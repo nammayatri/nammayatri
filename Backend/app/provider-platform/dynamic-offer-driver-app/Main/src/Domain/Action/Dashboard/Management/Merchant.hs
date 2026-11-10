@@ -21,6 +21,8 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantUpdate,
     postMerchantCloudUpdate,
     postMerchantCloudCityUpdate,
+    getMerchantConfigFareBreakup,
+    postMerchantConfigFareBreakupUpdate,
     getMerchantServiceUsageConfig,
     postMerchantServiceConfigSmsUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
@@ -128,6 +130,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Extra.TransporterConfig as DTCExtra
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.Common as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
@@ -5892,3 +5895,27 @@ postMerchantConfigDriverWalletMigratePendingDues merchantShortId opCity = do
   createJobIn @_ @'MigratePendingDuesToWallet (Just merchant.id) (Just merchantOpCityId) 0 $
     MigratePendingDuesToWalletJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCityId}
   pure Success
+
+getMerchantConfigFareBreakup :: ShortId DM.Merchant -> Context.City -> Flow Common.FareBreakupConfigRes
+getMerchantConfigFareBreakup merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  pure Common.FareBreakupConfigRes {config = A.toJSON <$> config.customerPayableFareBreakupSubItemsConfig}
+
+postMerchantConfigFareBreakupUpdate :: ShortId DM.Merchant -> Context.City -> Common.FareBreakupConfigUpdateReq -> Flow APISuccess
+postMerchantConfigFareBreakupUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mbSubItemsConfig <- forM req.config $ \val ->
+    either (throwError . InvalidRequest) pure (decodeFareBreakupSubItemsConfig val)
+  QTC.updateCustomerPayableFareBreakupSubItemsConfig mbSubItemsConfig merchantOpCityId
+  CQTC.clearCache merchantOpCityId
+  invalidateConfigInMem LYT.TransporterConfig
+  logTagInfo "dashboard -> postMerchantConfigFareBreakupUpdate : " (show merchantOpCityId)
+  pure Success
+
+decodeFareBreakupSubItemsConfig :: A.Value -> Either Text [DTCExtra.FareBreakupNode]
+decodeFareBreakupSubItemsConfig val = case DAT.ifromJSON val of
+  DAT.IError path err -> Left ("config does not match the fare breakup shape: " <> T.pack (DAT.formatError path err))
+  DAT.ISuccess subItems -> Right subItems

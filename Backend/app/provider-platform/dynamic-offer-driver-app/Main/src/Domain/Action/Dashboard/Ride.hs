@@ -88,6 +88,7 @@ import Lib.GateInfo.Geometry (pointInPolygon)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Safety.Storage.Queries.Sos as QSafetySos
+import SharedLogic.DriverFleetOperatorAssociation (checkFleetDriverAndDriverOperatorAssociation)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -295,7 +296,7 @@ getRideListUtil ::
   Flow Common.RideListRes
 getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbPaymentCollectedBy mbHasSos detailGroups mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
   withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode (isJust mbPaymentCollectedBy || isJust mbHasSos) $ \RideListCommonParams {..} -> do
-    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbRequestorId mbFleetOwnerId
+    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbRequestorId mbFleetOwnerId mbDriverId
     mbPaymentMethodIds <- forM mbPaymentCollectedBy $ \collector ->
       map (getId . (.id)) . filter (\paymentMethod -> paymentMethod.collectedBy == castPaymentCollector collector)
         <$> CQMPM.findAllByMerchantOpCityId merchantOpCity.id
@@ -317,15 +318,15 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
     pure Common.RideListRes {totalItems = count, summary, rides = rideListItems'}
 
 -- Resolve (show customer info?, effective fleet filter) from requestor role + optional fleet filter. Fleet owner/operator: only their fleet, no customer info; other roles: any fleet, show customer info.
-resolveFleetAndCustomerVisibility :: Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
-resolveFleetAndCustomerVisibility mbRequestorId (Just fleetOwnerId) = do
+resolveFleetAndCustomerVisibility :: Maybe Text -> Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
+resolveFleetAndCustomerVisibility mbRequestorId (Just fleetOwnerId) _ = do
   isFleetOrOp <- isRequestorFleetOwnerOrOperator mbRequestorId
   if isFleetOrOp
     then do
       void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
       pure (False, Just fleetOwnerId)
     else pure (True, Just fleetOwnerId)
-resolveFleetAndCustomerVisibility mbRequestorId Nothing = resolveRoleAndEffectiveFleet mbRequestorId
+resolveFleetAndCustomerVisibility mbRequestorId Nothing mbDriverId = resolveRoleAndEffectiveFleet mbRequestorId mbDriverId
 
 isRequestorFleetOwnerOrOperator :: Maybe Text -> Flow Bool
 isRequestorFleetOwnerOrOperator mbRequestorId = case mbRequestorId of
@@ -334,9 +335,9 @@ isRequestorFleetOwnerOrOperator mbRequestorId = case mbRequestorId of
     mbRequestor <- runInReplica $ QP.findById (Id requestorId)
     pure $ maybe False (\r -> DCommon.checkFleetOwnerRole r.role || r.role == DP.OPERATOR) mbRequestor
 
--- No fleetOwnerId in request: fleet owner => own fleet, no customer info; operator => access denied; other roles => no fleet filter, show customer info.
-resolveRoleAndEffectiveFleet :: Maybe Text -> Flow (Bool, Maybe Text)
-resolveRoleAndEffectiveFleet mbRequestorId = case mbRequestorId of
+-- No fleetOwnerId in request: fleet owner => own fleet, no customer info; operator => only a driver linked to them (directly or via a linked fleet), no customer info; other roles => no fleet filter, show customer info.
+resolveRoleAndEffectiveFleet :: Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
+resolveRoleAndEffectiveFleet mbRequestorId mbDriverId = case mbRequestorId of
   Nothing -> pure (True, Nothing)
   Just requestorId -> do
     mbRequestor <- runInReplica $ QP.findById (Id requestorId)
@@ -346,15 +347,20 @@ resolveRoleAndEffectiveFleet mbRequestorId = case mbRequestorId of
         case requestor.role of
           DP.FLEET_OWNER -> pure (False, Just requestorId)
           DP.FLEET_BUSINESS -> pure (False, Just requestorId)
-          DP.OPERATOR -> throwError AccessDenied
+          DP.OPERATOR -> case mbDriverId of
+            Nothing -> throwError AccessDenied
+            Just driverId -> do
+              isLinked <- checkFleetDriverAndDriverOperatorAssociation (Id driverId) requestor.id
+              unless isLinked $ throwError AccessDenied
+              pure (False, Nothing)
           _ -> pure (True, Nothing)
 
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Text -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId requestorId = do
   let mbDriverIdText = getId <$> _mbDriverId
   withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode (isJust mbRideStatus) $ \RideListCommonParams {..} -> do
-    -- Role-scope: fleet owner => own fleet, admin => all city, operator => denied (mirrors V1 getRideList).
-    (_, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility (Just requestorId) mbFleetOwnerId
+    -- Role-scope: fleet owner => own fleet, admin => all city, operator => only a linked driver (mirrors V1 getRideList).
+    (_, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility (Just requestorId) mbFleetOwnerId mbDriverId
     rideItems <-
       if useClickhouse
         then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount effectiveFleetOwnerId

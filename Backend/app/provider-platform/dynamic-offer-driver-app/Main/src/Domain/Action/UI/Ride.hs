@@ -24,6 +24,7 @@ module Domain.Action.UI.Ride
     listDriverRides,
     getDriverRideById,
     resolveCallingNumber,
+    effectiveCallingOption,
     mayDialDirectly,
     arrivedAtPickup,
     activateScheduledRideAtPickup,
@@ -282,7 +283,8 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   driverNumber <- RD.getDriverNumber rideDetail
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  resolvedCalling <- resolveCallingNumber booking ride (transporterConfig >>= DTC.driverCallingOption) (fromMaybe False (transporterConfig >>= DTC.forceDirectCalling)) (RideCommon.mkExoPhone mbExophone booking)
+  callingOption <- maybe (pure DTC.AnonymousCall) effectiveCallingOption transporterConfig
+  resolvedCalling <- resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
@@ -424,7 +426,8 @@ otpRideCreate driver otpCode booking clientId = do
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
+  callingOption <- effectiveCallingOption transporterConfig
+  resolvedCalling <- resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest
   where
@@ -693,20 +696,42 @@ startReturnTrip rideId enteredOtp = do
     QRide.updateReturnStartedAt (Just now) ride.id
   pure Success
 
-mayDialDirectly :: Bool -> DTC.CallingOption -> Maybe Bool -> Maybe Bool -> Bool
-mayDialDirectly forceDirect option snapshot live =
-  forceDirect || (allowsDirectCalling option && snapshot == Just True && live == Just True)
+-- callingMode wins when it names a known option; when it is unset the older columns decide. It is plain text
+-- so that a value this code does not know is read as AnonymousCall instead of failing the row, and never
+-- shares a rider's number.
+effectiveCallingOption :: (Monad m, Log m) => DTC.TransporterConfig -> m DTC.CallingOption
+effectiveCallingOption transporterConfig = case transporterConfig.callingMode of
+  Nothing -> pure legacyOption
+  Just mode -> case readMaybe (T.unpack mode) of
+    Just option -> pure option
+    Nothing -> do
+      logWarning $ "Unknown calling_mode " <> mode <> ", using AnonymousCall, merchantOperatingCityId: " <> transporterConfig.merchantOperatingCityId.getId
+      pure DTC.AnonymousCall
+  where
+    legacyOption
+      | transporterConfig.forceDirectCalling == Just True = DTC.ForceDirectCall
+      | otherwise = fromMaybe DTC.AnonymousCall transporterConfig.driverCallingOption
+
+mayDialDirectly :: DTC.CallingOption -> Maybe Bool -> Maybe Bool -> Bool
+mayDialDirectly option snapshot live = case option of
+  DTC.ForceDirectCall -> True
+  DTC.DirectCall -> snapshot == Just True && live == Just True
+  DTC.DualCall -> snapshot == Just True && live == Just True
+  DTC.AnonymousCall -> False
 
 allowsDirectCalling :: DTC.CallingOption -> Bool
-allowsDirectCalling option = option == DTC.DirectCall || option == DTC.DualCall
+allowsDirectCalling option = case option of
+  DTC.AnonymousCall -> False
+  DTC.DirectCall -> True
+  DTC.DualCall -> True
+  DTC.ForceDirectCall -> True
 
 getRiderNumbers ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DTC.CallingOption ->
-  Bool ->
   m (Maybe (Text, Text, Bool))
-getRiderNumbers booking option forceDirect
+getRiderNumbers booking option
   | not (allowsDirectCalling option) = pure Nothing
   | otherwise =
     case booking.riderId of
@@ -717,24 +742,23 @@ getRiderNumbers booking option forceDirect
           Nothing -> pure Nothing
           Just rider -> do
             bareNumber <- decrypt rider.mobileNumber
-            when (forceDirect && rider.consentToShareMobileNumber == Just False) $
-              logWarning $ "forceDirectCalling overriding rider opt-out, merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId
-            pure $ Just (bareNumber, rider.mobileCountryCode, mayDialDirectly forceDirect option booking.numberShareConsent rider.consentToShareMobileNumber)
+            when (option == DTC.ForceDirectCall && rider.consentToShareMobileNumber == Just False) $
+              logWarning $ "ForceDirectCall overriding rider opt-out, merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId
+            pure $ Just (bareNumber, rider.mobileCountryCode, mayDialDirectly option booking.numberShareConsent rider.consentToShareMobileNumber)
 
 resolveCallingNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DRide.Ride ->
-  Maybe DTC.CallingOption ->
-  Bool ->
+  DTC.CallingOption ->
   Text ->
   m RideCommon.ResolvedCalling
-resolveCallingNumber booking ride mbOption forceDirect exoPhone = do
+resolveCallingNumber booking ride option exoPhone = do
   let activeRide = ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED]
-      effectiveOption = if forceDirect then Just DTC.DirectCall else mbOption
-  mbNumbers <- case effectiveOption of
-    Just option | activeRide -> getRiderNumbers booking option forceDirect
-    _ -> pure Nothing
+  mbNumbers <-
+    if activeRide
+      then getRiderNumbers booking option
+      else pure Nothing
   let anonymous = RideCommon.CallingNumberAPIEntity {number = exoPhone, countryCode = Nothing, numberType = RideCommon.ANONYMOUS}
   pure $ case mbNumbers of
     Nothing ->

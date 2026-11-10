@@ -333,13 +333,20 @@ let RiderJobType =
       | BookingDepositExpiry
       | SilentReallocationExpiry
       | SendLegalPolicyNotification
+      | SharedCabAllocationTick
+      | SharedCabSessionExpiry
+      | SharedCabDegradedSweep
+      | SendRideInvoiceEmail
       >
 
 let jobRetryOnExceptionMapx =
       [] : List { mapKey : RiderJobType, mapValue : Bool }
 
 let jobInfoMapx =
-      [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      [ { mapKey = RiderJobType.SharedCabAllocationTick, mapValue = False }
+      , { mapKey = RiderJobType.SharedCabSessionExpiry, mapValue = False }
+      , { mapKey = RiderJobType.SharedCabDegradedSweep, mapValue = False }
+      , { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
@@ -386,6 +393,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.BookingDepositExpiry, mapValue = True }
       , { mapKey = RiderJobType.SilentReallocationExpiry, mapValue = True }
       , { mapKey = RiderJobType.SendLegalPolicyNotification, mapValue = True }
+      , { mapKey = RiderJobType.SendRideInvoiceEmail, mapValue = True }
       ]
 
 let cacConfig =
@@ -630,6 +638,7 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , enforcingInternalAuth = False
     , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions

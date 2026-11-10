@@ -390,6 +390,9 @@ data MembershipFeeInfo = MembershipFeeInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data ActiveRideType = SHARED_CAB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -485,6 +488,10 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- | Set while the driver runs a session with no driver-side Ride row, so the app can reopen it on launch.
+    activeRideType :: Maybe ActiveRideType,
+    -- | The feed version the app checks its cached shared-cab routes against.
+    publicTransportVersion :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -667,7 +674,8 @@ data UpdateDriverReq = UpdateDriverReq
     nomineeRelationship :: Maybe Text,
     nomineeDob :: Maybe Day,
     addressState :: Maybe Context.IndianState,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider
+    preferredMapProvider :: Maybe DriverInfo.MapProvider,
+    enableCashRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1543,6 +1551,7 @@ updateDriver ::
     HasField "version" r DeploymentVersion,
     HasField "cloudType" r (Maybe CloudType),
     Redis.HedisLTSFlowEnv r,
+    Forkable m,
     Finance.HasActorInfo m r,
     SOnboardingFlags.OnboardingFlow m r
   ) =>
@@ -1602,6 +1611,11 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     whenJust transporterConfig.supportedMapProviders $ \supported ->
       unless (mp `elem` supported) $ throwError $ InvalidRequest "Map provider not supported by merchant"
+  -- Cash ride preference of a fleet driver is controlled by the fleet (see postDriverFleetCashRideUpdate), so the driver cannot change it.
+  -- Checked before any write so a rejected request does not leave a partial update.
+  whenJust req.enableCashRide $ \_ -> do
+    mbActiveFda <- QFDA.findByDriverId personId True
+    when (isJust mbActiveFda) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet"
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1661,6 +1675,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.EV_HATCHBACK -> [DVST.EV_HATCHBACK, DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
               DV.EV_SEDAN -> [DVST.EV_SEDAN, DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.EV_SUV -> [DVST.EV_SUV, DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.SHARED_CAB -> [DVST.SHARED_CAB]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
@@ -1676,6 +1691,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   -- Update driver information (works for both cases: with or without vehicle)
   when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.preferredMapProvider) $ do
     QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs legacyAddress legacyAddressDocumentType legacyNomineeName legacyNomineeRelationship preferredMapProvider person.id
+
+  -- driver_information.enableCashRide (unset means cash rides allowed); synced so the driver pool sees it immediately.
+  whenJust req.enableCashRide $ \enableCashRide -> do
+    QFDA.updateEnableCashRideForDriversWithSync (Just enableCashRide) 1 [personId]
 
   whenJust req.onboardingAs $ \reqOnboardingAs -> do
     transporterConfigForOnboardingAs <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1956,6 +1975,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
+          activeRideType = if ((.variant) <$> mbVehicle) == Just DV.SHARED_CAB then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
+          publicTransportVersion = Nothing,
           ..
         }
 

@@ -287,3 +287,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostMerchantConfigDriverWalletMigratePendingDues","migration":"capability","param":"system-config.driver_wallet.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.driver_wallet.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_WALLET_MIGRATE_PENDING_DUES' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantConfigFareBreakup","migration":"capability","param":"system-config.fare_policy.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_FARE_BREAKUP' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigFareBreakupUpdate","migration":"capability","param":"system-config.fare_policy.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_BREAKUP_UPDATE' ) ON CONFLICT DO NOTHING;

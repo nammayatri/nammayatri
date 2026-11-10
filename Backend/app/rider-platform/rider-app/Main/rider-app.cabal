@@ -57,10 +57,8 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
-      API.Conductor
       API.Dashboard.Exotel
       API.DashboardExotel
-      API.Depot
       API.DirectDashboard
       API.FleetEngineToken
       API.FRFS
@@ -336,12 +334,10 @@ library
       Domain.Action.UI.CancellationReasons
       Domain.Action.UI.CancelLogic
       Domain.Action.UI.ChangeServiceTier
-      Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
-      Domain.Action.UI.Depot.Stats
       Domain.Action.UI.Disability
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
@@ -383,6 +379,7 @@ library
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.Offers
+      Domain.Action.UI.OpenMeter
       Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
@@ -414,6 +411,8 @@ library
       Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
+      Domain.Action.UI.SharedCab
+      Domain.Action.UI.SharedCabInternal
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
@@ -609,6 +608,7 @@ library
       SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
+      SharedLogic.FRFSCancelEffects
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
@@ -630,6 +630,9 @@ library
       SharedLogic.IncentiveJourney
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
+      SharedLogic.InternalAuth
+      SharedLogic.InvoiceEmail
+      SharedLogic.InvoiceEmailSchedule
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LegalPolicyEmail
@@ -645,6 +648,7 @@ library
       SharedLogic.Offer
       SharedLogic.OfferSegment
       SharedLogic.OfferTypes
+      SharedLogic.OpenMeter
       SharedLogic.OTP
       SharedLogic.Pass.Eligibility
       SharedLogic.PassExpiryReminder
@@ -694,13 +698,59 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
+      SharedLogic.Scheduler.Jobs.SendRideInvoiceEmail
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+      SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+      SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+      SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab
+      SharedLogic.SharedCab.Allocation
+      SharedLogic.SharedCab.Allocation.Claim
+      SharedLogic.SharedCab.Allocation.Reallocate
+      SharedLogic.SharedCab.Allocation.Select
+      SharedLogic.SharedCab.Allocation.Types
+      SharedLogic.SharedCab.Approach
+      SharedLogic.SharedCab.Boarding
+      SharedLogic.SharedCab.Booking
+      SharedLogic.SharedCab.BookingState
+      SharedLogic.SharedCab.Call
+      SharedLogic.SharedCab.Cancel
+      SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.ConfirmHook
+      SharedLogic.SharedCab.Degraded
+      SharedLogic.SharedCab.Demand
+      SharedLogic.SharedCab.DriverAction
+      SharedLogic.SharedCab.Enabled
+      SharedLogic.SharedCab.FindingTimeout
+      SharedLogic.SharedCab.Interest
+      SharedLogic.SharedCab.JourneyLeg
+      SharedLogic.SharedCab.Keys
+      SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Lock
+      SharedLogic.SharedCab.Lts
+      SharedLogic.SharedCab.NoShow
+      SharedLogic.SharedCab.Notify
+      SharedLogic.SharedCab.Offer
+      SharedLogic.SharedCab.RateLimit
+      SharedLogic.SharedCab.RefundDecision
+      SharedLogic.SharedCab.RefundPolicy
+      SharedLogic.SharedCab.RefundRetry
+      SharedLogic.SharedCab.RouteSnapshot
+      SharedLogic.SharedCab.Schedule
+      SharedLogic.SharedCab.Seats
+      SharedLogic.SharedCab.Session
+      SharedLogic.SharedCab.SessionState
+      SharedLogic.SharedCab.SessionView
+      SharedLogic.SharedCab.StopProgress
+      SharedLogic.SharedCab.StopProgress.Rules
+      SharedLogic.SharedCab.TripClient
+      SharedLogic.SharedCab.WalkUp
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking
@@ -788,7 +838,6 @@ library
       Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
-      Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
@@ -865,6 +914,7 @@ library
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.MetaWebhookConfigExtra
       Storage.Queries.NyRegularSubscriptionExtra
+      Storage.Queries.OpenMeterRideExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PassCategoryExtra
@@ -912,6 +962,7 @@ library
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
+      Storage.Queries.Transformers.EmailTemplate
       Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.FRFSQuoteCategory
       Storage.Queries.Transformers.IntegratedBPPConfig
@@ -1082,6 +1133,7 @@ library
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
       API.Action.UI.Offers
+      API.Action.UI.OpenMeter
       API.Action.UI.ParkingBooking
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
@@ -1096,6 +1148,8 @@ library
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
       API.Action.UI.RiderPreferences
+      API.Action.UI.SharedCab
+      API.Action.UI.SharedCabInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SupportBot
@@ -1247,6 +1301,7 @@ library
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
+      API.Types.UI.OpenMeter
       API.Types.UI.ParkingBooking
       API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
@@ -1261,6 +1316,8 @@ library
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
       API.Types.UI.RiderPreferences
+      API.Types.UI.SharedCab
+      API.Types.UI.SharedCabInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SupportBot
@@ -1314,6 +1371,7 @@ library
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
       Domain.Types.EDCMachineMapping
+      Domain.Types.EmailTemplate
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
@@ -1374,6 +1432,7 @@ library
       Domain.Types.NyRegularSubscription
       Domain.Types.OfferEntity
       Domain.Types.OnSearchEvent
+      Domain.Types.OpenMeterRide
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
       Domain.Types.PartnerInvoiceDataLog
@@ -1492,6 +1551,7 @@ library
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
       Storage.Beam.EDCMachineMapping
+      Storage.Beam.EmailTemplate
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
@@ -1552,6 +1612,7 @@ library
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OfferEntity
       Storage.Beam.OnSearchEvent
+      Storage.Beam.OpenMeterRide
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerInvoiceDataLog
@@ -1675,6 +1736,7 @@ library
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
       Storage.Queries.EDCMachineMapping
+      Storage.Queries.EmailTemplate
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
@@ -1735,6 +1797,7 @@ library
       Storage.Queries.NyRegularSubscription
       Storage.Queries.OfferEntity
       Storage.Queries.OnSearchEvent
+      Storage.Queries.OpenMeterRide
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
@@ -1772,6 +1835,7 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.MetaWebhookConfig
       Storage.Queries.OrphanInstances.NyRegularSubscription
+      Storage.Queries.OrphanInstances.OpenMeterRide
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Pass
@@ -2200,6 +2264,27 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      OpenMeter.TransitionsSpec
+      SharedCabAllocationTests
+      SharedCabBoardingTests
+      SharedCabCallTests
+      SharedCabCheckedInStatusTests
+      SharedCabConfigTests
+      SharedCabDegradedSweepTests
+      SharedCabDegradedTests
+      SharedCabDemandTests
+      SharedCabDriverActionTests
+      SharedCabExpiryTests
+      SharedCabLegStateTests
+      SharedCabLockTests
+      SharedCabNoShowTests
+      SharedCabNotifyTests
+      SharedCabRefundPolicyTests
+      SharedCabRefundRetryTests
+      SharedCabSeatTests
+      SharedCabSessionTests
+      SharedCabStopProgressTests
+      SharedCabWalkUpTests
       Paths_rider_app
   hs-source-dirs:
       test
@@ -2250,6 +2335,7 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , casing
     , cassava

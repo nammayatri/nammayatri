@@ -10,10 +10,12 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import Storage.Beam.SystemConfigs ()
 
 type API =
   ( "bulkLocPickupUpdate"
+      :> Header "api-key" Text
       :> ReqBody '[JSON] Domain.BulkLocPickupUpdateReq
       :> Post '[JSON] APISuccess
   )
@@ -22,5 +24,7 @@ handler :: FlowServer API
 handler =
   bulkLocPickupUpdate
 
-bulkLocPickupUpdate :: Domain.BulkLocPickupUpdateReq -> FlowHandler APISuccess
-bulkLocPickupUpdate = withFlowHandlerAPI . Domain.bulkLocPickupUpdate
+bulkLocPickupUpdate :: Maybe Text -> Domain.BulkLocPickupUpdateReq -> FlowHandler APISuccess
+bulkLocPickupUpdate apiKey req = withFlowHandlerAPI $ do
+  checkLtsKey "bulkLocPickupUpdate" apiKey
+  Domain.bulkLocPickupUpdate req

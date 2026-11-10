@@ -959,3 +959,16 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_unpaid_journey_window_
 ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_stale_journey_lookback_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_live_journey_window_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_feedback_window_sec integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN open_meter_max_idle_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN allow_multiple_open_meter_rides boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;

@@ -61,6 +61,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Domain.Action.UI.OpenMeter as DOpenMeter
 import Domain.Action.UI.Person as SP
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Depot as DDepot
@@ -550,7 +551,7 @@ conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbR
   merchantOpCity <-
     CQMOC.findByMerchantShortIdAndCity req.merchantId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> req.merchantId.getShortId <> " ,city: " <> show city)
-  bppConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
+  bppConfig <- SIBC.findBusIntegratedBPPConfig merchantOpCity.id (fromMaybe BecknSpec.BUS req.vehicleType) DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId merchantOpCity.id
   let gtfsId = bppConfig.feedKey
   -- Call GIMS verify endpoint
@@ -1008,6 +1009,8 @@ verify tokenId req mbClientId mbXForwardedFor = do
       SMC.decrementCustomerAuthCountersByIP clientIP merchantConfigs
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+  -- verifyFlow ended the rider's other sessions, so nothing can end their open meter rides any more.
+  DOpenMeter.autoEndRunningRides person.id
   whenJust req.userPasswordString $ \userPasswordString -> do
     passwordHash <- getDbHash userPasswordString
     void $ Person.updatePersonPassword (Just passwordHash) person.id
@@ -1226,6 +1229,7 @@ logout personId = do
   cleanCachedTokens personId
   void $ Person.updateDeviceToken Nothing personId
   void $ RegistrationToken.deleteByPersonId personId
+  DOpenMeter.autoEndRunningRides personId
   pure AP.Success
 
 authHitOTPChannel :: Id SP.Person -> Text

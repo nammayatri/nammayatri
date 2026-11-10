@@ -190,7 +190,8 @@ data ProfileRes = ProfileRes
     pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy],
     commsConsent :: Maybe Bool,
     mobileNumberRequired :: Bool,
-    isEmailVerified :: Bool
+    isEmailVerified :: Bool,
+    allowMultipleOpenMeterRides :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -464,6 +465,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
             profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
+            allowMultipleOpenMeterRides = Just riderConfig.allowMultipleOpenMeterRides,
             ..
           }
 

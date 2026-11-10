@@ -339,7 +339,7 @@ getAllFarePoliciesProduct mbPricingTime merchantId merchantOpCityId isDashboard 
 -- else differs -- same farePolicyId, same slabs, same charges -- so the spot fare IS the
 -- normal fare, by construction rather than by keeping two fare_product rows in sync.
 -- Applies in special zones too; if any tier already has a native OneWayRideOtp product
--- there, no spot ride is derived for any tier.
+-- there, no spot ride is derived for any tier. Derived copies carry isDerived = Just True.
 addSpotRidePolicies ::
   HM.HashMap ServiceTierType DVST.VehicleServiceTier ->
   Bool ->
@@ -354,7 +354,7 @@ addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
             DTC.OneWay mode
               | mode `elem` [DTC.OneWayOnDemandDynamicOffer, DTC.OneWayOnDemandStaticOffer],
                 (HM.lookup fp.vehicleServiceTier vehicleServiceTierMap >>= (.isSpotRideEnabled)) == Just True ->
-                Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp}
+                Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp, FarePolicyD.isDerived = Just True}
             _ -> Nothing
      in farePolicies <> derived
 

@@ -75,7 +75,11 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
+import "rider-app" SharedLogic.Scheduler.Jobs.SendRideInvoiceEmail
 import "rider-app" SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
@@ -121,6 +125,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env checkPNAndSendSMS
           & putJobHandlerInListWrapper flowRt env sendScheduledRideNotificationsToRider
           & putJobHandlerInListWrapper flowRt env silentReallocationExpiry
+          & putJobHandlerInListWrapper flowRt env sendRideInvoiceEmailJob
           & putJobHandlerInListWrapper flowRt env sendTagActionNotification
           & putJobHandlerInListWrapper flowRt env sendSafetyIVR
           & putJobHandlerInListWrapper flowRt env sendCallPoliceApi
@@ -158,6 +163,9 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
           & putJobHandlerInListWrapper flowRt env bookingDepositExpiryJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
+          & putJobHandlerInListWrapper flowRt env sharedCabAllocationTick
+          & putJobHandlerInListWrapper flowRt env sharedCabSessionExpiry
+          & putJobHandlerInListWrapper flowRt env sharedCabDegradedSweep
     }
 
 runRiderAppScheduler ::

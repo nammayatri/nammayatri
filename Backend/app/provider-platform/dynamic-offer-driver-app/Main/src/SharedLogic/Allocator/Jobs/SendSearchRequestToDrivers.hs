@@ -63,7 +63,7 @@ import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
-import SharedLogic.ScheduledRideTopDrivers (topDriverBatchCount, topDriversRoundCutoff)
+import SharedLogic.ScheduledRideTopDrivers (topDriversRoundCutoff)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
@@ -468,7 +468,7 @@ sendSearchRequestToDriversWithMode dispatchMode mbTopUpSize driverPoolConfig sea
   handler (handle mbBooking driverSearchBatchInput) goHomeCfg searchReqWithPoolingVersion.transactionId
   where
     -- Top-drivers round: when to stop (20 batches, or the cutoff before the first regular round) and the cleanup at the end.
-    topDriversRoundLimitReached = I.isTopDriversBatchLimitReached topDriverBatchCount (topDriversRoundCutoff (getNextBatchScheduleTime driverPoolConfig) driverPoolConfig.scheduleTryTimes searchTry.startTime) searchTry.id
+    topDriversRoundLimitReached = I.isTopDriversBatchLimitReached driverPoolConfig.maxNumberOfBatches (topDriversRoundCutoff (getNextBatchScheduleTime driverPoolConfig) driverPoolConfig.scheduleTryTimes searchTry.startTime) searchTry.id
     topDriversRoundEnded = I.resetBatchNumFor ScheduledTopDriversDispatch searchTry.id
 
     handle mbBooking driverSearchBatchInput =

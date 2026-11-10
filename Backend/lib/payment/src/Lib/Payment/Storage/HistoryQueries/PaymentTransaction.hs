@@ -5,6 +5,7 @@ module Lib.Payment.Storage.HistoryQueries.PaymentTransaction
     updateMultiple,
     findByTxnUUID,
     findByTxnId,
+    findByRrnOrEpgTxnId,
     findById,
     findAllByOrderId,
     findAllByOrderIds,
@@ -69,6 +70,9 @@ findByTxnUUID = QTransaction.findByTxnUUID
 
 findByTxnId :: PaymentBeamFlow.BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnId = QTransaction.findByTxnId
+
+findByRrnOrEpgTxnId :: PaymentBeamFlow.BeamFlow m r => Maybe Text -> Maybe Text -> m [PaymentTransaction]
+findByRrnOrEpgTxnId = QTransaction.findByRrnOrEpgTxnId
 
 findById :: PaymentBeamFlow.BeamFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
 findById = QTransaction.findById

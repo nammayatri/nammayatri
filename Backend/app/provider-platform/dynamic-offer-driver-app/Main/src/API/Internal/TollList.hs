@@ -26,6 +26,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.InternalAuth
 import SharedLogic.TollDashboard
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Toll ()
@@ -38,6 +39,7 @@ type API =
     :> Capture "city" Context.City
     :> "toll"
     :> "list"
+    :> Header "api-key" Text
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> Get '[JSON] [DM.TollAPIEntity]
@@ -48,10 +50,12 @@ handler = getTollList
 getTollList ::
   Id Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   FlowHandler [DM.TollAPIEntity]
-getTollList merchantId city mbLimit mbOffset = withFlowHandlerAPI $ do
+getTollList merchantId city apiKey mbLimit mbOffset = withFlowHandlerAPI $ do
+  checkListKey "toll/list" merchantId apiKey
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
   tolls <- CQToll.findAllTollsByMerchantOperatingCity merchantOpCity.id.getId
   pure $ map tollToAPIEntity $ applyPagination mbLimit mbOffset tolls

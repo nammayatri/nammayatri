@@ -15,7 +15,7 @@
 module Tools.Error (module Tools.Error) where
 
 import qualified Dashboard.Common as Common
-import Data.Aeson (Value (Null), object, (.=))
+import Data.Aeson (Value (Null), decode, object, (.=))
 import qualified Data.Text as T
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -23,7 +23,10 @@ import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
 import Kernel.Utils.Common (Meters)
+import qualified Network.HTTP.Types.Status as HTTP
+import Servant.Client (ResponseF (Response))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RatingError
@@ -395,6 +398,7 @@ data DriverWalletError
   | WalletAccountNotFound Text
   | WalletBalanceUpdateFailed Text
   | InstantPayoutNotAllowed
+  | LedgerHistoryRangeTooLong Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverWalletError
@@ -408,6 +412,7 @@ instance IsBaseError DriverWalletError where
     WalletAccountNotFound msg -> Just $ "Wallet account not found: " <> msg
     WalletBalanceUpdateFailed msg -> Just $ "Wallet balance update failed: " <> msg
     InstantPayoutNotAllowed -> Just "Instant payouts are not available for your account in this city."
+    LedgerHistoryRangeTooLong maxDays -> Just $ "Date range cannot exceed " <> show maxDays <> " days."
 
 instance IsHTTPError DriverWalletError where
   toErrorCode = \case
@@ -418,9 +423,11 @@ instance IsHTTPError DriverWalletError where
     WalletAccountNotFound _ -> "WALLET_ACCOUNT_NOT_FOUND"
     WalletBalanceUpdateFailed _ -> "WALLET_BALANCE_UPDATE_FAILED"
     InstantPayoutNotAllowed -> "INSTANT_PAYOUT_NOT_ALLOWED"
+    LedgerHistoryRangeTooLong _ -> "LEDGER_HISTORY_RANGE_TOO_LONG"
   toHttpCode = \case
     WalletTopupLockFailed -> E429
     InstantPayoutNotAllowed -> E400
+    LedgerHistoryRangeTooLong _ -> E400
     _ -> E500
 
 instance IsAPIError DriverWalletError
@@ -2725,3 +2732,8 @@ instance IsHTTPError BapProxyError where
 
 instance IsAPIError BapProxyError where
   toPayload (BapProxyResponseError _ _ _ payload) = payload
+
+instance FromResponse BapProxyError where
+  fromResponse (Response status _ _ body) = do
+    APIError code message payload <- decode body
+    pure $ BapProxyResponseError (codeToHttpCodeWith500Default (HTTP.statusCode status)) code message payload

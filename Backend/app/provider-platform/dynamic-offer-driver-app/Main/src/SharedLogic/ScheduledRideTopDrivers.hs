@@ -13,38 +13,21 @@
 -}
 
 module SharedLogic.ScheduledRideTopDrivers
-  ( TopDriverCriteria (..),
-    TopDriversRoundEvent (..),
-    topDriverBatchCount,
-    topDriverPoolSize,
+  ( TopDriversRoundEvent (..),
+    topDriversTopic,
     topDriversLeadTime,
     regularRoundStartsAt,
     topDriversRoundCutoff,
-    resolveTopDriverCriteria,
-    filterTopDrivers,
+    resolveTopDriverRules,
+    mkTopDriversRoundEvent,
   )
 where
 
-import Data.List (sortOn)
-import qualified Data.Map as Map
-import qualified Data.Text.Encoding as TE
-import qualified Domain.Types.DriverStats as DStats
-import qualified Domain.Types.SearchTry as DST
 import Domain.Types.ServiceTierType (ServiceTierType)
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
-import Kernel.Streaming.Kafka.Producer (produceMessage)
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
-import SharedLogic.DriverPool (DriverPoolWithActualDistResult (..))
 import SharedLogic.ScheduledRideVisibility (resolveVisibilityStage)
-import qualified Storage.Queries.DriverStatsExtra as QDriverStats
-
-topDriverBatchCount :: Int
-topDriverBatchCount = 20
-
-topDriverPoolSize :: Int
-topDriverPoolSize = 20
 
 defaultMinRating :: Double
 defaultMinRating = 4.5
@@ -58,22 +41,11 @@ defaultMinCompletedRides = 0
 topDriversTopic :: Text
 topDriversTopic = "scheduled-ride-top-drivers"
 
-data TopDriverCriteria = TopDriverCriteria
-  { minRatingRequired :: Double,
-    maxCancellationRatePctAllowed :: Double,
-    minCompletedRidesRequired :: Int,
-    maxPickupDistanceMeters :: Maybe Int,
-    usedDefaults :: Bool
-  }
-  deriving (Show)
-
 data TopDriversRoundEvent = TopDriversRoundEvent
   { searchTryId :: Text,
     merchantOperatingCityId :: Text,
     batchNumber :: Int,
     minutesToPickup :: Int,
-    candidateCount :: Int,
-    withinRadiusCount :: Int,
     passedStatsCount :: Int,
     selectedCount :: Int,
     selectedDriverIds :: [Text],
@@ -100,93 +72,46 @@ topDriversRoundCutoff :: Seconds -> [Int] -> UTCTime -> Maybe UTCTime
 topDriversRoundCutoff batchInterval scheduleTryTimes pickupTime =
   addUTCTime (negate (fromIntegral batchInterval)) <$> regularRoundStartsAt scheduleTryTimes pickupTime
 
-resolveTopDriverCriteria :: DTC.TransporterConfig -> ServiceTierType -> UTCTime -> UTCTime -> TopDriverCriteria
-resolveTopDriverCriteria transporterConfig serviceTier now pickupTime =
+-- | The visibility rules a driver has to meet to be a top driver for this ride: the rules of the
+-- visibility stage that applies, with the defaults filling in whatever the stage leaves out. Only the
+-- rules that driver_stats and the driver's position can answer are kept, since that is all the pool
+-- calculation knows about a driver. A pickup radius makes the nearby rule apply.
+-- The flag is True when the stage set none of the stats rules and the defaults are in force.
+resolveTopDriverRules :: DTC.TransporterConfig -> ServiceTierType -> UTCTime -> UTCTime -> (DTC.ScheduledRideVisibilityRules, Bool)
+resolveTopDriverRules transporterConfig serviceTier now pickupTime =
   let stages = fromMaybe [] transporterConfig.scheduledRideConfig.scheduledRideVisibilityStages
       mbRules = (.rules) <$> resolveVisibilityStage serviceTier stages (diffUTCTime pickupTime now)
       mbMinRating = mbRules >>= (.minRating)
       mbMaxCancellation = mbRules >>= (.maxCancellationRatePct)
       mbMinRides = mbRules >>= (.minCompletedRides)
-   in TopDriverCriteria
-        { minRatingRequired = fromMaybe defaultMinRating mbMinRating,
-          maxCancellationRatePctAllowed = fromMaybe defaultMaxCancellationRatePct mbMaxCancellation,
-          minCompletedRidesRequired = fromMaybe defaultMinCompletedRides mbMinRides,
-          maxPickupDistanceMeters = mbRules >>= (.pickupRadiusMeters),
-          usedDefaults = isNothing mbMinRating && isNothing mbMaxCancellation && isNothing mbMinRides
-        }
+      mbRadius = mbRules >>= (.pickupRadiusMeters)
+      rules =
+        DTC.ScheduledRideVisibilityRules
+          Nothing
+          (Just (fromMaybe defaultMaxCancellationRatePct mbMaxCancellation))
+          (Just (fromMaybe defaultMinCompletedRides mbMinRides))
+          (Just (fromMaybe defaultMinRating mbMinRating))
+          mbRadius
+          Nothing
+          (True <$ mbRadius)
+          Nothing
+   in (rules, isNothing mbMinRating && isNothing mbMaxCancellation && isNothing mbMinRides)
 
-filterTopDrivers ::
-  ( MonadFlow m,
-    MonadReader r m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasKafkaProducer r
-  ) =>
-  DST.SearchTry ->
-  Int ->
-  TopDriverCriteria ->
-  [DriverPoolWithActualDistResult] ->
-  m [DriverPoolWithActualDistResult]
-filterTopDrivers searchTry batchNumber criteria pool = do
-  now <- getCurrentTime
-  let withinRadius = filter (isWithinRadius criteria) pool
-  stats <- QDriverStats.findAllByDriverIdListFromDb (map (\dp -> dp.driverPoolResult.driverId) withinRadius)
-  let statsByDriver = Map.fromList [(driverStats.driverId, driverStats) | driverStats <- stats]
-      passesStats dp = maybe False (isTopDriver criteria) (Map.lookup dp.driverPoolResult.driverId statsByDriver)
-      good = filter passesStats withinRadius
-      selected = take topDriverPoolSize $ sortOn (\dp -> dp.actualDistanceToPickup) good
-  logInfo $
-    "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNumber
-      <> " candidates=" <> show (length pool)
-      <> " withinRadius=" <> show (length withinRadius)
-      <> " passedStats=" <> show (length good)
-      <> " selected=" <> show (length selected)
-  publishEvent now selected (length withinRadius) (length good)
-  pure selected
-  where
-    publishEvent now selected withinRadiusCount passedStatsCount = do
-      let event =
-            TopDriversRoundEvent
-              { searchTryId = searchTry.id.getId,
-                merchantOperatingCityId = searchTry.merchantOperatingCityId.getId,
-                batchNumber,
-                minutesToPickup = round (diffUTCTime searchTry.startTime now / 60),
-                candidateCount = length pool,
-                withinRadiusCount,
-                passedStatsCount,
-                selectedCount = length selected,
-                selectedDriverIds = map (\dp -> dp.driverPoolResult.driverId.getId) selected,
-                minRatingRequired = criteria.minRatingRequired,
-                maxCancellationRatePctAllowed = criteria.maxCancellationRatePctAllowed,
-                minCompletedRidesRequired = criteria.minCompletedRidesRequired,
-                maxPickupDistanceMeters = criteria.maxPickupDistanceMeters,
-                usedDefaults = criteria.usedDefaults,
-                createdAt = now
-              }
-      result <- withTryCatch "publishTopDriversRoundEvent" $ produceMessage (topDriversTopic, Just (TE.encodeUtf8 searchTry.id.getId)) event
-      case result of
-        Left err -> logError $ "TopDrivers: kafka publish failed for searchTryId=" <> searchTry.id.getId <> ": " <> show err
-        Right _ -> pure ()
-
-isWithinRadius :: TopDriverCriteria -> DriverPoolWithActualDistResult -> Bool
-isWithinRadius criteria dp = case criteria.maxPickupDistanceMeters of
-  Nothing -> True
-  Just radius -> getMeters dp.actualDistanceToPickup <= radius
-
-isTopDriver :: TopDriverCriteria -> DStats.DriverStats -> Bool
-isTopDriver criteria driverStats = ratingPasses && cancellationPasses && completedRidesPass
-  where
-    ratingPasses = maybe False (>= criteria.minRatingRequired) (driverRatingOf driverStats)
-    cancellationPasses = maybe True (<= criteria.maxCancellationRatePctAllowed) (cancellationRatePctOf driverStats)
-    completedRidesPass = driverStats.totalRides >= criteria.minCompletedRidesRequired
-
-driverRatingOf :: DStats.DriverStats -> Maybe Double
-driverRatingOf driverStats =
-  if fromMaybe 0 driverStats.totalRatings > 0
-    then driverStats.rating <&> (\(Centesimal ratingValue) -> realToFrac ratingValue)
-    else Nothing
-
-cancellationRatePctOf :: DStats.DriverStats -> Maybe Double
-cancellationRatePctOf driverStats = case driverStats.totalRidesAssigned of
-  Just assigned | assigned > 0 -> Just (fromIntegral (fromMaybe 0 driverStats.ridesCancelled) * 100 / fromIntegral assigned :: Double)
-  _ -> Nothing
+-- | The per-batch event for ClickHouse.
+mkTopDriversRoundEvent :: Text -> Text -> Int -> UTCTime -> Int -> [Text] -> DTC.ScheduledRideVisibilityRules -> Bool -> UTCTime -> TopDriversRoundEvent
+mkTopDriversRoundEvent searchTryId merchantOperatingCityId batchNumber pickupTime passedStatsCount selectedDriverIds rules usedDefaults createdAt =
+  TopDriversRoundEvent
+    { searchTryId,
+      merchantOperatingCityId,
+      batchNumber,
+      minutesToPickup = round (diffUTCTime pickupTime createdAt / 60),
+      passedStatsCount,
+      selectedCount = length selectedDriverIds,
+      selectedDriverIds,
+      minRatingRequired = fromMaybe defaultMinRating rules.minRating,
+      maxCancellationRatePctAllowed = fromMaybe defaultMaxCancellationRatePct rules.maxCancellationRatePct,
+      minCompletedRidesRequired = fromMaybe defaultMinCompletedRides rules.minCompletedRides,
+      maxPickupDistanceMeters = rules.pickupRadiusMeters,
+      usedDefaults,
+      createdAt
+    }

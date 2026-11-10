@@ -70,6 +70,8 @@ data GuardTarget
   | TargetDriverVehicle (Id DP.Person) Text
   | TargetVehicle Text
   | TargetVehicleById (Id DVRC.VehicleRegistrationCertificate)
+  | -- | A vehicle being added to a fleet. Resolves like 'TargetVehicleById'.
+    TargetFleetVehicleById (Id DVRC.VehicleRegistrationCertificate)
   | TargetFleetOwner (Id DP.Person)
   deriving (Show, Eq, Generic)
 
@@ -233,6 +235,9 @@ resolveTarget verb mbActorFleetId target = do
     TargetVehicleById rcId -> do
       mbRc <- RCQuery.findById rcId
       maybe (pure EUnresolved) (fmap EVehicle . resolveVehicle mbActorFleetId Nothing) mbRc
+    TargetFleetVehicleById rcId -> do
+      mbRc <- RCQuery.findById rcId
+      maybe (pure EUnresolved) (fmap EVehicle . resolveVehicle mbActorFleetId Nothing) mbRc
     TargetFleetOwner personId -> maybe EUnresolved EFleet <$> resolveFleetOwner verb personId
   hasLiveRide <- if verb `elem` liveRideVerbs then resolveLiveRide entity target else pure False
   pure TargetCtx {tcRaw = target, tcEntity = entity, tcHasLiveRide = hasLiveRide}
@@ -354,6 +359,7 @@ data TargetSel a where
   VehicleTarget :: TargetSel VehicleCtx
   DriverVehicle :: TargetSel (DriverCtx, VehicleCtx)
   RcTarget :: TargetSel VehicleCtx
+  FleetVehicleTarget :: TargetSel VehicleCtx
   FleetTarget :: TargetSel FleetCtx
 
 matchActor :: ActorSel a -> GuardCtx -> Maybe a
@@ -372,6 +378,7 @@ matchTarget selector ctx = case (selector, ctx.gcTarget.tcEntity) of
   (DriverVehicle, EDriverVehicle driverCtx vehicleCtx) -> Just (driverCtx, vehicleCtx)
   (RcTarget, EVehicle vehicleCtx) -> Just vehicleCtx
   (RcTarget, EDriverVehicle _ vehicleCtx) -> Just vehicleCtx
+  (FleetVehicleTarget, EVehicle vehicleCtx) | TargetFleetVehicleById _ <- ctx.gcTarget.tcRaw -> Just vehicleCtx
   (FleetTarget, EFleet fleetCtx) -> Just fleetCtx
   _ -> Nothing
 
@@ -435,9 +442,7 @@ onboardingFlow = do
   check Delete AnyActor DriverTarget driverDeletable -- driver strands no association
   check Delete AnyActor FleetTarget fleetDeletable -- fleet strands no association
   whenConfig (not . allowsFleetToLinkIndividual) $ check SetOnboardingAs FleetActor DriverTarget driverOnboardingSettableByFleet -- only an admin moves a self-employed driver
-  whenConfig blocksDriverOwnRc $ do
-    checkM LinkVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
-    checkM ActivateVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
+  whenConfig blocksDriverOwnRc $ checkM LinkVehicle AnyActor FleetVehicleTarget rcNotActiveWithAnotherDriver -- RC taken into a fleet is not driven by someone else
   unified $ check AnyVerb FleetActor AnyTarget actingFleetOwnerFit -- acting fleet owner is live
   unified $ check LinkVehicle DriverActor AnyTarget actingDriverFit -- acting driver is live
   unified $ check ActivateVehicle DriverActor AnyTarget actingDriverFit -- acting driver is live

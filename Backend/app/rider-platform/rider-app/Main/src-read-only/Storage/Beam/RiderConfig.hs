@@ -24,7 +24,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
-  { alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+  { allowMultipleOpenMeterRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     appUrl :: B.C f Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
@@ -127,6 +128,7 @@ data RiderConfigT f = RiderConfigT
     initiateFirstMultimodalJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     intercitySearchLocations :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation]),
     invoiceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    invoiceEmailEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     invoiceLogoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -175,6 +177,7 @@ data RiderConfigT f = RiderConfigT
     nyRegularMinGapSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     offerListCacheVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    openMeterMaxIdleHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderNextRunLocalTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
@@ -210,6 +213,7 @@ data RiderConfigT f = RiderConfigT
     sensitiveWordsForExactMatch :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     serviceTierRelationshipCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    sharedCabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     silentReallocationWindowSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     singleModeWalkSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     sosTrackingLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

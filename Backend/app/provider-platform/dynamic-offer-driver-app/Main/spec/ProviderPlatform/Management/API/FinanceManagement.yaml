@@ -181,6 +181,8 @@ apis:
         paymentMode: PaymentModeFilter
         txnAmountMin: HighPrecMoney
         txnAmountMax: HighPrecMoney
+        rrn: Text
+        gatewayTransactionId: Text
       auth: ApiAuthV2
       response:
         type: PaymentTransactionReportListRes
@@ -795,6 +797,10 @@ types:
     - reconciliationStatus: Maybe Text
     - reconciliationDate: Maybe UTCTime
     - differenceAmount: Maybe HighPrecMoney
+    - bankId: Maybe Text
+    - pgTxnId: Maybe Text
+    - mercId: Maybe Text
+    - cardType: Maybe Text
 
   # ----- Payment gateway transaction list -----
   PaymentTransactionReportListRes:
@@ -852,6 +858,8 @@ types:
     - ipAddress: Maybe Text
     - pgName: Maybe Text
     - pgMerchantId: Maybe Text
+    - rrn: Maybe Text
+    - attemptTimestamp: Maybe UTCTime
 
   # ----- Wallet ledger (balance + ledger combined) -----
   # normal mode (no subscriptionId): Liability wallet account — all entries on that account;

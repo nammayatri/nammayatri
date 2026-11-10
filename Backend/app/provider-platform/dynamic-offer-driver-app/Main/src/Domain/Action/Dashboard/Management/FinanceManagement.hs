@@ -587,12 +587,16 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             (txn : _) -> Just $ fromMaybe "" txn.tdsSection <> " (TDS: " <> show txn.tdsAmount <> ")"
             _ -> Nothing
 
-      -- Get linked ride/subscription IDs from ledger links
+      -- Get linked subscription IDs from ledger links
       ledgerLinks <- QInvoiceLedgerLink.findByInvoice invoice.id
       ledgerEntries <- mapM (QLedgerEntry.findById . (.ledgerEntryId)) ledgerLinks
 
-      -- Extract ride_id and subscription_id from ledger entries
-      let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
+      let subscriptionIds = [entry.referenceId | Just entry <- ledgerEntries, entry.referenceType == "SubscriptionPurchase"]
+
+      -- Ride ledger entries use types like BaseRide, so resolve the ride via the invoice's booking id
+      mbRide <- case invoice.referenceId of
+        Just bookingId | invoice.invoiceType == Ride -> QRide.findOneByBookingId (Id bookingId)
+        _ -> pure Nothing
 
       -- Get payment method from payment_transaction via invoice.paymentOrderId
       mbPaymentMethod <- case invoice.entityReferenceId of
@@ -635,7 +639,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             tdsReference = tdsRef,
             irn = invoice.irn,
             qrCode = invoice.signedQRCode,
-            rideId = listToMaybe rideIds,
+            rideId = (.id.getId) <$> mbRide,
             subscriptionId = listToMaybe subscriptionIds,
             supplierName = invoice.supplierName,
             supplierAddress = invoice.supplierAddress,
@@ -659,13 +663,6 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             recognizedRevenue = recognizedRevenue,
             deferredRevenue = deferredRevenue
           }
-
-    extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])
-    extractIds entry (rides, subs) =
-      case entry.referenceType of
-        "Ride" -> (entry.referenceId : rides, subs)
-        "SubscriptionPurchase" -> (rides, entry.referenceId : subs)
-        _ -> (rides, subs)
 
 -- Alias for generated API
 getFinanceManagementFinanceInvoiceList ::
@@ -1174,7 +1171,11 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
             rrnNo = report.rrn,
             reconciliationStatus = show . (.reconStatus) <$> mbEntry,
             reconciliationDate = (.reconciliationDate) <$> mbEntry,
-            differenceAmount = (.variance) <$> mbEntry
+            differenceAmount = (.variance) <$> mbEntry,
+            bankId = report.bankId,
+            pgTxnId = report.pgTxnId,
+            mercId = report.vendorId,
+            cardType = report.cardType
           }
 
     mkFullName :: DP.Person -> Text
@@ -1184,18 +1185,20 @@ getFinanceManagementFinancePaymentGatewayTransactionList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe UTCTime ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe API.PaymentModeFilter ->
   Maybe (ShortId Dashboard.Common.PaymentOrder) ->
   Maybe API.PaymentStatusFilter ->
   Maybe API.PgGateway ->
+  Maybe Text ->
   Maybe (Id Dashboard.Common.SubscriptionPurchase) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Flow API.PaymentTransactionReportListRes
-getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbLimit mbOffset mbPaymentMode mbPaymentOrderId mbPaymentStatus mbPgGateway mbSubscriptionId mbTo mbTxnAmountMax mbTxnAmountMin = do
+getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity mbFrom mbGatewayTransactionId mbLimit mbOffset mbPaymentMode mbPaymentOrderId mbPaymentStatus mbPgGateway mbRrn mbSubscriptionId mbTo mbTxnAmountMax mbTxnAmountMin = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -1203,7 +1206,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       offset = mkPageOffset mbOffset
 
   -- Resolve subscription purchases based on filters
-  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax (Just limit) (Just offset)
+  subscriptions <- resolveSubscriptions merchantOpCityId mbSubscriptionId mbPaymentOrderId mbRrn mbGatewayTransactionId mbFrom mbTo mbTxnAmountMin mbTxnAmountMax (Just limit) (Just offset)
 
   -- For each subscription, look up PaymentOrder, then build ORDER + REFUND entries
   allEntries <- fmap concat $
@@ -1244,7 +1247,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
           pure $ orderEntries <> refundEntries
 
   -- Apply in-memory filters (only paymentMode, paymentStatus, pgGateway)
-  let filteredEntries = filter (matchesFilters mbPaymentMode mbPaymentStatus mbPgGateway) allEntries
+  let filteredEntries = filter (matchesFilters mbPaymentMode mbPaymentStatus mbPgGateway mbRrn mbGatewayTransactionId) allEntries
       totalItems = length filteredEntries
 
   pure $
@@ -1258,6 +1261,8 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Id DMOC.MerchantOperatingCity ->
       Maybe (Id Dashboard.Common.SubscriptionPurchase) ->
       Maybe (ShortId Dashboard.Common.PaymentOrder) ->
+      Maybe Text ->
+      Maybe Text ->
       Maybe UTCTime ->
       Maybe UTCTime ->
       Maybe HighPrecMoney ->
@@ -1265,7 +1270,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Maybe Int ->
       Maybe Int ->
       Flow [DSP.SubscriptionPurchase]
-    resolveSubscriptions merchantOpCityId mbSubId mbOrderId mbFromDate mbToDate mbAmountMin mbAmountMax dbLimit dbOffset =
+    resolveSubscriptions merchantOpCityId mbSubId mbOrderId mbRrnFilter mbGatewayTxnIdFilter mbFromDate mbToDate mbAmountMin mbAmountMax dbLimit dbOffset =
       case mbSubId of
         Just subscriptionId ->
           QSubscriptionPurchase.findByPrimaryKey (cast subscriptionId) >>= \case
@@ -1281,20 +1286,26 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
                     Just sub -> pure [sub]
                     Nothing -> pure []
                 Nothing -> pure []
-            Nothing -> do
-              -- from and to are mandatory when no specific ID filter is provided
-              fromDate <- mbFromDate & fromMaybeM (InvalidRequest "'from' date is required when subscriptionId or paymentOrderId is not provided")
-              toDate <- mbToDate & fromMaybeM (InvalidRequest "'to' date is required when subscriptionId or paymentOrderId is not provided")
-              QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
-                merchantOpCityId
-                (Just DPlan.PREPAID_SUBSCRIPTION)
-                Nothing
-                (Just fromDate)
-                (Just toDate)
-                mbAmountMin
-                mbAmountMax
-                dbLimit
-                dbOffset
+            Nothing
+              | isJust mbRrnFilter || isJust mbGatewayTxnIdFilter -> do
+                txns <- HQPaymentTransaction.findByRrnOrEpgTxnId mbRrnFilter mbGatewayTxnIdFilter
+                let orderIds = nub $ map (\txn -> cast txn.orderId) txns
+                subs <- catMaybes <$> mapM QSubscriptionPurchase.findByPaymentOrderId orderIds
+                pure subs
+              | otherwise -> do
+                -- from and to are mandatory when no specific ID filter is provided
+                fromDate <- mbFromDate & fromMaybeM (InvalidRequest "'from' date is required when subscriptionId, paymentOrderId, rrn or gatewayTransactionId is not provided")
+                toDate <- mbToDate & fromMaybeM (InvalidRequest "'to' date is required when subscriptionId, paymentOrderId, rrn or gatewayTransactionId is not provided")
+                QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
+                  merchantOpCityId
+                  (Just DPlan.PREPAID_SUBSCRIPTION)
+                  Nothing
+                  (Just fromDate)
+                  (Just toDate)
+                  mbAmountMin
+                  mbAmountMax
+                  dbLimit
+                  dbOffset
 
     buildOrderEntry ::
       PaymentOrder.PaymentOrder ->
@@ -1363,7 +1374,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             refundStatus = Nothing,
             ipAddress = Nothing,
             pgName = txn.gatewayName,
-            pgMerchantId = order.paymentMerchantId
+            pgMerchantId = order.paymentMerchantId,
+            rrn = txn.rrn,
+            attemptTimestamp = txn.captureDateTime <|> Just txn.createdAt
           }
 
     buildRefundEntry ::
@@ -1434,7 +1447,9 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             refundStatus = Just $ show refund.status,
             ipAddress = Nothing,
             pgName = mbTxn >>= (.gatewayName),
-            pgMerchantId = order.paymentMerchantId
+            pgMerchantId = order.paymentMerchantId,
+            rrn = mbTxn >>= (.rrn),
+            attemptTimestamp = (mbTxn >>= (.captureDateTime)) <|> (mbTxn <&> (.createdAt))
           }
 
     selectRelevantPaymentTransaction ::
@@ -1479,13 +1494,17 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       Maybe API.PaymentModeFilter ->
       Maybe API.PaymentStatusFilter ->
       Maybe API.PgGateway ->
+      Maybe Text ->
+      Maybe Text ->
       API.PaymentTransactionReportItem ->
       Bool
-    matchesFilters mbModeFilter mbStatusFilter mbGwFilter item =
+    matchesFilters mbModeFilter mbStatusFilter mbGwFilter mbRrnFilter mbGatewayTxnIdFilter item =
       and
         [ matchesPaymentModeFilter mbModeFilter item.paymentMode,
           matchesPaymentStatusFilter mbStatusFilter item.transactionStatus,
-          matchesPgGatewayFilter mbGwFilter item.pgName
+          matchesPgGatewayFilter mbGwFilter item.pgName,
+          matchesRrnFilter mbRrnFilter item.rrn,
+          matchesGatewayTransactionIdFilter mbGatewayTxnIdFilter item.gatewayTransactionId
         ]
 
     matchesPaymentModeFilter :: Maybe API.PaymentModeFilter -> Maybe Text -> Bool
@@ -1516,6 +1535,14 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             API.RazorPay -> "razorpay"
             API.CCAvenue -> "ccavenue"
        in maybe False ((== expectedValue) . canonicalizeText) mbActualValue
+
+    matchesRrnFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesRrnFilter Nothing _ = True
+    matchesRrnFilter (Just rrnFilter) mbActualValue = mbActualValue == Just rrnFilter
+
+    matchesGatewayTransactionIdFilter :: Maybe Text -> Maybe Text -> Bool
+    matchesGatewayTransactionIdFilter Nothing _ = True
+    matchesGatewayTransactionIdFilter (Just gwTxnIdFilter) mbActualValue = mbActualValue == Just gwTxnIdFilter
 
     canonicalizeText :: Text -> Text
     canonicalizeText =
@@ -1851,38 +1878,39 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-  mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
-  let ctx =
-        FRT.buildInvoiceContext
-          FRT.BuildInvoiceContextInput
-            { language = lang,
-              logoUrl = tmplLogoUrl,
-              sellerTradeName = tmplSellerTradeName,
-              appName = tmplAppName,
-              invoice = chosenInv,
-              lineItems = chosenPdfData.parsedLineItems,
-              mbTaxTxn = chosenPdfData.mbTaxTxn,
-              mbPaymentMode = chosenPdfData.mbPaymentMethodType,
-              mbCardBrand = chosenPdfData.mbCardBrand,
-              mbCardLastFour = chosenPdfData.mbCardLastFour,
-              mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
-              mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
-              reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
-              ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
-              ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
-              ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
-              hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
-              categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
-              signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
-              cityState = transporterConfig.invoiceConfig >>= (.cityState),
-              qrImageDataUri = mbQrDataUri
-            }
-      mbInvType = case chosenInv.invoiceType of
-        AggregatedCommission -> Just AggregatedCommission
-        _ -> Nothing
-  html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
-  pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
+  mbStoredPdf <- if lang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
+  pdfBase64 <- case mbStoredPdf of
+    Just storedPdf -> pure storedPdf
+    Nothing -> do
+      mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
+      let ctx =
+            FRT.buildInvoiceContext
+              FRT.BuildInvoiceContextInput
+                { language = lang,
+                  logoUrl = tmplLogoUrl,
+                  sellerTradeName = tmplSellerTradeName,
+                  appName = tmplAppName,
+                  invoice = chosenInv,
+                  lineItems = chosenPdfData.parsedLineItems,
+                  mbTaxTxn = chosenPdfData.mbTaxTxn,
+                  mbPaymentMode = chosenPdfData.mbPaymentMethodType,
+                  mbCardBrand = chosenPdfData.mbCardBrand,
+                  mbCardLastFour = chosenPdfData.mbCardLastFour,
+                  mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
+                  mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
+                  mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+                  reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
+                  ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
+                  ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
+                  ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
+                  hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
+                  categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
+                  signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
+                  cityState = transporterConfig.invoiceConfig >>= (.cityState),
+                  qrImageDataUri = mbQrDataUri
+                }
+      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang tz ctx
+      generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $
     API.FinanceInvoicePdfResp

@@ -93,6 +93,7 @@ data TransporterConfig = TransporterConfig
     bulkWaiveOffLimit :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,
     cachedDevicesOSForSearchRequest :: [Kernel.Types.Version.DeviceType],
+    callingMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     canAddCancellationFee :: Kernel.Prelude.Bool,
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
@@ -125,6 +126,7 @@ data TransporterConfig = TransporterConfig
     createdAt :: Kernel.Prelude.UTCTime,
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
+    customerPayableFareBreakupSubItemsConfig :: Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode],
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -435,7 +437,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CallingOption = AnonymousCall | DirectCall | DualCall | ForceDirectCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,

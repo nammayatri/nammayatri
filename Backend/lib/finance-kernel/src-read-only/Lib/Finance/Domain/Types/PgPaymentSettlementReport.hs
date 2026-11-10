@@ -39,6 +39,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     pgApprovalCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pgBaseFee :: Kernel.Types.Common.HighPrecMoney,
     pgTax :: Kernel.Types.Common.HighPrecMoney,
+    pgTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rawData :: Kernel.Prelude.Maybe Data.Aeson.Value,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

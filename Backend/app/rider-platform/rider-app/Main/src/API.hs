@@ -24,9 +24,7 @@ import qualified API.Beckn as Beckn
 import qualified API.Beckn.FRFSSeller as BecknFRFSSeller
 import qualified API.Beckn.FRFSSeller.Onboarding as BecknFRFSSellerOnboarding
 import qualified API.Beckn.FRFSSellerRSF as BecknFRFSSellerRSF
-import qualified API.Conductor as Conductor
 import qualified API.DashboardExotel as DashboardExotel
-import qualified API.Depot as Depot
 import qualified API.DirectDashboard as DirectDashboard
 import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
@@ -105,8 +103,6 @@ type MainAPI =
              :> "v2"
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
-    :<|> Conductor.API
-    :<|> Depot.API
     :<|> FRFSMetrics.API
     :<|> MetaWhatsappWebhook.API
 
@@ -142,8 +138,6 @@ mainServer =
     :<|> Internal.handler
     :<|> LegalPublishInternal.handler
     :<|> juspayPayoutWebhookHandlerV2
-    :<|> Conductor.handler
-    :<|> Depot.handler
     :<|> FRFSMetrics.handler
     :<|> MetaWhatsappWebhook.handler
 

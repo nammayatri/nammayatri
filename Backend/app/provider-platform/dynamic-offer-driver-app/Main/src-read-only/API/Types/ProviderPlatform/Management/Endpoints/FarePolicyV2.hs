@@ -215,6 +215,20 @@ data FPV2FareChargeComponent
   | BoothChargeComponent
   | RideExtraTimeFareComponent
   | SchedulingChargeComponent
+  | SgstComponent
+  | CgstComponent
+  | ParkingTaxComponent
+  | CardChargeOnFareComponent
+  | CardChargeFixedComponent
+  | ConditionalChargesComponent
+  | CustomerGateFeeComponent
+  | DriverSelectedFareComponent
+  | NegotiatedFareDeltaComponent
+  | NegativeFareAdjustmentComponent
+  | PaymentChargePaidByCustomerComponent
+  | GovtChargesComponent
+  | PersonalDiscountComponent
+  | BusinessDiscountComponent
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

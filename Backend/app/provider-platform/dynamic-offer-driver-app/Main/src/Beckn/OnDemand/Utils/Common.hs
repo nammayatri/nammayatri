@@ -245,6 +245,7 @@ castVariant Variant.PINK_AUTO = (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
 castVariant Variant.EV_HATCHBACK = (show Enums.CAB, "EV_HATCHBACK")
 castVariant Variant.EV_SEDAN = (show Enums.CAB, "EV_SEDAN")
 castVariant Variant.EV_SUV = (show Enums.CAB, "EV_SUV")
+castVariant Variant.SHARED_CAB = (show Enums.CAB, "SHARED_CAB")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -1165,7 +1166,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       -- persisted quote that predates that field being populated.
       serviceTierName = fromMaybe serviceTier.name vehicleServiceTierName,
       serviceTierDescription =
-        if tripCategory == DT.OneWay DT.OneWayRideOtp
+        if isDerived
           then serviceTier.spotServiceTierShortDesc <|> serviceTier.shortDescription
           else serviceTier.shortDescription,
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty

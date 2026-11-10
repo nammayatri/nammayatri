@@ -47,7 +47,7 @@ postOperatorConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id (cast driverId)) SGuard.LinkToOperator (SGuard.TargetDriver (cast driverId)) $ do
-    SA.endAssociationsForOperatorLink merchantOperatingCityId transporterConfig driver
+    SA.endAssociationsForOperatorLink merchantOperatingCityId transporterConfig driver operator.id
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
     QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
     Analytics.handleDriverAnalyticsAndFlowStatus

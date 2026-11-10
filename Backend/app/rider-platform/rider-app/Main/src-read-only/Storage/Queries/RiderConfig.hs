@@ -49,7 +49,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
+    [ Se.Set Beam.allowMultipleOpenMeterRides (Just allowMultipleOpenMeterRides),
+      Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
       Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
@@ -152,6 +153,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.initiateFirstMultimodalJourney (Just initiateFirstMultimodalJourney),
       Se.Set Beam.intercitySearchLocations intercitySearchLocations,
       Se.Set Beam.invoiceConfig (invoiceConfig >>= Just . Data.Aeson.toJSON),
+      Se.Set Beam.invoiceEmailEnabled invoiceEmailEnabled,
       Se.Set Beam.invoiceLogoUrl invoiceLogoUrl,
       Se.Set Beam.isAvoidToll isAvoidToll,
       Se.Set Beam.isDeviceIdCheckDisabled isDeviceIdCheckDisabled,
@@ -199,6 +201,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.nyRegularMinGapSeconds (Just nyRegularMinGapSeconds),
       Se.Set Beam.nyRegularSubscriptionBatchSize nyRegularSubscriptionBatchSize,
       Se.Set Beam.offerListCacheVersion offerListCacheVersion,
+      Se.Set Beam.openMeterMaxIdleHours (Just openMeterMaxIdleHours),
       Se.Set Beam.passExpiryReminderBatchSize passExpiryReminderBatchSize,
       Se.Set Beam.passExpiryReminderDays passExpiryReminderDays,
       Se.Set Beam.passExpiryReminderNextRunLocalTime passExpiryReminderNextRunLocalTime,
@@ -234,6 +237,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.sensitiveWordsForExactMatch sensitiveWordsForExactMatch,
       Se.Set Beam.serviceTierRelationshipCfg (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.settleCancellationFeeBeforeNextRide settleCancellationFeeBeforeNextRide,
+      Se.Set Beam.sharedCabConfig (sharedCabConfig >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.silentReallocationWindowSeconds silentReallocationWindowSeconds,
       Se.Set Beam.singleModeWalkSpeed singleModeWalkSpeed,
       Se.Set Beam.sosTrackingLink sosTrackingLink,
@@ -281,7 +285,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
-          { alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
+          { allowMultipleOpenMeterRides = fromMaybe False allowMultipleOpenMeterRides,
+            alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
             appUrl = appUrl,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
@@ -384,6 +389,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             initiateFirstMultimodalJourney = fromMaybe False initiateFirstMultimodalJourney,
             intercitySearchLocations = intercitySearchLocations,
             invoiceConfig = invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe,
+            invoiceEmailEnabled = invoiceEmailEnabled,
             invoiceLogoUrl = invoiceLogoUrl,
             isAvoidToll = isAvoidToll,
             isDeviceIdCheckDisabled = isDeviceIdCheckDisabled,
@@ -432,6 +438,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             nyRegularMinGapSeconds = fromMaybe 900 nyRegularMinGapSeconds,
             nyRegularSubscriptionBatchSize = nyRegularSubscriptionBatchSize,
             offerListCacheVersion = offerListCacheVersion,
+            openMeterMaxIdleHours = fromMaybe 12 openMeterMaxIdleHours,
             passExpiryReminderBatchSize = passExpiryReminderBatchSize,
             passExpiryReminderDays = passExpiryReminderDays,
             passExpiryReminderNextRunLocalTime = passExpiryReminderNextRunLocalTime,
@@ -467,6 +474,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             sensitiveWordsForExactMatch = sensitiveWordsForExactMatch,
             serviceTierRelationshipCfg = serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe,
             settleCancellationFeeBeforeNextRide = settleCancellationFeeBeforeNextRide,
+            sharedCabConfig = sharedCabConfig >>= Kernel.Utils.JSON.valueToMaybe,
             silentReallocationWindowSeconds = silentReallocationWindowSeconds,
             singleModeWalkSpeed = singleModeWalkSpeed,
             sosTrackingLink = sosTrackingLink,
@@ -510,7 +518,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
 instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
-      { Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
+      { Beam.allowMultipleOpenMeterRides = Just allowMultipleOpenMeterRides,
+        Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
         Beam.appUrl = appUrl,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
@@ -613,6 +622,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.initiateFirstMultimodalJourney = Just initiateFirstMultimodalJourney,
         Beam.intercitySearchLocations = intercitySearchLocations,
         Beam.invoiceConfig = invoiceConfig >>= Just . Data.Aeson.toJSON,
+        Beam.invoiceEmailEnabled = invoiceEmailEnabled,
         Beam.invoiceLogoUrl = invoiceLogoUrl,
         Beam.isAvoidToll = isAvoidToll,
         Beam.isDeviceIdCheckDisabled = isDeviceIdCheckDisabled,
@@ -661,6 +671,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.nyRegularMinGapSeconds = Just nyRegularMinGapSeconds,
         Beam.nyRegularSubscriptionBatchSize = nyRegularSubscriptionBatchSize,
         Beam.offerListCacheVersion = offerListCacheVersion,
+        Beam.openMeterMaxIdleHours = Just openMeterMaxIdleHours,
         Beam.passExpiryReminderBatchSize = passExpiryReminderBatchSize,
         Beam.passExpiryReminderDays = passExpiryReminderDays,
         Beam.passExpiryReminderNextRunLocalTime = passExpiryReminderNextRunLocalTime,
@@ -696,6 +707,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.sensitiveWordsForExactMatch = sensitiveWordsForExactMatch,
         Beam.serviceTierRelationshipCfg = serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON,
         Beam.settleCancellationFeeBeforeNextRide = settleCancellationFeeBeforeNextRide,
+        Beam.sharedCabConfig = sharedCabConfig >>= Just . Data.Aeson.toJSON,
         Beam.silentReallocationWindowSeconds = silentReallocationWindowSeconds,
         Beam.singleModeWalkSpeed = singleModeWalkSpeed,
         Beam.sosTrackingLink = sosTrackingLink,

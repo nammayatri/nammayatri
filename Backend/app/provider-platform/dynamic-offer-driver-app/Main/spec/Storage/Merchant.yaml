@@ -51,6 +51,7 @@ imports:
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
   TdsConfig: Domain.Types.Extra.TransporterConfig
   RecomputePolicy: Domain.Types.Extra.TransporterConfig
+  FareBreakupNode: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1056,7 +1057,7 @@ TransporterConfig:
       erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
-      enum: "AnonymousCall, DirectCall, DualCall"
+      enum: "AnonymousCall, DirectCall, DualCall, ForceDirectCall"
     AnalyticsConfig:
       weekStartMode: Int
       earningsWindowSize: Int
@@ -1346,6 +1347,7 @@ TransporterConfig:
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
+    customerPayableFareBreakupSubItemsConfig: "Maybe [FareBreakupNode]"
     fareRecomputePolicy: Maybe RecomputePolicy # THE recompute config: unified nested policy; absent fields fall back to code defaults (RecomputeDecision.mkRecomputeConfig). Legacy scattered columns are no longer read -- backfill before deploy (dev/sql-seed/fare-recompute-policy-backfill.sql)
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
@@ -1641,6 +1643,7 @@ TransporterConfig:
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
     forceDirectCalling: Maybe Bool
+    callingMode: Maybe Text # A CallingOption name. When set and recognised it wins over driverCallingOption and forceDirectCalling; plain text so an unrecognised value falls back instead of failing the row.
     showRoutePerRequest: Maybe Bool # When True, the driver app shows the route on the ride request popup and the ride-assigned screen
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
@@ -1701,6 +1704,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     fareRecomputePolicy: Maybe Value
+    customerPayableFareBreakupSubItemsConfig: Maybe Value
     allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
@@ -1816,6 +1820,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     fareRecomputePolicy: Kernel.Prelude.toJSON <$> fareRecomputePolicy|E
+    customerPayableFareBreakupSubItemsConfig: Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
     preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
@@ -1942,6 +1947,8 @@ TransporterConfig:
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     fareRecomputePolicy: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareRecomputePolicy|E
+    customerPayableFareBreakupSubItemsConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerPayableFareBreakupSubItemsConfig|E
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
@@ -2054,6 +2061,7 @@ TransporterConfig:
     fareRecomputePolicy: json
     manualTollChargeConfig: json
     rideEvidenceConfig: json
+    customerPayableFareBreakupSubItemsConfig: json
     issueBreachConfig: json
     gpsTollBehaviorWindowDays: int
     enableGpsTollBehavior: boolean
@@ -2336,6 +2344,10 @@ TransporterConfig:
         - manualTollChargeConfig
         - rideEvidenceConfig
         - showRoutePerRequest
+    updateCustomerPayableFareBreakupSubItemsConfig:
+      kvFunction: updateOneWithKV
+      params: [customerPayableFareBreakupSubItemsConfig]
+      where: merchantOperatingCityId
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

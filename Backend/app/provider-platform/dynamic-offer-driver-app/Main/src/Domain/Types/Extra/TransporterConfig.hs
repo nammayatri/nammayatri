@@ -15,8 +15,10 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types as DTC
+import qualified Domain.Types.FarePolicy as FP
 import GHC.Generics (Generic)
 import Kernel.Types.Common (HighPrecMeters, HighPrecMoney, Meters, Seconds)
+import Lib.Yudhishthira.TypesTH (GenericDefaults (..))
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
@@ -244,3 +246,23 @@ data RecomputeBand = RecomputeBand
     minThresholdDistance :: Meters
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data FareBreakupNode = FareBreakupNode
+  { key :: Text,
+    node :: FareBreakupNodeValue
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data FareBreakupNodeValue
+  = FareTags [FP.FareChargeComponent]
+  | SubItems [FareBreakupNode]
+  deriving (Generic, Show, Eq)
+
+instance ToJSON FareBreakupNodeValue where
+  toJSON = genericToJSON defaultOptions {sumEncoding = UntaggedValue}
+
+instance FromJSON FareBreakupNodeValue where
+  parseJSON = genericParseJSON defaultOptions {sumEncoding = UntaggedValue}
+
+instance GenericDefaults FareBreakupNode where
+  genDef _ = [FareBreakupNode {key = "defaultText", node = FareTags [FP.RideFare]}]

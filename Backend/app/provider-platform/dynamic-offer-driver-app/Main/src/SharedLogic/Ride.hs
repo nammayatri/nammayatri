@@ -319,7 +319,7 @@ recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
                 }
         result <-
           withTryCatch "getOfferDiscount:recomputeRideFinancialsForFareUpdate" $
-            CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
+            CallBAPInternal.getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
         case result of
           Right resp -> pure resp.discountAmount
           Left err -> do
@@ -883,3 +883,4 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.PINK_AUTO -> buffer.autorickshaw
     DST.MAHILA_SHAKTI -> buffer.autorickshaw
     DST.INSTANT_AUTO -> buffer.autorickshaw
+    DST.SHARED_CAB -> buffer.sedan

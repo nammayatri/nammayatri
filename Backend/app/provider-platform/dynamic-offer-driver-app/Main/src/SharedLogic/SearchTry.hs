@@ -42,7 +42,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -54,13 +53,12 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
 import SharedLogic.DriverPool.Types
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
-import SharedLogic.ScheduledRideTopDrivers (topDriverBatchCount, topDriversLeadTime, topDriversRoundCutoff)
+import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime)
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
@@ -70,7 +68,6 @@ import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -115,14 +112,11 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
-betterDriverSearchRadiusMarginMeters :: HighPrecMeters
-betterDriverSearchRadiusMarginMeters = 100
-
--- | Radius of a stand-by better-driver search: the assigned driver's live straight-line
--- distance to pickup minus a margin (a replacement must be clearly closer), capped at the
--- city cap and never below 1m. Recomputed fresh per batch and stored nowhere - the driver
--- keeps moving. Nothing for normal searches, or if any input is missing (caller then falls
--- back to the normal radius).
+-- | Radius of a stand-by better-driver search: the city's proximity abort radius
+-- (betterDriverProximityAbortRadiusMeters), the same for every batch. A search only runs while
+-- the assigned driver is outside that radius, so every driver found inside it is closer to the
+-- pickup. Nothing for normal searches, or if the booking or the radius is missing (caller then
+-- falls back to the normal radius).
 computeBetterDriverSearchRadiusOverride ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -145,25 +139,8 @@ computeBetterDriverSearchRadiusOverride searchTry
         case mbBooking of
           Nothing -> pure Nothing
           Just booking -> do
-            mbRide <- QRide.findActiveByRBId booking.id
-            case mbRide of
-              Nothing -> pure Nothing
-              Just ride -> do
-                mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-                case mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters) of
-                  Nothing -> pure Nothing
-                  Just cap -> do
-                    -- Pre-pickup driver: pings are in LTS's on_pickup bucket, not on_ride.
-                    driverLocationResp <- LTSF.pickupDriverLocation ride.id booking.providerId ride.driverId
-                    pure $
-                      ( \latest ->
-                          highPrecMetersToMeters (max 1 (min cap (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates booking.fromLocation) - betterDriverSearchRadiusMarginMeters)))
-                      )
-                        <$> lastMaybe driverLocationResp.loc
-  where
-    lastMaybe [] = Nothing
-    lastMaybe [x] = Just x
-    lastMaybe (_ : xs) = lastMaybe xs
+            mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+            pure $ highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
 
 initiateDriverSearchBatch ::
   ( EncFlow m r,
@@ -264,17 +241,16 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         return searchTry
       Right _ -> return searchTry
   where
-    -- Run 1 at booking; run 2 at pickup - lead time if run 1 will be done by then. Both end at the cutoff.
+    -- Run 1 at booking; run 2 at pickup - lead time when the pickup is more than an hour away (closer than
+    -- that, run 1 alone is enough). Both end at the cutoff.
     scheduleTopDriversRound searchTry driverPoolConfig now =
-      unless (isAllocatorBatch || isRepeatSearch) $ do
+      unless isAllocatorBatch $ do
         mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing
         whenJust mbTransporterConfig $ \transporterConfig ->
           whenJust (topDriversLeadTime transporterConfig driverPoolConfig.scheduleTryTimes) $ \leadTime -> do
-            let batchInterval = getNextBatchScheduleTime driverPoolConfig
-                firstRunIn = 2
-                roundEndsIn = maybe 0 (\cutoff -> diffUTCTime cutoff now) (topDriversRoundCutoff batchInterval driverPoolConfig.scheduleTryTimes searchReq.startTime)
+            let firstRunIn = 2
                 secondRunIn = diffUTCTime searchReq.startTime now - leadTime
-                roundDuration = fromIntegral topDriverBatchCount * fromIntegral batchInterval
+                pickupFarEnoughForSecondRun = diffUTCTime searchReq.startTime now > 3600
                 jobData =
                   SendSearchRequestToDriverJobData
                     { searchTryId = searchTry.id,
@@ -285,11 +261,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                 createRound runIn = do
                   JC.createJobIn @_ @'SendScheduledSearchRequestToTopDrivers (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) runIn jobData
                   logInfo $ "initiateDriverSearchBatch: top drivers round for searchTry " <> searchTry.id.getId <> " queued in " <> show runIn
-            if roundEndsIn > firstRunIn
-              then do
-                createRound firstRunIn
-                when (secondRunIn >= firstRunIn + roundDuration && secondRunIn < roundEndsIn) $ createRound secondRunIn
-              else logInfo $ "initiateDriverSearchBatch: no room for a top drivers round before the regular round for searchTry " <> searchTry.id.getId
+            createRound firstRunIn
+            when pickupFarEnoughForSecondRun $ createRound secondRunIn
 
     scheduleBatching searchTry inTime = do
       let jobData =

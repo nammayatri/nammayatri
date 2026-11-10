@@ -2,6 +2,7 @@
 
 module SharedLogic.Finance.EInvoice
   ( generateEInvoiceForInvoice,
+    isEInvoiceEnabledForCity,
   )
 where
 
@@ -36,6 +37,19 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirect
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as QDriverGstin
+
+isEInvoiceEnabledForCity ::
+  (BeamFlow.BeamFlow m r) =>
+  Text ->
+  m Bool
+isEInvoiceEnabledForCity merchantOpCityId = do
+  mbServiceConfig <-
+    getOneConfig
+      (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)})
+      Nothing
+  pure $ case mbServiceConfig of
+    Just sc | DMSC.GSTEInvoiceServiceConfig _ <- sc.serviceConfig -> True
+    _ -> False
 
 -- | Attempt B2B e-invoice generation for a created invoice.
 --
@@ -144,6 +158,7 @@ generateEInvoiceForInvoice invoice = do
               logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
               actorInfo <- asks (.actorInfo)
               QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode (Just actorInfo.actorType) actorInfo.actorId invoice.id
+              QFInvoice.updatePdfS3Path Nothing (Just actorInfo.actorType) actorInfo.actorId invoice.id
               logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
           case eResult of
             Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx

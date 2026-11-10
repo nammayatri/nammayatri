@@ -1556,7 +1556,18 @@ buildComponentMap FareParameters {..} =
             (ReturnFeeChargeComponent, maybeZero returnFeeCharge),
             (BoothChargeComponent, maybeZero boothCharge),
             (RideExtraTimeFareComponent, maybeZero rideExtraTimeFare),
-            (SchedulingChargeComponent, maybeZero schedulingCharge)
+            (SchedulingChargeComponent, maybeZero schedulingCharge),
+            (ParkingTaxComponent, maybeZero parkingChargeTax),
+            (CardChargeOnFareComponent, fromMaybe 0 (cardCharge >>= (.onFare))),
+            (CardChargeFixedComponent, fromMaybe 0 (cardCharge >>= (.fixed))),
+            (ConditionalChargesComponent, sum (map (.charge) conditionalCharges)),
+            (CustomerGateFeeComponent, sum (map (.amount) (fromMaybe [] customerGateFeeItems))),
+            (DriverSelectedFareComponent, maybeZero driverSelectedFare),
+            (NegotiatedFareDeltaComponent, maybeZero negotiatedFareDelta),
+            (NegativeFareAdjustmentComponent, maybeZero negativeFareAdjustment),
+            (GovtChargesComponent, maybeZero govtCharges),
+            (PersonalDiscountComponent, if shouldApplyPersonalDiscount then negate (maybeZero personalDiscount) else 0),
+            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0)
           ]
    in Map.union baseMap (detailComponentMap fareParametersDetails)
 
@@ -1588,11 +1599,15 @@ detailComponentMap fareParametersDetails =
         DFParams.AmbulanceDetails det ->
           Map.fromList
             [ (AmbulanceDistBasedFareComponent, det.distBasedFare),
-              (PlatformFeeComponent, maybeZero det.platformFee)
+              (PlatformFeeComponent, maybeZero det.platformFee),
+              (SgstComponent, maybeZero det.sgst),
+              (CgstComponent, maybeZero det.cgst)
             ]
         DFParams.SlabDetails det ->
           Map.fromList
-            [ (PlatformFeeComponent, maybeZero det.platformFee)
+            [ (PlatformFeeComponent, maybeZero det.platformFee),
+              (SgstComponent, maybeZero det.sgst),
+              (CgstComponent, maybeZero det.cgst)
             ]
 
 -- | Get the monetary value of a component from the component map

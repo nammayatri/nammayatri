@@ -139,7 +139,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
             throwError (InvalidRequest "Fleet-linked drivers cannot apply an operator referral code; their operator is derived from the fleet")
           person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver dr.driverId personId) SGuard.LinkToFleet (SGuard.TargetDriver personId) $ do
-            SA.endDriverAssociations merchantOpCityId transporterConfig person
+            SA.endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig person (Just dr.driverId)
             DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
             mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
             case mbExistingInactiveAssoc of

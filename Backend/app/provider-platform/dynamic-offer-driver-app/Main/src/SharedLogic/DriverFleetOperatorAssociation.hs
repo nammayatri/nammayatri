@@ -2,6 +2,7 @@ module SharedLogic.DriverFleetOperatorAssociation
   ( checkForDriverAssociationOverwrite,
     guardDriverNotAssociated,
     endDriverAssociations,
+    endDriverAssociationsKeepingInviteFrom,
     endFleetAssociations,
     makeFleetOperatorAssociation,
     makeDriverOperatorAssociation,
@@ -10,6 +11,7 @@ module SharedLogic.DriverFleetOperatorAssociation
     checkFleetDriverAssociationIgnoringActive,
     checkFleetOperatorAssociation,
     checkDriverOperatorAssociation,
+    checkFleetDriverAndDriverOperatorAssociation,
     ensureDriverNotActiveElsewhere,
     resolveOperatorByCode,
     associateDriverWithOperator,
@@ -102,7 +104,16 @@ endDriverAssociations ::
   TransporterConfig ->
   DP.Person ->
   Flow ()
-endDriverAssociations merchantOpCityId transporterConfig driver = do
+endDriverAssociations merchantOpCityId transporterConfig driver =
+  endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig driver Nothing
+
+endDriverAssociationsKeepingInviteFrom ::
+  Id DMOC.MerchantOperatingCity ->
+  TransporterConfig ->
+  DP.Person ->
+  Maybe (Id DP.Person) ->
+  Flow ()
+endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig driver mbLinkingPartyId = do
   let driverFullName = driver.firstName <> maybe "" (" " <>) driver.lastName
   driverMobile <- maybe (pure "unknown") decrypt driver.mobileNumber
   existingFDAssociations <- QFDA.findAllByDriverId driver.id True
@@ -149,6 +160,16 @@ endDriverAssociations merchantOpCityId transporterConfig driver = do
           let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
           let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
           TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) Nothing ()
+
+  let isFromLinkingParty partyId = Just partyId == (getId <$> mbLinkingPartyId)
+  pendingOperatorInvites <- QDOA.findAllByDriverId driver.id False
+  forM_ (nub $ filter (not . isFromLinkingParty) $ (.operatorId) <$> pendingOperatorInvites) $ \operatorId -> do
+    logInfo $ "End pending operator driver invite: operatorId: " <> operatorId <> " driverId: " <> driver.id.getId
+    QDOA.endOperatorDriverAssociation operatorId driver.id
+  pendingFleetInvites <- QFDA.findAllByDriverId driver.id False
+  forM_ (filter (not . isFromLinkingParty . (.fleetOwnerId)) pendingFleetInvites) $ \invite -> do
+    logInfo $ "End pending fleet driver invite: fleetOwnerId: " <> invite.fleetOwnerId <> " driverId: " <> driver.id.getId
+    QFDA.endById invite.id
 
 endFleetAssociations ::
   Id DMOC.MerchantOperatingCity ->
@@ -279,9 +300,9 @@ checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
   if isDriverOperatorAssociated
     then return True
     else do
-      QFDA.findByDriverId driverId True >>= \case
-        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
-        Nothing -> return False
+      -- A driver can hold more than one active fleet link, so check them all.
+      fleetDriverAssocs <- QFDA.findAllByDriverId driverId True
+      or <$> mapM (\fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId) fleetDriverAssocs
 
 associateDriverWithOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DP.Person -> Bool -> Text -> Maybe DVC.VehicleCategory -> Flow ()
 associateDriverWithOperator merchant moc person operator isNew driverMobile mbVehicleCategory = do
@@ -297,11 +318,9 @@ associateDriverWithOperator merchant moc person operator isNew driverMobile mbVe
 linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> TransporterConfig -> DP.Person -> DP.Person -> Flow ()
 linkDriverToOperator merchant moc transporterConfig driver operator = do
   checkForDriverAssociationOverwrite merchant driver.id
-  endAssociationsForOperatorLink moc.id transporterConfig driver
+  endAssociationsForOperatorLink moc.id transporterConfig driver operator.id
   pendingAssocs <- QDOA.findAllByDriverId driver.id False
   let isForOperator assoc = assoc.operatorId == operator.id.getId
-  forM_ (nub $ (.operatorId) <$> filter (not . isForOperator) pendingAssocs) $ \otherOperatorId ->
-    QDOA.endOperatorDriverAssociation otherOperatorId driver.id
   mbVehicleCategory <- (>>= (.onboardingVehicleCategory)) <$> QDI.findById (cast driver.id)
   case find isForOperator pendingAssocs of
     Just pending -> QDOA.activateById pending.id mbVehicleCategory
@@ -315,10 +334,10 @@ linkDriverToOperator merchant moc transporterConfig driver operator = do
 
 -- | Ends the driver's active fleet/operator links before an operator link. The vehicle goes only
 --   when the driver leaves a fleet (it is the fleet's); from an operator or from no link it stays.
-endAssociationsForOperatorLink :: Id DMOC.MerchantOperatingCity -> TransporterConfig -> DP.Person -> Flow ()
-endAssociationsForOperatorLink merchantOpCityId transporterConfig driver = do
+endAssociationsForOperatorLink :: Id DMOC.MerchantOperatingCity -> TransporterConfig -> DP.Person -> Id DP.Person -> Flow ()
+endAssociationsForOperatorLink merchantOpCityId transporterConfig driver operatorId = do
   leavesFleet <- not . null <$> QFDA.findAllByDriverId driver.id True
-  endDriverAssociations merchantOpCityId transporterConfig driver
+  endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig driver (Just operatorId)
   when leavesFleet $
     DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driver.id
 
