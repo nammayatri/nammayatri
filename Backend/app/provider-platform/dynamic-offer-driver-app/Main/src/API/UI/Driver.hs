@@ -322,9 +322,9 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant c
 
 withSharedCabInfo :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
 withSharedCabInfo merchantOpCityId res = do
-  let variant = (.variant) <$> res.linkedVehicle
-  version <- SharedCab.sharedCabFeedVersion merchantOpCityId variant
-  tripActive <- SharedCab.sharedCabTripActive res.id res.linkedVehicle
+  let isSharedCab = isJust res.activeRideType
+  version <- SharedCab.sharedCabFeedVersion merchantOpCityId isSharedCab
+  tripActive <- SharedCab.sharedCabTripActive res.id (if isSharedCab then res.linkedVehicle else Nothing)
   pure res {DDriver.publicTransportVersion = version, DDriver.sharedCabTripActive = tripActive}
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess

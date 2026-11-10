@@ -9,10 +9,10 @@ import Data.Aeson (Value (..), decode, encode, object, (.=))
 import Data.Time (UTCTime (..), fromGregorian)
 import "dynamic-offer-driver-app" Domain.Action.Internal.SharedCabCallNumber (callNumberAllowed)
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionReason, bookingActionOf)
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as DCommon
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as SP
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.VehicleTrip as DVT
-import qualified "beckn-spec" Domain.Types.VehicleVariant as DV
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "dynamic-offer-driver-app" SharedLogic.SharedCab.RiderClient (BAPBookingOperationReq (..), BAPMessageReq (..), RiderCallNumberResp (..))
 import "dynamic-offer-driver-app" SharedLogic.SharedCab.Trip (RiderRun (..), TripAction (..), tripAction)
@@ -80,13 +80,14 @@ tests =
         (decode . encode) (BAPMessageReq {driverId = "d1", vehicleNumber = "ML05A9999", message = "on my way"})
           @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "message" .= ("on my way" :: String)]),
       testCase "the call number is handed out only for a driver on a shared cab" $
-        [ callNumberAllowed SP.DRIVER (Just DV.SHARED_CAB),
-          callNumberAllowed SP.DRIVER (Just DV.SEDAN),
-          callNumberAllowed SP.DRIVER Nothing,
-          callNumberAllowed SP.FLEET_OWNER (Just DV.SHARED_CAB),
-          callNumberAllowed SP.BUS_DRIVER (Just DV.SHARED_CAB)
+        [ callNumberAllowed SP.DRIVER [DCommon.SHARED_CAB],
+          callNumberAllowed SP.DRIVER [DCommon.TAXI, DCommon.SHARED_CAB],
+          callNumberAllowed SP.DRIVER [DCommon.SEDAN],
+          callNumberAllowed SP.DRIVER [],
+          callNumberAllowed SP.FLEET_OWNER [DCommon.SHARED_CAB],
+          callNumberAllowed SP.BUS_DRIVER [DCommon.SHARED_CAB]
         ]
-          @?= [True, False, False, False, False],
+          @?= [True, True, False, False, False, False],
       testCase "the plate's trip row follows rider-app's session: same run, another run, or none" $
         let runOf tripId walkups earnings = RiderRun {tripId, routeCode = "R2", walkupCount = walkups, earnings, fromStop = Nothing, toStop = Nothing}
             run tripId walkups earnings = Just (runOf tripId walkups earnings)

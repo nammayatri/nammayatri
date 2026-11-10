@@ -7,9 +7,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Shared-cab driver-facing actions: a pass-through that rejects unless the variant is SHARED_CAB and forwards to rider-app, which
+-- | Shared-cab driver-facing actions: a pass-through that rejects unless the vehicle has the SHARED_CAB tier and forwards to rider-app, which
 -- checks under the plate lock that the driver owns the cab's live session and (for booking actions) that the booking is on that plate.
--- Taxi dispatch never sees these drivers: no taxi service tier allows the SHARED_CAB variant.
 module Domain.Action.UI.SharedCab
   ( getPublicTransportData,
     postSharedCabRoutesDemand,
@@ -42,7 +41,6 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.SharedCabSession
 import qualified Domain.Types.Vehicle as DVehicle
 import qualified Domain.Types.VehicleTrip as DVT
-import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -136,11 +134,10 @@ driverTrips (personId, _merchantId, merchantOpCityId) mbDate mbTripId = do
 
 sharedCabTripActive :: Id SP.Person -> Maybe DVehicle.VehicleAPIEntity -> Flow (Maybe Bool)
 sharedCabTripActive personId = \case
-  Just vehicle
-    | vehicle.variant == DV.SHARED_CAB ->
-      either (const Nothing) (Just . maybe False ((== personId) . (.driverId)))
-        <$> withTryCatch "sharedCabTripActive" (QVT.findActiveByVehicleNumber vehicle.registrationNo)
-  _ -> pure Nothing
+  Just vehicle ->
+    either (const Nothing) (Just . maybe False ((== personId) . (.driverId)))
+      <$> withTryCatch "sharedCabTripActive" (QVT.findActiveByVehicleNumber vehicle.registrationNo)
+  Nothing -> pure Nothing
 
 tripSummary :: DVT.VehicleTrip -> SharedCabTripSummary
 tripSummary trip =
@@ -172,9 +169,9 @@ validateSharedCabDriver :: Id SP.Person -> Flow DVehicle.Vehicle
 validateSharedCabDriver personId = do
   validateDriver personId
   vehicle <- QVehicle.findById personId >>= fromMaybeM (DriverWithoutVehicle personId.getId)
-  unless (vehicle.variant == DV.SHARED_CAB) $
+  unless (DCommon.SHARED_CAB `elem` vehicle.selectedServiceTiers) $
     throwError $
-      InvalidRequest ("Vehicle variant " <> show vehicle.variant <> " is not a shared cab")
+      InvalidRequest ("Vehicle variant " <> show vehicle.variant <> " has no shared-cab tier")
   pure vehicle
 
 sharedCabBPPConfig :: Id MerchantOperatingCity -> Flow DIBC.IntegratedBPPConfig
@@ -192,9 +189,9 @@ routeData (personId, _merchantId, merchantOpCityId) = do
   SharedCabBAP.getSharedCabRouteData bap.apiKey bap.url integratedBPPConfig.agencyKey
 
 -- | Rider-app owns the feed, so a demand read with no routes fetches its version. A failure only leaves the app on its cached routes.
-sharedCabFeedVersion :: Id MerchantOperatingCity -> Maybe DV.VehicleVariant -> Flow (Maybe Text)
-sharedCabFeedVersion merchantOpCityId variant
-  | variant /= Just DV.SHARED_CAB = pure Nothing
+sharedCabFeedVersion :: Id MerchantOperatingCity -> Bool -> Flow (Maybe Text)
+sharedCabFeedVersion merchantOpCityId isSharedCab
+  | not isSharedCab = pure Nothing
   | otherwise =
     either (const Nothing) identity
       <$> withTryCatch
