@@ -226,7 +226,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
   -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
   when (monitorPickupProgress && not booking.isScheduled) $

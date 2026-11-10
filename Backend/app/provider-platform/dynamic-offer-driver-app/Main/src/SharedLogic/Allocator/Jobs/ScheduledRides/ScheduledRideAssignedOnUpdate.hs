@@ -301,7 +301,7 @@ activateScheduledRide driverId bookingId booking ride driver vehicle transporter
   whenJust (booking.toLocation) $ \toLoc -> do
     QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
   void $ QRide.updateStatus ride.id DRide.NEW
-  void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing}))
   -- Forked: a BAP NACK throws, and the tail below still has the pickup monitor to schedule.
   fork "scheduled ride activation push to BAP" $ do
     notifyDriverOnScheduledRideAssigned booking ride driver
