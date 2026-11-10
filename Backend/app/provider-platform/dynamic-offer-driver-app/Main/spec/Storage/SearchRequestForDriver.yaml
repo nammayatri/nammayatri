@@ -198,10 +198,10 @@ SearchRequestForDriver:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
-    clientOsType: (clientDevice <&> (.deviceType))|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsVersion: (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType: (clientDevice <&> Kernel.Types.Version.deviceType)|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     vehicleServiceTier: Kernel.Prelude.Just|I
     createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E

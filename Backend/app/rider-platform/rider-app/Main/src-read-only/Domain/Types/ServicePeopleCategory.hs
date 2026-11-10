@@ -34,12 +34,18 @@ data ServicePeopleCategory = ServicePeopleCategory
   }
   deriving (Generic, Show)
 
-data CancelCharge = FlatFee Kernel.Types.Common.HighPrecMoney | Percentage Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CancelCharge
+  = FlatFee Kernel.Types.Common.HighPrecMoney
+  | Percentage Kernel.Prelude.Int
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationCharge = CancellationCharge {cancelCharge :: Domain.Types.ServicePeopleCategory.CancelCharge, time :: Kernel.Types.Common.Seconds}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data PricingType = SameDay | AllDays deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PricingType
+  = SameDay
+  | AllDays
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelCharge)
 

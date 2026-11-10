@@ -17,27 +17,28 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketSubPlace as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketSubPlace.TicketSubPlace -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketSubPlace.TicketSubPlace -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketSubPlace.TicketSubPlace] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketSubPlace.TicketSubPlace] -> m ()
 createMany = traverse_ create
 
 findActiveByTicketPlaceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Bool -> m [Domain.Types.TicketSubPlace.TicketSubPlace])
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  (Kernel.Prelude.Bool -> m [Domain.Types.TicketSubPlace.TicketSubPlace])
 findActiveByTicketPlaceId ticketPlaceId isActive = do findAllWithKV [Se.And [Se.Is Beam.ticketPlaceId $ Se.Eq (Kernel.Types.Id.getId ticketPlaceId), Se.Is Beam.isActive $ Se.Eq isActive]]
 
-findAllByTicketPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m [Domain.Types.TicketSubPlace.TicketSubPlace])
+findAllByTicketPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m [Domain.Types.TicketSubPlace.TicketSubPlace]
 findAllByTicketPlaceId ticketPlaceId = do findAllWithKV [Se.Is Beam.ticketPlaceId $ Se.Eq (Kernel.Types.Id.getId ticketPlaceId)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace -> m (Maybe Domain.Types.TicketSubPlace.TicketSubPlace))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace -> m (Maybe Domain.Types.TicketSubPlace.TicketSubPlace)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace -> m (Maybe Domain.Types.TicketSubPlace.TicketSubPlace))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace -> m (Maybe Domain.Types.TicketSubPlace.TicketSubPlace)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketSubPlace.TicketSubPlace -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketSubPlace.TicketSubPlace -> m ()
 updateByPrimaryKey (Domain.Types.TicketSubPlace.TicketSubPlace {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -28,7 +28,10 @@ data FRFSCancellationConfig = FRFSCancellationConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON, Eq)
 
-data CancellationChargeType = PERCENTAGE | FLAT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data CancellationChargeType
+  = PERCENTAGE
+  | FLAT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationChargeType)
 

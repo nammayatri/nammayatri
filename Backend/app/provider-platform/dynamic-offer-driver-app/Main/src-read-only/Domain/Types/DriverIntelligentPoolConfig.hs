@@ -38,7 +38,14 @@ data DriverIntelligentPoolConfigD (s :: UsageSafety) = DriverIntelligentPoolConf
   }
   deriving (Generic, Show)
 
-data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data IntelligentFactors
+  = AcceptanceRatio
+  | CancellationRatio
+  | AvailableTime
+  | DriverSpeed
+  | ActualPickupDistance
+  | RideFrequency
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

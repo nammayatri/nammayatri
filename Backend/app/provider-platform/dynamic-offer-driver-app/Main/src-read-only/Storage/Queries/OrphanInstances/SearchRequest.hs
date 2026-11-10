@@ -4,7 +4,7 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
-import qualified Domain.Types.LocationMapping as Fields
+import qualified Domain.Types.LocationMapping
 import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
@@ -15,6 +15,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
@@ -27,7 +28,6 @@ import qualified Storage.Queries.Location
 import qualified Storage.Queries.LocationMapping
 import qualified Storage.Queries.Transformers.SearchRequest
 import qualified Tools.Error
-import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
   fromTType' (Beam.SearchRequestT {..}) = do
@@ -37,10 +37,10 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     mbToLocationMapping <- Storage.Queries.LocationMapping.getLatestEndByEntityId id
     let startTime_ = fromMaybe now startTime
     bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
-    fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
+    fromLocation' <- Storage.Queries.Location.findById (Domain.Types.LocationMapping.locationId fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound (Kernel.Types.Id.getId (Domain.Types.LocationMapping.locationId fromLocationMapping)))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
-    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
+    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . Domain.Types.LocationMapping.locationId) mbToLocationMapping
     userBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)
     userSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)
     pure $
@@ -148,7 +148,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.estimatedDuration = estimatedDuration,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.fromLocGeohash = fromLocGeohash,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.fromLocationId = Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation,
         Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvanceBookingEnabled = Just isAdvanceBookingEnabled,
@@ -184,7 +184,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
+        Beam.toLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation,
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,
@@ -192,10 +192,10 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.tripCategory = tripCategory,
         Beam.userBackendAppVersion = userBackendAppVersion,
         Beam.userBundleVersion = Kernel.Utils.Version.versionToText <$> userBundleVersion,
-        Beam.userManufacturer = userClientDevice >>= (.deviceManufacturer),
-        Beam.userModelName = userClientDevice <&> (.deviceModel),
-        Beam.userOsType = userClientDevice <&> (.deviceType),
-        Beam.userOsVersion = userClientDevice <&> (.deviceVersion),
+        Beam.userManufacturer = userClientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.userModelName = userClientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.userOsType = userClientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.userOsVersion = userClientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.userSdkVersion = Kernel.Utils.Version.versionToText <$> userSdkVersion,
         Beam.validTill = Just validTill
       }

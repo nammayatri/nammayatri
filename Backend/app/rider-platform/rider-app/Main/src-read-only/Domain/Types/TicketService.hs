@@ -40,7 +40,11 @@ data TicketService = TicketService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay | ValidityDays Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExpiryType
+  = InstantExpiry Kernel.Prelude.Int
+  | VisitDate Kernel.Prelude.TimeOfDay
+  | ValidityDays Kernel.Prelude.Int
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data OperationalDate = OperationalDate {eneDate :: Data.Time.Day, startDate :: Data.Time.Day} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
 

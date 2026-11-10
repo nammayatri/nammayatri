@@ -286,11 +286,11 @@ DriverInformation:
     hasAdvanceBooking: Kernel.Prelude.Just|I
     forwardBatchingEnabled: Kernel.Prelude.Just|I
     isInteroperable: Kernel.Prelude.Just|I
-    latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
-    latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
+    latestScheduledPickupLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    latestScheduledPickupLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
     preferredSecondarySpecialLocIds: Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
-    driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
-    driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
+    driverTripEndLocationLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    driverTripEndLocationLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
     issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
     servicesEnabledForSubscription: Kernel.Prelude.Just|I
     panNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted

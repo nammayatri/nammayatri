@@ -17,15 +17,16 @@ import qualified Lib.Payment.Storage.Beam.PayoutBatch as Beam
 import Lib.Payment.Storage.Queries.PayoutBatchExtra as ReExport
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch] -> m ()
 createMany = traverse_ create
 
 updateAfterStatusCall ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())
+  Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ()))))))))
 updateAfterStatusCall status resolvedAt failureReason failureCode statusCheckRound statusCheckCalls nextStatusCallAt statusNoDataReplies id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -43,7 +44,8 @@ updateAfterStatusCall status resolvedAt failureReason failureCode statusCheckRou
 
 updateAfterSubmit ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())
+  Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ()))))))))
 updateAfterSubmit status partnerBatchRef submittedAt statusCheckRound statusCheckCalls nextStatusCallAt failureReason failureCode id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -61,7 +63,8 @@ updateAfterSubmit status partnerBatchRef submittedAt statusCheckRound statusChec
 
 updateFailure ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())
+  Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())))))
 updateFailure status failureReason failureCode resolvedAt nextStatusCallAt id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -76,10 +79,11 @@ updateFailure status failureReason failureCode resolvedAt nextStatusCallAt id = 
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m (Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch {..}) = do
   _now <- getCurrentTime
   updateWithKV

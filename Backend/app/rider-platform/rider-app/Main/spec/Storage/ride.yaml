@@ -256,9 +256,9 @@ Ride:
 
   # distanceUnit should be the same for all fields
   toTType:
-    fare: Kernel.Prelude.fmap (.amount)|I
-    totalFare: Kernel.Prelude.fmap (.amount)|I
-    currency: Kernel.Prelude.fmap (.currency)|I
+    fare: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    totalFare: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    currency: Kernel.Prelude.fmap Kernel.Types.Price.getPriceCurrency|I
     trackingUrl: Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl|I
     chargeableDistance: Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters|I
     chargeableDistanceValue: Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit)|I
@@ -268,24 +268,24 @@ Ride:
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
-    clientOsType: clientDevice <&> (.deviceType)|E
-    clientOsVersion: clientDevice <&> (.deviceVersion)|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsType: clientDevice <&> Kernel.Types.Version.deviceType|E
+    clientOsVersion: clientDevice <&> Kernel.Types.Version.deviceVersion|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
-    driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
+    driversPreviousRideDropLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    driversPreviousRideDropLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
     paymentStatus: Kernel.Prelude.Just paymentStatus|E
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
     feedbackSkipped: Kernel.Prelude.Just feedbackSkipped|E
-    driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
-    driverNumberHash: (driverPhoneNumber <&> (.hash))|E
-    driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
-    driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
-    estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
-    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
-    tipAmount: Kernel.Prelude.fmap (.amount)|I
+    driverNumberEncrypted: (driverPhoneNumber <&> (unEncrypted . Kernel.External.Encryption.encrypted))|E
+    driverNumberHash: (driverPhoneNumber <&> Kernel.External.Encryption.hash)|E
+    driverAlternateNumberEncrypted: (driverAlternateNumber <&> (unEncrypted . Kernel.External.Encryption.encrypted))|E
+    driverAlternateNumberHash: (driverAlternateNumber <&> Kernel.External.Encryption.hash)|E
+    estimatedEndTimeRangeStart: Kernel.Prelude.fmap Domain.Types.Ride.start|I
+    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap Domain.Types.Ride.end|I
+    tipAmount: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
     isSafetyPlus:  Kernel.Prelude.Just isSafetyPlus|E
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just isPetRide|E

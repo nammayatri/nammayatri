@@ -4,7 +4,6 @@
 module Storage.Queries.OrphanInstances.NyRegularSubscription where
 
 import qualified Data.Text
-import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.NyRegularSubscription
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -13,9 +12,11 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.NyRegularSubscription as Beam
 import qualified Storage.Queries.Location
+import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.NyRegularSubscription Domain.Types.NyRegularSubscription.NyRegularSubscription where
   fromTType' (Beam.NyRegularSubscriptionT {..}) = do
@@ -55,9 +56,9 @@ instance ToTType' Beam.NyRegularSubscription Domain.Types.NyRegularSubscription.
     Beam.NyRegularSubscriptionT
       { Beam.bppId = bppId,
         Beam.createdAt = createdAt,
-        Beam.dropoffLocationId = Kernel.Types.Id.getId $ (.id) dropoffLocation,
-        Beam.fixedPrice = (.amount) <$> fixedPrice,
-        Beam.fixedPriceCurrency = (.currency) <$> fixedPrice,
+        Beam.dropoffLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId dropoffLocation,
+        Beam.fixedPrice = Kernel.Types.Price.getPriceAmount <$> fixedPrice,
+        Beam.fixedPriceCurrency = Kernel.Types.Price.getPriceCurrency <$> fixedPrice,
         Beam.fixedPriceBreakupDetails = fixedPriceBreakupDetails,
         Beam.fixedPriceExpiryDate = fixedPriceExpiryDate,
         Beam.id = Kernel.Types.Id.getId id,
@@ -66,7 +67,7 @@ instance ToTType' Beam.NyRegularSubscription Domain.Types.NyRegularSubscription.
         Beam.metadata = metadata,
         Beam.pauseEndDate = pauseEndDate,
         Beam.pauseStartDate = pauseStartDate,
-        Beam.pickupLocationId = Kernel.Types.Id.getId $ (.id) pickupLocation,
+        Beam.pickupLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId pickupLocation,
         Beam.recurrenceEndDate = recurrenceEndDate,
         Beam.recurrenceRuleDays = map show recurrenceRuleDays,
         Beam.scheduledTimeOfDay = scheduledTimeOfDay,

@@ -17,20 +17,22 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DraftTicketChangeHistory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory] -> m ()
 createMany = traverse_ create
 
 findByTicketPlaceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m [Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m [Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory]))
 findByTicketPlaceId limit offset ticketPlaceId = do findAllWithOptionsKV [Se.Is Beam.ticketPlaceId $ Se.Eq (Kernel.Types.Id.getId ticketPlaceId)] (Se.Desc Beam.createdAt) limit offset
 
 findByTicketPlaceIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.DraftTicketChange.DraftStatus -> m [Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> (Domain.Types.DraftTicketChange.DraftStatus -> m [Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory])))
 findByTicketPlaceIdAndStatus limit offset ticketPlaceId status = do
   findAllWithOptionsKV
     [ Se.And
@@ -44,10 +46,11 @@ findByTicketPlaceIdAndStatus limit offset ticketPlaceId status = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory -> m (Maybe Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory))
+  Kernel.Types.Id.Id Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory ->
+  m (Maybe Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory -> m ()
 updateByPrimaryKey (Domain.Types.DraftTicketChangeHistory.DraftTicketChangeHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV

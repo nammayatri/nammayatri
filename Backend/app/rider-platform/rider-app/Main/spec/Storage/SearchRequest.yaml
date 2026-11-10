@@ -201,30 +201,30 @@ SearchRequest:
 
   # distanceUnit should be the same for all fields
   toTType:
-    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
-    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    fromLocationId: (Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation)|E
+    toLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation|E
     distance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
     distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
     maxDistance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance)|E
     maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit) <$> maxDistance|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
-    customerExtraFee: (customerExtraFee <&> (.amountInt))|E
-    customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
-    negativeFareAdjustment: (negativeFareAdjustment <&> (.amountInt))|E
-    negativeFareAdjustmentAmount: (negativeFareAdjustment <&> (.amount))|E
-    currency: maybe (negativeFareAdjustment <&> (.currency)) Just (customerExtraFee <&> (.currency))|E
+    customerExtraFee: (customerExtraFee <&> Kernel.Types.Price.getPriceAmountInt)|E
+    customerExtraFeeAmount: (customerExtraFee <&> Kernel.Types.Price.getPriceAmount)|E
+    negativeFareAdjustment: (negativeFareAdjustment <&> Kernel.Types.Price.getPriceAmountInt)|E
+    negativeFareAdjustmentAmount: (negativeFareAdjustment <&> Kernel.Types.Price.getPriceAmount)|E
+    currency: maybe (negativeFareAdjustment <&> Kernel.Types.Price.getPriceCurrency) Just (customerExtraFee <&> Kernel.Types.Price.getPriceCurrency)|E
     riderPreferredOption: (Just riderPreferredOption)|E
-    clientOsType: clientDevice <&> (.deviceType)|E
-    clientOsVersion: clientDevice <&> (.deviceVersion)|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsType: clientDevice <&> Kernel.Types.Version.deviceType|E
+    clientOsVersion: clientDevice <&> Kernel.Types.Version.deviceVersion|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     distanceUnit: Kernel.Prelude.Just|I
-    driverIdentifierType: driverIdentifier <&> (._type)|E
-    driverIdentifierValue: driverIdentifier <&> (.value)|E
+    driverIdentifierType: driverIdentifier <&> Domain.Types.RefereeLink._type|E
+    driverIdentifierValue: driverIdentifier <&> Domain.Types.RefereeLink.value|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     busLocationData: Just $ toJSON busLocationData|E
 

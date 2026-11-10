@@ -65,12 +65,12 @@ OpenMeterRide:
     lastLatLong: Kernel.External.Maps.Types.LatLong <$> lastLat <*> lastLon|E
 
   toTType:
-    startLat: (startLatLong <&> (.lat))|E
-    startLon: (startLatLong <&> (.lon))|E
-    endLat: (endLatLong <&> (.lat))|E
-    endLon: (endLatLong <&> (.lon))|E
-    lastLat: (lastLatLong <&> (.lat))|E
-    lastLon: (lastLatLong <&> (.lon))|E
+    startLat: (startLatLong <&> Kernel.External.Maps.Types.lat)|E
+    startLon: (startLatLong <&> Kernel.External.Maps.Types.lon)|E
+    endLat: (endLatLong <&> Kernel.External.Maps.Types.lat)|E
+    endLon: (endLatLong <&> Kernel.External.Maps.Types.lon)|E
+    lastLat: (lastLatLong <&> Kernel.External.Maps.Types.lat)|E
+    lastLon: (lastLatLong <&> Kernel.External.Maps.Types.lon)|E
 
   constraints:
     id: PrimaryKey

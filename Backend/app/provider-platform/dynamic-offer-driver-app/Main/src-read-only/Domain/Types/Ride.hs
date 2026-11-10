@@ -156,20 +156,45 @@ data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTim
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupBehaviour = REACHED_PICKUP | PROGRESSING | DETOURING | STALLED | MOVING_AWAY | GPS_DARK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PickupBehaviour
+  = REACHED_PICKUP
+  | PROGRESSING
+  | DETOURING
+  | STALLED
+  | MOVING_AWAY
+  | GPS_DARK
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator | FleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data RideEndedBy
+  = Driver
+  | Dashboard
+  | CallBased
+  | CronJob
+  | Allocator
+  | FleetOwner
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RideStatus
+  = UPCOMING
+  | NEW
+  | INPROGRESS
+  | COMPLETED
+  | CANCELLED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | AssignedByOps | AssignedByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ScheduledAcceptanceMode
+  = AcceptedAsScheduled
+  | AcceptedFromBroadcast
+  | AssignedByOps
+  | AssignedByFleetOwner
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)

@@ -132,21 +132,21 @@ Merchant:
   toTType:
     city: defaultCity|E
     state: defaultState|E
-    originRestriction: (.origin)|I
-    destinationRestriction: (.destination)|I
+    originRestriction: Kernel.Types.Geofencing.origin|I
+    destinationRestriction: Kernel.Types.Geofencing.destination|I
     gatewayUrl: Kernel.Prelude.showBaseUrl|I
     registryUrl: Kernel.Prelude.showBaseUrl|I
     driverOfferBaseUrl: Kernel.Prelude.showBaseUrl|I
     scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
-    distanceUnit: (Just $ (.unit) editPickupDistanceThreshold)|E
+    distanceUnit: (Just $ Kernel.Types.Distance.unit editPickupDistanceThreshold)|E
     editPickupDistanceThreshold: Kernel.Utils.Common.distanceToHighPrecMeters|I
-    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold)|E
+    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) editPickupDistanceThreshold)|E
     driverDistanceThresholdFromPickup: (Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup)|E
-    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
+    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
     arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
-    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
-    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) arrivedPickupThreshold)|E
+    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit editPickupDistanceThreshold) arrivingPickupThreshold)|E
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
     cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
     cloudBaseUrl: (Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl)|I

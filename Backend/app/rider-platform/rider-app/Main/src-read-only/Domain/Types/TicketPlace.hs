@@ -57,11 +57,20 @@ data CustomTab = CustomTab {body :: Kernel.Prelude.Text, header :: Kernel.Prelud
 
 data Faq = Faq {answer :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
-data Fee = Percentage Kernel.Prelude.Int | Flat Kernel.Prelude.Double deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Fee
+  = Percentage Kernel.Prelude.Int
+  | Flat Kernel.Prelude.Double
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Metadata = Metadata {icon :: Kernel.Prelude.Maybe Kernel.Prelude.Text, key :: Kernel.Prelude.Text, value :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
-data PlaceStatus = Active | Inactive | ComingSoon | Ended | Unpublished deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PlaceStatus
+  = Active
+  | Inactive
+  | ComingSoon
+  | Ended
+  | Unpublished
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PlaceType
   = Museum

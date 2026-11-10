@@ -10,6 +10,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Toll.Domain.Types.Toll
 import qualified Toll.Storage.Beam.Toll as Beam
@@ -45,8 +46,8 @@ instance ToTType' Beam.Toll Toll.Domain.Types.Toll.Toll where
         Beam.isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
         Beam.maxTollCountInRide = maxTollCountInRide,
         Beam.name = name,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
-        Beam.price = (.amount) price,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) price,
+        Beam.price = Kernel.Types.Price.getPriceAmount price,
         Beam.tollEndGates = tollEndGates,
         Beam.tollStartGates = tollStartGates,
         Beam.merchantId = merchantId,

@@ -7,7 +7,8 @@ import qualified Data.Aeson
 import qualified Domain.Types.DriverInformation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
+import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -177,8 +178,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.driverDob = driverDob,
         Beam.driverFlowStatus = driverFlowStatus,
         Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.driverTripEndLocationLat = Kernel.Prelude.fmap (.lat) driverTripEndLocation,
-        Beam.driverTripEndLocationLon = Kernel.Prelude.fmap (.lon) driverTripEndLocation,
+        Beam.driverTripEndLocationLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat driverTripEndLocation,
+        Beam.driverTripEndLocationLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon driverTripEndLocation,
         Beam.drunkAndDriveViolationCount = drunkAndDriveViolationCount,
         Beam.enableCashRide = enableCashRide,
         Beam.enableForAirport = Kernel.Prelude.Just enableForAirport,
@@ -205,8 +206,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.lastEnabledOn = lastEnabledOn,
         Beam.lastOfflineTime = lastOfflineTime,
         Beam.latestScheduledBooking = latestScheduledBooking,
-        Beam.latestScheduledPickupLat = Kernel.Prelude.fmap (.lat) latestScheduledPickup,
-        Beam.latestScheduledPickupLon = Kernel.Prelude.fmap (.lon) latestScheduledPickup,
+        Beam.latestScheduledPickupLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat latestScheduledPickup,
+        Beam.latestScheduledPickupLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon latestScheduledPickup,
         Beam.maxPickupRadius = maxPickupRadius,
         Beam.mode = mode,
         Beam.nomineeName = nomineeName,

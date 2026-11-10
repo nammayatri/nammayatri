@@ -9,7 +9,7 @@ import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
-import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -20,7 +20,7 @@ data BookingCancellationReason = BookingCancellationReason
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     createdAt :: Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
+    driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
@@ -32,6 +32,12 @@ data BookingCancellationReason = BookingCancellationReason
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CancellationSource = ByUser | ByDriver | ByMerchant | ByAllocator | ByApplication deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CancellationSource
+  = ByUser
+  | ByDriver
+  | ByMerchant
+  | ByAllocator
+  | ByApplication
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationSource)

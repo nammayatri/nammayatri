@@ -86,7 +86,7 @@ Pass:
   toTType:
     vehicleType: Kernel.Prelude.Just|I
     verificationValidity: Kernel.Prelude.Just|I
-    maxSwitchCount: ((.maxSwitchCount) <$> passConfig)|E
+    maxSwitchCount: (Domain.Types.Pass.maxSwitchCount <$> passConfig)|E
     overrideBenefitConfigJson: (Data.Aeson.toJSON <$> overrideBenefitConfigJson)|E
 
   constraints:

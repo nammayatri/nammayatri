@@ -17,15 +17,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSRouteFareProduct as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct] -> m ()
 createMany = traverse_ create
 
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
 findByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -36,7 +37,8 @@ findByRouteCode routeCode integratedBppConfigId = do
 
 findByRouteCodeAndVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct))
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct))
 findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTierId = do
   findOneWithKV
     [ Se.And
@@ -47,10 +49,11 @@ findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTierId = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct -> m (Maybe Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct))
+  Kernel.Types.Id.Id Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct ->
+  m (Maybe Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct -> m ()
 updateByPrimaryKey (Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct {..}) = do
   _now <- getCurrentTime
   updateWithKV

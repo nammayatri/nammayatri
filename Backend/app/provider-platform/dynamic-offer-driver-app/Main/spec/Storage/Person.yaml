@@ -144,14 +144,14 @@ Person:
       clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
       clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
       backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-      clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-      clientOsType:  (clientDevice <&> (.deviceType))|E
-      mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
-      mobileNumberHash: (mobileNumber <&> (.hash))|E
-      alternateMobileNumberHash: (alternateMobileNumber <&> (.hash))|E
-      alternateMobileNumberEncrypted: (alternateMobileNumber <&> unEncrypted . (.encrypted))|E
-      clientModelName: (clientDevice <&> (.deviceModel))|E
-      clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+      clientOsVersion: (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+      clientOsType: (clientDevice <&> Kernel.Types.Version.deviceType)|E
+      mobileNumberEncrypted: (mobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+      mobileNumberHash: (mobileNumber <&> Kernel.External.Encryption.hash)|E
+      alternateMobileNumberHash: (alternateMobileNumber <&> Kernel.External.Encryption.hash)|E
+      alternateMobileNumberEncrypted: (alternateMobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+      clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+      clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
       driverTag: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
 
   constraints:

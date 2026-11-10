@@ -10,26 +10,27 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, Price (..), fromMaybeM, getCurrentTime)
+import qualified Kernel.Types.Price
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Toll.Domain.Types.Toll
 import qualified Toll.Storage.Beam.Toll as Beam
 import qualified Toll.Storage.BeamFlow
 import Toll.Storage.Queries.TollExtra as ReExport
 
-create :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Toll.Domain.Types.Toll.Toll -> m ())
+create :: (Toll.Storage.BeamFlow.BeamFlow m r) => Toll.Domain.Types.Toll.Toll -> m ()
 create = createWithKV
 
-createMany :: (Toll.Storage.BeamFlow.BeamFlow m r) => ([Toll.Domain.Types.Toll.Toll] -> m ())
+createMany :: (Toll.Storage.BeamFlow.BeamFlow m r) => [Toll.Domain.Types.Toll.Toll] -> m ()
 createMany = traverse_ create
 
-findAllTollsByMerchantOperatingCity :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Toll.Domain.Types.Toll.Toll])
+findAllTollsByMerchantOperatingCity :: (Toll.Storage.BeamFlow.BeamFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Toll.Domain.Types.Toll.Toll]
 findAllTollsByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-findByPrimaryKey :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> m (Maybe Toll.Domain.Types.Toll.Toll))
+findByPrimaryKey :: (Toll.Storage.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> m (Maybe Toll.Domain.Types.Toll.Toll)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Toll.Domain.Types.Toll.Toll -> m ())
+updateByPrimaryKey :: (Toll.Storage.BeamFlow.BeamFlow m r) => Toll.Domain.Types.Toll.Toll -> m ()
 updateByPrimaryKey (Toll.Domain.Types.Toll.Toll {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -39,8 +40,8 @@ updateByPrimaryKey (Toll.Domain.Types.Toll.Toll {..}) = do
       Se.Set Beam.isTwoWheelerTollChargeApplicable isTwoWheelerTollChargeApplicable,
       Se.Set Beam.maxTollCountInRide maxTollCountInRide,
       Se.Set Beam.name name,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
-      Se.Set Beam.price ((.amount) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) price),
+      Se.Set Beam.price (Kernel.Types.Price.getPriceAmount price),
       Se.Set Beam.tollEndGates tollEndGates,
       Se.Set Beam.tollStartGates tollStartGates,
       Se.Set Beam.merchantId merchantId,

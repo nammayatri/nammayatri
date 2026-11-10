@@ -4,6 +4,7 @@
 
 module Storage.Queries.Quote (module Storage.Queries.Quote, module ReExport) where
 
+import qualified Domain.Types.Extra.Quote
 import qualified Domain.Types.Quote
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
@@ -13,7 +14,8 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Price
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
@@ -21,16 +23,16 @@ import qualified Storage.Beam.Quote as Beam
 import Storage.Queries.QuoteExtra as ReExport
 import qualified Storage.Queries.Transformers.Quote
 
-findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Quote.Quote])
+findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Quote.Quote]
 findAllBySRId requestId = do findAllWithKVAndConditionalDB [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)] Nothing
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Quote.Quote -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Quote.Quote -> m ()
 updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -41,13 +43,13 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.bookingDeposit bookingDeposit,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
-      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
-      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
-      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientManufacturer (clientDevice >>= Kernel.Types.Version.deviceManufacturer),
+      Se.Set Beam.clientModelName (clientDevice <&> Kernel.Types.Version.deviceModel),
+      Se.Set Beam.clientOsType (clientDevice <&> Kernel.Types.Version.deviceType),
+      Se.Set Beam.clientOsVersion (clientDevice <&> Kernel.Types.Version.deviceVersion),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.currency (Just ((.currency) estimatedFare)),
-      Se.Set Beam.discount (discount <&> (.amount)),
+      Se.Set Beam.currency (Just (Kernel.Types.Price.getPriceCurrency estimatedFare)),
+      Se.Set Beam.discount (discount <&> Kernel.Types.Price.getPriceAmount),
       Se.Set Beam.distanceToNearestDriver (Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.distanceToNearestDriverValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.driverOfferId (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
@@ -58,9 +60,9 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.staticBppQuoteId (Storage.Queries.Transformers.Quote.getStaticBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverCancellationNotAllowed driverCancellationNotAllowed,
-      Se.Set Beam.estimatedFare ((.amount) estimatedFare),
+      Se.Set Beam.estimatedFare (Kernel.Types.Price.getPriceAmount estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
-      Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
+      Se.Set Beam.estimatedTotalFare (Kernel.Types.Price.getPriceAmount estimatedTotalFare),
       Se.Set Beam.fareSettlementType fareSettlementType,
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
@@ -80,7 +82,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationSupportNumber specialLocationSupportNumber,
       Se.Set Beam.specialLocationTag specialLocationTag,
-      Se.Set Beam.tollCharges (tollChargesInfo <&> ((.amount) . (.tollCharges))),
+      Se.Set Beam.tollCharges (tollChargesInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Extra.Quote.getTollChargesInfoPrice)),
       Se.Set Beam.tollNames (tollChargesInfo <&> (.tollNames)),
       Se.Set Beam.tripCategory tripCategory,
       Se.Set Beam.updatedAt (Just _now),

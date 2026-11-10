@@ -32,8 +32,8 @@ FareBreakup:
       currency: Maybe Currency
 
   toTType:
-    amount: ((.amount) amount)|E
-    currency: (Just $ (.currency) amount)|E
+    amount: Kernel.Types.Price.getPriceAmount amount|E
+    currency: (Just $ Kernel.Types.Price.getPriceCurrency amount)|E
 
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency amount|E

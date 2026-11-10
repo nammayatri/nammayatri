@@ -7,7 +7,7 @@ import qualified Domain.Types.BookingCancellationReason
 import qualified Domain.Types.CancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -25,7 +25,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             bookingId = Kernel.Types.Id.Id bookingId,
             createdAt = createdAt,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
-            driverCancellationLocation = Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+            driverCancellationLocation = Kernel.External.Maps.Types.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
             driverDistToPickup = driverDistToPickup,
             driverId = Kernel.Types.Id.Id <$> driverId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -44,8 +44,8 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.createdAt = createdAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
-        Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
+        Beam.driverCancellationLocationLat = driverCancellationLocation <&> Kernel.External.Maps.Types.lat,
+        Beam.driverCancellationLocationLon = driverCancellationLocation <&> Kernel.External.Maps.Types.lon,
         Beam.driverDistToPickup = driverDistToPickup,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

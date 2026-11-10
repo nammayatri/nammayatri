@@ -5,7 +5,6 @@ module Storage.Queries.OrphanInstances.Booking where
 
 import qualified Data.Text
 import qualified Domain.Types.Booking
-import qualified Domain.Types.Location as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -13,7 +12,8 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Price
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
@@ -23,6 +23,7 @@ import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
+import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
@@ -158,10 +159,10 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.itemId = bppEstimateId,
         Beam.clientBundleVersion = Kernel.Utils.Version.versionToText <$> clientBundleVersion,
         Beam.clientConfigVersion = Kernel.Utils.Version.versionToText <$> clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.commission = commission,
@@ -169,7 +170,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.createdAt = createdAt,
         Beam.dashboardAgentId = dashboardAgentId,
         Beam.disabilityTag = disabilityTag,
-        Beam.discount = discount <&> (.amount),
+        Beam.discount = discount <&> Kernel.Types.Price.getPriceAmount,
         Beam.displayBookingId = displayBookingId,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationNotAllowed = driverCancellationNotAllowed,
@@ -180,12 +181,12 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedDistance = Kernel.Utils.Common.distanceToHighPrecMeters <$> estimatedDistance,
         Beam.estimatedDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.currency = Just $ (.currency) estimatedFare,
-        Beam.estimatedFare = (.amount) estimatedFare,
+        Beam.currency = Just $ Kernel.Types.Price.getPriceCurrency estimatedFare,
+        Beam.estimatedFare = Kernel.Types.Price.getPriceAmount estimatedFare,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
-        Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.estimatedTotalFare = Kernel.Types.Price.getPriceAmount estimatedTotalFare,
         Beam.fareSettlementType = fareSettlementType,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
+        Beam.fromLocationId = Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation,
         Beam.fulfillmentId = fulfillmentId,
         Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,

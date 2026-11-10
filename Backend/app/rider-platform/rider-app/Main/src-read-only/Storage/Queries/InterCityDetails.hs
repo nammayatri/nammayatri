@@ -4,24 +4,26 @@
 
 module Storage.Queries.InterCityDetails where
 
-import qualified Domain.Types.Extra.RentalDetails as Fields
+import qualified Domain.Types.Extra.RentalDetails
 import qualified Domain.Types.InterCityDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.InterCityDetails as Beam
 import qualified Storage.Queries.Transformers.RentalDetails
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.InterCityDetails.InterCityDetails -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.InterCityDetails.InterCityDetails -> m ()
 create = createWithKV
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails -> m (Maybe Domain.Types.InterCityDetails.InterCityDetails))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails -> m (Maybe Domain.Types.InterCityDetails.InterCityDetails)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityDetails where
@@ -49,22 +51,22 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
 instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityDetails where
   toTType' (Domain.Types.InterCityDetails.InterCityDetails {..}) = do
     Beam.InterCityDetailsT
-      { Beam.baseFare = (.amount) baseFare,
-        Beam.currency = (.currency) baseFare,
-        Beam.deadKmFare = (.amount) deadKmFare,
+      { Beam.baseFare = Kernel.Types.Price.getPriceAmount baseFare,
+        Beam.currency = Kernel.Types.Price.getPriceCurrency baseFare,
+        Beam.deadKmFare = Kernel.Types.Price.getPriceAmount deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.distanceUnit = (.unit) kmPerPlannedExtraHour,
-        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
-        Beam.nightShiftCharge = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
-        Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
-        Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
+        Beam.distanceUnit = Kernel.Types.Distance.unit kmPerPlannedExtraHour,
+        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit kmPerPlannedExtraHour) kmPerPlannedExtraHour,
+        Beam.nightShiftCharge = nightShiftInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Extra.RentalDetails.getNightShiftInfoCharge),
+        Beam.nightShiftEnd = nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoEnd,
+        Beam.nightShiftStart = nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoStart,
         Beam.perDayMaxAllowanceInMins = perDayMaxAllowanceInMins,
         Beam.perDayMaxHourAllowance = perDayMaxHourAllowance,
-        Beam.perExtraKmRate = (.amount) perExtraKmRate,
-        Beam.perExtraMinRate = (.amount) perExtraMinRate,
-        Beam.perHourCharge = (.amount) perHourCharge,
-        Beam.plannedPerKmRateOneWay = (.amount) plannedPerKmRateOneWay,
-        Beam.plannedPerKmRateRoundTrip = (.amount) plannedPerKmRateRoundTrip,
+        Beam.perExtraKmRate = Kernel.Types.Price.getPriceAmount perExtraKmRate,
+        Beam.perExtraMinRate = Kernel.Types.Price.getPriceAmount perExtraMinRate,
+        Beam.perHourCharge = Kernel.Types.Price.getPriceAmount perHourCharge,
+        Beam.plannedPerKmRateOneWay = Kernel.Types.Price.getPriceAmount plannedPerKmRateOneWay,
+        Beam.plannedPerKmRateRoundTrip = Kernel.Types.Price.getPriceAmount plannedPerKmRateRoundTrip,
         Beam.roundTrip = roundTrip,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

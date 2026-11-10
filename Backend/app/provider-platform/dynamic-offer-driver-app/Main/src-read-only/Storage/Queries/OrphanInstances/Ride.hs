@@ -8,11 +8,14 @@ import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
@@ -20,14 +23,13 @@ import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
-import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
@@ -55,7 +57,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
@@ -177,10 +179,10 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
-        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
@@ -207,8 +209,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.endOdometerReadingFileId = getEndOdometerReadingFileId endOdometerReading,
         Beam.endOdometerReadingValue = Kernel.Prelude.fmap Domain.Types.Ride.value endOdometerReading,
         Beam.endOtp = endOtp,
-        Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap (.end) estimatedEndTimeRange,
-        Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap (.start) estimatedEndTimeRange,
+        Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap Domain.Types.Ride.end estimatedEndTimeRange,
+        Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap Domain.Types.Ride.start estimatedEndTimeRange,
         Beam.estimatedTollCharges = estimatedTollCharges,
         Beam.estimatedTollIds = estimatedTollIds,
         Beam.estimatedTollNames = estimatedTollNames,
@@ -243,8 +245,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.pickupDistanceCalculationFailed = pickupDistanceCalculationFailed,
         Beam.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         Beam.pickupFaultSeconds = pickupFaultSeconds,
-        Beam.previousRideTripEndLat = Kernel.Prelude.fmap (.lat) previousRideTripEndPos,
-        Beam.previousRideTripEndLon = Kernel.Prelude.fmap (.lon) previousRideTripEndPos,
+        Beam.previousRideTripEndLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat previousRideTripEndPos,
+        Beam.previousRideTripEndLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon previousRideTripEndPos,
         Beam.previousRideTripEndTime = previousRideTripEndTime,
         Beam.reactBundleVersion = reactBundleVersion,
         Beam.recomputeReason = recomputeReason,
@@ -270,11 +272,11 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.trackingUrl = Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = traveledDistance,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
-        Beam.tripEndLat = Kernel.Prelude.fmap (.lat) tripEndPos,
-        Beam.tripEndLon = Kernel.Prelude.fmap (.lon) tripEndPos,
+        Beam.tripEndLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat tripEndPos,
+        Beam.tripEndLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon tripEndPos,
         Beam.tripEndTime = tripEndTime,
-        Beam.tripStartLat = Kernel.Prelude.fmap (.lat) tripStartPos,
-        Beam.tripStartLon = Kernel.Prelude.fmap (.lon) tripStartPos,
+        Beam.tripStartLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat tripStartPos,
+        Beam.tripStartLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon tripStartPos,
         Beam.tripStartTime = tripStartTime,
         Beam.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
         Beam.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,

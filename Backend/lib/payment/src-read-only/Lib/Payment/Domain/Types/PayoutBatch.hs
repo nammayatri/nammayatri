@@ -39,9 +39,18 @@ data PayoutBatch = PayoutBatch
   }
   deriving (Generic)
 
-data PayoutBatchOrigin = SCHEDULED | ADHOC | INSTANT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PayoutBatchOrigin
+  = SCHEDULED
+  | ADHOC
+  | INSTANT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PayoutBatchRail = NEFT | RTGS | IMPS | A2A deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PayoutBatchRail
+  = NEFT
+  | RTGS
+  | IMPS
+  | A2A
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PayoutBatchStatus
   = CREATED

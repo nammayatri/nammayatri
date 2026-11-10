@@ -24,18 +24,19 @@ import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceUsageConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig] -> m ()
 createMany = traverse_ create
 
 findByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig)
 findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-updateMerchantServiceUsageConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ())
+updateMerchantServiceUsageConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -55,21 +56,24 @@ updateMerchantServiceUsageConfig (Domain.Types.MerchantServiceUsageConfig.Mercha
 
 updateSmsProvidersPriorityList ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.External.SMS.Types.SmsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+  [Kernel.External.SMS.Types.SmsService] ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateSnapToRoadProvidersPriorityList ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.External.Maps.Types.MapsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+  [Kernel.External.Maps.Types.MapsService] ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 updateSnapToRoadProvidersPriorityList snapToRoadProvidersList merchantOperatingCityId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.snapToRoadProvidersList snapToRoadProvidersList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateWhatsappProvidersPriorityList ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.External.Whatsapp.Types.WhatsappService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+  [Kernel.External.Whatsapp.Types.WhatsappService] ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId = do
   _now <- getCurrentTime
   updateWithKV
@@ -78,7 +82,7 @@ updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperat
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ()
 updateByPrimaryKey (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -459,6 +459,7 @@ library
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.PurchasedPass
+      Domain.Types.Extra.Quote
       Domain.Types.Extra.RecentLocation
       Domain.Types.Extra.RefundRequest
       Domain.Types.Extra.RentalDetails

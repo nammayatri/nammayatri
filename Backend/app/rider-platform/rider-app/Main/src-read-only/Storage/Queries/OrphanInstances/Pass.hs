@@ -88,7 +88,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.name = name,
         Beam.order = order,
         Beam.overrideBenefitConfigJson = Data.Aeson.toJSON <$> overrideBenefitConfigJson,
-        Beam.maxSwitchCount = (.maxSwitchCount) <$> passConfig,
+        Beam.maxSwitchCount = Domain.Types.Pass.maxSwitchCount <$> passConfig,
         Beam.passTypeId = Kernel.Types.Id.getId passTypeId,
         Beam.pricingTiers = pricingTiers,
         Beam.purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,

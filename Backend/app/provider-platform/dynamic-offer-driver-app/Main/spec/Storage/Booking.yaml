@@ -187,19 +187,19 @@ Booking:
     distanceToPickup: (Kernel.Prelude.realToFrac <$> distanceToPickup)|E
     isScheduled: (Just isScheduled)|E
     bookingType: Storage.Queries.Transformers.Booking.getBookingTypeFromTripCategory tripCategory|E
-    fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
-    toLocationId: ((Kernel.Types.Id.getId . (.id)) <$> toLocation)|E
+    fromLocationId: (Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation)|E
+    toLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation|E
     vehicleVariant: vehicleServiceTier|E
-    fareParametersId: (Kernel.Types.Id.getId $ (.id) fareParams)|E
+    fareParametersId: Kernel.Types.Id.getId (Domain.Types.FareParameters.id fareParams)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceUnit: Kernel.Prelude.Just|I
     isDashboardRequest: (Just isDashboardRequest)|E
-    senderId: (Kernel.Types.Id.getId <$> (senderDetails <&> (.id)))|E
-    senderName: (senderDetails <&> (.name))|E
-    senderPrimaryExophone: (senderDetails <&> (.primaryExophone))|E
-    receiverId: (Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)))|E
-    receiverName: (receiverDetails <&> (.name))|E
-    receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
+    senderId: Kernel.Types.Id.getId <$> (senderDetails <&> Domain.Types.DeliveryPersonDetails.id)|E
+    senderName: (senderDetails <&> Domain.Types.DeliveryPersonDetails.name)|E
+    senderPrimaryExophone: (senderDetails <&> Domain.Types.DeliveryPersonDetails.primaryExophone)|E
+    receiverId: Kernel.Types.Id.getId <$> (receiverDetails <&> Domain.Types.DeliveryPersonDetails.id)|E
+    receiverName: (receiverDetails <&> Domain.Types.DeliveryPersonDetails.name)|E
+    receiverPrimaryExophone: (receiverDetails <&> Domain.Types.DeliveryPersonDetails.primaryExophone)|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     addOnData: Just $ toJSON addOnData|E
     isSafetyPlus : Just isSafetyPlus|E

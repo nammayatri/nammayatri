@@ -19,24 +19,25 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as Beam
 import Storage.Queries.MerchantExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Merchant.Merchant -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Merchant.Merchant -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Merchant.Merchant] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Merchant.Merchant] -> m ()
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant))
+findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant)
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
-findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Merchant.Subscriber -> m (Maybe Domain.Types.Merchant.Merchant))
+findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.ShortId Domain.Types.Merchant.Subscriber -> m (Maybe Domain.Types.Merchant.Merchant)
 findBySubscriberId subscriberId = do findOneWithKV [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId)]
 
 updateCloudConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType -> Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Version.CloudType ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl -> (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ()))
 updateCloudConfig cloudType cloudBaseUrl id = do
   _now <- getCurrentTime
   updateWithKV
@@ -46,15 +47,15 @@ updateCloudConfig cloudType cloudBaseUrl id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateGatewayAndRegistryPriorityList :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.GatewayAndRegistryService] -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+updateGatewayAndRegistryPriorityList :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.GatewayAndRegistryService] -> (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
 updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.gatewayAndRegistryPriorityList (Kernel.Prelude.Just gatewayAndRegistryPriorityList), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Merchant.Merchant -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Merchant.Merchant -> m ()
 updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
   _now <- getCurrentTime
   updateWithKV

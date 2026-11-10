@@ -37,9 +37,16 @@ data MerchantOnboardingAPI = MerchantOnboardingAPI
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OnboardingStatus = INPROGRESS | COMPLETED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OnboardingStatus
+  = INPROGRESS
+  | COMPLETED
+  | REJECTED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data OnboardingType = TICKET_MERCHANT_ONBOARDING | OTHER_ONBOARDING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OnboardingType
+  = TICKET_MERCHANT_ONBOARDING
+  | OTHER_ONBOARDING
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RequestorRole
   = TICKET_DASHBOARD_USER

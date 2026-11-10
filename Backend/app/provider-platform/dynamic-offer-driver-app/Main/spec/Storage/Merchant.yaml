@@ -1762,9 +1762,9 @@ TransporterConfig:
   toTType:
     currency: Just currency|E
     distanceUnit: Kernel.Prelude.Just distanceUnit|E
-    fcmUrl: Kernel.Prelude.showBaseUrl $ (.fcmUrl) fcmConfig|E
-    fcmServiceAccount: (.fcmServiceAccount) fcmConfig|E
-    fcmTokenKeyPrefix: (.fcmTokenKeyPrefix) fcmConfig|E
+    fcmUrl: Kernel.Prelude.showBaseUrl (Kernel.External.Notification.FCM.Types.fcmUrl fcmConfig)|E
+    fcmServiceAccount: Kernel.External.Notification.FCM.Types.fcmServiceAccount fcmConfig|E
+    fcmTokenKeyPrefix: Kernel.External.Notification.FCM.Types.fcmTokenKeyPrefix fcmConfig|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverPaymentCycleDuration: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverPaymentCycleStartTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I

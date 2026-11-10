@@ -17,15 +17,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLegMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLegMapping.JourneyLegMapping] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.JourneyLegMapping.JourneyLegMapping] -> m ()
 createMany = traverse_ create
 
 findAllLegsMappingByJourneyId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Bool -> m [Domain.Types.JourneyLegMapping.JourneyLegMapping])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> (Kernel.Prelude.Bool -> m [Domain.Types.JourneyLegMapping.JourneyLegMapping])))
 findAllLegsMappingByJourneyId limit offset journeyId isDeleted = do
   findAllWithOptionsKV
     [ Se.And
@@ -39,7 +40,8 @@ findAllLegsMappingByJourneyId limit offset journeyId isDeleted = do
 
 findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  (Kernel.Prelude.Int -> (Kernel.Prelude.Bool -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping)))
 findByJourneyIdAndSequenceNumber journeyId sequenceNumber isDeleted = do
   findOneWithKV
     [ Se.And
@@ -49,25 +51,26 @@ findByJourneyIdAndSequenceNumber journeyId sequenceNumber isDeleted = do
         ]
     ]
 
-findByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
+findByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping)
 findByJourneyLegId journeyLegId = do findOneWithKV [Se.Is Beam.journeyLegId $ Se.Eq (Kernel.Types.Id.getId journeyLegId)]
 
-updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateIsDeleted isDeleted journeyLegId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq (Kernel.Types.Id.getId journeyLegId)]
 
 updateJourneyLegId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> Kernel.Types.Id.Id Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ())
+  Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+  (Kernel.Types.Id.Id Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ())
 updateJourneyLegId journeyLegId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.journeyLegId (Kernel.Types.Id.getId journeyLegId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLegMapping.JourneyLegMapping -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.JourneyLegMapping.JourneyLegMapping -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.JourneyLegMapping.JourneyLegMapping -> m ()
 updateByPrimaryKey (Domain.Types.JourneyLegMapping.JourneyLegMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV

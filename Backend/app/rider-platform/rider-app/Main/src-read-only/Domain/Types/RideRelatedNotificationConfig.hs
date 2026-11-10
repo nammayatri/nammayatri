@@ -27,11 +27,25 @@ data RideRelatedNotificationConfig = RideRelatedNotificationConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data EventTime = PreEvent | PostEvent | OnEvent deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EventTime
+  = PreEvent
+  | PostEvent
+  | OnEvent
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data NotificationType = SMS | PN | WHATSAPP | CALL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data NotificationType
+  = SMS
+  | PN
+  | WHATSAPP
+  | CALL
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TimeDiffEvent = RIDE_ASSIGNED | PICKUP_TIME | START_TIME | END_TIME deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data TimeDiffEvent
+  = RIDE_ASSIGNED
+  | PICKUP_TIME
+  | START_TIME
+  | END_TIME
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventTime)
 

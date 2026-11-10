@@ -16,18 +16,19 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.LlmPrompt as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LlmPrompt.LlmPrompt -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LlmPrompt.LlmPrompt -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LlmPrompt.LlmPrompt] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LlmPrompt.LlmPrompt] -> m ()
 createMany = traverse_ create
 
-findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LlmPrompt.LlmPrompt])
+findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LlmPrompt.LlmPrompt]
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.MerchantServiceConfig.ServiceName -> Domain.Types.LlmPrompt.UseCase -> Domain.Types.LlmPrompt.PromptKey -> m (Maybe Domain.Types.LlmPrompt.LlmPrompt))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.Extra.MerchantServiceConfig.ServiceName -> (Domain.Types.LlmPrompt.UseCase -> (Domain.Types.LlmPrompt.PromptKey -> m (Maybe Domain.Types.LlmPrompt.LlmPrompt))))
 findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOperatingCityId serviceName useCase promptKey = do
   findOneWithKV
     [ Se.And

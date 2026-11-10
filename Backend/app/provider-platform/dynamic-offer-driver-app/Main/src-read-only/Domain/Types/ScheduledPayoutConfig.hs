@@ -43,6 +43,12 @@ data ScheduledPayoutConfig = ScheduledPayoutConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data ScheduledPayoutFrequency = DAILY | WEEKLY | MONTHLY | HOURLY | EVERY_N_DAYS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ScheduledPayoutFrequency
+  = DAILY
+  | WEEKLY
+  | MONTHLY
+  | HOURLY
+  | EVERY_N_DAYS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledPayoutFrequency)

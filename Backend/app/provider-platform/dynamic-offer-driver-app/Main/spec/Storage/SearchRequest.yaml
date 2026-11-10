@@ -16,6 +16,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripCategory: Domain.Types.Trip
+  LocationMapping: Domain.Types.LocationMapping
   Person: Domain.Types.Person
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
@@ -139,8 +140,8 @@ SearchRequest:
       userManufacturer: Maybe Text
 
   toTType:
-    fromLocationId: Just $ Kernel.Types.Id.getId ((.id) fromLocation)|E
-    toLocationId: (Kernel.Types.Id.getId . (.id)) <$> toLocation|E
+    fromLocationId: Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation|E
+    toLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation|E
     startTime: Just startTime|E
     validTill: Just validTill|E
     isScheduled: Just isScheduled|E
@@ -157,10 +158,10 @@ SearchRequest:
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     preferSafetyPlus: Kernel.Prelude.Just|I
     isPetRide: Kernel.Prelude.Just|I
-    userOsType: userClientDevice <&> (.deviceType)|E
-    userOsVersion: userClientDevice <&> (.deviceVersion)|E
-    userModelName: userClientDevice <&> (.deviceModel)|E
-    userManufacturer: userClientDevice >>= (.deviceManufacturer)|E
+    userOsType: userClientDevice <&> Kernel.Types.Version.deviceType|E
+    userOsVersion: userClientDevice <&> Kernel.Types.Version.deviceVersion|E
+    userModelName: userClientDevice <&> Kernel.Types.Version.deviceModel|E
+    userManufacturer: userClientDevice >>= Kernel.Types.Version.deviceManufacturer|E
     userBundleVersion: Kernel.Utils.Version.versionToText <$> userBundleVersion|E
     userSdkVersion: Kernel.Utils.Version.versionToText <$> userSdkVersion|E
     riderPreferredOption: Just riderPreferredOption|E
@@ -175,8 +176,8 @@ SearchRequest:
   fromTType:
     merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
     bapUri: Kernel.Prelude.parseBaseUrl|IM
-    fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
-    toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
+    fromLocation: Storage.Queries.Location.findById (Domain.Types.LocationMapping.locationId fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound (Kernel.Types.Id.getId (Domain.Types.LocationMapping.locationId fromLocationMapping)))|EM
+    toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . Domain.Types.LocationMapping.locationId) mbToLocationMapping|EM
     stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
     startTime: startTime_|E
     validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E

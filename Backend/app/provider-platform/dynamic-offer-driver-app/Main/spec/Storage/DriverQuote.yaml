@@ -120,14 +120,14 @@ DriverQuote:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
 
   toTType:
-    fareParametersId: Kernel.Types.Id.getId ((.id) fareParams)|E
+    fareParametersId: Kernel.Types.Id.getId (Domain.Types.FareParameters.id fareParams)|E
     tripCategory: Kernel.Prelude.Just|I
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion:  (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType:  (clientDevice <&> Kernel.Types.Version.deviceType)|E
     vehicleServiceTier: Kernel.Prelude.Just|I
     createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
@@ -136,8 +136,8 @@ DriverQuote:
     estimatedFareAmount: Kernel.Prelude.Just|I
     estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     distanceUnit: Kernel.Prelude.Just|I
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
 
   queries:
     findById:

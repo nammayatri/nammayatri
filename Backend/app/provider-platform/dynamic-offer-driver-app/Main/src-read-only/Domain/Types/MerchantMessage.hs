@@ -39,7 +39,11 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
 
 data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT | EMAIL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
-data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+data MessageDomain
+  = FLEET
+  | RIDE_HAILING
+  | GENERAL
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data MessageKey
   = SEND_OTP

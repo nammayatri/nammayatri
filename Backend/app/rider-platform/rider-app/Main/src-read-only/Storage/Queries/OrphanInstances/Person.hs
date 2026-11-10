@@ -8,11 +8,12 @@ import qualified Data.Time
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
@@ -136,15 +137,15 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.blockedCount = blockedCount,
         Beam.blockedReason = blockedReason,
         Beam.blockedUntil = blockedUntil,
-        Beam.businessEmailEncrypted = businessEmail <&> unEncrypted . (.encrypted),
-        Beam.businessEmailHash = businessEmail <&> (.hash),
+        Beam.businessEmailEncrypted = businessEmail <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.businessEmailHash = businessEmail <&> Kernel.External.Encryption.hash,
         Beam.businessProfileVerified = businessProfileVerified,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = clientId,
         Beam.clientReactNativeVersion = clientReactNativeVersion,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
@@ -159,8 +160,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.description = description,
         Beam.deviceId = deviceId,
         Beam.deviceToken = deviceToken,
-        Beam.emailEncrypted = email <&> unEncrypted . (.encrypted),
-        Beam.emailHash = email <&> (.hash),
+        Beam.emailEncrypted = email <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.emailHash = email <&> Kernel.External.Encryption.hash,
         Beam.emailSource = emailSource,
         Beam.emailVerified = emailVerified,
         Beam.enableOtpLessRide = enableOtpLessRide,
@@ -179,8 +180,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.identifier = identifier,
         Beam.identifierType = identifierType,
-        Beam.imeiNumberEncrypted = imeiNumber <&> unEncrypted . (.encrypted),
-        Beam.imeiNumberHash = imeiNumber <&> (.hash),
+        Beam.imeiNumberEncrypted = imeiNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.imeiNumberHash = imeiNumber <&> Kernel.External.Encryption.hash,
         Beam.informPoliceSos = Just informPoliceSos,
         Beam.isNew = isNew,
         Beam.isValidRating = isValidRating,
@@ -196,8 +197,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.merchantOperatingCityId = (Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        Beam.mobileNumberHash = mobileNumber <&> (.hash),
+        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.mobileNumberHash = mobileNumber <&> Kernel.External.Encryption.hash,
         Beam.nightSafetyChecks = nightSafetyChecks,
         Beam.notificationToken = notificationToken,
         Beam.operatorBadgeToken = operatorBadgeToken,

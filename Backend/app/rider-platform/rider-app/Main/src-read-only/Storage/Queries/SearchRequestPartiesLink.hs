@@ -15,15 +15,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestPartiesLink as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink] -> m ()
 createMany = traverse_ create
 
 findAllBySearchRequestId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink])
+  Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
+  m [Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink]
 findAllBySearchRequestId searchRequestId = do findAllWithKVAndConditionalDB [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)] Nothing
 
 instance FromTType' Beam.SearchRequestPartiesLink Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink where

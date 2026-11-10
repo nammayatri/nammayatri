@@ -4,7 +4,8 @@
 module Storage.Queries.OrphanInstances.Booking where
 
 import qualified Domain.Types.Booking
-import qualified Domain.Types.DeliveryPersonDetails as Fields
+import qualified Domain.Types.DeliveryPersonDetails
+import qualified Domain.Types.FareParameters
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,7 +24,7 @@ import qualified Storage.Queries.FareParameters
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
-import qualified Tools.Fields as Fields
+import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
@@ -168,11 +169,11 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedFare = estimatedFare,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.exotelDeclinedCallStatusReceivingTime = exotelDeclinedCallStatusReceivingTime,
-        Beam.fareParametersId = Kernel.Types.Id.getId $ (.id) fareParams,
+        Beam.fareParametersId = Kernel.Types.Id.getId (Domain.Types.FareParameters.id fareParams),
         Beam.fareSettlementType = fareSettlementType,
         Beam.financeInvoiceId = financeInvoiceId,
         Beam.fromLocGeohash = fromLocGeohash,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
+        Beam.fromLocationId = Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation,
         Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initiatedAs = initiatedAs,
@@ -205,18 +206,18 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.primaryExophone = primaryExophone,
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.quoteId = quoteId,
-        Beam.receiverId = Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)),
-        Beam.receiverName = receiverDetails <&> (.name),
-        Beam.receiverPrimaryExophone = receiverDetails <&> (.primaryExophone),
+        Beam.receiverId = Kernel.Types.Id.getId <$> (receiverDetails <&> Domain.Types.DeliveryPersonDetails.id),
+        Beam.receiverName = receiverDetails <&> Domain.Types.DeliveryPersonDetails.name,
+        Beam.receiverPrimaryExophone = receiverDetails <&> Domain.Types.DeliveryPersonDetails.primaryExophone,
         Beam.reconciliationStatus = reconciliationStatus,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.riderName = riderName,
         Beam.roundTrip = roundTrip,
         Beam.searchTryId = Kernel.Types.Id.getId <$> searchTryId,
-        Beam.senderId = Kernel.Types.Id.getId <$> (senderDetails <&> (.id)),
-        Beam.senderName = senderDetails <&> (.name),
-        Beam.senderPrimaryExophone = senderDetails <&> (.primaryExophone),
+        Beam.senderId = Kernel.Types.Id.getId <$> (senderDetails <&> Domain.Types.DeliveryPersonDetails.id),
+        Beam.senderName = senderDetails <&> Domain.Types.DeliveryPersonDetails.name,
+        Beam.senderPrimaryExophone = senderDetails <&> Domain.Types.DeliveryPersonDetails.primaryExophone,
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationTag = specialLocationTag,
         Beam.specialZoneOtpCode = specialZoneOtpCode,
@@ -224,7 +225,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.status = status,
         Beam.stopLocationId = Kernel.Types.Id.getId <$> stopLocationId,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
+        Beam.toLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation,
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,

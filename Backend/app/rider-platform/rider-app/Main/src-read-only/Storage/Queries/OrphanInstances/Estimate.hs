@@ -12,7 +12,8 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Price
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
@@ -107,18 +108,18 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
         Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
-        Beam.businessDiscount = businessDiscountInfo <&> ((.amount) . (.businessDiscount)),
-        Beam.businessDiscountPercentage = businessDiscountInfo <&> (.businessDiscountPercentage),
+        Beam.businessDiscount = businessDiscountInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.businessDiscount),
+        Beam.businessDiscountPercentage = businessDiscountInfo <&> Domain.Types.Estimate.businessDiscountPercentage,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.device = device,
-        Beam.discount = discount <&> (.amount),
+        Beam.discount = discount <&> Kernel.Types.Price.getPriceAmount,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationNotAllowed = driverCancellationNotAllowed,
         Beam.driversLocation = driversLocation,
@@ -126,10 +127,10 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.estimatedDistance = Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance,
         Beam.estimatedDistanceValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.estimatedFare = (.amount) estimatedFare,
+        Beam.estimatedFare = Kernel.Types.Price.getPriceAmount estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
-        Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.estimatedTotalFare = Kernel.Types.Price.getPriceAmount estimatedTotalFare,
         Beam.fareSettlementType = fareSettlementType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuredAmount = insuredAmount,
@@ -145,11 +146,11 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.negativeFareSuggestion = negativeFareSuggestion,
         Beam.nightShiftCharge = mknightShiftCharge nightShiftInfo,
         Beam.nightShiftChargeAmount = mknightShiftChargeAmount nightShiftInfo,
-        Beam.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
-        Beam.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
-        Beam.oldNightShiftCharge = (.oldNightShiftCharge) =<< nightShiftInfo,
-        Beam.personalDiscount = personalDiscountInfo <&> ((.amount) . (.personalDiscount)),
-        Beam.personalDiscountPercentage = personalDiscountInfo <&> (.personalDiscountPercentage),
+        Beam.nightShiftEnd = nightShiftInfo <&> Domain.Types.Estimate.nightShiftEnd,
+        Beam.nightShiftStart = nightShiftInfo <&> Domain.Types.Estimate.nightShiftStart,
+        Beam.oldNightShiftCharge = Domain.Types.Estimate.oldNightShiftCharge =<< nightShiftInfo,
+        Beam.personalDiscount = personalDiscountInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.personalDiscount),
+        Beam.personalDiscountPercentage = personalDiscountInfo <&> Domain.Types.Estimate.personalDiscountPercentage,
         Beam.providerCompletedRidesCount = providerCompletedRidesCount,
         Beam.providerId = providerId,
         Beam.providerMobileNumber = providerMobileNumber,
@@ -166,9 +167,9 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationTag = specialLocationTag,
         Beam.status = status,
         Beam.tipOptions = tipOptions,
-        Beam.tollCharges = tollChargesInfo <&> ((.amount) . (.tollCharges)),
-        Beam.tollNames = tollChargesInfo <&> (.tollNames),
-        Beam.currency = Kernel.Prelude.Just $ (.currency) estimatedFare,
+        Beam.tollCharges = tollChargesInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.tollCharges),
+        Beam.tollNames = tollChargesInfo <&> Domain.Types.Estimate.tollNames,
+        Beam.currency = Kernel.Prelude.Just $ Kernel.Types.Price.getPriceCurrency estimatedFare,
         Beam.maxTotalFare = mkMaxTotalFare totalFareRange,
         Beam.minTotalFare = mkMinTotalFare totalFareRange,
         Beam.tripCategory = tripCategory,
@@ -180,6 +181,6 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
-        Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),
-        Beam.waitingChargePerMinAmount = (.waitingChargePerMin) waitingCharges <&> (.amount)
+        Beam.waitingChargePerMin = Domain.Types.Estimate.waitingChargePerMin waitingCharges <&> Kernel.Types.Price.getPriceAmountInt,
+        Beam.waitingChargePerMinAmount = Domain.Types.Estimate.waitingChargePerMin waitingCharges <&> Kernel.Types.Price.getPriceAmount
       }

@@ -79,10 +79,10 @@ NyRegularSubscription:
     recurrenceRuleDays: "[Text]"
 
   toTType:
-    pickupLocationId: Kernel.Types.Id.getId $ (.id) pickupLocation|E
-    dropoffLocationId: Kernel.Types.Id.getId $ (.id) dropoffLocation|E
-    fixedPrice: ((.amount) <$> fixedPrice)|E
-    fixedPriceCurrency: ((.currency) <$> fixedPrice)|E
+    pickupLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId pickupLocation|E
+    dropoffLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId dropoffLocation|E
+    fixedPrice: (Kernel.Types.Price.getPriceAmount <$> fixedPrice)|E
+    fixedPriceCurrency: (Kernel.Types.Price.getPriceCurrency <$> fixedPrice)|E
     recurrenceRuleDays: map show recurrenceRuleDays|E
   fromTType:
     pickupLocation: 'Storage.Queries.Location.findById (Kernel.Types.Id.Id pickupLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get pickupLocation " <> pickupLocationId))|EM'

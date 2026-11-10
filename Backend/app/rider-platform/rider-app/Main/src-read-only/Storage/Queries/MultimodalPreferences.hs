@@ -18,18 +18,19 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.MultimodalPreferences as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MultimodalPreferences.MultimodalPreferences -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MultimodalPreferences.MultimodalPreferences -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MultimodalPreferences.MultimodalPreferences] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MultimodalPreferences.MultimodalPreferences] -> m ()
 createMany = traverse_ create
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.MultimodalPreferences.MultimodalPreferences))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.MultimodalPreferences.MultimodalPreferences)
 findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updateUserPreferences ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Domain.Types.Common.MultimodalTravelMode] -> Domain.Types.MultimodalPreferences.JourneyOptionsSortingType -> Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  [Domain.Types.Common.MultimodalTravelMode] ->
+  (Domain.Types.MultimodalPreferences.JourneyOptionsSortingType -> (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))))
 updateUserPreferences allowedTransitModes journeyOptionsSortingType busTransitTypes subwayTransitTypes personId = do
   _now <- getCurrentTime
   updateWithKV
@@ -41,10 +42,10 @@ updateUserPreferences allowedTransitModes journeyOptionsSortingType busTransitTy
     ]
     [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.MultimodalPreferences.MultimodalPreferences))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.MultimodalPreferences.MultimodalPreferences)
 findByPrimaryKey personId = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MultimodalPreferences.MultimodalPreferences -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MultimodalPreferences.MultimodalPreferences -> m ()
 updateByPrimaryKey (Domain.Types.MultimodalPreferences.MultimodalPreferences {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -129,9 +129,18 @@ data Booking = Booking
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingStatus
+  = NEW
+  | TRIP_ASSIGNED
+  | COMPLETED
+  | CANCELLED
+  | REALLOCATED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BookingType
+  = SpecialZoneBooking
+  | NormalBooking
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 

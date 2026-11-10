@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.PartnerOrganization where
 import qualified Domain.Types.PartnerOrganization
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -28,8 +29,8 @@ instance FromTType' Beam.PartnerOrganization Domain.Types.PartnerOrganization.Pa
 instance ToTType' Beam.PartnerOrganization Domain.Types.PartnerOrganization.PartnerOrganization where
   toTType' (Domain.Types.PartnerOrganization.PartnerOrganization {..}) = do
     Beam.PartnerOrganizationT
-      { Beam.apiKeyEncrypted = unEncrypted . (.encrypted) $ apiKey,
-        Beam.apiKeyHash = (.hash) apiKey,
+      { Beam.apiKeyEncrypted = unEncrypted . Kernel.External.Encryption.encrypted $ apiKey,
+        Beam.apiKeyHash = Kernel.External.Encryption.hash apiKey,
         Beam.createdAt = createdAt,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.name = name,

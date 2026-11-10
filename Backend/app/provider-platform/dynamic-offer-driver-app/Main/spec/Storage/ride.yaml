@@ -267,12 +267,12 @@ Ride:
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
-    tripStartLat: Kernel.Prelude.fmap (.lat)|I
-    tripStartLon: Kernel.Prelude.fmap (.lon)|I
-    tripEndLat: Kernel.Prelude.fmap (.lat)|I
-    tripEndLon: Kernel.Prelude.fmap (.lon)|I
-    previousRideTripEndLat: Kernel.Prelude.fmap (.lat)|I
-    previousRideTripEndLon: Kernel.Prelude.fmap (.lon)|I
+    tripStartLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    tripStartLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
+    tripEndLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    tripEndLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
+    previousRideTripEndLat: Kernel.Prelude.fmap Kernel.External.Maps.Types.lat|I
+    previousRideTripEndLon: Kernel.Prelude.fmap Kernel.External.Maps.Types.lon|I
     startOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
     startOdometerReadingFileId: getStartOdometerReadingFileId
     endOdometerReadingValue: Kernel.Prelude.fmap Domain.Types.Ride.value|I
@@ -282,8 +282,8 @@ Ride:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion:  (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType:  (clientDevice <&> Kernel.Types.Version.deviceType)|E
     fare: Kernel.Prelude.fmap roundToIntegral|I
     currency: Kernel.Prelude.Just|I
     isAdvanceBooking: Kernel.Prelude.Just|I
@@ -292,12 +292,12 @@ Ride:
     distanceUnit: Kernel.Prelude.Just|I
     onlinePayment: Kernel.Prelude.Just|I
     isDriverSpecialLocWarrior: Kernel.Prelude.Just|I
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
     subscriptionPurchaseIds: (Kernel.Types.Id.getId <$>) <$> subscriptionPurchaseIds|E
-    estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
-    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
+    estimatedEndTimeRangeStart: Kernel.Prelude.fmap Domain.Types.Ride.start|I
+    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap Domain.Types.Ride.end|I
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     isInsured: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E

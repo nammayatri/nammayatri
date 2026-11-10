@@ -20,15 +20,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantMessage as Beam
 import qualified Storage.Queries.Transformers.MerchantMessage
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantMessage.MerchantMessage -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantMessage.MerchantMessage] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantMessage.MerchantMessage] -> m ()
 createMany = traverse_ create
 
 deleteByMerchantOpCityIdAndMessageKeyVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ())
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ()))
 deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
   deleteWithKV
     [ Se.And
@@ -40,12 +41,14 @@ deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId mes
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m [Domain.Types.MerchantMessage.MerchantMessage]
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage)))
 findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -57,7 +60,8 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messa
 
 findByMerchantOpCityIdDomainAndChannel ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage)))
 findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = do
   findOneWithKV
     [ Se.And
@@ -67,7 +71,7 @@ findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = 
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantMessage.MerchantMessage -> m ()
 updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   _now <- getCurrentTime
   updateWithKV

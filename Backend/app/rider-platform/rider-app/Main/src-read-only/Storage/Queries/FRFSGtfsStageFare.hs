@@ -18,20 +18,22 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSGtfsStageFare as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare] -> m ()
 createMany = traverse_ create
 
 findAllByVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+  Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier ->
+  m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]
 findAllByVehicleServiceTierId vehicleServiceTierId = do findAllWithKV [Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)]
 
 findAllByVehicleTypeAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+  BecknV2.FRFS.Enums.VehicleCategory ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
 findAllByVehicleTypeAndMerchantOperatingCityId vehicleType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -42,7 +44,8 @@ findAllByVehicleTypeAndMerchantOperatingCityId vehicleType merchantOperatingCity
 
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+  BecknV2.FRFS.Enums.VehicleCategory ->
+  (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]))
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -54,7 +57,8 @@ findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchan
 
 findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
+  BecknV2.FRFS.Enums.VehicleCategory ->
+  (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))))
 findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType stage merchantOperatingCityId vehicleServiceTierId = do
   findOneWithKV
     [ Se.And
@@ -65,10 +69,10 @@ findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId ve
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m ()
 updateByPrimaryKey (Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare {..}) = do
   _now <- getCurrentTime
   updateWithKV

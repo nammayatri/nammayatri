@@ -24,7 +24,9 @@ data MerchantOnboardingStepConfigT f = MerchantOnboardingStepConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table MerchantOnboardingStepConfigT where
-  data PrimaryKey MerchantOnboardingStepConfigT f = MerchantOnboardingStepConfigId (B.C f Domain.Types.MerchantOnboarding.OnboardingType) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  data PrimaryKey MerchantOnboardingStepConfigT f
+    = MerchantOnboardingStepConfigId (B.C f Domain.Types.MerchantOnboarding.OnboardingType) (B.C f Kernel.Prelude.Text)
+    deriving (Generic, B.Beamable)
   primaryKey = MerchantOnboardingStepConfigId <$> onboardingType <*> stepNameIdentifier
 
 type MerchantOnboardingStepConfig = MerchantOnboardingStepConfigT Identity

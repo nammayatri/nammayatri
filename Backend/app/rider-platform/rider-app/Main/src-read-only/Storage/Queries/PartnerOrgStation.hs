@@ -18,7 +18,8 @@ import qualified Storage.Beam.PartnerOrgStation as Beam
 
 findByPOrgIdAndPOrgStationId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> Kernel.Types.Id.Id Domain.Types.PartnerOrgStation.PartnerOrgStation -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
+  Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization ->
+  (Kernel.Types.Id.Id Domain.Types.PartnerOrgStation.PartnerOrgStation -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
 findByPOrgIdAndPOrgStationId partnerOrgId partnerOrgStationId = do
   findOneWithKV
     [ Se.And
@@ -29,7 +30,8 @@ findByPOrgIdAndPOrgStationId partnerOrgId partnerOrgStationId = do
 
 findByStationCodeAndPOrgId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
 findByStationCodeAndPOrgId stationCode partnerOrgId = do findOneWithKV [Se.And [Se.Is Beam.stationId $ Se.Eq stationCode, Se.Is Beam.partnerOrgId $ Se.Eq (Kernel.Types.Id.getId partnerOrgId)]]
 
 instance FromTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.PartnerOrgStation where

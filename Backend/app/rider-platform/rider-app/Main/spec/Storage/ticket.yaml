@@ -222,8 +222,8 @@ TicketService:
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
   toTType:
-    operationalStartDate: operationalDate <&> (.startDate)|E
-    operationalEndDate: operationalDate <&> (.eneDate)|E
+    operationalStartDate: operationalDate <&> Domain.Types.TicketService.startDate|E
+    operationalEndDate: operationalDate <&> Domain.Types.TicketService.eneDate|E
     serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
@@ -479,8 +479,8 @@ ServicePeopleCategory:
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
   toTType:
-    pricePerUnit: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    pricePerUnit: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     cancellationCharges: convertCancellationChargesToTable
     timeBounds: Kernel.Prelude.Just|I
     pricingType: Kernel.Prelude.Just|I
@@ -638,8 +638,8 @@ TicketBooking:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< peopleTicketQuantity|E
 
   toTType:
-    amount: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    amount: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
     peopleTicketQuantity: Data.Aeson.toJSON <$> peopleTicketQuantity|E
 
@@ -734,8 +734,8 @@ TicketBookingService:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
-    amount: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    amount: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
 
   sqlType:
@@ -810,8 +810,8 @@ TicketBookingServiceCategory:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
-    amount: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    amount: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
 
   sqlType:
@@ -870,8 +870,8 @@ TicketBookingPeopleCategory:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
-    pricePerUnit: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    pricePerUnit: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
 
   sqlType:

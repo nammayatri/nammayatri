@@ -104,9 +104,18 @@ data SearchRequest = SearchRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data SearchMode = NORMAL | RESERVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SearchMode
+  = NORMAL
+  | RESERVE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SearchRequestStatus
+  = NEW
+  | INPROGRESS
+  | CONFIRMED
+  | COMPLETED
+  | CLOSED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchMode)
 

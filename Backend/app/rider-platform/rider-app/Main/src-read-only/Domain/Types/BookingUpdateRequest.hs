@@ -34,7 +34,10 @@ data BookingUpdateRequest = BookingUpdateRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BookingUpdateRequestStatus = SOFT | CONFIRM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingUpdateRequestStatus
+  = SOFT
+  | CONFIRM
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ErrorObj = ErrorObj {errorCode :: Kernel.Prelude.Text, errorMessage :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

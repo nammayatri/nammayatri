@@ -481,8 +481,8 @@ RiderConfig:
     executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
     cancellationPaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> cancellationPaymentDelay)|E
     policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
-    hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
-    exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
+    hardLimitForSafetyJobs: fromMaybe 21600 (Kernel.Types.Time.getSeconds <$> hardLimitForSafetyJobs)|E
+    exotelStatusCheckSchedulerDelay: maybe 120 Kernel.Types.Time.getSeconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
     enableIGMIssueFlow: fromMaybe False enableIGMIssueFlow|E
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E

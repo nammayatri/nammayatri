@@ -29,8 +29,8 @@ PartnerOrganization:
     apiKey: EncryptedHashed (Encrypted apiKeyEncrypted) apiKeyHash|E
 
   toTType:
-    apiKeyEncrypted: (unEncrypted . (.encrypted) $ apiKey)|E
-    apiKeyHash: ((.hash) apiKey)|E
+    apiKeyEncrypted: (unEncrypted . Kernel.External.Encryption.encrypted $ apiKey)|E
+    apiKeyHash: (Kernel.External.Encryption.hash apiKey)|E
 
   constraints:
     apiKeyHash: PrimaryKey

@@ -1,6 +1,6 @@
 module Storage.Queries.Transformers.SearchRequest where
 
-import qualified Domain.Types.Location
+import Domain.Types.Location (Location (..))
 import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -11,6 +11,9 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
+
+getLocationId :: Location -> Text
+getLocationId Location {id = locId} = Kernel.Types.Id.getId locId
 
 getFromLocation :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Kernel.Prelude.Text -> m Domain.Types.Location.Location
 getFromLocation id = do

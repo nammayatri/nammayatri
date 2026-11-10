@@ -154,7 +154,13 @@ data RoutePair = RoutePair
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerificationStatus = PENDING | CLG_VERIFIED | MTC_VERIFIED | REJECTED | EXPIRED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data VerificationStatus
+  = PENDING
+  | CLG_VERIFIED
+  | MTC_VERIFIED
+  | REJECTED
+  | EXPIRED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VerificationStatus)
 

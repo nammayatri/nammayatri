@@ -4,19 +4,18 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
-import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Price
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
@@ -127,19 +126,19 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.busLocationData = Just $ toJSON busLocationData,
         Beam.clientBundleVersion = Kernel.Utils.Version.versionToText <$> clientBundleVersion,
         Beam.clientConfigVersion = Kernel.Utils.Version.versionToText <$> clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientReactNativeVersion = clientReactNativeVersion,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.cloudType = cloudType,
         Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
-        Beam.currency = maybe (negativeFareAdjustment <&> (.currency)) Just (customerExtraFee <&> (.currency)),
-        Beam.customerExtraFee = customerExtraFee <&> (.amountInt),
-        Beam.customerExtraFeeAmount = customerExtraFee <&> (.amount),
+        Beam.currency = maybe (negativeFareAdjustment <&> Kernel.Types.Price.getPriceCurrency) Just (customerExtraFee <&> Kernel.Types.Price.getPriceCurrency),
+        Beam.customerExtraFee = customerExtraFee <&> Kernel.Types.Price.getPriceAmountInt,
+        Beam.customerExtraFeeAmount = customerExtraFee <&> Kernel.Types.Price.getPriceAmount,
         Beam.destinationStopCode = destinationStopCode,
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
@@ -148,11 +147,11 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.distance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.driverIdentifierType = driverIdentifier <&> (._type),
-        Beam.driverIdentifierValue = driverIdentifier <&> (.value),
+        Beam.driverIdentifierType = driverIdentifier <&> Domain.Types.RefereeLink._type,
+        Beam.driverIdentifierValue = driverIdentifier <&> Domain.Types.RefereeLink.value,
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.estimatedRideStaticDuration = estimatedRideStaticDuration,
-        Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.fromLocationId = Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation,
         Beam.fromSpecialLocationId = fromSpecialLocationId,
         Beam.hasBetterPointSuggestion = hasBetterPointSuggestion,
         Beam.hasMultimodalSearch = hasMultimodalSearch,
@@ -172,8 +171,8 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.multimodalSearchRequestId = multimodalSearchRequestId,
-        Beam.negativeFareAdjustment = negativeFareAdjustment <&> (.amountInt),
-        Beam.negativeFareAdjustmentAmount = negativeFareAdjustment <&> (.amount),
+        Beam.negativeFareAdjustment = negativeFareAdjustment <&> Kernel.Types.Price.getPriceAmountInt,
+        Beam.negativeFareAdjustmentAmount = negativeFareAdjustment <&> Kernel.Types.Price.getPriceAmount,
         Beam.offersFraudCheckFailureReason = offersFraudCheckFailureReason,
         Beam.onSearchFailed = onSearchFailed,
         Beam.originStopCode = originStopCode,
@@ -191,7 +190,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.selectedPaymentMethodId = selectedPaymentMethodId,
         Beam.startTime = startTime,
         Beam.syncSearch = syncSearch,
-        Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
+        Beam.toLocationId = Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation,
         Beam.toSpecialLocationId = toSpecialLocationId,
         Beam.totalRidesCount = totalRidesCount,
         Beam.validTill = validTill,

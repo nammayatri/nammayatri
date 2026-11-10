@@ -110,10 +110,10 @@ FRFSSearch:
     clientBundleVersion: Maybe Text
 
   toTType:
-    fromStationLat: (.lat) <$> fromStationPoint|E
-    fromStationLon: (.lon) <$> fromStationPoint|E
-    toStationLat: (.lat) <$> toStationPoint|E
-    toStationLon: (.lon) <$> toStationPoint|E
+    fromStationLat: (Kernel.External.Maps.Types.lat <$> fromStationPoint)|E
+    fromStationLon: (Kernel.External.Maps.Types.lon <$> fromStationPoint)|E
+    toStationLat: (Kernel.External.Maps.Types.lat <$> toStationPoint)|E
+    toStationLon: (Kernel.External.Maps.Types.lon <$> toStationPoint)|E
     busLocationData: Just $ toJSON busLocationData|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
@@ -239,18 +239,18 @@ FRFSQuote:
     busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   toTType:
-    currency: (Kernel.Prelude.fmap (.currency))|I
+    currency: Kernel.Prelude.fmap Kernel.Types.Price.getPriceCurrency|I
     applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
-    providerRouteId: (fareDetails <&> (.providerRouteId))|E
-    distance: (fareDetails <&> (.distance))|E
-    via: (fareDetails <&> (.via))|E
-    ticketTypeCode: (fareDetails <&> (.ticketTypeCode))|E
-    trainTypeCode: (fareDetails <&> (.trainTypeCode))|E
-    appSession: (fareDetails <&> (.appSession))|E
-    fromStationLat: (.lat) <$> fromStationPoint|E
-    fromStationLon: (.lon) <$> fromStationPoint|E
-    toStationLat: (.lat) <$> toStationPoint|E
-    toStationLon: (.lon) <$> toStationPoint|E
+    providerRouteId: (fareDetails <&> Domain.Types.FRFSQuote.providerRouteId)|E
+    distance: (fareDetails <&> Domain.Types.FRFSQuote.distance)|E
+    via: (fareDetails <&> Domain.Types.FRFSQuote.via)|E
+    ticketTypeCode: (fareDetails <&> Domain.Types.FRFSQuote.ticketTypeCode)|E
+    trainTypeCode: (fareDetails <&> Domain.Types.FRFSQuote.trainTypeCode)|E
+    appSession: (fareDetails <&> Domain.Types.FRFSQuote.appSession)|E
+    fromStationLat: (Kernel.External.Maps.Types.lat <$> fromStationPoint)|E
+    fromStationLon: (Kernel.External.Maps.Types.lon <$> fromStationPoint)|E
+    toStationLat: (Kernel.External.Maps.Types.lat <$> toStationPoint)|E
+    toStationLon: (Kernel.External.Maps.Types.lon <$> toStationPoint)|E
     busLocationData: Just $ toJSON busLocationData|E
 
   sqlType:
@@ -327,15 +327,15 @@ FRFSQuoteCategory:
     seatIds: fmap (fmap Kernel.Types.Id.Id) seatIds|E
 
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
-    offeredPrice: (.amount)|I
-    finalPrice: (Kernel.Prelude.fmap (.amount))|I
-    code: (categoryMeta <&> (.code))|E
-    title: (categoryMeta <&> (.title))|E
-    description: (categoryMeta <&> (.description))|E
-    tnc: (categoryMeta <&> (.tnc))|E
-    categoryOrder: (categoryMeta >>= (.categoryOrder))|E
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
+    offeredPrice: Kernel.Types.Price.getPriceAmount|I
+    finalPrice: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    code: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.code)|E
+    title: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.title)|E
+    description: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.description)|E
+    tnc: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.tnc)|E
+    categoryOrder: (categoryMeta >>= Domain.Types.FRFSQuoteCategory.categoryOrder)|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
     seatIds: (fmap Kernel.Types.Id.getId) <$> seatIds|E
@@ -525,13 +525,13 @@ FRFSTicketBooking:
     sharedCabNoShows: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
     busLocationData: Just $ toJSON busLocationData|E
-    fromStationLat: (.lat) <$> fromStationPoint|E
-    fromStationLon: (.lon) <$> fromStationPoint|E
-    toStationLat: (.lat) <$> toStationPoint|E
-    toStationLon: (.lon) <$> toStationPoint|E
+    fromStationLat: (Kernel.External.Maps.Types.lat <$> fromStationPoint)|E
+    fromStationLon: (Kernel.External.Maps.Types.lon <$> fromStationPoint)|E
+    toStationLat: (Kernel.External.Maps.Types.lat <$> toStationPoint)|E
+    toStationLon: (Kernel.External.Maps.Types.lon <$> toStationPoint)|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     sharedCabNoShows: Kernel.Prelude.Just|I
@@ -869,14 +869,14 @@ FRFSTicketBookingPaymentCategory:
     seatIds: fmap (fmap Kernel.Types.Id.Id) seatIds|E
 
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
-    offeredPrice: (.amount)|I
-    finalPrice: (Kernel.Prelude.fmap (.amount))|I
-    code: (categoryMeta <&> (.code))|E
-    title: (categoryMeta <&> (.title))|E
-    description: (categoryMeta <&> (.description))|E
-    tnc: (categoryMeta <&> (.tnc))|E
+    price: Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
+    offeredPrice: Kernel.Types.Price.getPriceAmount|I
+    finalPrice: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    code: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.code)|E
+    title: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.title)|E
+    description: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.description)|E
+    tnc: (categoryMeta <&> Domain.Types.FRFSQuoteCategory.tnc)|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
     seatIds: (fmap Kernel.Types.Id.getId) <$> seatIds|E
@@ -1009,12 +1009,12 @@ FRFSRecon:
     differenceAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) differenceAmount|E
 
   toTType:
-    fare: (.amount)|I
-    buyerFinderFee: (.amount)|I
-    totalOrderValue: (.amount)|I
-    settlementAmount: (.amount)|I
-    differenceAmount: Kernel.Prelude.fmap (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    fare: Kernel.Types.Price.getPriceAmount|I
+    buyerFinderFee: Kernel.Types.Price.getPriceAmount|I
+    totalOrderValue: Kernel.Types.Price.getPriceAmount|I
+    settlementAmount: Kernel.Types.Price.getPriceAmount|I
+    differenceAmount: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    currency: (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency)|I
 
 FRFSConfig:
   tableName: frfs_config

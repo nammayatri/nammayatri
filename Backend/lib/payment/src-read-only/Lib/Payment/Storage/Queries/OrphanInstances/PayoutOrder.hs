@@ -10,6 +10,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PayoutOrder
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as Beam
@@ -56,8 +57,8 @@ instance ToTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.PayoutOr
   toTType' (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
     Beam.PayoutOrderT
       { Beam.accountDetailsType = accountDetailsType,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
-        Beam.price = (.amount) amount,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) amount,
+        Beam.price = Kernel.Types.Price.getPriceAmount amount,
         Beam.batchId = Kernel.Types.Id.getId <$> batchId,
         Beam.city = city,
         Beam.createdAt = createdAt,

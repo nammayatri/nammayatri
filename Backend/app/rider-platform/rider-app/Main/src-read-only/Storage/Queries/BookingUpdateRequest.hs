@@ -17,35 +17,35 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingUpdateRequest as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BookingUpdateRequest.BookingUpdateRequest] -> m ()
 createMany = traverse_ create
 
-findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
+findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest]
 findAllByBookingId bookingId = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
 
-findById ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateErrorObjById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+  Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.ErrorObj ->
+  (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
 updateErrorObjById errorObj id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
-      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
+    [ Se.Set Beam.errorCode (Domain.Types.BookingUpdateRequest.errorCode <$> errorObj),
+      Se.Set Beam.errorMessage (Domain.Types.BookingUpdateRequest.errorMessage <$> errorObj),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateMultipleById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ()))))))
 updateMultipleById travelledDistance estimatedDistance estimatedFare totalDistance currentPointLat currentPointLon id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -61,15 +61,17 @@ updateMultipleById travelledDistance estimatedDistance estimatedFare totalDistan
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus -> Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+  Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus ->
+  (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
+  Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+  m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m ()
 updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -77,8 +79,8 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.currentPointLat currentPointLat,
       Se.Set Beam.currentPointLon currentPointLon,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.errorCode ((.errorCode) <$> errorObj),
-      Se.Set Beam.errorMessage ((.errorMessage) <$> errorObj),
+      Se.Set Beam.errorCode (Domain.Types.BookingUpdateRequest.errorCode <$> errorObj),
+      Se.Set Beam.errorMessage (Domain.Types.BookingUpdateRequest.errorMessage <$> errorObj),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedFare estimatedFare,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -124,8 +126,8 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.currentPointLat = currentPointLat,
         Beam.currentPointLon = currentPointLon,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
-        Beam.errorCode = (.errorCode) <$> errorObj,
-        Beam.errorMessage = (.errorMessage) <$> errorObj,
+        Beam.errorCode = Domain.Types.BookingUpdateRequest.errorCode <$> errorObj,
+        Beam.errorMessage = Domain.Types.BookingUpdateRequest.errorMessage <$> errorObj,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedFare = estimatedFare,
         Beam.id = Kernel.Types.Id.getId id,

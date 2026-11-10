@@ -29,6 +29,9 @@ data SpecialOccasion = SpecialOccasion
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SpecialDayType = Open | Closed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SpecialDayType
+  = Open
+  | Closed
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialDayType)

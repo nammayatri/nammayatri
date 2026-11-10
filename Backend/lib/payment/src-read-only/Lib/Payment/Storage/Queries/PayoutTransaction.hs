@@ -11,42 +11,45 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PayoutTransaction
 import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction] -> m ()
 createMany = traverse_ create
 
 findById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByTransactionRef :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction))
+findByTransactionRef :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction)
 findByTransactionRef transactionRef = do findOneWithKV [Se.Is Beam.transactionRef $ Se.Eq transactionRef]
 
-updatePayoutTransactionStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updatePayoutTransactionStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ())
 updatePayoutTransactionStatus status transactionRef = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.transactionRef $ Se.Eq transactionRef]
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction ->
+  m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
-      Se.Set Beam.price ((.amount) amount),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) amount),
+      Se.Set Beam.price (Kernel.Types.Price.getPriceAmount amount),
       Se.Set Beam.beneficiaryAccount beneficiaryAccount,
       Se.Set Beam.beneficiaryIfsc beneficiaryIfsc,
       Se.Set Beam.beneficiaryName beneficiaryName,
@@ -85,8 +88,8 @@ instance FromTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransa
 instance ToTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction where
   toTType' (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction {..}) = do
     Beam.PayoutTransactionT
-      { Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
-        Beam.price = (.amount) amount,
+      { Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) amount,
+        Beam.price = Kernel.Types.Price.getPriceAmount amount,
         Beam.beneficiaryAccount = beneficiaryAccount,
         Beam.beneficiaryIfsc = beneficiaryIfsc,
         Beam.beneficiaryName = beneficiaryName,

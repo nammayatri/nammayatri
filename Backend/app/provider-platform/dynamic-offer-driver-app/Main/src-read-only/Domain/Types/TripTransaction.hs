@@ -74,9 +74,19 @@ data ActionSource
 data EstimatedRouteDetails = EstimatedRouteDetails {distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, polyline :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus
+  = TRIP_ASSIGNED
+  | CANCELLED
+  | IN_PROGRESS
+  | PAUSED
+  | COMPLETED
+  | UPCOMING
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripType = PILOT | WIMB deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripType
+  = PILOT
+  | WIMB
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 

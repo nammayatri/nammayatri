@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSRouteStopStageFare as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare] -> m ()
 createMany = traverse_ create
 
 findByRouteAndStopCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare))
+  Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare)))
 findByRouteAndStopCode farePolicyId routeCode stopCode = do
   findOneWithKV
     [ Se.And
@@ -36,7 +37,8 @@ findByRouteAndStopCode farePolicyId routeCode stopCode = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare))
+  Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare)))
 findByPrimaryKey farePolicyId routeCode stopCode = do
   findOneWithKV
     [ Se.And
@@ -46,7 +48,7 @@ findByPrimaryKey farePolicyId routeCode stopCode = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare -> m ()
 updateByPrimaryKey (Domain.Types.FRFSRouteStopStageFare.FRFSRouteStopStageFare {..}) = do
   _now <- getCurrentTime
   updateWithKV

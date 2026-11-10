@@ -423,17 +423,17 @@ Booking:
     isUpgradedToCab: getIsUpgradedToCab
     isBookingUpdated: (Just isBookingUpdated)|E
     providerUrl: (showBaseUrl providerUrl)|E
-    fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
-    estimatedFare: ((.amount) estimatedFare)|E
-    discount: (discount <&> (.amount))|E
-    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
-    currency: (Just $ (.currency) estimatedFare)|E
+    fromLocationId: (Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation)|E
+    estimatedFare: (Kernel.Types.Price.getPriceAmount estimatedFare)|E
+    discount: (discount <&> Kernel.Types.Price.getPriceAmount)|E
+    estimatedTotalFare: (Kernel.Types.Price.getPriceAmount estimatedTotalFare)|E
+    currency: (Just $ Kernel.Types.Price.getPriceCurrency estimatedFare)|E
     isScheduled: (Just isScheduled)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
-    clientOsType: clientDevice <&> (.deviceType)|E
-    clientOsVersion: clientDevice <&> (.deviceVersion)|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsType: clientDevice <&> Kernel.Types.Version.deviceType|E
+    clientOsVersion: clientDevice <&> Kernel.Types.Version.deviceVersion|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E

@@ -7,13 +7,16 @@ import qualified Data.Text
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Types as Fields
+import qualified Kernel.External.Encryption
+import qualified Kernel.External.Maps
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Price
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
@@ -147,10 +150,10 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
@@ -159,27 +162,27 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.destinationReachedAt = destinationReachedAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverAccountId = driverAccountId,
-        Beam.driverAlternateNumberEncrypted = driverAlternateNumber <&> unEncrypted . (.encrypted),
-        Beam.driverAlternateNumberHash = driverAlternateNumber <&> (.hash),
+        Beam.driverAlternateNumberEncrypted = driverAlternateNumber <&> (unEncrypted . Kernel.External.Encryption.encrypted),
+        Beam.driverAlternateNumberHash = driverAlternateNumber <&> Kernel.External.Encryption.hash,
         Beam.driverArrivalStatus = driverArrivalStatus,
         Beam.driverArrivalTime = driverArrivalTime,
         Beam.driverImage = driverImage,
         Beam.driverMobileCountryCode = driverMobileCountryCode,
         Beam.driverMobileNumber = driverMobileNumber,
         Beam.driverName = driverName,
-        Beam.driverNumberEncrypted = driverPhoneNumber <&> unEncrypted . (.encrypted),
-        Beam.driverNumberHash = driverPhoneNumber <&> (.hash),
+        Beam.driverNumberEncrypted = driverPhoneNumber <&> (unEncrypted . Kernel.External.Encryption.encrypted),
+        Beam.driverNumberHash = driverPhoneNumber <&> Kernel.External.Encryption.hash,
         Beam.driverRating = driverRating,
         Beam.driverRegisteredAt = driverRegisteredAt,
-        Beam.driversPreviousRideDropLat = Kernel.Prelude.fmap (.lat) driversPreviousRideDropLoc,
-        Beam.driversPreviousRideDropLon = Kernel.Prelude.fmap (.lon) driversPreviousRideDropLoc,
+        Beam.driversPreviousRideDropLat = Kernel.Prelude.fmap Kernel.External.Maps.Types.lat driversPreviousRideDropLoc,
+        Beam.driversPreviousRideDropLon = Kernel.Prelude.fmap Kernel.External.Maps.Types.lon driversPreviousRideDropLoc,
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.endOdometerReading = endOdometerReading,
         Beam.endOtp = endOtp,
-        Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap (.end) estimatedEndTimeRange,
-        Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap (.start) estimatedEndTimeRange,
-        Beam.currency = Kernel.Prelude.fmap (.currency) fare,
-        Beam.fare = Kernel.Prelude.fmap (.amount) fare,
+        Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap Domain.Types.Ride.end estimatedEndTimeRange,
+        Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap Domain.Types.Ride.start estimatedEndTimeRange,
+        Beam.currency = Kernel.Prelude.fmap Kernel.Types.Price.getPriceCurrency fare,
+        Beam.fare = Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount fare,
         Beam.favCount = favCount,
         Beam.feedbackSkipped = Kernel.Prelude.Just feedbackSkipped,
         Beam.hasStops = hasStops,
@@ -217,9 +220,9 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.startOdometerReading = startOdometerReading,
         Beam.status = status,
         Beam.talkedWithDriver = talkedWithDriver,
-        Beam.tipAmount = Kernel.Prelude.fmap (.amount) tipAmount,
+        Beam.tipAmount = Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount tipAmount,
         Beam.tollConfidence = tollConfidence,
-        Beam.totalFare = Kernel.Prelude.fmap (.amount) totalFare,
+        Beam.totalFare = Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount totalFare,
         Beam.trackingUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters traveledDistance,
         Beam.traveledDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) traveledDistance,

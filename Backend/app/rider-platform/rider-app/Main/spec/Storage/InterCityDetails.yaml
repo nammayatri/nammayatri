@@ -69,19 +69,19 @@ InterCityDetails:
     plannedPerKmRateRoundTrip: HighPrecMoney
 
   toTType:
-    baseFare: (.amount)|I
-    perHourCharge: (.amount)|I
-    perExtraMinRate: (.amount)|I
-    perExtraKmRate: (.amount)|I
-    plannedPerKmRateOneWay: (.amount)|I
-    plannedPerKmRateRoundTrip: (.amount)|I
-    deadKmFare: (.amount)|I
-    nightShiftCharge: ((.amount) . (.nightShiftCharge)) <$> nightShiftInfo|E
-    currency: (.currency) baseFare|E
-    nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
-    nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
-    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
-    distanceUnit: ((.unit) kmPerPlannedExtraHour)|E
+    baseFare: Kernel.Types.Price.getPriceAmount|I
+    perHourCharge: Kernel.Types.Price.getPriceAmount|I
+    perExtraMinRate: Kernel.Types.Price.getPriceAmount|I
+    perExtraKmRate: Kernel.Types.Price.getPriceAmount|I
+    plannedPerKmRateOneWay: Kernel.Types.Price.getPriceAmount|I
+    plannedPerKmRateRoundTrip: Kernel.Types.Price.getPriceAmount|I
+    deadKmFare: Kernel.Types.Price.getPriceAmount|I
+    nightShiftCharge: (nightShiftInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Extra.RentalDetails.getNightShiftInfoCharge))|E
+    currency: Kernel.Types.Price.getPriceCurrency baseFare|E
+    nightShiftStart: (nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoStart)|E
+    nightShiftEnd: (nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoEnd)|E
+    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
+    distanceUnit: Kernel.Types.Distance.unit kmPerPlannedExtraHour|E
 
   fromTType:
     baseFare: Kernel.Utils.Common.mkPrice (Just currency) baseFare|E

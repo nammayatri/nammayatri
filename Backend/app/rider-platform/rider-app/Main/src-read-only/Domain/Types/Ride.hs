@@ -338,13 +338,27 @@ instance EncryptedItem' Ride where
 
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CancellationFeeStatus = PENDING | CLEARED | WAIVED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CancellationFeeStatus
+  = PENDING
+  | CLEARED
+  | WAIVED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data DriverArrivalStatus = DRIVER_ON_THE_WAY | DRIVER_REACHING | DRIVER_REACHED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DriverArrivalStatus
+  = DRIVER_ON_THE_WAY
+  | DRIVER_REACHING
+  | DRIVER_REACHED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PaymentStatus = Completed | NotInitiated | Initiated | Cancelled | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentStatus
+  = Completed
+  | NotInitiated
+  | Initiated
+  | Cancelled
+  | Failed
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SosJourneyStatus
   = Safe
@@ -354,7 +368,11 @@ data SosJourneyStatus
   | PoliceMonitoring
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data UnexpectedConditionStage
+  = DriverDeviated
+  | UnusualStop
+  | UnsafeArea
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
 

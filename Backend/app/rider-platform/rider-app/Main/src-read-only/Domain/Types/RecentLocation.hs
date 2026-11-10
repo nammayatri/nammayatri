@@ -34,6 +34,12 @@ data RecentLocation = RecentLocation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EntityType = MULTIMODAL | SUBWAY | BUS | METRO | TAXI deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EntityType
+  = MULTIMODAL
+  | SUBWAY
+  | BUS
+  | METRO
+  | TAXI
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntityType)

@@ -7,6 +7,7 @@ import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverQuote
+import qualified Domain.Types.FareParameters
 import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -15,11 +16,11 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.DriverQuote as Beam
 import Storage.Queries.Transformers.DriverQuote
-import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
   fromTType' (Beam.DriverQuoteT {..}) = do
@@ -80,10 +81,10 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
@@ -100,7 +101,7 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.estimateId = Kernel.Types.Id.getId estimateId,
         Beam.estimatedFare = Kernel.Prelude.roundToIntegral estimatedFare,
         Beam.estimatedFareAmount = Kernel.Prelude.Just estimatedFare,
-        Beam.fareParametersId = Kernel.Types.Id.getId ((.id) fareParams),
+        Beam.fareParametersId = Kernel.Types.Id.getId (Domain.Types.FareParameters.id fareParams),
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoAccepted = isAutoAccepted,

@@ -192,11 +192,11 @@ Quote:
   # distanceUnit should be the same for all fields
   toTType:
     fareProductType: (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
-    discount: (discount <&> (.amount))|E
-    currency: (Just ((.currency) estimatedFare))|E
-    estimatedFare: ((.amount) estimatedFare)|E
-    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
-    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
+    discount: (discount <&> Kernel.Types.Price.getPriceAmount)|E
+    currency: (Just (Kernel.Types.Price.getPriceCurrency estimatedFare))|E
+    estimatedFare: (Kernel.Types.Price.getPriceAmount estimatedFare)|E
+    estimatedTotalFare: (Kernel.Types.Price.getPriceAmount estimatedTotalFare)|E
+    tollCharges: (tollChargesInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Extra.Quote.getTollChargesInfoPrice))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)))|E
@@ -212,10 +212,10 @@ Quote:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsVersion:  (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType:  (clientDevice <&> Kernel.Types.Version.deviceType)|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     distanceUnit: Kernel.Prelude.Just|I
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     isSafetyPlus: Kernel.Prelude.Just|I

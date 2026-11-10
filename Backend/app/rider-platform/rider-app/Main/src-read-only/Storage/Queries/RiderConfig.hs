@@ -17,35 +17,38 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderConfig.RiderConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RiderConfig.RiderConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderConfig.RiderConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RiderConfig.RiderConfig] -> m ()
 createMany = traverse_ create
 
-findByFrfsMetricsApiKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+findByFrfsMetricsApiKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.RiderConfig.RiderConfig)
 findByFrfsMetricsApiKey frfsMetricsApiKey = do findOneWithKV [Se.Is Beam.frfsMetricsApiKey $ Se.Eq frfsMetricsApiKey]
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.RiderConfig.RiderConfig)
 findByMerchantOperatingCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findExotelAppletMappingByMOCID ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m (Maybe Domain.Types.RiderConfig.RiderConfig)
 findExotelAppletMappingByMOCID merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig)
 findByPrimaryKey merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderConfig.RiderConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RiderConfig.RiderConfig -> m ()
 updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -369,7 +372,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             excludedVehicleVariants = excludedVehicleVariants,
             executePaymentDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay),
             exotelAppIdMapping = exotelAppIdMapping,
-            exotelStatusCheckSchedulerDelay = maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay,
+            exotelStatusCheckSchedulerDelay = maybe 120 Kernel.Types.Time.getSeconds exotelStatusCheckSchedulerDelay,
             externalSOSConfig = externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe,
             fareCacheInterCitySearchLocations = fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe,
             fareCacheRentalsConfig = fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe,
@@ -381,7 +384,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             flowStatusUnpaidJourneyWindowSec = flowStatusUnpaidJourneyWindowSec,
             frfsDriverDetailsLeadTimeSeconds = frfsDriverDetailsLeadTimeSeconds,
             frfsMetricsApiKey = frfsMetricsApiKey,
-            hardLimitForSafetyJobs = fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs),
+            hardLimitForSafetyJobs = fromMaybe 21600 (Kernel.Types.Time.getSeconds <$> hardLimitForSafetyJobs),
             immediateCaptureDriverCancellationFee = immediateCaptureDriverCancellationFee,
             immediateCaptureRiderCancellationFee = immediateCaptureRiderCancellationFee,
             incidentReportSupport = fromMaybe False incidentReportSupport,

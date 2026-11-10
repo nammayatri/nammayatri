@@ -46,10 +46,10 @@ RecentLocation:
     toStopCode: stopCode|E
 
   toTType:
-    lat: (.lat)|I
-    lon: (.lon)|I
-    stopLat: fromLatLong <&> (.lat)|E
-    stopLon: fromLatLong <&> (.lon)|E
+    lat: Kernel.External.Maps.Types.lat|I
+    lon: Kernel.External.Maps.Types.lon|I
+    stopLat: fromLatLong <&> Kernel.External.Maps.Types.lat|E
+    stopLon: fromLatLong <&> Kernel.External.Maps.Types.lon|E
     stopCode: toStopCode|E
 
   extraOperations:

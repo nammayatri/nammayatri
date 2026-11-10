@@ -15,27 +15,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as Beam
 import Storage.Queries.SearchRequestForDriverExtra as ReExport
 import Storage.Queries.Transformers.SearchRequestForDriver
-import qualified Tools.Fields as Fields
 
 findAllActiveBySRId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
+  Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
+  (Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
 findAllActiveBySRId requestId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 findAllActiveBySTId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
+  Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry ->
+  (Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
 findAllActiveBySTId searchTryId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.searchTryId $ Se.Eq (Kernel.Types.Id.getId searchTryId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+  Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse ->
+  (Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())))))
 updateDriverResponse response status notificationSource renderedAt respondedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -50,10 +53,11 @@ updateDriverResponse response status notificationSource renderedAt respondedAt i
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m (Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriver))
+  Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver ->
+  m (Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriver)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ()
 updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -70,10 +74,10 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.cancellationRatio cancellationRatio,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
-      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
-      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
-      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientManufacturer (clientDevice >>= Kernel.Types.Version.deviceManufacturer),
+      Se.Set Beam.clientModelName (clientDevice <&> Kernel.Types.Version.deviceModel),
+      Se.Set Beam.clientOsType (clientDevice <&> Kernel.Types.Version.deviceType),
+      Se.Set Beam.clientOsVersion (clientDevice <&> Kernel.Types.Version.deviceVersion),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.coinsRewardedOnGoldTierRide coinsRewardedOnGoldTierRide,
       Se.Set Beam.commissionCharges commissionCharges,

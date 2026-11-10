@@ -13,61 +13,63 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuoteCategory as Beam
 import Storage.Queries.FRFSQuoteCategoryExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory] -> m ()
 createMany = traverse_ create
 
-findAllByQuoteIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote] -> m [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory])
+findAllByQuoteIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote] -> m [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory]
 findAllByQuoteIds quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.In (Kernel.Types.Id.getId <$> quoteId)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateFinalPriceByQuoteCategoryId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.Price ->
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
 updateFinalPriceByQuoteCategoryId finalPrice id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateOfferedPriceByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateOfferedPriceByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Common.Price -> (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
 updateOfferedPriceByQuoteId offeredPrice quoteId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.offeredPrice ((.amount) offeredPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
+  updateWithKV [Se.Set Beam.offeredPrice (Kernel.Types.Price.getPriceAmount offeredPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
 
-updateQuantityByQuoteCategoryId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+updateQuantityByQuoteCategoryId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
 updateQuantityByQuoteCategoryId selectedQuantity id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.selectedQuantity (Kernel.Prelude.Just selectedQuantity), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ()
 updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.category (Kernel.Prelude.Just category),
-      Se.Set Beam.categoryOrder (categoryMeta >>= (.categoryOrder)),
-      Se.Set Beam.code (categoryMeta <&> (.code)),
-      Se.Set Beam.description (categoryMeta <&> (.description)),
-      Se.Set Beam.title (categoryMeta <&> (.title)),
-      Se.Set Beam.tnc (categoryMeta <&> (.tnc)),
-      Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
+      Se.Set Beam.categoryOrder (categoryMeta >>= Domain.Types.FRFSQuoteCategory.categoryOrder),
+      Se.Set Beam.code (categoryMeta <&> Domain.Types.FRFSQuoteCategory.code),
+      Se.Set Beam.description (categoryMeta <&> Domain.Types.FRFSQuoteCategory.description),
+      Se.Set Beam.title (categoryMeta <&> Domain.Types.FRFSQuoteCategory.title),
+      Se.Set Beam.tnc (categoryMeta <&> Domain.Types.FRFSQuoteCategory.tnc),
+      Se.Set Beam.finalPrice (Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount finalPrice),
       Se.Set Beam.holdId holdId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.offeredPrice ((.amount) offeredPrice),
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
-      Se.Set Beam.price ((.amount) price),
+      Se.Set Beam.offeredPrice (Kernel.Types.Price.getPriceAmount offeredPrice),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) price),
+      Se.Set Beam.price (Kernel.Types.Price.getPriceAmount price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.seatIds (fmap Kernel.Types.Id.getId <$> seatIds),
       Se.Set Beam.seatLabels seatLabels,

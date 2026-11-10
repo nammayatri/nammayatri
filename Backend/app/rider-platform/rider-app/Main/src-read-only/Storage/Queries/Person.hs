@@ -19,7 +19,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Version as Fields
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
@@ -28,29 +28,31 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Person as Beam
 import Storage.Queries.PersonExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Person.Person -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Person.Person -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Person.Person] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Person.Person] -> m ()
 createMany = traverse_ create
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Person.Person])
+findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Person.Person]
 findAllByDeviceId deviceId = do findAllWithKV [Se.Is Beam.deviceId $ Se.Eq deviceId]
 
 findAllByDeviceIdAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Person.Person])
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Person.Person])
 findAllByDeviceIdAndMerchantId deviceId merchantId = do findAllWithKV [Se.And [Se.Is Beam.deviceId $ Se.Eq deviceId, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByOperatorBadgeTokenAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
 findByOperatorBadgeTokenAndMerchantId operatorBadgeToken merchantId = do
   findOneWithKV
     [ Se.And
@@ -59,21 +61,21 @@ findByOperatorBadgeTokenAndMerchantId operatorBadgeToken merchantId = do
         ]
     ]
 
-findByReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person))
+findByReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person)
 findByReferralCode referralCode = do findOneWithKV [Se.Is Beam.referralCode $ Se.Eq referralCode]
 
-findPersonByCustomerReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person))
+findPersonByCustomerReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person)
 findPersonByCustomerReferralCode customerReferralCode = do findOneWithKV [Se.Is Beam.customerReferralCode $ Se.Eq customerReferralCode]
 
-setIsNewFalse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+setIsNewFalse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 setIsNewFalse isNew id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateAadhaarVerifiedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAadhaarVerifiedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAadhaarVerifiedState aadhaarVerified id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.aadhaarVerified aadhaarVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateAverageRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAverageRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())))
 updateAverageRating totalRatings totalRatingScore isValidRating id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -84,63 +86,65 @@ updateAverageRating totalRatings totalRatingScore isValidRating id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateBlockedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBlockedState :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateBlockedState blocked id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.blocked blocked, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateClientId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateClientId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateClientId clientId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.clientId clientId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCustomerTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCustomerTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCustomerTags customerNammaTags id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateFirebaseAppInstanceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFirebaseAppInstanceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFirebaseAppInstanceId firebaseAppInstanceId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.firebaseAppInstanceId firebaseAppInstanceId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFollowsRide followsRide id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateFreqLocGeohashes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFreqLocGeohashes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFreqLocGeohashes frequentLocGeohashes id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.frequentLocGeohashes frequentLocGeohashes, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateHasDisability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateHasDisability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateHasDisability hasDisability id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasDisability hasDisability, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateIsValidRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsValidRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateJuspayCustomerPaymentId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId ->
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateJuspayCustomerPaymentId juspayCustomerPaymentID id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateLastUsedVehicleCategories :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([BecknV2.OnDemand.Enums.VehicleCategory] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLastUsedVehicleCategories :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [BecknV2.OnDemand.Enums.VehicleCategory] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLastUsedVehicleCategories lastUsedVehicleCategories id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.lastUsedVehicleCategories (Just lastUsedVehicleCategories), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateLastUsedVehicleServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLastUsedVehicleServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ServiceTierType.ServiceTierType] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.lastUsedVehicleServiceTiers (Just lastUsedVehicleServiceTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateLastUsedVehicleServiceTiersAndCategories ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Domain.Types.ServiceTierType.ServiceTierType] -> [BecknV2.OnDemand.Enums.VehicleCategory] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  [Domain.Types.ServiceTierType.ServiceTierType] ->
+  ([BecknV2.OnDemand.Enums.VehicleCategory] -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateLastUsedVehicleServiceTiersAndCategories lastUsedVehicleServiceTiers lastUsedVehicleCategories id = do
   _now <- getCurrentTime
   updateWithKV
@@ -150,43 +154,45 @@ updateLastUsedVehicleServiceTiersAndCategories lastUsedVehicleServiceTiers lastU
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateLiveActivityToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLiveActivityToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLiveActivityToken liveActivityToken id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.liveActivityToken liveActivityToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePaymentMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePaymentMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePaymentMode paymentMode id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.paymentMode paymentMode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePersonPassword :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePersonPassword :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePersonPassword passwordHash id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.passwordHash passwordHash, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateReferralCodeAndReferredAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()))
 updateReferralCodeAndReferredAt referredAt referralCode id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.referredAt referredAt, Se.Set Beam.referralCode referralCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSafetyDrillStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateSafetyDrillStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSafetyDrillStatus hasCompletedMockSafetyDrill id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateWhatsappNotificationEnrollStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods ->
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWhatsappNotificationEnrollStatus whatsappNotificationEnrollStatus id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Person.Person -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Person.Person -> m ()
 updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -201,15 +207,15 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.blockedCount blockedCount,
       Se.Set Beam.blockedReason blockedReason,
       Se.Set Beam.blockedUntil blockedUntil,
-      Se.Set Beam.businessEmailEncrypted (businessEmail <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.businessEmailHash (businessEmail <&> (.hash)),
+      Se.Set Beam.businessEmailEncrypted (businessEmail <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.businessEmailHash (businessEmail <&> Kernel.External.Encryption.hash),
       Se.Set Beam.businessProfileVerified businessProfileVerified,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
-      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
-      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
-      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientManufacturer (clientDevice >>= Kernel.Types.Version.deviceManufacturer),
+      Se.Set Beam.clientModelName (clientDevice <&> Kernel.Types.Version.deviceModel),
+      Se.Set Beam.clientOsType (clientDevice <&> Kernel.Types.Version.deviceType),
+      Se.Set Beam.clientOsVersion (clientDevice <&> Kernel.Types.Version.deviceVersion),
       Se.Set Beam.clientId clientId,
       Se.Set Beam.clientReactNativeVersion clientReactNativeVersion,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
@@ -223,8 +229,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.deviceToken deviceToken,
-      Se.Set Beam.emailEncrypted (email <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.emailHash (email <&> (.hash)),
+      Se.Set Beam.emailEncrypted (email <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.emailHash (email <&> Kernel.External.Encryption.hash),
       Se.Set Beam.emailSource emailSource,
       Se.Set Beam.emailVerified emailVerified,
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
@@ -242,8 +248,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
-      Se.Set Beam.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.imeiNumberHash (imeiNumber <&> (.hash)),
+      Se.Set Beam.imeiNumberEncrypted (imeiNumber <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.imeiNumberHash (imeiNumber <&> Kernel.External.Encryption.hash),
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
@@ -259,8 +265,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.merchantOperatingCityId ((Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId),
       Se.Set Beam.middleName middleName,
       Se.Set Beam.mobileCountryCode mobileCountryCode,
-      Se.Set Beam.mobileNumberEncrypted (mobileNumber <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.mobileNumberHash (mobileNumber <&> Kernel.External.Encryption.hash),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.operatorBadgeToken operatorBadgeToken,

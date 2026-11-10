@@ -12,6 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.TicketBookingServiceCategory as Beam
 
@@ -41,8 +42,8 @@ instance FromTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBooking
 instance ToTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory where
   toTType' (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory {..}) = do
     Beam.TicketBookingServiceCategoryT
-      { Beam.amount = (.amount) amount,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
+      { Beam.amount = Kernel.Types.Price.getPriceAmount amount,
+        Beam.currency = (Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) amount,
         Beam.amountToRefund = amountToRefund,
         Beam.bookedSeats = bookedSeats,
         Beam.btype = btype,

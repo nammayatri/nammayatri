@@ -231,24 +231,24 @@ Estimate:
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
     minTotalFare:  (mkMinTotalFare totalFareRange)|E
-    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
-    waitingChargePerMinAmount: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
-    estimatedFare: ((.amount) estimatedFare)|E
-    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
-    discount: (discount <&> (.amount))|E
-    currency: (Kernel.Prelude.Just $ (.currency) estimatedFare)|E
+    waitingChargePerMin: ((Domain.Types.Estimate.waitingChargePerMin) waitingCharges <&> Kernel.Types.Price.getPriceAmountInt)|E
+    waitingChargePerMinAmount: ((Domain.Types.Estimate.waitingChargePerMin) waitingCharges <&> Kernel.Types.Price.getPriceAmount)|E
+    estimatedFare: (Kernel.Types.Price.getPriceAmount estimatedFare)|E
+    estimatedTotalFare: (Kernel.Types.Price.getPriceAmount estimatedTotalFare)|E
+    discount: (discount <&> Kernel.Types.Price.getPriceAmount)|E
+    currency: (Kernel.Prelude.Just $ Kernel.Types.Price.getPriceCurrency estimatedFare)|E
     providerUrl: showBaseUrl|I
-    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
-    tollNames: (tollChargesInfo <&> (.tollNames))|E
-    businessDiscount: (businessDiscountInfo <&> ((.amount) . (.businessDiscount)))|E
-    personalDiscount: (personalDiscountInfo <&> ((.amount) . (.personalDiscount)))|E
-    personalDiscountPercentage: (personalDiscountInfo <&> (.personalDiscountPercentage))|E
-    businessDiscountPercentage: (businessDiscountInfo <&> (.businessDiscountPercentage))|E
+    tollCharges: (tollChargesInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.tollCharges))|E
+    tollNames: (tollChargesInfo <&> Domain.Types.Estimate.tollNames)|E
+    businessDiscount: (businessDiscountInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.businessDiscount))|E
+    personalDiscount: (personalDiscountInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Estimate.personalDiscount))|E
+    personalDiscountPercentage: (personalDiscountInfo <&> Domain.Types.Estimate.personalDiscountPercentage)|E
+    businessDiscountPercentage: (businessDiscountInfo <&> Domain.Types.Estimate.businessDiscountPercentage)|E
     nightShiftCharge: (mknightShiftCharge nightShiftInfo)|E
     nightShiftChargeAmount: (mknightShiftChargeAmount nightShiftInfo)|E
-    oldNightShiftCharge: ((.oldNightShiftCharge) =<< nightShiftInfo)|E
-    nightShiftStart: (nightShiftInfo <&> (.nightShiftStart))|E
-    nightShiftEnd: (nightShiftInfo <&> (.nightShiftEnd))|E
+    oldNightShiftCharge: (Domain.Types.Estimate.oldNightShiftCharge =<< nightShiftInfo)|E
+    nightShiftStart: (nightShiftInfo <&> Domain.Types.Estimate.nightShiftStart)|E
+    nightShiftEnd: (nightShiftInfo <&> Domain.Types.Estimate.nightShiftEnd)|E
     estimatedDistance: (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
     estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
     distanceUnit: Kernel.Prelude.Just|I
@@ -256,10 +256,10 @@ Estimate:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsVersion:  (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType:  (clientDevice <&> Kernel.Types.Version.deviceType)|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     isInsured: Kernel.Prelude.Just isInsured|E
     estimateBreakupListJson: Storage.Queries.Transformers.Estimate.encodeEstimateBreakupList estimateBreakupList|E

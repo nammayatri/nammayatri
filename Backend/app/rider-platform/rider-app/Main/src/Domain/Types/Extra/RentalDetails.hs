@@ -14,6 +14,15 @@ data NightShiftInfo = NightShiftInfo
   }
   deriving (Generic, Show)
 
+getNightShiftInfoCharge :: NightShiftInfo -> Price
+getNightShiftInfoCharge NightShiftInfo {nightShiftCharge} = nightShiftCharge
+
+getNightShiftInfoStart :: NightShiftInfo -> TimeOfDay
+getNightShiftInfoStart NightShiftInfo {nightShiftStart} = nightShiftStart
+
+getNightShiftInfoEnd :: NightShiftInfo -> TimeOfDay
+getNightShiftInfoEnd NightShiftInfo {nightShiftEnd} = nightShiftEnd
+
 data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
   { nightShiftCharge :: Money,
     nightShiftChargeWithCurrency :: PriceAPIEntity,

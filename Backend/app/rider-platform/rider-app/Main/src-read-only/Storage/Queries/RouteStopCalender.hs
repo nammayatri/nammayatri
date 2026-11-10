@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteStopCalender as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteStopCalender.RouteStopCalender -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteStopCalender.RouteStopCalender -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopCalender.RouteStopCalender] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RouteStopCalender.RouteStopCalender] -> m ()
 createMany = traverse_ create
 
 findByTripIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopCalender.RouteStopCalender])
+  [Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] ->
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopCalender.RouteStopCalender])
 findByTripIds tripId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -35,7 +36,8 @@ findByTripIds tripId integratedBppConfigId = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable -> m (Maybe Domain.Types.RouteStopCalender.RouteStopCalender))
+  Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig ->
+  (Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable -> m (Maybe Domain.Types.RouteStopCalender.RouteStopCalender))
 findByPrimaryKey integratedBppConfigId tripId = do
   findOneWithKV
     [ Se.And
@@ -44,7 +46,7 @@ findByPrimaryKey integratedBppConfigId tripId = do
         ]
     ]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteStopCalender.RouteStopCalender -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RouteStopCalender.RouteStopCalender -> m ()
 updateByPrimaryKey (Domain.Types.RouteStopCalender.RouteStopCalender {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -17,16 +17,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Pass as Beam
 import Storage.Queries.PassExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Pass.Pass -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Pass.Pass -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Pass.Pass] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Pass.Pass] -> m ()
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Pass.Pass -> m (Maybe Domain.Types.Pass.Pass))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Pass.Pass -> m (Maybe Domain.Types.Pass.Pass)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Pass.Pass -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Pass.Pass -> m ()
 updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -55,7 +55,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.overrideBenefitConfigJson (Data.Aeson.toJSON <$> overrideBenefitConfigJson),
-      Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
+      Se.Set Beam.maxSwitchCount (Domain.Types.Pass.maxSwitchCount <$> passConfig),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.pricingTiers pricingTiers,
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,

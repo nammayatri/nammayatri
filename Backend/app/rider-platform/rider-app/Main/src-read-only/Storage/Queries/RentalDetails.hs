@@ -4,22 +4,25 @@
 
 module Storage.Queries.RentalDetails where
 
+import qualified Domain.Types.Extra.RentalDetails
 import qualified Domain.Types.RentalDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalDetails as Beam
 import qualified Storage.Queries.Transformers.RentalDetails
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RentalDetails.RentalDetails -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RentalDetails.RentalDetails -> m ()
 create = createWithKV
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails -> m (Maybe Domain.Types.RentalDetails.RentalDetails))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.RentalDetails.RentalDetails -> m (Maybe Domain.Types.RentalDetails.RentalDetails)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails where
@@ -41,24 +44,24 @@ instance FromTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails 
 instance ToTType' Beam.RentalDetails Domain.Types.RentalDetails.RentalDetails where
   toTType' (Domain.Types.RentalDetails.RentalDetails {..}) = do
     Beam.RentalDetailsT
-      { Beam.baseFare = (.amountInt) baseFare,
-        Beam.baseFareAmount = Just $ (.amount) baseFare,
-        Beam.currency = Just $ (.currency) baseFare,
-        Beam.deadKmFare = (.amount) deadKmFare,
+      { Beam.baseFare = Kernel.Types.Price.getPriceAmountInt baseFare,
+        Beam.baseFareAmount = Just $ Kernel.Types.Price.getPriceAmount baseFare,
+        Beam.currency = Just $ Kernel.Types.Price.getPriceCurrency baseFare,
+        Beam.deadKmFare = Kernel.Types.Price.getPriceAmount deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.distanceUnit = Just $ (.unit) includedDistancePerHr,
-        Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) includedDistancePerHr) includedDistancePerHr,
+        Beam.distanceUnit = Just $ Kernel.Types.Distance.unit includedDistancePerHr,
+        Beam.includedDistancePerHrValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance (Kernel.Types.Distance.unit includedDistancePerHr) includedDistancePerHr,
         Beam.includedKmPerHr = Kernel.Utils.Common.metersToKilometers $ Kernel.Utils.Common.distanceToMeters includedDistancePerHr,
-        Beam.nightShiftCharge = (.amountInt) . (.nightShiftCharge) <$> nightShiftInfo,
-        Beam.nightShiftChargeAmount = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
-        Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
-        Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
-        Beam.perExtraKmRate = (.amountInt) perExtraKmRate,
-        Beam.perExtraKmRateAmount = Just $ (.amount) perExtraKmRate,
-        Beam.perExtraMinRate = (.amountInt) perExtraMinRate,
-        Beam.perExtraMinRateAmount = Just $ (.amount) perExtraMinRate,
-        Beam.perHourCharge = (.amountInt) perHourCharge,
-        Beam.perHourChargeAmount = Just $ (.amount) perHourCharge,
-        Beam.plannedPerKmRate = (.amountInt) plannedPerKmRate,
-        Beam.plannedPerKmRateAmount = Just $ (.amount) plannedPerKmRate
+        Beam.nightShiftCharge = nightShiftInfo <&> (Kernel.Types.Price.getPriceAmountInt . Domain.Types.Extra.RentalDetails.getNightShiftInfoCharge),
+        Beam.nightShiftChargeAmount = nightShiftInfo <&> (Kernel.Types.Price.getPriceAmount . Domain.Types.Extra.RentalDetails.getNightShiftInfoCharge),
+        Beam.nightShiftEnd = nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoEnd,
+        Beam.nightShiftStart = nightShiftInfo <&> Domain.Types.Extra.RentalDetails.getNightShiftInfoStart,
+        Beam.perExtraKmRate = Kernel.Types.Price.getPriceAmountInt perExtraKmRate,
+        Beam.perExtraKmRateAmount = Just $ Kernel.Types.Price.getPriceAmount perExtraKmRate,
+        Beam.perExtraMinRate = Kernel.Types.Price.getPriceAmountInt perExtraMinRate,
+        Beam.perExtraMinRateAmount = Just $ Kernel.Types.Price.getPriceAmount perExtraMinRate,
+        Beam.perHourCharge = Kernel.Types.Price.getPriceAmountInt perHourCharge,
+        Beam.perHourChargeAmount = Just $ Kernel.Types.Price.getPriceAmount perHourCharge,
+        Beam.plannedPerKmRate = Kernel.Types.Price.getPriceAmountInt plannedPerKmRate,
+        Beam.plannedPerKmRateAmount = Just $ Kernel.Types.Price.getPriceAmount plannedPerKmRate
       }

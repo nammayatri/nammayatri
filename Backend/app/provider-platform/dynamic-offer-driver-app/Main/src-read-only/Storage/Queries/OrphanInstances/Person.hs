@@ -7,15 +7,16 @@ import qualified Data.Text
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.Person as Beam
 import qualified Storage.Queries.Transformers.Person
-import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do
@@ -82,16 +83,16 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
   toTType' (Domain.Types.Person.Person {..}) = do
     Beam.PersonT
       { Beam.acceptedPolicies = acceptedPolicies,
-        Beam.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
-        Beam.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+        Beam.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.alternateMobileNumberHash = alternateMobileNumber <&> Kernel.External.Encryption.hash,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = clientDevice >>= Kernel.Types.Version.deviceManufacturer,
+        Beam.clientModelName = clientDevice <&> Kernel.Types.Version.deviceModel,
+        Beam.clientOsType = clientDevice <&> Kernel.Types.Version.deviceType,
+        Beam.clientOsVersion = clientDevice <&> Kernel.Types.Version.deviceVersion,
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
@@ -118,8 +119,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        Beam.mobileNumberHash = mobileNumber <&> (.hash),
+        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.mobileNumberHash = mobileNumber <&> Kernel.External.Encryption.hash,
         Beam.nyClubConsent = nyClubConsent,
         Beam.onboardedFromDashboard = onboardedFromDashboard,
         Beam.operatorBadgeToken = operatorBadgeToken,

@@ -231,12 +231,12 @@ TicketMerchantDetails:
     name: (.contactDetails.name)|I
     number: (.contactDetails.number)|I
     email: (.contactDetails.email)|I
-    docCancelledChequeEncrypted: (docCancelledCheque <&> unEncrypted . (.encrypted))|E
-    docCancelledChequeHash: (docCancelledCheque <&> (.hash))|E
-    agreementLetterEncrypted: (agreementLetter <&> unEncrypted . (.encrypted))|E
-    agreementLetterHash: (agreementLetter <&> (.hash))|E
-    gstinEncrypted: (gstin <&> unEncrypted . (.encrypted))|E
-    gstinHash: (gstin <&> (.hash))|E
+    docCancelledChequeEncrypted: (docCancelledCheque <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    docCancelledChequeHash: (docCancelledCheque <&> Kernel.External.Encryption.hash)|E
+    agreementLetterEncrypted: (agreementLetter <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    agreementLetterHash: (agreementLetter <&> Kernel.External.Encryption.hash)|E
+    gstinEncrypted: (gstin <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    gstinHash: (gstin <&> Kernel.External.Encryption.hash)|E
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

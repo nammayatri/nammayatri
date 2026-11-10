@@ -213,24 +213,24 @@ Person:
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
     currentCity: Kernel.Prelude.Just|I
-    emailEncrypted: (email <&> unEncrypted . (.encrypted))|E
-    emailHash: (email <&> (.hash))|E
-    businessEmailEncrypted: (businessEmail <&> unEncrypted . (.encrypted))|E
-    businessEmailHash: (businessEmail <&> (.hash))|E
-    mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
-    mobileNumberHash: (mobileNumber <&> (.hash))|E
-    imeiNumberEncrypted: (imeiNumber <&> unEncrypted . (.encrypted))|E
-    imeiNumberHash: (imeiNumber <&> (.hash))|E
+    emailEncrypted: (email <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    emailHash: (email <&> Kernel.External.Encryption.hash)|E
+    businessEmailEncrypted: (businessEmail <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    businessEmailHash: (businessEmail <&> Kernel.External.Encryption.hash)|E
+    mobileNumberEncrypted: (mobileNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    mobileNumberHash: (mobileNumber <&> Kernel.External.Encryption.hash)|E
+    imeiNumberEncrypted: (imeiNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    imeiNumberHash: (imeiNumber <&> Kernel.External.Encryption.hash)|E
     merchantOperatingCityId: (Kernel.Prelude.Just . Kernel.Types.Id.getId)|I
     falseSafetyAlarmCount: (Just falseSafetyAlarmCount)|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
-    clientModelName: (clientDevice <&> (.deviceModel))|E
-    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientOsVersion:  (clientDevice <&> Kernel.Types.Version.deviceVersion)|E
+    clientOsType:  (clientDevice <&> Kernel.Types.Version.deviceType)|E
+    clientModelName: (clientDevice <&> Kernel.Types.Version.deviceModel)|E
+    clientManufacturer: (clientDevice >>= Kernel.Types.Version.deviceManufacturer)|E
     informPoliceSos: Just informPoliceSos|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
     lastUsedVehicleServiceTiers: Just lastUsedVehicleServiceTiers|E
