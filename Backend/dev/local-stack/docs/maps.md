@@ -651,10 +651,20 @@ and `anonymise.sql`: pending and refused proposals erased with their history,
 approved ones kept; the public page in French, Arabic and English). Phones see
 nothing until the app ships the screens.
 
+**Day 3 (2026-11-11) is done**: the console's « Lieux proposés » screen —
+the map on the console's own address (the `^~ /tiles/styles/basic-preview/`
+block above), correct / approve / refuse with one of six reason codes, the
+history, the counter in Aperçu — in the website (`modules/places`,
+`features/lieux`; its `docs/api.md`). Each decision is one transaction, and
+the office may correct an approved place: the passenger backend caches a name
+by `place_id` only for `getPlaceName` by id (`place_name_cache`), which our
+app never calls; search and `getPlaceDetails` are not cached (read in the source; to confirm
+on the live server after the release: no `u…` row in `place_name_cache`). The website's tests run on a byte-for-byte copy of
+`stack/db/suggested-places.sql`: **change that file, copy it to the website**
+(`apps/api/src/modules/places/backend/`), or its drift test fails.
+
 Left:
 
-- **Day 3:** the console's « Lieux proposés » screen (edit, approve, refuse
-  with a reason code, the history from `movin.suggested_place_decision`).
 - **Days 4–5:** the app — « Ajouter un lieu », « Mes lieux proposés », the
   type buttons, the driver's side; and the app's own deletion screen
   (« Ce qui est supprimé / Ce qui reste ») gets the proposed places, to say
