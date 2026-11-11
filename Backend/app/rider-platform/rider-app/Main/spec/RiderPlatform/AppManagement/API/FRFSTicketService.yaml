@@ -29,6 +29,7 @@ imports:
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   FRFSBookingPaymentAttemptsAPIRes: API.Types.UI.FRFSTicketService
   FRFSPaymentAttemptsListAPIRes: API.Types.UI.FRFSTicketService
+  FRFSRescheduleReq: API.Types.UI.FRFSTicketService
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
@@ -190,6 +191,31 @@ apis:
         query:
           - requestorId: Text
         actorInfo: requestorId
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/booking/{bookingId}/cancel
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        bookingId: Id FRFSTicketBooking
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+      migrate:
+        capability: city-operations.frfs.execute
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/booking/{bookingId}/reschedule
+      auditRequestBody: false
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: FRFSRescheduleReq
+      response:
+        type: FRFSTicketBookingStatusAPIRes
+      migrate:
+        capability: city-operations.frfs.execute
 
   - GET:
       endpoint: /customer/{customerId}/frfs/booking/{bookingId}/paymentAttempts

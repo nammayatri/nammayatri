@@ -17,13 +17,14 @@ import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2ConfirmHelper :<|> GetFRFSTicketServiceCustomerFrfsBookingStatusHelper :<|> GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation))
+type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2ConfirmHelper :<|> GetFRFSTicketServiceCustomerFrfsBookingStatusHelper :<|> PostFRFSTicketServiceCustomerFrfsBookingCancel :<|> PostFRFSTicketServiceCustomerFrfsBookingReschedule :<|> GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation))
 
 type GetFRFSTicketServiceCustomerFrfsConfig =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "config"
@@ -245,6 +246,31 @@ type GetFRFSTicketServiceCustomerFrfsBookingStatusHelper =
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 
+type PostFRFSTicketServiceCustomerFrfsBookingCancel =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "booking"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "cancel"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostFRFSTicketServiceCustomerFrfsBookingReschedule =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "booking"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "reschedule"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+  )
+
 type GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "booking"
       :> Capture
@@ -356,6 +382,8 @@ data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
     getFRFSTicketServiceCustomerFrfsSearchQuote :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes],
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
     getFRFSTicketServiceCustomerFrfsBookingStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
+    postFRFSTicketServiceCustomerFrfsBookingCancel :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postFRFSTicketServiceCustomerFrfsBookingReschedule :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> API.Types.UI.FRFSTicketService.FRFSRescheduleReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
     getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes,
     getFRFSTicketServiceCustomerFrfsPaymentAttempts :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp,
@@ -368,7 +396,7 @@ data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
 mkFRFSTicketServiceAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketServiceAPIs)
 mkFRFSTicketServiceAPIs fRFSTicketServiceClient = (FRFSTicketServiceAPIs {..})
   where
-    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> getFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation = fRFSTicketServiceClient
+    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> postFRFSTicketServiceCustomerFrfsBookingCancel :<|> postFRFSTicketServiceCustomerFrfsBookingReschedule :<|> getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> getFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation = fRFSTicketServiceClient
 
 data FRFSTicketServiceUserActionType
   = GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_CONFIG
@@ -381,6 +409,8 @@ data FRFSTicketServiceUserActionType
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_SEARCH_QUOTE
   | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_QUOTE_V2_CONFIRM
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_STATUS
+  | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_CANCEL
+  | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_RESCHEDULE
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_PAYMENT_ATTEMPTS
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_PAYMENT_ATTEMPTS
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SEAT_LAYOUT
