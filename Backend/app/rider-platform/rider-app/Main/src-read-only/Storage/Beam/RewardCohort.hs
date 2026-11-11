@@ -6,6 +6,7 @@ module Storage.Beam.RewardCohort where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.RewardCohort
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -24,6 +25,7 @@ data RewardCohortT f = RewardCohortT
     presentation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rewardImageUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rewardTitle :: B.C f Kernel.Prelude.Text,
+    unlockResetPeriod :: B.C f (Kernel.Prelude.Maybe Domain.Types.RewardCohort.UnlockResetPeriod),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)

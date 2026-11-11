@@ -9,6 +9,7 @@ import qualified Dashboard.Common.Rewards.ClaimMode
 import qualified Dashboard.Common.Rewards.CouponSourceType
 import qualified Dashboard.Common.Rewards.RedemptionTargetType
 import qualified Dashboard.Common.Rewards.SponsorType
+import qualified Dashboard.Common.Rewards.UnlockResetPeriod
 import qualified Dashboard.RiderPlatform.Management.Rewards
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
@@ -81,7 +82,8 @@ data CreateCohortReq = CreateCohortReq
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    unlockResetPeriod :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.UnlockResetPeriod.UnlockResetPeriod
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -123,7 +125,8 @@ data EditCohortReq = EditCohortReq
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    unlockResetPeriod :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.UnlockResetPeriod.UnlockResetPeriod
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -169,6 +172,7 @@ data RewardCohort = RewardCohort
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
     maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    unlockResetPeriod :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.UnlockResetPeriod.UnlockResetPeriod,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -184,7 +188,9 @@ data RewardContext = RewardContext
     hasTakenValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideVehicleVariant :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rideServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    rideServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validRidesThisCampaignDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    validRidesThisCampaignWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
