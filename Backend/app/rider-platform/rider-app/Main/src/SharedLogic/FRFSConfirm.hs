@@ -349,10 +349,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                             Nothing -> logWarning $ "FRFSConfirm: could not resolve pass for overrideAppliedEntityId=" <> newEntityId <> " on reconfirm, skipping overlapping-booking cap"
                             Just (_, appliedPass) ->
                               FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass (Id newEntityId) (maybe booking.id.getId (.getId) booking.parentBookingId) tripWindow
-                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
-                  void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
-                  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice booking.id
                   let mbPassOption = snd <$> mbResolved
                       resolvedType = DFRFSTicketBooking.PassOverride <$ mbPassOption
                       resolvedAmount = (.overriddenTotalPrice.amount) <$> mbPassOption
@@ -368,6 +364,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                         <> show booking.overrideAppliedEntityId
                         <> " (no purchasedPassPaymentId supplied by an authoritative caller)"
                   settleableAmount' <- FRFSPassOverride.settleableAmountFor overrideAppliedEntityId' quote.id totalPrice.amount
+                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
+                  void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
+                  void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
+                  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice booking.id
                   when (overrideType' /= booking.overrideType || overriddenAmount' /= booking.overriddenAmount || overrideAppliedEntityId' /= booking.overrideAppliedEntityId || settleableAmount' /= booking.settleableAmount) $
                     QFRFSTicketBooking.updatePassOverrideById overrideType' overriddenAmount' overrideAppliedEntityId' settleableAmount' booking.id
                   return $
@@ -500,9 +500,9 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           bookingOverriddenAmount = if isReschedule then mbOldBooking >>= (.overriddenAmount) else (.overriddenTotalPrice.amount) <$> mbPassOption
           bookingOverrideAppliedEntityId = if isReschedule then mbOldBooking >>= (.overrideAppliedEntityId) else (.purchasedPassPaymentId.getId) <$> mbPassOption
       bookingSettleableAmount <-
-        if isReschedule
-          then pure (mbOldBooking >>= (.settleableAmount))
-          else FRFSPassOverride.settleableAmountFor bookingOverrideAppliedEntityId id fareParameters.totalPrice.amount
+        case mbOldBooking >>= (.settleableAmount) of
+          Just carried | isReschedule -> pure (Just carried)
+          _ -> FRFSPassOverride.settleableAmountFor bookingOverrideAppliedEntityId id fareParameters.totalPrice.amount
 
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
