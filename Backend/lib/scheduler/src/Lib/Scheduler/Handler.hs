@@ -127,9 +127,9 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   logTagDebug "Available tasks - Count" . show $ length readyTasks
   -- Counted before the blacklist filter and before any per-job lock, so this is
   -- everything that came off the stream.
-  forM_ readyTasks $ \(AnyJob Job {jobInfo = jobInfo'}, _) ->
+  forM_ readyTasks $ \(AnyJob Job {jobInfo = jobInfo', merchantOperatingCityId = merchantOperatingCityId'}, _) ->
     fork "jobLifecycleDequeued" $
-      incrementJobLifecycleCounter (show (fromSing $ jobType jobInfo')) JobDequeued
+      incrementJobLifecycleCounter (show (fromSing $ jobType jobInfo')) (getId <$> merchantOperatingCityId') JobDequeued
   blackListedJobs <- asks (.blackListedJobs)
   (nonBlacklistedTasks, recordIdsToDelete) <-
     if null blackListedJobs
@@ -206,7 +206,7 @@ releaseLock jobId = Hedis.unlockRedis jobId.getId
 -- see https://redis.io/docs/reference/patterns/distributed-locks/
 
 executeTask :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
-executeTask SchedulerHandle {..} (AnyJob job) = do
+executeTask SchedulerHandle {..} (AnyJob job@Job {merchantOperatingCityId = jobMerchantOperatingCityId}) = do
   schedulerType <- asks (.schedulerType)
   let jobType' = show (fromSing $ jobType $ jobInfo job)
   let begTime = job.scheduledAt
@@ -217,7 +217,7 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   fork "" $ addGenericLatency ("Job_pickup_" <> jobType') $ diffInMill
   -- Reached only once the job's redis lock has been acquired, so this counts
   -- jobs that actually started executing -- not everything read off the stream.
-  fork "jobLifecyclePicked" $ incrementJobLifecycleCounter jobType' JobPicked
+  fork "jobLifecyclePicked" $ incrementJobLifecycleCounter jobType' (getId <$> jobMerchantOperatingCityId) JobPicked
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
@@ -249,21 +249,21 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "
-      fork "jobLifecycleDuplicate" $ incrementJobLifecycleCounter jobType' JobDuplicate
+      fork "jobLifecycleDuplicate" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobDuplicate
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
-      fork "jobLifecycleCompleted" $ incrementJobLifecycleCounter jobType' JobCompleted
+      fork "jobLifecycleCompleted" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobCompleted
     Terminate description -> do
       logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
       fork "" $ incrementStreamFailedCounter ("Executor_" <> show jobType')
-      fork "jobLifecycleFailed" $ incrementJobLifecycleCounter jobType' JobFailed
+      fork "jobLifecycleFailed" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobFailed
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
       reSchedule jobType' j reScheduledTime
-      fork "jobLifecycleRescheduled" $ incrementJobLifecycleCounter jobType' JobRescheduled
+      fork "jobLifecycleRescheduled" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobRescheduled
     Retry -> do
       isLong <- isJobLongRunning jobType'
       if not isLong
@@ -276,14 +276,14 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
                 then do
                   logError $ "retries amount exceeded for jobId:" <> show job.id <> ", job failed after try " <> show newErrorsCount
                   updateErrorCountAndFail jobType' job.id newErrorsCount
-                  fork "jobLifecycleRetryExhausted" $ incrementJobLifecycleCounter jobType' JobRetryExhausted
+                  fork "jobLifecycleRetryExhausted" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobRetryExhausted
                 else do
                   logError $ "try " <> show newErrorsCount <> " was not successful for jobId:" <> show job.id <> ", trying again"
                   waitBeforeRetry <- asks (.waitBeforeRetry)
                   now <- getCurrentTime
                   reScheduleOnError jobType' j newErrorsCount $
                     fromIntegral waitBeforeRetry `addUTCTime` now
-                  fork "jobLifecycleRetried" $ incrementJobLifecycleCounter jobType' JobRetried
+                  fork "jobLifecycleRetried" $ incrementJobLifecycleCounter jobType' (getId <$> merchantOperatingCityId) JobRetried
 
 defaultCatcher :: Text -> SomeException -> SchedulerM ExecutionResult
 defaultCatcher jobType' exep = do

@@ -119,7 +119,7 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
   -- Counted only after createJobFunc succeeds, so `created` never overstates
   -- what actually reached the store.
   fork "jobLifecycleCreated" $
-    incrementJobLifecycleCounter (show (fromSing (sing :: Sing e))) JobCreated
+    incrementJobLifecycleCounter (show (fromSing (sing :: Sing e))) (getId <$> merchantOperatingCityId) JobCreated
   pure id
   where
     idToShardNumber uuidTxt = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuidTxt)) `mod` maxShards
