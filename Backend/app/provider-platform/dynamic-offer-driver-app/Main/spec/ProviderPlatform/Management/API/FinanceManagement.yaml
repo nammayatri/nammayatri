@@ -1000,12 +1000,17 @@ types:
   TdsReimbursementStatusRes:
     - status: Maybe TdsReimbursementStatus
     - requestId: Maybe (Id FinanceTdsReimbursementRequest)
+    - tanNumber: Maybe Text
     - certNumber: Maybe Text
     - certAmount: Maybe HighPrecMoney
     - tdsRate: Maybe Double
     - tdsSection: Maybe Text
+    - documentId: Maybe (Id Image)
     - rejectionReason: Maybe Text
     - submittedAt: Maybe UTCTime
+    - approvedAt: Maybe UTCTime
+    - creditedAmount: Maybe HighPrecMoney
+    - ledgerEntryId: Maybe Text
     - invoiceLines: [TdsReimbursementStatusInvoiceLine]
     - totalTdsAmount: HighPrecMoney
 
@@ -1018,12 +1023,17 @@ types:
     - quarter: TdsReimbursementQuarter
     - assessmentYear: Text
     - status: TdsReimbursementStatus
+    - tanNumber: Text
     - certNumber: Text
     - certAmount: HighPrecMoney
     - tdsRate: Double
     - tdsSection: Maybe Text
+    - documentId: Id Image
     - rejectionReason: Maybe Text
     - submittedAt: UTCTime
+    - approvedAt: Maybe UTCTime
+    - creditedAmount: Maybe HighPrecMoney
+    - ledgerEntryId: Maybe Text
     - invoiceLines: [TdsReimbursementStatusInvoiceLine]
     - totalTdsAmount: HighPrecMoney
 

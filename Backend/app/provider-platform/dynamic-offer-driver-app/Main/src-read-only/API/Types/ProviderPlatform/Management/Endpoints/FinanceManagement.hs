@@ -594,12 +594,17 @@ data TdsReimbursementHistoryItem = TdsReimbursementHistoryItem
     quarter :: TdsReimbursementQuarter,
     assessmentYear :: Kernel.Prelude.Text,
     status :: TdsReimbursementStatus,
+    tanNumber :: Kernel.Prelude.Text,
     certNumber :: Kernel.Prelude.Text,
     certAmount :: Kernel.Types.Common.HighPrecMoney,
     tdsRate :: Kernel.Prelude.Double,
     tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     submittedAt :: Kernel.Prelude.UTCTime,
+    approvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    creditedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    ledgerEntryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceLines :: [TdsReimbursementStatusInvoiceLine],
     totalTdsAmount :: Kernel.Types.Common.HighPrecMoney
   }
@@ -710,12 +715,17 @@ data TdsReimbursementStatusInvoiceLine = TdsReimbursementStatusInvoiceLine
 data TdsReimbursementStatusRes = TdsReimbursementStatusRes
   { status :: Kernel.Prelude.Maybe TdsReimbursementStatus,
     requestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest),
+    tanNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     certNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     certAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     submittedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    approvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    creditedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    ledgerEntryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceLines :: [TdsReimbursementStatusInvoiceLine],
     totalTdsAmount :: Kernel.Types.Common.HighPrecMoney
   }
