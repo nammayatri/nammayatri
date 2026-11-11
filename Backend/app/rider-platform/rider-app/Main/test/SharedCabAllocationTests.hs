@@ -217,12 +217,18 @@ tests =
         map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False],
       testCase "skips bind while FINDING, and stop binding in FALLBACK (attempts or clock)" $
-        [ skippedWhileFinding defaultTunables t0 0 t0 ["A"],
-          skippedWhileFinding defaultTunables t0 2 t0 ["A"],
-          skippedWhileFinding defaultTunables (addUTCTime 599 t0) 1 t0 ["A"],
-          skippedWhileFinding defaultTunables (addUTCTime 600 t0) 1 t0 ["A"]
+        [ skippedWhileFinding defaultTunables t0 0 t0 [] ["A"],
+          skippedWhileFinding defaultTunables t0 2 t0 [] ["A"],
+          skippedWhileFinding defaultTunables (addUTCTime 599 t0) 1 t0 [] ["A"],
+          skippedWhileFinding defaultTunables (addUTCTime 600 t0) 1 t0 [] ["A"]
         ]
           @?= [["A"], [], ["A"], []],
+      testCase "a cab the rider skipped stays skipped in FALLBACK; the system's skips are released" $
+        [ skippedWhileFinding defaultTunables t0 0 t0 ["R"] ["R", "D"],
+          skippedWhileFinding defaultTunables t0 2 t0 ["R"] ["R", "D"],
+          skippedWhileFinding defaultTunables (addUTCTime 600 t0) 0 t0 ["R"] ["R", "D"]
+        ]
+          @?= [["R", "D"], ["R"], ["R"]],
       testCase "only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
         map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
           @?= [[CabAtStop], [CabAway], [CabMoving], [CabAway]],

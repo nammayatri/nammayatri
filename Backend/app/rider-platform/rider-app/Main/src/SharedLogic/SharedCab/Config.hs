@@ -63,7 +63,9 @@ data SharedCabTunables = SharedCabTunables
     maxSkipsAndCancels :: Int,
     skipCancelCountTtlSec :: Int,
     -- | The assigned cab's ETA to the board stop must be over this for the rider to skip it.
-    skipMinEtaSec :: Int
+    skipMinEtaSec :: Int,
+    -- | Seconds a cab the rider skipped stays off their booking in FALLBACK; after that, with no other cab found, the old one may come back.
+    riderSkipTtlSec :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -101,7 +103,8 @@ defaultTunables =
       offerRetryTimeoutSec = 15,
       maxSkipsAndCancels = 15,
       skipCancelCountTtlSec = 5 * 60 * 60,
-      skipMinEtaSec = 120
+      skipMinEtaSec = 120,
+      riderSkipTtlSec = 120
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -142,7 +145,8 @@ tunablesOf busPingMaxAgeSec mbConfig =
       offerRetryTimeoutSec = pick (.offerRetryTimeoutSec) (.offerRetryTimeoutSec),
       maxSkipsAndCancels = pick (.maxSkipsAndCancels) (.maxSkipsAndCancels),
       skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec),
-      skipMinEtaSec = pick (.skipMinEtaSec) (.skipMinEtaSec)
+      skipMinEtaSec = pick (.skipMinEtaSec) (.skipMinEtaSec),
+      riderSkipTtlSec = pickPositive (.riderSkipTtlSec) (.riderSkipTtlSec)
     }
   where
     pick :: (DRC.SharedCabConfig -> Maybe a) -> (SharedCabTunables -> a) -> a

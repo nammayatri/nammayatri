@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.Keys
     bookingLockKey,
     bookingStateKey,
     fallbackPushedKey,
+    riderSkippedKey,
     pickedCabKey,
     interestKey,
     riderFixKey,
@@ -92,6 +93,10 @@ bookingStateKey bookingId = "sharedcab:booking:" <> bookingId.getId
 -- | A once-flag, so it needs SETNX and stays outside the hash.
 fallbackPushedKey :: BookingId -> Text
 fallbackPushedKey bookingId = "sharedcab:fallbackpushed:" <> bookingId.getId
+
+-- | The cabs the rider skipped, each with when; outside the hash because it has its own TTL (riderSkipTtlSec), not the hash's.
+riderSkippedKey :: BookingId -> Text
+riderSkippedKey bookingId = "sharedcab:riderskipped:" <> bookingId.getId
 
 -- | The cab the rider picked, held from the confirm request until the booking exists (keyed by the search the booking is made from).
 pickedCabKey :: Text -> Text

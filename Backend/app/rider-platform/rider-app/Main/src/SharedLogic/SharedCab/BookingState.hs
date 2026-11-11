@@ -12,6 +12,8 @@ module SharedLogic.SharedCab.BookingState
     writeFindingSince,
     readSkipped,
     addSkipped,
+    readRiderSkipped,
+    addRiderSkipped,
     readOffersMade,
     writeOffersMade,
     readPreferred,
@@ -37,7 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (AllocationState)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (bookingStateKey, fallbackPushedKey)
+import SharedLogic.SharedCab.Keys (bookingStateKey, fallbackPushedKey, riderSkippedKey)
 
 type BookingId = Id DFTB.FRFSTicketBooking
 
@@ -87,6 +89,24 @@ addSkipped :: StateFlow m r => Int -> BookingId -> Text -> m ()
 addSkipped ttl bookingId plate = do
   skipped <- readSkipped bookingId
   writeField ttl bookingId "skipped" (nub (plate : skipped))
+
+-- | The plates the rider skipped themselves within the last `ttlSec`. Unlike the rest of `skipped` (driver declines, lapsed offers, missed
+-- timers), these stay excluded in FALLBACK too, until `ttlSec` has passed since the skip; by then no other cab was found, so the old
+-- one may come back. Each plate carries its own skip time, so a later skip does not extend an earlier one.
+readRiderSkipped :: StateFlow m r => Int -> UTCTime -> BookingId -> m [Text]
+readRiderSkipped ttlSec now bookingId = map fst . liveRiderSkips ttlSec now <$> readRiderSkips bookingId
+
+-- | Read-modify-write, under the booking lock like `addSkipped`. The key lives `ttlSec` from the newest skip.
+addRiderSkipped :: StateFlow m r => Int -> UTCTime -> BookingId -> Text -> m ()
+addRiderSkipped ttlSec now bookingId plate = do
+  skips <- liveRiderSkips ttlSec now <$> readRiderSkips bookingId
+  shared $ Redis.setExp (riderSkippedKey bookingId) ((plate, now) : filter ((/= plate) . fst) skips) ttlSec
+
+readRiderSkips :: StateFlow m r => BookingId -> m [(Text, UTCTime)]
+readRiderSkips bookingId = fromMaybe [] <$> shared (Redis.get (riderSkippedKey bookingId))
+
+liveRiderSkips :: Int -> UTCTime -> [(Text, UTCTime)] -> [(Text, UTCTime)]
+liveRiderSkips ttlSec now = filter (\(_, skippedAt) -> diffUTCTime now skippedAt < fromIntegral ttlSec)
 
 -- | The rider has used the one skip this booking allows.
 -- | How many offers this booking has had (the next one's length depends on it).
@@ -149,6 +169,7 @@ clearBookingState :: StateFlow m r => BookingId -> m ()
 clearBookingState bookingId = shared $ do
   Redis.del (bookingStateKey bookingId)
   Redis.del (fallbackPushedKey bookingId)
+  Redis.del (riderSkippedKey bookingId)
 
 -- | Seconds the hash has left, for a deadline when no timer is armed.
 bookingStateTtl :: StateFlow m r => BookingId -> m Integer

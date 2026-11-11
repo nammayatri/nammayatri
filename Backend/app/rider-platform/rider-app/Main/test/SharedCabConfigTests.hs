@@ -28,7 +28,7 @@ tests =
         fmap (\DRC.SharedCabConfig {DRC.enabled = e, DRC.findingTimeoutSec = f, DRC.tickSec = t} -> (e, f, t)) (A.decode "{\"enabled\":false,\"findingTimeoutSec\":25}" :: Maybe DRC.SharedCabConfig)
           @?= Just (Just False, Just 25, Nothing),
       testCase "every sharedCabConfig field lands on its own tunable" $
-        tunablesOf (Just 7.5) (A.decode "{\"allocationWindowSec\":101,\"atStopRadiusM\":102,\"standTimerSec\":103,\"movingTimerSec\":104,\"maxAttempts\":105,\"maxNoShows\":106,\"fallbackAfterSec\":107,\"findingTimeoutSec\":108,\"tickSec\":109,\"ltsMaxAgeSec\":110,\"autoEndAfterDropSec\":111,\"degradedTimeoutSec\":112,\"offRouteSec\":114,\"checkInLeadSec\":113,\"boardProximityM\":115,\"boardAttemptsPer10Min\":116,\"noLocationSpotBookingsPerVehiclePerDay\":117,\"maxCabSpeedMps\":118,\"interestWindowSec\":119,\"demandStopsPerRoute\":120,\"maxDemandRoutes\":121,\"offerTimeoutSec\":122,\"offerRetryTimeoutSec\":123,\"maxSkipsAndCancels\":124,\"skipCancelCountTtlSec\":125,\"skipMinEtaSec\":126,\"callEnabled\":true,\"chatEnabled\":true,\"pickEnabled\":true,\"driverAcceptEnabled\":true,\"callMode\":\"DIRECT\"}")
+        tunablesOf (Just 7.5) (A.decode "{\"allocationWindowSec\":101,\"atStopRadiusM\":102,\"standTimerSec\":103,\"movingTimerSec\":104,\"maxAttempts\":105,\"maxNoShows\":106,\"fallbackAfterSec\":107,\"findingTimeoutSec\":108,\"tickSec\":109,\"ltsMaxAgeSec\":110,\"autoEndAfterDropSec\":111,\"degradedTimeoutSec\":112,\"offRouteSec\":114,\"checkInLeadSec\":113,\"boardProximityM\":115,\"boardAttemptsPer10Min\":116,\"noLocationSpotBookingsPerVehiclePerDay\":117,\"maxCabSpeedMps\":118,\"interestWindowSec\":119,\"demandStopsPerRoute\":120,\"maxDemandRoutes\":121,\"offerTimeoutSec\":122,\"offerRetryTimeoutSec\":123,\"maxSkipsAndCancels\":124,\"skipCancelCountTtlSec\":125,\"skipMinEtaSec\":126,\"riderSkipTtlSec\":127,\"callEnabled\":true,\"chatEnabled\":true,\"pickEnabled\":true,\"driverAcceptEnabled\":true,\"callMode\":\"DIRECT\"}")
           @?= SharedCabTunables
             { allocationWindowSec = 101,
               atStopRadiusM = 102,
@@ -61,7 +61,8 @@ tests =
               offerRetryTimeoutSec = 123,
               maxSkipsAndCancels = 124,
               skipCancelCountTtlSec = 125,
-              skipMinEtaSec = 126
+              skipMinEtaSec = 126,
+              riderSkipTtlSec = 127
             },
       testCase "a negative checkInLeadSec reads as 0, so the driver is never asked" $
         checkInLeadSec (tunablesOf Nothing (A.decode "{\"checkInLeadSec\":-5}")) @?= 0,
@@ -139,7 +140,8 @@ tests =
               offerRetryTimeoutSec = 15,
               maxSkipsAndCancels = 15,
               skipCancelCountTtlSec = 18000,
-              skipMinEtaSec = 120
+              skipMinEtaSec = 120,
+              riderSkipTtlSec = 120
             }
     ]
 

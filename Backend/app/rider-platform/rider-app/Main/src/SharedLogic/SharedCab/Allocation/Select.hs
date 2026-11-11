@@ -40,7 +40,7 @@ module SharedLogic.SharedCab.Allocation.Select
   )
 where
 
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -230,10 +230,12 @@ silentCab now maxAgeSec plate tracking =
 withoutSkipped :: [Text] -> [RankedCandidate] -> [RankedCandidate]
 withoutSkipped skipped = filter ((`notElem` skipped) . (.rcSession.vehicleNumber))
 
-skippedWhileFinding :: Config.SharedCabTunables -> UTCTime -> Int -> UTCTime -> [Text] -> [Text]
-skippedWhileFinding cfg now attempts findingSince skipped
-  | fallbackReached now cfg.maxAttempts attempts findingSince cfg.fallbackAfterSec = []
-  | otherwise = skipped
+-- | The plates a claim must pass over. While FINDING, every skipped plate; in FALLBACK the system's skips (declines, lapsed offers,
+-- missed timers) are released so any cab can take the rider, but not the plates the rider skipped within riderSkipTtlSec (`riderSkipped`).
+skippedWhileFinding :: Config.SharedCabTunables -> UTCTime -> Int -> UTCTime -> [Text] -> [Text] -> [Text]
+skippedWhileFinding cfg now attempts findingSince riderSkipped skipped
+  | fallbackReached now cfg.maxAttempts attempts findingSince cfg.fallbackAfterSec = riderSkipped
+  | otherwise = nub (riderSkipped <> skipped)
 
 -- | Why a rider's picked cab stopped counting. PrefSkipped is a cab the booking already lost (it lapsed or the rider skipped it), which the
 -- rider heard about then.
