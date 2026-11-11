@@ -131,6 +131,7 @@ data RiderConfig = RiderConfig
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.RiderInvoiceConfig,
+    invoiceEmailEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     invoiceLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -320,6 +321,7 @@ data SharedCabConfig = SharedCabConfig
     callEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     callMode :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode,
     chatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    checkInLeadSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     degradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     demandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -340,6 +342,7 @@ data SharedCabConfig = SharedCabConfig
     offerTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     skipCancelCountTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    skipMinEtaSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     standTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }

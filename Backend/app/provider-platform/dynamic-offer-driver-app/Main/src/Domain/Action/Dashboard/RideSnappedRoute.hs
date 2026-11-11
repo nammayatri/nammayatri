@@ -21,6 +21,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Either (isRight)
 import Data.List (elemIndex, groupBy, partition, sortOn)
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Action.Dashboard.RideEstimatedRoute as RideEstimatedRoute
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -33,7 +34,7 @@ import Kernel.Types.Error
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters, getRouteLinearLength)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.LocationUpdates (pickupSnapEntityIdSuffix, snapToRoadReqPoints)
+import Lib.LocationUpdates (approxRouteEntityIdSuffix, pickupSnapEntityIdSuffix, snapToRoadReqPoints)
 import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -75,11 +76,12 @@ getRideSnappedRoute :: DRide.Ride -> Flow Common.RideSnappedRouteRes
 getRideSnappedRoute ride = do
   now <- getCurrentTime
   let pickupEntityId = ride.id.getId <> pickupSnapEntityIdSuffix
+      approxRouteEntityId = ride.id.getId <> approxRouteEntityIdSuffix
       rideDistanceFailed = ride.distanceCalculationFailed == Just True
   rows <-
     CHExternalApiCallLogs.findAllByEntityIdAndApiNames
-      [ride.id.getId, pickupEntityId]
-      [googleSnapApiName, osrmSnapApiName]
+      [ride.id.getId, pickupEntityId, approxRouteEntityId]
+      ([googleSnapApiName, osrmSnapApiName] <> RideEstimatedRoute.routeApiNames)
       ride.createdAt
       (addUTCTime endLookahead (fromMaybe now ride.tripEndTime))
       maxCalls
@@ -90,13 +92,19 @@ getRideSnappedRoute ride = do
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
         pure $ if transporterConfig.useWithSnapToRoadFallback then Just transporterConfig.snapToRoadConfidenceThreshold else Nothing
       else pure Nothing
-  let (pickupRows, rideRows) = partition (\row -> row.entityId == Just pickupEntityId) rows
+  let snapRows = filter (\row -> row.entityId /= Just approxRouteEntityId && row.apiName `elem` [Just googleSnapApiName, Just osrmSnapApiName]) rows
+      (pickupRows, rideRows) = partition (\row -> row.entityId == Just pickupEntityId) snapRows
+      approxRoute = do
+        call <- lastMay $ mapMaybe RideEstimatedRoute.toCall (filter (\row -> row.entityId == Just approxRouteEntityId) rows)
+        route <- listToMaybe $ sortOn (.durationSec) (reverse call.routes)
+        pure Common.MapsRouteCall {apiName = call.apiName, provider = call.provider, calledAt = call.calledAt, routes = [route]}
   (pickupBatches, pickupFailure) <- legBatches [Maps.OSRM] Nothing Common.ON_PICKUP (ride.pickupDistanceCalculationFailed == Just True) (mapMaybe toSnapCall pickupRows)
   (rideBatches, rideFailure) <- legBatches serviceUsageConfig.snapToRoadProvidersList mbConfidenceThreshold Common.ON_RIDE rideDistanceFailed (mapMaybe toSnapCall rideRows)
   pure
     Common.RideSnappedRouteRes
       { batches = pickupBatches <> rideBatches,
-        distanceFailures = catMaybes [pickupFailure, rideFailure]
+        distanceFailures = catMaybes [pickupFailure, rideFailure],
+        approxRoute
       }
 
 legBatches :: [Maps.MapsService] -> Maybe Double -> Common.Status -> Bool -> [SnapCall] -> Flow ([Common.SnapBatch], Maybe Common.SnapDistanceFailure)

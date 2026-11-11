@@ -24,7 +24,6 @@ module SharedLogic.SharedCab.LegState
     upcomingCabsOf,
     nearestAfter,
     SkipVerdict (..),
-    skipMinEtaSec,
     decideRiderSkip,
     skipAvailableFor,
   )
@@ -86,7 +85,9 @@ data SharedCabLegStatus = SharedCabLegStatus
     -- | Other cabs on the route that reach the board stop after the assigned one, soonest first (ALLOCATED only).
     upcomingCabs :: [UpcomingCab],
     -- | The rider may still skip the assigned cab: once per booking, and only while it is more than skipMinEtaSec away.
-    skipAvailable :: Bool
+    skipAvailable :: Bool,
+    -- | FINDING only: a cab was released without the rider choosing it (declined, lapsed, timed out at the stop), so another one is being found.
+    driverPassed :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -185,18 +186,15 @@ nearestAfter etaOf assignedEtaSec = take 3 . sortOn etaOf . filter (\x -> maybe 
 data SkipVerdict = SkipOk | SkipUsed | SkipTooLate
   deriving (Show, Eq)
 
--- | The assigned cab must be further than this from the board stop for the rider to skip it.
-skipMinEtaSec :: Int
-skipMinEtaSec = 120
-
--- | One skip per booking; never after boarding; only while the cab's ETA to the board stop is known and over skipMinEtaSec.
-decideRiderSkip :: Bool -> Bool -> Maybe Int -> SkipVerdict
-decideRiderSkip used boarded mbEtaSec
+-- | One skip per booking; never after boarding; only while the cab's ETA to the board stop is known and over skipMinEtaSec
+-- (the city's sharedCabConfig.skipMinEtaSec, default 120).
+decideRiderSkip :: Int -> Bool -> Bool -> Maybe Int -> SkipVerdict
+decideRiderSkip skipMinEtaSec used boarded mbEtaSec
   | used = SkipUsed
   | boarded = SkipTooLate
   | maybe True (<= skipMinEtaSec) mbEtaSec = SkipTooLate
   | otherwise = SkipOk
 
 -- | What the app uses to show the skip button.
-skipAvailableFor :: SharedCabState -> Bool -> Maybe Int -> Bool
-skipAvailableFor st used mbEtaSec = st == ALLOCATED && decideRiderSkip used False mbEtaSec == SkipOk
+skipAvailableFor :: Int -> SharedCabState -> Bool -> Maybe Int -> Bool
+skipAvailableFor skipMinEtaSec st used mbEtaSec = st == ALLOCATED && decideRiderSkip skipMinEtaSec used False mbEtaSec == SkipOk

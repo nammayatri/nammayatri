@@ -16,3 +16,11 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN updated_at timestamp 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN vehicle_number text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN walkup_count integer NOT NULL default 0;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN to_stop text ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN from_stop text ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_trip ADD COLUMN earnings double precision ;

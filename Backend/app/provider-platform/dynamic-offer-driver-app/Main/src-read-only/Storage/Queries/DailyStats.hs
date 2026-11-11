@@ -131,6 +131,19 @@ updateReferralStatsByDriverId activatedValidRides referralEarnings payoutStatus 
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
+updateSharedCabStatsByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.Seconds -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+updateSharedCabStatsByDriverId sharedCabTrips sharedCabEarnings sharedCabRideTime driverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.sharedCabTrips (Kernel.Prelude.Just sharedCabTrips),
+      Se.Set Beam.sharedCabEarnings (Kernel.Prelude.Just sharedCabEarnings),
+      Se.Set Beam.sharedCabRideTime (Kernel.Prelude.Just sharedCabRideTime),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+
 updateTipAmountByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
 updateTipAmountByDriverId tipAmount driverId merchantLocalDate = do
   _now <- getCurrentTime
@@ -170,6 +183,9 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
       Se.Set Beam.referralCounts (Kernel.Prelude.Just referralCounts),
       Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
+      Se.Set Beam.sharedCabEarnings (Kernel.Prelude.Just sharedCabEarnings),
+      Se.Set Beam.sharedCabRideTime (Kernel.Prelude.Just sharedCabRideTime),
+      Se.Set Beam.sharedCabTrips (Kernel.Prelude.Just sharedCabTrips),
       Se.Set Beam.tipAmount (Kernel.Prelude.Just tipAmount),
       Se.Set Beam.tollCharges (Kernel.Prelude.Just tollCharges),
       Se.Set Beam.totalDistance totalDistance,

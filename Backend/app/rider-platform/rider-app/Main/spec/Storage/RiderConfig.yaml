@@ -92,6 +92,7 @@ RiderConfig:
       autoEndAfterDropSec: Maybe Int
       degradedTimeoutSec: Maybe Int
       offRouteSec: Maybe Int
+      checkInLeadSec: Maybe Int # seconds before the off-route pause the driver is asked to confirm the route; 0 = off, null = 60
       boardProximityM: Maybe Int
       boardAttemptsPer10Min: Maybe Int
       noLocationSpotBookingsPerVehiclePerDay: Maybe Int
@@ -108,6 +109,7 @@ RiderConfig:
       pickEnabled: Maybe Bool # the rider picks a specific cab; null or Just False is off
       maxSkipsAndCancels: Maybe Int # rider skips, and separately rider cancels, allowed per search; null = 15
       skipCancelCountTtlSec: Maybe Int # seconds a search's skip and cancel counts last; null = 18000 (5 h)
+      skipMinEtaSec: Maybe Int # the assigned cab's ETA to the board stop must be over this for the rider to skip it; null = 120
     ExternalSOSTriggerSource:
       enum: "FRONTEND,DASHBOARD"
     ExternalSOSConfig:
@@ -337,6 +339,7 @@ RiderConfig:
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
     invoiceConfig: Maybe RiderInvoiceConfig
+    invoiceEmailEnabled: Maybe Bool
     # Better route point suggestion: detect a point already on the search route that
     # is a short walk from the customer's pickup/drop but cuts a large detour out of
     # the ride (one-ways, dividers, lanes). Suggested as an extra estimate, the

@@ -42,7 +42,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -54,7 +53,6 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
 import SharedLogic.DriverPool.Types
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -70,7 +68,6 @@ import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -115,14 +112,11 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
-betterDriverSearchRadiusMarginMeters :: HighPrecMeters
-betterDriverSearchRadiusMarginMeters = 100
-
--- | Radius of a stand-by better-driver search: the assigned driver's live straight-line
--- distance to pickup minus a margin (a replacement must be clearly closer), capped at the
--- city cap and never below 1m. Recomputed fresh per batch and stored nowhere - the driver
--- keeps moving. Nothing for normal searches, or if any input is missing (caller then falls
--- back to the normal radius).
+-- | Radius of a stand-by better-driver search: the city's proximity abort radius
+-- (betterDriverProximityAbortRadiusMeters), the same for every batch. A search only runs while
+-- the assigned driver is outside that radius, so every driver found inside it is closer to the
+-- pickup. Nothing for normal searches, or if the booking or the radius is missing (caller then
+-- falls back to the normal radius).
 computeBetterDriverSearchRadiusOverride ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -145,25 +139,8 @@ computeBetterDriverSearchRadiusOverride searchTry
         case mbBooking of
           Nothing -> pure Nothing
           Just booking -> do
-            mbRide <- QRide.findActiveByRBId booking.id
-            case mbRide of
-              Nothing -> pure Nothing
-              Just ride -> do
-                mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-                case mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters) of
-                  Nothing -> pure Nothing
-                  Just cap -> do
-                    -- Pre-pickup driver: pings are in LTS's on_pickup bucket, not on_ride.
-                    driverLocationResp <- LTSF.pickupDriverLocation ride.id booking.providerId ride.driverId
-                    pure $
-                      ( \latest ->
-                          highPrecMetersToMeters (max 1 (min cap (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates booking.fromLocation) - betterDriverSearchRadiusMarginMeters)))
-                      )
-                        <$> lastMaybe driverLocationResp.loc
-  where
-    lastMaybe [] = Nothing
-    lastMaybe [x] = Just x
-    lastMaybe (_ : xs) = lastMaybe xs
+            mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+            pure $ highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
 
 initiateDriverSearchBatch ::
   ( EncFlow m r,

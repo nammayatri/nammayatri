@@ -13,6 +13,7 @@ where
 
 import qualified API.Types.UI.SharedCabInternal as API
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (findIndex)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -38,6 +39,7 @@ import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
+import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
@@ -133,16 +135,18 @@ postSharedCabRouteOperations mbToken req = do
     API.SELECT_ROUTE -> selectRoute req
     API.RETURN_TRIP -> do
       tripId <- required "vehicleTripId" req.vehicleTripId
-      ended . Just =<< (Session.endRoute req.driverId req.vehicleNumber forced (StartReturn tripId) >>= releasing AllocTypes.RouteChanged >>= mkSessionResp)
+      (earned, switched) <- Session.endRoute req.driverId req.vehicleNumber forced (StartReturn tripId)
+      ended earned . Just =<< (releasing AllocTypes.RouteChanged switched >>= mkSessionResp)
     API.CHANGE_ROUTE -> do
       merchantId <- agencyMerchant =<< required "agencyId" req.agencyId
-      ended . Just =<< (ownSession merchantId req.driverId req.vehicleNumber >>= mkSessionResp)
+      ended Nothing . Just =<< (ownSession merchantId req.driverId req.vehicleNumber >>= mkSessionResp)
     API.END_ROUTE -> do
-      void $ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed
-      ended Nothing
+      (earned, closed) <- Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
+      void $ releasing AllocTypes.SessionClosed closed
+      ended earned Nothing
   where
     forced = req.forceEnd == Just True
-    ended session = pure API.SelectRouteResp {session, affectedRiders = Nothing}
+    ended endedTripEarnings session = pure API.SelectRouteResp {session, affectedRiders = Nothing, endedTripEarnings}
 
 selectRoute :: API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
 selectRoute req = do
@@ -171,7 +175,7 @@ selectRoute req = do
   case selected of
     Left onBoard -> do
       affected <- mapM affectedRider onBoard
-      pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
+      pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected, endedTripEarnings = Nothing}
     Right session -> do
       void $ seeded session
       Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
@@ -181,7 +185,7 @@ selectRoute req = do
           then pure session
           else Session.setWalkupCount req.driverId req.vehicleNumber session.version walkupCount
       resp <- mkSessionResp session'
-      pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
+      pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing, endedTripEarnings = Nothing}
   where
     affectedRider (booking :: DFTB.FRFSTicketBooking) = do
       mbRider <- QPerson.findById booking.riderId
@@ -227,6 +231,7 @@ postSharedCabSessionOperations mbToken req = do
       (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
       Allocation.afterUnboarded plate AllocTypes.SeatLost released
       mkSessionResp full
+    API.STILL_ON_ROUTE -> CheckIn.answer req.driverId plate req.checkInId >>= mkSessionResp
   where
     plate = req.vehicleNumber
 
@@ -254,7 +259,8 @@ sessionRoute integratedBppConfig code = do
       { code,
         name = maybe code (.longName) mbRoute,
         direction = routeDirection stops,
-        nextStops = map (.stopName) stops
+        nextStops = map (.stopName) stops,
+        nextStopCodes = map (.stopCode) stops
       }
 
 -- | The plate's live bookings as rider rows; status/ETA/deadline come from the booking's real state.
@@ -348,10 +354,15 @@ mkSessionRespFrom cabReads s = do
       mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s mbTrack
   let vehicle = (.position) <$> mbTrack
+      nextIdx = fromMaybe 0 (mbTrack >>= Lts.nextStopCode >>= \code -> findIndex ((== code) . (.stopCode)) stops)
+      ahead = drop nextIdx stops
   riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
+  now <- getCurrentTime
+  checkIn <- if s.status == ACTIVE then (>>= CheckIn.checkInView now) <$> CheckIn.readCheckIn s.vehicleNumber else pure Nothing
+  tripEarnings <- Booking.tripEarnings s.vehicleTripId
   pure
     View.SharedCabSession
-      { route,
+      { route = route {View.nextStops = map (.stopName) ahead, View.nextStopCodes = map (.stopCode) ahead},
         tripId = s.vehicleTripId,
         gtfsId = integratedBppConfig.feedKey,
         queuedRoute,
@@ -362,12 +373,14 @@ mkSessionRespFrom cabReads s = do
         walkupCount = s.walkupCount,
         available,
         version = s.version,
-        riders = View.ridersOf [(st.stopCode, st.stopName) | st <- stops] riderRows,
+        riders = View.ridersOf (map (.stopCode) (take nextIdx stops)) [(st.stopCode, st.stopName) | st <- stops] riderRows,
         pendingOffers = View.pendingOffersOf [(st.stopCode, st.stopName) | st <- stops] riderRows,
         stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
         shapePolyline,
         vehicle,
-        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand
+        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand,
+        tripEarnings,
+        checkIn
       }
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.

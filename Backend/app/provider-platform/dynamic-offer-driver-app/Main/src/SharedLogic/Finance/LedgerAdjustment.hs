@@ -19,7 +19,6 @@ import qualified Data.Ord
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPanCard
@@ -46,6 +45,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import Lib.Finance.Audit.Interface (AuditInput (..))
 import qualified Lib.Finance.Audit.Service as Audit
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
@@ -974,7 +974,7 @@ ledgerAdjustmentPostAction ::
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
 ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
-  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 50000 $ do
+  withOwnerLock adjustmentRequest.personId.getId $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId
@@ -1020,7 +1020,7 @@ runLedgerAdjustment ::
   Flow (Maybe (Id DLE.LedgerEntry))
 runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest = do
   result <-
-    PostActions.runFinance ctx $
+    PostActions.runFinance (withAdjustmentEntity adjustmentRequest ctx) $
       adjustment
         adjustmentRequest.direction
         fromRole
@@ -1028,6 +1028,15 @@ runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest = do
         adjustmentRequest.amount
         adjustmentRequest.referenceType
   unwrapFinanceResult adjustmentName result
+
+-- | Tag the adjustment's legs with its request id, so each request posts its own
+--   legs even when several adjustments share one reference (the kernel posts a
+--   leg once per reference + entity reference + accounts).
+withAdjustmentEntity :: DLA.LedgerAdjustmentRequest -> Finance.FinanceCtx -> Finance.FinanceCtx
+withAdjustmentEntity adjustmentRequest ctx =
+  ctx{Finance.entityReferenceId = Just adjustmentRequest.id.getId,
+      Finance.entityReferenceType = Just DLE.LedgerAdjustmentRequest
+     }
 
 -- | Common post shape for adjustments without a ride context: fetch the person,
 --   run the category-specific person guard, then post with the invoice-less
@@ -1142,7 +1151,7 @@ postTdsReimbursementAdjustment transporterConfig checkerId adminCheckerName adju
 
   let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
   result <-
-    PostActions.runFinance ctx $ do
+    PostActions.runFinance (withAdjustmentEntity adjustmentRequest ctx) $ do
       mbLedgerEntryId <-
         adjustment
           DLA.Credit

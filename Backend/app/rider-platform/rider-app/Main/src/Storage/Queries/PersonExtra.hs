@@ -46,6 +46,15 @@ updateCommsConsent (Id personId) commsConsent = do
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 
+-- | At most two rows: enough to tell whether a device is shared, without loading everyone on it.
+findUpToTwoByDeviceIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Id Merchant -> m [Person]
+findUpToTwoByDeviceIdAndMerchantId deviceId (Id merchantId) =
+  findAllWithOptionsKV
+    [Se.And [Se.Is BeamP.deviceId $ Se.Eq (Just deviceId), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+    (Se.Desc BeamP.createdAt)
+    (Just 2)
+    Nothing
+
 findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
 findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
 

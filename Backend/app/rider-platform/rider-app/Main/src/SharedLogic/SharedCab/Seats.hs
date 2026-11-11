@@ -42,11 +42,13 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.RouteStopMapping as DRSM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.FRFSCancelJourney (endJourneyIfOnlyTransitLeg)
 import SharedLogic.SharedCab.Booking (noteOnPlate, partyOf, partySizes, plateBookings, withBookingLock)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.SessionState (Session (..))
@@ -216,11 +218,19 @@ alarmIfOverbooked s c =
     logError ("shared-cab seats: " <> s.vehicleNumber <> " is overbooked (capacity " <> show c.capacity <> ", walk-ups " <> show c.walkups <> ", riders " <> show c.riders <> ")")
 
 -- | "I got down": boarded tickets go USED, which ends the booking's seats; a ticket that never boarded is a cancel, not consumed here.
+-- Once no ticket is left to board or drop the ride is over, so a journey whose only leg this is ends too: the app's "journey complete"
+-- may never come.
 markDropped :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFTB.FRFSTicketBooking -> m ()
-markDropped booking = withBookingLock booking.id $ do
-  droppable <- filter ((== DFRFSTicket.INPROGRESS) . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
-  forM_ droppable $ \ticket ->
-    QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+markDropped booking = do
+  rideOver <- withBookingLock booking.id $ do
+    tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+    let droppable = filter ((== DFRFSTicket.INPROGRESS) . (.status)) tickets
+    forM_ droppable $ \ticket ->
+      QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+    pure $ not (null droppable) && notElem DFRFSTicket.ACTIVE (map (.status) tickets)
+  when rideOver $
+    withTryCatch "sharedCab:markDropped:endJourney" (endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId)
+      >>= either (\e -> logError $ "shared-cab journey not ended for dropped booking " <> booking.id.getId <> ": " <> show e) pure
 
 freeForStops :: SeatFlow m r => Session -> Text -> Text -> m Int
 freeForStops s board dropStop = do

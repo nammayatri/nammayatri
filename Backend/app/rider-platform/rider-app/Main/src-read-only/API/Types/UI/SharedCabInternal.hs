@@ -5,6 +5,7 @@ module API.Types.UI.SharedCabInternal where
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Servant
 import qualified SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView
@@ -18,7 +19,11 @@ data RiderCallNumberResp = RiderCallNumberResp {riderNumber :: Kernel.Prelude.Te
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SelectRouteResp = SelectRouteResp {affectedRiders :: Kernel.Prelude.Maybe [AffectedRider], session :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession}
+data SelectRouteResp = SelectRouteResp
+  { affectedRiders :: Kernel.Prelude.Maybe [AffectedRider],
+    endedTripEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    session :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -73,11 +78,13 @@ data SharedCabSessionOperation
   = SET_SEATS
   | RESUME
   | CAB_FULL
+  | STILL_ON_ROUTE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabSessionOperationReq = SharedCabSessionOperationReq
-  { driverId :: Kernel.Prelude.Text,
+  { checkInId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Text,
     operation :: SharedCabSessionOperation,
     vehicleNumber :: Kernel.Prelude.Text,
     version :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

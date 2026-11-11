@@ -93,6 +93,19 @@ findReversalOf ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
 findReversalOf reversalOf = do findOneWithKV [Se.Is Beam.reversalOf $ Se.Eq (Kernel.Types.Id.getId <$> reversalOf)]
 
+updateReversedBy ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateReversedBy reversedBy updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.reversedBy (Kernel.Types.Id.getId <$> reversedBy),
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateSettled ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
@@ -155,6 +168,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceType referenceType,
       Se.Set Beam.reversalOf (Kernel.Types.Id.getId <$> reversalOf),
+      Se.Set Beam.reversedBy (Kernel.Types.Id.getId <$> reversedBy),
       Se.Set Beam.settledAt settledAt,
       Se.Set Beam.settlementId settlementId,
       Se.Set Beam.settlementStatus settlementStatus,
@@ -196,6 +210,7 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             referenceId = referenceId,
             referenceType = referenceType,
             reversalOf = Kernel.Types.Id.Id <$> reversalOf,
+            reversedBy = Kernel.Types.Id.Id <$> reversedBy,
             settledAt = settledAt,
             settlementId = settlementId,
             settlementStatus = settlementStatus,
@@ -234,6 +249,7 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.referenceId = referenceId,
         Beam.referenceType = referenceType,
         Beam.reversalOf = Kernel.Types.Id.getId <$> reversalOf,
+        Beam.reversedBy = Kernel.Types.Id.getId <$> reversedBy,
         Beam.settledAt = settledAt,
         Beam.settlementId = settlementId,
         Beam.settlementStatus = settlementStatus,

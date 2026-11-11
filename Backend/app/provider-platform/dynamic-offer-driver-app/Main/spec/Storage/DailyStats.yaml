@@ -42,6 +42,9 @@ DailyStats:
     d2dReferralEarnings: HighPrecMoney
     d2dReferralCounts: Int
     d2dActivatedValidRides: Int
+    sharedCabTrips: Int
+    sharedCabEarnings: HighPrecMoney
+    sharedCabRideTime: Seconds
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -59,6 +62,9 @@ DailyStats:
     d2dReferralEarnings: Maybe HighPrecMoney
     d2dReferralCounts: Maybe Int
     d2dActivatedValidRides: Maybe Int
+    sharedCabTrips: Maybe Int
+    sharedCabEarnings: Maybe HighPrecMoney
+    sharedCabRideTime: Maybe Seconds
   beamFields:
     totalEarnings:
       totalEarnings: Money
@@ -84,6 +90,9 @@ DailyStats:
     d2dReferralEarnings: Kernel.Prelude.fromMaybe 0|I
     d2dReferralCounts: Kernel.Prelude.fromMaybe 0|I
     d2dActivatedValidRides: Kernel.Prelude.fromMaybe 0|I
+    sharedCabTrips: Kernel.Prelude.fromMaybe 0|I
+    sharedCabEarnings: Kernel.Prelude.fromMaybe 0|I
+    sharedCabRideTime: Kernel.Prelude.fromMaybe 0|I
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
@@ -104,6 +113,9 @@ DailyStats:
     d2dReferralEarnings: Kernel.Prelude.Just|I
     d2dReferralCounts: Kernel.Prelude.Just|I
     d2dActivatedValidRides: Kernel.Prelude.Just|I
+    sharedCabTrips: Kernel.Prelude.Just|I
+    sharedCabEarnings: Kernel.Prelude.Just|I
+    sharedCabRideTime: Kernel.Prelude.Just|I
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -123,6 +135,12 @@ DailyStats:
     updateReferralStatsByDriverId:
       kvFunction: updateOneWithKV
       params: [activatedValidRides, referralEarnings, payoutStatus]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateSharedCabStatsByDriverId:
+      kvFunction: updateOneWithKV
+      params: [sharedCabTrips, sharedCabEarnings, sharedCabRideTime]
       where:
         and: [driverId, merchantLocalDate]
 

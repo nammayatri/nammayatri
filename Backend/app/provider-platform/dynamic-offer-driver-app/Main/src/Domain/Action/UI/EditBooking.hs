@@ -3,6 +3,7 @@ module Domain.Action.UI.EditBooking where
 import API.Types.UI.EditBooking
 import qualified Data.Geohash as DG
 import Data.Text as T
+import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Location
@@ -11,6 +12,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -26,6 +28,7 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logError)
 import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
@@ -60,14 +63,15 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
   lockEditDestination <- Redis.tryLockRedis (editDestinationLockKey driverId) 20
   if action == ACCEPT && lockEditDestination
     then do
+      ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
+      let isAdvanceRide = ride.status == DRide.NEW && ride.isAdvanceBooking
       hasAdvancedRide <- QDI.findById driverId <&> maybe False (.hasAdvanceBooking)
-      if hasAdvancedRide
+      if hasAdvancedRide && not isAdvanceRide
         then do
           CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
           throwError $ InvalidRequest "You have an upcoming ride near your current drop location."
         else do
           QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
-          ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
           QB.updateIsPickupOrDestinationEdited (Just True) booking.id
           fork "updateIsReallocationEnabled" $ do
             searchReq <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId bookingUpdateReq.merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> bookingUpdateReq.merchantId.getId)
@@ -77,7 +81,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           whenJust mbDropLocation $ \dl -> do
             let dropLatLong = LatLong {lat = dl.lat, lon = dl.lon}
             QDI.updateTripEndLocation (Just dropLatLong) driverId
-            updatePassedThroughDrop driverId
+            unless isAdvanceRide $ updatePassedThroughDrop driverId
           prevOrder <- QLM.maxOrderByEntity bookingUpdateReq.bookingId.getId
           dropLocMapBooking <- SLM.buildLocationMapping' dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId) prevOrder
           prevOrderforRide <- QLM.maxOrderByEntity ride.id.getId
@@ -105,6 +109,10 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
               Redis.setExp (editDestinationUpdatedLocGeohashKey driverId) geohash (2 * 60 * 60)
             fork "FleetEngine:notifyDropoffChanged" $
               FleetEngine.notifyDropoffChanged ride.merchantOperatingCityId ride.id LatLong {lat = lat, lon = lon}
+            when (ride.status == DRide.INPROGRESS) $
+              whenJust ride.tripStartPos $ \startPoint -> do
+                rideInfo <- SInternal.mkInProgressRideLtsInfo ride {DRide.toLocation = Just updatedloc} startPoint
+                void $ LF.rideStart ride.id startPoint.lat startPoint.lon bookingUpdateReq.merchantId driverId (Just rideInfo)
           Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
           return Success
     else do
@@ -116,7 +124,10 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
     errorMessageByBookingType :: Bool -> (Text, Text)
     errorMessageByBookingType isLockAquired = do
       if isLockAquired && action /= ACCEPT
-        then ("Trip Update Request Declined", "Request was declined by your driver. Kindly check with them offline before requesting again.")
+        then
+          if action == IGNORED
+            then ("Trip Update Request Unanswered", "Your driver did not respond to the request. Kindly check with them offline before requesting again.")
+            else ("Trip Update Request Declined", "Request was declined by your driver. Kindly check with them offline before requesting again.")
         else ("Trip Update Request Not Available", "Edit Destination is not possible at this moment. Please try again later.")
 
 -- Skips all driver-coupled work (ride mapping, driver FCM, geohash, notifyEditDestination) since there is no Ride.

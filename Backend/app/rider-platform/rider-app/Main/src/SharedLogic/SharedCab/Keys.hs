@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Keys
     driverInfoKey,
     plateLockKey,
     offRouteKey,
+    checkInKey,
     noLocationKey,
     bookingLockKey,
     bookingStateKey,
@@ -38,6 +39,7 @@ module SharedLogic.SharedCab.Keys
     sweepLeaseKey,
     refundRetryRunKey,
     cabBookingsKey,
+    tripFaresKey,
   )
 where
 
@@ -74,6 +76,9 @@ plateLockKey plate = "sharedcab:lock:" <> plate
 
 offRouteKey :: Text -> Text
 offRouteKey plate = "sharedcab:offroute:" <> plate
+
+checkInKey :: Text -> Text
+checkInKey plate = "sharedcab:checkin:" <> plate
 
 noLocationKey :: Text -> Text
 noLocationKey plate = "sharedcab:noloc:" <> plate
@@ -172,3 +177,6 @@ refundRetryRunKey cityId = "sharedcab:refundretryRun:" <> cityId.getId
 -- | The bookings assigned to a plate, each added under its plate lock: what a seat count reads beside the DB, which lags KV.
 cabBookingsKey :: Text -> Text
 cabBookingsKey plate = "sharedcab:cab:bookings:" <> plate
+
+tripFaresKey :: Text -> Text
+tripFaresKey tripId = "sharedcab:trip:fares:" <> tripId

@@ -26,14 +26,19 @@ module Lib.Finance.Balance
     resolveTransferAmount,
     withAccountBalanceLock,
     accountBalanceLockKey,
+    withOwnerLock,
+    withOwnerLockOrSkip,
+    ownerLockKey,
     offerHoldKeyForAccount,
   )
 where
 
+import Data.IORef (atomicWriteIORef, newIORef, readIORef)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Account.Service (releaseOwnedLock, withMasterReads)
 import Lib.Finance.AccountConfig (ResolvedAccountConfig (..), cutoffTimeFor, getAccountConfigForAccount)
 import Lib.Finance.Domain.Types.Account (Account (..), AccountType (PayoutLiability))
 import Lib.Finance.Domain.Types.FinanceAccountConfig (FeeBearer (..), FeeSpec)
@@ -245,6 +250,124 @@ accountBalanceLockKey accountId = "Finance:BalanceLock:" <> accountId.getId
 withAccountBalanceLock :: (CacheFlow m r, MonadFlow m) => Id Account -> Int -> m a -> m a
 withAccountBalanceLock accountId ttlSeconds =
   Redis.withWaitAndLockRedis (accountBalanceLockKey accountId) ttlSeconds 10000
+
+-- | Kernel-owned lock over one owner's postings and the balance checks made before them (a
+--   driver, a fleet owner, ...), keyed by the owner's id. Every flow that checks a balance and then
+--   posts, or posts several legs that belong together, takes it. Balance writes themselves are also
+--   serialised per account ('Lib.Finance.Account.Service.withAccountWriteLock'). Not
+--   'accountBalanceLockKey': the transfer verbs hold that lock while they call the caller's runner,
+--   and neither lock is re-entrant.
+--
+--   The key keeps the driver app's previous name, so during a rolling deploy old pods (which lock
+--   "WalletRunningBalanceLockKey:<id>") and new pods exclude each other. Renaming it later needs every
+--   pod on the old name drained first.
+--   TODO: once no pod runs a release older than this one, rename to "Finance:OwnerLock:<id>" in a release
+--   of its own (no other lock change in it), so the old and new names are never in use at the same time.
+ownerLockKey :: Text -> Text
+ownerLockKey ownerId = "WalletRunningBalanceLockKey:" <> ownerId
+
+-- | Runs the action under the owner's lock, waiting as long as it is held. The lease is renewed while
+--   the action runs (up to 'ownerLockMaxHoldSeconds'), so a slow holder doesn't lose the lock half way,
+--   and only the holder releases it. A crashed holder can't wedge the owner for longer than one lease.
+withOwnerLock :: (CacheFlow m r, MonadFlow m) => Text -> m a -> m a
+withOwnerLock ownerId action = do
+  token <- generateGUIDText
+  let resource = ownerLockResource ownerId
+      acquire = do
+        acquired <- Redis.setNxExpire resource ownerLockSeconds token
+        unless acquired $ threadDelay ownerLockPollMicros >> acquire
+  acquire
+  holdOwnerLock resource token action
+
+-- | Like 'withOwnerLock', but gives up after 'ownerLockSeconds' of waiting and skips the action (logged).
+--   Only for work that something retries anyway.
+withOwnerLockOrSkip :: (CacheFlow m r, MonadFlow m) => Text -> m () -> m ()
+withOwnerLockOrSkip ownerId action = do
+  token <- generateGUIDText
+  startedAt <- getCurrentTime
+  let resource = ownerLockResource ownerId
+      acquire = do
+        acquired <- Redis.setNxExpire resource ownerLockSeconds token
+        if acquired
+          then pure True
+          else do
+            now <- getCurrentTime
+            if diffUTCTime now startedAt >= fromIntegral ownerLockSeconds
+              then pure False
+              else threadDelay 50000 >> acquire
+  acquired <- acquire
+  if acquired
+    then holdOwnerLock resource token action
+    else logWarning $ "Owner lock for " <> ownerId <> " still busy after " <> show ownerLockSeconds <> " s; skipped"
+
+-- | Runs the action holding the lock: renews the lease every few seconds while it runs, then releases the
+--   lock if this holder still owns it (an atomic token check-and-delete, so a holder whose lease ran out
+--   never deletes the next holder's lock). The renewal reads the holder from the master, never a replica
+--   that may not have the SETNX yet, and without the decode-failure delete of 'Redis.get', since an old
+--   pod's lock holds a different value.
+holdOwnerLock :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m a -> m a
+holdOwnerLock resource token action = do
+  done <- liftIO (newIORef False)
+  -- DB and KV reads under the lock go to the master: a "posted already?" check must see the previous
+  -- holder's postings, which a replica may not have yet. (A write resets that setting, so the kernel's
+  -- by-reference reads also ask for the master themselves; plain Redis reads need 'Redis.withMasterRedis'
+  -- at the read site.) The renewer is started inside the protected region, so
+  -- an exception can't leave it renewing for a holder that is gone; a failed release is logged rather
+  -- than replacing the action's own result.
+  (fork ("OwnerLockRenew:" <> resource) (renew done ownerLockMaxHoldSeconds) >> withMasterReads action)
+    `finally` (liftIO (atomicWriteIORef done True) >> releaseLogged)
+  where
+    currentHolder = Redis.withMasterRedis (Redis.get' resource (pure ()))
+    renew done secondsLeft = do
+      threadDelay (ownerLockRenewSeconds * 1000000)
+      finished <- liftIO (readIORef done)
+      unless finished $
+        if secondsLeft <= 0
+          then logWarning $ "Owner lock " <> resource <> " held past " <> show ownerLockMaxHoldSeconds <> " s; no longer renewed"
+          else -- A Redis error on one tick is logged and the next tick tries again, so a long holder keeps its lease.
+
+            try @_ @SomeException renewStep >>= \case
+              Right True -> continue
+              Right False -> pure ()
+              Left err -> logWarning ("Owner lock " <> resource <> " renewal step failed: " <> show err) >> continue
+      where
+        continue = renew done (secondsLeft - ownerLockRenewSeconds)
+        -- True to keep renewing.
+        renewStep =
+          currentHolder >>= \case
+            Just holder
+              | holder == token -> Redis.expire resource ownerLockSeconds >> pure True
+              | otherwise -> logWarning ("Owner lock " <> resource <> " was taken over; no longer renewed") >> pure False
+            -- Gone (lease ran out) or unreadable: take it back if it is free, and keep renewing. If the
+            -- action finished meanwhile (its release ran first), the lock just taken back is dropped again.
+            Nothing -> do
+              retaken <- Redis.setNxExpire resource ownerLockSeconds token
+              finishedNow <- liftIO (readIORef done)
+              if retaken && finishedNow then release >> pure False else pure True
+    release = void (releaseOwnedLock resource token)
+    releaseLogged =
+      try @_ @SomeException release >>= \case
+        Left err -> logError $ "Owner lock " <> resource <> " not released (expires with its lease): " <> show err
+        Right () -> pure ()
+
+-- | The Redis key, named as 'Redis.withWaitAndLockRedis' names its locks, so this lock and the previous
+--   release's lock on the same key exclude each other.
+ownerLockResource :: Text -> Text
+ownerLockResource ownerId = Redis.buildLockResourceName (ownerLockKey ownerId)
+
+ownerLockSeconds :: Int
+ownerLockSeconds = 10
+
+ownerLockRenewSeconds :: Int
+ownerLockRenewSeconds = 3
+
+ownerLockMaxHoldSeconds :: Int
+ownerLockMaxHoldSeconds = 120
+
+-- | Retry interval while another holder has the lock: postings hold it for milliseconds to seconds, so a
+--   10 ms poll costs no noticeable latency and keeps contended Redis traffic low.
+ownerLockPollMicros :: Int
+ownerLockPollMicros = 10000
 
 -- | Standard offer-hold key for an account. New write paths must use this; legacy
 --   domain-named keys are accepted read-side via getBalanceBreakdown's second argument.

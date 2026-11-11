@@ -892,7 +892,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
-      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp
+      -- Only derived spot quotes get the spot label; native (e.g. airport) OTP quotes keep the tier's own name.
+      isSpotRideQuote = fullFarePolicy.isDerived == Just True
       -- Dashboard-configured spotServiceTierName wins when set; otherwise "Spot " <> the
       -- tier's normal name (e.g. "Spot Auto").
       vehicleServiceTierDisplayName =
@@ -917,6 +918,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         merchantOperatingCityId = Just merchantOpCityId,
         area = fullFarePolicy.mbArea >>= (\a -> if a == SL.Default then Nothing else Just (SL.areaToText a)),
         addOnData = [],
+        isDerived = isSpotRideQuote,
         ..
       }
 

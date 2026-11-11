@@ -53,6 +53,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Finance.Balance (withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
@@ -68,7 +69,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
+import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -241,7 +242,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   -- reallocated before start would otherwise leave waypoints and a cumulative distance
   -- behind for the keys' TTL, and this ride's distanceToPickup would include them.
   LocUpd.resetPickupLegState ride.driverId
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
   -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
   when (monitorPickupProgress && not booking.isScheduled) $
@@ -391,7 +392,9 @@ releaseBookingHolds booking driverId mbFleetOwnerId reason failureLogTag = do
           booking.id.getId
           reason
           mbVehicleCategory
-      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey ownerId) 10 10 50000 $
+      -- Waits for the lock: nothing else releases a cancelled booking's hold, so a skip would keep it
+      -- reducing the balance for good.
+      withOwnerLock ownerId $
         voidWalletHoldByReference counterpartyType ownerId booking.id.getId reason
   case result of
     Left (e :: SomeException) ->

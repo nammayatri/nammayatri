@@ -180,7 +180,7 @@ saveSession old new = shared $ do
 -- driver-app's row on the session anyway.
 expireDriverTrip :: TripClientFlow m r => Session -> m ()
 expireDriverTrip s =
-  withTryCatch "sharedCab:expireDriverTrip" (TripClient.expireTrip s.merchantId s.vehicleTripId)
+  withTryCatch "sharedCab:expireDriverTrip" (Booking.tripEarnings s.vehicleTripId >>= TripClient.expireTrip s.merchantId s.vehicleTripId)
     >>= either (\e -> logError $ "sharedCab: couldn't expire driver-app trip " <> s.vehicleTripId <> " of " <> s.vehicleNumber <> ": " <> show e) pure
 
 switchTo :: (SessionFlow m r c, MonadMask m) => Text -> Text -> Session -> m Session
@@ -249,17 +249,20 @@ applyQueuedRoute plate = withPlateLock plate $ do
       if null onBoard then generateGUIDText >>= \tripId -> True <$ switchTo tripId queued s else pure False
     _ -> pure False
 
-endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow Session
+endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow (Maybe HighPrecMoney, Session)
 endRoute driver plate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   onBoard <- ridersOnBoard plate
-  unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
-  case action of
+  -- Riders aboard: only a forced return trip takes them along; ending the run is refused, the driver drops each one first.
+  let returning = case action of StartReturn _ -> True; _ -> False
+  unless (null onBoard || (forced && returning)) $ throwError (RidersOnBoard (length onBoard))
+  next <- case action of
     StartReturn tripId -> do
       returnRoute <- liftSession (returnRouteOf s.routeCode)
       s' <- switchTo tripId returnRoute s
       s' <$ mapM_ (Notify.notifyRouteChange returnRoute) onBoard
     _ -> finish s
+  (,next) <$> Booking.tripEarnings s.vehicleTripId
 
 -- | The silent cab's run ends here, not by the driver: driver-app hears of it after the plate lock.
 expire :: (SessionFlow m r c, MonadMask m, TripClientFlow m r) => Text -> m Session

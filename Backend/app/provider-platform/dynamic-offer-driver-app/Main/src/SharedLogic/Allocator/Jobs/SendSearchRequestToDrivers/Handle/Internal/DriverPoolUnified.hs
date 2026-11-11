@@ -222,13 +222,21 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               selected = take (getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize) qualifiedDrivers
           logInfo $
             "TopDrivers: searchTryId=" <> searchTry.id.getId <> " batch=" <> show batchNum
-              <> " qualified=" <> show (length qualifiedDrivers)
-              <> " selected=" <> show (length selected)
-              <> " rules(minRating=" <> show topDriverRules.minRating
-              <> " maxCancellationPct=" <> show topDriverRules.maxCancellationRatePct
-              <> " minRides=" <> show topDriverRules.minCompletedRides
-              <> " radius=" <> show topDriverRules.pickupRadiusMeters
-              <> " usedDefaults=" <> show usedDefaults <> ")"
+              <> " qualified="
+              <> show (length qualifiedDrivers)
+              <> " selected="
+              <> show (length selected)
+              <> " rules(minRating="
+              <> show topDriverRules.minRating
+              <> " maxCancellationPct="
+              <> show topDriverRules.maxCancellationRatePct
+              <> " minRides="
+              <> show topDriverRules.minCompletedRides
+              <> " radius="
+              <> show topDriverRules.pickupRadiusMeters
+              <> " usedDefaults="
+              <> show usedDefaults
+              <> ")"
 
         addSpecialZonePickupInfo pool = do
           (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool

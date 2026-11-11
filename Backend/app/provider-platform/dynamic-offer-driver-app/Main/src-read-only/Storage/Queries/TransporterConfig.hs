@@ -444,6 +444,8 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.sendMembershipIdInProfile sendMembershipIdInProfile,
       Se.Set Beam.sendSmsOnEnablement sendSmsOnEnablement,
       Se.Set Beam.separateDriverVehicleEnablement separateDriverVehicleEnablement,
+      Se.Set Beam.sharedCabDailyTripTarget sharedCabDailyTripTarget,
+      Se.Set Beam.sharedCabTripEarningsTarget sharedCabTripEarningsTarget,
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,

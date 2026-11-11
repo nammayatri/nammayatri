@@ -7,6 +7,7 @@ import qualified Data.Text as Text
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
 import qualified Domain.Types.Merchant
@@ -47,6 +48,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -993,7 +995,9 @@ processRefundSucceeded refundRequest = do
   void $ RidePaymentFinance.createRefundSucceededLedger refundRequest.id
   unless alreadyRecorded $ do
     (rideFareTotal, cancellationTotal, splits) <- computeRefundSplits rideId refundRequest ctx
-    RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
+    refundInvoiceCreated <- RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
+    when refundInvoiceCreated $
+      SInvoiceEmailSchedule.scheduleInvoiceEmail booking.merchantId booking.merchantOperatingCityId rideId DET.REFUND_INVOICE (Just refundRequest.id.getId)
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
     CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
       CallBPPInternal.RefundLedgerReq

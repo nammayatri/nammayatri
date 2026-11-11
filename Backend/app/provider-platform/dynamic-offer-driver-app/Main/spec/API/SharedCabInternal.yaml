@@ -3,11 +3,17 @@ imports:
   SharedCabAllocationEntityData: Tools.Notifications
   UTCTime: Kernel.Prelude
   Merchant: Domain.Types.Merchant
+  HighPrecMoney: Kernel.Types.Common
 
 module: SharedCabInternal
 
 # Called by rider-app and mounted under /internal by API.Internal. The token header is checked in the domain handlers.
 types:
+  SharedCabCheckInReq:
+    driverId: Text
+    routeCode: Text
+    derive: "Show"
+
   SharedCabDriverCallNumberResp:
     driverNumber: Text
     derive: "Show"
@@ -32,6 +38,15 @@ apis:
         token: Text
       request:
         type: SharedCabAllocationEntityData
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /sharedCabCheckInFCM
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabCheckInReq
       response:
         type: APISuccess
   - GET:
@@ -60,6 +75,8 @@ apis:
       params:
         merchantId: Id Merchant
         tripId: Text
+      query:
+        - earnings: HighPrecMoney
       headers:
         token: Text
       response:

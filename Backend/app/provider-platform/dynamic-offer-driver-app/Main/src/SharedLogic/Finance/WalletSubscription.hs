@@ -14,9 +14,8 @@
 
 -- | Collecting a subscription driver_fee from the driver wallet (wallet-subscription cities):
 --   the nightly fee and, once, every pending due moved in at switch-over. The wallet may go
---   negative. A fee is marked paid only after its ledger post (reference = driver fee id), and only
---   the components not in the ledger yet are posted, so the integrity check can complete a partial
---   debit.
+--   negative. Each fee is posted at most once (reference = driver fee id) and is marked paid
+--   only after the ledger post, so a retry never debits twice and never marks an unpaid fee.
 module SharedLogic.Finance.WalletSubscription
   ( WalletDebitKind (..),
     walletCollectedBy,
@@ -152,26 +151,28 @@ debitDriverFeeFromWallet transporterConfig kind fee = do
   let (feeRef, gstRef, penaltyRef) = referenceTypes kind
       (feeAmount, gstAmount, penaltyAmount) = feeDebitAmounts fee
       ctx = buildDriverChargeCtx counterpartyType ownerId fee.merchantId.getId fee.merchantOperatingCityId.getId fee.currency fee.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-  -- Each component is posted only if it is not already in the ledger (under either kind), so the
-  -- integrity check completes a debit that stopped between the three transfers.
-  (feeMissing, gstMissing, penaltyMissing) <- missingDebitComponents fee
-  let postFee = feeMissing && feeAmount > 0
-      postGst = gstMissing && gstAmount > 0
-      postPenalty = penaltyMissing && penaltyAmount > 0
-  when (postFee || postGst || postPenalty) $ do
-    result <- runFinance ctx $ do
-      when postFee $ void $ transfer OwnerLiability SellerRevenue feeAmount feeRef Nothing
-      when postGst $ void $ transfer OwnerLiability GovtIndirect gstAmount gstRef Nothing
-      when postPenalty $ void $ transfer OwnerLiability OwnerExpense penaltyAmount penaltyRef Nothing
-    case result of
-      Left err -> throwError $ InternalError ("Wallet debit failed for driver fee " <> fee.id.getId <> ": " <> show err)
-      Right _ -> logInfo $ "Debited driver fee " <> fee.id.getId <> " (" <> show kind <> ") from wallet of " <> ownerId
-  -- Only after the ledger post.
-  now <- getCurrentTime
-  QDF.updateCollectedPaymentStatus DDF.CLEARED (Just walletCollectedBy) now Nothing fee.id
-  -- A migrated due's old invoices are deactivated, which kills any open payment link for it.
-  when (kind == MigratedDues) $
-    QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [fee.id] Nothing
+  withOwnerLock ownerId $ do
+    -- Each component is posted only if it is not already in the ledger (under either kind), so a retry after
+    -- a crash between the three transfers posts exactly what is missing and never debits twice.
+    (feeMissing, gstMissing, penaltyMissing) <- missingDebitComponents fee
+    let postFee = feeMissing && feeAmount > 0
+        postGst = gstMissing && gstAmount > 0
+        postPenalty = penaltyMissing && penaltyAmount > 0
+    when (postFee || postGst || postPenalty) $ do
+      result <- runFinance ctx $ do
+        when postFee $ void $ transfer OwnerLiability SellerRevenue feeAmount feeRef Nothing
+        when postGst $ void $ transfer OwnerLiability GovtIndirect gstAmount gstRef Nothing
+        when postPenalty $ void $ transfer OwnerLiability OwnerExpense penaltyAmount penaltyRef Nothing
+      case result of
+        Left err -> throwError $ InternalError ("Wallet debit failed for driver fee " <> fee.id.getId <> ": " <> show err)
+        Right _ -> logInfo $ "Debited driver fee " <> fee.id.getId <> " (" <> show kind <> ") from wallet of " <> ownerId
+    -- Only after the ledger post: a crash in between retries into the missing-components check. Still under
+    -- the wallet lock, so two jobs on the same fee can't interleave here.
+    now <- getCurrentTime
+    QDF.updateCollectedPaymentStatus DDF.CLEARED (Just walletCollectedBy) now Nothing fee.id
+    -- A migrated due's old invoices are deactivated, which kills any open payment link for it.
+    when (kind == MigratedDues) $
+      QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [fee.id] Nothing
 
 debitBehaviourPenaltyFromWallet ::
   ( MonadFlow m,
@@ -192,10 +193,13 @@ debitBehaviourPenaltyFromWallet ::
 debitBehaviourPenaltyFromWallet transporterConfig merchantIdText merchantOpCityIdText driverId penaltyMoney penaltyChargeRef = do
   (counterpartyType, ownerId) <- resolveWalletOwner driverId
   let ctx = buildDriverChargeCtx counterpartyType ownerId merchantIdText merchantOpCityIdText transporterConfig.currency penaltyChargeRef (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-  result <- runFinance ctx $ void $ transfer OwnerLiability OwnerExpense penaltyMoney walletReferenceBehaviourPenalty Nothing
-  case result of
-    Left err -> throwError $ InternalError ("Wallet penalty debit failed for driver " <> driverId.getId <> " charge " <> penaltyChargeRef <> ": " <> show err)
-    Right _ -> logInfo $ "Debited penalty " <> penaltyChargeRef <> " of " <> show penaltyMoney <> " from wallet of " <> ownerId
+  withOwnerLock ownerId $ do
+    existing <- getEntriesByReference walletReferenceBehaviourPenalty penaltyChargeRef
+    when (null existing) $ do
+      result <- runFinance ctx $ void $ transfer OwnerLiability OwnerExpense penaltyMoney walletReferenceBehaviourPenalty Nothing
+      case result of
+        Left err -> throwError $ InternalError ("Wallet penalty debit failed for driver " <> driverId.getId <> " charge " <> penaltyChargeRef <> ": " <> show err)
+        Right _ -> logInfo $ "Debited penalty " <> penaltyChargeRef <> " of " <> show penaltyMoney <> " from wallet of " <> ownerId
 
 -- | Called by 'processPayment' once a payment order succeeds, with the fees as they were before
 --   it marked them CLEARED:
@@ -205,6 +209,8 @@ debitBehaviourPenaltyFromWallet transporterConfig merchantIdText merchantOpCityI
 --   * a fee already collected from the wallet (a migrated due, paid late through an old link or
 --     a late webhook) is credited back to the wallet that was debited, instead of being collected
 --     twice.
+--
+--   Each credit is posted at most once (reference checked under the wallet lock).
 creditWalletForPaidDriverFees ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -220,24 +226,37 @@ creditWalletForPaidDriverFees ::
   [DDF.DriverFee] ->
   m ()
 creditWalletForPaidDriverFees transporterConfig driver paymentOrderId feesBeforePayment = do
-  -- An INACTIVE recharge counts too: a charge that timed out client-side was marked INACTIVE, but if the
-  -- gateway did charge the mandate the paid order is the proof, and it must be credited.
+  -- processPayment marks the fee CLEARED before calling this, so a retry after a failed credit sees it
+  -- CLEARED already. Idempotency comes from the reference check in creditWallet, not from the status --
+  -- which also means an INACTIVE recharge counts: a charge that timed out client-side was marked INACTIVE,
+  -- but if the gateway did charge the mandate the paid order is the proof, and it must be credited.
   let recharges = filter ((== DDF.WALLET_TOPUP) . (.feeType)) feesBeforePayment
       latePaidWalletFees = filter (\df -> df.status == DDF.CLEARED && df.collectedBy == Just walletCollectedBy) feesBeforePayment
   forM_ recharges $ \fee -> do
-    creditWallet (DRIVER, fee.driverId.getId) walletReferenceAutopayRecharge fee.id.getId fee
-    let title = "Wallet recharged"
-        message = "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay."
-    fork "wallet autopay recharge notification" $
-      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message driver driver.deviceToken
+    void $ creditWallet (DRIVER, fee.driverId.getId) walletReferenceAutopayRecharge fee.id.getId fee
+    -- The credit exists now (posted by this delivery or an earlier one). The push goes out once per recharge,
+    -- marked separately from the credit: a delivery that stopped after crediting still notifies on the retry.
+    firstNotification <- Redis.setNxExpire ("WalletAutopayRechargeNotified:" <> fee.id.getId) (7 * 24 * 3600) True
+    when firstNotification $ do
+      let title = "Wallet recharged"
+          message = "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay."
+      fork "wallet autopay recharge notification" $
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message driver driver.deviceToken
   forM_ latePaidWalletFees $ \fee -> do
     owner <- resolveWalletOwner (cast fee.driverId)
-    creditWallet owner walletReferenceLatePaymentCredit (paymentOrderId <> ":" <> fee.id.getId) fee
+    void $ creditWallet owner walletReferenceLatePaymentCredit (paymentOrderId <> ":" <> fee.id.getId) fee
   where
     feeAmount fee = fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fee.govtCharges + fromMaybe 0 fee.cancellationPenaltyAmount
-    creditWallet (counterpartyType, ownerId) referenceType referenceId fee = do
-      let ctx = buildDriverChargeCtx counterpartyType ownerId fee.merchantId.getId fee.merchantOperatingCityId.getId fee.currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-      result <- runFinance ctx $ void $ transfer PlatformAsset OwnerLiability (feeAmount fee) referenceType Nothing
-      case result of
-        Left err -> throwError $ InternalError ("Wallet credit failed for driver fee " <> fee.id.getId <> ": " <> show err)
-        Right _ -> logInfo $ "Credited " <> referenceType <> " for driver fee " <> fee.id.getId <> " to wallet of " <> ownerId
+    creditWallet (counterpartyType, ownerId) referenceType referenceId fee =
+      withOwnerLock ownerId $ do
+        existing <- getEntriesByReference referenceType referenceId
+        if not (null existing)
+          then pure False
+          else do
+            let ctx = buildDriverChargeCtx counterpartyType ownerId fee.merchantId.getId fee.merchantOperatingCityId.getId fee.currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+            result <- runFinance ctx $ void $ transfer PlatformAsset OwnerLiability (feeAmount fee) referenceType Nothing
+            case result of
+              Left err -> throwError $ InternalError ("Wallet credit failed for driver fee " <> fee.id.getId <> ": " <> show err)
+              Right _ -> do
+                logInfo $ "Credited " <> referenceType <> " for driver fee " <> fee.id.getId <> " to wallet of " <> ownerId
+                pure True

@@ -561,9 +561,9 @@ findBookingsForInvoice personId startDate endDate mlimit moffset = do
     mlimit
     moffset
 
-findCompletedBookingById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
-findCompletedBookingById (Id bookingId) = do
-  findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.Eq COMPLETED]]
+findCompletedBookingByIdAndRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Id Person -> m (Maybe Booking)
+findCompletedBookingByIdAndRiderId (Id bookingId) (Id riderId) = do
+  findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.Eq COMPLETED]]
 
 -- | Find completed bookings for partner booking statement with pagination
 -- Returns bookings sorted by createdAt descending (most recent first)

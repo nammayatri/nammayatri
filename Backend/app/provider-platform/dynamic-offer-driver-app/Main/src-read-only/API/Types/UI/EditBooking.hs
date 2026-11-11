@@ -14,5 +14,6 @@ data EditBookingRespondAPIReq = EditBookingRespondAPIReq {action :: EditBookingR
 data EditBookingRespondAction
   = ACCEPT
   | REJECT
+  | IGNORED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

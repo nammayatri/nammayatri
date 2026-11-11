@@ -109,6 +109,7 @@ data DrunkAndDriveViolationWarningData = DrunkAndDriveViolationWarningData
 -- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
+    hasAdvanceBooking :: Bool,
     origin :: Maybe Location,
     destination :: Maybe Location,
     stops :: Maybe [Location],
@@ -743,6 +744,30 @@ notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityDat
       ("boardStopCode", fromMaybe "" entityData.boardStopCode),
       ("etaSeconds", maybe "" show entityData.etaSeconds)
     ]
+    Nothing
+
+-- | rider-app asks the driver of a cab gone off route to confirm the route; the app answers from its session view.
+notifySharedCabCheckIn ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  Text ->
+  m ()
+notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    personId
+    mbDeviceToken
+    lang
+    Nothing
+    (createFCMReq "SHARED_CAB_CHECK_IN" personId.getId FCM.Person identity)
+    (Just ())
+    [("routeCode", routeCode)]
     Nothing
 
 -- FCM.ALLOCATION_REQUEST

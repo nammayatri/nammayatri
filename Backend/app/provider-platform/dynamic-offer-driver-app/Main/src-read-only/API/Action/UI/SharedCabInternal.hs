@@ -14,6 +14,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -27,9 +28,19 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> "sharedCabCheckInFCM"
+      :> Header "token" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.SharedCabInternal.SharedCabCheckInReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> "sharedCab"
       :> "driver"
-      :> Capture "driverId" Kernel.Prelude.Text
+      :> Capture
+           "driverId"
+           Kernel.Prelude.Text
       :> "callNumber"
       :> Header
            "token"
@@ -61,6 +72,9 @@ type API =
            "tripId"
            Kernel.Prelude.Text
       :> "expire"
+      :> QueryParam
+           "earnings"
+           Kernel.Types.Common.HighPrecMoney
       :> Header
            "token"
            Kernel.Prelude.Text
@@ -70,10 +84,13 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postSharedCabAllocationFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire
+handler = postSharedCabAllocationFCM :<|> postSharedCabCheckInFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire
 
 postSharedCabAllocationFCM :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Tools.Notifications.SharedCabAllocationEntityData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSharedCabAllocationFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabAllocationFCM a2 a1
+
+postSharedCabCheckInFCM :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabCheckInReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSharedCabCheckInFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabCheckInFCM a2 a1
 
 getSharedCabDriverCallNumber :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabDriverCallNumberResp)
 getSharedCabDriverCallNumber a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabDriverCallNumber a2 a1
@@ -81,5 +98,5 @@ getSharedCabDriverCallNumber a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRe
 getSharedCabTripActive :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabTrip))
 getSharedCabTripActive a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabTripActive a3 a2 a1
 
-postSharedCabTripExpire :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postSharedCabTripExpire a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabTripExpire a3 a2 a1
+postSharedCabTripExpire :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSharedCabTripExpire a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabTripExpire a4 a3 a2 a1

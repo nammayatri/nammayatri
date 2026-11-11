@@ -34,6 +34,7 @@ data LedgerEntryT f = LedgerEntryT
     referenceId :: B.C f Kernel.Prelude.Text,
     referenceType :: B.C f Kernel.Prelude.Text,
     reversalOf :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reversedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     settledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     settlementId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     settlementStatus :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus),

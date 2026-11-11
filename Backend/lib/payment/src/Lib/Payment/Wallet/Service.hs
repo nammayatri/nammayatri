@@ -371,8 +371,10 @@ reconcileWalletFromProgram wallet _account mbConfigRate program = do
       let expectedBalance = syncAvailable * rate
           delta = expectedBalance - freshAccount.balance
       when (delta /= 0) $ do
+        -- Each correction is its own posting, not a repeat of the wallet's last one.
+        correctionId <- generateGUIDText
         res <-
-          runLoyaltyTransfer wallet wallet.id.getId $
+          runLoyaltyTransfer wallet correctionId $
             Finance.adjustment Finance.BuyerAsset Finance.OwnerLiability delta loyaltySyncReferenceType
         case res of
           Left err -> logError $ "loyalty reconcile adjustment failed wallet=" <> wallet.id.getId <> ": " <> show err

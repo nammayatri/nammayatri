@@ -87,6 +87,7 @@ import Lib.Finance
     getEntriesByReference,
     invoice,
     transfer,
+    withOwnerLock,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
@@ -587,7 +588,9 @@ processWalletTopupWebhook driver order transactionStatus = do
     ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
     -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
     -- the success push is gated on it — a redelivery must not re-notify.
-    creditedNow <- case mbTransfer of
+    -- Also the wallet's running-balance lock: every other posting on this wallet (ride end,
+    -- nightly fee, penalties) holds it, and the balance update is read-modify-write.
+    creditedNow <- withOwnerLock order.personId.getId $ case mbTransfer of
       Just transfer' -> do
         let recipe =
               Inbound.CreditRecipe
@@ -895,7 +898,8 @@ updatePrepaidBalanceAndExpiry ::
 updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let creditAmount = driverFee.totalEarnings
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
-  let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
+  -- The recharge's own fee, not its plan: every recharge of a plan is a separate purchase.
+  let referenceId = driverFee.id.getId
   mbPanCard <- QPanCard.findByDriverId person.id
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist person.merchantOperatingCityId.getId)
