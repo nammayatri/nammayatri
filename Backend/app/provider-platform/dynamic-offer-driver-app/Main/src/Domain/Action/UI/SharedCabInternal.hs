@@ -15,6 +15,7 @@ import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Tools.Notifications (SharedCabAllocationEntityData)
 
@@ -30,5 +31,5 @@ getSharedCabDriverCallNumber = DCallNumber.sharedCabDriverCallNumber
 getSharedCabTripActive :: Id Merchant -> Text -> Maybe Text -> Flow (Maybe SharedCabTrip)
 getSharedCabTripActive = DTrip.sharedCabActiveTrip
 
-postSharedCabTripExpire :: Id Merchant -> Text -> Maybe Text -> Flow APISuccess
+postSharedCabTripExpire :: Id Merchant -> Text -> Maybe HighPrecMoney -> Maybe Text -> Flow APISuccess
 postSharedCabTripExpire = DTrip.expireSharedCabTrip

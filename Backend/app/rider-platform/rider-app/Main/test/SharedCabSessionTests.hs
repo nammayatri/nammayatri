@@ -130,6 +130,7 @@ tests =
         returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute,
       testCase "riders: every held rider once, boarded or not, with both stops by name" $
         View.ridersOf
+          []
           routeStops
           [ row "b1" "Asha" 2 "A" "C" False,
             row "b2" "Ravi" 1 "A" "B" True,
@@ -140,11 +141,14 @@ tests =
                 rider "b3" "Mei" 1 "Bravo" "Charlie"
               ],
       testCase "riders: a booking holding no seat and an empty cab produce nothing" $ do
-        View.ridersOf routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 0 "Z" "Y" True] @?= []
-        View.ridersOf routeStops [] @?= [],
+        View.ridersOf [] routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 0 "Z" "Y" True] @?= []
+        View.ridersOf [] routeStops [] @?= [],
       testCase "MED-4: a rider whose stop is off the route keeps the stop's code" $
-        View.ridersOf routeStops [row "b2" "Ravi" 1 "A" "Y" True, row "b3" "Mei" 1 "Z" "C" False]
+        View.ridersOf [] routeStops [row "b2" "Ravi" 1 "A" "Y" True, row "b3" "Mei" 1 "Z" "C" False]
           @?= [rider "b2" "Ravi" 1 "Alpha" "Y", rider "b3" "Mei" 1 "Z" "Charlie"],
+      testCase "riders: a rider whose drop stop the cab has passed is left out; one off the route stays" $
+        map (.bookingId) (View.ridersOf ["A", "B"] routeStops [row "b1" "Asha" 1 "A" "B" True, row "b2" "Ravi" 1 "A" "C" True, row "b3" "Mei" 1 "B" "C" False, row "b4" "Lin" 1 "A" "Y" True])
+          @?= ["b2", "b3", "b4"],
       testCase "real-state status: a flipped ticket beats an allocation, an allocation beats walking" $
         map (uncurry View.riderStatusOf) [(True, True), (True, False), (False, True), (False, False)]
           @?= [View.BOARDED, View.BOARDED, View.ARRIVING, View.MINUTES_AWAY],
@@ -173,15 +177,15 @@ tests =
                   dropStopAddress = Just "2 Charlie Rd",
                   distanceMeters = Just 2500
                 }
-         in View.ridersOf routeStops [arriving]
-              @?= [View.SharedCabRider "b1" "Asha" 1 "Alpha" "Charlie" 10 View.ARRIVING (Just 3) deadline (Just "b1") True (Just "+919876543210") (Just 4.5) (Just "1 Alpha Rd") (Just "2 Charlie Rd") (Just 2500)],
+         in View.ridersOf [] routeStops [arriving]
+              @?= [View.SharedCabRider "b1" "Asha" 1 "Alpha" "Charlie" 10 View.ARRIVING (Just 3) deadline (Just "b1") True (Just "+919876543210") (Just 4.5) (Just "1 Alpha Rd") (Just "2 Charlie Rd") (Just 2500) "A" "C"],
       testCase "an offered rider is not in the riders list; the driver's pending offers list it, soonest to lapse first" $
         let offered b secs = ((row b "Asha" 1 "A" "C" False) :: View.RiderRow) {View.offerExpiresAt = Just (addUTCTime secs t0)}
             rows = [offered "late" 30, row "boarding" "Ravi" 1 "A" "C" False, offered "soon" 15]
-         in ( map (.bookingId) (View.ridersOf routeStops rows),
-              map (\o -> (o.bookingId, o.boardStop, o.dropStop)) (View.pendingOffersOf routeStops rows)
+         in ( map (.bookingId) (View.ridersOf [] routeStops rows),
+              map (\o -> (o.bookingId, o.boardStop, o.dropStop, o.boardStopCode, o.dropStopCode)) (View.pendingOffersOf routeStops rows)
             )
-              @?= (["boarding"], [("soon", "Alpha", "Charlie"), ("late", "Alpha", "Charlie")]),
+              @?= (["boarding"], [("soon", "Alpha", "Charlie", "A", "C"), ("late", "Alpha", "Charlie", "A", "C")]),
       testCase "a stop ships as code, name, lat and lon, and nothing else" $
         BLC.unpack (encode (View.sessionStopOf "SC_POLO" "Polo" (LatLong 25.5 91.8)))
           @?= "{\"code\":\"SC_POLO\",\"lat\":25.5,\"lon\":91.8,\"name\":\"Polo\"}",
@@ -217,7 +221,7 @@ tests =
         map View.roundedRating [Nothing, Just 4.56, Just 4.0, Just 4.44, Just 0.06, Just 5]
           @?= [Nothing, Just 4.6, Just 4.0, Just 4.4, Just 0.1, Just 5.0],
       testCase "a boarded rider keeps its chat channel and call flag" $
-        map (\r -> (r.bookingId, r.chatChannelId, r.callable)) (View.ridersOf routeStops [(row "b2" "Ravi" 1 "A" "B" True) {View.chatChannelId = Just "b2", View.callable = True}])
+        map (\r -> (r.bookingId, r.chatChannelId, r.callable)) (View.ridersOf [] routeStops [(row "b2" "Ravi" 1 "A" "B" True) {View.chatChannelId = Just "b2", View.callable = True}])
           @?= [("b2", Just "b2", True)],
       testCase "H3: finish reports exactly the riders whose drop failed" $
         stranded [("b1", Right ()), ("b2", Left ("timeout" :: Text)), ("b3", Right ()), ("b4", Left "timeout")] @?= ["b2", "b4"]
@@ -232,4 +236,4 @@ row bookingId firstName seats boardStopCode dropStopCode boarded =
 
 rider :: Text -> Text -> Int -> Text -> Text -> View.SharedCabRider
 rider bookingId firstName seats boardStop dropStop =
-  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing}
+  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing, boardStopCode = boardStop, dropStopCode = dropStop}

@@ -47,12 +47,12 @@ sharedCabActiveTrip merchantId vehicleNumber apiKey = do
         }
 
 -- | rider-app expired the run (the cab went silent). Closes it only while it is still the plate's ACTIVE trip: a later run is left alone.
-expireSharedCabTrip :: Id DM.Merchant -> Text -> Maybe Text -> Flow APISuccess
-expireSharedCabTrip merchantId tripId apiKey = do
+expireSharedCabTrip :: Id DM.Merchant -> Text -> Maybe HighPrecMoney -> Maybe Text -> Flow APISuccess
+expireSharedCabTrip merchantId tripId earnings apiKey = do
   authMerchant merchantId apiKey
   trip <- QVT.findById (Id tripId) >>= fromMaybeM (InvalidRequest $ "No shared-cab trip " <> tripId)
   unless (trip.merchantId == merchantId) $ throwError $ InvalidRequest ("No shared-cab trip " <> tripId)
   Trip.withTripLock trip.vehicleNumber $ do
     active <- QVT.findActiveByVehicleNumber trip.vehicleNumber
-    when (((.id) <$> active) == Just trip.id) $ Trip.closeTrip DVT.SESSION_TIMEOUT trip
+    when (((.id) <$> active) == Just trip.id) $ Trip.closeTrip DVT.SESSION_TIMEOUT earnings trip
   pure Success
