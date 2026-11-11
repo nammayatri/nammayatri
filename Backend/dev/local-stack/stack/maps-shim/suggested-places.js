@@ -50,7 +50,7 @@
  * the live index before a release (no CI, and PGlite has no PostGIS).
  * Everything else here is plain SQL on movin.suggested_place, tested for real.
  */
-const { driverFromToken, riderFromToken } = require('./identity');
+const identity = require('./identity');
 const { send } = require('./reply');
 const { arabicLocalities } = require('./places');
 
@@ -142,18 +142,8 @@ function box(lat, metres) {
 
 /* ── who is calling ────────────────────────────────────────────────────── */
 
-/**
- * The person behind a token: a driver or a passenger. Asked of the driver
- * backend first, as deletion.js does; a token belongs to one of the two.
- */
-async function whoIs(env, token) {
-  if (!token) return null;
-  const driver = await driverFromToken(env.driverUrl, token);
-  if (driver) return { side: 'driver', id: driver.id };
-  const rider = await riderFromToken(env.riderUrl, token);
-  if (rider) return { side: 'rider', id: rider.id };
-  return null;
-}
+/** The person behind a token, driver or passenger: identity.js, the one copy. */
+const whoIs = (env, token) => identity.whoIs(env.driverUrl, env.riderUrl, token);
 
 /* ── the live database's four answers ──────────────────────────────────── */
 

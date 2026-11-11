@@ -74,4 +74,27 @@ async function riderFromToken(riderUrl, token) {
   return id ? { id } : null;
 }
 
-module.exports = { driverFromToken, riderFromToken };
+/**
+ * Which person a token belongs to, on either side: `{ side, id }` or null.
+ *
+ * For the routes both apps call (« delete my account », proposed places).
+ * The driver backend is asked first; a token belongs to one of the two. `side`
+ * comes from the backend that accepted the token, never from the request: a
+ * client that could name its own side could ask the rider backend to vouch
+ * for a driver's id.
+ *
+ * ONE copy. deletion.js and suggested-places.js each had their own until
+ * 2026-11-11, and they had already begun to differ (one read env.DRIVER_URL,
+ * the other env.driverUrl) -- the drift the header above warns about. The
+ * addresses are arguments, so each caller keeps its own configuration.
+ */
+async function whoIs(driverUrl, riderUrl, token) {
+  if (!token) return null;
+  const driver = await driverFromToken(driverUrl, token);
+  if (driver) return { side: 'driver', id: driver.id };
+  const rider = await riderFromToken(riderUrl, token);
+  if (rider) return { side: 'rider', id: rider.id };
+  return null;
+}
+
+module.exports = { driverFromToken, riderFromToken, whoIs };

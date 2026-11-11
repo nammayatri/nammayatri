@@ -24,7 +24,7 @@
  * because it looks like one. Written this way, a status nobody here has seen
  * refuses the deletion, which is the safe direction.
  */
-const { driverFromToken, riderFromToken } = require('./identity');
+const identity = require('./identity');
 
 const TERMINAL = ['COMPLETED', 'CANCELLED'];
 
@@ -37,21 +37,8 @@ function send(res, code, body) {
   res.end(payload);
 }
 
-/**
- * Who is calling, and which of their two possible accounts this is.
- *
- * `side` comes from the token that was accepted, never from the body: a client
- * that could name its own side could ask the rider backend to vouch for a
- * driver id.
- */
-async function whoIs(env, token) {
-  if (!token) return null;
-  const driver = await driverFromToken(env.DRIVER_URL, token);
-  if (driver) return { side: 'driver', id: driver.id };
-  const rider = await riderFromToken(env.RIDER_URL, token);
-  if (rider) return { side: 'rider', id: rider.id };
-  return null;
-}
+/** Who is calling, and which of their two accounts: identity.js, the one copy. */
+const whoIs = (env, token) => identity.whoIs(env.DRIVER_URL, env.RIDER_URL, token);
 
 /** The phone number on the account, for the office to match a caller to a row. */
 async function phoneOf(pool, side, personId) {
