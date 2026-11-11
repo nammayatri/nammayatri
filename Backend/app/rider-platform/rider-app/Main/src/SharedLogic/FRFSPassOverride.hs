@@ -58,6 +58,8 @@ module SharedLogic.FRFSPassOverride
     refundTrip,
     adjustTrips,
     zeroTrips,
+    breakoffTripCountFor,
+    settleableAmountFor,
     netTripAdjustment,
     tryWithTripCountLock,
     BookedTripWindow (..),
@@ -71,9 +73,11 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (nubBy)
 import qualified Data.Time as T
 import qualified Domain.Types.EntityValueLog as DEntityValueLog
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
@@ -221,6 +225,8 @@ validateBenefitWith requireTripCount benefit
     Left "maximum_trip_count must be positive"
   | maybe False (<= 0) benefit.maxTicketQuantityPerOverride =
     Left "max_ticket_quantity_per_override must be positive"
+  | maybe False (<= 0) benefit.breakoffTripCount =
+    Left "breakoff_trip_count must be positive"
   | otherwise = Right benefit
 
 savingEnabled :: Maybe a -> (a -> Maybe Bool) -> Bool
@@ -869,6 +875,22 @@ adjustTrips payment entry delta
         pure (Right remaining)
   where
     benefit = entryBenefit entry
+
+breakoffTripCountFor :: OverrideBenefit -> Maybe Int
+breakoffTripCountFor benefit =
+  mfilter (> 0) $ benefit.breakoffTripCount <|> (if isUnlimitedBenefit benefit then Nothing else benefit.maximumTripCount)
+
+settleableAmountFor :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id DFRFSQuote.FRFSQuote -> HighPrecMoney -> m (Maybe HighPrecMoney)
+settleableAmountFor mbEntityId quoteId bookingTotal =
+  passForOverrideAppliedEntity mbEntityId >>= \case
+    Nothing -> pure Nothing
+    Just (payment, pass) ->
+      (benefitForPayment payment pass <&> (>>= breakoffTripCountFor)) >>= \case
+        Nothing -> pure Nothing
+        Just breakoff -> do
+          quantity <- max 1 . sum . map (.selectedQuantity) <$> QFRFSQuoteCategory.findAllByQuoteId quoteId
+          let perTripShare = payment.amount / fromIntegral breakoff
+          pure . Just $ min (fromIntegral quantity * perTripShare) bookingTotal
 
 zeroTrips :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Maybe OverrideBenefit -> m (Maybe Int)
 zeroTrips payment mbBenefit = do
