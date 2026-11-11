@@ -630,7 +630,9 @@ style) with the pin drawn by the console, no map library. The console's
 security policy allows images from its own address only (`img-src 'self'`), so
 the pictures come from `admin.movinapp.net/tiles/styles/basic-preview/{z}/{x}/{y}.png`:
 `location ^~ /tiles/styles/basic-preview/` in the console's server block, the
-same tile server as the API host's `/tiles/`, that one style only. **No
+same tile server as the API host's `/tiles/`, and of it only that style's plain
+tiles, `{z}/{x}/{y}.png`: its `style.json`, `@2x` tiles and static-image renderer
+answer 404 there (an `if … return 404` in the block; the boss's review, 11 Nov). **No
 `add_header` in it**: one would drop HSTS, nosniff, the referrer policy and
 X-Frame-Options from its answers (the `/assets/` trap); caching is `expires 7d`
 with the tile server's own `Cache-Control` hidden. `tests/edge-admin-tiles.test.js`

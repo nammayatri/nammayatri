@@ -48,6 +48,29 @@ t.ok(/proxy_hide_header\s+Cache-Control;/.test(body) && /expires\s+\d+d;/.test(b
 t.ok(/proxy_hide_header\s+Access-Control-Allow-Origin;/.test(body),
   'the tile server\'s CORS header hidden: same address, nobody else needs to read these');
 
+t.section('1b. only the plain tiles reach the tile server (the boss\'s review, 2026-11-11)');
+// The prefix alone also passed the style's style.json, its @2x tiles and its
+// static-image renderer. The block now answers 404 to anything under it that
+// is not {z}/{x}/{y}.png. nginx's PCRE and JavaScript read this pattern alike.
+const guard = body.match(/if\s*\(\$uri\s*!~\s*"([^"]+)"\)\s*\{\s*return\s+404;\s*\}/);
+t.ok(Boolean(guard), 'the block refuses, with a 404, every address that does not match its tile pattern', guard ? guard[1] : 'no guard');
+const tile = guard ? new RegExp(guard[1]) : /$^/;
+for (const uri of [`${PREFIX}16/33324/25564.png`, `${PREFIX}13/4166/3195.png`, `${PREFIX}18/133296/102256.png`]) {
+  t.ok(tile.test(uri), `passed: ${uri}`);
+}
+for (const uri of [
+  `${PREFIX}style.json`,
+  `${PREFIX}static/3.0588,36.7538,15/300x200.png`,
+  `${PREFIX}16/33324/25564@2x.png`,
+  `${PREFIX}16/33324/25564.webp`,
+  `${PREFIX}sprite.png`,
+  `${PREFIX}16/33324/../../style.json`,
+  `${PREFIX}`,
+]) {
+  t.ok(!tile.test(uri), `404 before the tile server: ${uri}`);
+}
+t.ok(body.indexOf('return 404') < body.indexOf('proxy_pass'), 'the refusal is written before the proxy, where a reader looks first');
+
 t.section('2. no add_header, which would drop the server\'s security headers');
 t.ok(!/\badd_header\b/.test(body), 'no add_header in the block');
 t.ok(!/\badd_header\b/.test(ngx.uncomment(ngx.readCommon())), 'nor in proxy-common.inc, which it includes');
