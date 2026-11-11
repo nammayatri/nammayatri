@@ -354,15 +354,26 @@ tests =
           silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) fromTheFutureAgo]
           )
           @?= (False, True, False),
-      testCase "the alloc key lives at least findingTimeoutSec and always covers the stacked timers plus the margin" $
-        let stacked = defaultTunables.standTimerSec + defaultTunables.movingTimerSec + allocKeyTtlMarginSec
-            short = defaultTunables {findingTimeoutSec = 25, standTimerSec = 12, movingTimerSec = 8}
+      testCase "the alloc key lives at least findingTimeoutSec and always covers the stacked timers and the away timer plus the margin" $
+        let short = defaultTunables {findingTimeoutSec = 25, standTimerSec = 12, movingTimerSec = 8, allocationWindowSec = 15}
+            -- MeghOne c2: findingTimeoutSec 120, defaults elsewhere; the old TTL (280s) expired under the 480s away timer
+            c2 = defaultTunables {findingTimeoutSec = 120}
+            awayCovered = defaultTunables.allocationWindowSec + allocKeyTtlMarginSec
          in ( allocKeyTtl defaultTunables,
               allocKeyTtl short,
-              allocKeyTtl defaultTunables {findingTimeoutSec = stacked},
-              allocKeyTtl defaultTunables {findingTimeoutSec = stacked - 1}
+              allocKeyTtl short {allocationWindowSec = 40},
+              allocKeyTtl c2,
+              allocKeyTtl c2 {findingTimeoutSec = awayCovered + 1}
             )
-              @?= (1200, 12 + 8 + allocKeyTtlMarginSec, stacked, stacked),
+              @?= (1200, 12 + 8 + allocKeyTtlMarginSec, 40 + allocKeyTtlMarginSec, awayCovered, awayCovered + 1),
+      testCase "only an away timer inside its lead warns the driver; a lead of 0 never does" $
+        let d = addUTCTime 480 t0
+            alloc tm = AllocationState {vehicleNumber = "P1", timer = tm}
+         in ( map (\at' -> awayWarnDeadline 120 (addUTCTime at' t0) (alloc (AwayTimer d))) [0, 359, 360, 480],
+              awayWarnDeadline 0 (addUTCTime 400 t0) (alloc (AwayTimer d)),
+              map (awayWarnDeadline 120 (addUTCTime 400 t0) . alloc) [StandTimer d, MovingTimer d, OfferTimer d, NoTimer]
+            )
+              @?= ([Nothing, Nothing, Just d, Just d], Nothing, [Nothing, Nothing, Nothing, Nothing]),
       testCase "a cab reaches a stop with the stop's own entry, only while the stop is still ahead of it" $
         ( (.stopCode) <$> cabStopEta t0 defaultTunables "S1" stop (cabFixEta 125 "A" stop (Just 5) 10),
           (.stopCode) <$> cabStopEta t0 defaultTunables "S2" stop (cabFixEta 125 "A" stop (Just 5) 10)

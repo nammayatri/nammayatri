@@ -65,7 +65,10 @@ data SharedCabTunables = SharedCabTunables
     -- | The assigned cab's ETA to the board stop must be over this for the rider to skip it.
     skipMinEtaSec :: Int,
     -- | Seconds a cab the rider skipped stays off their booking in FALLBACK; after that, with no other cab found, the old one may come back.
-    riderSkipTtlSec :: Int
+    riderSkipTtlSec :: Int,
+    -- | Seconds before an accepted cab still standing away from the stop is released (AwayTimeout) that its driver is pushed to
+    -- start moving; 0 turns the push off.
+    awayWarnLeadSec :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -104,7 +107,8 @@ defaultTunables =
       maxSkipsAndCancels = 15,
       skipCancelCountTtlSec = 5 * 60 * 60,
       skipMinEtaSec = 120,
-      riderSkipTtlSec = 120
+      riderSkipTtlSec = 120,
+      awayWarnLeadSec = 120
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -146,7 +150,8 @@ tunablesOf busPingMaxAgeSec mbConfig =
       maxSkipsAndCancels = pick (.maxSkipsAndCancels) (.maxSkipsAndCancels),
       skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec),
       skipMinEtaSec = pick (.skipMinEtaSec) (.skipMinEtaSec),
-      riderSkipTtlSec = pickPositive (.riderSkipTtlSec) (.riderSkipTtlSec)
+      riderSkipTtlSec = pickPositive (.riderSkipTtlSec) (.riderSkipTtlSec),
+      awayWarnLeadSec = pick (.awayWarnLeadSec) (.awayWarnLeadSec)
     }
   where
     pick :: (DRC.SharedCabConfig -> Maybe a) -> (SharedCabTunables -> a) -> a

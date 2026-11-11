@@ -26,7 +26,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf, warnStationaryDriver)
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
@@ -243,16 +243,19 @@ expireTimers cfg now movingOn silentOn live =
   where
     failed (b, _) e = logError $ "shared-cab tick: timer check failed for booking " <> b.id.getId <> ": " <> show e
     expire (b, plate) = do
-      result <- withBookingLock b.id $ do
+      (result, warnBy) <- withBookingLock b.id $ do
         mbState <- readAlloc b.id
         case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
-          Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+          Just outcome -> (,Nothing) . fmap (outcome,) <$> closeLocked cfg b.id plate outcome
           Nothing -> do
+            let moving = maybe False (movingOn plate) b.routeCode
             whenJust mbState $ \st ->
-              when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
+              when (clearOnMove st.timer /= st.timer && moving) $ do
                 writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
-            pure Nothing
+            -- a cab seen moving just had its away timer cleared, so there is nothing to warn of
+            pure (Nothing, if moving then Nothing else awayWarnDeadline cfg.awayWarnLeadSec now =<< mbState)
       whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
+      whenJust warnBy $ warnStationaryDriver cfg b plate
 
 pushTimeFallbacks :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
 pushTimeFallbacks cfg now findings =

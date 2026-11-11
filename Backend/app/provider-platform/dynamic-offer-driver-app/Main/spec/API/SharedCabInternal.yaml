@@ -14,6 +14,14 @@ types:
     routeCode: Text
     derive: "Show"
 
+  # An accepted cab still standing away from the board stop: its driver is told to start moving before the ride goes to another cab.
+  SharedCabMoveWarningReq:
+    driverId: Text
+    bookingId: Text
+    boardStop: Maybe Text
+    releaseInSec: Int
+    derive: "Show"
+
   SharedCabDriverCallNumberResp:
     driverNumber: Text
     derive: "Show"
@@ -47,6 +55,15 @@ apis:
         token: Text
       request:
         type: SharedCabCheckInReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /sharedCabMoveWarningFCM
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabMoveWarningReq
       response:
         type: APISuccess
   - GET:

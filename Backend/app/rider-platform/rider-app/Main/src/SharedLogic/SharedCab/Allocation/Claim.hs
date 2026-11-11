@@ -8,6 +8,7 @@ module SharedLogic.SharedCab.Allocation.Claim
     liveBookingsOf,
     findLive,
     claimFallbackPush,
+    warnStationaryDriver,
   )
 where
 
@@ -31,7 +32,7 @@ import SharedLogic.SharedCab.Booking (shared, stopAddresses, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import SharedLogic.SharedCab.Keys (fallbackPushedKey)
+import SharedLogic.SharedCab.Keys (awayWarnedKey, fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -135,6 +136,28 @@ claimUnderLocks cfg booking cand s = do
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
 claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec
+
+-- | Tells the driver of an accepted cab still standing away from the stop to start moving before it is released (AwayTimeout).
+-- Once per (booking, cab); best effort, as the release happens with or without it.
+warnStationaryDriver :: AllocFlow m r => Config.SharedCabTunables -> DFTB.FRFSTicketBooking -> Text -> UTCTime -> m ()
+warnStationaryDriver cfg booking plate deadline =
+  whenM (shared $ Redis.tryLockRedis (awayWarnedKey booking.id plate) (allocKeyTtl cfg)) $
+    fork "sharedCabMoveWarning" $
+      withTryCatch "sharedCabMoveWarning" push >>= \case
+        Left e -> logWarning $ "shared-cab move warning failed booking=" <> booking.id.getId <> " cab=" <> plate <> ": " <> show e
+        Right _ -> logInfo $ "shared-cab move warning sent booking=" <> booking.id.getId <> " cab=" <> plate
+  where
+    push = do
+      s <- Session.readSession plate >>= fromMaybeM (InvalidRequest ("No shared-cab session for " <> plate))
+      merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
+      now <- getCurrentTime
+      CallBPPInternal.sharedCabMoveWarningFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl $
+        CallBPPInternal.SharedCabMoveWarningReq
+          { driverId = s.driverId,
+            bookingId = booking.id.getId,
+            boardStop = booking.fromStationName,
+            releaseInSec = max 0 (ceiling (diffUTCTime deadline now))
+          }
 
 offerDeadline :: AllocationState -> Maybe UTCTime
 offerDeadline st = case st.timer of
