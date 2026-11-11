@@ -109,6 +109,7 @@ data DrunkAndDriveViolationWarningData = DrunkAndDriveViolationWarningData
 -- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
+    hasAdvanceBooking :: Bool,
     origin :: Maybe Location,
     destination :: Maybe Location,
     stops :: Maybe [Location],

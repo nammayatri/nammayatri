@@ -6,7 +6,7 @@ imports:
 module: EditBooking
 types:
   EditBookingRespondAction:
-    enum: "ACCEPT, REJECT"
+    enum: "ACCEPT, REJECT, IGNORED"
   EditBookingRespondAPIReq:
     action : EditBookingRespondAction
 
