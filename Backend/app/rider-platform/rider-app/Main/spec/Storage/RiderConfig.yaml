@@ -92,6 +92,7 @@ RiderConfig:
       autoEndAfterDropSec: Maybe Int
       degradedTimeoutSec: Maybe Int
       offRouteSec: Maybe Int
+      checkInLeadSec: Maybe Int # seconds before the off-route pause the driver is asked to confirm the route; 0 = off, null = 60
       boardProximityM: Maybe Int
       boardAttemptsPer10Min: Maybe Int
       noLocationSpotBookingsPerVehiclePerDay: Maybe Int

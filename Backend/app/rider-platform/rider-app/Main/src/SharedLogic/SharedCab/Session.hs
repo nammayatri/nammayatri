@@ -253,7 +253,9 @@ endRoute :: Text -> Text -> Bool -> EndRouteAction -> Environment.Flow Session
 endRoute driver plate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   onBoard <- ridersOnBoard plate
-  unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
+  -- Riders aboard: only a forced return trip takes them along; ending the run is refused, the driver drops each one first.
+  let returning = case action of StartReturn _ -> True; _ -> False
+  unless (null onBoard || (forced && returning)) $ throwError (RidersOnBoard (length onBoard))
   case action of
     StartReturn tripId -> do
       returnRoute <- liftSession (returnRouteOf s.routeCode)

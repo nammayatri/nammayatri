@@ -75,7 +75,8 @@ data BAPSessionOperationReq = BAPSessionOperationReq
     driverId :: Text,
     vehicleNumber :: Text,
     version :: Maybe Int,
-    walkupCount :: Maybe Int
+    walkupCount :: Maybe Int,
+    checkInId :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)

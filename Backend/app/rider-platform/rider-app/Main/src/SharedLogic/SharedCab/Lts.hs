@@ -37,7 +37,9 @@ data CabTrack = CabTrack
     -- | the stops still ahead, in arrival order
     etas :: [CQMMB.BusStopETA],
     -- | farther from its route than gps-processor's gate (it then lists no stops ahead)
-    offRoute :: Bool
+    offRoute :: Bool,
+    -- | gps-processor's answer: the cab is held at the stop at the head of `etas`. Nothing from a gps-processor that doesn't send it.
+    onStop :: Maybe Bool
   }
   deriving (Show)
 
@@ -59,7 +61,8 @@ data GpsEntry = GpsEntry
     stop_sequence :: Maybe Int,
     current_trip_id :: Maybe Text,
     eta_data :: Maybe [CQMMB.BusStopETA],
-    off_route :: Maybe Bool
+    off_route :: Maybe Bool,
+    is_on_stop :: Maybe Bool
   }
   deriving (Generic, FromJSON)
 
@@ -73,7 +76,8 @@ fromGps plate e =
       stopSequence = e.stop_sequence,
       tripId = e.current_trip_id,
       etas = sortOn (.arrivalTimeUnix) (fromMaybe [] e.eta_data),
-      offRoute = fromMaybe False e.off_route
+      offRoute = fromMaybe False e.off_route,
+      onStop = e.is_on_stop
     }
 
 -- | Read straight from the LTS Redis, the hot path (the tick every few seconds, every rider poll). Fields decode one by one: a bad one is

@@ -28,7 +28,7 @@ tests =
         fmap (\DRC.SharedCabConfig {DRC.enabled = e, DRC.findingTimeoutSec = f, DRC.tickSec = t} -> (e, f, t)) (A.decode "{\"enabled\":false,\"findingTimeoutSec\":25}" :: Maybe DRC.SharedCabConfig)
           @?= Just (Just False, Just 25, Nothing),
       testCase "every sharedCabConfig field lands on its own tunable" $
-        tunablesOf (Just 7.5) (A.decode "{\"allocationWindowSec\":101,\"atStopRadiusM\":102,\"standTimerSec\":103,\"movingTimerSec\":104,\"maxAttempts\":105,\"maxNoShows\":106,\"fallbackAfterSec\":107,\"findingTimeoutSec\":108,\"tickSec\":109,\"ltsMaxAgeSec\":110,\"autoEndAfterDropSec\":111,\"degradedTimeoutSec\":112,\"offRouteSec\":114,\"boardProximityM\":115,\"boardAttemptsPer10Min\":116,\"noLocationSpotBookingsPerVehiclePerDay\":117,\"maxCabSpeedMps\":118,\"interestWindowSec\":119,\"demandStopsPerRoute\":120,\"maxDemandRoutes\":121,\"offerTimeoutSec\":122,\"offerRetryTimeoutSec\":123,\"maxSkipsAndCancels\":124,\"skipCancelCountTtlSec\":125,\"skipMinEtaSec\":126,\"callEnabled\":true,\"chatEnabled\":true,\"pickEnabled\":true,\"driverAcceptEnabled\":true,\"callMode\":\"DIRECT\"}")
+        tunablesOf (Just 7.5) (A.decode "{\"allocationWindowSec\":101,\"atStopRadiusM\":102,\"standTimerSec\":103,\"movingTimerSec\":104,\"maxAttempts\":105,\"maxNoShows\":106,\"fallbackAfterSec\":107,\"findingTimeoutSec\":108,\"tickSec\":109,\"ltsMaxAgeSec\":110,\"autoEndAfterDropSec\":111,\"degradedTimeoutSec\":112,\"offRouteSec\":114,\"checkInLeadSec\":113,\"boardProximityM\":115,\"boardAttemptsPer10Min\":116,\"noLocationSpotBookingsPerVehiclePerDay\":117,\"maxCabSpeedMps\":118,\"interestWindowSec\":119,\"demandStopsPerRoute\":120,\"maxDemandRoutes\":121,\"offerTimeoutSec\":122,\"offerRetryTimeoutSec\":123,\"maxSkipsAndCancels\":124,\"skipCancelCountTtlSec\":125,\"skipMinEtaSec\":126,\"callEnabled\":true,\"chatEnabled\":true,\"pickEnabled\":true,\"driverAcceptEnabled\":true,\"callMode\":\"DIRECT\"}")
           @?= SharedCabTunables
             { allocationWindowSec = 101,
               atStopRadiusM = 102,
@@ -43,6 +43,7 @@ tests =
               autoEndAfterDropSec = 111,
               degradedTimeoutSec = 112,
               offRouteSec = 114,
+              checkInLeadSec = 113,
               boardProximityM = 115,
               boardPingMaxAgeSec = 7.5,
               boardAttemptsPer10Min = 116,
@@ -62,6 +63,8 @@ tests =
               skipCancelCountTtlSec = 125,
               skipMinEtaSec = 126
             },
+      testCase "a negative checkInLeadSec reads as 0, so the driver is never asked" $
+        checkInLeadSec (tunablesOf Nothing (A.decode "{\"checkInLeadSec\":-5}")) @?= 0,
       testCase "per-city switch: SHARED_CAB config and not Just False" $
         [sharedCabEnabledDecision c s | c <- [True, False], s <- [Nothing, Just True, Just False]]
           @?= [True, True, False, False, False, False],
@@ -118,6 +121,7 @@ tests =
               autoEndAfterDropSec = 600,
               degradedTimeoutSec = 3600,
               offRouteSec = 120,
+              checkInLeadSec = 60,
               boardProximityM = 150,
               boardPingMaxAgeSec = 10,
               boardAttemptsPer10Min = 5,

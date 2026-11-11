@@ -55,7 +55,7 @@ import Kernel.Utils.Common (addUTCTime, diffUTCTime)
 import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
-import SharedLogic.SharedCab.Lts (CabTrack (..), etaAt)
+import SharedLogic.SharedCab.Lts (CabTrack (..), etaAt, nextStopCode)
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 
 data FindingBooking = FindingBooking
@@ -136,13 +136,17 @@ data RankedCandidate = RankedCandidate
   }
   deriving (Show, Generic)
 
--- | Per the cab's fresh position; decides the claim's timer. Only a stationary cab within atStopRadiusM of the board stop is waiting for the rider.
+-- | Per the cab's fresh position; decides the claim's timer. A cab gps-processor holds at the board stop (`is_on_stop`, which it sets only
+-- within its on-stop radius) and not reported moving is waiting for the rider, speed or not. Otherwise `is_on_stop` with a speed says
+-- away; without either, only a cab within atStopRadiusM of the board stop is at it, so a parked cab with no speed still gets a bounded timer.
 data CabStance = CabMoving | CabAtStop | CabAway
   deriving (Show, Eq)
 
-cabStance :: Config.SharedCabTunables -> CabTrack -> LatLong -> CabStance
-cabStance cfg cab stopPoint
+cabStance :: Config.SharedCabTunables -> CabTrack -> Text -> LatLong -> CabStance
+cabStance cfg cab boardStopCode stopPoint
+  | cab.onStop == Just True && nextStopCode cab == Just boardStopCode && not (isMovingSpeed cab.speed) = CabAtStop
   | isMovingSpeed cab.speed = CabMoving
+  | isJust cab.onStop && isJust cab.speed = CabAway
   | distanceBetweenInMeters cab.position stopPoint <= fromIntegral cfg.atStopRadiusM = CabAtStop
   | otherwise = CabAway
 
@@ -164,7 +168,7 @@ eligibleCandidates ::
 eligibleCandidates now cfg tracking sessions booking boardPoint =
   sortOn
     rcEtaToBoardStopSec
-    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcStance = cabStance cfg cab boardPoint}
+    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcStance = cabStance cfg cab booking.boardStopCode boardPoint}
       | s <- sessions,
         s.status == ACTIVE,
         s.capacity >= booking.seats,

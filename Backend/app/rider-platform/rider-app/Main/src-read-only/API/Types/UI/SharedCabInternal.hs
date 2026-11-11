@@ -73,11 +73,13 @@ data SharedCabSessionOperation
   = SET_SEATS
   | RESUME
   | CAB_FULL
+  | STILL_ON_ROUTE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabSessionOperationReq = SharedCabSessionOperationReq
-  { driverId :: Kernel.Prelude.Text,
+  { checkInId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Text,
     operation :: SharedCabSessionOperation,
     vehicleNumber :: Kernel.Prelude.Text,
     version :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

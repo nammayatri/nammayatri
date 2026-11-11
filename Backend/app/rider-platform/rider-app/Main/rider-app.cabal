@@ -721,6 +721,7 @@ library
       SharedLogic.SharedCab.BookingState
       SharedLogic.SharedCab.Call
       SharedLogic.SharedCab.Cancel
+      SharedLogic.SharedCab.CheckIn
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.ConfirmHook
       SharedLogic.SharedCab.Degraded
@@ -2269,6 +2270,7 @@ test-suite rider-app-test
       SharedCabBoardingTests
       SharedCabCallTests
       SharedCabCheckedInStatusTests
+      SharedCabCheckInTests
       SharedCabConfigTests
       SharedCabDegradedSweepTests
       SharedCabDegradedTests

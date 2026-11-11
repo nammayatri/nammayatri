@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.StopProgress
   )
 where
 
+import Control.Monad.Extra (whenJustM)
 import qualified Data.Aeson as A
 import Data.List (findIndex)
 import qualified Data.Map.Strict as M
@@ -17,13 +18,16 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Error (MerchantError (MerchantNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
+import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
 import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePositions)
@@ -32,6 +36,7 @@ import SharedLogic.SharedCab.Seats (markDropped, routeStopRows)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionFlow, SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 type StopProgressFlow m r c =
@@ -109,7 +114,7 @@ stepCab cfg now bookings routeRead s = do
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
         movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b
   forM_ onBoard $ dropStep cfg now mbCab plate
-  when (s.status == ACTIVE) $ offRouteStep cfg now ((.offRoute) <$> freshTrack) plate
+  when (s.status == ACTIVE) $ offRouteStep cfg now ((.offRoute) <$> freshTrack) s
 
 -- | gps-processor lists only the stops still ahead: every route stop before the cab's next one is reached.
 -- ponytail: past the last stop gps-processor lists none, so nothing reads reached and drops there go by the at-stop radius.
@@ -117,7 +122,9 @@ cabFix :: [DRSM.RouteStopMapping] -> CabTrack -> CabFix
 cabFix stops cab =
   CabFix
     { position = cab.position,
-      stops = zipWith mark [0 ..] stops
+      stops = zipWith mark [0 ..] stops,
+      -- `is_on_stop` is about gps-processor's next stop: with that stop off this route's mapping, the at-stop radius decides instead.
+      onStop = cab.onStop <* nextIdx
     }
   where
     nextIdx = nextStopCode cab >>= \code -> findIndex ((== code) . (.stopCode)) stops
@@ -155,16 +162,44 @@ dropStep cfg now mbCab plate b = do
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
       KeepWaiting -> pure ()
 
-offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe Bool -> Text -> m ()
-offRouteStep cfg now freshOffRoute plate = do
+-- | A driver who confirmed the route keeps the riders for one more `offRouteSec`, and is asked again within it.
+offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe Bool -> Session -> m ()
+offRouteStep cfg now freshOffRoute s = do
   offSince <- Redis.withMasterRedis $ Redis.safeGet (offRouteKey plate)
+  let offFor = maybe "" (\since -> "after " <> show (round (diffUTCTime now since) :: Int) <> " s off route") offSince
   case offRouteAction cfg now offSince freshOffRoute of
-    StartOffRouteClock -> Redis.withMasterRedis $ Redis.setExp (offRouteKey plate) now (2 * cfg.offRouteSec)
-    ClearOffRouteClock -> Redis.withMasterRedis $ Redis.del (offRouteKey plate)
-    PauseOffRoute -> do
+    StartOffRouteClock -> startClock
+    ClearOffRouteClock -> do
       Redis.withMasterRedis $ Redis.del (offRouteKey plate)
-      withTryCatch "sharedCabOffRoutePause" (Session.pause plate OFF_ROUTE) >>= \case
-        Left e -> logWarning $ "shared-cab off-route pause skipped for " <> plate <> ": " <> show e
-        Right _ -> do
-          releaseUnboarded plate SessionClosed
+      void $ CheckIn.clear plate
+    AskCheckIn deadline -> whenJust offSince $ \since -> whenJustM (CheckIn.openIfNone plate since deadline) $ \c -> do
+      logInfo $ "shared-cab check-in: opened " <> c.checkInId <> " for " <> plate <> " on route " <> s.routeCode <> " " <> offFor
+      fork "sharedCabCheckInPush" (notifyCheckIn s)
+    PauseOffRoute ->
+      CheckIn.clear plate >>= \case
+        Just c | c.answered -> do
+          logInfo $ "shared-cab check-in: " <> plate <> " confirmed " <> c.checkInId <> " " <> offFor <> ", off-route clock restarted"
+          startClock
+        mbOpen -> do
+          whenJust mbOpen $ \c -> logInfo $ "shared-cab check-in: " <> plate <> " did not answer " <> c.checkInId <> " " <> offFor <> ", pausing"
+          Redis.withMasterRedis $ Redis.del (offRouteKey plate)
+          withTryCatch "sharedCabOffRoutePause" (Session.pause plate OFF_ROUTE) >>= \case
+            Left e -> logWarning $ "shared-cab off-route pause skipped for " <> plate <> ": " <> show e
+            Right _ -> do
+              releaseUnboarded plate SessionClosed
     OffRouteNoChange -> pure ()
+  where
+    plate = s.vehicleNumber
+    startClock = Redis.withMasterRedis $ Redis.setExp (offRouteKey plate) now (2 * cfg.offRouteSec)
+
+-- | Best-effort: the session poll shows the check-in anyway, so a failed push is only logged.
+notifyCheckIn :: StopProgressFlow m r c => Session -> m ()
+notifyCheckIn s =
+  withTryCatch "sharedCabCheckInPush" push >>= \case
+    Left e -> logWarning $ "shared-cab check-in push failed for " <> s.vehicleNumber <> ": " <> show e
+    Right _ -> pure ()
+  where
+    push = do
+      merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
+      CallBPPInternal.sharedCabCheckInFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl $
+        CallBPPInternal.SharedCabCheckInReq {driverId = s.driverId, routeCode = s.routeCode}

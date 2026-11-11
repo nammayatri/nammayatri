@@ -95,7 +95,11 @@ cabFix = cabFixEta 120
 
 -- as cabFix, reaching the board stop `etaSec` after t0
 cabFixEta :: Int -> Text -> LatLong -> Maybe Double -> Int -> Lts.CabTrack
-cabFixEta etaSec plate pos speed agoSec =
+cabFixEta etaSec = cabAhead Nothing [("S1", etaSec)]
+
+-- a cab with gps-processor's is_on_stop and these stops still ahead, each reached `etaSec` after t0
+cabAhead :: Maybe Bool -> [(Text, Int)] -> Text -> LatLong -> Maybe Double -> Int -> Lts.CabTrack
+cabAhead onStop ahead plate pos speed agoSec =
   Lts.CabTrack
     { vehicleNumber = plate,
       position = pos,
@@ -103,7 +107,9 @@ cabFixEta etaSec plate pos speed agoSec =
       speed,
       stopSequence = Nothing,
       tripId = Nothing,
-      etas = [etaEntry "S1" (addUTCTime (fromIntegral etaSec) t0)]
+      etas = [etaEntry code (addUTCTime (fromIntegral etaSec) t0) | (code, etaSec) <- ahead],
+      offRoute = False,
+      onStop
     }
 
 -- a stop's entry in gps-processor's eta_data
@@ -220,6 +226,20 @@ tests =
       testCase "only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
         map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
           @?= [[CabAtStop], [CabAway], [CabMoving], [CabAway]],
+      testCase "with gps-processor's is_on_stop and a speed the stance follows it, not the at-stop radius; without a speed the radius decides" $
+        let cab onStop ahead pos speed = cabAhead onStop ahead "P1" pos speed 5
+            board = [("S1", 120)]
+         in map
+              claimedAs
+              [ cab (Just True) board farAway (Just 0),
+                cab (Just True) board farAway Nothing,
+                cab (Just True) board nearStop (Just 3),
+                cab (Just True) (("S0", 30) : board) nearStop (Just 0),
+                cab (Just False) board nearStop (Just 0),
+                cab (Just False) board nearStop Nothing,
+                cab (Just False) board farAway Nothing
+              ]
+              @?= [[CabAtStop], [CabAtStop], [CabMoving], [CabAway], [CabAway], [CabAtStop], [CabAway]],
       testCase "a stationary cab gets a bounded wait, at the stop the stand timer and away the allocation window; a moving cab none" $
         map (\veh -> [claimTimer defaultTunables t0 c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding stop]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[StandTimer (addUTCTime (fromIntegral defaultTunables.standTimerSec) t0)], [AwayTimer (addUTCTime (fromIntegral defaultTunables.allocationWindowSec) t0)], [NoTimer]],
