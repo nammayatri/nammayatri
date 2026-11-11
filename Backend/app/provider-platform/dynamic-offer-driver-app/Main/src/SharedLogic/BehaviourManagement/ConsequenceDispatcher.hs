@@ -18,6 +18,7 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
     handleConsequences,
     handleCommunications,
     sendOverlayByKey,
+    parseBlockReasonFlag,
   )
 where
 

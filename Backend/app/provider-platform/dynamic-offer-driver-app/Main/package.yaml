@@ -262,5 +262,8 @@ tests:
       - tasty-hunit
       - text
       - bytestring
+      - yudhishthira
+      - time
+      - behavior-tracker
     extra-libraries:
       - cac_client

@@ -1,0 +1,76 @@
+imports:
+  UTCTime: Kernel.Prelude
+  BlockReasonFlag: Tools.Error
+  ProfileWarningInfo: Lib.BehaviorTracker.Types
+  Value: Data.Aeson
+  ServiceTierType: Domain.Types.Common
+
+module: DriverAccountHealth
+
+apis:
+  - GET:
+      endpoint: /driver/accountHealth
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverAccountHealth.AccountHealthRes
+
+types:
+  # The driver's overall standing, also sent in the profile, most severe first:
+  # BLOCKED = can't go online: the driver's account block (an expired one counts as lifted, as going
+  #   online lifts it) or the overcharging block.
+  # RESTRICTED = can go online but is losing something: a soft block (some service tiers) or a feature
+  #   block (toll routes, AC).
+  # WARNING = a warning the engine pinned to the profile. GOOD = none of these.
+  AccountHealthStatus:
+    enum: "GOOD,WARNING,RESTRICTED,BLOCKED"
+
+  AccountHealthRes:
+    status: AccountHealthStatus
+    behaviours: "[BehaviourHealth]" # one entry per behaviour live in the city
+    warnings: "[ProfileWarningInfo]" # warnings the engine pinned to the driver
+    block: Maybe AccountBlock # the block that stops the driver going online; absent when there is none
+    blocks: "[ActiveBlock]" # every block in force, from driver_information; empty when none
+
+  # One behaviour live in the driver's city, as the behaviour framework holds it for this driver.
+  BehaviourHealth:
+    behaviour: Text # rulebook domain as the framework names it, e.g. "CANCELLATION-RATE-BEHAVIOR"
+    periods: "[BehaviourPeriod]" # the counts the rules judge, for the periods the rules read; empty when it keeps none
+    rules: "[BehaviourRule]" # rules of the city's live rulebook, in rulebook order; empty when it has none readable
+
+  # The counts the rules judge for one period: offences out of counted events, as the engine counts them.
+  BehaviourPeriod:
+    period: Text # e.g. "daily", "weekly", or "events" for a rulebook judging the last X events
+    actionCount: Int # times the behaviour happened
+    eligibleCount: Int # out of how many; 0 when the behaviour keeps no eligible counter; for "events", the events counted, at most X
+    rate: Int # actionCount * 100 / eligibleCount, as the framework computes it
+    windowSize: Maybe Int # "events" only: X, how many of the newest events the rules judge
+
+  # One rule of the live rulebook, copied as written.
+  BehaviourRule:
+    kind: Text # rule action, e.g. "WARN", "HARD_BLOCK", "PERMANENT_BLOCK", "NUDGE"
+    tag: Maybe Text # a block's reasonTag, or a warning's or nudge's overlay key (= warnings[].reasonTag)
+    blockReasonFlag: Maybe BlockReasonFlag # block rules only: the flag the engine sets for the tag (= block.reasonFlag)
+    hours: Maybe Int # block duration; absent for a warning or a permanent block
+    conditions: "[RuleCondition]" # all must hold for the rule to fire
+
+  RuleCondition:
+    fact: Text # e.g. "counters.daily.rate"
+    op: Text # e.g. ">=", "<", "=="
+    value: Value # as written in the rulebook
+
+  AccountBlock:
+    blockedUntil: Maybe UTCTime # absent for a permanent block
+    reasonFlag: Maybe BlockReasonFlag # timed blocks only
+
+  ActiveBlockType:
+    enum: "HARD,PERMANENT,SOFT,FEATURE"
+
+  # A block in force on the driver, as driver_information holds it. The tag and reason come from the
+  # behaviour framework's record of the block when there is one; a dashboard block has neither.
+  ActiveBlock:
+    blockType: ActiveBlockType # HARD/PERMANENT: can't go online; SOFT: loses service tiers; FEATURE: loses a feature
+    tag: Maybe Text # the rule's own tag, as written in the rulebook (= rules[].tag); absent when no framework record matches
+    reason: Maybe Text # the rule's reason text; absent when no framework record matches
+    blockedUntil: Maybe UTCTime # absent for a permanent block
+    feature: Maybe Text # FEATURE only: the feature taken away, e.g. "TOLL_ROUTES", "AC_USAGE"
+    serviceTiers: Maybe [ServiceTierType] # SOFT only: the service tiers the driver doesn't get rides in

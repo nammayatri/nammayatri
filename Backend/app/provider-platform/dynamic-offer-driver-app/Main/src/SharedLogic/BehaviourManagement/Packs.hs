@@ -57,6 +57,26 @@ data EventsSupport = EventsSupport
     eventsOverlayKeys :: [Text]
   }
 
+-- | Which bt: counters hold a behaviour's counts, for the driver's account health screen. The
+-- counter names are chosen only in the code that counts the event, so they are listed here; each
+-- counter's settings (window, periods) come from the framework's counter registry
+-- (Visibility.defaultDriverDomainConfig), patched with the city's config where the engine counts
+-- with a city setting.
+data PackCounting = PackCounting
+  { -- | the counter whose ACTION_COUNT the rules judge (the offences)
+    offenceCounter :: Text,
+    -- | a shared counter whose ELIGIBLE_COUNT the offences are judged against; Nothing = the
+    -- offence counter's own ELIGIBLE_COUNT
+    eligibleCounter :: Maybe Text,
+    -- | the registry settings as the engine counts with them in this city; a read with other
+    -- settings than the engine's could trim the shared counter
+    cityCounterConfig :: DTC.TransporterConfig -> BTT.CounterConfig -> BTT.CounterConfig
+  }
+
+-- | A behaviour counted in one counter, with the registry's settings in every city.
+ownCounter :: Text -> Maybe PackCounting
+ownCounter name = Just PackCounting {offenceCounter = name, eligibleCounter = Nothing, cityCounterConfig = \_ config -> config}
+
 data BehaviourPack = BehaviourPack
   { packDomain :: LYT.LogicDomain,
     -- | overlays a TIME (daily/weekly) version needs
@@ -64,7 +84,10 @@ data BehaviourPack = BehaviourPack
     configPrereqs :: [ConfigPrereq],
     blockReasonSeeds :: [BlockReasonSeed],
     -- | Nothing = TIME versions only
-    eventsSupport :: Maybe EventsSupport
+    eventsSupport :: Maybe EventsSupport,
+    -- | how the driver's account health screen reads its counts (shown while it is live in the
+    -- city); Nothing = it keeps no counter the screen can show
+    counting :: Maybe PackCounting
   }
 
 behaviourPacks :: [BehaviourPack]
@@ -74,7 +97,9 @@ behaviourPacks =
         requiredOverlayKeys = ["LOW_RATING_NUDGE", "LOW_RATING_WARN"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "LOW_RATING" (Just "Blocked for sustained low customer rating") (Just 72)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "LOW_RATING"
       },
     BehaviourPack
       { packDomain = LYT.CANCELLATION_RATE_BEHAVIOR,
@@ -90,6 +115,14 @@ behaviourPacks =
                 windowKeyName = DriverPool.rideCancellationActionType,
                 windowMark = BTT.MarkLatestEligible,
                 eventsOverlayKeys = ["CANCELLATION_RATE_NUDGE_EVENTS", "CANCELLATION_RATE_WARN_EVENTS"]
+              },
+        counting =
+          Just
+            PackCounting
+              { offenceCounter = DriverPool.rideCancellationActionType,
+                eligibleCounter = Nothing,
+                -- Lib.DriverScore counts with the city's cancellationRateWindow
+                cityCounterConfig = \tc config -> config {BTT.windowSizeDays = toInteger $ fromMaybe 7 tc.cancellationRateWindow}
               }
       },
     BehaviourPack
@@ -97,28 +130,50 @@ behaviourPacks =
         requiredOverlayKeys = [],
         configPrereqs = [ConfigPrereq "enable_gps_toll_behavior" (.enableGpsTollBehavior)],
         blockReasonSeeds = [],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          Just
+            PackCounting
+              { offenceCounter = "GPS_TOLL_BAD_BEHAVIOR",
+                eligibleCounter = Nothing,
+                -- kafka-consumers' GPS toll handler counts its "window" period over the city's
+                -- gpsTollBehaviorWindowDays (default 15)
+                cityCounterConfig = \tc config ->
+                  config {BTT.periods = [if period.periodName == "window" then period {BTT.periodDays = toInteger $ fromMaybe 15 tc.gpsTollBehaviorWindowDays} else period | period <- config.periods]}
+              }
       },
     BehaviourPack
       { packDomain = LYT.PICKUP_STALL_BEHAVIOR,
         requiredOverlayKeys = ["PICKUP_STALL_NUDGE"],
         configPrereqs = [ConfigPrereq "pickup_stall_monitoring_config" (isJust . (.pickupStallMonitoringConfig))],
         blockReasonSeeds = [BlockReasonSeed "PickupStall" (Just "Blocked for repeatedly stalling at pickup") (Just 24)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "PICKUP_STALL"
       },
     BehaviourPack
       { packDomain = LYT.QUOTE_RESPONSE_BEHAVIOR,
         requiredOverlayKeys = ["QUOTE_RESPONSE_NUDGE"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "QuoteResponseBlock" (Just "Blocked for rejecting too many ride requests") (Just 4)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          Just
+            PackCounting
+              { offenceCounter = DriverPool.quoteResponseRejectActionType,
+                -- rejects are judged against the requests sent (buildSnapshotWithSharedEligible)
+                eligibleCounter = Just DriverPool.quoteResponseEligibleActionType,
+                cityCounterConfig = \_ config -> config
+              }
       },
     BehaviourPack
       { packDomain = LYT.AUTO_ACCEPT_CANCELLATION_BEHAVIOR,
         requiredOverlayKeys = ["AUTO_ACCEPT_CANCELLATION_NUDGE"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "AutoAcceptCancellation" (Just "Blocked for repeatedly cancelling auto-assigned rides") (Just 24)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "AUTO_ACCEPT_CANCELLATION"
       },
     BehaviourPack
       { packDomain = LYT.ISSUE_BREACH_BEHAVIOR,
@@ -128,42 +183,62 @@ behaviourPacks =
           [ BlockReasonSeed "ExtraFareDaily" (Just "Blocked for repeated extra-fare complaints (daily)") (Just 12),
             BlockReasonSeed "ExtraFareWeekly" (Just "Blocked for repeated extra-fare complaints (weekly)") (Just 24)
           ],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          Just
+            PackCounting
+              { offenceCounter = "ISSUE_BREACH_EXTRA_FARE",
+                eligibleCounter = Nothing,
+                -- ReportIssue counts with the EXTRA_FARE_MITIGATION entry's window
+                cityCounterConfig = \tc config ->
+                  maybe config (\ib -> config {BTT.windowSizeDays = toInteger ib.ibCountWindowSizeInDays}) $
+                    find ((== IB.EXTRA_FARE_MITIGATION) . (.ibIssueBreachType)) =<< tc.issueBreachConfig
+              }
       },
     BehaviourPack
       { packDomain = LYT.DRUNK_DRIVE_BEHAVIOR,
         requiredOverlayKeys = ["DRUNK_AND_DRIVE_WARNING"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "DrunkAndDriveViolation" (Just "Blocked for repeated drunk-and-drive reports") Nothing],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "DRUNK_AND_DRIVE"
       },
     BehaviourPack
       { packDomain = LYT.TOLL_ISSUE_BEHAVIOR,
         requiredOverlayKeys = [],
         configPrereqs = [],
         blockReasonSeeds = [],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "TOLL_RELATED_ISSUE"
       },
     BehaviourPack
       { packDomain = LYT.AC_RESTRICTION_BEHAVIOR,
         requiredOverlayKeys = [],
         configPrereqs = [],
         blockReasonSeeds = [],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "AC_RESTRICTION"
       },
     BehaviourPack
       { packDomain = LYT.UNHYGIENIC_VEHICLE_BEHAVIOR,
         requiredOverlayKeys = ["UNHYGIENIC_VEHICLE_WARN"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "UNHYGIENIC_VEHICLE" (Just "Blocked for repeated vehicle hygiene complaints") (Just 24)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "UNHYGIENIC_VEHICLE"
       },
     BehaviourPack
       { packDomain = LYT.VEHICLE_UNSAFE_BEHAVIOR,
         requiredOverlayKeys = ["VEHICLE_UNSAFE_WARN"],
         configPrereqs = [],
         blockReasonSeeds = [BlockReasonSeed "VEHICLE_UNSAFE" (Just "Blocked for repeated vehicle safety complaints") (Just 48)],
-        eventsSupport = Nothing
+        eventsSupport = Nothing,
+        counting =
+          ownCounter "VEHICLE_UNSAFE"
       }
   ]
 
