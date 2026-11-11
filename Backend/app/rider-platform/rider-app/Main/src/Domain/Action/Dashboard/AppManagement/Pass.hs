@@ -49,6 +49,7 @@ import qualified IssueManagement.Common.UI.Issue as IssueCommon
 import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
 import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Types
 import qualified Kernel.External.Types as Lang
 import qualified Kernel.Prelude
@@ -58,8 +59,11 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action
 import qualified Lib.Payment.Domain.Types.PaymentOrder
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PassRestore as PassRestore
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
 import qualified Storage.CachedQueries.PassType as CQPassType
@@ -272,7 +276,7 @@ adjustPurchasedPassPaymentTrips merchantShortId opCity purchasedPassPaymentId re
   let adjustLocked = do
         attempts <-
           filter (\logEntry -> logEntry.operationType == DEntityValueLog.TripCountAdjust && logEntry.status /= DEntityValueLog.FAILED)
-            <$> QEntityValueLog.findAllByEntityTypeAndEntityIdAndOperationId DEntityValueLog.PurchasedPassPayment purchasedPassPaymentId.getId operationId
+            <$> QEntityValueLog.findAllByEntityTypeAndEntityIdAndOperationId FRFSPassOverride.passPaymentEntityType purchasedPassPaymentId.getId operationId
         case attempts of
           existing : _
             | existing.status == DEntityValueLog.PENDING ->
@@ -292,14 +296,21 @@ adjustPurchasedPassPaymentTrips merchantShortId opCity purchasedPassPaymentId re
                 | before + req.delta < 0 -> pure . Left $ "Only " <> show before <> " trips left, cannot remove " <> show (negate req.delta)
                 | otherwise -> do
                   logEntry <- logTripAdjustment payment operationId req before
-                  FRFSPassOverride.adjustTrips payment entry req.delta >>= \case
-                    Left reason -> do
-                      QEntityValueLog.updateByPrimaryKey logEntry {DEntityValueLog.status = DEntityValueLog.FAILED, DEntityValueLog.valueAfter = Just before}
+                  let markFailed = void . withTryCatch "adjustPurchasedPassPaymentTrips:markFailed" $ QEntityValueLog.updateByPrimaryKey logEntry {DEntityValueLog.status = DEntityValueLog.FAILED, DEntityValueLog.valueAfter = Just before}
+                  withTryCatch "adjustPurchasedPassPaymentTrips:adjust" (FRFSPassOverride.adjustTrips payment entry req.delta) >>= \case
+                    Left err -> markFailed >> throwM err
+                    Right (Left reason) -> do
+                      markFailed
                       pure (Left reason)
-                    Right remaining -> do
-                      QEntityValueLog.updateByPrimaryKey logEntry {DEntityValueLog.status = DEntityValueLog.APPLIED, DEntityValueLog.valueBefore = Just (remaining - req.delta), DEntityValueLog.valueAfter = Just remaining}
-                      logInfo $ "adjustPurchasedPassPaymentTrips paymentId=" <> purchasedPassPaymentId.getId <> " operationId=" <> operationId <> " delta=" <> show req.delta <> " remaining=" <> show remaining <> " reason=" <> req.reason
-                      pure (Right ())
+                    Right (Right remaining) ->
+                      withTryCatch "adjustPurchasedPassPaymentTrips:markApplied" (QEntityValueLog.updateByPrimaryKey logEntry {DEntityValueLog.status = DEntityValueLog.APPLIED, DEntityValueLog.valueBefore = Just (remaining - req.delta), DEntityValueLog.valueAfter = Just remaining}) >>= \case
+                        Left err -> do
+                          FRFSPassOverride.revertTripAdjustment payment req.delta
+                          markFailed
+                          throwM err
+                        Right () -> do
+                          logInfo $ "adjustPurchasedPassPaymentTrips paymentId=" <> purchasedPassPaymentId.getId <> " operationId=" <> operationId <> " delta=" <> show req.delta <> " remaining=" <> show remaining <> " reason=" <> req.reason
+                          pure (Right ())
   FRFSPassOverride.tryWithTripCountLock purchasedPassPaymentId adjustLocked >>= \case
     Nothing -> throwError (InvalidRequest "This pass's trip count is being updated, please retry")
     Just (Left reason) -> throwError (InvalidRequest reason)
@@ -315,7 +326,7 @@ logTripAdjustment payment operationId req before = do
   let logEntry =
         DEntityValueLog.EntityValueLog
           { id = logId,
-            entityType = DEntityValueLog.PurchasedPassPayment,
+            entityType = FRFSPassOverride.passPaymentEntityType,
             entityId = payment.id.getId,
             operationId = operationId,
             operationType = DEntityValueLog.TripCountAdjust,
@@ -338,37 +349,98 @@ terminatePurchasedPassPayment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 terminatePurchasedPassPayment merchantShortId opCity purchasedPassPaymentId req = do
   let reason = T.strip req.reason
   when (T.null reason) $ throwError (InvalidRequest "reason is required")
+  let refundRequested = fromMaybe False req.refund
   merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
-  void $ findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+  initialPayment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+  alreadyRefunded <- if refundRequested then terminatedWithRefund initialPayment else pure False
+  when (refundRequested && not alreadyRefunded) $ ensureRefundable initialPayment
   let terminateLocked = do
         payment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
-        if payment.status `notElem` [Domain.Types.PurchasedPass.Active, Domain.Types.PurchasedPass.PreBooked]
-          then pure . Left $ "Only an active or pre-booked pass can be terminated, this one is " <> show payment.status
-          else do
-            now <- getCurrentTime
-            today <- FRFSPassOverride.localTripDayForCity payment.merchantOperatingCityId now
-            let endDate = Data.Time.addDays (-1) today
-                startDate = min payment.startDate endDate
-            mbBenefit <- fmap DPassOverrideConfig.entryBenefit <$> paymentEntry payment
-            logEntry <- logPassTermination payment reason
-            before <- FRFSPassOverride.zeroTrips payment mbBenefit
-            QPurchasedPassPayment.updateStatusAndDatesById startDate endDate Domain.Types.PurchasedPass.Expired payment.id
-            expireParentPass payment startDate endDate
-            QEntityValueLog.updateByPrimaryKey
-              logEntry
-                { DEntityValueLog.status = DEntityValueLog.APPLIED,
-                  DEntityValueLog.delta = negate <$> before,
-                  DEntityValueLog.valueBefore = before,
-                  DEntityValueLog.valueAfter = 0 <$ before
-                }
-            logInfo $ "terminatePurchasedPassPayment paymentId=" <> payment.id.getId <> " endDate=" <> show endDate <> " tripsBefore=" <> show before <> " reason=" <> reason
-            pure (Right ())
+        terminationLogs <- passTerminationLogs payment
+        let hasAppliedTermination = any (\entry -> entry.status == DEntityValueLog.APPLIED) terminationLogs
+            mbPendingTermination = find (\entry -> entry.status == DEntityValueLog.PENDING) terminationLogs
+        if refundRequested && hasAppliedTermination && payment.status `elem` terminatedRefundStatuses
+          then pure (Right ())
+          else
+            if payment.status `elem` [Domain.Types.PurchasedPass.Active, Domain.Types.PurchasedPass.PreBooked]
+              then Right <$> (maybe (logPassTermination payment reason) pure mbPendingTermination >>= applyTermination payment)
+              else case mbPendingTermination of
+                Just pendingLog | payment.status == Domain.Types.PurchasedPass.Expired -> Right <$> applyTermination payment pendingLog
+                _ -> pure . Left $ "Only an active or pre-booked pass can be terminated, this one is " <> show payment.status
   FRFSPassOverride.tryWithTripCountLock purchasedPassPaymentId terminateLocked >>= \case
     Nothing -> throwError (InvalidRequest "This pass's trip count is being updated, please retry")
     Just (Left err) -> throwError (InvalidRequest err)
     Just (Right ()) -> do
+      when alreadyRefunded $
+        logInfo $ "terminatePurchasedPassPayment repeat request paymentId=" <> purchasedPassPaymentId.getId <> ", already terminated with a refund"
+      when (refundRequested && not alreadyRefunded) $ refundTerminatedPayment initialPayment
       updatedPayment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
       paymentEntry updatedPayment >>= buildTripsResp updatedPayment
+
+terminatedWithRefund :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.Flow Bool
+terminatedWithRefund payment = do
+  terminationLogs <- passTerminationLogs payment
+  let terminated =
+        any (\entry -> entry.status == DEntityValueLog.APPLIED) terminationLogs
+          && payment.status `elem` terminatedRefundStatuses
+  if terminated
+    then do
+      order <- QPaymentOrder.findById payment.orderId >>= fromMaybeM (PaymentOrderNotFound payment.orderId.getId)
+      isJust <$> HQRefunds.findLatestByOrderId order.shortId
+    else pure False
+
+terminatedRefundStatuses :: [Domain.Types.PurchasedPass.StatusType]
+terminatedRefundStatuses =
+  [ Domain.Types.PurchasedPass.Expired,
+    Domain.Types.PurchasedPass.RefundPending,
+    Domain.Types.PurchasedPass.RefundInitiated,
+    Domain.Types.PurchasedPass.Refunded
+  ]
+
+ensureRefundable :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.Flow ()
+ensureRefundable payment = do
+  when (payment.amount <= 0) $ throwError (InvalidRequest "This pass was not paid for, there is nothing to refund")
+  order <- QPaymentOrder.findById payment.orderId >>= fromMaybeM (PaymentOrderNotFound payment.orderId.getId)
+  unless (order.status == Payment.CHARGED) $
+    throwError (InvalidRequest $ "Only a charged payment can be refunded, this one is " <> show order.status)
+  existingRefund <- HQRefunds.findLatestByOrderId order.shortId
+  whenJust existingRefund $ \_ -> throwError (InvalidRequest "A refund already exists for this pass payment")
+
+refundTerminatedPayment :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.Flow ()
+refundTerminatedPayment payment =
+  withTryCatch "terminatePurchasedPassPayment:refund" (SPayment.markRefundPendingAndSyncOrderStatus payment.merchantId payment.personId payment.orderId) >>= \case
+    Right _ -> logInfo $ "terminatePurchasedPassPayment refund initiated paymentId=" <> payment.id.getId <> " orderId=" <> payment.orderId.getId <> " amount=" <> show payment.amount
+    Left err -> do
+      logError $ "terminatePurchasedPassPayment refund failed paymentId=" <> payment.id.getId <> " err=" <> show err
+      throwError (InternalError "The pass was terminated but the refund could not be started, retry terminate with refund to try again")
+
+applyTermination :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> DEntityValueLog.EntityValueLog -> Environment.Flow ()
+applyTermination payment logEntry = do
+  now <- getCurrentTime
+  today <- FRFSPassOverride.localTripDayForCity payment.merchantOperatingCityId now
+  let endDate = Data.Time.addDays (-1) today
+      startDate = min payment.startDate endDate
+  mbBenefit <- fmap DPassOverrideConfig.entryBenefit <$> paymentEntry payment
+  zeroedFrom <- FRFSPassOverride.zeroTrips payment mbBenefit
+  let before = logEntry.valueBefore <|> zeroedFrom
+      recordedLog = logEntry {DEntityValueLog.valueBefore = before}
+  when (isNothing logEntry.valueBefore && isJust before) $
+    QEntityValueLog.updateByPrimaryKey recordedLog
+  QPurchasedPassPayment.updateStatusAndDatesById startDate endDate Domain.Types.PurchasedPass.Expired payment.id
+  expireParentPass payment startDate endDate
+  QEntityValueLog.updateByPrimaryKey
+    recordedLog
+      { DEntityValueLog.status = DEntityValueLog.APPLIED,
+        DEntityValueLog.delta = negate <$> before,
+        DEntityValueLog.valueBefore = before,
+        DEntityValueLog.valueAfter = 0 <$ before
+      }
+  logInfo $ "terminatePurchasedPassPayment paymentId=" <> payment.id.getId <> " endDate=" <> show endDate <> " tripsBefore=" <> show before <> " logId=" <> logEntry.id.getId
+
+passTerminationLogs :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.Flow [DEntityValueLog.EntityValueLog]
+passTerminationLogs payment =
+  filter (\entry -> entry.operationType == DEntityValueLog.PassTerminate)
+    <$> QEntityValueLog.findAllByEntityTypeAndEntityId FRFSPassOverride.passPaymentEntityType payment.id.getId
 
 expireParentPass :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Data.Time.Day -> Data.Time.Day -> Environment.Flow ()
 expireParentPass payment startDate endDate =
@@ -394,7 +466,7 @@ logPassTermination payment reason = do
   let logEntry =
         DEntityValueLog.EntityValueLog
           { id = logId,
-            entityType = DEntityValueLog.PurchasedPassPayment,
+            entityType = FRFSPassOverride.passPaymentEntityType,
             entityId = payment.id.getId,
             operationId = logId.getId,
             operationType = DEntityValueLog.PassTerminate,

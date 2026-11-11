@@ -243,6 +243,7 @@ types:
 
   PurchasedPassPaymentTerminateReq:
     reason: Text
+    refund: Maybe Bool
     derive: "'HideSecrets"
 
 apis:

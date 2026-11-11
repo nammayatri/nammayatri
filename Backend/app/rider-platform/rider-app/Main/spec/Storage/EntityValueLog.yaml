@@ -7,9 +7,6 @@ EntityValueLog:
   tableName: entity_value_log
 
   types:
-    EntityType:
-      enum: "PurchasedPassPayment"
-      derive: "HttpInstance"
     OperationType:
       enum: "TripCountAdjust, PassTerminate"
       derive: "HttpInstance"
@@ -19,7 +16,7 @@ EntityValueLog:
 
   fields:
     id: Id EntityValueLog
-    entityType: EntityType
+    entityType: Text
     entityId: Text
     operationId: Text
     operationType: OperationType

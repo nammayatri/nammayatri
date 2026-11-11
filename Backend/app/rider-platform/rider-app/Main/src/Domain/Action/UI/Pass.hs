@@ -875,7 +875,9 @@ assertPassSellable :: DPass.Pass -> Environment.Flow ()
 assertPassSellable pass = do
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
   passType <- CQPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
-  passCategory <- CQPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  passCategory <-
+    getOneConfig (PassCategoryDimensions {merchantOperatingCityId = pass.merchantOperatingCityId.getId, configId = Just passType.passCategoryId.getId}) (Just (maybeToList <$> CQPassCategory.findById passType.passCategoryId))
+      >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   unless (isEnabledPassType passType && isEnabledCategory passCategory) $
     throwError (InvalidRequest "Pass is not enabled")
 

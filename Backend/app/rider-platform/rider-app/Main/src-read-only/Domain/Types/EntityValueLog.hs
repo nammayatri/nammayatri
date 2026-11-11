@@ -17,7 +17,7 @@ data EntityValueLog = EntityValueLog
     actorType :: Kernel.Types.ActorInfo.ActorType,
     delta :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     entityId :: Kernel.Prelude.Text,
-    entityType :: Domain.Types.EntityValueLog.EntityType,
+    entityType :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.EntityValueLog.EntityValueLog,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -32,15 +32,9 @@ data EntityValueLog = EntityValueLog
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EntityType = PurchasedPassPayment deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data OperationStatus = PENDING | APPLIED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data OperationType = TripCountAdjust | PassTerminate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityType))
-
-$(mkHttpInstancesForEnum (''EntityType))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OperationStatus))
 
