@@ -102,6 +102,7 @@ where
 import "this" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
 import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified "this" API.Types.ProviderPlatform.Management.Message as Common
+import qualified API.Types.UI.DriverAccountHealth as DAHT
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
@@ -132,6 +133,7 @@ import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummy
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import Domain.Action.UI.DriverAcceptOffer (AcceptDynamicOfferFlow, acceptDynamicOfferDriverRequest)
+import qualified Domain.Action.UI.DriverAccountHealth as DAH
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -522,6 +524,8 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- | Overall account health for the profile card and home banner; the detail is in /driver/accountHealth.
+    accountHealthStatus :: Maybe DAHT.AccountHealthStatus,
     -- | Set while the driver runs a session with no driver-side Ride row, so the app can reopen it on launch.
     activeRideType :: Maybe ActiveRideType,
     -- | The feed version the app checks its cached shared-cab routes against.
@@ -2018,6 +2022,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          accountHealthStatus = Just $ DAH.accountHealthStatus now driverInfo activeProfileWarnings,
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
           activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,

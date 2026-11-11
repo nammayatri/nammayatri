@@ -25,6 +25,7 @@ import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.Dispatcher as Dispatcher
+import qualified API.Action.UI.DriverAccountHealth as DriverAccountHealth
 import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
 import qualified API.Action.UI.DriverCommunication as DriverCommunication
 import qualified API.Action.UI.DriverDocument as DriverDocument
@@ -200,6 +201,7 @@ type API =
            :<|> SubscriptionTransaction.API
            :<|> FinanceInvoice.API
            :<|> Penalty.API
+           :<|> DriverAccountHealth.API
            :<|> FleetOwnerList.API
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
@@ -297,6 +299,7 @@ handler =
     :<|> SubscriptionTransaction.handler
     :<|> FinanceInvoice.handler
     :<|> Penalty.handler
+    :<|> DriverAccountHealth.handler
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler

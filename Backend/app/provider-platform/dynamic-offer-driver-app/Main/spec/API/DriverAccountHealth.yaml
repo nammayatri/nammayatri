@@ -1,0 +1,56 @@
+imports:
+  UTCTime: Kernel.Prelude
+  BlockReasonFlag: Tools.Error
+  ProfileWarningInfo: Lib.BehaviorTracker.Types
+  Value: Data.Aeson
+
+module: DriverAccountHealth
+
+apis:
+  - GET:
+      endpoint: /driver/accountHealth
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverAccountHealth.AccountHealthRes
+
+types:
+  # The driver's overall standing, also sent in the profile: an unexpired block, else a pinned warning.
+  AccountHealthStatus:
+    enum: "GOOD,WARNING,BLOCKED"
+
+  AccountHealthRes:
+    status: AccountHealthStatus
+    behaviours: "[BehaviourHealth]" # one entry per behaviour shown to the driver
+    warnings: "[ProfileWarningInfo]" # warnings the engine pinned to the driver
+    block: Maybe AccountBlock # current account block; absent when not blocked
+
+  # One behaviour of the behaviour framework, as it holds it for this driver.
+  BehaviourHealth:
+    behaviour: Text # rulebook domain as the framework names it, e.g. "CANCELLATION-RATE-BEHAVIOR"
+    actionType: Text # counter it reads, e.g. "RIDE_CANCELLATION"
+    periods: "[BehaviourPeriod]" # counters per period; empty for a behaviour that keeps no periods
+    rules: "[BehaviourRule]" # rules of the city's live rulebook, in rulebook order; empty when it has none readable
+
+  # Counter values for one period of the behaviour.
+  BehaviourPeriod:
+    period: Text # e.g. "daily", "weekly", "monthly", "window"
+    actionCount: Int # times the behaviour happened
+    eligibleCount: Int # out of how many; 0 when the behaviour keeps no eligible counter
+    rate: Int # actionCount * 100 / eligibleCount, as the framework computes it
+
+  # One rule of the live rulebook, copied as written.
+  BehaviourRule:
+    kind: Text # rule action, e.g. "WARN", "HARD_BLOCK", "PERMANENT_BLOCK", "NUDGE"
+    tag: Maybe Text # a block's reasonTag, or a warning's or nudge's overlay key (= warnings[].reasonTag)
+    blockReasonFlag: Maybe BlockReasonFlag # block rules only: the flag the engine sets for the tag (= block.reasonFlag)
+    hours: Maybe Int # block duration; absent for a warning or a permanent block
+    conditions: "[RuleCondition]" # all must hold for the rule to fire
+
+  RuleCondition:
+    fact: Text # e.g. "counters.daily.rate"
+    op: Text # e.g. ">=", "<", "=="
+    value: Value # as written in the rulebook
+
+  AccountBlock:
+    blockedUntil: Maybe UTCTime # absent for a permanent block
+    reasonFlag: Maybe BlockReasonFlag
