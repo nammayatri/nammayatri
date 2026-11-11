@@ -5,75 +5,26 @@
 //   node tests/edge-places.test.js
 //
 // No nginx on the laptop and no CI, so this reads the file and chooses a
-// location for each address the way nginx does (an exact `=` match first;
-// else the longest prefix, final if it is `^~`; else the first regex that
-// matches, in file order; else that longest prefix). It is not `nginx -t`:
-// the release runs that on the box before it reloads, and refuses a file
-// nginx refuses. This checks what `nginx -t` cannot: WHERE an address goes.
+// location for each address the way nginx does (tests/lib/nginx.js). It is
+// not `nginx -t`: the release runs that on the box before it reloads. This
+// checks what `nginx -t` cannot: WHERE an address goes.
 //
 // Why it matters: a shim route without an edge block answers correctly on
 // 8030 and 404 from every phone (docs/gotchas.md -- the wallet shipped that
 // way); and a /place/ prefix published by mistake would hand the backend's
 // whole geocoder to the internet.
-const fs = require('fs');
 const path = require('path');
 const fakes = require('./lib/fakes');
+const { read, servers, locations, choose, label: labelOf } = require('./lib/nginx');
 
-const CONF = path.join(__dirname, '..', 'stack', 'edge', 'nginx.conf');
 const { BODY_LIMIT } = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'suggested-places.js'));
 
-/** The text of each top-level `server { … }`, comments removed. */
-function servers(text) {
-  const clean = text.split('\n').map((l) => l.replace(/(^|\s)#.*$/, '')).join('\n');
-  const out = [];
-  const re = /^server\s*\{/gm;
-  let m;
-  while ((m = re.exec(clean))) {
-    let depth = 0;
-    for (let i = m.index; i < clean.length; i += 1) {
-      if (clean[i] === '{') depth += 1;
-      if (clean[i] === '}') { depth -= 1; if (depth === 0) { out.push(clean.slice(m.index, i + 1)); break; } }
-    }
-  }
-  return out;
-}
-
-/** The locations directly inside one server: modifier, path, body. */
-function locations(server) {
-  const out = [];
-  const re = /\n\s*location\s+(?:(=|~\*|~|\^~)\s+)?(\S+)\s*\{/g;
-  let m;
-  while ((m = re.exec(server))) {
-    let depth = 0;
-    for (let i = m.index + m[0].length - 1; i < server.length; i += 1) {
-      if (server[i] === '{') depth += 1;
-      if (server[i] === '}') {
-        depth -= 1;
-        if (depth === 0) { out.push({ mod: m[1] || '', path: m[2], body: server.slice(m.index + m[0].length, i) }); break; }
-      }
-    }
-  }
-  return out;
-}
-
-/** Which location nginx picks for a URI. */
-function choose(locs, uri) {
-  const exact = locs.find((l) => l.mod === '=' && l.path === uri);
-  if (exact) return exact;
-  const prefixes = locs.filter((l) => (l.mod === '' || l.mod === '^~') && uri.startsWith(l.path))
-    .sort((a, b) => b.path.length - a.path.length);
-  if (prefixes[0] && prefixes[0].mod === '^~') return prefixes[0];
-  const regex = locs.find((l) => (l.mod === '~' || l.mod === '~*')
-    && new RegExp(l.path, l.mod === '~*' ? 'i' : '').test(uri));
-  return regex || prefixes[0] || null;
-}
-
 const t = fakes.checker();
-const text = fs.readFileSync(CONF, 'utf8');
+const text = read();
 const api = servers(text).find((s) => /server_name\s+api\./.test(s));
 t.ok(Boolean(api), 'the API server block is found (server_name api.…)');
 const locs = locations(api);
-const label = (l) => (l ? `location ${l.mod ? `${l.mod} ` : ''}${l.path}` : 'none');
+const label = labelOf;
 
 t.section('1. the /places/ block');
 const places = locs.filter((l) => l.path === '/places/');

@@ -624,6 +624,24 @@ curl -s -o /dev/null -w '%{http_code}\n' https://api.movinapp.net/place/autocomp
 
 A 404 on the first means the edge has no block for it.
 
+**The console's map** (day 3, 2026-11-11). The « Lieux proposés » screen shows
+where a place is on a 3×3 grid of map pictures (PNG, the `basic-preview`
+style) with the pin drawn by the console, no map library. The console's
+security policy allows images from its own address only (`img-src 'self'`), so
+the pictures come from `admin.movinapp.net/tiles/styles/basic-preview/{z}/{x}/{y}.png`:
+`location ^~ /tiles/styles/basic-preview/` in the console's server block, the
+same tile server as the API host's `/tiles/`, that one style only. **No
+`add_header` in it**: one would drop HSTS, nosniff, the referrer policy and
+X-Frame-Options from its answers (the `/assets/` trap); caching is `expires 7d`
+with the tile server's own `Cache-Control` hidden. `tests/edge-admin-tiles.test.js`
+holds the block, where each address goes, and the API host's `/tiles/` unchanged.
+After the release:
+
+```bash
+curl -s -D - -o /dev/null https://admin.movinapp.net/tiles/styles/basic-preview/16/33324/25564.png \
+  | grep -iE '^HTTP|content-type|strict-transport|cache-control'   # 200, image/png, HSTS, one Cache-Control
+```
+
 ### Where it stands, and what is left
 
 **Day 2 (2026-11-09) is done**: the `locality` column, the `/places/` routes and
