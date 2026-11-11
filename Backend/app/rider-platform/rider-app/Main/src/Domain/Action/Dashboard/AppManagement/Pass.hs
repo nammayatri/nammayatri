@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.AppManagement.Pass
     updatePassCategory,
     getPurchasedPassPaymentTrips,
     adjustPurchasedPassPaymentTrips,
+    terminatePurchasedPassPayment,
   )
 where
 
@@ -67,6 +68,7 @@ import qualified Storage.Queries.Pass as QPass
 import qualified Storage.Queries.PassCategory as QPassCategory
 import qualified Storage.Queries.PassType as QPassType
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 
@@ -322,6 +324,85 @@ logTripAdjustment payment operationId req before = do
             valueBefore = Just before,
             valueAfter = Just (before + req.delta),
             reason = Just (T.strip req.reason),
+            actorType = actorInfo.actorType,
+            actorId = actorInfo.actorId,
+            merchantId = payment.merchantId,
+            merchantOperatingCityId = payment.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QEntityValueLog.create logEntry
+  pure logEntry
+
+terminatePurchasedPassPayment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> API.Types.Dashboard.AppManagement.Pass.PurchasedPassPaymentTerminateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PurchasedPassPaymentTripsResp)
+terminatePurchasedPassPayment merchantShortId opCity purchasedPassPaymentId req = do
+  let reason = T.strip req.reason
+  when (T.null reason) $ throwError (InvalidRequest "reason is required")
+  merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
+  void $ findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+  let terminateLocked = do
+        payment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+        if payment.status `notElem` [Domain.Types.PurchasedPass.Active, Domain.Types.PurchasedPass.PreBooked]
+          then pure . Left $ "Only an active or pre-booked pass can be terminated, this one is " <> show payment.status
+          else do
+            now <- getCurrentTime
+            today <- FRFSPassOverride.localTripDayForCity payment.merchantOperatingCityId now
+            let endDate = Data.Time.addDays (-1) today
+                startDate = min payment.startDate endDate
+            mbBenefit <- fmap DPassOverrideConfig.entryBenefit <$> paymentEntry payment
+            logEntry <- logPassTermination payment reason
+            before <- FRFSPassOverride.zeroTrips payment mbBenefit
+            QPurchasedPassPayment.updateStatusAndDatesById startDate endDate Domain.Types.PurchasedPass.Expired payment.id
+            expireParentPass payment startDate endDate
+            QEntityValueLog.updateByPrimaryKey
+              logEntry
+                { DEntityValueLog.status = DEntityValueLog.APPLIED,
+                  DEntityValueLog.delta = negate <$> before,
+                  DEntityValueLog.valueBefore = before,
+                  DEntityValueLog.valueAfter = 0 <$ before
+                }
+            logInfo $ "terminatePurchasedPassPayment paymentId=" <> payment.id.getId <> " endDate=" <> show endDate <> " tripsBefore=" <> show before <> " reason=" <> reason
+            pure (Right ())
+  FRFSPassOverride.tryWithTripCountLock purchasedPassPaymentId terminateLocked >>= \case
+    Nothing -> throwError (InvalidRequest "This pass's trip count is being updated, please retry")
+    Just (Left err) -> throwError (InvalidRequest err)
+    Just (Right ()) -> do
+      updatedPayment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+      paymentEntry updatedPayment >>= buildTripsResp updatedPayment
+
+expireParentPass :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Data.Time.Day -> Data.Time.Day -> Environment.Flow ()
+expireParentPass payment startDate endDate =
+  QPurchasedPass.findByPrimaryKey payment.purchasedPassId >>= \case
+    Nothing -> logWarning $ "terminatePurchasedPassPayment: purchased pass not found for paymentId=" <> payment.id.getId
+    Just purchasedPass -> do
+      let isCurrentPayment = case purchasedPass.currentPaymentOrderId of
+            Just orderId -> orderId == payment.orderId
+            Nothing -> purchasedPass.startDate == payment.startDate
+      when isCurrentPayment $
+        QPurchasedPass.updateByPrimaryKey
+          purchasedPass
+            { Domain.Types.PurchasedPass.status = Domain.Types.PurchasedPass.Expired,
+              Domain.Types.PurchasedPass.startDate = startDate,
+              Domain.Types.PurchasedPass.endDate = endDate
+            }
+
+logPassTermination :: Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Kernel.Prelude.Text -> Environment.Flow DEntityValueLog.EntityValueLog
+logPassTermination payment reason = do
+  logId <- generateGUID
+  now <- getCurrentTime
+  actorInfo <- asks (.actorInfo)
+  let logEntry =
+        DEntityValueLog.EntityValueLog
+          { id = logId,
+            entityType = DEntityValueLog.PurchasedPassPayment,
+            entityId = payment.id.getId,
+            operationId = logId.getId,
+            operationType = DEntityValueLog.PassTerminate,
+            status = DEntityValueLog.PENDING,
+            delta = Nothing,
+            valueBefore = Nothing,
+            valueAfter = Nothing,
+            reason = Just reason,
             actorType = actorInfo.actorType,
             actorId = actorInfo.actorId,
             merchantId = payment.merchantId,

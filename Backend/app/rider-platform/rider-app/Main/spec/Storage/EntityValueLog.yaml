@@ -11,7 +11,7 @@ EntityValueLog:
       enum: "PurchasedPassPayment"
       derive: "HttpInstance"
     OperationType:
-      enum: "TripCountAdjust"
+      enum: "TripCountAdjust, PassTerminate"
       derive: "HttpInstance"
     OperationStatus:
       enum: "PENDING, APPLIED, FAILED"
