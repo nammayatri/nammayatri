@@ -39,6 +39,7 @@ module SharedLogic.SharedCab.Keys
     sweepLeaseKey,
     refundRetryRunKey,
     cabBookingsKey,
+    tripFaresKey,
   )
 where
 
@@ -176,3 +177,6 @@ refundRetryRunKey cityId = "sharedcab:refundretryRun:" <> cityId.getId
 -- | The bookings assigned to a plate, each added under its plate lock: what a seat count reads beside the DB, which lags KV.
 cabBookingsKey :: Text -> Text
 cabBookingsKey plate = "sharedcab:cab:bookings:" <> plate
+
+tripFaresKey :: Text -> Text
+tripFaresKey tripId = "sharedcab:trip:fares:" <> tripId

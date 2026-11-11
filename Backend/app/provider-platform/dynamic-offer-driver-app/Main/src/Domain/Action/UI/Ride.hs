@@ -39,6 +39,7 @@ module Domain.Action.UI.Ride
   )
 where
 
+import API.Types.UI.SharedCab (SharedCabTripSummary)
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM hiding (filter)
@@ -51,6 +52,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
+import qualified Domain.Action.UI.SharedCab as SharedCab
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Location as DLoc
@@ -205,8 +207,9 @@ data ArrivedAtPickupReq = ArrivedAtPickupReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-newtype DriverRideListRes = DriverRideListRes
-  { list :: [RideCommon.DriverRideRes]
+data DriverRideListRes = DriverRideListRes
+  { list :: [RideCommon.DriverRideRes],
+    sharedCabTrips :: [SharedCabTripSummary]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -244,7 +247,11 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
       unless (isJust isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
       return $ filter (\ride -> ride.fleetOwnerId == (Just fleetOwnerId)) driverRideLis
     Nothing -> return driverRideLis
-  pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
+  trips <-
+    if mbOnlyActive == Just True
+      then pure []
+      else SharedCab.sharedCabTrips driverId (fromMaybe driverPerson.merchantOperatingCityId mocId) mbDay mbLimit mbOffset
+  pure DriverRideListRes {list = sortOn (Down . (.bookingType)) filteredRides, sharedCabTrips = trips}
 
 getDriverRideById ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>

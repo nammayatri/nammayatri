@@ -8,7 +8,7 @@ import "dynamic-offer-driver-app" API.Types.UI.SharedCab (SharedCabBookingOperat
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import Data.Time (UTCTime (..), fromGregorian)
 import "dynamic-offer-driver-app" Domain.Action.Internal.SharedCabCallNumber (callNumberAllowed)
-import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionReason, bookingActionOf)
+import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionReason, bookingActionOf, tripTargets)
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DCommon
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as SP
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
@@ -36,6 +36,9 @@ activeTrip =
       DVT.endedAt = Nothing,
       DVT.endReason = Nothing,
       DVT.walkupCount = 1,
+      DVT.earnings = Just 40,
+      DVT.fromStop = Nothing,
+      DVT.toStop = Nothing,
       DVT.createdAt = t0,
       DVT.updatedAt = t0
     }
@@ -92,22 +95,40 @@ tests =
         ]
           @?= [True, True, False, False, False, False],
       testCase "the plate's trip row follows rider-app's session: same run, another run, or none" $
-        let run tripId walkups = Just RiderRun {tripId, routeCode = "R2", walkupCount = walkups, routeEnds = Nothing}
+        let runOf tripId walkups earnings = RiderRun {tripId, routeCode = "R2", walkupCount = walkups, earnings, fromStop = Nothing, toStop = Nothing, routeEnds = Nothing}
+            run tripId walkups earnings = Just (runOf tripId walkups earnings)
             sync driver = tripAction (Id driver) DVT.END_ROUTE
-         in [ sync "d1" (Just activeTrip) (run "T1" 1),
-              sync "d1" (Just activeTrip) (run "T1" 3),
-              sync "d1" (Just activeTrip) (run "T2" 0),
-              sync "d2" (Just activeTrip) (run "T2" 0),
-              sync "d1" Nothing (run "T2" 0),
+         in [ sync "d1" (Just activeTrip) (run "T1" 1 (Just 40)),
+              sync "d1" (Just activeTrip) (run "T1" 3 (Just 40)),
+              sync "d1" (Just activeTrip) (run "T1" 1 (Just 90)),
+              sync "d1" (Just activeTrip) (run "T1" 1 (Just 25)),
+              sync "d1" (Just activeTrip) (run "T1" 1 Nothing),
+              sync "d1" (Just activeTrip) (run "T1" 3 Nothing),
+              sync "d1" (Just activeTrip) (run "T2" 0 Nothing),
+              sync "d2" (Just activeTrip) (run "T2" 0 Nothing),
+              sync "d1" Nothing (run "T2" 0 Nothing),
               sync "d1" (Just activeTrip) Nothing,
               sync "d1" Nothing Nothing
             ]
               @?= [ TripUnchanged,
-                    SetWalkups (Id "T1") 3,
-                    OpenTrip (Just (Id "T1", DVT.ROUTE_CHANGED)) (RiderRun "T2" "R2" 0 Nothing),
-                    OpenTrip (Just (Id "T1", DVT.SESSION_TIMEOUT)) (RiderRun "T2" "R2" 0 Nothing),
-                    OpenTrip Nothing (RiderRun "T2" "R2" 0 Nothing),
+                    SetProgress (Id "T1") 3 40,
+                    SetProgress (Id "T1") 1 90,
+                    SetProgress (Id "T1") 1 25,
+                    TripUnchanged,
+                    SetProgress (Id "T1") 3 40,
+                    OpenTrip (Just (Id "T1", DVT.ROUTE_CHANGED)) (runOf "T2" 0 Nothing),
+                    OpenTrip (Just (Id "T1", DVT.SESSION_TIMEOUT)) (runOf "T2" 0 Nothing),
+                    OpenTrip Nothing (runOf "T2" 0 Nothing),
                     CloseTrip (Id "T1") DVT.END_ROUTE,
                     TripUnchanged
-                  ]
+                  ],
+      testCase "a driver tag sets the targets before the city config and the default" $
+        [ tripTargets (object ["SharedCabDailyTripTarget" .= Number 12, "SharedCabTripEarningsTarget" .= Number 150]) (Just 8) (Just 90),
+          tripTargets (object ["SharedCabDailyTripTarget" .= String "14", "SharedCabTripEarningsTarget" .= String "120.5"]) (Just 8) (Just 90),
+          tripTargets (object ["SafetyScore" .= Number 80]) (Just 8) (Just 90),
+          tripTargets (object []) Nothing Nothing,
+          tripTargets (object ["SharedCabDailyTripTarget" .= Number 0, "SharedCabTripEarningsTarget" .= String "high"]) (Just 8) Nothing,
+          tripTargets Null (Just 8) (Just 90)
+        ]
+          @?= [(12, 150), (14, 120.5), (8, 90), (10, 100), (8, 100), (8, 90)]
     ]
