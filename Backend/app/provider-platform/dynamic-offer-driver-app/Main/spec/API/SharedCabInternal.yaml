@@ -3,6 +3,7 @@ imports:
   SharedCabAllocationEntityData: Tools.Notifications
   UTCTime: Kernel.Prelude
   Merchant: Domain.Types.Merchant
+  HighPrecMoney: Kernel.Types.Common
 
 module: SharedCabInternal
 
@@ -74,6 +75,8 @@ apis:
       params:
         merchantId: Id Merchant
         tripId: Text
+      query:
+        - earnings: HighPrecMoney
       headers:
         token: Text
       response:

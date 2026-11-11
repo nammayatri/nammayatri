@@ -14,6 +14,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -71,6 +72,9 @@ type API =
            "tripId"
            Kernel.Prelude.Text
       :> "expire"
+      :> QueryParam
+           "earnings"
+           Kernel.Types.Common.HighPrecMoney
       :> Header
            "token"
            Kernel.Prelude.Text
@@ -94,5 +98,5 @@ getSharedCabDriverCallNumber a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRe
 getSharedCabTripActive :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabTrip))
 getSharedCabTripActive a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabTripActive a3 a2 a1
 
-postSharedCabTripExpire :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postSharedCabTripExpire a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabTripExpire a3 a2 a1
+postSharedCabTripExpire :: (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSharedCabTripExpire a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabTripExpire a4 a3 a2 a1

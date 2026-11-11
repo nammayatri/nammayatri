@@ -104,3 +104,10 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN d2d_referral_counts in
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN d2d_activated_valid_rides integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN shared_cab_trips integer ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN shared_cab_ride_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN shared_cab_earnings double precision ;
