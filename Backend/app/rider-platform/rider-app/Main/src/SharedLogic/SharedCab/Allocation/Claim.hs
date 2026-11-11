@@ -114,7 +114,7 @@ claimUnderLocks ::
 claimUnderLocks cfg booking cand s = do
   now <- getCurrentTime
   attempts <- readAttempts booking.bookingId
-  skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
+  skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readRiderSkipped cfg.riderSkipTtlSec now booking.bookingId <*> readSkipped booking.bookingId
   mbLive <- findLive booking.bookingId
   markerAlive <- Degraded.isMarkerAlive booking.bookingId
   case claimGate s skipped mbLive markerAlive of
