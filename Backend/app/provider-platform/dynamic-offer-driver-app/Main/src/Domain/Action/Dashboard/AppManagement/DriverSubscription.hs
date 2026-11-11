@@ -121,6 +121,7 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
         message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")
         msg <- createMessageLanguageDict message
         produceMessage (topicName, Just (encodeUtf8 $ getId driverId)) msg
+      EMAIL -> throwError $ InvalidRequest "EMAIL channel is not supported for driver messages"
   -- if the message is sent successfuly then increment the count of both volunteer and driver
   void $ incrementVolunteerSMSSendingCount volunteerId channel
   void $ incrementDriverSMSReceivingCount driverId.getId channel
@@ -163,6 +164,7 @@ getLimitAccordingToChannel config channel =
     WHATSAPP -> config.whatsapp
     OVERLAY -> config.overlay
     ALERT -> config.alert
+    EMAIL -> 0
 
 incrementVolunteerSMSSendingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
 incrementVolunteerSMSSendingCount volunteerId channel = SWC.incrementWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit

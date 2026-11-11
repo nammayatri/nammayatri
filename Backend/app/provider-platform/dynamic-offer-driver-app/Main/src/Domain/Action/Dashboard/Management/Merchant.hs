@@ -5722,6 +5722,8 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
                 templateName = req.templateName,
                 vehicleCategory = req.vehicleCategory,
                 mediaUrl = req.mediaUrl,
+                senderEmail = Nothing,
+                title = Nothing,
                 createdAt = now,
                 updatedAt = now
               }

@@ -27,15 +27,17 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     message :: Kernel.Prelude.Text,
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
     messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    senderEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
     templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, Eq)
 
-data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT | EMAIL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
@@ -97,6 +99,7 @@ data MessageKey
   | ONBOARDING_APPROVED
   | VEHICLE_APPROVED
   | SEND_WHATSAPP_OTP
+  | DASHBOARD_WELCOME_EMAIL
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe
