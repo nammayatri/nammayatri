@@ -36,7 +36,7 @@ data EntityType = PurchasedPassPayment deriving (Eq, Ord, Show, Read, Generic, T
 
 data OperationStatus = PENDING | APPLIED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data OperationType = TripCountAdjust deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OperationType = TripCountAdjust | PassTerminate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityType))
 
