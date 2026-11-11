@@ -46,6 +46,7 @@ import qualified API.Internal.RiderConsent as RiderConsent
 import qualified API.Internal.SearchTryPoolStats as SearchTryPoolStats
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
+import qualified API.Internal.SendWelcomeEmail as SendWelcomeEmail
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
@@ -103,6 +104,7 @@ type API =
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
            :<|> SendEmailOTP.API
+           :<|> SendWelcomeEmail.API
            :<|> VerifyEmailUpdate.API
            :<|> PersonCreate.API
            :<|> InMemManagement.API
@@ -161,6 +163,7 @@ handler env =
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
     :<|> SendEmailOTP.handler
+    :<|> SendWelcomeEmail.handler
     :<|> VerifyEmailUpdate.handler
     :<|> PersonCreate.handler
     :<|> InMemManagement.handler

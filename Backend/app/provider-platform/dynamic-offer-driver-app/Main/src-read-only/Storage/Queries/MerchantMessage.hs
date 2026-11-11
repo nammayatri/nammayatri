@@ -79,9 +79,11 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,
       Se.Set Beam.messageType messageType,
+      Se.Set Beam.senderEmail senderEmail,
       Se.Set Beam.senderHeader senderHeader,
       Se.Set Beam.templateId (Just templateId),
       Se.Set Beam.templateName templateName,
+      Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleCategory vehicleCategory
     ]
@@ -103,9 +105,11 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             message = message,
             messageKey = messageKey,
             messageType = messageType,
+            senderEmail = senderEmail,
             senderHeader = senderHeader,
             templateId = fromMaybe "" templateId,
             templateName = templateName,
+            title = title,
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory
           }
@@ -124,9 +128,11 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.message = message,
         Beam.messageKey = messageKey,
         Beam.messageType = messageType,
+        Beam.senderEmail = senderEmail,
         Beam.senderHeader = senderHeader,
         Beam.templateId = Just templateId,
         Beam.templateName = templateName,
+        Beam.title = title,
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory
       }

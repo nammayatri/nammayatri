@@ -37,3 +37,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN channel character
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN media_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN title text ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN sender_email character varying(255) ;

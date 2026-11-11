@@ -23,6 +23,7 @@ import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
 import Test.Tasty (defaultMain, testGroup)
 import qualified TollDecisionTests
+import qualified WelcomeEmailTemplateTests
 import Prelude
 
 main :: IO ()
@@ -43,6 +44,10 @@ main = do
         testGroup
           "Security Unit Tests"
           [ CsvSanitizationTests.csvSanitizationTests
+          ],
+        testGroup
+          "Dashboard Welcome Email"
+          [ WelcomeEmailTemplateTests.tests
           ],
         testGroup
           "Rewards Unit Tests"
