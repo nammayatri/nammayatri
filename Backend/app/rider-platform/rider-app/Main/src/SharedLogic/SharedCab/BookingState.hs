@@ -106,7 +106,7 @@ readRiderSkips :: StateFlow m r => BookingId -> m [(Text, UTCTime)]
 readRiderSkips bookingId = fromMaybe [] <$> shared (Redis.get (riderSkippedKey bookingId))
 
 liveRiderSkips :: Int -> UTCTime -> [(Text, UTCTime)] -> [(Text, UTCTime)]
-liveRiderSkips ttlSec now = filter (\(_, at) -> diffUTCTime now at < fromIntegral ttlSec)
+liveRiderSkips ttlSec now = filter (\(_, skippedAt) -> diffUTCTime now skippedAt < fromIntegral ttlSec)
 
 -- | The rider has used the one skip this booking allows.
 -- | How many offers this booking has had (the next one's length depends on it).
