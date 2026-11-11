@@ -2628,6 +2628,7 @@ data RideEvidenceError
   | RideEvidenceNotAllowed
   | RideEvidenceWindowClosed
   | RideEvidenceLimitReached
+  | RideEvidenceUploadLimitReached
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RideEvidenceError
@@ -2638,6 +2639,7 @@ instance IsBaseError RideEvidenceError where
     RideEvidenceNotAllowed -> Just "Proofs cannot be added to an upcoming ride."
     RideEvidenceWindowClosed -> Just "The time for adding proofs to this ride has passed."
     RideEvidenceLimitReached -> Just "The maximum number of proofs for this ride has been reached."
+    RideEvidenceUploadLimitReached -> Just "Too many uploads. Try again later."
 
 instance IsHTTPError RideEvidenceError where
   toErrorCode = \case
@@ -2645,12 +2647,14 @@ instance IsHTTPError RideEvidenceError where
     RideEvidenceNotAllowed -> "RIDE_EVIDENCE_NOT_ALLOWED"
     RideEvidenceWindowClosed -> "RIDE_EVIDENCE_WINDOW_CLOSED"
     RideEvidenceLimitReached -> "RIDE_EVIDENCE_LIMIT_REACHED"
+    RideEvidenceUploadLimitReached -> "RIDE_EVIDENCE_UPLOAD_LIMIT_REACHED"
 
   toHttpCode = \case
     RideEvidenceDisabled -> E400
     RideEvidenceNotAllowed -> E400
     RideEvidenceWindowClosed -> E400
     RideEvidenceLimitReached -> E400
+    RideEvidenceUploadLimitReached -> E429
 
 instance IsAPIError RideEvidenceError
 
