@@ -2270,29 +2270,40 @@ getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiQuarter ass
         API.TdsReimbursementStatusRes
           { status = Nothing,
             requestId = Nothing,
+            tanNumber = Nothing,
             certNumber = Nothing,
             certAmount = Nothing,
             tdsRate = Nothing,
             tdsSection = Nothing,
+            documentId = Nothing,
             rejectionReason = Nothing,
             submittedAt = Nothing,
+            approvedAt = Nothing,
+            creditedAmount = Nothing,
+            ledgerEntryId = Nothing,
             invoiceLines = [],
             totalTdsAmount = 0
           }
     Just request -> do
       mappings <- QTdsMap.findAllByRequestId request.id
       invoiceLines <- buildStatusInvoiceLines mappings
+      mbPostedAdjustment <- findPostedTdsAdjustment request
       let totalTdsAmount = sum $ map (.tdsAmount) mappings
       pure
         API.TdsReimbursementStatusRes
           { status = Just (castTdsReimbursementRequestStatus request.status),
             requestId = Just (cast request.id),
+            tanNumber = Just request.tanNumber,
             certNumber = Just request.certNumber,
             certAmount = Just request.certAmount,
             tdsRate = Just request.tdsRate,
             tdsSection = request.tdsSection,
+            documentId = Just (cast request.documentId),
             rejectionReason = request.rejectionReason,
             submittedAt = Just request.createdAt,
+            approvedAt = mbPostedAdjustment >>= (.postedAt),
+            creditedAmount = (.amount) <$> mbPostedAdjustment,
+            ledgerEntryId = (.getId) <$> (mbPostedAdjustment >>= (.ledgerEntryId)),
             invoiceLines = invoiceLines,
             totalTdsAmount = totalTdsAmount
           }
@@ -2321,26 +2332,39 @@ getFinanceManagementTdsReimbursementHistory merchantShortId opCity requestorId =
     when (isNothing mbLine) $
       logError $ "Invoice " <> mapping.invoiceId.getId <> " of TDS reimbursement request " <> mapping.requestId.getId <> " not found, leaving it out of the history"
   let linesByRequestId = HM.fromListWith (flip (<>)) [(mapping.requestId.getId, [(mapping, mbLine)]) | (mapping, mbLine) <- linesByMapping]
-      items = requests <&> \request -> mkTdsHistoryItem request (HM.findWithDefault [] request.id.getId linesByRequestId)
+  items <- forM requests $ \request -> do
+    mbPostedAdjustment <- findPostedTdsAdjustment request
+    pure $ mkTdsHistoryItem request mbPostedAdjustment (HM.findWithDefault [] request.id.getId linesByRequestId)
   pure API.TdsReimbursementHistoryRes {requests = items}
+
+findPostedTdsAdjustment :: DTdsReq.FinanceTdsReimbursementRequest -> Flow (Maybe DLAR.LedgerAdjustmentRequest)
+findPostedTdsAdjustment request
+  | request.status == DTdsReq.APPROVED = QLedgerAdjustmentRequest.findByReferenceIdAndStatuses (Just request.id.getId) [DLAR.POSTED]
+  | otherwise = pure Nothing
 
 mkTdsHistoryItem ::
   DTdsReq.FinanceTdsReimbursementRequest ->
+  Maybe DLAR.LedgerAdjustmentRequest ->
   [(DTdsMap.FinanceTdsReimbursementInvoiceMapping, Maybe API.TdsReimbursementStatusInvoiceLine)] ->
   API.TdsReimbursementHistoryItem
-mkTdsHistoryItem request requestLines =
+mkTdsHistoryItem request mbPostedAdjustment requestLines =
   let DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
    in API.TdsReimbursementHistoryItem
         { requestId = cast request.id,
           quarter = castDomainQuarterToTds request.quarter,
           assessmentYear = assessmentYearText,
           status = castTdsReimbursementRequestStatus request.status,
+          tanNumber = request.tanNumber,
           certNumber = request.certNumber,
           certAmount = request.certAmount,
           tdsRate = request.tdsRate,
           tdsSection = request.tdsSection,
+          documentId = cast request.documentId,
           rejectionReason = request.rejectionReason,
           submittedAt = request.createdAt,
+          approvedAt = mbPostedAdjustment >>= (.postedAt),
+          creditedAmount = (.amount) <$> mbPostedAdjustment,
+          ledgerEntryId = (.getId) <$> (mbPostedAdjustment >>= (.ledgerEntryId)),
           invoiceLines = mapMaybe snd requestLines,
           totalTdsAmount = sum $ map ((.tdsAmount) . fst) requestLines
         }
