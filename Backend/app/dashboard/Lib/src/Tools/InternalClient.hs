@@ -36,6 +36,8 @@ module Tools.InternalClient
     CreatePersonReq (..),
     CreatePersonResp (..),
     callBPPInternalCreatePerson,
+    SendWelcomeEmailReq (..),
+    callBPPInternalSendWelcomeEmail,
   )
 where
 
@@ -270,3 +272,47 @@ callBPPInternalCreatePerson merchantShortId city req = do
   dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (createPersonClient merchantShortId city (Just dataServer.token) req) "callBPPInternalCreatePerson" (Proxy :: Proxy Raw)
+
+-- Welcome email
+
+-- | Mirror of driver-app's @SendWelcomeEmailReq@
+-- (Domain.Action.Internal.SendWelcomeEmail). Field names are the wire contract.
+-- The password is plaintext: never log this value.
+data SendWelcomeEmailReq = SendWelcomeEmailReq
+  { email :: Text,
+    roleName :: Text,
+    password :: Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type SendWelcomeEmailAPI =
+  "internal"
+    :> "sendWelcomeEmail"
+    :> Capture "merchantShortId" Text
+    :> Capture "city" City.City
+    :> Header "api-key" Text
+    :> ReqBody '[JSON] SendWelcomeEmailReq
+    :> Post '[JSON] APISuccess
+
+sendWelcomeEmailClient :: Text -> City.City -> Maybe Text -> SendWelcomeEmailReq -> Euler.EulerClient APISuccess
+sendWelcomeEmailClient = Euler.client (Proxy @SendWelcomeEmailAPI)
+
+-- | The welcome-email template lives with the driver app, so @merchantShortId@
+-- must be the driver-app (X_PARTNER) short id.
+callBPPInternalSendWelcomeEmail ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  City.City ->
+  SendWelcomeEmailReq ->
+  m APISuccess
+callBPPInternalSendWelcomeEmail merchantShortId city req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers
+  dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendWelcomeEmailClient merchantShortId city (Just dataServer.token) req) "callBPPInternalSendWelcomeEmail" (Proxy :: Proxy Raw)

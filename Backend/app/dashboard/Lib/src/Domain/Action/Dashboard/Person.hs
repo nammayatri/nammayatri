@@ -448,7 +448,37 @@ createPerson tokenInfo personEntity = do
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing [] Nothing
   QP.create person
+  sendWelcomeEmail merchant role personEntity
   return $ CreatePersonRes personAPIEntity
+
+-- | Emails the new user their login details through the driver app's internal
+-- welcome-email endpoint. Sent for every role. Best effort: a failure is logged
+-- and never blocks user creation. Neither the password nor the error text is
+-- logged, since client errors can echo the request.
+sendWelcomeEmail ::
+  ( BeamFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  DMerchant.Merchant ->
+  DRole.Role ->
+  CreatePersonReq ->
+  m ()
+sendWelcomeEmail merchant role personEntity = do
+  let shortId = getShortId merchant.shortId
+      -- The template lives with the driver app, whose merchants are X_PARTNER.
+      bppShortId = if "_PARTNER" `T.isSuffixOf` shortId then shortId else shortId <> "_PARTNER"
+      req =
+        InternalClient.SendWelcomeEmailReq
+          { email = personEntity.email,
+            roleName = role.name,
+            password = personEntity.password
+          }
+  result <- try @_ @SomeException $ InternalClient.callBPPInternalSendWelcomeEmail bppShortId personEntity.operatingCity req
+  case result of
+    Right _ -> pure ()
+    Left _ -> logError $ "Welcome email request failed for merchant " <> shortId <> ", city " <> show personEntity.operatingCity <> ", role " <> role.name
 
 driverRoleName :: MonadFlow m => DRole.DashboardAccessType -> m Text
 driverRoleName role = case role of

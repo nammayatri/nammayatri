@@ -90,6 +90,7 @@ library:
     - SharedCabBlacklistTests
   other-modules:
     - CsvSanitizationTests
+    - WelcomeEmailTemplateTests
     - RegistrationUnitTests
     - VehicleAssociationUnitTests
     - DriverDocumentUploadUnitTests
