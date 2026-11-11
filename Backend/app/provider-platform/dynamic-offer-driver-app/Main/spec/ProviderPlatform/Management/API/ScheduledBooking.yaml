@@ -5,6 +5,7 @@ imports:
   Driver: Dashboard.Common
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
+  City: Kernel.Types.Beckn.Context
 
 
 module: ScheduledBooking
@@ -23,6 +24,20 @@ apis:
       auth: ApiAuthV2
       response:
         type: ScheduledBookingListRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
+
+  - GET: # ScheduledBookingCityWiseCountAPI — per-city aggregate counts for the ops landing page
+      endpoint: /cityWiseCount
+      query:
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: ScheduledBookingCityWiseCountRes
+      helperApiExtra:
+        query:
+          - requestorId: Text
       migrate:
         capability: city-operations.scheduled-bookings.read
 
@@ -130,6 +145,19 @@ types:
     - total: Int
     - assigned: Int
     - unassigned: Int
+
+  ScheduledBookingCityWiseCountRes:
+    - cities: [ScheduledBookingCityCount]
+
+  # Per-city scheduled-booking counts over the requested window, one row per city the requestor can access.
+  ScheduledBookingCityCount:
+    - city: City # Beckn city; serializes to the std code the dashboard uses as the drill-down key
+    - cityName: Text # human-readable city name
+    - total: Int # all scheduled bookings in the window, any status
+    - assigned: Int # TRIP_ASSIGNED
+    - unassigned: Int # NEW
+    - completed: Int # COMPLETED
+    - cancelled: Int # CANCELLED
 
   ScheduledBookingListItem:
     - transactionId: Text
