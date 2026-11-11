@@ -1,0 +1,1479 @@
+{
+  "environments": {
+    "production": {
+      "host": "https://db-manager.sso.internal.svc.movingtech.net",
+      "mode": "aws",
+      "protected": true
+    },
+    "prod-international": {
+      "host": "https://db-manager.c2.eu.sso.internal.svc.movingtech.net",
+      "mode": "gcp",
+      "protected": true
+    },
+    "master": {
+      "host": "https://db-manager.sso.c2.integ.internal.svc.movingtech.net",
+      "mode": "gcp",
+      "protected": false
+    }
+  },
+  "defaults": {
+    "maxRows": 5000,
+    "ignore": [
+      "created_at",
+      "updated_at"
+    ],
+    "keepPatterns": [
+      "_encrypted$",
+      "_hash$",
+      "_private_key$",
+      "_secret$",
+      "_token$",
+      "_password$"
+    ],
+    "rewrite": {
+      "merchant_id": "merchant_id",
+      "merchant_short_id": "merchant_short_id",
+      "city": "city"
+    }
+  },
+  "scope": {
+    "name": "city",
+    "optionsSql": "select id::text as id, city::text as city, merchant_id::text as merchant_id, merchant_short_id::text as merchant_short_id from {schema}.merchant_operating_city order by merchant_short_id, city limit 5000",
+    "valueField": "id",
+    "labelField": "city",
+    "displayFields": [
+      "merchant_short_id",
+      "city",
+      "id"
+    ],
+    "filters": {
+      "merchant_operating_city_id": "id",
+      "merchant_id": "merchant_id",
+      "merchant_opt_city_id": "id"
+    }
+  },
+  "apps": {
+    "driver": {
+      "database": "Bpp",
+      "schema": "atlas_driver_offer_bpp",
+      "tables": {
+        "add_on_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "add_on_type",
+            "descriptor_name",
+            "vehicle_service_tier"
+          ],
+          "zone": "green"
+        },
+        "app_dynamic_logic_always_on": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "app_dynamic_logic_element": {
+          "scope": "merchant_id",
+          "dimensions": [
+            "domain",
+            "order",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "app_dynamic_logic_rollout": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "time_bounds",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "bap_metadata": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "beckn_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "vehicle_category"
+          ],
+          "keep": [
+            "unique_key_id"
+          ],
+          "zone": "red"
+        },
+        "black_list_org": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "subscriber_id",
+            "domain",
+            "type"
+          ],
+          "zone": "red"
+        },
+        "blocked_route": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "call_feedback_options": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category",
+            "message_key"
+          ],
+          "zone": "green"
+        },
+        "cancellation_consequence_matrix": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "area",
+            "cancelled_by"
+          ],
+          "zone": "green"
+        },
+        "cancellation_fare_policy": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "cancellation_reason": {
+          "scope": null,
+          "dimensions": [
+            "reason_code"
+          ],
+          "zone": "yellow"
+        },
+        "coin_config": {
+          "scope": "merchant_opt_city_id",
+          "dimensions": [
+            "event_function",
+            "event_name",
+            "vehicle_category",
+            "trip_category_type",
+            "service_tier_type",
+            "time_bounds"
+          ],
+          "zone": "green"
+        },
+        "common_driver_onboarding_documents": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "document_verification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "document_type",
+            "vehicle_category"
+          ],
+          "zone": "green"
+        },
+        "document_verification_stages_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "applicable_to",
+            "document_category",
+            "document_onboarding_stage",
+            "vehicle_category"
+          ],
+          "zone": "green"
+        },
+        "domain_discount_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "billing_category",
+            "domain",
+            "vehicle_service_tier"
+          ],
+          "zone": "green"
+        },
+        "driver_block_reason": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "reason_code"
+          ],
+          "zone": "green"
+        },
+        "driver_intelligent_pool_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "green"
+        },
+        "driver_pool_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "trip_distance",
+            "vehicle_variant",
+            "trip_category",
+            "area",
+            "time_bounds"
+          ],
+          "zone": "green"
+        },
+        "exophone": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "primary_phone"
+          ],
+          "zone": "yellow"
+        },
+        "fare_policy": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "fare_policy_ambulance_details_slab": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_driver_extra_fee_bounds": {
+          "scope": null,
+          "dimensions": [
+            "fare_policy_id",
+            "start_distance"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_inter_city_details": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "fare_policy_inter_city_details_pricing_slabs": {
+          "scope": null,
+          "dimensions": [
+            "fare_policy_id",
+            "time_percentage",
+            "distance_percentage"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_progressive_details": {
+          "scope": null,
+          "dimensions": [
+            "fare_policy_id"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_progressive_details_per_extra_km_rate_section": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_progressive_details_per_min_rate_section": {
+          "scope": null,
+          "dimensions": [
+            "fare_policy_id",
+            "ride_duration_in_min"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_rental_details": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "fare_policy_rental_details_distance_buffers": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "fare_policy_rental_details_pricing_slabs": {
+          "scope": null,
+          "dimensions": [
+            "fare_policy_id",
+            "time_percentage",
+            "distance_percentage"
+          ],
+          "zone": "red"
+        },
+        "fare_policy_slabs_details_slab": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "fare_product": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "vehicle_variant",
+            "area",
+            "trip_category",
+            "time_bounds",
+            "search_source"
+          ],
+          "zone": "yellow"
+        },
+        "feedback_form_v2": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category_name",
+            "rating",
+            "question"
+          ],
+          "zone": "green"
+        },
+        "fleet_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "fleet_owner_id"
+          ],
+          "zone": "red"
+        },
+        "fleet_owner_document_verification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "document_type",
+            "role"
+          ],
+          "zone": "green"
+        },
+        "fleet_route_association": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "fleet_owner_id",
+            "route_code"
+          ],
+          "zone": "red"
+        },
+        "gate_info": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "geometry": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "go_home_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "yellow"
+        },
+        "igm_config": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "integrated_bpp_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "vehicle_category",
+            "platform_type"
+          ],
+          "keep": [
+            "config_json"
+          ],
+          "zone": "yellow"
+        },
+        "invoice_template": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "invoice_type",
+            "language"
+          ],
+          "zone": "green"
+        },
+        "issue_category": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category"
+          ],
+          "zone": "red"
+        },
+        "issue_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "red"
+        },
+        "issue_message": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message",
+            "label"
+          ],
+          "zone": "red"
+        },
+        "issue_option": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "option",
+            "label"
+          ],
+          "zone": "red"
+        },
+        "issue_translation": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "kiosk_location": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "kiosk_location_translation": {
+          "scope": null,
+          "dimensions": [
+            "kiosk_location_id",
+            "language"
+          ],
+          "zone": "red"
+        },
+        "knowledge_center": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "document_name",
+            "file_type",
+            "sop_type"
+          ],
+          "zone": "green"
+        },
+        "leader_board_configs": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "leader_board_type"
+          ],
+          "zone": "green"
+        },
+        "lms_module_translation": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "module_id",
+            "language"
+          ],
+          "zone": "yellow"
+        },
+        "lms_video_translation": {
+          "scope": null,
+          "dimensions": [
+            "video_id",
+            "language"
+          ],
+          "zone": "yellow"
+        },
+        "merchant": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "merchant_client_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service_name",
+            "package_id"
+          ],
+          "zone": "yellow"
+        },
+        "merchant_message": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message_key"
+          ],
+          "zone": "yellow"
+        },
+        "merchant_operating_city": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "merchant_overlay": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "overlay_key",
+            "language",
+            "udf1",
+            "vehicle_category"
+          ],
+          "zone": "green"
+        },
+        "merchant_payment_method": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "payment_type",
+            "payment_instrument",
+            "collected_by"
+          ],
+          "zone": "green"
+        },
+        "merchant_push_notification": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "key",
+            "language",
+            "fcm_sub_category",
+            "trip_category",
+            "fcm_notification_type"
+          ],
+          "zone": "green"
+        },
+        "merchant_service_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service_name"
+          ],
+          "keep": [
+            "config_json"
+          ],
+          "zone": "red"
+        },
+        "merchant_service_usage_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "green"
+        },
+        "merchant_state": {
+          "scope": "merchant_id",
+          "dimensions": [
+            "state"
+          ],
+          "zone": "red"
+        },
+        "message_dictionary": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message_key",
+            "message_type"
+          ],
+          "zone": "green"
+        },
+        "message_translation": {
+          "scope": null,
+          "dimensions": [
+            "message_id",
+            "language"
+          ],
+          "zone": "yellow"
+        },
+        "monetary_reward_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "event_name",
+            "event_function",
+            "vehicle_category"
+          ],
+          "zone": "green"
+        },
+        "namma_tag": {
+          "scope": null,
+          "dimensions": [
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "namma_tag_trigger": {
+          "scope": null,
+          "dimensions": [
+            "event",
+            "tag_name"
+          ],
+          "zone": "yellow"
+        },
+        "namma_tag_trigger_v2": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "event",
+            "tag_name"
+          ],
+          "zone": "green"
+        },
+        "namma_tag_v2": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "offer": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "offer_code"
+          ],
+          "zone": "green"
+        },
+        "operation_hub": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "payout_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "vehicle_category",
+            "order_type"
+          ],
+          "zone": "green"
+        },
+        "plan": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "payment_mode",
+            "plan_type",
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "plan_translation": {
+          "scope": null,
+          "dimensions": [
+            "plan_id",
+            "language"
+          ],
+          "zone": "yellow"
+        },
+        "policy_and_compliance_document": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "policy_type",
+            "entity_type",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "rc_validation_rules": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "fuel_type",
+            "vehicle_class",
+            "vehicle_oem"
+          ],
+          "zone": "green"
+        },
+        "registry_map_fallback": {
+          "scope": null,
+          "dimensions": [
+            "subscriber_id",
+            "unique_id"
+          ],
+          "zone": "red"
+        },
+        "reminder_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "document_type"
+          ],
+          "zone": "green"
+        },
+        "ride_related_notification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "notification_key",
+            "notification_type",
+            "time_diff",
+            "time_diff_event",
+            "on_booking_status"
+          ],
+          "zone": "green"
+        },
+        "route": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "code",
+            "vehicle_type"
+          ],
+          "zone": "red"
+        },
+        "route_trip_stop_mapping": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "route_code",
+            "scheduled_day",
+            "stop_code",
+            "trip_code",
+            "trip_sequence_num"
+          ],
+          "zone": "red"
+        },
+        "scheduled_payout_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "payout_category"
+          ],
+          "zone": "green"
+        },
+        "special_location": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "location_name"
+          ],
+          "zone": "yellow"
+        },
+        "station": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "code",
+            "vehicle_type"
+          ],
+          "zone": "red"
+        },
+        "subscription_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service_name"
+          ],
+          "zone": "yellow"
+        },
+        "surge_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "vehicle_service_tier",
+            "time_bounds",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "surge_pricing": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "source_hex",
+            "day_of_week",
+            "hour_of_day",
+            "vehicle_service_tier"
+          ],
+          "zone": "red"
+        },
+        "system_configs": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "tag_action_notification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "notification_key",
+            "notification_type"
+          ],
+          "zone": "green"
+        },
+        "time_bound_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "time_bound_domain"
+          ],
+          "zone": "green"
+        },
+        "toll": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "translations": {
+          "scope": null,
+          "dimensions": [
+            "message_key",
+            "language"
+          ],
+          "zone": "yellow"
+        },
+        "transporter_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "keep": [
+            "fcm_service_account"
+          ],
+          "zone": "yellow"
+        },
+        "ui_driver_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "os",
+            "platform"
+          ],
+          "zone": "green"
+        },
+        "value_add_np": {
+          "scope": null,
+          "dimensions": [
+            "subscriber_id"
+          ],
+          "zone": "red"
+        },
+        "vehicle_details": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "vehicle_service_tier": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service_tier_type"
+          ],
+          "zone": "yellow"
+        },
+        "vendor_split_details": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "area",
+            "vehicle_variant",
+            "vendor_id"
+          ],
+          "zone": "red"
+        },
+        "white_list_org": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "subscriber_id",
+            "domain",
+            "type"
+          ],
+          "zone": "red"
+        }
+      }
+    },
+    "rider": {
+      "database": "Bap",
+      "schema": "atlas_app",
+      "tables": {
+        "app_dynamic_logic_always_on": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "app_dynamic_logic_element": {
+          "scope": "merchant_id",
+          "dimensions": [
+            "domain",
+            "order",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "app_dynamic_logic_rollout": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "time_bounds",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "bbps_config": {
+          "scope": "merchant_id",
+          "dimensions": [],
+          "zone": "red"
+        },
+        "beckn_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "vehicle_category"
+          ],
+          "keep": [
+            "unique_key_id"
+          ],
+          "zone": "red"
+        },
+        "beckn_vehicle_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category"
+          ],
+          "zone": "red"
+        },
+        "black_list_org": {
+          "scope": null,
+          "dimensions": [
+            "subscriber_id",
+            "domain",
+            "type"
+          ],
+          "zone": "red"
+        },
+        "bpp_details": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "business_hour": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "btype"
+          ],
+          "zone": "red"
+        },
+        "cancellation_reason": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "reason_code"
+          ],
+          "zone": "green"
+        },
+        "disability": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "disability_translation": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "exophone": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "primary_phone"
+          ],
+          "zone": "yellow"
+        },
+        "feedback_form": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category_name",
+            "rating",
+            "question"
+          ],
+          "zone": "green"
+        },
+        "frfs_cancellation_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "vehicle_category",
+            "min_minutes_before_departure"
+          ],
+          "zone": "green"
+        },
+        "frfs_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "yellow"
+        },
+        "frfs_fare_policy": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "type",
+            "description"
+          ],
+          "zone": "yellow"
+        },
+        "frfs_gtfs_stage_fare": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "vehicle_type",
+            "stage",
+            "vehicle_service_tier_id",
+            "route_tag"
+          ],
+          "zone": "yellow"
+        },
+        "frfs_route_fare_product": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "route_code",
+            "vehicle_type",
+            "vehicle_service_tier_id",
+            "time_bounds"
+          ],
+          "zone": "yellow"
+        },
+        "frfs_stage_fare": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "fare_policy_id",
+            "stage"
+          ],
+          "zone": "yellow"
+        },
+        "frfs_ticket_category_metadata_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category",
+            "code",
+            "vehicle_category"
+          ],
+          "zone": "green"
+        },
+        "frfs_vehicle_service_tier": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "type",
+            "provider_code"
+          ],
+          "zone": "yellow"
+        },
+        "gate_info": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "geometry": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "hot_spot_config": {
+          "scope": null,
+          "dimensions": null,
+          "zone": "red"
+        },
+        "igm_config": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "insurance_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "trip_category",
+            "vehicle_category",
+            "partner_id"
+          ],
+          "zone": "yellow"
+        },
+        "integrated_bpp_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "domain",
+            "vehicle_category",
+            "platform_type"
+          ],
+          "keep": [
+            "config_json",
+            "ondc_encryption_private_key"
+          ],
+          "zone": "yellow"
+        },
+        "invoice_template": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "invoice_type",
+            "language"
+          ],
+          "zone": "green"
+        },
+        "issue_category": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "category"
+          ],
+          "zone": "red"
+        },
+        "issue_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "red"
+        },
+        "issue_message": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message",
+            "label"
+          ],
+          "zone": "red"
+        },
+        "issue_option": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "option",
+            "label"
+          ],
+          "zone": "red"
+        },
+        "issue_translation": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "merchant": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "merchant_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "green"
+        },
+        "merchant_message": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message_key"
+          ],
+          "zone": "yellow"
+        },
+        "merchant_onboarding_step_config": {
+          "scope": null,
+          "dimensions": [
+            "onboarding_type",
+            "step_name_identifier"
+          ],
+          "zone": "yellow"
+        },
+        "merchant_operating_city": {
+          "scope": "merchant_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "merchant_payment_method": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "payment_type",
+            "payment_instrument",
+            "collected_by"
+          ],
+          "zone": "green"
+        },
+        "merchant_push_notification": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "key",
+            "language",
+            "fcm_sub_category",
+            "trip_category",
+            "fcm_notification_type"
+          ],
+          "zone": "green"
+        },
+        "merchant_service_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service_name"
+          ],
+          "keep": [
+            "config_json"
+          ],
+          "zone": "red"
+        },
+        "merchant_service_usage_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "green"
+        },
+        "merchant_state": {
+          "scope": "merchant_id",
+          "dimensions": [
+            "state"
+          ],
+          "zone": "red"
+        },
+        "meta_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "phone_number_id"
+          ],
+          "keep": [
+            "access_token",
+            "app_secret",
+            "verify_token"
+          ],
+          "zone": "red"
+        },
+        "namma_tag": {
+          "scope": null,
+          "dimensions": [
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "namma_tag_trigger": {
+          "scope": null,
+          "dimensions": [
+            "event",
+            "tag_name"
+          ],
+          "zone": "yellow"
+        },
+        "notification_sounds_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "notification_type"
+          ],
+          "zone": "green"
+        },
+        "offer": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "offer_code"
+          ],
+          "zone": "green"
+        },
+        "partner_org_config": {
+          "scope": null,
+          "dimensions": [
+            "config_type",
+            "partner_org_id"
+          ],
+          "zone": "red"
+        },
+        "partner_org_station": {
+          "scope": null,
+          "dimensions": [
+            "partner_org_id",
+            "partner_org_station_id"
+          ],
+          "zone": "red"
+        },
+        "partner_organization": {
+          "scope": "merchant_id",
+          "dimensions": [
+            "api_key_hash"
+          ],
+          "zone": "red"
+        },
+        "pass": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "code"
+          ],
+          "zone": "yellow"
+        },
+        "pass_category": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "pass_type": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "yellow"
+        },
+        "payout_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "payout_entity",
+            "vehicle_category",
+            "order_type"
+          ],
+          "zone": "green"
+        },
+        "place_based_service_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "place_id",
+            "service_name"
+          ],
+          "zone": "yellow"
+        },
+        "policy_and_compliance_document": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "policy_type",
+            "entity_type",
+            "version"
+          ],
+          "zone": "green"
+        },
+        "popular_location": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "green"
+        },
+        "ride_related_notification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "notification_key",
+            "notification_type",
+            "time_diff",
+            "time_diff_event",
+            "on_booking_status"
+          ],
+          "zone": "green"
+        },
+        "rider_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [],
+          "zone": "yellow"
+        },
+        "route_polylines": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "route_id",
+            "vehicle_type"
+          ],
+          "zone": "red"
+        },
+        "route_stop_calender": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "integrated_bpp_config_id",
+            "trip_id"
+          ],
+          "zone": "red"
+        },
+        "route_trip_mapping": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "trip_code"
+          ],
+          "zone": "red"
+        },
+        "seat_management": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "date",
+            "ticket_service_category_id"
+          ],
+          "zone": "red"
+        },
+        "service_category": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "place_id"
+          ],
+          "zone": "red"
+        },
+        "service_people_category": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "special_location": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "location_name"
+          ],
+          "zone": "yellow"
+        },
+        "special_occasion": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "date",
+            "entity_id"
+          ],
+          "zone": "red"
+        },
+        "stations_extra_information": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "station_id"
+          ],
+          "zone": "red"
+        },
+        "stop_information": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": null,
+          "zone": "red"
+        },
+        "system_configs": {
+          "scope": null,
+          "dimensions": [
+            "id"
+          ],
+          "zone": "red"
+        },
+        "tag_action_notification_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "notification_key",
+            "notification_type"
+          ],
+          "zone": "green"
+        },
+        "ticket_place": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name"
+          ],
+          "zone": "red"
+        },
+        "ticket_service": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "service",
+            "places_id"
+          ],
+          "zone": "red"
+        },
+        "ticket_sub_place": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "ticket_place_id"
+          ],
+          "zone": "red"
+        },
+        "time_bound_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "name",
+            "time_bound_domain"
+          ],
+          "zone": "green"
+        },
+        "translations": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "message_key",
+            "language"
+          ],
+          "zone": "green"
+        },
+        "ui_rider_config": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "os",
+            "platform"
+          ],
+          "zone": "green"
+        },
+        "value_add_np": {
+          "scope": null,
+          "dimensions": [
+            "subscriber_id"
+          ],
+          "zone": "red"
+        },
+        "white_list_org": {
+          "scope": "merchant_operating_city_id",
+          "dimensions": [
+            "subscriber_id",
+            "domain",
+            "type"
+          ],
+          "zone": "red"
+        }
+      }
+    }
+  }
+}
