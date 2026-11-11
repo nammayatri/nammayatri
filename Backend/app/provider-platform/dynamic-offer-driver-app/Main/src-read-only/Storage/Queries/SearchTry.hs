@@ -4,7 +4,6 @@
 
 module Storage.Queries.SearchTry (module Storage.Queries.SearchTry, module ReExport) where
 
-import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -45,33 +44,36 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.businessEmailDomain businessEmailDomain,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
-      Se.Set Beam.customerExtraFeeAmount customerExtraFee,
+      Se.Set Beam.customerExtraFeeAmount (customerExtraFee),
       Se.Set Beam.driverPreference driverPreference,
       Se.Set Beam.emailDomain emailDomain,
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.estimateIds (Kernel.Prelude.Just estimateIds),
       Se.Set Beam.isAdvancedBookingEnabled (Kernel.Prelude.Just isAdvancedBookingEnabled),
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
+      Se.Set Beam.isSilentReallocation isSilentReallocation,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
       Se.Set Beam.negativeFareAdjustment (Kernel.Prelude.roundToIntegral <$> negativeFareAdjustment),
-      Se.Set Beam.negativeFareAdjustmentAmount negativeFareAdjustment,
+      Se.Set Beam.negativeFareAdjustmentAmount (negativeFareAdjustment),
       Se.Set Beam.paymentInstrument paymentInstrument,
       Se.Set Beam.petCharges (Kernel.Prelude.roundToIntegral <$> petCharges),
-      Se.Set Beam.petChargesAmount petCharges,
+      Se.Set Beam.petChargesAmount (petCharges),
       Se.Set Beam.preferSafetyPlus (Kernel.Prelude.Just preferSafetyPlus),
+      Se.Set Beam.reallocationOutcome reallocationOutcome,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.searchRepeatCounter searchRepeatCounter,
       Se.Set Beam.searchRepeatType searchRepeatType,
       Se.Set Beam.serviceTierArray (Kernel.Prelude.Just serviceTierArray),
+      Se.Set Beam.silentReallocationWindowEndsAt silentReallocationWindowEndsAt,
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status status,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.vehicleVariant vehicleServiceTier,
+      Se.Set Beam.vehicleVariant (vehicleServiceTier),
       Se.Set Beam.vehicleServiceTierName (Kernel.Prelude.Just vehicleServiceTierName)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

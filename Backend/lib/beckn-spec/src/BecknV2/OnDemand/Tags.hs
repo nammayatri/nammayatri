@@ -467,6 +467,8 @@ data BecknTag
   | ROUND_TRIP
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
+  | IS_SILENT_REALLOCATION_ENABLED
+  | SILENT_REALLOCATION_WINDOW_SECONDS
   | -- Meter ride tags
     IS_METER_RIDE_SEARCH
   | -- FareParametersInRatwCard tag
@@ -660,6 +662,8 @@ instance CompleteTag BecknTag where
     OFFLINE_CONTRACT -> (Just "Offline Contract", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    IS_SILENT_REALLOCATION_ENABLED -> (Just "Is Silent Reallocation Enabled", Nothing)
+    SILENT_REALLOCATION_WINDOW_SECONDS -> (Just "Silent Reallocation Window Seconds", Nothing)
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
     IS_MULTIMODAL_SEARCH -> (Just "Is Multimodal Search", Nothing)
     RESERVED_RIDE_TAG -> (Just "Reserved Ride Tag", Nothing)
@@ -721,6 +725,8 @@ instance CompleteTag BecknTag where
     PAYMENT_CHARGE -> SETTLEMENT_DETAILS
     PAYMENT_CHARGE_BEARER -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    IS_SILENT_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    SILENT_REALLOCATION_WINDOW_SECONDS -> REALLOCATION_INFO
     IS_METER_RIDE_SEARCH -> SEARCH_REQUEST_INFO
     IS_MULTIMODAL_SEARCH -> SEARCH_REQUEST_INFO
     RESERVED_RIDE_TAG -> SEARCH_REQUEST_INFO

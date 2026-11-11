@@ -157,6 +157,8 @@ data DSearchReq = DSearchReq
     customerLanguage :: Maybe Maps.Language,
     customerNammaTags :: Maybe [LYT.TagNameValue],
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
+    silentReallocationWindowSeconds :: Maybe Seconds,
     isMeterRideSearch :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     disabilityTag :: Maybe Text,

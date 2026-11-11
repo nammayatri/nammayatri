@@ -221,3 +221,10 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_name text ;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_area text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN drop_area text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN silent_reallocation_window_seconds integer ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_silent_reallocation_enabled boolean ;

@@ -69,6 +69,8 @@ buildSearchReqRaw messageId bapSubscriberId _bapSubscriberUrl req context actual
       device_ = Nothing
       disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
       isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
+      isSilentReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsSilentReallocationEnabled req
+      silentReallocationWindowSeconds_ = Beckn.OnDemand.Utils.Search.getSilentReallocationWindowSeconds req
       isMeterRideSearch = Beckn.OnDemand.Utils.Search.getIsMeterRideSearch req
       numberOfLuggages = Beckn.OnDemand.Utils.Search.getNumberOfLuggages req
       fareParametersInRateCard_ = Beckn.OnDemand.Utils.Search.fareParametersInRateCard req
@@ -134,6 +136,8 @@ buildSearchReqRaw messageId bapSubscriberId _bapSubscriberUrl req context actual
         dropAddrress = dropAddrress_,
         dropLocation = dropLocation_,
         isReallocationEnabled = isReallocationEnabled_,
+        isSilentReallocationEnabled = isSilentReallocationEnabled_,
+        silentReallocationWindowSeconds = silentReallocationWindowSeconds_,
         fareParametersInRateCard = fareParametersInRateCard_,
         messageId = messageId_,
         pickupAddress = pickupAddress_,
