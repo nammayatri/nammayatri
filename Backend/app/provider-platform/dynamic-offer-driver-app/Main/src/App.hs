@@ -57,6 +57,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
+import qualified Kernel.Utils.PayloadEncryption as PayloadEncryption
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as HttpTLS
@@ -190,7 +191,8 @@ runDynamicOfferDriverApp' appCfg = do
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
     proxyManager <- HttpTLS.newTlsManager
-    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
+    payloadEncryption <- PayloadEncryption.payloadEncryptionMiddleware <$> PayloadEncryption.loadPayloadEncryptionConfig "DRIVER_PAYLOAD_ENC_PRIVATE_KEYS"
+    runSettings settings $ timeoutMiddleware (payloadEncryption (App.run proxyManager (App.EnvR flowRt' appEnv)))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList
