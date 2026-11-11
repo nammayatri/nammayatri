@@ -367,8 +367,11 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
   t.ok(routes.cleanName('Café\u200B Tfeila\u00AD') === 'Café Tfeila',
     'invisible characters inside a real name are removed, not refused');
   t.ok(routes.cleanName('ZW') === 'ZW', 'two letters are still a name');
-  t.ok(routes.cleanName('a'.repeat(78) + '☕☕') !== null && [...routes.cleanName('a'.repeat(78) + '☕☕')].length === 80,
-    'an emoji is one character, as char_length counts it');
+  // 😀 is outside the 16-bit range: .length counts it 2, char_length 1. (☕,
+  // used here until 2026-11-11, is one unit either way and proved nothing.)
+  t.ok(routes.cleanName('a'.repeat(78) + '😀😀') === 'a'.repeat(78) + '😀😀'
+    && routes.cleanName('a'.repeat(79) + '😀😀') === null,
+    'an emoji is one character, as char_length counts it: 78 letters + 2 emoji = 80 accepted, 81 refused');
 
   who.close();
   await db.close();
