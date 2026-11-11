@@ -16,6 +16,10 @@ data SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SharedCabMoveWarningReq = SharedCabMoveWarningReq {boardStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text, bookingId :: Kernel.Prelude.Text, driverId :: Kernel.Prelude.Text, releaseInSec :: Kernel.Prelude.Int}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabTrip = SharedCabTrip
   { agencyId :: Kernel.Prelude.Text,
     capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
