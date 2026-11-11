@@ -199,6 +199,8 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
     if isValueAddNP
       then QRB.findByBPPBookingId bppBookingId |<|>| QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
       else QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+  when (booking.status == DRB.CANCELLED) $
+    throwError $ InvalidRequest ("Booking has already been cancelled: " <> booking.id.getId)
   mbMerchant <- CQM.findById booking.merchantId
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   onlinePaymentParameters <-
