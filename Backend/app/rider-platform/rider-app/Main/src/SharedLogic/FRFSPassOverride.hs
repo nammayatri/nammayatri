@@ -41,6 +41,7 @@ module SharedLogic.FRFSPassOverride
     loadPassCandidates,
     filterCandidatesForLeg,
     localTripDay,
+    localTripDayForCity,
     bookingTripDay,
     ticketQuantityForBooking,
     withinQuantityCap,
@@ -56,6 +57,7 @@ module SharedLogic.FRFSPassOverride
     passLegsNotCoverable,
     refundTrip,
     adjustTrips,
+    zeroTrips,
     netTripAdjustment,
     tryWithTripCountLock,
     BookedTripWindow (..),
@@ -867,6 +869,18 @@ adjustTrips payment entry delta
         pure (Right remaining)
   where
     benefit = entryBenefit entry
+
+zeroTrips :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Maybe OverrideBenefit -> m (Maybe Int)
+zeroTrips payment mbBenefit = do
+  let key = makeTripCountKey payment.id
+  before <- case mbBenefit of
+    Just benefit | not (isUnlimitedBenefit benefit) -> Just <$> seededRemainingTrips payment (allowanceFor payment benefit)
+    _ -> pure Nothing
+  Redis.set key (0 :: Int)
+  refreshTripCountTtl payment key
+  QPurchasedPassPayment.updateAvailableTripCountById (Just 0) payment.id
+  logInfo $ "FRFSPassOverride:zeroTrips paymentId=" <> payment.id.getId <> " before=" <> show before
+  pure before
 
 netTripAdjustment :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> m Int
 netTripAdjustment payment =
