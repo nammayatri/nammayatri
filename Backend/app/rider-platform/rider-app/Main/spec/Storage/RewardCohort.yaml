@@ -18,9 +18,17 @@ RewardCohort:
     rewardImageUrl: Maybe Text
     couponValidityDays: Maybe Int
     maxUnlocksPerCohort: Maybe Int
+    unlockResetPeriod: Maybe UnlockResetPeriod
     presentation: Maybe Value
     createdAt: UTCTime
     updatedAt: UTCTime
+  types:
+    UnlockResetPeriod:
+      enum: "Daily, Weekly"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <UnlockResetPeriod>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <UnlockResetPeriod>
   constraints:
     id: PrimaryKey
     campaignId: "!SecondaryKey"

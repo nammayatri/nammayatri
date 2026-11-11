@@ -11,6 +11,7 @@ imports:
   RedemptionTargetType: Dashboard.Common.Rewards.RedemptionTargetType
   ClaimMode: Dashboard.Common.Rewards.ClaimMode
   CampaignStatus: Dashboard.Common.Rewards.CampaignStatus
+  UnlockResetPeriod: Dashboard.Common.Rewards.UnlockResetPeriod
   APISuccess: Kernel.Types.APISuccess
 
 module: Rewards
@@ -61,6 +62,7 @@ types:
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
     - maxUnlocksPerCohort: Maybe Int
+    - unlockResetPeriod: Maybe UnlockResetPeriod
     - derive: "'HideSecrets"
 
   CreateCohortResp:
@@ -76,6 +78,7 @@ types:
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
     - maxUnlocksPerCohort: Maybe Int
+    - unlockResetPeriod: Maybe UnlockResetPeriod
     - derive: "'HideSecrets"
 
   UploadCodesResp:
@@ -128,6 +131,7 @@ types:
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
     - maxUnlocksPerCohort: Maybe Int
+    - unlockResetPeriod: Maybe UnlockResetPeriod
     - createdAt: UTCTime
     - updatedAt: UTCTime
 
@@ -152,6 +156,8 @@ types:
     - isValidRide: Maybe Bool
     - rideVehicleVariant: Maybe Text
     - rideServiceTier: Maybe Text
+    - validRidesThisCampaignDay: Maybe Int
+    - validRidesThisCampaignWeek: Maybe Int
 
   ValidateCohortEligibilityReq:
     - cohortId: Maybe (Id RewardCohort)
