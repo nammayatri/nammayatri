@@ -65,7 +65,7 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
-import Tools.DynamicLogic (getAppDynamicLogic)
+import Tools.DynamicLogic (getAppDynamicLogic, tossForEntity)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import Tools.MarketingEvents as TM
@@ -148,7 +148,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
         cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly"]
         fetchRules = \domain -> do
           localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
-          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
+          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing (Just (tossForEntity driverId.getId))
     snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
     output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
     logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)

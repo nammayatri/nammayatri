@@ -5,7 +5,9 @@ module Tools.DynamicLogic where
 
 import Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
+import Data.Char (ord)
 import Data.List (nub)
+import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
@@ -249,6 +251,11 @@ chooseLogic logics mbToss = do
   let cumulative = cumulativeRollout logics
   toss <- maybe (getRandomInRange (1, 100 :: Int)) pure mbToss
   return $ findLogic toss cumulative
+
+-- | A fixed toss (1..100) for an entity, so a weighted rollout keeps the entity on one
+-- version every time it is evaluated, and every reader picks that same version.
+tossForEntity :: Text -> Int
+tossForEntity entityId = 1 + foldl' (\acc c -> (acc * 31 + ord c) `mod` 1000003) 7 (T.unpack entityId) `mod` 100
 
 -- | Group-aware version of 'chooseLogic': delegates to the shared per-transaction
 -- experiment-group resolver (reads 'TxnIdKey' via option-local), using this

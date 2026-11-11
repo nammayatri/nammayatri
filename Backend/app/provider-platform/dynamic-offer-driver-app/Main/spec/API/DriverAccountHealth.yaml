@@ -1,0 +1,40 @@
+imports:
+  UTCTime: Kernel.Prelude
+  BlockReasonFlag: Tools.Error
+  ProfileWarningInfo: Lib.BehaviorTracker.Types
+
+module: DriverAccountHealth
+
+apis:
+  - GET:
+      endpoint: /driver/accountHealth
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverAccountHealth.AccountHealthRes
+
+types:
+  # The lower bounds of one rung of the city's live rulebook: the rung fires once the period
+  # reaches all of them. A bound the rung does not set is absent (e.g. no rate on a count-only rung).
+  RuleLimit:
+    rate: Maybe Int
+    minRides: Maybe Int
+    minCancellations: Maybe Int
+    hours: Maybe Int # block duration; absent for a warning or a permanent block
+
+  CancellationPeriod:
+    period: Text # "daily" or "weekly"
+    rate: Int
+    eligibleCount: Int
+    actionCount: Int
+    warnAt: Maybe RuleLimit
+    blockAt: Maybe RuleLimit
+
+  AccountBlock:
+    blockedUntil: Maybe UTCTime # absent for a permanent block
+    reasonFlag: Maybe BlockReasonFlag
+
+  AccountHealthRes:
+    rulesVersion: Maybe Int # live CANCELLATION_RATE_BEHAVIOR version; absent when the city has none
+    cancellation: "[CancellationPeriod]"
+    warnings: "[ProfileWarningInfo]"
+    block: Maybe AccountBlock
