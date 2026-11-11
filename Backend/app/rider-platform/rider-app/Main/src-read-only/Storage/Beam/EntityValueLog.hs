@@ -17,7 +17,7 @@ data EntityValueLogT f = EntityValueLogT
     actorType :: (B.C f Kernel.Types.ActorInfo.ActorType),
     delta :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Domain.Types.EntityValueLog.EntityType),
+    entityType :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
