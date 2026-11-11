@@ -238,7 +238,7 @@ data PassUpdateReq = PassUpdateReq
 instance Kernel.Types.HideSecrets.HideSecrets PassUpdateReq where
   hideSecrets = Kernel.Prelude.identity
 
-data PurchasedPassPaymentTerminateReq = PurchasedPassPaymentTerminateReq {reason :: Kernel.Prelude.Text}
+data PurchasedPassPaymentTerminateReq = PurchasedPassPaymentTerminateReq {reason :: Kernel.Prelude.Text, refund :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

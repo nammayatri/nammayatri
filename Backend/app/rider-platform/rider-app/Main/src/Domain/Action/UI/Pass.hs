@@ -50,6 +50,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Types.EntityValueLog as DEntityValueLog
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -130,6 +131,7 @@ import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.EntityValueLog as QEntityValueLog
 import qualified Storage.Queries.FRFSPassTicketStatistics as QFRFSPassTicketStatistics
 -- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
 -- both the generated CRUD and the hand-written Extra queries.
@@ -775,7 +777,13 @@ createPassCatalog merchantShortId opCity req = do
   pure $ DashPass.PassCreateResp {passId = passId}
 
 updatePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
-updatePassCatalog merchantShortId opCity passId req = do
+updatePassCatalog merchantShortId opCity passId req =
+  Redis.whenWithLockRedisAndReturnValue ("PassCatalogUpdate:PassId:" <> passId.getId) 30 (updatePassCatalogLocked merchantShortId opCity passId req) >>= \case
+    Left _ -> throwError (InvalidRequest "Another update to this pass is in progress, please try again")
+    Right result -> pure result
+
+updatePassCatalogLocked :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassCatalogLocked merchantShortId opCity passId req = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
   passRow <- findPassInCity passId merchantOperatingCity.id opCity
   whenJust req.passTypeId $ \newPassTypeId -> do
@@ -826,7 +834,67 @@ updatePassCatalog merchantShortId opCity passId req = do
   validateValidityDays updatedPass
   QPass.updateCatalogFields updatedPass
   CQPass.clearCache passRow.id (nub [passRow.passTypeId, updatedPass.passTypeId])
+  logPassCatalogChanges passRow updatedPass
   pure APISuccess.Success
+
+logPassCatalogChanges :: DPass.Pass -> DPass.Pass -> Environment.Flow ()
+logPassCatalogChanges oldPass newPass = do
+  let logCountChange opType valueOf =
+        let (before, after) = (valueOf oldPass, valueOf newPass)
+         in logAppliedValueChange opType passEntityType newPass.id.getId newPass.merchantId newPass.merchantOperatingCityId (show <$> before) (show <$> after) ((-) <$> after <*> before)
+      benefitOf pass = DPassOverrideConfig.entryBenefit <$> (pass.overrideBenefitConfigJson >>= DPassOverrideConfig.firstEntry)
+  when (oldPass.amount /= newPass.amount) $
+    logAppliedValueChange DEntityValueLog.PassPriceChange passEntityType newPass.id.getId newPass.merchantId newPass.merchantOperatingCityId (Just (showMoney oldPass.amount)) (Just (showMoney newPass.amount)) Nothing
+  logCountChange DEntityValueLog.PassTripCountChange (\pass -> benefitOf pass >>= (.maximumTripCount))
+  logCountChange DEntityValueLog.PassBreakoffTripCountChange (\pass -> benefitOf pass >>= (.breakoffTripCount))
+  logCountChange DEntityValueLog.PassMaxValidTripsChange (.maxValidTrips)
+
+logAppliedValueChange ::
+  DEntityValueLog.OperationType ->
+  Text ->
+  Text ->
+  Id.Id DM.Merchant ->
+  Id.Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Int ->
+  Environment.Flow ()
+logAppliedValueChange opType entType entId logMerchantId logMerchantOpCityId before after change =
+  when (before /= after) $ do
+    logId <- generateGUID
+    now <- getCurrentTime
+    actorInfo <- asks (.actorInfo)
+    QEntityValueLog.create
+      DEntityValueLog.EntityValueLog
+        { id = logId,
+          entityType = entType,
+          entityId = entId,
+          operationId = logId.getId,
+          operationType = opType,
+          status = DEntityValueLog.APPLIED,
+          delta = change,
+          valueBefore = before,
+          valueAfter = after,
+          reason = Nothing,
+          actorType = actorInfo.actorType,
+          actorId = actorInfo.actorId,
+          merchantId = logMerchantId,
+          merchantOperatingCityId = logMerchantOpCityId,
+          createdAt = now,
+          updatedAt = now
+        }
+    logInfo $ "EntityValueLog " <> show opType <> " " <> entType <> "=" <> entId <> " " <> fromMaybe "null" before <> " -> " <> fromMaybe "null" after
+
+passEntityType :: Text
+passEntityType = "Pass"
+
+moneyInPaise :: HighPrecMoney -> Int
+moneyInPaise money = round (money.getHighPrecMoney * 100)
+
+showMoney :: HighPrecMoney -> Text
+showMoney money =
+  let paise = moneyInPaise money
+   in show (paise `div` 100) <> "." <> T.justifyRight 2 '0' (show (paise `mod` 100))
 
 -- | Soft delete (enable = false) so purchased_pass rows keep their pass reference.
 deletePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> Environment.Flow APISuccess.APISuccess
@@ -875,7 +943,9 @@ assertPassSellable :: DPass.Pass -> Environment.Flow ()
 assertPassSellable pass = do
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
   passType <- CQPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
-  passCategory <- CQPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  passCategory <-
+    getOneConfig (PassCategoryDimensions {merchantOperatingCityId = pass.merchantOperatingCityId.getId, configId = Just passType.passCategoryId.getId}) (Just (maybeToList <$> CQPassCategory.findById passType.passCategoryId))
+      >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   unless (isEnabledPassType passType && isEnabledCategory passCategory) $
     throwError (InvalidRequest "Pass is not enabled")
 
@@ -2210,6 +2280,8 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
     QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount (paymentToUpdate <&> (.orderId))
     when (newStatus == DPurchasedPass.Active && (purchasedPass.status /= newStatus || isNothing purchasedPass.activatedAt)) $
       QPurchasedPass.updateActivatedAt (Just now) purchasedPass.id
+  whenJust paymentToUpdate $ \payment ->
+    logAppliedValueChange DEntityValueLog.PassReschedule FRFSPassOverride.passPaymentEntityType payment.id.getId payment.merchantId payment.merchantOperatingCityId (Just (show payment.startDate)) (Just (show newStartDate)) (Just (fromIntegral (DT.diffDays newStartDate payment.startDate)))
   return APISuccess.Success
 
 postMultimodalPassUploadProfilePictureV1 ::
