@@ -22,6 +22,7 @@ import qualified Dashboard.Common.Rewards.ClaimMode as ClaimMode
 import qualified Dashboard.Common.Rewards.CouponSourceType as CouponSourceType
 import qualified Dashboard.Common.Rewards.RedemptionTargetType as RedemptionTargetType
 import qualified Dashboard.Common.Rewards.SponsorType as SponsorType
+import qualified Dashboard.Common.Rewards.UnlockResetPeriod as UnlockResetPeriod
 import qualified Dashboard.RiderPlatform.Management.Rewards as Dash
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
@@ -156,6 +157,7 @@ postRewardsCampaignCohort merchantShortId opCity campaignId req = do
             rewardImageUrl = req.rewardImageUrl,
             couponValidityDays = req.couponValidityDays,
             maxUnlocksPerCohort = req.maxUnlocksPerCohort,
+            unlockResetPeriod = toDomainUnlockResetPeriod <$> req.unlockResetPeriod,
             presentation = req.presentation,
             merchantId = Nothing,
             merchantOperatingCityId = Nothing,
@@ -196,6 +198,7 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
     req.couponValidityDays
     req.presentation
     (Just <$> req.maxUnlocksPerCohort)
+    (Just . toDomainUnlockResetPeriod <$> req.unlockResetPeriod)
   CQLR.clearCache campaign.merchantOperatingCityId
   pure Success
 
@@ -392,7 +395,9 @@ castRewardContext c =
       hasTakenValidRide = c.hasTakenValidRide,
       isValidRide = c.isValidRide,
       rideVehicleVariant = c.rideVehicleVariant,
-      rideServiceTier = c.rideServiceTier
+      rideServiceTier = c.rideServiceTier,
+      validRidesThisCampaignDay = c.validRidesThisCampaignDay,
+      validRidesThisCampaignWeek = c.validRidesThisCampaignWeek
     }
 
 loadMerchantContext ::
@@ -471,6 +476,7 @@ toApiCohort co =
       couponValidityDays = co.couponValidityDays,
       presentation = co.presentation,
       maxUnlocksPerCohort = co.maxUnlocksPerCohort,
+      unlockResetPeriod = fromDomainUnlockResetPeriod <$> co.unlockResetPeriod,
       createdAt = co.createdAt,
       updatedAt = co.updatedAt
     }
@@ -538,6 +544,14 @@ toDomainClaimMode ClaimMode.ManualClaim = DRCmp.ManualClaim
 fromDomainClaimMode :: DRCmp.ClaimMode -> ClaimMode.ClaimMode
 fromDomainClaimMode DRCmp.AutoClaim = ClaimMode.AutoClaim
 fromDomainClaimMode DRCmp.ManualClaim = ClaimMode.ManualClaim
+
+toDomainUnlockResetPeriod :: UnlockResetPeriod.UnlockResetPeriod -> DRC.UnlockResetPeriod
+toDomainUnlockResetPeriod UnlockResetPeriod.Daily = DRC.Daily
+toDomainUnlockResetPeriod UnlockResetPeriod.Weekly = DRC.Weekly
+
+fromDomainUnlockResetPeriod :: DRC.UnlockResetPeriod -> UnlockResetPeriod.UnlockResetPeriod
+fromDomainUnlockResetPeriod DRC.Daily = UnlockResetPeriod.Daily
+fromDomainUnlockResetPeriod DRC.Weekly = UnlockResetPeriod.Weekly
 
 toDomainCampaignStatus :: CampaignStatus.CampaignStatus -> DRCmp.CampaignStatus
 toDomainCampaignStatus CampaignStatus.Draft = DRCmp.Draft

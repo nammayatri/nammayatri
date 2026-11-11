@@ -51,40 +51,51 @@ findByCampaignCohortAndCode campaignId cohortId code =
 -- (all cohorts); this function filters down to the candidate's cohort.
 nextUnlockDecision ::
   DRC.RewardCohort ->
+  Maybe UTCTime ->
   [DRU.RewardUnlock] ->
   DRU.RewardUnlock ->
   Maybe Int
-nextUnlockDecision cohort existing unlock
-  | not (hasUnlockCapacity cohort.maxUnlocksPerCohort unlock.cohortId existing) = Nothing
-  | otherwise =
-    case cohort.maxUnlocksPerCohort of
-      Nothing -> Just 1
-      Just _ -> Just (maximum (0 : map (fromMaybe 1 . (.unlockSeq)) forCohort) + 1)
+nextUnlockDecision cohort mBlockStart existing unlock
+  | not (hasUnlockCapacity cohort.maxUnlocksPerCohort mBlockStart unlock.cohortId existing) = Nothing
+  | isNothing cohort.maxUnlocksPerCohort && isNothing mBlockStart = Just 1
+  | otherwise = Just (maximum (0 : map (fromMaybe 1 . (.unlockSeq)) forCohort) + 1)
   where
+    -- Every row for the cohort, not just the current block's, so a seq is never reused.
     forCohort = filter (\u -> u.cohortId == unlock.cohortId) existing
 
 -- | Whether the rider can still unlock this cohort: below its repeat cap
 -- ('Just n' live unlocks), or with no live unlock at all for a one-shot cohort
--- ('Nothing'). Live = any status but 'Reclaimed'. The single source of the cap
--- rule, shared by 'nextUnlockDecision' and the home-screen live reward card so the
--- card can't outlive (or die before) the reward it advertises.
+-- ('Nothing'). Live = any status but 'Reclaimed'. With a block start (cohorts
+-- whose cap resets daily/weekly, see 'Domain.Action.Rewards.CampaignBlock'),
+-- only unlocks from that block on count, so the cap applies per block. The
+-- single source of the cap rule, shared by 'nextUnlockDecision' and the
+-- home-screen live reward card so the card can't outlive (or die before) the
+-- reward it advertises.
 hasUnlockCapacity ::
   Maybe Int ->
+  Maybe UTCTime ->
   Id DRC.RewardCohort ->
   [DRU.RewardUnlock] ->
   Bool
-hasUnlockCapacity maxUnlocks cohortId existing =
-  case maxUnlocks of
-    Nothing -> null liveForCohort
-    Just n -> length liveForCohort < n
+hasUnlockCapacity maxUnlocks mBlockStart cohortId existing =
+  length liveForCohort < fromMaybe 1 maxUnlocks
   where
-    liveForCohort = filter (\u -> u.cohortId == cohortId && u.status /= DRU.Reclaimed) existing
+    liveForCohort =
+      filter
+        ( \u ->
+            u.cohortId == cohortId
+              && u.status /= DRU.Reclaimed
+              && maybe True (u.unlockedAt >=) mBlockStart
+        )
+        existing
 
 -- | Create the next unlock row for a rider+cohort, honoring the cohort's
 -- repeat cap ('maxUnlocksPerCohort'). Non-repeatable cohorts ('Nothing') keep
 -- today's one-shot sticky behavior: at most one non-'Reclaimed' row ever, at
 -- 'unlockSeq' 1. Repeatable cohorts ('Just n') allow up to 'n' non-'Reclaimed'
--- rows, each with a fresh, never-reused 'unlockSeq'.
+-- rows, each with a fresh, never-reused 'unlockSeq'. Cohorts with a reset
+-- period ('mBlockStart' set) apply that cap (1 when 'Nothing') per block, also
+-- with fresh seqs, so a rider can unlock again in each new block.
 --
 -- 'existing' is the caller's already-fetched existing unlocks for this
 -- rider+campaign (across all cohorts); 'unlock' is the candidate row, whose
@@ -95,11 +106,12 @@ hasUnlockCapacity maxUnlocks cohortId existing =
 createNextUnlock ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   DRC.RewardCohort ->
+  Maybe UTCTime ->
   [DRU.RewardUnlock] ->
   DRU.RewardUnlock ->
   m Bool
-createNextUnlock cohort existing unlock =
-  case nextUnlockDecision cohort existing unlock of
+createNextUnlock cohort mBlockStart existing unlock =
+  case nextUnlockDecision cohort mBlockStart existing unlock of
     Nothing -> do
       whenJust cohort.maxUnlocksPerCohort $ \n ->
         logInfo $

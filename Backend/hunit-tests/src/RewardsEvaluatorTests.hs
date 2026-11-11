@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
+import qualified Domain.Action.Rewards.CampaignBlock as Block
 import qualified Domain.Action.Rewards.Evaluator as Eval
 import qualified Domain.Action.Rewards.LiveReward as LiveReward
 import qualified Domain.Types.RewardCampaign as DRCmp
@@ -68,7 +69,9 @@ tests =
                   hasTakenValidRide = Just True,
                   isValidRide = Just False,
                   rideVehicleVariant = Just "AUTO_RICKSHAW",
-                  rideServiceTier = Just "AUTO_RICKSHAW"
+                  rideServiceTier = Just "AUTO_RICKSHAW",
+                  validRidesThisCampaignDay = Just 6,
+                  validRidesThisCampaignWeek = Just 7
                 }
             expected =
               A.object
@@ -80,7 +83,9 @@ tests =
                   "hasTakenValidRide" A..= True,
                   "isValidRide" A..= Just False,
                   "rideVehicleVariant" A..= ("AUTO_RICKSHAW" :: Text),
-                  "rideServiceTier" A..= ("AUTO_RICKSHAW" :: Text)
+                  "rideServiceTier" A..= ("AUTO_RICKSHAW" :: Text),
+                  "validRidesThisCampaignDay" A..= (6 :: Int),
+                  "validRidesThisCampaignWeek" A..= (7 :: Int)
                 ]
         rewardContextToLogicInput ctx @?= expected,
       -- rewardContextToLogicInput: absent fields default so a logic still runs
@@ -95,7 +100,9 @@ tests =
                   "hasTakenValidRide" A..= False,
                   "isValidRide" A..= (Nothing :: Maybe Bool),
                   "rideVehicleVariant" A..= (Nothing :: Maybe Text),
-                  "rideServiceTier" A..= (Nothing :: Maybe Text)
+                  "rideServiceTier" A..= (Nothing :: Maybe Text),
+                  "validRidesThisCampaignDay" A..= (0 :: Int),
+                  "validRidesThisCampaignWeek" A..= (0 :: Int)
                 ]
         rewardContextToLogicInput defaultRewardContext @?= expected,
       -- variant-scoped cohorts: match on the vehicle variant of the triggering ride
@@ -129,6 +136,8 @@ tests =
         ("isValidRide" `elem` rewardContextKeys) @?= True
         ("rideVehicleVariant" `elem` rewardContextKeys) @?= True
         ("rideServiceTier" `elem` rewardContextKeys) @?= True
+        ("validRidesThisCampaignDay" `elem` rewardContextKeys) @?= True
+        ("validRidesThisCampaignWeek" `elem` rewardContextKeys) @?= True
         ("ridesLast7days" `elem` rewardContextKeys) @?= False,
       testCase "unknown-var detection flags a typo'd field (mirrors handler check)" $ do
         let logic = gteRule "ridesLast7days" 5
@@ -140,39 +149,39 @@ tests =
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) Nothing
             existing = [mkUnlock "c1" DRU.Active 1]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existing candidate @?= Nothing,
+        QRUE.nextUnlockDecision cohort Nothing existing candidate @?= Nothing,
       testCase "non-repeatable cohort: first evaluation with no existing rows unlocks at seq 1" $ do
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) Nothing
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort [] candidate @?= Just 1,
+        QRUE.nextUnlockDecision cohort Nothing [] candidate @?= Just 1,
       testCase "repeatable cohort under cap: two evaluations create unlockSeq 1 then 2, both Active" $ do
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) (Just 3)
             candidate = mkCandidate "c1"
             -- First evaluation: no existing rows yet.
-            firstSeq = QRUE.nextUnlockDecision cohort [] candidate
+            firstSeq = QRUE.nextUnlockDecision cohort Nothing [] candidate
         firstSeq @?= Just 1
         let afterFirst = [mkUnlock "c1" DRU.Active 1]
             -- Second evaluation: the first unlock now exists (Active).
-            secondSeq = QRUE.nextUnlockDecision cohort afterFirst candidate
+            secondSeq = QRUE.nextUnlockDecision cohort Nothing afterFirst candidate
         secondSeq @?= Just 2,
       testCase "repeatable cohort at cap: liveForCohort count reaching n makes the next evaluation a no-op" $ do
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) (Just 3)
             existing = [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Redeemed 2, mkUnlock "c1" DRU.Active 3]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existing candidate @?= Nothing,
+        QRUE.nextUnlockDecision cohort Nothing existing candidate @?= Nothing,
       testCase "reclaimed row does not count against the cap and its unlockSeq is not reused" $ do
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) (Just 2)
             -- 2 live rows (seq 1, 3) plus a Reclaimed row at seq 2: cap is 2,
             -- liveForCohort has 2 entries, so this should still be blocked...
             existingAtCap = [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Reclaimed 2, mkUnlock "c1" DRU.Active 3]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existingAtCap candidate @?= Nothing
+        QRUE.nextUnlockDecision cohort Nothing existingAtCap candidate @?= Nothing
         -- ...but with only 1 live row (the Reclaimed one doesn't count against
         -- the cap), the rider is under cap. nextSeq is still computed from the
         -- max unlockSeq across ALL rows (including Reclaimed), so it continues
         -- from 2 rather than reusing it: 3.
         let existingUnderCap = [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Reclaimed 2]
-        QRUE.nextUnlockDecision cohort existingUnderCap candidate @?= Just 3,
+        QRUE.nextUnlockDecision cohort Nothing existingUnderCap candidate @?= Just 3,
       -- unlockSeq is nullable (NammaDSL forbids a NOT NULL new column); rows
       -- written before this migration have unlockSeq = Nothing and must be
       -- treated as occupying seq 1, both for blocking non-repeatable re-unlocks
@@ -181,12 +190,12 @@ tests =
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) Nothing
             existing = [mkLegacyUnlock "c1" DRU.Active]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existing candidate @?= Nothing,
+        QRUE.nextUnlockDecision cohort Nothing existing candidate @?= Nothing,
       testCase "legacy row (unlockSeq = Nothing) is treated as seq 1 when computing the next seq" $ do
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) (Just 3)
             existing = [mkLegacyUnlock "c1" DRU.Active]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existing candidate @?= Just 2,
+        QRUE.nextUnlockDecision cohort Nothing existing candidate @?= Just 2,
       -- Live reward card (GET /rewards/live)
       testCase "live reward: campaigns then cohorts by (displayOrder, createdAt), so ties are stable" $ do
         let campA = mkCampaign "campA" 0 (day 2)
@@ -219,6 +228,7 @@ tests =
         isRight' (parsed (variantInRule ["AUTO_RICKSHAW"])) @?= False
         isRight' (parsed (eqTextRule "rideServiceTier" "COMFY")) @?= False
         isRight' (parsed (gteRule "ridesLast7days" 3)) @?= False
+        isRight' (parsed (gteRule "validRidesThisCampaignWeek" 2)) @?= False
         isRight' (LiveReward.parseHomeCard (A.object ["header" A..= ("no title" :: Text)])) @?= False,
       testCase "live reward: live only inside the campaign window" $ do
         let campaign = mkCampaignWith "c" 0 (day 0) DRCmp.Active (Just (day 10))
@@ -229,7 +239,7 @@ tests =
         liveAt 10 @?= [False],
       testCase "live reward: one-shot cohort hides once unlocked in any non-Reclaimed status" $ do
         let candidates = singleCohortCandidates Nothing Nothing
-            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards A.Null unlocks candidates)
+            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards (day 0) A.Null unlocks candidates)
         shown [] @?= ["c1"]
         shown [mkUnlock "c1" DRU.Active 1] @?= []
         shown [mkUnlock "c1" DRU.Redeemed 1] @?= []
@@ -237,10 +247,10 @@ tests =
         shown [mkUnlock "other" DRU.Active 1] @?= ["c1"],
       testCase "live reward: a Reclaimed unlock shows the card again" $ do
         let candidates = singleCohortCandidates Nothing Nothing
-        map candidateCohortId (LiveReward.eligibleLiveRewards A.Null [mkUnlock "c1" DRU.Reclaimed 1] candidates) @?= ["c1"],
+        map candidateCohortId (LiveReward.eligibleLiveRewards (day 0) A.Null [mkUnlock "c1" DRU.Reclaimed 1] candidates) @?= ["c1"],
       testCase "live reward: repeatable cohort keeps its card until the cap is reached" $ do
         let candidates = singleCohortCandidates (Just 2) Nothing
-            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards A.Null unlocks candidates)
+            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards (day 0) A.Null unlocks candidates)
         shown [mkUnlock "c1" DRU.Active 1] @?= ["c1"]
         shown [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Redeemed 2] @?= []
         shown [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Reclaimed 2] @?= ["c1"],
@@ -249,6 +259,7 @@ tests =
             shownFor hasRide =
               map candidateCohortId $
                 LiveReward.eligibleLiveRewards
+                  (day 0)
                   (rewardContextToLogicInput defaultRewardContext {hasTakenValidRide = Just hasRide})
                   []
                   candidates
@@ -259,7 +270,40 @@ tests =
             candidates =
               LiveReward.mkLiveRewardCandidates
                 [(campaign, [mkHomeCardCohort "c1" 0 (day 0) Nothing (Just (cardJson "C1")), mkHomeCardCohort "c2" 1 (day 0) Nothing (Just (cardJson "C2"))])]
-        map candidateTitle (LiveReward.eligibleLiveRewards A.Null [mkUnlock "c1" DRU.Active 1] candidates) @?= ["C2"]
+        map candidateTitle (LiveReward.eligibleLiveRewards (day 0) A.Null [mkUnlock "c1" DRU.Active 1] candidates) @?= ["C2"],
+      -- campaign blocks: days / 7-day weeks counted from the campaign start
+      testCase "campaign block: daily and weekly block starts are counted from the campaign start" $ do
+        let start = read "2026-11-10 18:30:00 UTC" -- 11 Nov 00:00 IST
+            at = addUTCTime (8 * 86400 + 3600) start -- 19 Nov 01:00 IST
+        Block.blockStartAt DRC.Daily start at @?= addUTCTime (8 * 86400) start
+        Block.blockStartAt DRC.Weekly start at @?= addUTCTime (7 * 86400) start
+        Block.blockStartAt DRC.Weekly start (addUTCTime (7 * 86400 - 1) start) @?= start,
+      testCase "campaign block: a time before the campaign start falls in the first block" $ do
+        let start = read "2026-11-10 18:30:00 UTC"
+        Block.blockStartAt DRC.Weekly start (addUTCTime (-3600) start) @?= start,
+      testCase "evalCohortLogic: == N on validRidesThisCampaignWeek together with isValidRide" $ do
+        let logic = andRule [eqIntRule "validRidesThisCampaignWeek" 2, eqRule "isValidRide" True]
+            ctxWith n valid = rewardContextToLogicInput defaultRewardContext {validRidesThisCampaignWeek = Just n, isValidRide = Just valid}
+        snd <$> Eval.evalCohortLogic logic (ctxWith 2 True) @?= Right True
+        snd <$> Eval.evalCohortLogic logic (ctxWith 3 True) @?= Right False
+        snd <$> Eval.evalCohortLogic logic (ctxWith 2 False) @?= Right False,
+      -- weekly cap: once per 7-day block, again in the next block
+      testCase "weekly cohort: one unlock per week, again next week with a fresh seq" $ do
+        let cohort = mkWeeklyCohort "c1"
+            candidate = mkCandidate "c1"
+            week1 = Block.unlockBlockStart (day 0) cohort (day 2)
+            week2 = Block.unlockBlockStart (day 0) cohort (day 8)
+            unlockedWeek1 = [mkUnlockAt "c1" DRU.Active 1 (day 1)]
+        QRUE.nextUnlockDecision cohort week1 [] candidate @?= Just 1
+        QRUE.nextUnlockDecision cohort week1 unlockedWeek1 candidate @?= Nothing
+        QRUE.nextUnlockDecision cohort week2 unlockedWeek1 candidate @?= Just 2
+        QRUE.nextUnlockDecision cohort week2 (unlockedWeek1 <> [mkUnlockAt "c1" DRU.Active 2 (day 8)]) candidate @?= Nothing,
+      testCase "live reward: weekly cohort card hides after this week's unlock and returns next week" $ do
+        let weeklyCohort = (mkHomeCardCohort "c1" 0 (day 0) Nothing (Just (cardJson "C1"))) {DRC.unlockResetPeriod = Just DRC.Weekly}
+            candidates = LiveReward.mkLiveRewardCandidates [(mkCampaign "camp" 0 (day 0), [weeklyCohort])]
+            unlocks = [mkUnlockAt "c1" DRU.Active 1 (day 1)]
+        map candidateCohortId (LiveReward.eligibleLiveRewards (day 3) A.Null unlocks candidates) @?= []
+        map candidateCohortId (LiveReward.eligibleLiveRewards (day 7) A.Null unlocks candidates) @?= ["c1"]
     ]
 
 mkCtx :: Text -> Int -> A.Value
@@ -284,8 +328,15 @@ andRule rules = A.object ["and" A..= rules]
 eqRule :: Text -> Bool -> A.Value
 eqRule field b = A.object ["==" A..= [varRule field, A.toJSON b]]
 
+eqIntRule :: Text -> Int -> A.Value
+eqIntRule field n = A.object ["==" A..= [varRule field, A.toJSON n]]
+
 mkCohort :: Text -> A.Value -> DRC.RewardCohort
 mkCohort cohortId rule = mkCohortWithCap cohortId rule Nothing
+
+-- | One unlock per 7-day block (no maxUnlocksPerCohort, so the cap is 1 per block).
+mkWeeklyCohort :: Text -> DRC.RewardCohort
+mkWeeklyCohort cohortId = (mkCohort cohortId (A.Bool True)) {DRC.unlockResetPeriod = Just DRC.Weekly}
 
 mkCohortWithCap :: Text -> A.Value -> Maybe Int -> DRC.RewardCohort
 mkCohortWithCap cohortId rule maxUnlocks =
@@ -300,6 +351,7 @@ mkCohortWithCap cohortId rule maxUnlocks =
       rewardImageUrl = Nothing,
       couponValidityDays = Nothing,
       maxUnlocksPerCohort = maxUnlocks,
+      unlockResetPeriod = Nothing,
       presentation = Nothing,
       createdAt = read "2026-01-01 00:00:00 UTC",
       updatedAt = read "2026-01-01 00:00:00 UTC",
@@ -311,6 +363,10 @@ mkCohortWithCap cohortId rule maxUnlocks =
 -- unlockSeq — only the fields 'nextUnlockDecision' inspects vary per test.
 mkUnlock :: Text -> DRU.UnlockStatus -> Int -> DRU.RewardUnlock
 mkUnlock cohortId status seqNo = mkUnlockWithSeq cohortId status (Just seqNo)
+
+-- | Same, unlocked at a given time (for per-block caps).
+mkUnlockAt :: Text -> DRU.UnlockStatus -> Int -> UTCTime -> DRU.RewardUnlock
+mkUnlockAt cohortId status seqNo at = (mkUnlock cohortId status seqNo) {DRU.unlockedAt = at}
 
 -- | A row with unlockSeq = Nothing, as written before the unlockSeq column
 -- existed (NammaDSL forbids a NOT NULL new column, so unlockSeq is nullable
@@ -385,6 +441,7 @@ mkHomeCardCohort cohortIdText order created maxUnlocks homeCard =
       rewardImageUrl = Nothing,
       couponValidityDays = Nothing,
       maxUnlocksPerCohort = maxUnlocks,
+      unlockResetPeriod = Nothing,
       presentation = (\h -> A.object ["homeCard" A..= h]) <$> homeCard,
       createdAt = created,
       updatedAt = created,

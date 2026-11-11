@@ -7,8 +7,10 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RewardCampaign
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data RewardCohort = RewardCohort
@@ -24,8 +26,15 @@ data RewardCohort = RewardCohort
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rewardTitle :: Kernel.Prelude.Text,
+    unlockResetPeriod :: Kernel.Prelude.Maybe Domain.Types.RewardCohort.UnlockResetPeriod,
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq)
+
+data UnlockResetPeriod = Daily | Weekly deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''UnlockResetPeriod)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''UnlockResetPeriod)

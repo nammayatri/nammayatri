@@ -141,9 +141,9 @@ getLiveReward (mbPersonId, _merchantId) = do
           -- The rider context costs a few Redis reads; only audience rules need it.
           riderContext <-
             if any (isJust . (.targetingJsonLogic)) candidates
-              then Ctx.readRiderContext personId DRewardCtx.noRideInput
+              then DRewardCtx.rewardContextToLogicInput <$> Ctx.readRiderContext personId DRewardCtx.noRideInput
               else pure A.Null
-          API.LiveRewardCardResp . fmap (.card) <$> firstWithCoupons (LiveReward.eligibleLiveRewards riderContext unlocks candidates)
+          API.LiveRewardCardResp . fmap (.card) <$> firstWithCoupons (LiveReward.eligibleLiveRewards now riderContext unlocks candidates)
 
 -- | The first candidate with a coupon to give. Pool campaigns hand out
 -- pre-uploaded codes, so an empty pool means the ride would unlock nothing

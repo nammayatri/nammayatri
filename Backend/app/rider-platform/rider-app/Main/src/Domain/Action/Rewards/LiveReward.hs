@@ -36,10 +36,11 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import Data.List (sortOn)
 import qualified Data.Text as T
+import qualified Domain.Action.Rewards.CampaignBlock as Block
 import qualified Domain.Action.Rewards.Evaluator as Eval
 import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
-import Domain.Types.RewardContext (rewardContextKeys, rideScopedContextKeys)
+import Domain.Types.RewardContext (campaignScopedContextKeys, rewardContextKeys, rideScopedContextKeys)
 import qualified Domain.Types.RewardUnlock as DRU
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -54,6 +55,7 @@ data LiveRewardCandidate = LiveRewardCandidate
     endsAt :: Maybe UTCTime,
     isPoolSourced :: Bool,
     maxUnlocksPerCohort :: Maybe Int,
+    unlockResetPeriod :: Maybe DRC.UnlockResetPeriod,
     card :: API.LiveRewardCard,
     targetingJsonLogic :: Maybe A.Value
   }
@@ -62,7 +64,9 @@ data LiveRewardCandidate = LiveRewardCandidate
 -- | Read @presentation.homeCard@: the card (the extra @targetingJsonLogic@ key
 -- is ignored by its decoder) and the optional audience rule. The rule may only
 -- reference rider-context fields known at home-screen time; ride-scoped fields
--- ('rideScopedContextKeys') describe a just-finished ride, so they are rejected here.
+-- ('rideScopedContextKeys') describe a just-finished ride and campaign-scoped
+-- ones ('campaignScopedContextKeys') are only set during a campaign's
+-- evaluation, so both are rejected here.
 parseHomeCard :: A.Value -> Either Text (API.LiveRewardCard, Maybe A.Value)
 parseHomeCard v = do
   parsedCard <- case A.fromJSON v of
@@ -76,7 +80,7 @@ parseHomeCard v = do
     _ -> Right Nothing
   pure (parsedCard, audience)
   where
-    allowedFields = filter (`notElem` rideScopedContextKeys) rewardContextKeys
+    allowedFields = filter (`notElem` (rideScopedContextKeys <> campaignScopedContextKeys)) rewardContextKeys
     validateTarget logic =
       let referenced = filter (not . T.null) (Eval.collectVarNames logic)
           unknown = filter (\f -> T.takeWhile (/= '.') f `notElem` allowedFields) referenced
@@ -99,6 +103,7 @@ mkLiveRewardCandidates campaigns =
         endsAt = campaign.endsAt,
         isPoolSourced = campaign.couponSourceType == DRCmp.Pool,
         maxUnlocksPerCohort = cohort.maxUnlocksPerCohort,
+        unlockResetPeriod = cohort.unlockResetPeriod,
         card = homeCardValue,
         targetingJsonLogic = homeCardAudience
       }
@@ -116,13 +121,15 @@ isLiveAt now c = c.startsAt <= now && maybe True (> now) c.endsAt
 
 -- | Candidates this rider should see, in priority order: still unlockable under
 -- the cohort's repeat cap ('QRUE.hasUnlockCapacity', the rule the unlock engine
--- uses) and matching the audience rule, if any, against the rider's current
+-- uses; per day/week block for cohorts with a reset period) and matching the audience rule, if any, against the rider's current
 -- context. A rule that fails to evaluate hides the card. Pool stock is checked
 -- by the caller, since it needs Redis.
-eligibleLiveRewards :: A.Value -> [DRU.RewardUnlock] -> [LiveRewardCandidate] -> [LiveRewardCandidate]
-eligibleLiveRewards riderContext unlocks = filter (\c -> canStillUnlock c && inAudience c)
+eligibleLiveRewards :: UTCTime -> A.Value -> [DRU.RewardUnlock] -> [LiveRewardCandidate] -> [LiveRewardCandidate]
+eligibleLiveRewards now riderContext unlocks = filter (\c -> canStillUnlock c && inAudience c)
   where
-    canStillUnlock c = QRUE.hasUnlockCapacity c.maxUnlocksPerCohort c.cohortId unlocks
+    canStillUnlock c =
+      let mBlockStart = (\period -> Block.blockStartAt period c.startsAt now) <$> c.unlockResetPeriod
+       in QRUE.hasUnlockCapacity c.maxUnlocksPerCohort mBlockStart c.cohortId unlocks
     inAudience c = case c.targetingJsonLogic of
       Nothing -> True
       Just logic -> either (const False) snd (Eval.evalCohortLogic logic riderContext)
