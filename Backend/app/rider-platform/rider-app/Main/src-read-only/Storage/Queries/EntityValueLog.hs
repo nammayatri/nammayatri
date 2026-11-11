@@ -21,12 +21,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.EntityValueLog.EntityValueLog] -> m ())
 createMany = traverse_ create
 
-findAllByEntityTypeAndEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.EntityValueLog.EntityType -> Kernel.Prelude.Text -> m ([Domain.Types.EntityValueLog.EntityValueLog]))
+findAllByEntityTypeAndEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.EntityValueLog.EntityValueLog]))
 findAllByEntityTypeAndEntityId entityType entityId = do findAllWithKV [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.entityId $ Se.Eq entityId]]
 
 findAllByEntityTypeAndEntityIdAndOperationId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.EntityValueLog.EntityType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.EntityValueLog.EntityValueLog]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.EntityValueLog.EntityValueLog]))
 findAllByEntityTypeAndEntityIdAndOperationId entityType entityId operationId = do
   findAllWithKV
     [ Se.And
