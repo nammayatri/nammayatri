@@ -110,6 +110,7 @@ RiderConfig:
       maxSkipsAndCancels: Maybe Int # rider skips, and separately rider cancels, allowed per search; null = 15
       skipCancelCountTtlSec: Maybe Int # seconds a search's skip and cancel counts last; null = 18000 (5 h)
       skipMinEtaSec: Maybe Int # the assigned cab's ETA to the board stop must be over this for the rider to skip it; null = 120
+      riderSkipTtlSec: Maybe Int # seconds a cab the rider skipped stays excluded once the booking is in fallback; null = 120
     ExternalSOSTriggerSource:
       enum: "FRONTEND,DASHBOARD"
     ExternalSOSConfig:

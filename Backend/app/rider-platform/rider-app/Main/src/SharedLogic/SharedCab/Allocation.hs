@@ -80,10 +80,16 @@ releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   pure (isJust closed)
 
 -- | Rider skip: the plate joins the skipped set, and the rider's own skip is counted against the search, in the same booking-lock hold, so no claim can re-offer it first.
+-- A skip by the rider's choice (not "it arrived full") also lands in the rider-skipped key, which FALLBACK releases only after riderSkipTtlSec.
 skipSharedCabAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> Text -> SkipReason -> m Bool
 skipSharedCabAllocation cfg bookingId searchId plate reason = do
   let outcome = RiderSkipped reason
-  closed <- closeAllocation cfg bookingId plate outcome (addSkipped (allocKeyTtl cfg) bookingId plate >> when (usesRiderSkip reason) (recordRiderAction cfg.skipCancelCountTtlSec RiderSkip searchId))
+  closed <- closeAllocation cfg bookingId plate outcome $ do
+    addSkipped (allocKeyTtl cfg) bookingId plate
+    when (usesRiderSkip reason) $ do
+      now <- getCurrentTime
+      addRiderSkipped cfg.riderSkipTtlSec now bookingId plate
+      recordRiderAction cfg.skipCancelCountTtlSec RiderSkip searchId
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
@@ -183,7 +189,7 @@ claimFindings cityId cfg now live positionsByRoute = do
       let sessions = map (.session) snapshot
       flip (eachIsolated (withTryCatch "sharedCabClaim") failed) bookings $ \booking -> do
         attempts <- readAttempts booking.bookingId
-        skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
+        skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readRiderSkipped cfg.riderSkipTtlSec now booking.bookingId <*> readSkipped booking.bookingId
         let freeFor s = fromMaybe 0 $ do
               cab <- find ((== s.vehicleNumber) . (.session.vehicleNumber)) snapshot
               range <- Seats.bookingRange cab.seats booking.boardStopCode booking.dropStopCode
