@@ -68,6 +68,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, waybillMovesBooking)
@@ -1980,12 +1981,14 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
                 amountInt = fareParameters.totalPrice.amountInt,
                 currency = fareParameters.currency
               }
-          updatedBooking =
+      switchedSettleableAmount <- FRFSPassOverride.settleableAmountFor booking.overrideAppliedEntityId quoteId totalPriceForSwitchLeg.amount
+      let updatedBooking =
             booking
               { DFRFSTicketBooking.quoteId = quoteId,
                 DFRFSTicketBooking.stationsJson = quote.stationsJson,
                 DFRFSTicketBooking.routeStationsJson = quote.routeStationsJson,
-                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg
+                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg,
+                DFRFSTicketBooking.settleableAmount = switchedSettleableAmount
               }
       void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do

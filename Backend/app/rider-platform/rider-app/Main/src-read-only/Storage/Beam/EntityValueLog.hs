@@ -17,7 +17,7 @@ data EntityValueLogT f = EntityValueLogT
     actorType :: (B.C f Kernel.Types.ActorInfo.ActorType),
     delta :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Domain.Types.EntityValueLog.EntityType),
+    entityType :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
@@ -25,8 +25,8 @@ data EntityValueLogT f = EntityValueLogT
     operationType :: (B.C f Domain.Types.EntityValueLog.OperationType),
     reason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Domain.Types.EntityValueLog.OperationStatus),
-    valueAfter :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    valueBefore :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    valueAfter :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    valueBefore :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
