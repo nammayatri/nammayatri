@@ -38,6 +38,7 @@ import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
+import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
@@ -227,6 +228,7 @@ postSharedCabSessionOperations mbToken req = do
       (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
       Allocation.afterUnboarded plate AllocTypes.SeatLost released
       mkSessionResp full
+    API.STILL_ON_ROUTE -> CheckIn.answer req.driverId plate req.checkInId >>= mkSessionResp
   where
     plate = req.vehicleNumber
 
@@ -349,6 +351,8 @@ mkSessionRespFrom cabReads s = do
       (mbTrack,) <$> Seats.freeAhead s mbTrack
   let vehicle = (.position) <$> mbTrack
   riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
+  now <- getCurrentTime
+  checkIn <- if s.status == ACTIVE then (>>= CheckIn.checkInView now) <$> CheckIn.readCheckIn s.vehicleNumber else pure Nothing
   pure
     View.SharedCabSession
       { route,
@@ -367,7 +371,8 @@ mkSessionRespFrom cabReads s = do
         stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
         shapePolyline,
         vehicle,
-        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand
+        demandAhead = Demand.demandAheadRows [(st.stopCode, st.stopName) | st <- stops] demand,
+        checkIn
       }
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.

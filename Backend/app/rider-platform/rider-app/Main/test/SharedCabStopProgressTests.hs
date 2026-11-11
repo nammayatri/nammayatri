@@ -8,7 +8,7 @@ import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), runningTimerDeadline)
-import SharedLogic.SharedCab.Config (SharedCabTunables, defaultTunables)
+import SharedLogic.SharedCab.Config (SharedCabTunables (..), defaultTunables)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -16,6 +16,9 @@ import Prelude
 
 cfg :: SharedCabTunables
 cfg = defaultTunables
+
+noCheckIn :: SharedCabTunables
+noCheckIn = cfg {checkInLeadSec = 0}
 
 t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000
@@ -28,7 +31,11 @@ stopAt :: Int -> Bool -> StopMark
 stopAt idx reached = StopMark {stopCode = T.pack ("S" <> show idx), stopIdx = idx, reached, coordinate = LatLong (25.57 + 0.01 * fromIntegral idx) 91.88}
 
 fix :: Double -> [StopMark] -> CabFix
-fix lat stops = CabFix {position = LatLong lat 91.88, stops}
+fix = fixOn Nothing
+
+-- as fix, with gps-processor's is_on_stop
+fixOn :: Maybe Bool -> Double -> [StopMark] -> CabFix
+fixOn onStop lat stops = CabFix {position = LatLong lat 91.88, stops, onStop}
 
 tests :: TestTree
 tests =
@@ -57,14 +64,23 @@ tests =
         )
           @?= (StartDropClock, StartDropClock, KeepWaiting, KeepWaiting, KeepWaiting, AutoEnd),
       testCase "off route: pause only after gps-processor flags the cab for offRouteSec straight" $
-        ( offRouteAction cfg t0 Nothing (Just False),
-          offRouteAction cfg t0 Nothing (Just True),
-          offRouteAction cfg (after 119) (Just t0) (Just True),
-          offRouteAction cfg (after 120) (Just t0) (Just True),
-          offRouteAction cfg (after 120) (Just t0) (Just False),
-          offRouteAction cfg (after 120) (Just t0) Nothing
+        ( offRouteAction noCheckIn t0 Nothing (Just False),
+          offRouteAction noCheckIn t0 Nothing (Just True),
+          offRouteAction noCheckIn (after 119) (Just t0) (Just True),
+          offRouteAction noCheckIn (after 120) (Just t0) (Just True),
+          offRouteAction noCheckIn (after 120) (Just t0) (Just False),
+          offRouteAction noCheckIn (after 120) (Just t0) Nothing
         )
           @?= (OffRouteNoChange, StartOffRouteClock, OffRouteNoChange, PauseOffRoute, ClearOffRouteClock, OffRouteNoChange),
+      testCase "off route: the driver is asked checkInLeadSec before the pause, until it; never with no lead; the pause stays at offRouteSec" $
+        ( offRouteAction cfg (after 59) (Just t0) (Just True),
+          offRouteAction cfg (after 60) (Just t0) (Just True),
+          offRouteAction cfg (after 119) (Just t0) (Just True),
+          offRouteAction cfg (after 120) (Just t0) (Just True),
+          offRouteAction noCheckIn (after 60) (Just t0) (Just True),
+          offRouteAction cfg (after 60) (Just t0) Nothing
+        )
+          @?= (OffRouteNoChange, AskCheckIn (after 120), AskCheckIn (after 120), PauseOffRoute, OffRouteNoChange, OffRouteNoChange),
       testCase "moving timer: armed once, on arrival at the Upcoming board stop" $
         ( armMovingTimer cfg t0 Nothing (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5",
           armMovingTimer cfg t0 (Just (after 30)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5",
@@ -73,6 +89,13 @@ tests =
           armMovingTimer cfg t0 Nothing Nothing "S5"
         )
           @?= (Just (after 90), Nothing, Nothing, Nothing, Nothing),
+      testCase "moving timer with gps-processor's is_on_stop: armed when it holds the cab at the board stop, wherever the fix is; never on distance alone" $
+        ( armMovingTimer cfg t0 Nothing (Just (fixOn (Just True) 25.0 [stopAt 5 False, stopAt 6 False])) "S5",
+          armMovingTimer cfg t0 Nothing (Just (fixOn (Just False) 25.6195 [stopAt 5 False, stopAt 6 False])) "S5",
+          armMovingTimer cfg t0 Nothing (Just (fixOn (Just True) 25.6195 [stopAt 5 True, stopAt 6 False])) "S5",
+          armMovingTimer cfg t0 Nothing (Just (fixOn (Just True) 25.6195 [stopAt 4 False, stopAt 5 False, stopAt 6 False])) "S5"
+        )
+          @?= (Just (after 90), Nothing, Nothing, Nothing),
       testCase "moving timer: an away timer running at the stop is never replaced by the rider-blamed moving timer; a stand or moving timer is not either" $
         let st timer = AllocationState {vehicleNumber = "P1", timer}
             armedWith timer = armMovingTimer cfg t0 (runningTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"

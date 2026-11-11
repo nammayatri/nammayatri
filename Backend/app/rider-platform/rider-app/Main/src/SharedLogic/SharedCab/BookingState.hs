@@ -18,6 +18,7 @@ module SharedLogic.SharedCab.BookingState
     writePreferred,
     readPreferenceDropped,
     writePreferenceDropped,
+    writeDriverPassed,
     clearBookingState,
     bookingStateTtl,
     BookingStateView (..),
@@ -108,13 +109,18 @@ readPreferenceDropped bookingId = fromMaybe False <$> readField bookingId "prefe
 writePreferenceDropped :: StateFlow m r => Int -> BookingId -> m ()
 writePreferenceDropped ttl bookingId = writeField ttl bookingId "preferredDropped" True
 
+-- | A cab was released without the rider choosing it (declined, lapsed, timed out at the stop), so another is being found.
+writeDriverPassed :: StateFlow m r => Int -> BookingId -> m ()
+writeDriverPassed ttl bookingId = writeField ttl bookingId "driverPassed" True
+
 -- | The hash's fields a leg poll shows, from one HGETALL instead of a read per field.
 data BookingStateView = BookingStateView
   { allocState :: Maybe AllocationState,
     attemptCount :: Int,
     findingStintSince :: Maybe UTCTime,
     preferredPlate :: Maybe Text,
-    preferenceLost :: Bool
+    preferenceLost :: Bool,
+    driverPassed :: Bool
   }
 
 -- | A missing or undecodable field reads as its single-field reader's default.
@@ -125,7 +131,8 @@ bookingStateFrom fields =
       attemptCount = fromMaybe 0 (field "attempts"),
       findingStintSince = field "findingSince",
       preferredPlate = field "preferred",
-      preferenceLost = fromMaybe False (field "preferredDropped")
+      preferenceLost = fromMaybe False (field "preferredDropped"),
+      driverPassed = fromMaybe False (field "driverPassed")
     }
   where
     field :: FromJSON a => Text -> Maybe a

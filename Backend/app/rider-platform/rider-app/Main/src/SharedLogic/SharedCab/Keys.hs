@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Keys
     driverInfoKey,
     plateLockKey,
     offRouteKey,
+    checkInKey,
     noLocationKey,
     bookingLockKey,
     bookingStateKey,
@@ -74,6 +75,9 @@ plateLockKey plate = "sharedcab:lock:" <> plate
 
 offRouteKey :: Text -> Text
 offRouteKey plate = "sharedcab:offroute:" <> plate
+
+checkInKey :: Text -> Text
+checkInKey plate = "sharedcab:checkin:" <> plate
 
 noLocationKey :: Text -> Text
 noLocationKey plate = "sharedcab:noloc:" <> plate

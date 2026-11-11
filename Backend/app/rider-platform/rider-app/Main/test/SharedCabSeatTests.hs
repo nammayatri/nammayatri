@@ -167,5 +167,7 @@ tests =
           speed = Nothing,
           stopSequence = Nothing,
           tripId = Nothing,
-          etas = [CQMMB.BusStopETA code Nothing t0 i Nothing | (i, code) <- zip [0 ..] ahead]
+          etas = [CQMMB.BusStopETA code Nothing t0 i Nothing | (i, code) <- zip [0 ..] ahead],
+          offRoute = False,
+          onStop = Nothing
         }

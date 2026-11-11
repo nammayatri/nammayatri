@@ -313,6 +313,7 @@ data SharedCabConfig = SharedCabConfig
     callEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     callMode :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode,
     chatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    checkInLeadSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     degradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     demandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

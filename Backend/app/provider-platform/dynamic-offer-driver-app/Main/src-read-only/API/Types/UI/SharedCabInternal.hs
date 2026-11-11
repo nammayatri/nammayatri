@@ -8,6 +8,10 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data SharedCabCheckInReq = SharedCabCheckInReq {driverId :: Kernel.Prelude.Text, routeCode :: Kernel.Prelude.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
