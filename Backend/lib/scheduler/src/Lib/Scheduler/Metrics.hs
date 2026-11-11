@@ -76,9 +76,9 @@ jobLifecycleStatusLabel = \case
 -- @jobType@ must be the bare job type (e.g. @SendSearchRequestToDriver@). Do
 -- not pre-apply 'show' to it: the older @stream_jobs_counter@ call sites do,
 -- which is why their @job_type@ label values carry embedded quotes.
-incrementJobLifecycleCounter :: CoreMetrics m => Text -> JobLifecycleStatus -> m ()
-incrementJobLifecycleCounter jobType status =
-  incrementSchedulerJobLifecycleCounter jobType (jobLifecycleStatusLabel status)
+incrementJobLifecycleCounter :: CoreMetrics m => Text -> Maybe Text -> JobLifecycleStatus -> m ()
+incrementJobLifecycleCounter jobType merchantOperatingCityId status =
+  incrementSchedulerJobLifecycleCounter jobType (jobLifecycleStatusLabel status) (fromMaybe "unknown" merchantOperatingCityId)
 
 {-# NOINLINE reviverStageCounter #-}
 reviverStageCounter :: P.Vector P.Label1 P.Counter
