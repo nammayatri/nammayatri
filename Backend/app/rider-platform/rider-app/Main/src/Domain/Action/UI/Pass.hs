@@ -1394,7 +1394,9 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
               || firstPayment.passPhotoMediaId /= purchasedPass.passPhotoMediaId
               || purchasedPass.activatedAt /= newActivatedAt
               || isChangedProfilePicture
-       in return (newPass, Just newPassPayment, hasChanged)
+       in if hasChanged
+            then return (newPass, Just newPassPayment, True)
+            else return (purchasedPass, Just firstPayment, False)
     Nothing
       | purchasedPass.status `elem` liveStatuses
           && purchasedPass.endDate < today ->
