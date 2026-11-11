@@ -6,8 +6,9 @@ import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
-import Data.List (groupBy, nub, sortBy)
+import Data.List (groupBy, nub, sortBy, sortOn)
 import qualified Data.List.NonEmpty as DLNE
 import qualified Data.List.NonEmpty as NE
 import Data.Scientific (toRealFloat)
@@ -798,12 +799,17 @@ upsertLogicRollout ::
   (LYT.LogicDomain -> Id LYT.MerchantOperatingCity -> Id Lib.Yudhishthira.Types.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp) ->
   Kernel.Types.Beckn.Context.City ->
   m Kernel.Types.APISuccess.APISuccess
-upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity = do
+upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
   if isDriverOrRiderConfig domain || isUIConfig domain
     then do
+      -- Per-field guard: within each timeBounds group, versions that write the SAME config field
+      -- compete for it (newest wins at runtime), so their cumulative rollout on that field must not
+      -- exceed 100%. Run here (not in the deeper helpers) because it reads the live config via
+      -- 'giveConfigs', which is fixed to this function's monad.
+      forM_ rolloutReq $ \ro -> validateFieldWiseRollout ro.domain merchantOpCityId ro.rollout
       void $ ensureBaseRolloutExistAndUpdateRollout domain merchantOpCityId now rolloutReq
       when (isUIConfig domain) $ do
         void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
@@ -849,9 +855,78 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity 
     mkAppDynamicLogicRolloutDomain merchantOperatingCityId now Lib.Yudhishthira.Types.LogicRolloutObject {..} = do
       when (timeBounds /= "Unbounded") $
         void $ CQTBC.findByPrimaryKey merchantOperatingCityId timeBounds domain >>= fromMaybeM (InvalidRequest $ "Time bound not found: " <> timeBounds)
-      let rolloutSum = sum $ map (.rolloutPercentage) rollout
-      when (rolloutSum > 100) $ throwError $ InvalidRequest "Sum of rollout percentages should not exceed 100"
+      if isDriverOrRiderConfig domain || isUIConfig domain
+        then forM_ rollout $ \rv ->
+          when (rv.rolloutPercentage < 0 || rv.rolloutPercentage > 100) $
+            throwError $ InvalidRequest $ "Rollout percentage for version " <> show rv.version <> " must be between 0 and 100"
+        else do
+          let rolloutSum = sum $ map (.rolloutPercentage) rollout
+          when (rolloutSum > 100) $ throwError $ InvalidRequest "Sum of rollout percentages should not exceed 100"
       mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds (if isDriverOrRiderConfig domain || isUIConfig domain then Just Lib.Yudhishthira.Types.RUNNING else Nothing) modifiedBy) rollout
+
+    validateFieldWiseRollout domain merchantOperatingCityId rollout =
+      case mbMerchantId of
+        Nothing -> pure ()
+        Just merchantId -> do
+          eConfigs <- try @_ @SomeException $ giveConfigs domain merchantOperatingCityId merchantId opCity
+          case eConfigs of
+            -- Fail-open: a transient failure loading the base config disables the guard for this
+            -- request. Warn so a persistently-broken guard is visible rather than silent.
+            Left e -> logWarning $ "validateFieldWiseRollout: skipping per-field guard for domain=" <> show domain <> " (could not load base config): " <> show e
+            Right tableData -> do
+              let baseConfigs = tableData.configs
+              perVersionFields <-
+                forM (filter (\rv -> rv.rolloutPercentage > 0) rollout) $ \rv -> do
+                  fields <- touchedFieldsForVersion domain baseConfigs rv.version
+                  pure (rv.version, rv.rolloutPercentage, fields)
+              let allFields = nub $ concatMap (\(_, _, fs) -> fs) perVersionFields
+                  overAllocated =
+                    [ (field, contributors, total)
+                      | field <- allFields,
+                        let contributors = [(ver, pct) | (ver, pct, fs) <- perVersionFields, field `elem` fs],
+                        let total = sum (map snd contributors),
+                        total > 100
+                    ]
+                  -- Field keys are row-qualified ("<rowIdx>.<dotted.path>"); strip the row index for a
+                  -- readable name and de-duplicate so an all-rows edit reads as one field, not N.
+                  displayField p = let (_, rest) = T.breakOn "." p in if T.null rest then p else T.drop 1 rest
+                  renderConflict (field, contributors, total) =
+                    displayField field <> " (" <> T.intercalate ", " (map (\(ver, pct) -> "v" <> show ver <> "=" <> show pct <> "%") contributors) <> " => " <> show total <> "%)"
+              unless (null overAllocated) $
+                throwError $ InvalidRequest $ "Cumulative rollout exceeds 100% on field(s): " <> T.intercalate "; " (nub (map renderConflict overAllocated))
+
+    touchedFieldsForVersion :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> [A.Value] -> Int -> m [Text]
+    touchedFieldsForVersion domain baseConfigs version = do
+      elems <- CADLE.findByDomainAndVersion domain version
+      let logics = map (.logic) (sortOn (.order) elems)
+      if null logics
+        then pure []
+        else do
+          changedPerConfig <-
+            forM (zip [0 :: Int ..] baseConfigs) $ \(rowIdx, rawCfg) -> do
+              let wrapper = Lib.Yudhishthira.Types.Config {config = rawCfg, extraDimensions = Nothing, identifier = 0}
+              resp <- runLogics logics wrapper
+              pure $ map (\p -> show rowIdx <> "." <> p) (changedConfigFields (A.toJSON wrapper) resp.result)
+          pure $ nub (concat changedPerConfig)
+    changedConfigFields :: A.Value -> A.Value -> [Text]
+    changedConfigFields before after =
+      let b = configLeafPaths before
+          a = configLeafPaths after
+          keys = nub (map fst a <> map fst b)
+       in [k | k <- keys, lookup k a /= lookup k b]
+
+    configLeafPaths :: A.Value -> [(Text, A.Value)]
+    configLeafPaths v = case v of
+      A.Object o -> maybe [] (flattenJson "") (AKM.lookup "config" o)
+      _ -> []
+    flattenJson :: Text -> A.Value -> [(Text, A.Value)]
+    flattenJson prefix val = case val of
+      A.Object o | not (AKM.null o) -> concatMap (\(k, v) -> flattenJson (joinPath prefix (AK.toText k)) v) (AKM.toList o)
+      A.Array vec | not (null vec) -> concat $ zipWith (\i v -> flattenJson (joinPath prefix (show (i :: Int))) v) [0 ..] (toList vec)
+      leaf -> [(prefix, leaf)]
+      where
+        joinPath "" k = k
+        joinPath p k = p <> "." <> k
 
     mkAppDynamicLogicRollout ::
       BeamFlow m r =>

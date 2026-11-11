@@ -705,7 +705,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
+  result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnDBConfigs opCity
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
@@ -1574,7 +1574,7 @@ postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorNa
             rollout = [LYT.RolloutVersion {version = version, rolloutPercentage = percentage, versionDescription = Just ("Enabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
             modifiedBy = Just (Id requestorId)
           }
-  void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
+  void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnDBConfigs opCity
   -- Seed the pack's template keys PLUS every NUDGE/WARN key the enabled rulebook
   -- version actually references, so a customised rulebook never points at an
   -- overlay the city doesn't have.
@@ -1633,7 +1633,7 @@ postNammaTagBehaviorDisable merchantShortId opCity domain requestorId requestorN
                 rollout = [LYT.RolloutVersion {version = active.version, rolloutPercentage = 0, versionDescription = Just ("Disabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
                 modifiedBy = Just (Id requestorId)
               }
-      void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
+      void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnDBConfigs opCity
       logInfo $ "Behaviour " <> show domain <> " disabled in city " <> merchantOpCityId.getId <> " by " <> requestorId
       pure Kernel.Types.APISuccess.Success
 
