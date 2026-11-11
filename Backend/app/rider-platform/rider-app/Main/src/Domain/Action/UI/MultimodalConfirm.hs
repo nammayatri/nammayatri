@@ -3066,7 +3066,7 @@ onboardBusOrMetro ::
   DJourneyLeg.JourneyLeg ->
   DFRFSTicketBooking.FRFSTicketBooking ->
   Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
-onboardBusOrMetro (mbPersonId, merchantId) journeyId subLegOrder req journey journeyLeg booking = do
+onboardBusOrMetro (mbPersonId, merchantId) journeyId _subLegOrder req journey journeyLeg booking = do
   vehicleNumber <- req.vehicleNumber & fromMaybeM (InvalidRequest "vehicleNumber is required")
   let boardingMethod = DJourneyLeg.UserActivated
   let mbForceCheckIn = req.forceCheckIn
