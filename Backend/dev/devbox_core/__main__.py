@@ -39,7 +39,7 @@ def _summary(m: dict) -> dict:
 
 
 def _devboxes(args: argparse.Namespace) -> tuple[list, str | None]:
-    res = fleet.fetch_machines(args.gateway)
+    res = fleet.fetch_machines()
     return fleet.devboxes(res.get("machines", [])), res.get("error")
 
 
@@ -58,7 +58,7 @@ def cmd_pick(args: argparse.Namespace) -> int:
     workflow steps as DEVBOX_HOST / DEVBOX_USER / DEVBOX_NAME, and the address
     its URLs are opened on (office network) as DEVBOX_URL_HOST."""
     try:
-        t, name, url_host = flow.pick_target(args.user, args.host, None, args.gateway)
+        t, name, url_host = flow.pick_target(args.user, args.host, None)
     except RuntimeError as e:
         print(json.dumps({"error": str(e)}))
         return 1
@@ -266,9 +266,6 @@ def main(argv: list | None = None) -> int:
     for name, func, help_ in (("machines", cmd_machines, "list the dev-boxes and their route from here"),
                               ("pick", cmd_pick, "the least-loaded reachable dev-box with a front desk")):
         c = sub.add_parser(name, help=help_)
-        c.add_argument("--gateway", default=stack.GATEWAY_URL,
-                       help="hopper service discovery, whose /node/list names the machines "
-                            "(env HOPPER_GATEWAY_URL)")
         if name == "pick":
             c.add_argument("--host", help="use this dev-box (its front desk is still checked)")
             c.add_argument("--user", help="SSH user for --host")
