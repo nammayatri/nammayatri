@@ -64,6 +64,8 @@ SearchRequest:
     tollNames: Maybe [Text]
     tollIds: Maybe [Text]
     isReallocationEnabled: Maybe Bool
+    isSilentReallocationEnabled: Maybe Bool
+    silentReallocationWindowSeconds: Maybe Seconds
     toLocation: Maybe Location
     estimatedDistance: Maybe Meters
     distanceUnit: DistanceUnit

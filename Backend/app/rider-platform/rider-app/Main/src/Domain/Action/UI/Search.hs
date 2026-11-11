@@ -522,6 +522,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
+  -- the BPP stamps reallocation tries as silent-window hits or misses, so it needs the window length
+  let silentWindowSeconds = if searchRequest.isSilentReallocationEnabled == Just True then riderCfg.silentReallocationWindowSeconds else Nothing
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,
@@ -530,7 +532,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain silentWindowSeconds,
         riderGender = Just (show person.gender),
         origin = enrichedOrigin,
         stops = enrichedStops,
@@ -561,7 +563,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain mbSilentWindowSeconds = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
@@ -580,6 +582,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
                      (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
                      (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
+                     (Beckn.IS_SILENT_REALLOCATION_ENABLED, show <$> searchRequest.isSilentReallocationEnabled),
+                     (Beckn.SILENT_REALLOCATION_WINDOW_SECONDS, show . (.getSeconds) <$> mbSilentWindowSeconds),
                      (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
                      (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
                      (Beckn.IS_MULTIMODAL_SEARCH, Just $ show justMultimodalSearch),

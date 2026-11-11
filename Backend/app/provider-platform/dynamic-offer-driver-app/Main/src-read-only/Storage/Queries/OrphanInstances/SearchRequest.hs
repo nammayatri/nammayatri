@@ -38,7 +38,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
-    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
+    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
     userBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)
     userSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)
     pure $
@@ -79,6 +79,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             isReallocationEnabled = isReallocationEnabled,
             isReserveRide = isReserveRide,
             isScheduled = fromMaybe False isScheduled,
+            isSilentReallocationEnabled = isSilentReallocationEnabled,
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
             numberOfLuggages = numberOfLuggages,
@@ -98,6 +99,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             riderPreferredOption = fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption,
             roundTrip = roundTrip,
             searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
+            silentReallocationWindowSeconds = silentReallocationWindowSeconds,
             specialLocationName = specialLocationName,
             specialLocationTag = specialLocationTag,
             startTime = startTime_,
@@ -155,6 +157,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.isReallocationEnabled = isReallocationEnabled,
         Beam.isReserveRide = isReserveRide,
         Beam.isScheduled = Just isScheduled,
+        Beam.isSilentReallocationEnabled = isSilentReallocationEnabled,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
         Beam.numberOfLuggages = numberOfLuggages,
@@ -174,11 +177,12 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.riderPreferredOption = Just riderPreferredOption,
         Beam.roundTrip = roundTrip,
         Beam.searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags,
+        Beam.silentReallocationWindowSeconds = silentReallocationWindowSeconds,
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
+        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,

@@ -177,6 +177,7 @@ handler merchantId req validatedReq = do
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
+        QST.markReallocationOutcome searchTry
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing quote.addOnData

@@ -36,6 +36,7 @@ data SearchTry = SearchTry
     id :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,
     isAdvancedBookingEnabled :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
+    isSilentReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
@@ -43,10 +44,12 @@ data SearchTry = SearchTry
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     preferSafetyPlus :: Kernel.Prelude.Bool,
+    reallocationOutcome :: Kernel.Prelude.Maybe Domain.Types.SearchTry.ReallocationOutcome,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRepeatCounter :: Kernel.Prelude.Int,
     searchRepeatType :: Domain.Types.SearchTry.SearchRepeatType,
     serviceTierArray :: [Kernel.Prelude.Text],
+    silentReallocationWindowEndsAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.SearchTry.SearchTryStatus,
     tripCategory :: Domain.Types.Common.TripCategory,
@@ -58,12 +61,16 @@ data SearchTry = SearchTry
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ReallocationOutcome = SILENT_REALLOCATION_ACCEPTED | REALLOCATION_ACCEPTED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchTryStatus)
+data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''SearchTryStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchTryStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRepeatType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SearchTryStatus))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRepeatType))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ReallocationOutcome))
