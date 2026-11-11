@@ -1,7 +1,9 @@
 """Fleet helpers: list the machines service discovery knows, and pick a devbox.
 
-The machines come from hopper's service discovery (GET <gateway>/node/list):
-every node whose hopper-agent reported in the last 30s. A dev-box shows up
+The machines come from `hopper list --json`: service discovery's private,
+tailnet-only /node/list (every node whose hopper-agent reported in the last
+30s) plus each node's tailscale online state. So this needs the hopper CLI and
+`hopper up`, and never asks SD's public listener. A dev-box shows up
 only when its hopper-agent was installed with node type "dev-box"
 (HOPPER_NODE_TYPE in /etc/hopper-agent.env).
 
@@ -14,12 +16,38 @@ import ipaddress
 import json
 import re
 import subprocess
+import os
 import sys
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
-from . import ssh, stack
+from . import ssh
+
+HOPPER = os.environ.get("HOPPER_CLI", "hopper")
+_HOPPER_FIX = "install hopper (brew install nammayatri/hopper/hopper) and run 'hopper up'"
+
+
+def _hopper_nodes() -> list:
+    """`hopper list --json`: [{magic_dns_name, node_type, username, local_ip,
+    overlay_ip, cpu_usage, mem_usage, disk_usage, updated_at, online}, …].
+    Raises RuntimeError with what to do when hopper is missing, too old or offline."""
+    try:
+        r = subprocess.run([HOPPER, "list", "--json"], capture_output=True, text=True, timeout=20)
+    except FileNotFoundError:
+        raise RuntimeError(f"hopper CLI not found: {_HOPPER_FIX}")
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"'hopper list --json' timed out: {_HOPPER_FIX}")
+    if r.returncode != 0:
+        lines = (r.stderr or r.stdout).strip().splitlines()
+        raise RuntimeError(f"'hopper list --json' failed ({lines[-1].strip() if lines else r.returncode}): {_HOPPER_FIX}")
+    try:
+        nodes = json.loads(r.stdout)
+    except ValueError:
+        # Older hopper ignores --json and prints its table.
+        raise RuntimeError("hopper is too old for 'hopper list --json': brew upgrade nammayatri/hopper/hopper")
+    if not isinstance(nodes, list):
+        raise RuntimeError("'hopper list --json' did not return a list")
+    return nodes
 
 
 def _port_open(ip: str, port: int = 22) -> bool:
@@ -67,29 +95,25 @@ def _pct(value) -> str:
         return ""
 
 
-def fetch_machines(gateway: str = stack.GATEWAY_URL,
-                   reachable: Callable[[str], bool] = _port_open) -> dict:
+def fetch_machines(reachable: Callable[[str], bool] = _port_open,
+                   nodes_fn: Callable[[], list] = _hopper_nodes) -> dict:
     """The machines hopper's service discovery knows, as MachineInfo dicts.
 
-    Calls  GET <gateway>/node/list
-    which returns the nodes whose hopper-agent reported in the last 30s:
+    Runs  hopper list --json  (see _hopper_nodes), which lists the nodes whose
+    hopper-agent reported in the last 30s:
       [{magic_dns_name, node_type, username, local_ip, overlay_ip,
-        cpu_usage, mem_usage, disk_usage, updated_at}, …]
+        cpu_usage, mem_usage, disk_usage, updated_at, online}, …]
 
     Transforms that into:
       { "machines": [MachineInfo, …], "myIps": [...], "myNetworks": [...] }
     where MachineInfo = {name, role, localIp, overlayIp, bestIp, user, type, usage, …}
 
     `reachable(ip)` decides whether an address answers; callers that poll pass
-    a cached version."""
-    url = f"{gateway.rstrip('/')}/node/list"
+    a cached version. `nodes_fn` is the node source (tests pass a fake)."""
     try:
-        with urllib.request.urlopen(url, timeout=10) as r:
-            nodes = json.loads(r.read().decode())
-        if not isinstance(nodes, list):
-            raise ValueError("not a list")
+        nodes = nodes_fn()
     except Exception as e:
-        return {"machines": [], "myIps": [], "error": f"service discovery unreachable at {url}: {e}"}
+        return {"machines": [], "myIps": [], "error": str(e)}
 
     # Collect this machine's IPs + networks so we can pick the best route.
     my_networks = _my_networks()
@@ -121,7 +145,8 @@ def fetch_machines(gateway: str = stack.GATEWAY_URL,
         local_ip = n.get("local_ip") or ""
         overlay_ip = n.get("overlay_ip") or ""
         lan_subnet = _shared_subnet(local_ip)
-        overlay_ok = bool(overlay_ip) and reachable(overlay_ip)
+        # tailscale already says it is offline: don't wait on a probe that can't answer.
+        overlay_ok = bool(overlay_ip) and n.get("online") is not False and reachable(overlay_ip)
         # Skip the office probe when the overlay address already answered — same box.
         lan_ok = bool(local_ip) and (False if overlay_ok else reachable(local_ip))
         # The overlay address wins when it answers: it does not change when the

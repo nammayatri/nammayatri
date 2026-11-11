@@ -1035,7 +1035,7 @@ def _reach_cache_clear() -> None:
 
 
 def _fetch_machines() -> dict:
-    """The machines hopper's service discovery lists (GET <gateway>/node/list),
+    """The machines hopper's service discovery lists (`hopper list --json`),
     as MachineInfo dicts the frontend can render in a dropdown:
       { "machines": [MachineInfo, …], "myIps": [...] }
     where MachineInfo = {name, role, localIp, overlayIp, bestIp, user, type, usage}
