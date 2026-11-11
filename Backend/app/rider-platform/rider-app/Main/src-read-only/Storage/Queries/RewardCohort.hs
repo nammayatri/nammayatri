@@ -46,6 +46,7 @@ updateByPrimaryKey (Domain.Types.RewardCohort.RewardCohort {..}) = do
       Se.Set Beam.presentation (Kernel.Prelude.identity presentation),
       Se.Set Beam.rewardImageUrl rewardImageUrl,
       Se.Set Beam.rewardTitle rewardTitle,
+      Se.Set Beam.unlockResetPeriod unlockResetPeriod,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)

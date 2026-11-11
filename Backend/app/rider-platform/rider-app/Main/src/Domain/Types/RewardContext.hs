@@ -20,6 +20,7 @@ module Domain.Types.RewardContext
     rewardContextToLogicInput,
     rewardContextKeys,
     rideScopedContextKeys,
+    campaignScopedContextKeys,
   )
 where
 
@@ -51,7 +52,12 @@ data RewardContext = RewardContext
     rideVehicleVariant :: Maybe Text,
     -- | Service tier of the ride that triggered the evaluation (e.g. @"COMFY"@,
     -- @"ECO"@). Absent when there is no ride context.
-    rideServiceTier :: Maybe Text
+    rideServiceTier :: Maybe Text,
+    -- | Valid rides in the campaign's city in the current day / 7-day block,
+    -- counted from the campaign's start ('Domain.Action.Rewards.CampaignBlock').
+    -- Set per campaign during evaluation; absent (so 0) elsewhere.
+    validRidesThisCampaignDay :: Maybe Int,
+    validRidesThisCampaignWeek :: Maybe Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -80,7 +86,9 @@ defaultRewardContext =
       hasTakenValidRide = Nothing,
       isValidRide = Nothing,
       rideVehicleVariant = Nothing,
-      rideServiceTier = Nothing
+      rideServiceTier = Nothing,
+      validRidesThisCampaignDay = Nothing,
+      validRidesThisCampaignWeek = Nothing
     }
 
 -- | The single serializer feeding JSON logic (production AND dashboard tool).
@@ -101,7 +109,9 @@ rewardContextToLogicInput RewardContext {..} =
       "hasTakenValidRide" A..= fromMaybe False hasTakenValidRide,
       "isValidRide" A..= isValidRide,
       "rideVehicleVariant" A..= rideVehicleVariant,
-      "rideServiceTier" A..= rideServiceTier
+      "rideServiceTier" A..= rideServiceTier,
+      "validRidesThisCampaignDay" A..= fromMaybe 0 validRidesThisCampaignDay,
+      "validRidesThisCampaignWeek" A..= fromMaybe 0 validRidesThisCampaignWeek
     ]
 
 -- | The context keys a cohort eligibility logic may reference. Derived from the
@@ -118,3 +128,9 @@ rewardContextKeys = case rewardContextToLogicInput defaultRewardContext of
 -- evaluated there must not reference them.
 rideScopedContextKeys :: [Text]
 rideScopedContextKeys = ["isValidRide", "rideVehicleVariant", "rideServiceTier"]
+
+-- | Context keys that depend on the campaign being evaluated. Only set during
+-- ride-completion evaluation, so logics evaluated without a campaign (e.g. the
+-- home-screen card's targeting rule) must not reference them.
+campaignScopedContextKeys :: [Text]
+campaignScopedContextKeys = ["validRidesThisCampaignDay", "validRidesThisCampaignWeek"]

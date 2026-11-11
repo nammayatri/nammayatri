@@ -29,3 +29,8 @@ ALTER TABLE atlas_app.reward_cohort ADD COLUMN presentation jsonb ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.reward_cohort ADD COLUMN max_unlocks_per_cohort integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.reward_cohort ADD COLUMN unlock_reset_period text ;

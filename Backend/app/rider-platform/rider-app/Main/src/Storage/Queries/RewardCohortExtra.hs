@@ -31,8 +31,11 @@ updateEditableFields ::
   -- 'Just (Just n)' = set the repeat cap to n. Double-'Maybe' (unlike the
   -- other fields here) because ops needs a way to unset a previously-set cap.
   Maybe (Maybe Int) ->
+  -- | Same double-'Maybe' shape: 'Just Nothing' = cap covers the whole campaign
+  -- again; 'Just (Just p)' = cap resets every day / 7-day block.
+  Maybe (Maybe DRC.UnlockResetPeriod) ->
   m ()
-updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewardImageUrl mCouponValidityDays mPresentation mMaxUnlocksPerCohort = do
+updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewardImageUrl mCouponValidityDays mPresentation mMaxUnlocksPerCohort mUnlockResetPeriod = do
   now <- getCurrentTime
   let updates =
         catMaybes
@@ -45,6 +48,7 @@ updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewa
             mCouponValidityDays >>= \d -> Just (Se.Set Beam.couponValidityDays (Just d)),
             mPresentation >>= \p -> Just (Se.Set Beam.presentation (Just p)),
             mMaxUnlocksPerCohort >>= \mn -> Just (Se.Set Beam.maxUnlocksPerCohort mn),
+            mUnlockResetPeriod >>= \mp -> Just (Se.Set Beam.unlockResetPeriod mp),
             Just (Se.Set Beam.updatedAt now)
           ]
   unless (null updates) $

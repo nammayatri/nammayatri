@@ -30,6 +30,7 @@ instance FromTType' Beam.RewardCohort Domain.Types.RewardCohort.RewardCohort whe
             presentation = Kernel.Prelude.identity presentation,
             rewardImageUrl = rewardImageUrl,
             rewardTitle = rewardTitle,
+            unlockResetPeriod = unlockResetPeriod,
             updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
@@ -50,6 +51,7 @@ instance ToTType' Beam.RewardCohort Domain.Types.RewardCohort.RewardCohort where
         Beam.presentation = Kernel.Prelude.identity presentation,
         Beam.rewardImageUrl = rewardImageUrl,
         Beam.rewardTitle = rewardTitle,
+        Beam.unlockResetPeriod = unlockResetPeriod,
         Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId

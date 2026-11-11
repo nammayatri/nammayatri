@@ -19,6 +19,7 @@ module Domain.Action.Rewards.Consumer
   )
 where
 
+import qualified Domain.Action.Rewards.CampaignBlock as Block
 import qualified Domain.Action.Rewards.Coupon as Coupon
 import qualified Domain.Action.Rewards.Evaluator as Eval
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -76,7 +77,7 @@ evaluateRewardsForRider ::
   DRCtx.RewardRideInput ->
   m ()
 evaluateRewardsForRider riderId moCityId completedAt rideInput = do
-  context <- Ctx.readRiderContext riderId rideInput
+  riderContext <- Ctx.readRiderContext riderId rideInput
   activeCampaigns <- QRCmpE.findAllActiveInCityAtTime moCityId completedAt
   logInfo $
     "rewards.eval.start riderId="
@@ -86,14 +87,17 @@ evaluateRewardsForRider riderId moCityId completedAt rideInput = do
       <> " activeCampaignCount="
       <> show (length activeCampaigns)
       <> " context="
-      <> encodeToText context
+      <> encodeToText (DRCtx.rewardContextToLogicInput riderContext)
   foldM_
     ( \pushesSoFar campaign -> do
         cohorts <- QRC.findAllByCampaign campaign.id
         existing <- QRU.findByPersonAndCampaign riderId campaign.id
+        campaignContext <- Ctx.withCampaignBlockCounts riderId campaign completedAt riderContext
+        let context = DRCtx.rewardContextToLogicInput campaignContext
         let existingNonReclaimed = [u.cohortId | u <- existing, u.status /= DRU.Reclaimed]
         matched <- Eval.evaluateCohorts context cohorts
-        let isRepeatableCohortId cid = maybe False (isJust . (.maxUnlocksPerCohort)) (find (\c -> c.id == cid) cohorts)
+        let isRepeatableCohort c = isJust c.maxUnlocksPerCohort || isJust c.unlockResetPeriod
+        let isRepeatableCohortId cid = maybe False isRepeatableCohort (find (\c -> c.id == cid) cohorts)
         let toUnlock = filter (\cid -> cid `notElem` existingNonReclaimed || isRepeatableCohortId cid) matched
         when (not (null cohorts)) $
           logInfo $
@@ -101,6 +105,10 @@ evaluateRewardsForRider riderId moCityId completedAt rideInput = do
               <> riderId.getId
               <> " campaignId="
               <> campaign.id.getId
+              <> " validRidesThisCampaignDay="
+              <> show campaignContext.validRidesThisCampaignDay
+              <> " validRidesThisCampaignWeek="
+              <> show campaignContext.validRidesThisCampaignWeek
               <> " matchedCohortIds="
               <> show (map (.getId) matched)
               <> " toUnlockCohortIds="
@@ -143,16 +151,21 @@ evaluateRewardsForRider riderId moCityId completedAt rideInput = do
               -- every matching evaluation. createNextUnlock still re-checks
               -- and inserts, as the race-safety backstop against the unique
               -- index.
-              case QRUE.nextUnlockDecision cohort existing candidate of
+              let mBlockStart = Block.unlockBlockStart campaign.startsAt cohort completedAt
+              case QRUE.nextUnlockDecision cohort mBlockStart existing candidate of
                 Nothing -> do
-                  whenJust cohort.maxUnlocksPerCohort $ \n ->
+                  when (isRepeatableCohort cohort) $
                     logInfo $
                       "rewards.unlock.cap_reached riderId="
                         <> riderId.getId
                         <> " cohortId="
                         <> cohortId.getId
                         <> " maxUnlocksPerCohort="
-                        <> show n
+                        <> show cohort.maxUnlocksPerCohort
+                        <> " unlockResetPeriod="
+                        <> show cohort.unlockResetPeriod
+                        <> " blockStart="
+                        <> show mBlockStart
                   pure sentSoFar
                 Just _ -> do
                   mCode <- Coupon.claimCoupon campaign cohort riderId
@@ -170,7 +183,7 @@ evaluateRewardsForRider riderId moCityId completedAt rideInput = do
                       pure sentSoFar
                     Just code -> do
                       let unlock = candidate {DRU.couponCode = Just code}
-                      inserted <- QRUE.createNextUnlock cohort existing unlock
+                      inserted <- QRUE.createNextUnlock cohort mBlockStart existing unlock
                       if inserted
                         then do
                           Coupon.finalizeClaim campaign cohort code
