@@ -1490,6 +1490,7 @@ data SharedCabSessionError
   | NoReturnRoute
   | RidersOnBoard Int
   | CodeAmbiguous
+  | CheckInClosed
   deriving (Eq, Show, IsBecknAPIError)
 
 instance IsAPIError SharedCabSessionError
@@ -1505,8 +1506,9 @@ instance IsBaseError SharedCabSessionError where
     SessionVersionMismatch -> Just "Shared-cab session changed; refresh and retry."
     InvalidWalkupCount -> Just "Walk-up count must be between 0 and the vehicle capacity."
     NoReturnRoute -> Just "This route has no return route."
-    RidersOnBoard n -> Just $ show n <> " rider(s) still on board; drop them first or end with force."
+    RidersOnBoard n -> Just $ show n <> " rider(s) still on board; drop them first, or start the return trip with them aboard."
     CodeAmbiguous -> Just "More than one shared cab ends in that code. Pick your route to find the cab."
+    CheckInClosed -> Just "This route check is no longer open."
 
 instance IsHTTPError SharedCabSessionError where
   toErrorCode = \case
@@ -1519,6 +1521,7 @@ instance IsHTTPError SharedCabSessionError where
     NoReturnRoute -> "SHARED_CAB_NO_RETURN_ROUTE"
     RidersOnBoard _ -> "SHARED_CAB_RIDERS_ON_BOARD"
     CodeAmbiguous -> "SHARED_CAB_CODE_AMBIGUOUS"
+    CheckInClosed -> "SHARED_CAB_CHECK_IN_CLOSED"
   toHttpCode = \case
     SessionHeldByAnotherDriver -> E409
     SessionNotFound -> E404
@@ -1529,6 +1532,7 @@ instance IsHTTPError SharedCabSessionError where
     NoReturnRoute -> E400
     RidersOnBoard _ -> E409
     CodeAmbiguous -> E409
+    CheckInClosed -> E409
 
 -- | Shared-cab boarding engine: one generic error for every boarding failure, so callers can't tell "no cab here" from "wrong code".
 data SharedCabBoardingError

@@ -124,6 +124,13 @@ data DemandAtStop = DemandAtStop
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | rider-app's open "are you still on the route?" question; `deadlineSec` is the whole seconds left before the off-route pause.
+data SessionCheckIn = SessionCheckIn
+  { checkInId :: Text,
+    deadlineSec :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data SharedCabSession = SharedCabSession
   { route :: SessionRoute,
     -- | The driver-app run (vehicle_trip id) the session is on.
@@ -144,7 +151,8 @@ data SharedCabSession = SharedCabSession
     stops :: [SessionStop],
     shapePolyline :: Maybe Text,
     vehicle :: Maybe LatLong,
-    demandAhead :: [DemandAtStop]
+    demandAhead :: [DemandAtStop],
+    checkIn :: Maybe SessionCheckIn
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

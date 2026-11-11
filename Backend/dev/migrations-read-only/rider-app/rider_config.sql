@@ -972,3 +972,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN allow_multiple_open_meter_rides bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;
+
+
+------- SQL updates -------
+

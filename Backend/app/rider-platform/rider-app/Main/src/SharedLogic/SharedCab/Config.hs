@@ -32,6 +32,8 @@ data SharedCabTunables = SharedCabTunables
     autoEndAfterDropSec :: Int,
     degradedTimeoutSec :: Int,
     offRouteSec :: Int,
+    -- | How long before the off-route pause the driver is asked to confirm the route; 0 never asks.
+    checkInLeadSec :: Int,
     boardProximityM :: Int,
     -- | The bus boarding's freshness bar (rider_config.boardingBusPingMaxAgeSeconds), for the cab's ping and the rider's point.
     boardPingMaxAgeSec :: Double,
@@ -81,6 +83,7 @@ defaultTunables =
       autoEndAfterDropSec = 10 * 60,
       degradedTimeoutSec = 60 * 60,
       offRouteSec = 120,
+      checkInLeadSec = 60,
       boardProximityM = 150,
       boardPingMaxAgeSec = 10,
       boardAttemptsPer10Min = 5,
@@ -121,6 +124,7 @@ tunablesOf busPingMaxAgeSec mbConfig =
       autoEndAfterDropSec = pick (.autoEndAfterDropSec) (.autoEndAfterDropSec),
       degradedTimeoutSec = pick (.degradedTimeoutSec) (.degradedTimeoutSec),
       offRouteSec = pick (.offRouteSec) (.offRouteSec),
+      checkInLeadSec = max 0 (pick (.checkInLeadSec) (.checkInLeadSec)),
       boardProximityM = pick (.boardProximityM) (.boardProximityM),
       boardPingMaxAgeSec = fromMaybe defaultTunables.boardPingMaxAgeSec busPingMaxAgeSec,
       boardAttemptsPer10Min = pick (.boardAttemptsPer10Min) (.boardAttemptsPer10Min),

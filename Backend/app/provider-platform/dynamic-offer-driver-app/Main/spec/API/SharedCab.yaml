@@ -42,12 +42,13 @@ types:
     derive: "Show,Eq"
 
   SharedCabSessionOperation:
-    enum: "SET_SEATS,RESUME,CAB_FULL"
+    enum: "SET_SEATS,RESUME,CAB_FULL,STILL_ON_ROUTE"
 
   SharedCabSessionOperationReq:
     operation: SharedCabSessionOperation
     version: Maybe Int
     walkupCount: Maybe Int
+    checkInId: Maybe Text
     derive: "Show,Eq"
 
   SharedCabBookingOperation:
