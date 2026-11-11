@@ -30,6 +30,7 @@ library
       FileManagementUnitTests
   other-modules:
       CsvSanitizationTests
+      WelcomeEmailTemplateTests
       RegistrationUnitTests
       VehicleAssociationUnitTests
       DriverDocumentUploadUnitTests
