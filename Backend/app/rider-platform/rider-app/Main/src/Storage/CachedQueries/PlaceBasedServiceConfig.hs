@@ -172,6 +172,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
     EventTrackingInterface.ClevertapConfig _ -> EventTrackingService EventTracking.Clevertap
     EventTrackingInterface.FirebaseAnalyticsConfig _ -> EventTrackingService EventTracking.FirebaseAnalytics
+    EventTrackingInterface.BreezeConfig _ -> EventTrackingService EventTracking.Breeze
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya

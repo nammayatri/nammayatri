@@ -127,3 +127,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN face
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN image_extraction_providers_priority_list text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_providers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_overrides jsonb ;
