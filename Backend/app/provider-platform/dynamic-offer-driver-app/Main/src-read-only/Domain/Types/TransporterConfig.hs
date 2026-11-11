@@ -348,6 +348,8 @@ data TransporterConfig = TransporterConfig
     sendMembershipIdInProfile :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sendSmsOnEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     separateDriverVehicleEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sharedCabDailyTripTarget :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabTripEarningsTarget :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     showRoutePerRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
     specialDrivers :: [Kernel.Prelude.Text],

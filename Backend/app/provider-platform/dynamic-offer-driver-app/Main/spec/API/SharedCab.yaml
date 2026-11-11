@@ -6,6 +6,11 @@ imports:
   SharedCabDemandResp: Domain.Types.SharedCabSession
   SharedCabRouteDataResp: Domain.Types.SharedCabSession
   SharedCabSession: Domain.Types.SharedCabSession
+  VehicleTripStatus: Domain.Types.VehicleTrip
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
 
 module: SharedCab
 
@@ -39,6 +44,7 @@ types:
   SelectRouteResp:
     affectedRiders: Maybe [AffectedRider]
     session: Maybe SharedCabSession
+    endedTripEarnings: Maybe HighPrecMoney
     derive: "Show,Eq"
 
   SharedCabSessionOperation:
@@ -61,6 +67,18 @@ types:
 
   SharedCabMessageReq:
     message: Text
+    derive: "Show,Eq"
+
+  SharedCabTripSummary:
+    tripId: Text
+    routeCode: Text
+    fromStop: Maybe Text
+    toStop: Maybe Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    earnings: HighPrecMoney
+    currency: Currency
     derive: "Show,Eq"
 
 apis:

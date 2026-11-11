@@ -79,7 +79,9 @@ data PendingOffer = PendingOffer
     riderRating :: Maybe Double,
     boardStopAddress :: Maybe Text,
     dropStopAddress :: Maybe Text,
-    distanceMeters :: Maybe Int
+    distanceMeters :: Maybe Int,
+    boardStopCode :: Text,
+    dropStopCode :: Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -87,7 +89,8 @@ data SessionRoute = SessionRoute
   { code :: Text,
     name :: Text,
     direction :: Text,
-    nextStops :: [Text]
+    nextStops :: [Text],
+    nextStopCodes :: [Text]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -111,7 +114,9 @@ data SharedCabRider = SharedCabRider
     boardStopAddress :: Maybe Text,
     dropStopAddress :: Maybe Text,
     -- | Metres along the route from the board stop to the drop stop; none when it cannot be worked out.
-    distanceMeters :: Maybe Int
+    distanceMeters :: Maybe Int,
+    boardStopCode :: Text,
+    dropStopCode :: Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -152,6 +157,7 @@ data SharedCabSession = SharedCabSession
     shapePolyline :: Maybe Text,
     vehicle :: Maybe LatLong,
     demandAhead :: [DemandAtStop],
+    tripEarnings :: Maybe HighPrecMoney,
     checkIn :: Maybe SessionCheckIn
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

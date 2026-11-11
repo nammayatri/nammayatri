@@ -51,7 +51,7 @@ type TripAPI api = "internal" :> "sharedCab" :> Capture "merchantId" Text :> "tr
 
 type ActiveTripAPI = TripAPI ("active" :> MandatoryQueryParam "vehicleNumber" Text :> Header "token" Text :> Get '[JSON] (Maybe DriverTrip))
 
-type ExpireTripAPI = TripAPI (Capture "tripId" Text :> "expire" :> Header "token" Text :> Post '[JSON] APISuccess)
+type ExpireTripAPI = TripAPI (Capture "tripId" Text :> "expire" :> QueryParam "earnings" HighPrecMoney :> Header "token" Text :> Post '[JSON] APISuccess)
 
 activeTrip :: TripClientFlow m r => Id DM.Merchant -> Text -> m (Maybe DriverTrip)
 activeTrip merchantId plate = do
@@ -59,10 +59,10 @@ activeTrip merchantId plate = do
   callDriver merchant "SharedCabActiveTrip" (client (Proxy @ActiveTripAPI) merchant.driverOfferMerchantId plate (Just merchant.driverOfferApiKey)) (Proxy @ActiveTripAPI)
 
 -- | rider-app ends a run itself only when the cab went silent.
-expireTrip :: TripClientFlow m r => Id DM.Merchant -> Text -> m ()
-expireTrip merchantId tripId = do
+expireTrip :: TripClientFlow m r => Id DM.Merchant -> Text -> Maybe HighPrecMoney -> m ()
+expireTrip merchantId tripId earnings = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  void $ callDriver merchant "SharedCabExpireTrip" (client (Proxy @ExpireTripAPI) merchant.driverOfferMerchantId tripId (Just merchant.driverOfferApiKey)) (Proxy @ExpireTripAPI)
+  void $ callDriver merchant "SharedCabExpireTrip" (client (Proxy @ExpireTripAPI) merchant.driverOfferMerchantId tripId earnings (Just merchant.driverOfferApiKey)) (Proxy @ExpireTripAPI)
 
 callDriver :: (TripClientFlow m r, SanitizedUrl api, ToJSON a) => DM.Merchant -> Text -> EulerClient a -> Proxy api -> m a
 callDriver merchant desc eulerClient api = do

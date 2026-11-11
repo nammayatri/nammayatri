@@ -143,6 +143,7 @@ import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Action.UI.SharedCab as SharedCab
 import qualified Domain.Action.UI.StclMembership as DStclMembershipAction
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -492,6 +493,7 @@ data DriverInformationRes = DriverInformationRes
     activeRideType :: Maybe ActiveRideType,
     -- | The feed version the app checks its cached shared-cab routes against.
     publicTransportVersion :: Maybe Text,
+    sharedCabTripActive :: Maybe Bool,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -809,7 +811,9 @@ data DriverStatsRes = DriverStatsRes
     coinBalance :: Int,
     totalValidRidesOfDay :: Int,
     tipsEarning :: PriceAPIEntity,
-    todayOnlineDuration :: Minutes
+    todayOnlineDuration :: Minutes,
+    sharedCabTripTarget :: Maybe Int,
+    sharedCabEarningsTarget :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1979,6 +1983,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
           activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
+          sharedCabTripActive = Nothing,
           ..
         }
 
@@ -2514,6 +2519,16 @@ getStats ::
 getStats (driverId, _, merchantOpCityId) date = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverDailyStats <- runInReplica $ SQDS.findByDriverIdAndDate driverId date
+  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let targets =
+        if person.role == SP.DRIVER
+          then
+            Just $
+              SharedCab.tripTargets
+                (Yudhishthira.convertTags (fromMaybe [] person.driverTag))
+                transporterConfig.sharedCabDailyTripTarget
+                transporterConfig.sharedCabTripEarningsTarget
+          else Nothing
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   validRideCountOfDriver <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
@@ -2545,7 +2560,9 @@ getStats (driverId, _, merchantOpCityId) date = do
         totalEarningsOfDayPerKmWithCurrency = PriceAPIEntity totalEarningsOfDayPerKm currency,
         bonusEarning = roundToIntegral bonusEarning,
         bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency,
-        todayOnlineDuration = todayOnlineDuration
+        todayOnlineDuration = todayOnlineDuration,
+        sharedCabTripTarget = fst <$> targets,
+        sharedCabEarningsTarget = (\(_, earningsTarget) -> PriceAPIEntity earningsTarget currency) <$> targets
       }
 
 getEarnings :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> Flow DCommon.EarningPeriodStatsRes

@@ -6,6 +6,7 @@ imports:
   SharedCabSession: SharedLogic.SharedCab.SessionView
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   APISuccess: Kernel.Types.APISuccess
+  HighPrecMoney: Kernel.Types.Common
 
 module: SharedCabInternal
 
@@ -23,6 +24,7 @@ types:
   SelectRouteResp:
     session: Maybe SharedCabSession
     affectedRiders: Maybe [AffectedRider]
+    endedTripEarnings: Maybe HighPrecMoney
 
   SharedCabRouteOperation:
     enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
