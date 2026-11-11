@@ -46,7 +46,7 @@ types:
     vehicleTripId: Maybe Text
 
   SharedCabSessionOperation:
-    enum: "SET_SEATS,RESUME,CAB_FULL"
+    enum: "SET_SEATS,RESUME,CAB_FULL,STILL_ON_ROUTE"
 
   SharedCabSessionOperationReq:
     operation: SharedCabSessionOperation
@@ -54,6 +54,8 @@ types:
     vehicleNumber: Text
     version: Maybe Int
     walkupCount: Maybe Int
+    # the open check-in a STILL_ON_ROUTE answers
+    checkInId: Maybe Text
 
   SharedCabBookingOperation:
     enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"

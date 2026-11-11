@@ -192,6 +192,9 @@ tests =
             let st = bookingStateFrom [("attempts", A.Number 2), ("preferred", A.String "ML05A1234"), ("preferredDropped", A.String "yes")]
              in (isNothing st.allocState, st.attemptCount, st.findingStintSince, st.preferredPlate, st.preferenceLost)
                   @?= (True, 2, Nothing, Just "ML05A1234", False),
+          testCase "a rider's own skip is not a cab passing them by" $
+            map (.driverPassed) [bookingStateFrom [("skipped", A.toJSON ["ML05A1234" :: Text])], bookingStateFrom [("driverPassed", A.Bool True)], bookingStateFrom []]
+              @?= [False, True, False],
           testCase "when the assigned cab's own ETA is unknown every other cab counts" $
             map (.cabId) (upcomingCabsOf Nothing [cab "x" 90, cab "y" 30]) @?= ["y", "x"],
           testCase "an upcoming cab ships its opaque id, ETA and seats, and nothing else" $
@@ -234,7 +237,9 @@ tests =
           speed = Nothing,
           stopSequence = Nothing,
           tripId = Nothing,
-          etas = [CQMMB.BusStopETA code (Just code) at (floor (utcTimeToPOSIXSeconds at)) Nothing | (code, etaSec) <- ahead, let at = addUTCTime etaSec now]
+          etas = [CQMMB.BusStopETA code (Just code) at (floor (utcTimeToPOSIXSeconds at)) Nothing | (code, etaSec) <- ahead, let at = addUTCTime etaSec now],
+          offRoute = False,
+          onStop = Nothing
         }
 
     leg :: Text -> MultiModalTypes.MultiModalLeg
@@ -280,7 +285,8 @@ tests =
           preferredCab = Nothing,
           preferredCabLost = False,
           upcomingCabs = [],
-          skipAvailable = False
+          skipAvailable = False,
+          driverPassed = False
         }
 
     statusWithReason :: SharedCabLegStatus

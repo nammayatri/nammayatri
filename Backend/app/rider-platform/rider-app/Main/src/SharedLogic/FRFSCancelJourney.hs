@@ -20,14 +20,22 @@ cancelJourney booking = getJourneyIdFromBooking booking >>= mapM_ cancelJourneyB
 
 -- | A shared-cab leg that reached a terminal cancel ends the journey only when it is the journey's one non-walk leg.
 cancelJourneyIfOnlyTransitLeg :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m ()
-cancelJourneyIfOnlyTransitLeg searchId =
+cancelJourneyIfOnlyTransitLeg = endJourneyIfOnlyTransitLeg DJourney.CANCELLED
+
+-- | A leg that ended (cancelled, or ridden to the drop) ends the journey with `endStatus` when it is the journey's one non-walk leg.
+endJourneyIfOnlyTransitLeg :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DJourney.JourneyStatus -> Text -> m ()
+endJourneyIfOnlyTransitLeg endStatus searchId =
   QJourneyLeg.findByLegSearchId (Just searchId) >>= mapM_ \leg -> do
     legs <- QJourneyLeg.getJourneyLegs leg.journeyId
-    when (onlyTransitLeg (map (.mode) legs)) $ cancelJourneyById leg.journeyId
+    when (onlyTransitLeg (map (.mode) legs)) $ endJourneyById endStatus leg.journeyId
 
 -- | Callable from the allocation tick too (no replica read, no API env).
 cancelJourneyById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> m ()
-cancelJourneyById journeyId = do
+cancelJourneyById = endJourneyById DJourney.CANCELLED
+
+-- | Finishes every leg's tracking and moves a journey not yet ended to `endStatus`.
+endJourneyById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DJourney.JourneyStatus -> Id DJourney.Journey -> m ()
+endJourneyById endStatus journeyId = do
   now <- getCurrentTime
   legs <- QJourneyLeg.getJourneyLegs journeyId
   forM_ legs $ \journeyLeg -> do
@@ -42,4 +50,4 @@ cancelJourneyById journeyId = do
       journeyLeg.routeDetails
   journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
   when (DJourney.CANCELLED > journey.status) $
-    QJourneyExtra.updateStatusAndEndTime DJourney.CANCELLED journeyId
+    QJourneyExtra.updateStatusAndEndTime endStatus journeyId

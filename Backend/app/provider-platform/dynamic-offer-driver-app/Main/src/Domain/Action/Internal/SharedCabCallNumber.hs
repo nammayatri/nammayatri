@@ -3,8 +3,8 @@
 module Domain.Action.Internal.SharedCabCallNumber where
 
 import API.Types.UI.SharedCabInternal (SharedCabDriverCallNumberResp (..))
+import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -24,11 +24,11 @@ sharedCabDriverCallNumber driverId apiKey = do
     (Just p, Just m) | Just m.internalApiKey == apiKey -> pure p
     _ -> throwError $ AuthBlocked "Invalid BPP internal api key"
   mbVehicle <- QVehicle.findById person.id
-  unless (callNumberAllowed person.role ((.variant) <$> mbVehicle)) $ throwError $ AuthBlocked "Invalid BPP internal api key"
+  unless (callNumberAllowed person.role (maybe [] (.selectedServiceTiers) mbVehicle)) $ throwError $ AuthBlocked "Invalid BPP internal api key"
   decrypted <- mapM decrypt person.mobileNumber
   number <- fromMaybeM (InternalError "Driver has no phone number.") $ (<>) <$> person.mobileCountryCode <*> decrypted
   pure $ SharedCabDriverCallNumberResp number
 
 -- | Only a driver whose linked vehicle is a shared cab has a number to hand out; anyone else answers as an unknown person.
-callNumberAllowed :: SP.Role -> Maybe DV.VehicleVariant -> Bool
-callNumberAllowed role mbVariant = role == SP.DRIVER && mbVariant == Just DV.SHARED_CAB
+callNumberAllowed :: SP.Role -> [DCommon.ServiceTierType] -> Bool
+callNumberAllowed role tiers = role == SP.DRIVER && DCommon.SHARED_CAB `elem` tiers

@@ -90,7 +90,7 @@ acceptOffer driver plate bookingId = do
         guard (isFreshPosition now cfg.ltsMaxAgeSec cab)
         guard (isJust (Lts.etaAt boardStopCode cab)) -- the board stop is still ahead of it
         boardPoint <- (.stopPoint) <$> find ((== boardStopCode) . (.stopCode)) stops
-        pure (cabStance cfg cab boardPoint)
+        pure (cabStance cfg cab boardStopCode boardPoint)
 
 declineOffer :: Text -> Text -> Id DFTB.FRFSTicketBooking -> Environment.Flow Session
 declineOffer driver plate bookingId = do

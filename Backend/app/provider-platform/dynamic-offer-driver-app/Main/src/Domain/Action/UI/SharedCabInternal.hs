@@ -1,12 +1,13 @@
 module Domain.Action.UI.SharedCabInternal
   ( postSharedCabAllocationFCM,
+    postSharedCabCheckInFCM,
     getSharedCabDriverCallNumber,
     getSharedCabTripActive,
     postSharedCabTripExpire,
   )
 where
 
-import API.Types.UI.SharedCabInternal (SharedCabDriverCallNumberResp, SharedCabTrip)
+import API.Types.UI.SharedCabInternal (SharedCabCheckInReq, SharedCabDriverCallNumberResp, SharedCabTrip)
 import qualified Domain.Action.Internal.SharedCabAllocation as DAllocation
 import qualified Domain.Action.Internal.SharedCabCallNumber as DCallNumber
 import qualified Domain.Action.Internal.SharedCabTrip as DTrip
@@ -19,6 +20,9 @@ import Tools.Notifications (SharedCabAllocationEntityData)
 
 postSharedCabAllocationFCM :: Maybe Text -> SharedCabAllocationEntityData -> Flow APISuccess
 postSharedCabAllocationFCM mbToken req = DAllocation.sharedCabAllocationFCM req mbToken
+
+postSharedCabCheckInFCM :: Maybe Text -> SharedCabCheckInReq -> Flow APISuccess
+postSharedCabCheckInFCM mbToken req = DAllocation.sharedCabCheckInFCM req mbToken
 
 getSharedCabDriverCallNumber :: Text -> Maybe Text -> Flow SharedCabDriverCallNumberResp
 getSharedCabDriverCallNumber = DCallNumber.sharedCabDriverCallNumber

@@ -87,7 +87,7 @@ closeLocked cfg bookingId expectedPlate outcome =
         else reallocate b
     reallocate b = do
       clearAlloc bookingId
-      when (skipsPlateOnClose outcome) $ addSkipped (allocKeyTtl cfg) bookingId expectedPlate
+      when (skipsPlateOnClose outcome) $ addSkipped (allocKeyTtl cfg) bookingId expectedPlate >> writeDriverPassed (allocKeyTtl cfg) bookingId
       -- Known limitation: a Redis flush resets attempts.
       attemptsBefore <- readAttempts bookingId
       let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)

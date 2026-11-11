@@ -14,6 +14,8 @@
 
 module Domain.Action.Internal.SharedCabAllocation where
 
+import API.Types.UI.SharedCabInternal (SharedCabCheckInReq)
+import Domain.Types.Person (Person)
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
@@ -29,16 +31,24 @@ import Tools.Notifications
 
 sharedCabAllocationFCM :: SharedCabAllocationEntityData -> Maybe Text -> Flow APISuccess
 sharedCabAllocationFCM req apiKey = do
-  -- Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
-  -- unauthenticated caller cannot probe for existing driver ids (PersonNotFound vs AuthBlocked).
-  verified <- do
-    mbPerson <- runInReplica $ QPerson.findById (Id req.driverId)
-    mbMerchant <- maybe (pure Nothing) (QM.findById . (.merchantId)) mbPerson
-    pure $ case (mbPerson, mbMerchant) of
-      (Just p, Just m) | Just m.internalApiKey == apiKey -> Just p
-      _ -> Nothing
-  person <- fromMaybeM (AuthBlocked "Invalid BPP internal api key") verified
+  person <- verifiedDriver req.driverId apiKey
   notifySharedCabAllocation person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req
   -- an offer is a request the driver answers, counted like a ride request so the accept and reject rates stay true
   when (isJust req.offerExpiresAt) $ DP.incrementSrdSentCount person.id
   pure Success
+
+sharedCabCheckInFCM :: SharedCabCheckInReq -> Maybe Text -> Flow APISuccess
+sharedCabCheckInFCM req apiKey = do
+  person <- verifiedDriver req.driverId apiKey
+  notifySharedCabCheckIn person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req.routeCode
+  pure Success
+
+-- | Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
+-- unauthenticated caller cannot probe for existing driver ids (PersonNotFound vs AuthBlocked).
+verifiedDriver :: Text -> Maybe Text -> Flow Person
+verifiedDriver driver apiKey = do
+  mbPerson <- runInReplica $ QPerson.findById (Id driver)
+  mbMerchant <- maybe (pure Nothing) (QM.findById . (.merchantId)) mbPerson
+  fromMaybeM (AuthBlocked "Invalid BPP internal api key") $ case (mbPerson, mbMerchant) of
+    (Just p, Just m) | Just m.internalApiKey == apiKey -> Just p
+    _ -> Nothing
