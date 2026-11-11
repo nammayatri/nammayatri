@@ -16,6 +16,8 @@ module Domain.Action.Dashboard.AppManagement.FRFSTicketService
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
     postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction,
     postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation,
+    postFRFSTicketServiceCustomerFrfsBookingCancel,
+    postFRFSTicketServiceCustomerFrfsBookingReschedule,
   )
 where
 
@@ -33,6 +35,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -168,3 +171,13 @@ postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: (Kernel.Types.
 postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantShortId _opCity customerId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DFrfs.postFrfsFleetOperatorCurrentOperation (Just customerId, merchant.id) req
+
+postFRFSTicketServiceCustomerFrfsBookingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketServiceCustomerFrfsBookingCancel merchantShortId _opCity customerId bookingId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DFrfs.postFrfsBookingCancel (Just customerId, merchant.id) bookingId
+
+postFRFSTicketServiceCustomerFrfsBookingReschedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> API.Types.UI.FRFSTicketService.FRFSRescheduleReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
+postFRFSTicketServiceCustomerFrfsBookingReschedule merchantShortId _opCity customerId bookingId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DFrfs.postFrfsBookingReschedule (Just customerId, merchant.id) bookingId req
