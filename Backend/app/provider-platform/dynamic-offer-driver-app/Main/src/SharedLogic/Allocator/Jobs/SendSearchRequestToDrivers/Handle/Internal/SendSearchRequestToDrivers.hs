@@ -90,9 +90,8 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
-import SharedLogic.Finance.Prepaid (counterpartyDriver)
-import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
-import SharedLogic.Finance.WalletAccount (hasMinWalletBalance, isMinBalanceEnforced)
+import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry, getScheduledRideMinBalanceIfShort)
+import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
@@ -295,14 +294,7 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
     addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge tripQuoteDetail.bufferedFare validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
     -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
-    mbScheduledRideMinWalletBalance <-
-      if searchTry.isScheduled && not (SDP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes searchTry.startTime flagNow)
-        then do
-          mbFarePolicyFloor <- getScheduledRideMinWalletFloorFromSnapshot tripQuoteDetail.estimateOrQuoteId
-          let minBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
-          walletOk <- hasMinWalletBalance counterpartyDriver minBalance dPoolRes.driverPoolResult.driverId.getId
-          pure $ if walletOk then Nothing else minBalance
-        else pure Nothing
+    mbScheduledRideMinWalletBalance <- getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime flagNow (getScheduledRideMinWalletFloorFromSnapshot tripQuoteDetail.estimateOrQuoteId) dPoolRes.driverPoolResult.driverId.getId
     let entityData = (USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)

@@ -125,6 +125,7 @@ module SharedLogic.Finance.Wallet
     getWalletAndControlAccountsByOwner,
     getWalletBalanceByOwner,
     hasMinWalletBalance,
+    getScheduledRideMinBalanceIfShort,
     validateWalletDebitAmount,
     getControlBalanceByOwner,
     createWalletEntryDelta,
@@ -237,7 +238,8 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance)
-import SharedLogic.Finance.Prepaid (tdsReimbursementReferenceType)
+import SharedLogic.DriverPool (isScheduledOpenToAll)
+import SharedLogic.Finance.Prepaid (counterpartyDriver, tdsReimbursementReferenceType)
 import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletClassConfig, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -1203,3 +1205,23 @@ applyThresholdBenefit taxConfig mbCumulative mbPanCard currentBase rawAmount =
         if cumulative + currentBase <= thresh
           then 0
           else rawAmount
+
+-- | The minimum wallet balance a scheduled ride needs, when the driver's wallet is below it.
+-- Nothing when the ride is not scheduled, is already open to every driver, needs no minimum, or the driver has enough.
+-- The fare policy's floor wins over the city's. It is looked up only when the check applies.
+getScheduledRideMinBalanceIfShort ::
+  (BeamFlow m r) =>
+  DTC.TransporterConfig ->
+  Bool ->
+  UTCTime ->
+  UTCTime ->
+  m (Maybe HighPrecMoney) ->
+  Text ->
+  m (Maybe HighPrecMoney)
+getScheduledRideMinBalanceIfShort transporterConfig isScheduled pickupTime now getFarePolicyFloor driverId
+  | not isScheduled || isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pickupTime now = pure Nothing
+  | otherwise = do
+      mbFarePolicyFloor <- getFarePolicyFloor
+      let minBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+      walletOk <- hasMinWalletBalance counterpartyDriver minBalance driverId
+      pure $ if walletOk then Nothing else minBalance
