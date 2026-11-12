@@ -13,6 +13,7 @@ Faq:
     question: Text
     answer: Text
     category: Maybe Text
+    subCategory: Maybe Text
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
 
@@ -30,3 +31,4 @@ Faq:
     question: text
     answer: text
     category: character varying(255)
+    subCategory: character varying(255)

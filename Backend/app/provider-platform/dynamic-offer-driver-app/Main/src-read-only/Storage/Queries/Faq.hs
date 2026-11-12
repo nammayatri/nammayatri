@@ -47,6 +47,7 @@ updateByPrimaryKey (Domain.Types.Faq.Faq {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.question question,
+      Se.Set Beam.subCategory subCategory,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -64,6 +65,7 @@ instance FromTType' Beam.Faq Domain.Types.Faq.Faq where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             question = question,
+            subCategory = subCategory,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -79,6 +81,7 @@ instance ToTType' Beam.Faq Domain.Types.Faq.Faq where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.question = question,
+        Beam.subCategory = subCategory,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

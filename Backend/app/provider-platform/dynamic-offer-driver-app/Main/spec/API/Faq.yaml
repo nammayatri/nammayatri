@@ -8,6 +8,7 @@ types:
   FaqAPIEntity:
     faqGroupId: Text
     category: Maybe Text
+    subCategory: Maybe Text
     question: Text
     answer: Text
 
