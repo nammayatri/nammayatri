@@ -15,6 +15,7 @@ module SharedLogic.IncentiveJourney.MgCampaign
     resolveMgPerkSource,
     resolveMgPerkSourceAt,
     resolveMgPerkSourceFromDriverTags,
+    isControlCampaign,
     extractIjCampaignMemberships,
     mgForbidsDriverCancellation,
     mgPoolingPriorityValue,
@@ -36,7 +37,6 @@ import qualified Domain.Types.FleetConfig as DFC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -55,11 +55,13 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 
+-- | Who is in charge of a driver's controls (auto-assign, tier/AC/intracity lock, pooling priority, no-cancel, area and
+-- distance preferences). One source at a time: a member of a campaign with control features ('CampaignMember') is run by
+-- the campaign all day, its perks only off outside the campaign's hours ('perksActive'), and the fleet is ignored. Anyone
+-- else, including a member of behaviour-only campaigns, resolves to 'UseNoCampaign': the fleet (or the driver) is in charge.
 data MgPerkSource
-  = UseNoCampaign -- no active IJ campaign membership; callers use fleet/driver defaults
-  | -- | Membership occupies the perk slot (incl. behaviour-only / empty controlFeatures):
-    -- suppress fleet AA / cancel / pooling. Empty controls → driver defaults, not fleet.
-    CampaignMember {snapshot :: Mg.MgCampaignSnapshot, perksActive :: Bool}
+  = UseNoCampaign
+  | CampaignMember {snapshot :: Mg.MgCampaignSnapshot, perksActive :: Bool}
   deriving (Show)
 
 -- | Sync / clear IJCampaign tag(s). Just payload upserts one CJM membership; Nothing clears all.
@@ -287,6 +289,8 @@ extractIjCampaignMemberships = \case
       (AKM.toList o)
   _ -> []
 
+-- | One membership's 'MgPerkSource': 'CampaignMember' only for an enabled campaign with control features
+-- ('controlsTakeCharge'); a behaviour-only campaign leaves the fleet in charge.
 resolveFromControls ::
   UTCTime ->
   CampaignTag.CampaignMembership ->
@@ -297,8 +301,7 @@ resolveFromControls localTime membership optedIn = \case
   Nothing -> UseNoCampaign
   Just controls
     | not controls.enabled -> UseNoCampaign
-    -- Behaviour-only (no controlFeatures): still CampaignMember so fleet AA/cancel/pooling
-    -- are suppressed. Snapshot controls are empty defaults — restore fleet by unassigning.
+    | not (controlsTakeCharge controls) -> UseNoCampaign
     | otherwise ->
       let snap =
             Mg.MgCampaignSnapshot
@@ -318,6 +321,16 @@ resolveFromControls localTime membership optedIn = \case
             Mg.isMgPerksActive localTime snap
               && localTime >= controls.campaignStartDate
        in CampaignMember {snapshot = snap, perksActive = perksActive}
+
+-- | A campaign with control features (AutoAssign / PoolingPriority / CanDxCancelBooking) takes charge of its members'
+-- controls; a behaviour-only one doesn't. The same rule as the single control slot ('Mg.cjmHasControlFeatures').
+controlsTakeCharge :: CampaignControls -> Bool
+controlsTakeCharge controls = Mg.valueHasControlFeatures controls.controlFeatures
+
+-- | Whether this campaign was in charge of its members' controls ('controlsTakeCharge'), enabled or not, so that leaving
+-- it hands control back to the fleet. An unknown campaign counts as in charge: handing back is always safe.
+isControlCampaign :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DCJM.CohortJourneyMapping -> m Bool
+isControlCampaign cjmId = maybe True controlsTakeCharge <$> getCampaignControls cjmId
 
 -- | Merge multi-campaign perk sources: cancel forbidden if any forbids; first AA / pooling wins.
 mergePerkSources :: MgPerkSource -> MgPerkSource -> MgPerkSource
@@ -346,8 +359,7 @@ resolveMgPerkSource ::
   ( MonadFlow m,
     BeamFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r
+    CacheFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe DI.DriverInformation ->

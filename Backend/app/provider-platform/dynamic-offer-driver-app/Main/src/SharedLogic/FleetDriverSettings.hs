@@ -3,6 +3,11 @@
 --
 -- Only the tiers that driver's vehicle serves get auto-assign. Nothing is removed when the driver leaves the fleet; what
 -- an earlier fleet left is cleared when the driver joins the next one ('applyFleetSettingsOnJoin').
+--
+-- One source is in charge of a driver's auto-assign, tier/AC/intracity lock and preferences ('getAutoAssignControl'):
+-- the campaign for a member of a campaign with control features, all day; the fleet for everyone else, including
+-- members of behaviour-only campaigns. Joining or leaving a control campaign clears what the previous source left and
+-- applies the new one's settings ('reconcileAutoAssignAfterMgSync', 'onCampaignMembershipCleared').
 module SharedLogic.FleetDriverSettings
   ( autoAssignTagName,
     vehicleAutoAcceptTiers,
@@ -14,7 +19,6 @@ module SharedLogic.FleetDriverSettings
     applyLockedFleetSettingsToDriver,
     applyLockedFleetSettingsOnWalletPosting,
     clearAutoAssign,
-    clearAllAutoAssign,
     reconcileAutoAssignAfterMgSync,
     onCampaignMembershipCleared,
     getDriverFleetAutoAssignConfig,
@@ -36,7 +40,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -81,44 +84,68 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
   Just (A.Array values) -> [value | A.String value <- V.toList values]
   _ -> []
 
--- | Auto-assign settings: any IJ campaign membership wins (incl. behaviour-only →
--- Nothing, suppressing fleet). Else active fleet. For controlFeatures members,
--- returns snapshot AutoAssign even outside the perk window so reconcile/apply can
--- install tags at opt-in; silent-assign still gates on perksActive at dispatch.
--- Lives in SharedLogic (not query Extra) to avoid PersonExtra ↔ FleetDriverAssociationExtra ↔ MgCampaign cycle.
+-- | Who is in charge of the driver's auto-assign, and its settings.
+data AutoAssignControl = AutoAssignControl
+  { -- | A control campaign runs the driver: the fleet's settings and its per-driver switch are ignored.
+    campaignInCharge :: Bool,
+    autoAssignConfig :: Maybe DFC.AutoAssignConfig
+  }
+
+-- | The source in charge of the driver's auto-assign ('MgCampaign.MgPerkSource'): a control campaign's AutoAssign config,
+-- read all day (outside the campaign's hours too, so the lock and tags stay; silent-assign at dispatch still waits for
+-- the perk window), or else the active fleet's. Lives in SharedLogic (not query Extra) to avoid a PersonExtra ↔
+-- FleetDriverAssociationExtra ↔ MgCampaign cycle.
+getAutoAssignControl ::
+  (MonadFlow m, IJBeam.BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Id MerchantOperatingCity ->
+  m AutoAssignControl
+getAutoAssignControl driverId merchantOpCityId = do
+  mbInfo <- QDI.findById driverId
+  MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo >>= \case
+    MgCampaign.CampaignMember {snapshot} ->
+      pure AutoAssignControl {campaignInCharge = True, autoAssignConfig = MgCampaign.mgAutoAssignConfigFromSnapshot snapshot}
+    MgCampaign.UseNoCampaign ->
+      AutoAssignControl False
+        <$> (QFDA.findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId))
+
+-- | The auto-assign settings of whoever is in charge of the driver ('getAutoAssignControl'): the area/distance preference
+-- callers, the tier lock and the settings below all read this one lookup.
 getDriverFleetAutoAssignConfig ::
-  (MonadFlow m, IJBeam.BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, IJBeam.BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
-  mbInfo <- QDI.findById driverId
-  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo
-  case mgSource of
-    MgCampaign.CampaignMember {snapshot} -> pure $ MgCampaign.mgAutoAssignConfigFromSnapshot snapshot
-    MgCampaign.UseNoCampaign ->
-      QFDA.findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = (.autoAssignConfig) <$> getAutoAssignControl driverId merchantOpCityId
 
 -- | Applies the driver's fleet settings to the driver and this vehicle, one after another on the same tags: auto-assign
 -- on the vehicle's auto-accept tiers when the fleet has it on by default (or 'forceAutoAssign', the fleet's per-driver
 -- switch), then area preference off and trip-distance preference off when the fleet ignores them. No-op for a driver
--- whose fleet has no auto-assign settings, unless forced.
+-- whose fleet has no auto-assign settings, unless forced. For a driver a control campaign runs, the campaign's settings
+-- apply instead and the fleet's per-driver switch is ignored.
 applyFleetSettings ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
   [DVST.VehicleServiceTier] ->
   Person ->
   DV.Vehicle ->
   m ()
 applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
-  mbInfo <- QDI.findById driver.id
-  mgSource <- MgCampaign.resolveMgPerkSource driver.merchantOperatingCityId mbInfo
-  mbFleetAutoAssign <- getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
-  -- Active IJ membership owns the perk slot: do not force-install fleet AA.
-  let allowForceFleet = case mgSource of
-        MgCampaign.UseNoCampaign -> True
-        MgCampaign.CampaignMember {} -> False
-      force = forceAutoAssign && allowForceFleet
+  control <- getAutoAssignControl driver.id driver.merchantOperatingCityId
+  applyFleetSettingsWith control forceAutoAssign cityTiers driver vehicle
+
+-- | 'applyFleetSettings' with the source in charge already read.
+applyFleetSettingsWith ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  AutoAssignControl ->
+  Bool ->
+  [DVST.VehicleServiceTier] ->
+  Person ->
+  DV.Vehicle ->
+  m ()
+applyFleetSettingsWith control forceAutoAssign cityTiers driver vehicle = do
+  let mbFleetAutoAssign = control.autoAssignConfig
+      force = forceAutoAssign && not control.campaignInCharge
   when (force || isJust mbFleetAutoAssign) $ do
     FleetTiers {autoAssignTiers = tiers, forceSelectedTiers} <- planFleetTiers force mbFleetAutoAssign cityTiers driver vehicle
     let ignorePreferences = maybe False (.disableDriverAreaAndDistancePreference) mbFleetAutoAssign
@@ -139,17 +166,17 @@ applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
       if ignore then setTag name (LYT.TextValue (AreaPref.mkEnabledTagValue False)) tags else tags
 
 -- | The tiers 'applyFleetSettings' would give auto-assign on for this driver and vehicle (with 'forceAutoAssign' for the
--- fleet's per-driver switch). Empty means the switch has nothing to turn on.
+-- fleet's per-driver switch). Empty means the switch has nothing to turn on, as for a driver a control campaign runs.
 fleetAutoAssignTiers ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r) =>
   Bool ->
   [DVST.VehicleServiceTier] ->
   Person ->
   DV.Vehicle ->
   m [ServiceTierType]
 fleetAutoAssignTiers forceAutoAssign cityTiers driver vehicle = do
-  mbFleetAutoAssign <- getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
-  (.autoAssignTiers) <$> planFleetTiers forceAutoAssign mbFleetAutoAssign cityTiers driver vehicle
+  control <- getAutoAssignControl driver.id driver.merchantOperatingCityId
+  (.autoAssignTiers) <$> planFleetTiers (forceAutoAssign && not control.campaignInCharge) control.autoAssignConfig cityTiers driver vehicle
 
 data FleetTiers = FleetTiers
   { autoAssignTiers :: [ServiceTierType],
@@ -194,7 +221,7 @@ planFleetTiers forceAutoAssign mbFleetAutoAssign cityTiers driver vehicle = do
 -- | For a driver whose vehicle was just written (RC activate/re-verify, add-vehicle): applies the current fleet's settings
 -- to the vehicle they have, if any. A driver joining a fleet goes through 'applyFleetSettingsOnJoin' instead. Re-reads the driver and vehicle under the selected-tiers lock (see 'applyFleetSettingsLocked').
 applyFleetSettingsToDriver ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
@@ -204,78 +231,45 @@ applyFleetSettingsToDriver = applyFleetSettingsLocked \mbFleetAutoAssign driver 
   -- tiers left to keep.
   Just <$> lockedOnAutoAssign mbFleetAutoAssign driver
 
--- | Strip the AutoAssign tag and its tiers' auto-accept ('clearAutoAssign') under the selected-tiers lock, so leftover
--- fleet/MG tiers cannot silent-assign.
-clearAllAutoAssign ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Id Person ->
-  m ()
-clearAllAutoAssign driverId =
-  Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey driverId) 5 10 50000 $
-    QPerson.findById driverId >>= mapM_ \driver -> void . clearAutoAssign driver =<< QVehicle.findById driverId
-
--- | After IJCampaign tag sync.
--- Recompute from *all* current memberships (resolveMgPerkSource /
--- getDriverFleetAutoAssignConfig), not the single campaign just synced. A
--- behaviour-only opt-in must not wipe AutoAssign that another controls membership
--- still supplies. rewrite = clear then apply effective config: campaign AA ->
--- reinstall; behaviour-only / controls without AA -> clear only (fleet suppressed
--- until unassign). Invite-only keeps driver-owned selections. Silent-assign at
--- dispatch still requires perksActive via 'mgAutoAssignConfig'.
+-- | After an IJCampaign tag sync. Only a change of who is in charge touches auto-assign: an opt-in to a control campaign
+-- clears what the fleet (or an earlier campaign) left and applies the campaign's settings; a behaviour-only membership
+-- leaves the fleet in charge and changes nothing; an invite (not yet opted in) keeps the driver's own selections. With
+-- every membership cleared (Nothing), the fleet's settings are re-applied if it has any. All under the selected-tiers
+-- lock, on a fresh read ('resetAutoAssign').
 reconcileAutoAssignAfterMgSync ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id IJCommon.Person ->
   Maybe Mg.MgCampaignSnapshot ->
   m ()
 reconcileAutoAssignAfterMgSync personId mbSnap = do
   let driverId = cast personId
-  case mbSnap of
-    Just snap
-      | snap.optedIn -> rewriteAutoAssignFromCurrentConfig driverId
-      | otherwise -> pure () -- invite only: keep driver-owned selections
-    Nothing -> restoreFleetAutoAssignOrKeep driverId
+  QPerson.findById driverId >>= mapM_ \driver ->
+    case mbSnap of
+      Just snap
+        | snap.optedIn -> resetAutoAssign (.campaignInCharge) driverId driver.merchantOperatingCityId
+        | otherwise -> pure ()
+      Nothing -> resetAutoAssign (\control -> not control.campaignInCharge && isJust control.autoAssignConfig) driverId driver.merchantOperatingCityId
 
--- | After one CJM membership is removed from tags: strip leftover AA, then re-apply
--- fleet (or remaining campaign) settings so fleet perks return after unassign.
+-- | After one campaign membership is removed from the driver's tags (unassign, opt-out, campaign end). Leaving a control
+-- campaign hands charge back: what the campaign left is cleared and the fleet's (or a remaining control campaign's)
+-- settings are applied, which brings the fleet lock back. Leaving a behaviour-only campaign changes nothing: the fleet
+-- was in charge throughout.
 onCampaignMembershipCleared ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id DCJM.CohortJourneyMapping ->
   m ()
-onCampaignMembershipCleared driverId _cjmId = do
-  clearAllAutoAssign driverId
-  QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsToDriver driver.id driver.merchantOperatingCityId
-
--- | clear + apply current MG/fleet AA from getDriverFleetAutoAssignConfig.
-rewriteAutoAssignFromCurrentConfig ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Id Person ->
-  m ()
-rewriteAutoAssignFromCurrentConfig driverId = do
-  clearAllAutoAssign driverId
-  QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsToDriver driver.id driver.merchantOperatingCityId
-
--- | After all IJCampaign tags cleared: restore fleet AA if any; never wipe independent
--- driver self-selections when there is no fleet AutoAssign to reinstall.
-restoreFleetAutoAssignOrKeep ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Id Person ->
-  m ()
-restoreFleetAutoAssignOrKeep driverId =
-  QPerson.findById driverId >>= mapM_ \driver -> do
-    mbFleetAA <-
-      QFDA.findByDriverId driverId True
-        >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId driver.merchantOperatingCityId)
-    case mbFleetAA of
-      Just _ -> rewriteAutoAssignFromCurrentConfig driverId
-      Nothing -> pure ()
+onCampaignMembershipCleared driverId cjmId = do
+  wasInCharge <- MgCampaign.isControlCampaign cjmId
+  when wasInCharge $
+    QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsOnJoin driverId driver.merchantOperatingCityId
 
 -- | 'applyFleetSettingsToDriver', only for a driver on auto-assign in a fleet that doesn't let its drivers toggle it. For
 -- use after an event that makes more tiers eligible (AC back on, a wallet posting): a fleet that allows toggling keeps the driver's choices,
 -- and a driver the fleet switched off stays off. Forced, like the fleet's per-driver switch that put the driver on
 -- auto-assign: with the fleet's default off, an unforced apply would do nothing.
 applyLockedFleetSettingsToDriver ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
@@ -288,7 +282,7 @@ applyLockedFleetSettingsToDriver = applyFleetSettingsLocked \mbFleetAutoAssign d
 -- A driver without an AutoAssign tag (outside a fleet, or switched off) stops at the person read: no lock, no fleet read.
 -- With nothing to restore it writes nothing ('applyFleetSettings' writes only a changed column).
 applyLockedFleetSettingsOnWalletPosting ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
@@ -311,7 +305,7 @@ lockedOnAutoAssign mbFleetAutoAssign driver = do
 -- a concurrent tier change. 'decide' sees the fleet's auto-assign config and the driver: Nothing skips, Just force applies.
 -- Not for a caller that already holds the lock (the lock isn't re-entrant): call 'applyFleetSettings' there.
 applyFleetSettingsLocked ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   (Maybe DFC.AutoAssignConfig -> Person -> m (Maybe Bool)) ->
   Id Person ->
   Id MerchantOperatingCity ->
@@ -320,27 +314,42 @@ applyFleetSettingsLocked decide driverId merchantOpCityId =
   Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey driverId) 5 10 50000 $
     QVehicle.findById driverId >>= mapM_ \vehicle -> do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      mbFleetAutoAssign <- getDriverFleetAutoAssignConfig driverId merchantOpCityId
-      decide mbFleetAutoAssign driver >>= mapM_ \forceAutoAssign -> do
+      control <- getAutoAssignControl driverId merchantOpCityId
+      decide control.autoAssignConfig driver >>= mapM_ \forceAutoAssign -> do
         cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-        applyFleetSettings forceAutoAssign cityTiers driver vehicle
+        applyFleetSettingsWith control forceAutoAssign cityTiers driver vehicle
 
 -- | For a driver who joins a fleet or moves to another one. Whatever auto-assign an earlier fleet left (nothing is
 -- removed on leave) is cleared first ('clearAutoAssign'), so the new fleet's default, and later its per-driver switch,
 -- decides from scratch; then the new fleet's settings are applied, unforced. Under the selected-tiers lock, on a fresh
 -- read. Not for a vehicle rewrite in the same fleet, which keeps the driver's auto-assign ('applyFleetSettingsToDriver').
+-- A driver a control campaign runs gets the campaign's settings, the fleet's left for when the campaign ends.
 applyFleetSettingsOnJoin ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m ()
-applyFleetSettingsOnJoin driverId merchantOpCityId =
+applyFleetSettingsOnJoin = resetAutoAssign (const True)
+
+-- | When 'shouldReset' holds for the source now in charge: clears the driver's auto-assign ('clearAutoAssign') and applies
+-- that source's settings, unforced. Under the selected-tiers lock, on a fresh read of the driver, vehicle and source, so
+-- it can't interleave with a driver's tier update, the wallet strip or another apply. Not for a caller that already
+-- holds the lock (the lock isn't re-entrant).
+resetAutoAssign ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (AutoAssignControl -> Bool) ->
+  Id Person ->
+  Id MerchantOperatingCity ->
+  m ()
+resetAutoAssign shouldReset driverId merchantOpCityId =
   Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey driverId) 5 10 50000 $ do
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    (driver', mbVehicle) <- clearAutoAssign driver =<< QVehicle.findById driverId
-    whenJust mbVehicle \vehicle -> do
-      cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-      applyFleetSettings False cityTiers driver' vehicle
+    control <- getAutoAssignControl driverId merchantOpCityId
+    when (shouldReset control) $ do
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      (driver', mbVehicle) <- clearAutoAssign driver =<< QVehicle.findById driverId
+      whenJust mbVehicle \vehicle -> do
+        cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+        applyFleetSettingsWith control False cityTiers driver' vehicle
 
 -- | Takes the driver off fleet auto-assign: the whole AutoAssign tag, whatever it holds (also tiers the city no longer
 -- has), and those tiers' auto-accept on the vehicle. Selected service tiers are left as they are. Returns the driver and
@@ -361,7 +370,8 @@ clearAutoAssign driver mbVehicle = do
     pure vehicle {DV.selectedAutoAcceptTiers = Just autoAcceptTiers}
   pure (driver {DP.driverTag = Just newTags}, mbVehicle')
 
--- | What a fleet that doesn't let its drivers toggle auto-assign locks for one of its drivers. It holds the driver only:
+-- | What a fleet that doesn't let its drivers toggle auto-assign locks for one of its drivers (or, for a driver a control
+-- campaign runs, what that campaign locks). It holds the driver only:
 -- ops edits, the rating/AC recomputes, the wallet strip and the fleet's own switch still change their tiers.
 data FleetLock = FleetLock
   { -- | Tiers the fleet gave auto-assign on: the driver can't turn off the tier or its auto-accept.
@@ -372,10 +382,12 @@ data FleetLock = FleetLock
     intraCityLocked :: Bool
   }
 
--- | The fleet lock on this driver, if their fleet doesn't let drivers toggle auto-assign and the driver is on it (has the
--- AutoAssign tag): a driver the fleet switched off with its per-driver switch isn't locked.
+-- | The lock on this driver from whoever is in charge ('getDriverFleetAutoAssignConfig'): a control campaign's
+-- AutoAssign with allowDriverToToggle=false locks its members to the campaign's tiers, all day; any other driver,
+-- including a behaviour-only campaign member, keeps the fleet's lock, if their fleet doesn't let drivers toggle
+-- auto-assign. Only for a driver on auto-assign (has the AutoAssign tag): one switched off isn't locked.
 getFleetLock ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IJBeam.BeamFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IJBeam.BeamFlow m r) =>
   Id MerchantOperatingCity ->
   Person ->
   DI.DriverInformation ->
