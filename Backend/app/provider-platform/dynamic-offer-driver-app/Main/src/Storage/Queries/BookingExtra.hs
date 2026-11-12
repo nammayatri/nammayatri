@@ -6,6 +6,8 @@ import qualified Data.Aeson as A
 import Data.List.Extra (notNull, sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Time as DT
+import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Booking
@@ -17,15 +19,18 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
+import qualified EulerHS.Language as L
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (forM_)
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -339,16 +344,55 @@ findAllOnlineByIdsAndBapId merchantId bookingIds bapId =
 -- RSF: a merchant's completed online (non-cash) bookings created in [from, to).
 findAllCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [Booking]
 findAllCompletedOnlineByProviderAndCreatedAtRange merchantId from to =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamB.providerId $ Se.Eq merchantId.getId,
-          Se.Is BeamB.status $ Se.Eq COMPLETED,
-          Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq Nothing),
-          Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq (Just DMPM.Cash)),
-          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is BeamB.createdAt $ Se.LessThan to
-        ]
-    ]
+  findAllWithKV [Se.And (completedOnlineInRange merchantId from to Nothing [])]
+
+-- RSF missed orders: one page of the merchant's completed online bookings created in [from, to), newest first,
+-- leaving out the given (already claimed) ids, optionally one BAP's. The query applies the limit and offset.
+findCompletedOnlinePageByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> Int -> Int -> m [Booking]
+findCompletedOnlinePageByProviderAndCreatedAtRange merchantId from to mbBapId excluded limit offset =
+  findAllWithOptionsKV
+    [Se.And (completedOnlineInRange merchantId from to mbBapId excluded)]
+    (Se.Desc BeamB.createdAt)
+    (Just limit)
+    (Just offset)
+
+-- The same filter as the page above, counted in the database (KV has no count).
+countCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> m Int
+countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId excluded = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \booking ->
+                  B.sqlBool_ (BeamB.providerId booking B.==. B.val_ merchantId.getId)
+                    B.&&?. B.sqlBool_ (BeamB.status booking B.==. B.val_ COMPLETED)
+                    B.&&?. B.sqlBool_ (B.isJust_ (BeamB.paymentInstrument booking))
+                    B.&&?. (BeamB.paymentInstrument booking B./=?. B.val_ (Just DMPM.Cash))
+                    B.&&?. B.sqlBool_ (BeamB.createdAt booking B.>=. B.val_ from)
+                    B.&&?. B.sqlBool_ (BeamB.createdAt booking B.<. B.val_ to)
+                    B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\bapId -> B.sqlBool_ (BeamB.bapId booking B.==. B.val_ bapId)) mbBapId
+                    B.&&?. (if null excluded then B.sqlBool_ (B.val_ True) else B.sqlBool_ (B.not_ (BeamB.id booking `B.in_` map (B.val_ . getId) excluded)))
+              )
+              $ B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+  -- a failed count is an error, not "no bookings": a 0 would hide the missed orders
+  case res of
+    Left err -> throwError $ InternalError ("RSF missed-orders count failed: " <> show err)
+    Right rows -> pure $ fromMaybe 0 (listToMaybe rows)
+
+completedOnlineInRange :: Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> [Se.Clause Postgres BeamB.BookingT]
+completedOnlineInRange merchantId from to mbBapId excluded =
+  [ Se.Is BeamB.providerId $ Se.Eq merchantId.getId,
+    Se.Is BeamB.status $ Se.Eq COMPLETED,
+    Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq Nothing),
+    Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq (Just DMPM.Cash)),
+    Se.Is BeamB.createdAt $ Se.GreaterThanOrEq from,
+    Se.Is BeamB.createdAt $ Se.LessThan to
+  ]
+    <> [Se.Is BeamB.bapId $ Se.Eq bapId | Just bapId <- [mbBapId]]
+    <> [Se.Is BeamB.id $ Se.Not (Se.In (map getId excluded)) | not (null excluded)]
 
 findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)
 findLastCancelledByRiderId riderDetailsId =

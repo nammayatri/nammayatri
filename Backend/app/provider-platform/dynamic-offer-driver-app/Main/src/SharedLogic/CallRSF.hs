@@ -77,12 +77,13 @@ data PreparedMessage = PreparedMessage
 -- them is sent, then they are sent one by one. Returns (sent, already sent).
 -- Returns (sent, already sent, failed with reason). Each unanswered message is checked and sent on its
 -- own: one that fails a check or is NACKed is reported and stays unanswered (retried by the next send),
--- and the others still go out.
-sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> m ([Text], [Text], [(Text, Text)])
-sendOnReceiverReconForDate merchantId day = do
+-- and the others still go out. With a bapId only that collector's messages and missing rides are sent.
+sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> Maybe Text -> m ([Text], [Text], [(Text, Text)])
+sendOnReceiverReconForDate merchantId day mbBapId = do
   let mid = merchantId
       (from, to) = RSFLedger.istDayRange day
-  envelopes <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED from to
+      forBap e = maybe True (\b -> e.bapId == Just b) mbBapId
+  envelopes <- filter forBap <$> QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED from to
   let messageIds = nub (mapMaybe (.messageId) envelopes)
   -- the merchant's finance lock, shared with allocation, so a send never interleaves with an allocation
   RSFLedger.withFinanceLock mid $ do
@@ -105,8 +106,8 @@ sendOnReceiverReconForDate merchantId day = do
           pure (Left (messageId, reason))
     -- a day's receiver_recon settles the previous day's rides, so that day's unclaimed rides are reported
     let (prevFrom, prevTo) = RSFLedger.istDayRange (addDays (-1) day)
-    missing <- sendMissingRides merchantId prevFrom prevTo envelopes
-    when (null messageIds && null missing) $ throwError $ InvalidRequest "No receiver_recon messages or missing rides on this date"
+    missing <- sendMissingRides merchantId prevFrom prevTo mbBapId envelopes
+    when (null messageIds && null missing) $ throwError $ InvalidRequest ("No receiver_recon messages or missing rides on this date" <> maybe "" (" for BAP " <>) mbBapId)
     pure (rights results <> rights missing, alreadySent, lefts results <> lefts missing)
   where
     alreadyAnswered entries = not (null (RSFLedger.ofType L.ORDER_VARIANCE entries <> RSFLedger.ofType L.UTR_VARIANCE entries))
@@ -181,9 +182,11 @@ dispatchMessage merchantId prepared = do
 -- message ids, the rest of the context from the day's receiver_recon, or a fresh RSF context when the day has
 -- none), every ride reported 04 with its whole
 -- fare as the diff and code "missing". Nothing is recorded, so every send reports them again.
-sendMissingRides :: SendFlow m r => Id DM.Merchant -> UTCTime -> UTCTime -> [RSFLedger.Entry] -> m [Either (Text, Text) Text]
-sendMissingRides merchantId from to envelopes = do
-  bookings <- QAgg.findUnclaimedCompletedBookings merchantId from to
+-- It goes to the bap_uri of the BAP's latest receiver_recon (its RSF / NTS10 endpoint): the booking's bap_uri is
+-- the BAP's ride-hailing endpoint, which rejects on_receiver_recon. A BAP that never sent one fails without a send.
+sendMissingRides :: SendFlow m r => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> [RSFLedger.Entry] -> m [Either (Text, Text) Text]
+sendMissingRides merchantId from to mbBapId envelopes = do
+  bookings <- filter (\b -> maybe True (== b.bapId) mbBapId) <$> QAgg.findUnclaimedCompletedBookings merchantId from to
   rideByBookingId <- RSFLedger.latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map (.id) bookings))
   bppUri <- BecknUtils.mkBppUri merchantId.getId
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)

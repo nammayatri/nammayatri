@@ -347,18 +347,20 @@ getLinker merchantId dayClaims orderIds utrMap = do
 -- Phase 3 (step 11): pooled allocation over one IST day's accepted claims. A UTR's money is
 -- fungible across the orders linked to it: orders are filled whole, smallest outstanding first,
 -- draining each order's UTRs settled first, then least shared, then smallest. Every UTR of the
--- day must be bank-verified.
+-- day must be bank-verified. With a bapId only that collector's claims are allocated,
+-- so only its UTRs need to be verified.
 -- Reported orders are frozen; re-runs only top up. An order that gets nothing is given a
 -- 0-amount row so Phase 4 can tell "allocated nothing" from "never allocated".
 autoAllocate ::
   (BeamFlow m r, Hedis.HedisFlow m r) =>
   Id DM.Merchant ->
   Day ->
+  Maybe Text ->
   m AutoAllocationOutcome
-autoAllocate merchantId day = withFinanceLock merchantId $ do
+autoAllocate merchantId day mbBapId = withFinanceLock merchantId $ do
   let (from, to) = istDayRange day
-  dayClaims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange merchantId L.ACCEPTED from to
-  when (null dayClaims) $ throwError $ InvalidRequest "No accepted receiver_recon claims on this date"
+  dayClaims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange merchantId L.ACCEPTED from to mbBapId
+  when (null dayClaims) $ throwError $ InvalidRequest ("No accepted receiver_recon claims on this date" <> maybe "" (" from BAP " <>) mbBapId)
   utrMap0 <- giveUtr merchantId dayClaims (nub (mapMaybe (.utr) dayClaims))
   orderIds <- unprocessedOrderIds merchantId dayClaims
   let openOrders = HS.fromList orderIds

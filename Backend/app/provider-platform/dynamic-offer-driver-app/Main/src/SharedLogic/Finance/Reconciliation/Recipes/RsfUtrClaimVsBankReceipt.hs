@@ -48,7 +48,7 @@ recipe messageId =
 
 fetchSources :: (BeamFlow m r) => Text -> ReconT.MerchantScope -> ReconT.DateRange -> m [ReconT.SourceRecord]
 fetchSources messageId scope range = do
-  claims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange (Id scope.merchantId) L.PENDING range.from range.to
+  claims <- QLedger.findClaimsByMerchantStatusAndCreatedAtRange (Id scope.merchantId) L.PENDING range.from range.to Nothing
   fetchSourcesById messageId scope (nub $ mapMaybe (.utr) claims)
 
 -- One source per UTR: this message's PENDING legs on it.

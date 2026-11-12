@@ -30,6 +30,7 @@ RsfUtrState:
   constraints:
     merchantId: PrimaryKey
     utr: PrimaryKey
+    bapId: "!SecondaryKey" # the dashboard's BAP filter reads through KV
 
   sqlType:
     reportedDiff: numeric(30,2)

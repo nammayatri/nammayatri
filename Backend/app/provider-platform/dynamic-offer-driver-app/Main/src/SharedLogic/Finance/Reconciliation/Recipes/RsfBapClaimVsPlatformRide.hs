@@ -58,7 +58,7 @@ fetchSources ::
   ReconT.DateRange ->
   m [ReconT.SourceRecord]
 fetchSources scope range = do
-  QLedger.findClaimsByMerchantStatusAndCreatedAtRange (Id scope.merchantId) L.PENDING range.from range.to >>= claimsToSourceRecords scope
+  QLedger.findClaimsByMerchantStatusAndCreatedAtRange (Id scope.merchantId) L.PENDING range.from range.to Nothing >>= claimsToSourceRecords scope
 
 fetchSourcesById ::
   (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

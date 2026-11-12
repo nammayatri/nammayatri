@@ -33,6 +33,6 @@ instance B.Table RsfOrderStateT where
 
 type RsfOrderState = RsfOrderStateT Identity
 
-$(enableKVPG (''RsfOrderStateT) [('merchantId), ('orderId)] [])
+$(enableKVPG (''RsfOrderStateT) [('merchantId), ('orderId)] [[('bapId)]])
 
 $(mkTableInstances (''RsfOrderStateT) "rsf_order_state")
