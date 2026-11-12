@@ -7,6 +7,8 @@ where
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
+import qualified Environment
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
@@ -14,6 +16,7 @@ import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.LocationUpdates (LocationUpdateFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -25,6 +28,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
 import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
 import qualified Tools.Payout as Payout
 
@@ -95,7 +99,11 @@ executeSpecialZonePayoutRequest ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    IJBeamFlow.BeamFlow m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DPR.PayoutRequest ->
   m ()

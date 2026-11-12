@@ -6,44 +6,56 @@
 -}
 
 module Lib.IncentiveJourney.Period
-  ( mkJourneyPeriodKey,
+  ( mkJourneyPeriodKeyWithStart,
     mkDailyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
   )
 where
 
 import qualified Data.Text as T
-import Data.Time (utctDay)
-import Data.Time.Calendar (toGregorian)
-import Data.Time.Calendar.WeekDate (toWeekDate)
+import Data.Time (Day, addDays, addGregorianMonthsClip, diffDays, utctDay)
 import Kernel.Prelude
 import Lib.IncentiveJourney.Types
 
-mkJourneyPeriodKey :: UTCTime -> JourneyPeriodType -> Text
-mkJourneyPeriodKey localTime periodType =
+-- | Period key for eval / streak / UI.
+-- Daily: calendar day.
+-- Weekly / Monthly: always anchored to campaign startDate (7-day / month-step buckets).
+-- Format: Day:YYYY-MM-DD | Week:YYYY-MM-DD | Month:YYYY-MM-DD.
+mkJourneyPeriodKeyWithStart :: UTCTime -> JourneyPeriodType -> UTCTime -> Text
+mkJourneyPeriodKeyWithStart localTime periodType startDate =
   case periodType of
     Daily -> mkDailyPeriodKey localTime
-    Weekly -> mkWeeklyPeriodKey localTime
-    Monthly -> mkMonthlyPeriodKey localTime
+    Weekly -> mkWeeklyPeriodKeyAnchored startDate localTime
+    Monthly -> mkMonthlyPeriodKeyAnchored startDate localTime
 
 -- | Calendar day only — peak windows are filtered at milestone eval, not in the key.
 mkDailyPeriodKey :: UTCTime -> Text
 mkDailyPeriodKey localTime =
   "Day:" <> T.pack (show (utctDay localTime))
 
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey localTime =
-  let (year, week, _) = toWeekDate (utctDay localTime)
-   in "Week:" <> T.pack (show year) <> "-W" <> T.pack (pad2 week)
+-- | 7-day buckets from startDate. Format: Week:YYYY-MM-DD (anchor day).
+mkWeeklyPeriodKeyAnchored :: UTCTime -> UTCTime -> Text
+mkWeeklyPeriodKeyAnchored startDate localTime =
+  let startDay = utctDay startDate
+      localDay = utctDay localTime
+      idx = max 0 (diffDays localDay startDay) `div` 7
+      anchor = addDays (idx * 7) startDay
+   in "Week:" <> T.pack (show anchor)
 
--- | Calendar month in the already-localized timestamp.
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey localTime =
-  let (year, month, _) = toGregorian (utctDay localTime)
-   in "Month:" <> T.pack (show year) <> "-" <> T.pack (pad2 month)
+-- | Month-length buckets from startDate. Format: Month:YYYY-MM-DD (anchor day).
+mkMonthlyPeriodKeyAnchored :: UTCTime -> UTCTime -> Text
+mkMonthlyPeriodKeyAnchored startDate localTime =
+  let startDay = utctDay startDate
+      localDay = utctDay localTime
+      idx = monthPeriodIndex startDay localDay
+      anchor = addGregorianMonthsClip idx startDay
+   in "Month:" <> T.pack (show anchor)
 
-pad2 :: Int -> String
-pad2 n
-  | n < 10 = '0' : show n
-  | otherwise = show n
+-- | Largest i >= 0 with addGregorianMonthsClip i startDay <= localDay.
+monthPeriodIndex :: Day -> Day -> Integer
+monthPeriodIndex startDay localDay
+  | localDay < startDay = 0
+  | otherwise = go 0
+  where
+    go i =
+      let next = addGregorianMonthsClip (i + 1) startDay
+       in if localDay < next then i else go (i + 1)

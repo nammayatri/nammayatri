@@ -270,11 +270,6 @@ getFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text 
 getFleetAutoAssignConfig ownerId merchantOpCityId =
   (\fleetConfigs -> M.lookup ownerId fleetConfigs >>= (.autoAssign)) <$> getCityFleetConfigs merchantOpCityId
 
--- | Auto-assign settings of the driver's active fleet.
-getDriverFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId =
-  findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
-
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Id Person -> Bool -> m (Maybe FleetDriverAssociation))

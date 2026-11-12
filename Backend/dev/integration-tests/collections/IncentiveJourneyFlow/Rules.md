@@ -10,9 +10,11 @@ Provider/driver **Incentive Journey** E2E for **NAMMA_YATRI** (Bangalore): dashb
    ```bash
    , run-mobility-stack-full
    ```
-   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis, Kafka, **`kafka-consumers`**, and **mock-server** (`:8080`). Suite `02` sends the CSV as a multipart file on `POST .../assign/bulkFromS3`. Driver-app writes that object under `Backend/s3/local/test-bucket/<key>`, and the allocator reads it from there. The mock `put-text` step also writes `collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv` so newman can attach that file. Restart mock-server after pulling that endpoint.
+   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis, Kafka, **`kafka-ride-events-consumer-exe`**, **`kafka-ij-behavior-tick-consumer-exe`**, and **mock-server** (`:8080`). Suite `02` sends the CSV as a multipart file on `POST .../assign/bulkFromS3`. Driver-app writes that object under `Backend/s3/local/test-bucket/<key>`, and the allocator reads it from there. The mock `put-text` step also writes `collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv` so newman can attach that file. Restart mock-server after pulling that endpoint.
 
-2. **Kafka consumer** — ride-end processing updates journey milestones via `DriverCoinsAndJourney` (`SharedLogic.RideEvents.DriverCoinsAndJourney` / `handleDriverCoinsAndJourney`). Without `kafka-consumers`, the poll step will fail.
+2. **Consumers** —
+   - Ride-end: `kafka-ride-events-consumer-exe` (`RIDE_EVENTS_CONSUMER` / `DriverCoinsAndJourney`). Without it, ride-end milestone polls fail.
+   - Behaviour ticks: `kafka-ij-behavior-tick-consumer-exe` (`IJ_BEHAVIOR_TICK_CONSUMER`, Redis stream `dynamic-offer-driver-app:ij_behavior_tick_stream_*`). Accept publishes via `publishBehaviorMetricTick`; without it, suite `03`'s BehaviourMetricTick-only award poll fails. Restart the stack (or start that process) after pulling this wiring.
 
 3. **Dashboard auth** (auto-run by `./run-tests.sh incentive-journey`, or after DB reset):
    ```bash
@@ -40,6 +42,8 @@ Examples:
 | Create milestone | `POST .../milestone/create` |
 | List milestones | `GET .../milestone/{journeyId}/list` |
 | Cohort↔journey map | `POST .../cohortJourney/create` (enabled, maxWaiveOffCount, streak-end reward) |
+| Roll next campaign window | `POST .../cohortJourney/roll` (`cohortJourneyMappingId`, new `startDate`; copies streak/rewards, sets `parentId`) — covered in `01` |
+| List cohort↔journey maps | `GET .../cohortJourney/list` (includes `parentId`) |
 | Assign driver | `POST .../assign` (one user mapping per cohort-journey mapping) |
 | Unassign | `DELETE .../unassign` |
 | Disable cohort mapping | `PUT .../cohortJourney/update` (`cohortJourneyMappingId`, `enabled: false`) |
@@ -48,6 +52,7 @@ Examples:
 | Driver assignments | `GET .../driver/{driverId}/assignments` |
 | Stats history | `GET .../stats/history/{driverId}?fromDate=&toDate=&journeyId=` |
 | Waive milestone | `POST .../stats/waiveOff` (`driverId`, `journeyId`, `milestoneId`, `periodKey`) |
+| Inspect / catch-up streak-end | `POST .../streakEnd/inspect` (`driverId`, `cohortJourneyMappingId`, `periodKey`, `trigger`) — `trigger` only after exclusive window end (`SliceNotClosed` while open: periodized slice end or classic `computeStreakEndDate`); NetOff streak-end → Cash (classic or periodized) |
 
 There is no journey update API, and no delete for a cohort-journey mapping. Set `enabled: false` on `PUT .../cohortJourney/update`. Eval and the driver list already skip a disabled mapping. Stats rows stay.
 
@@ -71,6 +76,7 @@ cd Backend/dev/integration-tests
 ./run-tests.sh incentive-journey NY_Bangalore
 ./run-tests.sh incentive-journey NY_Bangalore 01-IncentiveJourneyRideProgressFlow
 ./run-tests.sh incentive-journey NY_Bangalore 02-IncentiveJourneyBulkAssignRideProgressFlow
+./run-tests.sh incentive-journey NY_Bangalore 03-IncentiveJourneyMgCampaignOptInFlow
 ```
 
 Skip automatic SQL seed: `NY_TEST_SKIP_INCENTIVE_SEED=1 ./run-tests.sh incentive-journey`
@@ -85,10 +91,38 @@ newman run collections/IncentiveJourneyFlow/01-IncentiveJourneyRideProgressFlow.
 
 ## Collection
 
-| File | What it tests |
-|------|----------------|
-| `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 2 is RideCompleted GTE 2 for 200 coins and completes on ride 2. A second cohort is auto-applied for `AUTO_CATEGORY` with no user mapping and completes on ride 1. Then waive earnings → streak-end cash ₹1 does not change coin balance → unassign both mappings, disable them, and disable auto-apply |
-| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key |
+| `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 1 milestones stay legacy simple columns. Journey 2 uses **evaluation.logic** JsonLogic `ridesCompleted>=2 AND (earnings>=1 OR distanceMeters>=1)` (200 coins) on ride 2. Auto-apply uses the same AND/OR shape with `ridesCompleted>=1` (30 coins) on ride 1. Polls assert `currentMetrics`. Then waive earnings → streak-end cash ₹1. Before cleanup: roll campaign checks. Then unassign / disable mappings |
+| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key. Roll API is covered in `01` only |
+| `03-IncentiveJourneyMgCampaignOptInFlow.json` | **OptIn + deferred behaviour settle**. CJM `OptIn` + `controlFeatures`, `streakRange=2`, `startDate=yesterday`. Invite → opt-in → Accept/ride **stats-sync only** (`InProgress`, no mid-period Completing) → Local Redis seed of closed `Day:` ij:bm → `GET /incentive/journey/list` settles previous period (behaviour Coins `Completed`) → unassign → re-invite → dashboard opt-in → cleanup |
+
+## OptIn + controlFeatures suite (`03`)
+
+Do **not** fold this into `01` — Assigned ride progress and OptIn+controls are different flows.
+
+`03` is self-contained and covers (update fixture JSON after generator):
+
+1. CJM **`campaignUserLinkType=OptIn`** + **`controlFeatures`**. Optional **`periodDays`** lives in **`streakEndRewardMetadata`** (must divide campaign length). Milestone **`evaluation`** = condition JsonLogic only (`{ "logic": … }`). Slabs / NetOff flags in **`rewardMetadata`** (`includeEarningsAllDay`, `mgAmountSlabs`, `percentSlabs`, `violationPercentSlabs`). Reward **`NetOffEarnings`** (static MG in `rewardValue` or `mgAmountSlabs`). Stats **`currentMetrics`**: earnings + behaviour in/out timebound keys + `slabPercent`.
+2. Opt-in **before** invite must fail; invite assign; driver list empty until opted in
+3. Driver UI `/incentive/journey/optIn` then list/history show `controlFeatures` / `currentMetrics`
+4. Behaviour tick **stats-sync only** (no mid-period reward / no settle). Deferred milestones (behavior in condition or NetOff) settle the **previous closed period** via **list-API fork only** (not ride-end). Redis `ij:settle:done:{person}:{cjm}` stores the settled periodKey (one key per assignment, overwritten on next period; TTL by journey type). Watermark advances only across a contiguous quiet prefix — deferred `RewardPending` **or** periodized/classic streak `AwardSkipped` with positive expected payout keeps the period non-quiet so the slice is retried. NetOff settle with payout ≤ 0 creates no pending row (closes InProgress/RewardPending as Completed 0); payout > 0 + AwardSkipped stays `RewardPending` (VPA retry). Cash uses `periodKey` in referenceId. **rrReceived** Redis-bumps every SRD; Kafka/stats sync batches every 10 (flushed early on accept/cancel). Slabs only in **rewardMetadata** (no `evaluation.rule`). Cancel/accept **rates derived from period ij:bm/stats counts** (not city bt:). `conditionType=JSONLogic` means use `evaluation.logic` (operator/value ignored).
+5. Ride-only Coin/Cash (no behavior, not NetOff) still award immediately when condition true
+6. NetOff payout: `max(0, (mg − earnings) * minPercent / 100)`; streak NetOff sums per-day `(mg−earnings)` (keeps negatives) then applies min %
+7. Unassign → list clears; re-invite → dashboard `/optIn`; cleanup disable
+
+### Local settle hook in `03` (no Haskell / clock change)
+
+Live Accept/ride always write **today’s** `periodKey`. Settle needs a **previous** key in-streak. Collection does:
+
+1. `streakRange=2` + `startDate` = yesterday IST → period keys `[Day:yest, Day:today]`.
+2. Mid-period polls assert **`InProgress` + `currentMetrics`** (not `Completed`). Exit `NoReward` false logic is a **no-op** (not `Disqualified`).
+3. `POST /mock/redis/set` seeds `ij:bm:rrReceived|rrAccepted:{driver}:{cjm}:{Day:yest}:daily = 1` (cluster + standalone) and deletes `ij:settle:done:…`.
+4. `GET /incentive/journey/list` forks settle → poll `stats/history` for closed `Day:yest` behaviour milestone **`Completed`** (15 coins).
+
+Requires `envType=Local` + mock-server. Without the Redis seed step, settle has empty closed-period metrics and will not award.
+
+**Membership / controls:** wire `IJCampaign:<cjmId>#Assigned|OptIn;daily|tb[#expiry]` (cjmId only in tag name; `daily`/`tb` are Redis suffixes only — real windows live on milestone/CJM cache). At most one **live** **controlFeatures** campaign per driver (ended CJMs do not occupy the slot even if UCM.validTill is still open). Dashboard `GET .../assignments` exposes `optInStatus` (`NotRequired` | `Pending` | `OptedIn`) plus `campaignUserLinkType` / `optedInAt`. **OptIn** tag on opt-in only; **all Assigned** tags ensured in a non-blocking list fork (never on assign/bulk). Pooling/cancel/AA resolve **CJM.controlFeatures** via pod in-mem cache; unexpired membership always suppresses fleet AA/cancel/pooling — **behaviour-only** (no controlFeatures) → driver defaults only; unassign to restore fleet. **ij:bm / BehaviourMetricTick** only when the journey has behaviour-related milestones (`trackBehaviorMetrics`); controlFeatures-only or ride/earnings-only campaigns keep the tag but skip Redis bumps, Kafka ticks, and behaviour stats sync. Redis key is period-scoped: `ij:bm:{metric}:{driver}:{cjm}:{Day|Week|Month:…}:{daily|tb}` (same periodKey as stats rows). **Stats is progressive SoT** for settle/reward (max-merge with Redis; never clobber DB with zeros). On Redis key miss, bump re-seeds from stats before INCR.
+
+Run alone: `./run-tests.sh incentive-journey NY_Bangalore 03-IncentiveJourneyMgCampaignOptInFlow`
 
 ## Bulk assign suite
 
@@ -110,17 +144,17 @@ Eval does not carry progress into the next milestone, and it does not start the 
 | 2 | RideCompleted GTE | 1 | Still open after ride 1; completed by ride 2 (10 coins) |
 | 3 | Earnings GTE | 1000000 | Left open, then `POST .../stats/waiveOff` |
 
-Same cohort, second mapping (separate assign; a user mapping points at one cohort-journey mapping, not the whole cohort):
+Same cohort, second mapping (separate assign; a user mapping points at one cohort-journey mapping, not the whole cohort) — **JsonLogic bag eval on ride-end**:
 
 | Order | Condition | Value | What the test does |
 |-------|-----------|-------|--------------------|
-| 1 | RideCompleted GTE | 2 | Open at 1 after ride 1; completed on ride 2 (200 coins) |
+| 1 | `conditionLogic`: `ridesCompleted >= 2` **AND** (`earnings >= 1` **OR** `distanceMeters >= 1`) | 2 | Open at `currentValue=1` after ride 1; completed on ride 2 (200 coins). Snapshot includes rides + earnings/distance vars |
 
-Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it still applies while the driver has the other mappings, `vehicleCategory` `AUTO_CATEGORY`, matching Add Vehicle):
+Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it still applies while the driver has the other mappings, `vehicleCategory` `AUTO_CATEGORY`, matching Add Vehicle) — **JsonLogic**:
 
 | Order | Condition | Value | What the test does |
 |-------|-----------|-------|--------------------|
-| 1 | RideCompleted GTE | 1 | Completed by ride 1 (30 coins) |
+| 1 | `ridesCompleted >= 1` **AND** (`earnings >= 1` **OR** `distanceMeters >= 1`) | 1 | Completed by ride 1 (30 coins) + compound `metricSnapshot` |
 
 `periodKey` is taken from the completed ride stats row (`Day:YYYY-MM-DD`, city local day). Cohort mapping `startDate` is noon UTC on that same IST calendar day so streak-end (streakRange 1, cash ₹1) matches the ride period. `maxWaiveOffCount` is 1.
 
@@ -132,6 +166,7 @@ Separate auto-apply cohort (no user mapping, `allowIfNoMapping` false so it stil
 
 ## Env notes
 
-- `ij_eval_wait_ms` (default `12000`) — busy-wait before each list poll so Kafka can catch up.
+- `ij_eval_wait_ms` (default `12000`) — busy-wait before ride-end list/stats polls so Kafka can catch up.
+- `ij_behaviour_tick_wait_ms` (falls back to `ij_eval_wait_ms`) — wait after Accept before BehaviourMetricTick stats poll.
 - `_test_start_date` — noon UTC of today's IST day, so streak period keys match ride eval.
 - `envType=Local` enables mock-server steps; non-Local auto-skips URLs containing `mockServerUrl` / `mock_fcm_url`.

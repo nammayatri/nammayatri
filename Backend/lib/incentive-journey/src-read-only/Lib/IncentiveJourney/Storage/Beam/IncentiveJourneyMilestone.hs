@@ -20,6 +20,7 @@ data IncentiveJourneyMilestoneT f = IncentiveJourneyMilestoneT
     conditionValue :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    evaluation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     id :: B.C f Kernel.Prelude.Text,
     journeyId :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

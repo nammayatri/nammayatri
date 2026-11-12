@@ -796,6 +796,11 @@ library
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
+      SharedLogic.IncentiveJourney.BehaviorTickPublisher
+      SharedLogic.IncentiveJourney.CampaignBehaviorBump
+      SharedLogic.IncentiveJourney.CampaignControlsCache
+      SharedLogic.IncentiveJourney.MetricBag
+      SharedLogic.IncentiveJourney.MgCampaign
       SharedLogic.IntegratedBPPConfig
       SharedLogic.InternalAuth
       SharedLogic.KaalChakra.Actions

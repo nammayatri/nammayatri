@@ -56,6 +56,10 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCoho
   updateWithKV
     [ Se.Set Beam.cohortMappingId (Kernel.Types.Id.getId cohortMappingId),
       Se.Set Beam.enabled enabled,
+      Se.Set Beam.optInPeriod optInPeriod,
+      Se.Set Beam.optedInAt optedInAt,
+      Se.Set Beam.optedInBy optedInBy,
+      Se.Set Beam.termsAcceptedAt termsAcceptedAt,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userId (Kernel.Types.Id.getId userId),
       Se.Set Beam.validTill validTill

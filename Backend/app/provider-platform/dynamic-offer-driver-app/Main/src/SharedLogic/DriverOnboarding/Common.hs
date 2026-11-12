@@ -63,6 +63,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI

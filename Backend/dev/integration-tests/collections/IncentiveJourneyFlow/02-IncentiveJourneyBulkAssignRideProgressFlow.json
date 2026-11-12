@@ -2612,6 +2612,49 @@
       }
     },
     {
+      "name": "POST streakEnd/inspect before waive (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('streakEnd/inspect before waive 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Classic streak inspect incomplete before waive', function () {",
+              "  pm.expect(d.mode).to.eql('ClassicFullStreak');",
+              "  pm.expect(d.streakEndRewardType).to.eql('Cash');",
+              "  pm.expect(d.eligible).to.eql(false);",
+              "  pm.expect(d.triggered).to.eql(false);",
+              "  pm.expect(d.verdict).to.eql('LastMilestoneIncomplete');",
+              "  pm.expect(d.periodKey).to.eql(pm.environment.get('ij_period_key'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/streakEnd/inspect"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\",\n  \"periodKey\": \"{{ij_period_key}}\",\n  \"trigger\": false\n}"
+        }
+      }
+    },
+    {
       "name": "POST Waive earnings milestone (Dashboard)",
       "event": [
         {
@@ -2703,6 +2746,91 @@
               "value": "{{ij_journey_id}}"
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "POST streakEnd/inspect after waive (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('streakEnd/inspect after waive 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Classic streak ready after waive', function () {",
+              "  pm.expect(d.mode).to.eql('ClassicFullStreak');",
+              "  pm.expect(d.streakEndRewardType).to.eql('Cash');",
+              "  pm.expect(d.eligible).to.eql(true);",
+              "  pm.expect(d.triggered).to.eql(false);",
+              "  pm.expect(d.verdict).to.eql('ReadyToAward');",
+              "  pm.expect(d.expectedPayout).to.eql(1);",
+              "  pm.expect(d.periodKey).to.eql(pm.environment.get('ij_period_key'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/streakEnd/inspect"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\",\n  \"periodKey\": \"{{ij_period_key}}\",\n  \"trigger\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "POST streakEnd/inspect trigger after waive (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('streakEnd/inspect trigger 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Idempotent streak-end trigger after waive', function () {",
+              "  pm.expect(d.mode).to.eql('ClassicFullStreak');",
+              "  pm.expect(d.eligible).to.eql(true);",
+              "  pm.expect(d.triggered).to.eql(true);",
+              "  pm.expect(d.verdict).to.be.oneOf(['AwardDispatched', 'AwardSkippedByDispatcher']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/streakEnd/inspect"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\",\n  \"periodKey\": \"{{ij_period_key}}\",\n  \"trigger\": true\n}"
         }
       }
     },

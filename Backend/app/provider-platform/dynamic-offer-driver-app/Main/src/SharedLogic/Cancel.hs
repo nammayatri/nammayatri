@@ -32,6 +32,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Environment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
@@ -44,6 +45,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -63,6 +65,7 @@ import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -116,8 +119,10 @@ reAllocateBookingIfPossible ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     EventStreamFlow m r,
     HasPrettyLogger m r,

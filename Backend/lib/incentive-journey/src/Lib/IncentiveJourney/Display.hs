@@ -120,18 +120,32 @@ buildMilestoneTargetDescription milestone displayConditionValue =
     DIJM.Distance -> formatDistanceCompleted displayConditionValue
     DIJM.RideDuration -> formatDurationCompleted displayConditionValue
     DIJM.BookingTicket -> formatTicketsBooked displayConditionValue
+    DIJM.CancellationRate -> "Cancellation rate ≤ " <> show displayConditionValue <> "%"
+    DIJM.AcceptanceRate -> "Acceptance rate ≥ " <> show displayConditionValue <> "%"
+    DIJM.OnlineMinutes -> "Online " <> show displayConditionValue <> " minutes"
+    DIJM.JSONLogic -> jsonLogicDriverOverlayText
+
+-- | Fallback when JSONLogic milestone has no name/description.
+jsonLogicDriverOverlayText :: Text
+jsonLogicDriverOverlayText = "Complete the required goals to earn your reward"
+
+nonEmptyText :: Maybe Text -> Maybe Text
+nonEmptyText = \case
+  Just t | not (T.null (T.strip t)) -> Just (T.strip t)
+  _ -> Nothing
 
 resolveOverlayMilestoneDescription ::
   DIJM.IncentiveJourneyMilestone ->
   [DIJM.IncentiveJourneyMilestone] ->
   Text
 resolveOverlayMilestoneDescription milestone journeyMilestones =
-  case milestone.name of
-    Just n | not (T.null (T.strip n)) -> n
-    _ ->
-      case milestone.description of
-        Just desc | not (T.null (T.strip desc)) -> desc
-        _ ->
+  -- Same for all condition types (incl. JSONLogic): name → description → type fallback.
+  case nonEmptyText milestone.name of
+    Just n -> n
+    Nothing ->
+      case nonEmptyText milestone.description of
+        Just desc -> desc
+        Nothing ->
           let displayValue = aggregatedDisplayConditionValue milestone journeyMilestones
            in buildMilestoneTargetDescription milestone displayValue
 

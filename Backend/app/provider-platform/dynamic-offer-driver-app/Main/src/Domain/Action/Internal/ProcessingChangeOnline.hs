@@ -1,22 +1,30 @@
 module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, processingChangeOffline, updateOnlineDurationDuringFetchingDailyStats) where
 
+import qualified Data.Text as T
 import Data.Time (Day, DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Environment
 import EulerHS.Prelude hiding (id, state)
+import GHC.Records.Extra (HasField)
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import qualified SharedLogic.FleetOperatorStats as FOS
+import qualified SharedLogic.IncentiveJourney.BehaviorTickPublisher as BehaviorTickPublisher
+import qualified SharedLogic.IncentiveJourney.CampaignBehaviorBump as CampaignBehaviorBump
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
@@ -28,7 +36,13 @@ import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import Tools.Error
 
 processingChangeOnline ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    Metrics.CoreMetrics m,
+    BeamFlow m r,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
+  ) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   Maybe DriverInfo.DriverMode ->
@@ -43,7 +57,8 @@ processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
       else pure Nothing
   when cameOnline $
     DriverOnlineHoursCache.markOnlineToday driverId transporterConfig.timeDiffFromUtc
-  -- Analytics: emit the just-closed online session interval(s) to Kafka (-> ClickHouse).
+  -- Analytics + duration/idle bookkeeping first: markOfflineToday already cleared
+  -- lastOnlineAt, so a later retry cannot recover the closed session if we abort here.
   emitClosedSessionEvents driverId transporterConfig.merchantId transporterConfig.merchantOperatingCityId transporterConfig.timeDiffFromUtc mbClosedSession
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
@@ -54,18 +69,50 @@ processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
       QDI.updateOnlineDurationRefreshedAt driverId now
       -- Resume idle tracking when the driver comes back online.
       DriverIdleTime.resumeIdleOnOnline driverId
+  -- Campaign onlineMinutes after bookkeeping. Split closed session by local day + peak
+  -- window, then bump/publish each slice with its own sample time. Errors are logged and
+  -- swallowed so IJ never blocks the offline transition.
+  whenJust mbClosedSession $ \(sessionStart, sessionEnd) -> do
+    result <- try $ do
+      credits <-
+        CampaignBehaviorBump.bumpOnlineMinutesForClosedSession
+          driverId
+          sessionStart
+          sessionEnd
+          transporterConfig.timeDiffFromUtc
+      let toUtc = addUTCTime (negate (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc))
+      forM_ credits $ \credit ->
+        when (credit.minutes > 0) $
+          BehaviorTickPublisher.publishBehaviorMetricTickDetailedAt
+            driverId
+            transporterConfig.merchantId
+            transporterConfig.merchantOperatingCityId
+            "ONLINE_MINUTES"
+            (Just [credit.cjmId])
+            (Just "onlineMinutes")
+            (Just credit.minutes)
+            (Just (toUtc credit.sampleLocalTime))
+    case result of
+      Right () -> pure ()
+      Left (err :: SomeException) ->
+        logError $
+          "IncentiveJourney onlineMinutes closed-session failed for driver "
+            <> driverId.getId
+            <> ": "
+            <> T.pack (displayException err)
 
--- | Same bookkeeping as 'processingChangeOnline' for a forced transition to OFFLINE, without the
--- caller having to supply the old mode. Must run BEFORE the driver's mode is written as OFFLINE:
--- the old mode is taken from the driverInfo already read under the lock. The cache/idle steps are
--- no-ops when the driver is already offline.
+-- | Forced OFFLINE bookkeeping without campaign OnlineMinutes. Must run BEFORE the driver's
+-- mode is written OFFLINE (duration update reads mode from DB under the lock). Prefer
+-- 'processingChangeOnline' when the caller knows the previous mode and campaign OnlineMinutes
+-- must be counted (RC force-offline, DriverMode).
 processingChangeOffline ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   m ()
 processingChangeOffline driverId transporterConfig = do
-  void $ DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+  mbClosedSession <- DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+  emitClosedSessionEvents driverId transporterConfig.merchantId transporterConfig.merchantOperatingCityId transporterConfig.timeDiffFromUtc mbClosedSession
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom ->
     when (driverInfo.mode == Just DriverInfo.ONLINE) $
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom

@@ -66,6 +66,7 @@ import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Merchant as SMerchant
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Beam.LedgerAdjustmentRequest as BeamLA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))

@@ -26,19 +26,19 @@ import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import Kernel.Prelude
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -68,15 +68,8 @@ clearDuesMigrationRunning :: (MonadFlow m, Redis.HedisFlow m r) => Id MerchantOp
 clearDuesMigrationRunning cityId = Redis.withCrossAppRedis $ Redis.del (duesMigrationRunningKey cityId)
 
 migratePendingDuesToWallet ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    BeamFlow m r,
-    Finance.HasActorInfo m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ( WalletFloorOfflineFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'MigratePendingDuesToWallet ->
   m ExecutionResult

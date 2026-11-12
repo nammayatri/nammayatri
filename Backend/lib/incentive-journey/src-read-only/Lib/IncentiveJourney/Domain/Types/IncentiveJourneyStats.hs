@@ -16,12 +16,14 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
 import qualified Tools.Beam.UtilsTH
 
 data IncentiveJourneyStats = IncentiveJourneyStats
-  { cohortId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails,
+  { campaignUserLinkType :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType,
+    cohortId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails,
     cohortJourneyMappingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping),
     conditionOperator :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
+    currentMetrics :: Kernel.Prelude.Maybe Data.Aeson.Value,
     currentValue :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats.IncentiveJourneyStats,
     journeyId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney,
@@ -44,6 +46,7 @@ data JourneyMilestoneStatus
   | Rewarded
   | WaivedOff
   | RewardPending
+  | Disqualified
   deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyMilestoneStatus)

@@ -16,6 +16,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Environment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -23,10 +24,16 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Commons (KafkaTopic)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 
+-- | Includes IJ BeamFlow + behavior-tick publisher because RC/vehicle force-offline must call
+-- 'processingChangeOnline' so a closed ONLINE session still bumps campaign OnlineMinutes
+-- (same path as DriverMode). Also covers MG auto-assign (applyFleetSettings).
+-- Call sites need `import Storage.Beam.IncentiveJourney ()` for HasSchemaName orphans.
 type OnboardingFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -36,6 +43,8 @@ type OnboardingFlow m r =
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     ServiceFlow m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     HasField "broadcastMessageTopic" r KafkaTopic,
     HasField "authTokenCacheExpiry" r Seconds,
@@ -45,7 +54,8 @@ type OnboardingFlow m r =
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
   )
 
 data FlagSnapshot = FlagSnapshot

@@ -30,6 +30,7 @@ import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Environment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
@@ -42,12 +43,14 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler (SchedulerType)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckBetterDriverSearchProximityJobData (..))
 import SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (betterDriverSearchProximityInitialDelaySec)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.Types as SDT
@@ -56,6 +59,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod
 import SharedLogic.SearchTry (buildTripQuoteDetail, initiateDriverSearchBatch)
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -111,15 +115,18 @@ startBetterDriverSearch ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     EventStreamFlow m r,
     HasPrettyLogger m r,
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   DMerc.Merchant ->
   SRB.Booking ->

@@ -22,33 +22,25 @@ module SharedLogic.Allocator.Jobs.Wallet.ChargeWalletPenalty
 where
 
 import Kernel.Prelude
-import qualified Kernel.Storage.Clickhouse.Config as CH
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 
 chargeWalletPenaltyJob ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    BeamFlow m r,
-    Finance.HasActorInfo m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ( WalletFloorOfflineFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ChargeWalletPenalty ->
   m ExecutionResult

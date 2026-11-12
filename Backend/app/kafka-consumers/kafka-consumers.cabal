@@ -34,6 +34,7 @@ library
       Processor.BroadcastMessage.Processor
       Processor.FleetAnalytics.Realtime
       Processor.FleetCommunication.Processor
+      Processor.IncentiveJourney.BehaviorTick
       Processor.LocationUpdate.Processor
       Processor.LocationUpdate.Types
       Processor.RideEvents.Handlers
@@ -107,6 +108,7 @@ library
     , finance-kernel
     , hedis
     , hw-kafka-client
+    , incentive-journey
     , location-updates
     , mobility-core
     , monad-control

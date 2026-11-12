@@ -67,6 +67,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
@@ -76,6 +77,8 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
@@ -193,19 +196,33 @@ ensurePoolingLogicVersion searchReq
 -- | Pooling priority of each driver's fleet, keyed off the 'fleetOwnerId' cached in the
 -- driver's LTS pool data (kept in sync on fleet link/unlink).
 getFleetPoolingPriorities ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r) =>
   Id MerchantOperatingCity ->
+  DTC.TransporterConfig ->
   [DriverPoolWithActualDistResult] ->
   m (Map.Map (Id Driver) FleetPoolingPriority)
-getFleetPoolingPriorities mOCityId drivers = do
+getFleetPoolingPriorities mOCityId transporterCfg drivers = do
   fleetConfigs <- getCityFleetConfigs mOCityId
-  pure $
-    Map.fromList
-      [ (d.driverPoolResult.driverId, priority)
-        | d <- drivers,
-          Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
-          Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
-      ]
+  localTime <- getLocalCurrentTime transporterCfg.timeDiffFromUtc
+  -- IJCampaign tags + CJM in-mem controls (no DI / LTS campaign snapshot).
+  priorities <- forM drivers $ \d -> do
+    mgSource <- MgCampaign.resolveMgPerkSourceFromDriverTags localTime d.driverPoolResult.driverTags
+    pure $
+      case MgCampaign.mgPoolingPriorityValue mgSource of
+        Just val ->
+          ( d.driverPoolResult.driverId,
+            case A.fromJSON val of
+              A.Success (p :: FleetPoolingPriority) -> Just p
+              A.Error _ -> Nothing
+          )
+        Nothing ->
+          case mgSource of
+            MgCampaign.CampaignMember {} -> (d.driverPoolResult.driverId, Nothing)
+            MgCampaign.UseNoCampaign ->
+              ( d.driverPoolResult.driverId,
+                d.driverPoolResult.fleetOwnerId >>= (`Map.lookup` fleetConfigs) >>= (.fleetPoolingPriority)
+              )
+  pure $ Map.fromList [(did, p) | (did, Just p) <- priorities]
 
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
@@ -299,7 +316,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
   fleetPriorities <-
     if null allLogics
       then pure Map.empty
-      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId onlyNewDriversWithCustomerInfo
+      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId transporterCfg onlyNewDriversWithCustomerInfo
   -- The search's area plus its pickup and drop special locations, so the fleet's Pickup_ and Drop_ entries both count.
   let priorityAreas = catMaybes [searchReq.area, searchReq.pickupArea, searchReq.dropArea]
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING

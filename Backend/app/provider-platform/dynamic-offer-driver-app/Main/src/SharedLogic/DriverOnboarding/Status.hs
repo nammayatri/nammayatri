@@ -101,6 +101,7 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

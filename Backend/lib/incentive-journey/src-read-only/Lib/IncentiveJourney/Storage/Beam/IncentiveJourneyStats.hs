@@ -3,22 +3,26 @@
 
 module Lib.IncentiveJourney.Storage.Beam.IncentiveJourneyStats where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats
 
 data IncentiveJourneyStatsT f = IncentiveJourneyStatsT
-  { cohortId :: B.C f Kernel.Prelude.Text,
+  { campaignUserLinkType :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType),
+    cohortId :: B.C f Kernel.Prelude.Text,
     cohortJourneyMappingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     conditionOperator :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator,
     conditionType :: B.C f Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
     conditionValue :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currentMetrics :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     currentValue :: B.C f Kernel.Prelude.Int,
     id :: B.C f Kernel.Prelude.Text,
     journeyId :: B.C f Kernel.Prelude.Text,

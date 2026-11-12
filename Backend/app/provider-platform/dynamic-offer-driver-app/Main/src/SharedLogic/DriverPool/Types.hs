@@ -251,7 +251,10 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     vehicleNumber :: Maybe Text,
     fleetOwnerId :: Maybe Text
   }
-  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+  deriving (Generic, Show, HasCoordinates, ToJSON)
+
+instance FromJSON DriverPoolResultCurrentlyOnRide where
+  parseJSON = A.genericParseJSON A.defaultOptions
 
 data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver | SafetyPlusDriver
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -402,7 +405,9 @@ withJsonDefault _ _ v = v
 
 instance FromJSON DriverPoolResult where
   -- absent isPetModeEnabled => driver had not opted into pet rides
-  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "isPetModeEnabled" (A.Bool False)
+  parseJSON =
+    A.genericParseJSON A.defaultOptions
+      . withJsonDefault "isPetModeEnabled" (A.Bool False)
 
 instance FromJSON DriverPoolWithActualDistResult where
   parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "hasApplicablePreferences" (A.Bool False) . withJsonDefault "preferenceMatchScore" (A.Number 1.0)

@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 import qualified Tools.Beam.UtilsTH
@@ -16,8 +17,18 @@ data UserCohortMapping = UserCohortMapping
     createdAt :: Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping,
+    optInPeriod :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.OptInPeriod,
+    optedInAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    optedInBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    termsAcceptedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     userId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data OptInPeriod = Daily | Weekly deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''OptInPeriod)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''OptInPeriod)

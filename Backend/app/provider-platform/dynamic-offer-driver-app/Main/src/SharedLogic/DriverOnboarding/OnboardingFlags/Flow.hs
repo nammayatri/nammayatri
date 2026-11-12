@@ -52,6 +52,7 @@ import SharedLogic.DriverOnboarding.Common
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Checks as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra

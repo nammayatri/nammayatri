@@ -13,3 +13,4 @@ import Servant
 type IncentiveJourneyAPI =
   "list" :> Common.IncentiveJourneyListAPI
     :<|> "history" :> Common.IncentiveJourneyHistoryAPI
+    :<|> "optIn" :> Common.IncentiveJourneyOptInAPI
