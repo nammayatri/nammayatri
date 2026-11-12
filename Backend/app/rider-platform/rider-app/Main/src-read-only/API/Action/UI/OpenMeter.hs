@@ -16,7 +16,6 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -89,19 +88,10 @@ type API =
       :> Get
            ('[JSON])
            [API.Types.UI.OpenMeter.OpenMeterRideRes]
-      :<|> TokenAuth
-      :> "openMeter"
-      :> "ride"
-      :> Capture
-           "rideId"
-           (Kernel.Types.Id.Id Domain.Types.OpenMeterRide.OpenMeterRide)
-      :> Delete
-           ('[JSON])
-           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postOpenMeterRideStart :<|> postOpenMeterRideHeartbeat :<|> postOpenMeterRideEnd :<|> postOpenMeterRideCancel :<|> getOpenMeterRide :<|> getOpenMeterRides :<|> deleteOpenMeterRide
+handler = postOpenMeterRideStart :<|> postOpenMeterRideHeartbeat :<|> postOpenMeterRideEnd :<|> postOpenMeterRideCancel :<|> getOpenMeterRide :<|> getOpenMeterRides
 
 postOpenMeterRideStart ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -160,12 +150,3 @@ getOpenMeterRides ::
     Environment.FlowHandler [API.Types.UI.OpenMeter.OpenMeterRideRes]
   )
 getOpenMeterRides a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.OpenMeter.getOpenMeterRides (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
-
-deleteOpenMeterRide ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.OpenMeterRide.OpenMeterRide ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
-deleteOpenMeterRide a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.OpenMeter.deleteOpenMeterRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

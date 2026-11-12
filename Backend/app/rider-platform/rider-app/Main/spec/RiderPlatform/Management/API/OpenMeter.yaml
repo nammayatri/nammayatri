@@ -1,0 +1,98 @@
+# Open meter rides for the ops dashboard, read only. Riders cannot delete their rides, and neither
+# can the dashboard. Every ride is scoped to the dashboard's merchant city.
+#
+# Generates:
+#   src-read-only/API/Types/RiderPlatform/Management/Endpoints/OpenMeter.hs
+#   src-read-only/API/Action/DashboardAuth/Management/OpenMeter.hs
+# Business logic: src/Domain/Action/Dashboard/OpenMeter.hs
+
+imports:
+  Customer: Dashboard.Common
+  Summary: Dashboard.Common
+  OpenMeterRide: Domain.Types.OpenMeterRide
+  OpenMeterRideStatus: Domain.Types.OpenMeterRide
+  OpenMeterEndReason: Domain.Types.OpenMeterRide
+  LatLong: Kernel.External.Maps.Types
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Value: Data.Aeson
+
+module: OpenMeter
+
+types:
+  OpenMeterRideListRes:
+    totalItems: Int
+    summary: Summary
+    rides: "[OpenMeterRideListItem]"
+
+  OpenMeterRideListItem:
+    rideId: Id OpenMeterRide
+    customerId: Id Customer
+    status: OpenMeterRideStatus
+    startTime: UTCTime
+    endTime: Maybe UTCTime
+    distanceMeters: Meters
+    serverLinearDistanceMeters: Maybe Meters
+    waitingTimeSeconds: Seconds
+    fare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    endReason: Maybe OpenMeterEndReason
+    createdAt: UTCTime
+
+  # Everything stored for the ride: the route (encodedPolyline), the phone's tariff and tracking
+  # settings at start, and the coordinates the phone last sent.
+  OpenMeterRideInfoRes:
+    rideId: Id OpenMeterRide
+    customerId: Id Customer
+    status: OpenMeterRideStatus
+    startTime: UTCTime
+    serverStartedAt: UTCTime
+    endTime: Maybe UTCTime
+    lastHeartbeatAt: Maybe UTCTime
+    startLatLong: Maybe LatLong
+    endLatLong: Maybe LatLong
+    lastLatLong: Maybe LatLong
+    distanceMeters: Meters
+    serverLinearDistanceMeters: Maybe Meters
+    estimatedGapMeters: Meters
+    waitingTimeSeconds: Seconds
+    encodedPolyline: Maybe Text
+    pointsCount: Int
+    fare: Maybe HighPrecMoney
+    currency: Maybe Currency
+    tariffSnapshot: Maybe Value
+    trackingConfig: Maybe Value
+    endReason: Maybe OpenMeterEndReason
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+apis:
+  # GET /openMeter/ride/list
+  # The city's rides, newest first. customerId narrows it to one rider; from and to bound createdAt.
+  - GET:
+      endpoint: /ride/list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        customerId: Id Customer
+        status: OpenMeterRideStatus
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: OpenMeterRideListRes
+      migrate:
+        capability: city-operations.ride.read
+
+  # GET /openMeter/ride/{rideId}/info
+  - GET:
+      endpoint: /ride/{rideId}/info
+      auth: ApiAuthV2
+      params:
+        rideId: Id OpenMeterRide
+      response:
+        type: OpenMeterRideInfoRes
+      migrate:
+        capability: city-operations.ride.read

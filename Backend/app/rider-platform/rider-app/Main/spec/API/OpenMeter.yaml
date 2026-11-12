@@ -17,7 +17,6 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Value: Data.Aeson
-  APISuccess: Kernel.Types.APISuccess
 
 module: OpenMeter
 
@@ -123,12 +122,3 @@ apis:
         offset: Int
       response:
         type: "[OpenMeterRideRes]"
-
-  # Only for rides that are not RUNNING.
-  - DELETE:
-      endpoint: /openMeter/ride/{rideId}
-      auth: TokenAuth
-      params:
-        rideId: Id OpenMeterRide
-      response:
-        type: APISuccess

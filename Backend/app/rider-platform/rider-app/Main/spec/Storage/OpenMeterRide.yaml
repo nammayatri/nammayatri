@@ -102,9 +102,6 @@ OpenMeterRide:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where: id
-    deleteById:
-      kvFunction: deleteWithKV
-      where: id
     deleteAllByPersonId:
       kvFunction: deleteWithKV
       where: personId

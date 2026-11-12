@@ -113,9 +113,6 @@ check "a second id gives 409" "409 OPEN_METER_RIDE_ALREADY_ACTIVE" "$code $(jq -
 code=$(req "$WORK/not-uuid" POST /openMeter/ride/start "$(start_body "$(new_id)x")")
 check "a start with a rideId that is not a UUID gives 400" "400 INVALID_REQUEST" "$code $(jq -r '.errorCode // empty' "$WORK/not-uuid")"
 
-code=$(req "$WORK/delete-running" DELETE "/openMeter/ride/$RIDE_ID")
-check "a DELETE of a running ride gives 400" "400 OPEN_METER_RIDE_INVALID_STATE" "$code $(jq -r '.errorCode // empty' "$WORK/delete-running")"
-
 # "???gE" is (0, 0) -> (0, 0.001), about 111 m.
 END_BODY=$(jq -nc --arg t "$(now)" '{endTime: $t, endLatLong: {lat: 12.9726, lon: 77.5956}, distanceMeters: 111, waitingTimeSeconds: 30, fare: 45.5, currency: "INR", encodedPolyline: "???gE", pointsCount: 2, estimatedGapMeters: 0, endReason: "USER"}')
 code1=$(req "$WORK/end1" POST "/openMeter/ride/$RIDE_ID/end" "$END_BODY")
@@ -123,8 +120,11 @@ code2=$(req "$WORK/end2" POST "/openMeter/ride/$RIDE_ID/end" "$END_BODY")
 check "end twice gives 200" "200 200" "$code1 $code2"
 check "end twice gives identical bodies" "$(cat "$WORK/end1")" "$(cat "$WORK/end2")"
 
+# Rides cannot be deleted: there is no DELETE route, and the ride is still there afterwards.
 code=$(req "$WORK/delete-ended" DELETE "/openMeter/ride/$RIDE_ID")
-check "a DELETE of an ended ride gives 200" 200 "$code"
+check "a DELETE of a ride is not served" refused "$([[ $code == 4?? ]] && echo refused || echo "$code")"
+code=$(req "$WORK/after-delete" GET "/openMeter/ride/$RIDE_ID")
+check "the ride is still there after a DELETE" "200 ENDED" "$code $(jq -r '.status // empty' "$WORK/after-delete")"
 
 # Starts and ends a new ride.
 make_ended_ride() {
