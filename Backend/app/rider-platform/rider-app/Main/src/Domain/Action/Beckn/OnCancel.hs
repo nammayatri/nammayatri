@@ -84,7 +84,10 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let cancellationSource_ :: Maybe Enums.CancellationSource = readMaybe . T.unpack =<< cancellationSource
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
-  let castedCancellationSource = castCancellatonSource cancellationSource_
+  let castedCancellationSource =
+        if isJust booking.supersededByBookingId
+          then SBCR.ByAllocator
+          else castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let immediateCharge = isJust cancellationFee && resolveImmediateCapture riderConfig collectionMode castedCancellationSource
   whenJust booking.bookingDepositAmount $ \_ ->
