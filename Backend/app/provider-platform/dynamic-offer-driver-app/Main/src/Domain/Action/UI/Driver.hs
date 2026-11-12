@@ -2132,7 +2132,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction) (Just betterDriverSwapAction)
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
-              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
+              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) (Just sReqFD) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
             Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
@@ -2419,8 +2419,8 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
       | otherwise = throwM exc
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Maybe DRide.ScheduledAcceptanceMode -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode = do
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> Maybe SearchRequestForDriver -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Maybe DRide.ScheduledAcceptanceMode -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
+acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
@@ -2440,8 +2440,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   whenJust mbSearchTry $ \searchTry -> do
     QST.updateStatus DST.COMPLETED searchTry.id
     QST.markReallocationOutcome searchTry
-    mSReqFD <- QSRD.findByDriverAndSearchTryId driver.id searchTry.id
-    whenJust mSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
+  whenJust mbDriverSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
   (ride, rideDetails, vehicle) <-
     if booking.isScheduled
       then -- per-driver lock: two overlapping scheduled accepts hold different per-booking locks, so serialize
@@ -3760,8 +3759,29 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
     when (addUTCTime (secondsToNominalDiffTime distanceResponse.duration) now > booking.startTime) $
       throwError (InvalidRequest "You cannot reach the pickup location before the scheduled pickup time.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
+  -- Every popup this driver got for this try, whatever its status, read once. Any row means the
+  -- request was already counted (even if they rejected it); the accept uses the active one.
+  driverSReqFDs <- case mbActiveSearchTry of
+    Just searchTry -> QSRD.findAllByDriverAndSearchTryId driver.id searchTry.id
+    Nothing -> pure []
+  let mbDriverSReqFD = find ((== Active) . (.status)) driverSReqFDs
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry mbDriverSReqFD driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
+  recordScheduledAcceptAnalytics transporterConfig driver.id booking mbActiveSearchTry (not (null driverSReqFDs))
   pure Success
+
+-- | A scheduled booking taken from the list, or assigned by ops or a fleet owner, never goes through
+-- respondQuote, so fleet analytics would see a completed ride with no request and no accept.
+-- Count one request and one accept here. A driver who already got a popup for this search try
+-- (answered or not) had the request counted when it was sent, so only the accept is added.
+recordScheduledAcceptAnalytics :: TransporterConfig -> Id SP.Person -> DRB.Booking -> Maybe DST.SearchTry -> Bool -> Flow ()
+recordScheduledAcceptAnalytics transporterConfig driverId booking mbSearchTry alreadyRequested = do
+  -- Same id respondQuote would use for this accept, so the consumer dedups if both ever fire.
+  let searchTryOrBookingId = maybe booking.id.getId (.id.getId) mbSearchTry
+  -- The driver is in the batch key so two drivers taking the same booking each get counted.
+  unless alreadyRequested $
+    Analytics.recordFleetOperatorAnalytics transporterConfig $
+      Analytics.SearchRequested [driverId] searchTryOrBookingId (Analytics.searchBatchKey [booking.id.getId, driverId.getId])
+  Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTryOrBookingId)
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
