@@ -24,6 +24,7 @@ import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -160,6 +161,8 @@ processAssignment :: OneShotAssignReq -> Flow ()
 processAssignment req = do
   now <- getCurrentTime
   estimate <- QEstimate.findByBPPEstimateId (Id req.bppEstimateId) >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> req.bppEstimateId)
+  when (UEstimate.isCancelled estimate.status) $
+    throwError $ EstimateCancelled estimate.id.getId
   searchRequest <- QSRLite.findByIdLite estimate.requestId >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
   person <- QPerson.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)

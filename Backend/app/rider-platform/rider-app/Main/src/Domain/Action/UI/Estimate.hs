@@ -242,4 +242,4 @@ mkFareRangeAPIEntity FareRange {..} =
 isCancelled ::
   EstimateStatus ->
   Bool
-isCancelled status = status == CANCELLED || status == DRIVER_QUOTE_CANCELLED
+isCancelled status = status == CANCELLED || status == DRIVER_QUOTE_CANCELLED || status == RIDE_SEARCH_EXPIRED

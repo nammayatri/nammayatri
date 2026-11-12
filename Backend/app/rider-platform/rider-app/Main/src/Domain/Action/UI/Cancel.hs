@@ -299,7 +299,6 @@ mkDomainCancelSearch _personId estimateId = do
   where
     buildCancelReq estimate = do
       let estStatus = estimate.status
-      let isEstimateNotNew = estStatus /= DEstimate.NEW
       merchantId <- fromMaybeM (MerchantNotFound $ "estimate with esId: " <> estimate.id.getId <> "doesn't have merchantID") estimate.merchantId
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       isValueAddNP <- CQVAN.isValueAddNP estimate.providerId
@@ -316,7 +315,7 @@ mkDomainCancelSearch _personId estimateId = do
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
             estimateStatus = estStatus,
-            sendToBpp = isEstimateNotNew && isValueAddNP,
+            sendToBpp = isValueAddNP,
             merchant = merchant,
             vehicleVariant = DVeh.castServiceTierToVariant estimate.vehicleServiceTierType,
             ..
