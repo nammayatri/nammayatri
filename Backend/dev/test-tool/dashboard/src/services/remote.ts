@@ -51,8 +51,9 @@ export interface DevboxAssignment {
   usage?: { cpu?: string; ram?: string; storage?: string };
   created?: boolean;
   repinned?: boolean;
-  /** Which address answered: the machine's own 'local' one, or its 'vpn' one. */
-  route?: 'local' | 'vpn' | '';
+  /** Which address answered: the machine's own 'local' (office) one, or its
+   *  hopper 'overlay' (tailnet) one. */
+  route?: 'local' | 'overlay' | '';
   localIp?: string;
   vpnHost?: string;
   localSubnet?: string;
@@ -66,7 +67,8 @@ export interface DevboxAssignment {
    *  stays the same when the workspace's own ports change. */
   workspaceUrl?: string;
   /** <hopper gateway>/api/<dev-box>/8888/<id> — the same workspace from any
-   *  network, the testers' apps only (hopper's nginx gate). */
+   *  network: the front desk gives hopper's gateway only rider-app, driver-app,
+   *  location-tracking and the control centre. */
   publicUrl?: string;
   /** Whether the dev-box front desk answered its health check. */
   frontdeskOk?: boolean;

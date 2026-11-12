@@ -835,8 +835,8 @@ export const RemoteStackPanel: React.FC = () => {
         <p className="rsp-sub">
           Runs the backend, test-context-api and mock-server — on this machine
           (<b>Local</b>) or on a fleet <b>Dev-Box</b>. The first Dev-Box run picks the
-          least-loaded machine, authorizes your SSH key and pins the machine to this
-          checkout; afterwards the same machine and workspace are reused, and code sync,
+          least-loaded machine hopper lists, connects to it over hopper (tailnet) and
+          pins the machine to this checkout; afterwards the same machine and workspace are reused, and code sync,
           rebuilds and ports are all handled for you. Press ▶ to start.
         </p>
       </div>
@@ -959,7 +959,7 @@ export const RemoteStackPanel: React.FC = () => {
                 className="rsp-btn-retry"
                 onClick={() => resolveAssignment(false)}
                 disabled={resolving}
-                title="Ask the base station again and re-resolve the assignment"
+                title="Ask hopper again and re-resolve the assignment"
               >
                 {resolving ? '◌ Retrying…' : '⟳ Retry'}
               </button>
@@ -978,8 +978,8 @@ export const RemoteStackPanel: React.FC = () => {
                 {devbox.route && (
                   <span className="rsp-route-pill" title={devbox.route === 'local'
                     ? `reached on its local address${devbox.localSubnet ? ` — same subnet ${devbox.localSubnet}` : ' (routed, not same subnet)'}`
-                    : `reached on its VPN address${devbox.vpnSubnet ? ` — same subnet ${devbox.vpnSubnet}` : ''}; its local address did not answer`}>
-                    via {devbox.route.toUpperCase()}
+                    : `reached on its hopper (tailnet) address${devbox.vpnSubnet ? ` — same subnet ${devbox.vpnSubnet}` : ''}; its local address did not answer`}>
+                    via {devbox.route === 'local' ? 'LOCAL' : 'TAILNET'}
                   </span>
                 )}
                 {devbox.created && <span className="rsp-tag">new assignment</span>}
@@ -1086,7 +1086,7 @@ export const RemoteStackPanel: React.FC = () => {
                       <button
                         className="rsp-btn-ghost"
                         onClick={() => copyWorkspaceUrl(devbox.publicUrl!)}
-                        title="Copy the URL testers' phones use on any network (hopper gateway) — rider-app and driver-app only"
+                        title="Copy the URL testers' phones use on any network (hopper gateway) — rider-app, driver-app, location-tracking and control centre only"
                       >
                         {urlCopied === devbox.publicUrl ? '✓ Copied' : '⧉ Copy'}
                       </button>
@@ -1108,6 +1108,28 @@ export const RemoteStackPanel: React.FC = () => {
                       >
                         driver-app ↗
                       </a>
+                      <a
+                        className="rsp-btn-ghost"
+                        href={`${devbox.publicUrl}/control-centre/`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="control centre through hopper's gateway"
+                      >
+                        control centre ↗
+                      </a>
+                    </dd>
+                  </>
+                )}
+                {devbox.frontdeskOk && !devbox.publicUrl && (
+                  <>
+                    <dt>Public URL</dt>
+                    <dd>
+                      <span
+                        className="rsp-sync-checked"
+                        title="hopper does not list this dev-box's front desk (:8888) yet — re-run the front desk setup.py on the dev-box (nix-the-builder)"
+                      >
+                        not on hopper's gateway yet
+                      </span>
                     </dd>
                   </>
                 )}

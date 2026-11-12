@@ -1055,9 +1055,8 @@ def _parse_ram_pct(usage: dict) -> float:
 
 
 NO_DEVBOX_ERROR = (
-    "no dev-box available — the base station lists no dev-box that this machine "
-    "can reach (a dev-box off your subnet needs a VPN address). Start one, join "
-    "the VPN, or run the stack with Run on = Local."
+    "no dev-box available — hopper lists no dev-box that this machine can reach. "
+    "Run `hopper up` (and check `hopper list`), or run the stack with Run on = Local."
 )
 
 
@@ -1199,7 +1198,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
             if lost_route:
                 return {"error": f"{previous_machine} has no route from this machine any "
                                  f"more, and no other dev-box is reachable either. "
-                                 f"Join the VPN / check the fleet, or run with "
+                                 f"Run `hopper up` / check `hopper list`, or run with "
                                  f"Run on = Local."}
             return {"error": NO_DEVBOX_ERROR}
         machine = _dc_fleet.pick(assignable)
@@ -1260,7 +1259,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
                    f"(via {route.upper()}) — re-pointed this checkout, workspace and "
                    f"deploy state kept")
     elif repinned and lost_route:
-        message = (f"{previous_machine} is no longer reachable on either its local or VPN "
+        message = (f"{previous_machine} is no longer reachable on either its local or hopper (tailnet) "
                    f"address — re-assigned to the least-loaded reachable dev-box "
                    f"{machine.get('name', '')} ({host} via {route.upper()})")
     elif repinned:
@@ -1291,7 +1290,8 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "vpnHost": vpn_host,
         "vpnSubnet": vpn_subnet,
         "workspaceUrl": f"http://{host}:{FRONTDESK_PORT}/{dev_id}",
-        # Through hopper's gateway (any network) — rider and driver APIs only.
+        # Through hopper's gateway (any network) — the front desk gives the gateway
+        # rider-app, driver-app, location-tracking and the control centre only.
         # Only when hopper lists the dev-box's public front desk; the gateway
         # 404s otherwise.
         "publicUrl": (_dc_stack.public_base(machine["name"], dev_id)
