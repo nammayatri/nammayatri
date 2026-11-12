@@ -11,3 +11,9 @@ ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN question text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.faq ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN sub_category character varying(255) ;

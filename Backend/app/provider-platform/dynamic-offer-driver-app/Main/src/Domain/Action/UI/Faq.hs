@@ -40,6 +40,7 @@ toFaqAPIEntity faq =
   API.Types.UI.Faq.FaqAPIEntity
     { faqGroupId = faq.faqGroupId,
       category = faq.category,
+      subCategory = faq.subCategory,
       question = faq.question,
       answer = faq.answer
     }

@@ -8,6 +8,12 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data FaqAPIEntity = FaqAPIEntity {answer :: Kernel.Prelude.Text, category :: Kernel.Prelude.Maybe Kernel.Prelude.Text, faqGroupId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text}
+data FaqAPIEntity = FaqAPIEntity
+  { answer :: Kernel.Prelude.Text,
+    category :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    faqGroupId :: Kernel.Prelude.Text,
+    question :: Kernel.Prelude.Text,
+    subCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
