@@ -392,7 +392,13 @@ data MembershipFeeInfo = MembershipFeeInfo
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ActiveRideType = SHARED_CAB
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance ToJSON ActiveRideType where
+  toJSON = DA.genericToJSON DA.defaultOptions {DA.tagSingleConstructors = True}
+
+instance FromJSON ActiveRideType where
+  parseJSON = DA.genericParseJSON DA.defaultOptions {DA.tagSingleConstructors = True}
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
