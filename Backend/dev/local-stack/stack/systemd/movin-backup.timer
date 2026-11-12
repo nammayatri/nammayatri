@@ -1,0 +1,14 @@
+# Installed by the release (ops/deploy.sh) into /etc/systemd/system -- edit it
+# here, in git, never on the server.
+[Unit]
+Description=Movin DZ database backup, nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+# If the VPS was off at 02:30, run when it comes back rather than skipping the
+# night entirely -- which is exactly the night you would want a backup from.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+# Installed by the release (ops/deploy.sh) into /etc/systemd/system -- edit it
+# here, in git, never on the server. Phase 4 (2026-10-06): until then the unit
+# was written by `backup.sh install` and ran a hand-copied /root/backup.sh;
+# now it runs the very file the release ships, so the backup that runs is the
+# one that was reviewed.
+[Unit]
+Description=Movin DZ database backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ny/local-stack/backup.sh
+Environment=RCLONE_REMOTE=movin-drive:movin-backups

@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/stop_detected_message_sheet">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="32dp"
+        android:background="@drawable/message_sheet_bg"
+        android:layout_alignParentBottom="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:clipToPadding="false"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width= "match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:id="@+id/stop_detected_message_sheet_header">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ny_ic_close"
+                            android:visibility="invisible"
+                            android:id="@+id/header_prefix_image">
+                        </ImageView>
+                        <TextView
+                            android:id="@+id/HeaderTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.0"
+                            android:textSize="18dp"
+                            android:gravity="center"
+                            android:textColor="@color/Black800"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:includeFontPadding="true"
+                            android:text="Customer is waiting!"
+                            android:textFontWeight="700">
+                        </TextView>
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ny_ic_close"
+                            android:id="@+id/header_suffix_image">
+                        </ImageView>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/BodyTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16dp"
+                    android:gravity="center"
+                    android:textColor="@color/Black800"
+                    android:fontFamily="@font/plus_jakartasans_semibold"
+                    android:includeFontPadding="true"
+                    android:text="Please start moving towards the pickup location"
+                    android:textFontWeight="400"
+                    android:padding="10dp">
+                </TextView>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/quick_chats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12dp"
+                android:textColor="@color/Black700"
+                android:fontFamily="@font/plus_jakartasans_regular"
+                android:lineHeight="16dp"
+                android:includeFontPadding="false"
+                android:text="Quick Chats:"
+                android:textFontWeight="400">
+
+            </TextView>
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="2dp"
+                android:layout_weight="1.0"
+                android:layout_marginBottom="32dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    android:background="@drawable/message_sheet_chat_background"
+                    android:id="@+id/suggestion1"
+                    android:clickable="true"
+                    android:padding="6dp"
+                    android:layout_marginVertical="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_weight="1.0"
+                        android:text="On my way, hold tight!"
+                        android:id="@+id/suggestion1_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="18dp"
+                        android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
+                        >
+                    </TextView>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_send_blue"
+                        android:id="@+id/suggestion1_image"
+                        android:layout_gravity="center_vertical"
+                        android:clickable="false"
+                        android:padding="2dp">
+                    </ImageView>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion1_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    android:background="@drawable/message_sheet_chat_background"
+                    android:id="@+id/suggestion2"
+                    android:clickable="true"
+                    android:padding="6dp"
+                    android:layout_marginVertical="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_weight="1.0"
+                        android:text="Traffic ahead, few mins delay"
+                        android:id="@+id/suggestion2_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="18dp"
+                        android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
+                        >
+                    </TextView>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_send_blue"
+                        android:id="@+id/suggestion2_image"
+                        android:layout_gravity="center_vertical"
+                        android:clickable="false"
+                        android:padding="2dp">
+                    </ImageView>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion2_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
+
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_vertical"
+                    android:background="@drawable/message_sheet_chat_background"
+                    android:id="@+id/suggestion3"
+                    android:clickable="true"
+                    android:padding="6dp"
+                    android:layout_marginVertical="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_weight="1.0"
+                        android:text="Struggling with location, one sec!"
+                        android:id="@+id/suggestion3_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="18dp"
+                        android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
+                        >
+                    </TextView>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_send_blue"
+                        android:id="@+id/suggestion3_image"
+                        android:layout_gravity="center_vertical"
+                        android:clickable="false"
+                        android:padding="2dp">
+                    </ImageView>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion3_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/got_it_button_parent">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/got_it_button"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_semibold"
+                    android:text="Ok, Got it"
+                    android:textAllCaps="false"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/yellow900"
+                    android:paddingVertical="12dp"
+                    android:layout_marginVertical="6dp"
+                    android:textFontWeight="600"
+                    android:textSize="16dp"
+                    android:theme="@style/Theme.MaterialComponents.Light"
+                    android:backgroundTint="@color/Black800"
+                    android:visibility="gone"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </RelativeLayout>
+
+</RelativeLayout>
