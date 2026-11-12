@@ -1045,6 +1045,52 @@ def _fetch_machines() -> dict:
     return _dc_fleet.fetch_machines(reachable=_reachable_cached)
 
 
+HOPPER_INSTALL_CMD = "HOMEBREW_GITHUB_API_TOKEN=$(gh auth token) brew install nammayatri/hopper/hopper"
+
+
+def _hopper_status() -> dict:
+    """What the Remote Stack's Hopper card shows. Dev-Box mode only runs when
+    `connected` is true: the dev-boxes are reached over hopper (tailnet) only.
+      { installed, connected, me: {name, overlayIp} | None,
+        devboxes: [{name, overlayIp, reachable}], install, error }"""
+    if not shutil.which(_dc_fleet.HOPPER):
+        return {"installed": False, "connected": False, "me": None, "devboxes": [],
+                "install": HOPPER_INSTALL_CMD,
+                "error": "hopper is not installed on this machine"}
+    res = _fetch_machines()
+    if res.get("error"):
+        # Installed but `hopper list --json` failed: not joined yet, logged out,
+        # or a hopper too old for --json (the error says which).
+        # fleet's message ends with the install hint, which is noise once installed.
+        err = res["error"].split(": install hopper (")[0]
+        return {"installed": True, "connected": False, "me": None, "devboxes": [],
+                "install": HOPPER_INSTALL_CMD, "error": err}
+    machines = res.get("machines", [])
+    my_ips = set(res.get("myIps") or [])
+    me = next((m for m in machines if m.get("overlayIp") in my_ips), None)
+    return {
+        "installed": True,
+        "connected": True,
+        "me": {"name": me["name"], "overlayIp": me["overlayIp"]} if me else None,
+        "devboxes": [{"name": m["name"], "overlayIp": m.get("overlayIp", ""),
+                      "reachable": bool(m.get("overlayReachable"))}
+                     for m in _dc_fleet.devboxes(machines)],
+        "install": HOPPER_INSTALL_CMD,
+        "error": "",
+    }
+
+
+def hopper_up(body: dict) -> dict:
+    """Run `hopper up` in a PTY session the panel shows, so the Google login link
+    (and a sudo prompt, if hopper asks) appear inside the dashboard."""
+    if not shutil.which(_dc_fleet.HOPPER):
+        return {"error": f"hopper is not installed: {HOPPER_INSTALL_CMD}"}
+    session = _remote_session_make("hopper-up", "localhost")
+    _remote_register(session)
+    return _remote_spawn_pty(session, [_dc_fleet.HOPPER, "up"],
+                             cols=body.get("cols"), rows=body.get("rows"))
+
+
 # ── Devbox auto-assignment ────────────────────────────────────────────────────
 
 DEVBOX_ID_FILE = PROJECT_ROOT / ".devbox-id.json"
@@ -3783,6 +3829,16 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # GET /api/remote/machines  — fetch ServiceDiscovery machine list
         if method == "GET" and path == "/api/remote/machines":
             self._send_json(_fetch_machines())
+            return True
+
+        # GET /api/hopper/status — is hopper installed / joined, which dev-boxes it lists
+        if method == "GET" and path == "/api/hopper/status":
+            self._send_json(_hopper_status())
+            return True
+
+        # POST /api/hopper/up — PTY session running `hopper up` (Google login)
+        if method == "POST" and path == "/api/hopper/up":
+            self._send_json(hopper_up(self._read_json_body() or {}))
             return True
 
         # GET /api/devbox/resolve[?new=1]

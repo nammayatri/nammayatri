@@ -308,6 +308,27 @@ export const openRemoteEditor = (
 ): Promise<{ opened?: string; error?: string }> =>
   json('/api/remote/open-editor', t);
 
+// ── hopper (tailnet) ──
+// Dev-Box mode reaches the dev-boxes over hopper only, so the panel checks this
+// first and shows the Hopper card (install / join / connected).
+export interface HopperStatus {
+  installed: boolean;
+  connected: boolean;
+  /** This laptop as hopper lists it; null when its tailnet IP is not in the list. */
+  me: { name: string; overlayIp: string } | null;
+  devboxes: { name: string; overlayIp: string; reachable: boolean }[];
+  /** brew command that installs hopper. */
+  install: string;
+  error: string;
+}
+
+export const hopperStatus = (): Promise<HopperStatus> =>
+  fetch(`${LOCAL_API_BASE}/api/hopper/status`).then(r => r.json());
+
+// `hopper up` in a PTY the panel attaches its terminal to (Google login link).
+export const hopperUp = (): Promise<RemoteSessionResponse> =>
+  json('/api/hopper/up', {});
+
 // `code` on PATH? The panel only offers the open-in-editor button when it is.
 export const editorAvailable = (): Promise<{
   available?: boolean; cli?: string; path?: string; error?: string;
