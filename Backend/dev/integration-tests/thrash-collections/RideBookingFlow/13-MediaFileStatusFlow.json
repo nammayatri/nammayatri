@@ -465,9 +465,9 @@
       "request": {
         "method": "POST",
         "url": {
-          "raw": "{{baseURL_BAP_Dashboard}}/bap/NAMMA_YATRI/{{city}}/onboarding/step/{{_onboarding_step_id}}/test-doc/uploadFile",
+          "raw": "{{baseURL_BAP_Dashboard}}/bap/NAMMA_YATRI/{{city}}/onboarding/step/{{_onboarding_step_id}}/docPan/uploadFile",
           "host": ["{{baseURL_BAP_Dashboard}}"],
-          "path": ["bap", "NAMMA_YATRI", "{{city}}", "onboarding", "step", "{{_onboarding_step_id}}", "test-doc", "uploadFile"]
+          "path": ["bap", "NAMMA_YATRI", "{{city}}", "onboarding", "step", "{{_onboarding_step_id}}", "docPan", "uploadFile"]
         },
         "header": [
           {"key": "token", "value": "{{_rider_dashboard_token}}"}
