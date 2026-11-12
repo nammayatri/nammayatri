@@ -532,8 +532,10 @@ nothing in the body names anybody.
 | Route | Does | Refuses |
 |---|---|---|
 | `POST /places/suggest` `{name, type, lat, lon}` | stores a `pending` proposal: country and locality from the pin, the author from the token; `201 {placeId: "u…", status, name, type, locality, country}` | `400 bad_name / bad_type / bad_position / bad_body`, `413` over 4 KB, `422 outside_service_area`, `409 duplicate` (with the existing place), `429 daily_limit / too_many_pending` |
-| `GET /places/mine` | the person's own, newest first (50): shown name, what they typed, type, status, refusal reason code | `401` |
+| `GET /places/mine` | the person's own, newest first (50): shown name, what they typed, type, status, refusal reason code, and since day 4 `photos`, the numbers of the photos stored (`[]`, `[1]`, `[1,2]`) | `401` |
 | `GET /places/nearby?type=&lat=&lon=` | OSM places of that type plus approved proposals, nearest first, 20; names and localities in French and Arabic; `radius` says 5000 or 15000 | `400` for `other`, an unknown type or a bad position |
+| `PUT /places/photos/u<id>/<1\|2>` (the image, day 4) | stores or replaces photo 1 or 2 of the person's own **pending** proposal; `200 {placeId, n, type, bytes}` | `404` not theirs or no such place (the same answer), `409 decided` once approved or refused, `415 not_an_image`, `400 no_image`, `413` over 512 KB |
+| `DELETE /places/photos/u<id>/<1\|2>` (day 4) | takes it back; `200 {placeId, n, deleted}` | the same `404` / `409` |
 
 - **Names** are NFKC-normalised (Arabic presentation forms become ordinary
   letters), every run of whitespace becomes one space, bidi controls and
@@ -557,6 +559,21 @@ nothing in the body names anybody.
   hundreds, each a scan of the whole index (`geo.place.display_name` has no
   index), before the `LIMIT`. The probe found it; the route test now checks
   there is exactly one locality lookup per search.
+
+**The photos** (day 4, 2026-11-12): one or two per proposal, optional, for
+the office only — nobody reads them back through the shim (`GET` is `405`);
+the console shows them (day 4, point 5). In the database, not on a volume
+(decision D1), in `movin.suggested_place_photo`: deleted with their place,
+1 or 2, JPEG or PNG **by their first bytes** (checked in the shim and again by
+a CHECK), 512 KB at most (the shim's `PHOTO_MAX_BYTES`, the CHECK, and the
+edge's `location /places/photos/` at 512k — `/places/` keeps 4k). A photo
+added or removed moves the place's `updated_at`, the version the console's
+decision names, so the office cannot approve a place whose photos changed
+after its page was loaded. After the release: `investigations/probe-place-photos.sh`
+on the server (the table, the shim, the edge; no account needed). That a
+photo of somebody else's place, or of a decided one, is refused needs a
+signed-in token, so it is proven in PGlite (`suggested-places-routes.test.js`,
+section 9) and live in the end-of-day phone test.
 
 **What only the live database can answer** — the pin's country, its locality,
 the OSM places near it, the OSM places of a type — is `liveGeo()` in the
