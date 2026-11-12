@@ -286,6 +286,8 @@ submitItem env seenResponses item =
         not (followUpReached env.configById seenResponses config) ->
         rejected "QUESTION_NOT_SERVED"
       | Just prev <- HM.lookup config.id seenResponses, isFinal prev.status -> rejected "ALREADY_ANSWERED"
+      -- Shown again after an app restart: keep the first display's row and timings.
+      | Just prev <- HM.lookup config.id seenResponses, item.status == DRFR.SHOWN -> accepted config prev []
       | item.status == DRFR.ANSWERED -> case validateAnswer config item.answer of
         Left code -> rejected code
         Right answer -> do
