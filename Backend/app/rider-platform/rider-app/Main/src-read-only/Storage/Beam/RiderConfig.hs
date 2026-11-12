@@ -119,6 +119,7 @@ data RiderConfigT f = RiderConfigT
     flowStatusStaleJourneyLookbackSec :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     flowStatusUnpaidJourneyWindowSec :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     frfsDriverDetailsLeadTimeSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    frfsKeepJourneyConfirmedUntilDeparture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     frfsMetricsApiKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     immediateCaptureDriverCancellationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

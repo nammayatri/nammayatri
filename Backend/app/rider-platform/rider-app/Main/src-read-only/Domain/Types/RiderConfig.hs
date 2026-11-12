@@ -122,6 +122,7 @@ data RiderConfig = RiderConfig
     flowStatusStaleJourneyLookbackSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     flowStatusUnpaidJourneyWindowSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     frfsDriverDetailsLeadTimeSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    frfsKeepJourneyConfirmedUntilDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frfsMetricsApiKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     immediateCaptureDriverCancellationFee :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

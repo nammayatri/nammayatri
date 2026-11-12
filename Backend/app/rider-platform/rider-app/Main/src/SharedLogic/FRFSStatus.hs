@@ -645,10 +645,13 @@ markJourneyPaidForBooking booking paymentOrder journeyId = do
   let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
   void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
   now <- getCurrentTime
-  let newStatus
-        | booking.status == DFRFSTicketBooking.FAILED = DJ.FAILED
-        | maybe False (> now) booking.startTime = DJ.CONFIRMED
-        | otherwise = DJ.INPROGRESS
+  newStatus <-
+    if
+        | booking.status == DFRFSTicketBooking.FAILED -> pure DJ.FAILED
+        | booking.isSpotBooking == Just True || not (maybe False (> now) booking.startTime) -> pure DJ.INPROGRESS
+        | otherwise -> do
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+          pure $ if (mbRiderConfig >>= (.frfsKeepJourneyConfirmedUntilDeparture)) == Just True then DJ.CONFIRMED else DJ.INPROGRESS
   mbJourney <- QJourney.findByPrimaryKey journeyId
   whenJust mbJourney $ \journey ->
     when (newStatus > journey.status) $ void $ QJourney.updateStatus newStatus journeyId
