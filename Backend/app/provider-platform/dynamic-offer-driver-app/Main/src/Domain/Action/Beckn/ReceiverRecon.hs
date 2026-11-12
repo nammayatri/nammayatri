@@ -126,6 +126,7 @@ runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
           let mbRide = Map.lookup order.orderId rideByOrderId
           pure
             row{L.messageId = Just req.messageId,
+                L.bapId = Just req.bapId,
                 L.orderId = Just order.orderId,
                 L.utr = Just leg.utr,
                 L.orderPaymentAmount = Just order.claimedGrossAmount,

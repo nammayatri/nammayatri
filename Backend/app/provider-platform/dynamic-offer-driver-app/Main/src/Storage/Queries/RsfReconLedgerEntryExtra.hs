@@ -197,16 +197,18 @@ findClaimsByMerchantStatusAndCreatedAtRange ::
   Domain.RsfClaimStatus ->
   UTCTime ->
   UTCTime ->
+  Maybe Text ->
   m [Domain.RsfReconLedgerEntry]
-findClaimsByMerchantStatusAndCreatedAtRange merchantId claimStatus from to =
+findClaimsByMerchantStatusAndCreatedAtRange merchantId claimStatus from to mbBapId =
   findLedgerRows
-    [ Se.And
+    [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId.getId,
           Se.Is Beam.entryType $ Se.Eq Domain.BAP_CLAIM,
           Se.Is Beam.claimStatus $ Se.Eq (Just claimStatus),
           Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
           Se.Is Beam.createdAt $ Se.LessThan to
         ]
+          <> [Se.Is Beam.bapId $ Se.Eq (Just bapId) | Just bapId <- [mbBapId]]
     ]
 
 findAllByMerchantEntryTypeAndCreatedAtRange ::

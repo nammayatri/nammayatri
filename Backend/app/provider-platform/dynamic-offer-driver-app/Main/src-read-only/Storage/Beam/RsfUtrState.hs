@@ -32,6 +32,6 @@ instance B.Table RsfUtrStateT where
 
 type RsfUtrState = RsfUtrStateT Identity
 
-$(enableKVPG (''RsfUtrStateT) [('merchantId), ('utr)] [])
+$(enableKVPG (''RsfUtrStateT) [('merchantId), ('utr)] [[('bapId)]])
 
 $(mkTableInstances (''RsfUtrStateT) "rsf_utr_state")

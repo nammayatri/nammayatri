@@ -84,15 +84,17 @@ findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset 
     (Just limit)
     (Just offset)
 
--- Every UTR whose latest claim falls in the range (the day summary folds the whole day).
-findAllByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> m [Domain.RsfUtrState]
-findAllByMerchantAndLastClaimedAtRange merchantId from to =
+-- Every UTR whose latest claim falls in the range (the day summary folds the whole day), optionally one
+-- collector's: with a bapId the bap_id secondary key serves the rows from KV, so fresh claims show before they drain.
+findAllByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> m [Domain.RsfUtrState]
+findAllByMerchantAndLastClaimedAtRange merchantId from to mbBapId =
   findAllWithKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId.getId,
           Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
           Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
+          <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
     ]
 
 -- Phase 4 (Mapping D): stamped once per send, only after the collector ACKs.

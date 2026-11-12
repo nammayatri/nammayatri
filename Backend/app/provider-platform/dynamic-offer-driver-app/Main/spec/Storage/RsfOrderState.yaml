@@ -30,6 +30,7 @@ RsfOrderState:
   constraints:
     merchantId: PrimaryKey
     orderId: PrimaryKey
+    bapId: "!SecondaryKey" # the dashboard's BAP filter reads through KV
 
   sqlType:
     reportedDiff: numeric(30,2)
