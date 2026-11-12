@@ -216,6 +216,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           -- customerCancellationDuesWithCurrency = mkDummyPrice 0,
           tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
           isScheduled = False,
+          scheduledRideMinWalletBalance = Nothing,
           preferenceMatchScore = Nothing,
           duration = Just (Seconds 300),
           pickupZone = False, -- TODO: make it dynamic ?

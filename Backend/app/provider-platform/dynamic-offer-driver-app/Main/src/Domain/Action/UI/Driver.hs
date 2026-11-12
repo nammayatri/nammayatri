@@ -2029,7 +2029,11 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
+      nowForWalletFlag <- getCurrentTime
+      mbScheduledRideMinWalletBalance <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime nowForWalletFlag (pure $ scheduledRideMinWalletFloor farePolicy.conditionalCharges) driverId.getId
+      -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2416,11 +2420,9 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
   when booking.isScheduled $ do
     nowT <- getCurrentTime
-    unless (DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT) $ do
-      minScheduledRideBalance <- getScheduledRideMinWalletBalance quote transporterConfig
-      walletOk <- FWallet.hasMinWalletBalance counterpartyDriver minScheduledRideBalance driver.id.getId
-      unless walletOk $
-        throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> maybe "" show minScheduledRideBalance <> ".")
+    mbShortOf <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig booking.isScheduled booking.startTime nowT (getScheduledRideMinWalletBalance quote transporterConfig) driver.id.getId
+    whenJust mbShortOf $ \minBalance ->
+      throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> show minBalance <> ".")
   when booking.isScheduled $ ensureNoScheduledOverlap transporterConfig booking
   when booking.isScheduled $ removeBookingFromRedis booking
   isBookingCancelled' <- CS.isBookingCancelled booking.id

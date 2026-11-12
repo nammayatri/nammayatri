@@ -13,13 +13,10 @@
 -}
 
 module SharedLogic.ScheduledRideTopDrivers
-  ( TopDriversRoundEvent (..),
-    topDriversTopic,
-    topDriversLeadTime,
+  ( topDriversLeadTime,
     regularRoundStartsAt,
     topDriversRoundCutoff,
     resolveTopDriverRules,
-    mkTopDriversRoundEvent,
   )
 where
 
@@ -37,26 +34,6 @@ defaultMaxCancellationRatePct = 10
 
 defaultMinCompletedRides :: Int
 defaultMinCompletedRides = 0
-
-topDriversTopic :: Text
-topDriversTopic = "scheduled-ride-top-drivers"
-
-data TopDriversRoundEvent = TopDriversRoundEvent
-  { searchTryId :: Text,
-    merchantOperatingCityId :: Text,
-    batchNumber :: Int,
-    minutesToPickup :: Int,
-    passedStatsCount :: Int,
-    selectedCount :: Int,
-    selectedDriverIds :: [Text],
-    minRatingRequired :: Double,
-    maxCancellationRatePctAllowed :: Double,
-    minCompletedRidesRequired :: Int,
-    maxPickupDistanceMeters :: Maybe Int,
-    usedDefaults :: Bool,
-    createdAt :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 topDriversLeadTime :: DTC.TransporterConfig -> [Int] -> Maybe NominalDiffTime
 topDriversLeadTime transporterConfig scheduleTryTimes =
@@ -96,22 +73,3 @@ resolveTopDriverRules transporterConfig serviceTier now pickupTime =
           (True <$ mbRadius)
           Nothing
    in (rules, isNothing mbMinRating && isNothing mbMaxCancellation && isNothing mbMinRides)
-
--- | The per-batch event for ClickHouse.
-mkTopDriversRoundEvent :: Text -> Text -> Int -> UTCTime -> Int -> [Text] -> DTC.ScheduledRideVisibilityRules -> Bool -> UTCTime -> TopDriversRoundEvent
-mkTopDriversRoundEvent searchTryId merchantOperatingCityId batchNumber pickupTime passedStatsCount selectedDriverIds rules usedDefaults createdAt =
-  TopDriversRoundEvent
-    { searchTryId,
-      merchantOperatingCityId,
-      batchNumber,
-      minutesToPickup = round (diffUTCTime pickupTime createdAt / 60),
-      passedStatsCount,
-      selectedCount = length selectedDriverIds,
-      selectedDriverIds,
-      minRatingRequired = fromMaybe defaultMinRating rules.minRating,
-      maxCancellationRatePctAllowed = fromMaybe defaultMaxCancellationRatePct rules.maxCancellationRatePct,
-      minCompletedRidesRequired = fromMaybe defaultMinCompletedRides rules.minCompletedRides,
-      maxPickupDistanceMeters = rules.pickupRadiusMeters,
-      usedDefaults,
-      createdAt
-    }
