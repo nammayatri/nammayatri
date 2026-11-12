@@ -112,5 +112,5 @@ getRoutesTrains routeId = do
       return $ RouteWithTrains routeId []
 
 -- Get trains for multiple routes
-getTrainsForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "ltsReplicaHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [Text] -> m [RouteWithTrains]
+getTrainsForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "peerLTSHedisEnvs" r [(CloudType, Hedis.HedisEnv)], HasField "ltsReplicaHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [Text] -> m [RouteWithTrains]
 getTrainsForRoutes = mapM getRoutesTrains

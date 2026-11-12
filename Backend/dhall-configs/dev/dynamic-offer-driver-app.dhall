@@ -481,7 +481,10 @@ let jobInfoMapx =
       ]
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+      { clouds =
+        [ { cloud = common.CloudType.AWS, url = "http://localhost:${ltsPort}/" }
+        ]
+      }
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
@@ -642,10 +645,14 @@ in  { esqDBCfg
     , driverClickhouseCfg
     , dashboardClickhouseCfg
     , hedisCfg = rcfg
-    , hedisClusterCfg = rccfg
-    , hedisSecondaryClusterCfg = rccfgSecondary
-    , ltsRedisCfg = ltsrcfg
-    , secondaryLTSRedisCfg = Some ltsrcfg
+    , hedisClusterCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = rccfg }
+      , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = rccfgSecondary }
+      ]
+    , ltsRedisCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = ltsrcfg }
+      , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = ltsrcfg }
+      ]
     , ltsReplicaRedisCfg = Some ltsrcfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg

@@ -7,6 +7,8 @@ module SharedLogic.DriverPool.LTSDataSync
   )
 where
 
+import Data.List (sortOn)
+import Data.Ord (Down (..))
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -191,7 +193,8 @@ syncDriverPoolDataToLTS driverId update = do
         DPD.setDriverPoolDataByCloud deploymentCloudType merged
         recordSupplyChange existing merged
       Nothing -> do
-        mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+        peerExisting <- Redis.runOnAllPeerLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+        let mbExisting' = listToMaybe $ sortOn (Down . (.lastUpdatedAt)) $ catMaybes peerExisting
         case mbExisting' of
           Just existing' -> do
             let merged = applyUpdate now update existing'
@@ -231,7 +234,7 @@ cleanupOldCloudKey deploymentCloudType old new =
     let key = DPD.driverPoolDataKey old.driverId
     if deploymentCloudType == Just (fromMaybe GCP old.cloudType)
       then Redis.withLTSRedis $ Redis.del key
-      else Redis.withSecondaryLTSRedis $ Redis.del key
+      else Redis.withPeerLTSRedis (Just (fromMaybe GCP old.cloudType)) $ Redis.del key
 
 driverPoolSyncLockKey :: Id Driver -> Text
 driverPoolSyncLockKey driverId = "driver-pool-sync-lock:" <> driverId.getId

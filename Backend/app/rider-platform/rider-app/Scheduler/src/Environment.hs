@@ -35,7 +35,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, connectHedisClusterClouds, connectHedisStandaloneClouds, disconnectHedis)
 import Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
@@ -84,9 +84,9 @@ data HandlerEnv = HandlerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     ltsHedisEnv :: HedisEnv,
-    secondaryLTSHedisEnv :: Maybe HedisEnv,
+    peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -171,20 +171,15 @@ buildHandlerEnv HandlerCfg {..} = do
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>)
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds hedisClusterCfgs ("rider-app-scheduler:" <>)
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("rider-app-scheduler:" <>)
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
-  secondaryHedisClusterEnv <-
-    Kernel.Prelude.try (connectHedisCluster schedulerConfig.hedisSecondaryClusterCfg ("rider-app-scheduler:" <>)) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let jobRetryOnExceptionMap :: (M.Map Text Bool) = M.mapKeys show jobRetryOnExceptionMapx
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
@@ -196,13 +191,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
-  ltsHedisEnv <- connectHedis ltsRedis identity
-  secondaryLTSHedisEnv <-
-    Kernel.Prelude.try (connectHedis ltsSecondaryRedis identity) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
+  (ltsHedisEnv, peerLTSHedisEnvs) <- connectHedisStandaloneClouds ltsRedisCfgs identity
   ltsReplicaHedisEnv <- case ltsReplicaRedis of
     Nothing -> pure Nothing
     Just replicaCfg ->
@@ -221,9 +210,9 @@ releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
   disconnectHedis ltsHedisEnv
-  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  mapM_ (disconnectHedis . snd) peerLTSHedisEnvs
   maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
 
 type Flow = FlowR HandlerEnv

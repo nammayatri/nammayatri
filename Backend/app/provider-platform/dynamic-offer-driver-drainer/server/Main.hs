@@ -25,8 +25,10 @@ import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
+import Kernel.Storage.Hedis.Config (HedisCloudCfg (..))
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Flow
+import Kernel.Types.Version (CloudType (..), localCloudType)
 import Kernel.Utils.Dhall hiding (void)
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
@@ -53,8 +55,7 @@ main = do
                 ConnectionConfigDriver
                   { esqDBCfg = appCfg.esqDBCfg,
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                    hedisClusterCfg = appCfg.hedisClusterCfg,
-                    hedisSecondaryClusterCfg = appCfg.hedisClusterCfg
+                    hedisClusterCfgs = [HedisCloudCfg {hedisCloud = fromMaybe UNAVAILABLE localCloudType, hedisCloudCfg = appCfg.hedisClusterCfg}]
                   }
                 appCfg.kvConfigUpdateFrequency
             )

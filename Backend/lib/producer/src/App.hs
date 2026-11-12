@@ -69,8 +69,7 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
           ( ConnectionConfigRider
               { esqDBCfg = appCfg.esqDBCfg,
                 esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = appCfg.hedisClusterCfg,
-                hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
+                hedisClusterCfgs = appCfg.hedisClusterCfgs
               }
           )
           appCfg.kvConfigUpdateFrequency

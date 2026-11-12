@@ -418,7 +418,10 @@ let superPositionConfig =
       }
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+      { clouds =
+        [ { cloud = common.CloudType.AWS, url = "http://localhost:${ltsPort}/" }
+        ]
+      }
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
@@ -530,13 +533,17 @@ in  { esqDBCfg
     , totpClockSkew = Some +2
     , twoFaIssuerName = "Control Centre"
     , hedisCfg = hcfg
-    , hedisClusterCfg = hccfg
-    , hedisSecondaryClusterCfg = hccfgSecondary
+    , hedisClusterCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = hccfg }
+      , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = hccfgSecondary }
+      ]
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
-    , ltsRedis
-    , ltsSecondaryRedis
+    , ltsRedisCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = ltsRedis }
+      , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = ltsSecondaryRedis }
+      ]
     , ltsReplicaRedis = Some ltsReplicaRedisCfg
     , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = False

@@ -43,6 +43,7 @@ sendEmail serviceConfig emailConfig to otpCode = do
     case cloudType of
       AWS -> AWS.sendEmail emailConfig to otpCode
       GCP -> GCP.sendEmail (getSendGridUrl serviceConfig) emailConfig to otpCode
+      NAMMA -> GCP.sendEmail (getSendGridUrl serviceConfig) emailConfig to otpCode
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email"
@@ -53,6 +54,7 @@ sendPlainEmail serviceConfig from to subject bodyText bodyFormat = do
     case cloudType of
       AWS -> AWS.sendPlainEmail from to subject bodyText bodyFormat
       GCP -> GCP.sendPlainEmail (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat
+      NAMMA -> GCP.sendPlainEmail (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route plain email"
@@ -64,6 +66,7 @@ sendMagicLinkEmail serviceConfig emailConfig to token = do
     case cloudType of
       AWS -> AWS.sendMagicLinkEmail emailConfig to token
       GCP -> GCP.sendMagicLinkEmail (getSendGridUrl serviceConfig) emailConfig to token
+      NAMMA -> GCP.sendMagicLinkEmail (getSendGridUrl serviceConfig) emailConfig to token
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route magic link email"
@@ -74,6 +77,7 @@ sendBusinessVerificationEmail serviceConfig emailConfig to otpCode token = do
     case cloudType of
       AWS -> AWS.sendBusinessVerificationEmail emailConfig to otpCode token
       GCP -> GCP.sendBusinessVerificationEmail (getSendGridUrl serviceConfig) emailConfig to otpCode token
+      NAMMA -> GCP.sendBusinessVerificationEmail (getSendGridUrl serviceConfig) emailConfig to otpCode token
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route business verification email"
@@ -92,6 +96,7 @@ sendEmailWithAttachment serviceConfig from to subject bodyText filePath fileName
     case cloudType of
       AWS -> AWS.sendEmailWithAttachment from to subject bodyText filePath fileName
       GCP -> GCP.sendEmailWithAttachment (getSendGridUrl serviceConfig) from to subject bodyText filePath fileName
+      NAMMA -> GCP.sendEmailWithAttachment (getSendGridUrl serviceConfig) from to subject bodyText filePath fileName
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachment"
@@ -110,6 +115,7 @@ sendEmailWithAttachments serviceConfig from to subject bodyText bodyFormat attac
     case cloudType of
       AWS -> AWS.sendEmailWithAttachments from to subject bodyText bodyFormat attachments
       GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
+      NAMMA -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachments"
@@ -128,6 +134,7 @@ sendEncodedEmailWithAttachments serviceConfig from to subject bodyText bodyForma
     case cloudType of
       AWS -> AWS.sendEncodedEmailWithAttachments from to subject bodyText bodyFormat attachments
       GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
+      NAMMA -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route encoded email with attachments"
@@ -149,6 +156,7 @@ sendEmailWithAttachmentsTracked serviceConfig options from to subject bodyText b
   case cloudType of
     AWS -> EmailSendResult SES . Just <$> AWS.sendEmailWithAttachmentsTracked options from to subject bodyText bodyFormat attachments
     GCP -> EmailSendResult SENDGRID <$> GCP.sendEmailWithAttachmentsTracked (getSendGridUrl serviceConfig) options from to subject bodyText bodyFormat attachments
+    NAMMA -> EmailSendResult SENDGRID <$> GCP.sendEmailWithAttachmentsTracked (getSendGridUrl serviceConfig) options from to subject bodyText bodyFormat attachments
     UNAVAILABLE -> do
       putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
       error "CloudType UNAVAILABLE: Cannot route email with attachments"

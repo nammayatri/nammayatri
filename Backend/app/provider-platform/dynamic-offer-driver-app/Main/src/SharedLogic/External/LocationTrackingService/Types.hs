@@ -25,6 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType, localCloudType)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 
@@ -73,11 +74,35 @@ data NearByTagReq = NearByTagReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
-  { url :: BaseUrl,
-    secondaryUrl :: Maybe BaseUrl
+data LtsCloudCfg = LtsCloudCfg
+  { cloud :: CloudType,
+    url :: BaseUrl
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
+
+newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
+  { clouds :: [LtsCloudCfg]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
+
+localLtsCloud :: LocationTrackingeServiceConfig -> Maybe LtsCloudCfg
+localLtsCloud cfg = case filter (\c -> Just c.cloud == localCloudType) cfg.clouds of
+  c : _ -> Just c
+  [] -> listToMaybe cfg.clouds
+
+localUrl :: LocationTrackingeServiceConfig -> BaseUrl
+localUrl cfg = maybe (error "ltsCfg.clouds is empty") (.url) (localLtsCloud cfg)
+
+allUrls :: LocationTrackingeServiceConfig -> [(CloudType, BaseUrl)]
+allUrls cfg = [(c.cloud, c.url) | c <- cfg.clouds]
+
+urlForCloud :: LocationTrackingeServiceConfig -> Maybe CloudType -> BaseUrl
+urlForCloud cfg mbCloud = maybe (localUrl cfg) snd (mbCloud >>= \cloud -> find ((== cloud) . fst) (allUrls cfg))
+
+peerUrls :: LocationTrackingeServiceConfig -> [(CloudType, BaseUrl)]
+peerUrls cfg =
+  let localCloud = (.cloud) <$> localLtsCloud cfg
+   in [(c.cloud, c.url) | c <- cfg.clouds, Just c.cloud /= localCloud]
 
 data LocationUpdate = LocationUpdate
   { lat :: Double,

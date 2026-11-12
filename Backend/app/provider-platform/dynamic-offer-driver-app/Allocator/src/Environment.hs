@@ -35,7 +35,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, connectHedisClusterClouds, connectHedisStandaloneClouds, disconnectHedis)
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer.Types
@@ -87,13 +87,13 @@ data HandlerEnv = HandlerEnv
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
-    secondaryLTSHedisEnv :: Maybe HedisEnv,
+    peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
@@ -183,15 +183,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   passettoContext <- uncurry mkPassettoContextAuto encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
-  ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
-  secondaryLTSHedisEnv <- case appCfg.secondaryLTSRedisCfg of
-    Nothing -> pure Nothing
-    Just cfg ->
-      Kernel.Prelude.try (connectHedis cfg ("dynamic-offer-driver-app-lts:" <>)) >>= \case
-        Left (e :: SomeException) -> do
-          putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
-          pure Nothing
-        Right env -> pure (Just env)
+  (ltsHedisEnv, peerLTSHedisEnvs) <- connectHedisStandaloneClouds appCfg.ltsRedisCfgs ("dynamic-offer-driver-app-lts:" <>)
   ltsReplicaHedisEnv <- case appCfg.ltsReplicaRedisCfg of
     Nothing -> pure Nothing
     Just replicaCfg ->
@@ -208,20 +200,15 @@ buildHandlerEnv HandlerCfg {..} = do
   enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds appCfg.hedisClusterCfgs ("dynamic-offer-driver-app:" <>)
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("dynamic-offer-driver-app:" <>)
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
-  secondaryHedisClusterEnv <-
-    Kernel.Prelude.try (connectHedisCluster appCfg.hedisSecondaryClusterCfg ("dynamic-offer-driver-app:" <>)) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let jobRetryOnExceptionMap :: (M.Map Text Bool) = M.mapKeys show jobRetryOnExceptionMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
@@ -247,10 +234,10 @@ releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
-  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  mapM_ (disconnectHedis . snd) peerLTSHedisEnvs
   maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
 
 type Flow = FlowR HandlerEnv
 
