@@ -26,6 +26,7 @@ import Kernel.Streaming.Kafka.Commons (KafkaTopic)
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
+import Storage.DocumentVault (DocumentVault)
 
 type OnboardingFlow m r =
   ( MonadFlow m,
@@ -40,6 +41,7 @@ type OnboardingFlow m r =
     HasField "broadcastMessageTopic" r KafkaTopic,
     HasField "authTokenCacheExpiry" r Seconds,
     HasField "s3Env" r (S3.S3Env m),
+    HasField "documentVault" r (Maybe DocumentVault),
     HasField "externalServiceRateLimitOptions" r APIRateLimitOptions,
     HasField "imageExtractionTimeoutSec" r Seconds,
     SchedulerFlow r,

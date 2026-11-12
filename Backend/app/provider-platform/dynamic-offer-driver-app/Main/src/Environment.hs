@@ -75,6 +75,7 @@ import Slack.Types (SlackNotificationConfig)
 import Storage
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
+import Storage.DocumentVault (DocumentVault, DocumentVaultConfig, buildDocumentVault)
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
@@ -124,6 +125,7 @@ data AppCfg = AppCfg
     s3PublicConfig :: S3Config,
     storageServiceConfig :: StorageServiceConfig,
     storagePublicServiceConfig :: StorageServiceConfig,
+    documentVaultConfig :: Maybe DocumentVaultConfig,
     migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -339,6 +341,7 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
     s3EnvPublic :: S3Env Flow,
+    documentVault :: Maybe DocumentVault,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     cacheTranslationConfig :: CacheTranslationConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
@@ -506,6 +509,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       searchRequestExpirationSecondsForMultimodal = fromIntegral cfg.searchRequestExpirationSecondsForMultimodal
   s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
   s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
+  documentVault <- mapM buildDocumentVault cfg.documentVaultConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg

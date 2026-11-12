@@ -35,6 +35,7 @@ library
       AWS.S3.Utils
       Storage
       Storage.CloudRouter
+      Storage.DocumentVault
       Storage.Flow
       Storage.GCS.Flow
       Storage.Types
@@ -80,6 +81,7 @@ library
   build-depends:
       aeson
     , amazonka
+    , amazonka-kms
     , amazonka-s3
     , base >=4.7 && <5
     , base16-bytestring
@@ -88,6 +90,8 @@ library
     , case-insensitive
     , containers
     , cryptohash
+    , cryptonite
+    , cryptostore >=0.2.3.0
     , directory
     , euler-hs
     , filepath
@@ -96,11 +100,13 @@ library
     , http-media
     , http-types
     , lens
+    , memory
     , mobility-core
     , openapi3
     , process
     , record-dot-preprocessor
     , record-hasfield
+    , resourcet
     , servant
     , servant-client
     , servant-openapi3
@@ -111,6 +117,7 @@ library
     , unix
     , unordered-containers
     , uri-encode
+    , x509
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

@@ -61,6 +61,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import Storage
+import Storage.DocumentVault (DocumentVault, buildDocumentVault)
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.ARDUBPPMetrics.Types
@@ -134,6 +135,7 @@ data HandlerEnv = HandlerEnv
     searchRequestExpirationSeconds :: NominalDiffTime,
     searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     s3Env :: S3Env Flow,
+    documentVault :: Maybe DocumentVault,
     passettoContext :: PassettoContext,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
@@ -230,6 +232,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   s3Env <- buildStorageEnvIO loggerEnv appCfg.storageServiceConfig
+  documentVault <- mapM buildDocumentVault appCfg.documentVaultConfig
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal

@@ -25,7 +25,6 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
   )
 where
 
-import qualified AWS.S3 as S3
 import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay, utctDay)
@@ -65,6 +64,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveDLVersionMetadata)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -297,7 +297,7 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.DriverLicense) $
         throwError (ImageInvalidType (show DTO.DriverLicense) "")
-      S3.get $ T.unpack imageMetadata.s3Path
+      readDocument imageMetadata
 
     -- unlinkDLFromDriver :: Id Person.Person -> Flow ()
     -- unlinkDLFromDriver pId = do

@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap, workbench_bap
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap, workbench_bap, kms
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -174,7 +174,7 @@ class MockHandler(BaseHTTPRequestHandler):
         # `_json()` on the way out; non-admin paths get a record appended in
         # the finally below. Admin paths (/mock/..., /health, /) are tagged
         # so the SSE stream can filter them out by default.
-        is_admin = path.startswith("/mock/") or path in ("/", "/health", "/flush-redis")
+        is_admin = (path.startswith("/mock/") or path in ("/", "/health", "/flush-redis")) and not self.headers.get("X-Amz-Target")
         self._hit_start = time.time()
         self._hit_request_headers = {k: v for k, v in self.headers.items()}
         self._hit_request_body = body
@@ -207,6 +207,11 @@ class MockHandler(BaseHTTPRequestHandler):
                 log.exception("failed to record mock hit")
 
     def _dispatch(self, parsed, path, query, body):
+        if self.headers.get("X-Amz-Target", "").startswith("TrentService."):
+            self._hit_service = "kms"
+            self._apply_overrides("kms", path, query, body)
+            return kms.handle(self, path, body)
+
         # ── Hit-buffer admin endpoints (must come before the /mock prefix dispatch) ──
         if path == "/mock/hits/stream":
             return self._mock_hits_stream(parsed)
@@ -251,6 +256,9 @@ class MockHandler(BaseHTTPRequestHandler):
         # Local mock S3 object. Allocator reads Backend/s3/local/test-bucket/<key>.
         if path == "/mock/s3/put-text" and self.command == "POST":
             return self._mock_s3_put_text(body)
+
+        if path.startswith("/mock/kms/"):
+            return kms.handle_admin(self, path, body)
 
         # ── Route to service handler with middleware override check ──
         for prefix, module, svc_name in ROUTES:

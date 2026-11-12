@@ -11,11 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE PackageImports #-}
 
 module AWS.S3.Utils where
 
 import qualified Crypto.Hash.SHA256 as SHA256
-import Crypto.MAC.HMAC (hmac)
+import "cryptohash" Crypto.MAC.HMAC (hmac)
 import Data.ByteString as DB
 import Data.ByteString.Base16 as Base16
 import Data.Text as T

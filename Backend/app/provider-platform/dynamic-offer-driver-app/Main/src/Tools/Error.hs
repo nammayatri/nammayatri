@@ -1501,6 +1501,7 @@ data DriverOnboardingError
   | ImageNotFound Text
   | ImageAccessDenied Text
   | ImageNotValid Text
+  | DocumentArchived Text
   | ImageNotBelongsToPerson Text
   | FaceMatchFailed
   | DriverAlreadyLinked
@@ -1606,6 +1607,7 @@ instance IsBaseError DriverOnboardingError where
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
     ImageAccessDenied id_ -> Just $ "Access denied for image with imageId \"" <> id_ <> "\"."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
+    DocumentArchived id_ -> Just $ "Document with imageId \"" <> id_ <> "\" can no longer be read. Please upload it again."
     ImageNotBelongsToPerson id_ -> Just $ "Image with imageId \"" <> id_ <> "\" belongs to another person/entity."
     FaceMatchFailed -> Just "Face match failed. The photo on this document does not match your selfie. Please re-upload."
     DriverAlreadyLinked -> Just "Document is already linked with driver."
@@ -1712,6 +1714,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
     ImageAccessDenied _ -> "IMAGE_ACCESS_DENIED"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
+    DocumentArchived _ -> "DOCUMENT_ARCHIVED"
     ImageNotBelongsToPerson _ -> "IMAGE_NOT_BELONGS_TO_PERSON"
     FaceMatchFailed -> "FACE_MATCH_FAILED"
     DriverAlreadyLinked -> "DRIVER_ALREADY_LINKED"
@@ -1812,6 +1815,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotFound _ -> E400
     ImageAccessDenied _ -> E403
     ImageNotValid _ -> E400
+    DocumentArchived _ -> E400
     ImageNotBelongsToPerson _ -> E403
     FaceMatchFailed -> E400
     DriverAlreadyLinked -> E400

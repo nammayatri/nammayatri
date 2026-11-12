@@ -24,7 +24,6 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
-import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Set as Set
@@ -78,6 +77,7 @@ import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import SharedLogic.DriverOnboarding.DocumentIdentifier
+import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
@@ -1062,7 +1062,7 @@ getValidDocumentImage personId imageId_ expectedDocType = do
 getImageFromS3 :: OnboardingFlow m r => Image.Image -> m Text
 getImageFromS3 imageMetadata =
   Redis.withWaitAndLockRedis (imageS3Lock imageMetadata.s3Path) 5 50000 $
-    S3.get $ T.unpack imageMetadata.s3Path
+    readDocument imageMetadata
 
 -- | Outcome of a server-side selfie-vs-document face match.
 --   FMSkip     -> face match not required, or document already SDK-matched on-device.
@@ -1222,17 +1222,43 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
         if webhookPending
           then logInfo $ "Deferred face match: webhook still in flight for " <> show docType <> " image " <> docImg.id.getId <> "; the webhook handler will resolve it."
           else do
-            outcome <- runDocFaceMatch person config docImg.id Nothing Nothing
-            case outcome of
-              FMFail -> do
+            matchResult <- try @_ @DriverOnboardingError $ runDocFaceMatch person config docImg.id Nothing Nothing
+            case matchResult of
+              Left (DocumentArchived _) -> rejectPendingArchivedDoc docType docImg
+              Left err -> throwError err
+              Right FMFail -> do
                 let mbReason = toMessage FaceMatchFailed
                 case docType of
                   ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) docImg.id
                   ODC.PanCard -> DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
                   ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
                   _ -> pure ()
-              FMPass -> promotePendingToValid docType docImg
-              _ -> pure ()
+              Right FMPass -> promotePendingToValid docType docImg
+              Right _ -> pure ()
+    rejectPendingArchivedDoc docType docImg = do
+      let archived = DocumentArchived docImg.id.getId
+          mbReason = toMessage archived
+          rejectImage = ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID archived docImg.id
+      case docType of
+        ODC.DriverLicense -> do
+          mbDL <- DLQuery.findByDriverId person.id
+          whenJust mbDL $ \dl ->
+            when (dl.documentImageId1 == docImg.id && dl.verificationStatus == Documents.PENDING) $ do
+              rejectImage
+              DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Document archived" mbReason) docImg.id
+        ODC.PanCard -> do
+          mbPan <- DPQuery.findByDriverId person.id
+          whenJust mbPan $ \pan ->
+            when (pan.documentImageId1 == docImg.id && pan.verificationStatus == Documents.PENDING) $ do
+              rejectImage
+              DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
+        ODC.AadhaarCard -> do
+          mbAadhaar <- QAadhaarCard.findByPrimaryKey person.id
+          whenJust mbAadhaar $ \aadhaar ->
+            when (aadhaar.verificationStatus == Documents.PENDING) $ do
+              rejectImage
+              QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
+        _ -> pure ()
     -- Promote only PENDING records belonging to this exact image; legacy VALID rows are never touched.
     promotePendingToValid docType docImg = case docType of
       ODC.DriverLicense -> do

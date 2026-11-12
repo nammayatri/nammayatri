@@ -21,6 +21,7 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
         Domain.Types.Image.Image
           { documentExpiry = documentExpiry,
             documentVersionId = documentVersionId,
+            encryptedDataKey = encryptedDataKey,
             failureReason = failureReason,
             id = Kernel.Types.Id.Id id,
             imageType = imageType,
@@ -42,6 +43,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
     Beam.ImageT
       { Beam.documentExpiry = documentExpiry,
         Beam.documentVersionId = documentVersionId,
+        Beam.encryptedDataKey = encryptedDataKey,
         Beam.failureReason = failureReason,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.imageType = imageType,

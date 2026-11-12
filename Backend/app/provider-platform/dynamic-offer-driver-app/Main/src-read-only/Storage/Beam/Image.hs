@@ -17,6 +17,7 @@ import qualified Tools.Error
 data ImageT f = ImageT
   { documentExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     documentVersionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    encryptedDataKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     failureReason :: B.C f (Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError),
     id :: B.C f Kernel.Prelude.Text,
     imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,

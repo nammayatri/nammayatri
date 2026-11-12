@@ -87,6 +87,7 @@ import SharedLogic.DriverOnboarding.Digilocker
     verifyDigiLockerEnabled,
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
+import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -985,7 +986,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
       Redis.withWaitAndLockRedis (SDO.imageS3Lock (imageMetadata.s3Path)) 5 50000 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        readDocument imageMetadata
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
@@ -1104,7 +1105,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
       Redis.withWaitAndLockRedis (SDO.imageS3Lock (imageMetadata.s3Path)) 5 50000 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        readDocument imageMetadata
     callIdfy :: TransporterConfig -> Text -> Flow Documents.VerificationStatus
     callIdfy transporterConfig personId = do
       image1 <- getImage req.imageId1

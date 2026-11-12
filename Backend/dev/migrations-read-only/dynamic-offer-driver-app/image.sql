@@ -55,3 +55,8 @@ ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN metadata json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN document_version_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN encrypted_data_key text ;

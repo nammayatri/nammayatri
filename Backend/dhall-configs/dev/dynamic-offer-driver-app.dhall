@@ -564,6 +564,16 @@ let storagePublicServiceConfig =
       , gcsConfig = None GCSGcpConfig
       }
 
+let documentVaultConfig =
+      None
+        { region : Text
+        , processingKeyAliasPrefix : Text
+        , archiveKeyArn : Text
+        , kmsEndpoint : Optional Text
+        , sealNewUploads : Bool
+        , documentTypes : List Text
+        }
+
 let rideEventsRedisEnabled = env:RIDE_EVENTS_REDIS_PUBLISH_ENABLED ? True
 
 let rideEventsKafkaEnabled = env:RIDE_EVENTS_KAFKA_PUBLISH_ENABLED ? False
@@ -751,6 +761,7 @@ in  { esqDBCfg
     , emailServiceConfig
     , storageServiceConfig
     , storagePublicServiceConfig
+    , documentVaultConfig
     , ttenTokenCacheExpiry = +86390
     , imageExtractionTimeoutSec = +20
     , bulkRcPlaceholderImagePath =
