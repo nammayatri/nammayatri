@@ -41,13 +41,13 @@ import AWS.S3.Utils
 import qualified Amazonka
 import qualified Amazonka.S3 as Amazonka
 import qualified Amazonka.S3.HeadObject as Amazonka
+import qualified Amazonka.S3.PutObject as PutObject
 import Control.Exception (throwIO, try)
 import Control.Lens.Getter ((^.))
 import qualified Crypto.Hash.MD5 as MD5
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Text.Encoding as T
@@ -64,9 +64,7 @@ import qualified System.Directory as Dir
 import System.Exit (ExitCode (..))
 import System.FilePath.Posix as Path
 import System.IO.Error (userError)
-import qualified System.Posix.Files as Posix
-import qualified System.Posix.IO as Posix
-import System.Process (callCommand, readProcessWithExitCode)
+import System.Process (readProcessWithExitCode)
 
 type S3GetAPI = Get '[S3ImageData] Text
 
@@ -215,6 +213,11 @@ runAwsS3GetObject bucketName path tmpPath = do
       -- throwIO so Control.Exception.try / app-level retry catchers see the full AWS stderr.
       liftIO . throwIO $ userError errMsg
 
+-- | CWE-78 fix: this used to shell out via `callCommand "aws s3api put-object
+-- --key " <> path <> ...` (/bin/sh -c), letting an attacker-controlled S3 key
+-- (e.g. the merchant-onboarding upload's payloadKey path segment) inject
+-- arbitrary shell commands. Amazonka.send never involves a shell -- `path`
+-- becomes an opaque ObjectKey value, not a position in a command string.
 put'' ::
   ( CoreMetrics m,
     MonadFlow m
@@ -224,16 +227,11 @@ put'' ::
   Text ->
   m ()
 put'' bucketName path img = withLogTag "S3" $ do
-  let tmpPath = getTmpPath path
-  liftIO $ writeFile_ tmpPath img
-  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath
-  liftIO $ callCommand cmd
-  liftIO $ removeFile tmpPath
-  where
-    writeFile_ path_ img_ = do
-      fd <- Posix.createFile path_ Posix.accessModes
-      _ <- Posix.fdWrite fd (T.unpack img_)
-      Posix.closeFd fd
+  env <- Amazonka.newEnv Amazonka.discover
+  let bucketName' = Amazonka.BucketName bucketName
+      path' = Amazonka.ObjectKey $ T.pack path
+      body = Amazonka.toBody (T.encodeUtf8 img)
+  void . liftIO . Amazonka.runResourceT $ Amazonka.send env (Amazonka.newPutObject bucketName' path' body)
 
 putRaw'' ::
   ( CoreMetrics m,
@@ -245,11 +243,12 @@ putRaw'' ::
   String ->
   m ()
 putRaw'' bucketName path bs _contentType = withLogTag "S3" $ do
-  let tmpPath = getTmpPath path
-  liftIO $ BS.writeFile tmpPath bs
-  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath <> " --content-type " <> _contentType
-  liftIO $ callCommand cmd
-  liftIO $ removeFile tmpPath
+  env <- Amazonka.newEnv Amazonka.discover
+  let bucketName' = Amazonka.BucketName bucketName
+      path' = Amazonka.ObjectKey $ T.pack path
+      body = Amazonka.toBody bs
+      putReq = (Amazonka.newPutObject bucketName' path' body) {PutObject.contentType = Just (T.pack _contentType)}
+  void . liftIO . Amazonka.runResourceT $ Amazonka.send env putReq
 
 delete'' ::
   ( CoreMetrics m,
@@ -259,11 +258,10 @@ delete'' ::
   String ->
   m ()
 delete'' bucketName path = withLogTag "S3" $ do
-  let cmd = "aws s3api delete-object --bucket " <> T.unpack bucketName <> " --key " <> path
-  liftIO $ callCommand cmd
-
-getTmpPath :: String -> String
-getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
+  env <- Amazonka.newEnv Amazonka.discover
+  let bucketName' = Amazonka.BucketName bucketName
+      path' = Amazonka.ObjectKey $ T.pack path
+  void . liftIO . Amazonka.runResourceT $ Amazonka.send env (Amazonka.newDeleteObject bucketName' path')
 
 -- | Unique temp path per download so a failed get's removeFile cannot delete
 -- another concurrent transfer that shares the same S3 key basename.

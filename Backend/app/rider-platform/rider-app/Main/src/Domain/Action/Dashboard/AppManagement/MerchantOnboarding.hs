@@ -54,6 +54,33 @@ import Storage.Queries.MerchantOnboardingStepConfig as QMOSC
 import System.IO (hFileSize)
 import Tools.Error
 
+-- | The only document slots the ticket-merchant onboarding submit/approve
+-- handlers ever read (TicketHandlers.hs's TicketMerchantInfoPayload: docPan,
+-- docCancelledCheque, agreementLetter). payloadKey arrives as a raw URL
+-- Capture with no validation otherwise, so it is rejected here -- before it
+-- reaches S3.createFilePath -- rather than cleaned. CWE-78 fix: closes the
+-- command-injection sink in AWS/S3/Flow.hs's put'' (callCommand).
+data DocumentSlot = DocPan | DocCancelledCheque | AgreementLetter
+
+parseDocumentSlot :: Text -> Maybe DocumentSlot
+parseDocumentSlot "docPan" = Just DocPan
+parseDocumentSlot "docCancelledCheque" = Just DocCancelledCheque
+parseDocumentSlot "agreementLetter" = Just AgreementLetter
+parseDocumentSlot _ = Nothing
+
+renderDocumentSlot :: DocumentSlot -> Text
+renderDocumentSlot DocPan = "docPan"
+renderDocumentSlot DocCancelledCheque = "docCancelledCheque"
+renderDocumentSlot AgreementLetter = "agreementLetter"
+
+-- | Content types accepted for a ticket-merchant onboarding document upload.
+-- reqContentType is also attacker-controlled free text that reaches
+-- putRaw'''s shell string ("--content-type <value>"); this whitelist closes
+-- that second CWE-78 input, matching the exact-match convention used by
+-- driver-doc uploads (Driver.hs's validateContentType).
+allowedUploadContentTypes :: [Text]
+allowedUploadContentTypes = ["image/png", "image/jpeg", "application/pdf"]
+
 mkMerchantOnboardingAPI :: Domain.Types.MerchantOnboarding.MerchantOnboarding -> [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] -> Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
 mkMerchantOnboardingAPI onboarding steps =
   Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
@@ -289,6 +316,9 @@ merchantOnboardingStepUploadFile _merchantShortId _opCity stepId payloadKey requ
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
   unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have this access"
+  documentSlot <- parseDocumentSlot payloadKey & fromMaybeM (InvalidRequest "Invalid document slot for payloadKey")
+  unless (reqContentType `elem` allowedUploadContentTypes) $
+    throwError $ InvalidRequest "Unsupported reqContentType for document upload"
   merchant <- findMerchantByShortId _merchantShortId
   merchantConfig <- CQM.findById (merchant.id) >>= fromMaybeM (MerchantNotFound merchant.id.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
@@ -296,7 +326,7 @@ merchantOnboardingStepUploadFile _merchantShortId _opCity stepId payloadKey requ
     throwError $ FileSizeExceededError ("File size " <> show fileSize <> " exceeds the limit of " <> show merchantConfig.mediaFileSizeUpperLimit)
 
   documentFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) fileType reqContentType
+  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> renderDocumentSlot documentSlot) fileType reqContentType
   let fileUrl =
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "merchant-onboarding"
@@ -307,7 +337,7 @@ merchantOnboardingStepUploadFile _merchantShortId _opCity stepId payloadKey requ
     ( do
         S3.put (T.unpack filePath) documentFile
         MFQuery.updateStatusById DMF.COMPLETED fileEntity.id
-        updateStepPayloadWithFileId step payloadKey (fileEntity.id.getId)
+        updateStepPayloadWithFileId step (renderDocumentSlot documentSlot) (fileEntity.id.getId)
     )
       `catch` \(e :: SomeException) -> do
         logError $ "S3 upload failed for onboarding media file " <> fileEntity.id.getId <> ": " <> show e
