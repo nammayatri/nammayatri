@@ -80,7 +80,12 @@ let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { hedisCfg
-    , hedisClusterCfg
+    , hedisClusterCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = hedisClusterCfg }
+      , { hedisCloud = common.CloudType.GCP
+        , hedisCloudCfg = hedisSecondaryClusterCfg
+        }
+      ]
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = False
@@ -115,6 +120,5 @@ in  { hedisCfg
     , secondaryKafkaProducerCfg
     , cacConfig
     , inMemConfig
-    , hedisSecondaryClusterCfg
     , blackListedJobs = [] : List Text
     }

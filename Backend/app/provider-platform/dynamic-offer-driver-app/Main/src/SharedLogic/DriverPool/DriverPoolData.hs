@@ -174,8 +174,8 @@ getDriverPoolDataBatch ::
 getDriverPoolDataBatch driverIds = do
   let keys = map driverPoolDataKey driverIds
   primaryResults <- Redis.withLTSReplicaRedis $ Redis.mGetStandalone keys
-  secondaryResults <- Redis.withSecondaryLTSRedis $ Redis.mGetStandalone keys
-  pure $ pickLatestPerDriver (primaryResults <> secondaryResults)
+  peerResults <- Redis.runOnAllPeerLTSRedis $ Redis.mGetStandalone keys
+  pure $ pickLatestPerDriver (primaryResults <> concat peerResults)
 
 -- | Deduplicate pool entries by driverId, keeping the most recently written copy.
 -- The same driver key can live in both primary and secondary LTS (e.g. right after
@@ -285,4 +285,4 @@ setDriverPoolDataByCloud deploymentCloudType dpd = do
       expiry = 2592000 * 12 -- 1 year
   if deploymentCloudType == Just (fromMaybe GCP driverCloud)
     then Redis.withLTSRedis $ Redis.setExp key dpd expiry
-    else Redis.withSecondaryLTSRedis $ Redis.setExp key dpd expiry
+    else Redis.withPeerLTSRedis (Just (fromMaybe GCP driverCloud)) $ Redis.setExp key dpd expiry

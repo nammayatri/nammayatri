@@ -90,29 +90,29 @@ callMultiCloudDriverLocation ride = do
   ltsCfg <- asks (.ltsCfg)
   let req = DriversLocationReq {driverIds = [ride.driverId]}
   case cloudType of
-    Nothing -> callBothClouds ltsCfg.url ltsCfg.secondaryUrl req
-    Just UNAVAILABLE -> callBothClouds ltsCfg.url ltsCfg.secondaryUrl req
+    Nothing -> callAllClouds ltsCfg req
+    Just UNAVAILABLE -> callAllClouds ltsCfg req
     Just ct
-      | Just ct == ride.cloudType -> callDriverLocationAPI ltsCfg.url req
+      | Just ct == ride.cloudType -> callDriverLocationAPI (localUrl ltsCfg) req
       | otherwise ->
         maybe
-          (logError "Secondary URL not configured for cross-cloud tracking" >> pure [])
+          (callAllClouds ltsCfg req)
           (`callDriverLocationAPI` req)
-          ltsCfg.secondaryUrl
+          (ride.cloudType >>= \rideCloud -> snd <$> find ((== rideCloud) . fst) (allUrls ltsCfg))
   where
-    callBothClouds primaryUrl mbSecondaryUrl req = do
-      primaryAwaitable <- awaitableFork "primaryLTS" $ callDriverLocationAPI primaryUrl req
-      mbSecondaryAwaitable <- forM mbSecondaryUrl $ \url -> awaitableFork "secondaryLTS" $ callDriverLocationAPI url req
-      primaryRes <-
-        L.await Nothing primaryAwaitable >>= \case
-          Left err -> throwError $ InternalError $ "Failed to call driversLocation API for primary url: " <> show primaryUrl <> ", error: " <> show err
+    callAllClouds ltsCfg req = do
+      localAwaitable <- awaitableFork "localLTS" $ callDriverLocationAPI (localUrl ltsCfg) req
+      peerAwaitables <- forM (peerUrls ltsCfg) $ \(_, url) -> awaitableFork "peerLTS" $ callDriverLocationAPI url req
+      localRes <-
+        L.await Nothing localAwaitable >>= \case
+          Left err -> throwError $ InternalError $ "Failed to call driversLocation API for local url: " <> show (localUrl ltsCfg) <> ", error: " <> show err
           Right result -> pure result
-      secondaryRes <- maybe (pure []) handleSecondaryResult mbSecondaryAwaitable
-      pure $ primaryRes <> secondaryRes
+      peerRes <- forM peerAwaitables handlePeerResult
+      pure $ localRes <> concat peerRes
       where
-        handleSecondaryResult awaitable =
+        handlePeerResult awaitable =
           L.await Nothing awaitable >>= \case
-            Left err -> logError ("Failed to call driversLocation API for secondary url, error: " <> show err) >> pure []
+            Left err -> logError ("Failed to call driversLocation API for peer url, error: " <> show err) >> pure []
             Right result -> pure result
 
     callDriverLocationAPI url req =

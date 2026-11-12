@@ -107,11 +107,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
-    ltsRedisCfg :: HedisCfg,
-    secondaryLTSRedisCfg :: Maybe HedisCfg,
+    ltsRedisCfgs :: [HedisCloudCfg],
     ltsReplicaRedisCfg :: Maybe HedisCfg,
-    hedisClusterCfg :: HedisCfg,
-    hedisSecondaryClusterCfg :: HedisCfg,
+    hedisClusterCfgs :: [HedisCloudCfg],
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
@@ -159,12 +157,12 @@ data AppEnv = AppEnv
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
-    secondaryLTSHedisEnv :: Maybe HedisEnv,
+    peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     kafkaConsumerCfg :: ConsumerConfig,
@@ -239,16 +237,7 @@ buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
-  ltsHedisEnv <- connectHedis ltsRedisCfg id
-  secondaryLTSHedisEnv <-
-    case secondaryLTSRedisCfg of
-      Nothing -> pure Nothing
-      Just cfg' ->
-        Kernel.try (connectHedis cfg' id) >>= \case
-          Left (e :: SomeException) -> do
-            putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ Kernel.Prelude.show e
-            pure Nothing
-          Right env -> pure (Just env)
+  (ltsHedisEnv, peerLTSHedisEnvs) <- connectHedisStandaloneClouds ltsRedisCfgs id
   ltsReplicaHedisEnv <-
     case ltsReplicaRedisCfg of
       Nothing -> pure Nothing
@@ -263,20 +252,15 @@ buildAppEnv AppCfg {..} consumerType = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Nothing
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds hedisClusterCfgs id
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg id
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg id
-  secondaryHedisClusterEnv <-
-    Kernel.try (connectHedisCluster hedisSecondaryClusterCfg id) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ Kernel.Prelude.show e
-        pure Nothing
-      Right env -> pure (Just env)
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
   eventRequestCounter <- registerEventRequestCounterMetric
@@ -299,6 +283,6 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
-  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  mapM_ (disconnectHedis . snd) peerLTSHedisEnvs
   Kernel.Prelude.maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
-  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs

@@ -228,9 +228,8 @@ allConnectionsHealthCheck :: FlowHandler Text
 allConnectionsHealthCheck = do
   env <- asks (.appEnv)
   let redisEnvs =
-        [ ("clusterRedis", Just env.hedisClusterEnv),
-          ("secondaryClusterRedis", env.secondaryHedisClusterEnv)
-        ]
+        ("clusterRedis", Just env.hedisClusterEnv) :
+        map (\(cloud, hedisEnv) -> ("peerClusterRedis" <> show cloud, Just hedisEnv)) env.peerHedisClusterEnvs
       dbEnvs = [("db", env.esqDBEnv), ("replicaDb", env.esqDBReplicaEnv)]
   dbErrors <- liftIO $ catMaybes <$> forM dbEnvs (\(name, dbEnv) -> runCheck name (checkDb dbEnv))
   redisErrors <- liftIO $ catMaybes <$> forM redisEnvs (\(name, mbHedisEnv) -> maybe (pure Nothing) (runCheck name . checkRedis) mbHedisEnv)

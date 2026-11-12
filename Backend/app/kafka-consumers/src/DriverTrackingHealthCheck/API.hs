@@ -19,6 +19,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Servant (Get, JSON)
@@ -41,7 +42,7 @@ healthCheck ::
     HasField "hedisNonCriticalEnv" r Redis.HedisEnv,
     HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
     HasField "hedisClusterEnv" r Redis.HedisEnv,
-    HasField "secondaryHedisClusterEnv" r (Maybe Redis.HedisEnv)
+    HasField "peerHedisClusterEnvs" r [(CloudType, Redis.HedisEnv)]
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI' do

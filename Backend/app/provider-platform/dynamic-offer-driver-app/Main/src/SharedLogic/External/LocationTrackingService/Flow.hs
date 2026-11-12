@@ -47,7 +47,7 @@ import SharedLogic.QuickRetry (withQuickRetry)
 rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe RideInfo -> m APISuccess
 rideStart rideId lat lon merchantId driverId rideInfo = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         StartRideReq
           { lat,
@@ -66,7 +66,7 @@ rideStart rideId lat lon merchantId driverId rideInfo = do
 rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> Maybe RideInfo -> Maybe Int64 -> m EndRideRes
 rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo mbTs = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         EndRideReq
           { lat,
@@ -84,6 +84,17 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo mbTs = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
+firstFromUrls :: (MonadFlow m, Forkable m) => [(CloudType, BaseUrl)] -> (a -> Bool) -> (BaseUrl -> m a) -> m (Maybe a)
+firstFromUrls urls isUseful call = do
+  awaitables <- forM urls $ \(cloud, url) -> (cloud,) <$> awaitableFork "peerLTS" (call url)
+  results <- forM awaitables $ \(cloud, awaitable) ->
+    L.await Nothing awaitable >>= \case
+      Right result -> pure (Just result)
+      Left err -> do
+        logError $ "Failed LTS call for cloud " <> show cloud <> ", error: " <> show err
+        pure Nothing
+  pure $ listToMaybe (filter isUseful (catMaybes results))
+
 nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> m [DriverLocation]
 nearBy lat lon onRide vt radius merchantId groupId groupId2 searchTryId = do
   ltsCfg <- asks (.ltsCfg)
@@ -99,34 +110,30 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 searchTryId = do
             groupId2,
             searchTryId
           }
-  -- Call both APIs (primary and secondary cloud) concurrently and combine results
   let callNearByAPI url = do
         withQuickRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
 
-  -- For secondary URL, gracefully handle errors
-  let secondaryCallNearByAPI url = do
+  let peerCallNearByAPI url = do
         withQuickRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= \case
               Right locations -> pure locations
               Left err -> do
-                logError $ "Failed to call nearBy API for secondary url: " <> show url <> ", error: " <> show err
+                logError $ "Failed to call nearBy API for peer url: " <> show url <> ", error: " <> show err
                 pure []
 
-  primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
-  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . secondaryCallNearByAPI
+  localAwaitable <- awaitableFork "localLTS" $ callNearByAPI (localUrl ltsCfg)
+  peerAwaitables <- forM (peerUrls ltsCfg) $ \(_, url) -> awaitableFork "peerLTS" (peerCallNearByAPI url)
 
-  -- Primary call must succeed - propagate error if it fails
-  primaryResult <-
-    L.await Nothing primaryAwaitable >>= \case
-      Left err -> throwError $ InternalError $ "Failed to call nearBy API for primary url: " <> show ltsCfg.url <> ", error: " <> show err
+  localResult <-
+    L.await Nothing localAwaitable >>= \case
+      Left err -> throwError $ InternalError $ "Failed to call nearBy API for local url: " <> show (localUrl ltsCfg) <> ", error: " <> show err
       Right result -> pure result
-  -- Secondary call is optional - gracefully handle errors
-  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+  peerResults <- forM peerAwaitables $ \awaitable -> Either.fromRight [] <$> L.await Nothing awaitable
 
-  let combinedLocations = primaryResult <> secondaryResult
+  let combinedLocations = localResult <> concat peerResults
   logDebug $ "lts nearBy: " <> show combinedLocations
   return combinedLocations
 
@@ -134,13 +141,13 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 searchTryId = do
 -- (e.g. "MS" for Mahila Shakti), used to decide whether that tier's estimate
 -- should be visible for this search — independent of, and not a substitute
 -- for, the general driver pool used for actual dispatch.
--- Queries both the primary and (if configured) secondary LTS instance, same
+-- Queries the local and every peer cloud's LTS instance, same
 -- contract as 'nearBy' -- cohort tag GEO buckets can be written to either
--- cloud, so counting only the primary would under-count and could wrongly
--- exclude an otherwise-qualified tier. Unlike 'nearBy', a primary-call
+-- cloud, so counting only the local one would under-count and could wrongly
+-- exclude an otherwise-qualified tier. Unlike 'nearBy', a local-call
 -- failure here does not throw: the whole point of this check is to fail
 -- open (return 'Nothing') so a transient issue never takes down an
--- otherwise-correct estimate. Secondary failures are always non-fatal.
+-- otherwise-correct estimate. Peer failures are always non-fatal.
 nearByTagCount :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Double -> Double -> Text -> Int -> Id DM.Merchant -> m (Maybe Int)
 nearByTagCount lat lon tag radius merchantId = do
   ltsCfg <- asks (.ltsCfg)
@@ -148,29 +155,32 @@ nearByTagCount lat lon tag radius merchantId = do
   let callNearByTagAPI url =
         withQuickRetry $
           callAPI url (NearByTagAPI.nearByTag req) "nearByTag" NearByTagAPI.locationTrackingServiceAPI
-  primaryResult <- callNearByTagAPI ltsCfg.url
-  case primaryResult of
+  let localCloudUrl = localUrl ltsCfg
+  peerAwaitables <- forM (peerUrls ltsCfg) $ \(cloud, url) -> (cloud,) <$> awaitableFork "peerLTS" (callNearByTagAPI url)
+  localResult <- callNearByTagAPI localCloudUrl
+  case localResult of
     Left err -> do
-      logError $ "Failed to call nearByTag API for tag " <> tag <> ", url: " <> show ltsCfg.url <> ", error: " <> show err
+      logError $ "Failed to call nearByTag API for tag " <> tag <> ", url: " <> show localCloudUrl <> ", error: " <> show err
       pure Nothing
-    Right primaryLocations -> do
-      logDebug $ "lts nearByTag (primary): " <> show primaryLocations
-      secondaryCount <- case ltsCfg.secondaryUrl of
-        Nothing -> pure 0
-        Just secondaryUrl ->
-          callNearByTagAPI secondaryUrl >>= \case
-            Right locations -> do
-              logDebug $ "lts nearByTag (secondary): " <> show locations
-              pure (length locations)
-            Left err -> do
-              logError $ "Failed to call nearByTag API for secondary url: " <> show secondaryUrl <> ", tag " <> tag <> ", error: " <> show err
-              pure 0
-      pure $ Just (length primaryLocations + secondaryCount)
+    Right localLocations -> do
+      logDebug $ "lts nearByTag (local): " <> show localLocations
+      peerCounts <- forM peerAwaitables $ \(cloud, awaitable) ->
+        L.await Nothing awaitable >>= \case
+          Right (Right locations) -> do
+            logDebug $ "lts nearByTag (" <> show cloud <> "): " <> show locations
+            pure (length locations)
+          Right (Left err) -> do
+            logError $ "Failed to call nearByTag API for tag " <> tag <> ", cloud: " <> show cloud <> ", error: " <> show err
+            pure 0
+          Left err -> do
+            logError $ "Failed to call nearByTag API for tag " <> tag <> ", cloud: " <> show cloud <> ", error: " <> show err
+            pure 0
+      pure $ Just (length localLocations + sum peerCounts)
 
 rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         RideDetailsReq
           { rideId,
@@ -192,7 +202,7 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo 
 driversLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => [Id DP.Person] -> m [DriverLocation]
 driversLocation driverIds = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         DriversLocationReq
           { driverIds
@@ -202,21 +212,22 @@ driversLocation driverIds = do
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocation: " <> show driversLocationRes
-  case (driversLocationRes, ltsCfg.secondaryUrl) of
-    ([], Just secondaryUrl) -> do
-      logDebug "driversLocation: primary returned empty, trying secondary URL"
+  case driversLocationRes of
+    [] -> do
+      logDebug "driversLocation: local returned empty, trying peer clouds"
       fallbackRes <-
-        withQuickRetry $
-          callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
-            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
+        firstFromUrls (peerUrls ltsCfg) (not . null) $ \peerUrl ->
+          withQuickRetry $
+            callAPI peerUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+              >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") peerUrl)
       logDebug $ "lts driversLocation fallback: " <> show fallbackRes
-      return fallbackRes
+      return $ fromMaybe driversLocationRes fallbackRes
     _ -> return driversLocationRes
 
 driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
 driverLocation rideId merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         DriverLocationReq
           { driverId,
@@ -227,21 +238,22 @@ driverLocation rideId merchantId driverId = do
       callAPI url (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") url)
   logDebug $ "lts driverLocation: " <> show driverLocationRes
-  case (driverLocationRes.loc, ltsCfg.secondaryUrl) of
-    ([], Just secondaryUrl) -> do
-      logDebug "driverLocation: primary returned empty, trying secondary URL"
+  case driverLocationRes.loc of
+    [] -> do
+      logDebug "driverLocation: local returned empty, trying peer clouds"
       fallbackRes <-
-        withQuickRetry $
-          callAPI secondaryUrl (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
-            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") secondaryUrl)
+        firstFromUrls (peerUrls ltsCfg) (not . null . (.loc)) $ \peerUrl ->
+          withQuickRetry $
+            callAPI peerUrl (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
+              >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") peerUrl)
       logDebug $ "lts driverLocation fallback: " <> show fallbackRes
-      return fallbackRes
+      return $ fromMaybe driverLocationRes fallbackRes
     _ -> return driverLocationRes
 
 pickupDriverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
 pickupDriverLocation rideId merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         DriverLocationReq
           { driverId,
@@ -252,21 +264,22 @@ pickupDriverLocation rideId merchantId driverId = do
       callAPI url (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") url)
   logDebug $ "lts pickupDriverLocation: " <> show pickupDriverLocationRes
-  case (pickupDriverLocationRes.loc, ltsCfg.secondaryUrl) of
-    ([], Just secondaryUrl) -> do
-      logDebug "pickupDriverLocation: primary returned empty, trying secondary URL"
+  case pickupDriverLocationRes.loc of
+    [] -> do
+      logDebug "pickupDriverLocation: local returned empty, trying peer clouds"
       fallbackRes <-
-        withQuickRetry $
-          callAPI secondaryUrl (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
-            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") secondaryUrl)
+        firstFromUrls (peerUrls ltsCfg) (not . null . (.loc)) $ \peerUrl ->
+          withQuickRetry $
+            callAPI peerUrl (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
+              >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") peerUrl)
       logDebug $ "lts pickupDriverLocation fallback: " <> show fallbackRes
-      return fallbackRes
+      return $ fromMaybe pickupDriverLocationRes fallbackRes
     _ -> return pickupDriverLocationRes
 
 blockDriverLocationsTill :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DM.Merchant -> Id DP.Person -> UTCTime -> m APISuccess
 blockDriverLocationsTill merchantId driverId blockTill = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         DriverBlockTillReq
           { ..
@@ -281,7 +294,7 @@ blockDriverLocationsTill merchantId driverId blockTill = do
 manualQueueRemove :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Maybe Text -> Bool -> m APISuccess
 manualQueueRemove specialLocationId vehicleType merchantId driverId reason preservePosition = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req = ManualQueueRemoveAPI.ManualQueueRemoveRequest {reason, preservePosition = Just preservePosition}
   manualQueueRemoveResp <-
     withQuickRetry $
@@ -293,7 +306,7 @@ manualQueueRemove specialLocationId vehicleType merchantId driverId reason prese
 manualQueueAdd :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Int -> m APISuccess
 manualQueueAdd specialLocationId vehicleType merchantId driverId position = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req = ManualQueueAddAPI.ManualQueueAddRequest {queuePosition = position}
   manualQueueAddResp <-
     withQuickRetry $
@@ -305,7 +318,7 @@ manualQueueAdd specialLocationId vehicleType merchantId driverId position = do
 getQueueDriverPosition :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DP.Person -> m QueueDriverPositionResp
 getQueueDriverPosition specialLocationId vehicleType driverId = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   queuePositionRes <-
     withQuickRetry $
       callAPI url (NearByAPI.queueDriverPosition specialLocationId vehicleType driverId) "getQueueDriverPosition" NearByAPI.queueDriverPositionAPI
@@ -316,7 +329,7 @@ getQueueDriverPosition specialLocationId vehicleType driverId = do
 getQueueDrivers :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> m QueueDriversResponse
 getQueueDrivers specialLocationId vehicleType = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   queueDriversRes <-
     withQuickRetry $
       callAPI url (NearByAPI.queueDrivers specialLocationId vehicleType) "getQueueDrivers" NearByAPI.queueDriversAPI
@@ -327,7 +340,7 @@ getQueueDrivers specialLocationId vehicleType = do
 getDriverQueueHistory :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DM.Merchant -> Id DP.Person -> m DriverQueueHistoryResp
 getDriverQueueHistory merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   queueHistoryRes <-
     withQuickRetry $
       callAPI url (QueueHistoryAPI.queueHistory merchantId driverId) "getDriverQueueHistory" QueueHistoryAPI.queueHistoryAPI
@@ -338,9 +351,7 @@ getDriverQueueHistory merchantId driverId = do
 driversLocationByCloudType :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => [Id DP.Person] -> Maybe CloudType -> m [DriverLocation]
 driversLocationByCloudType driverIds mbCloudType = do
   ltsCfg <- asks (.ltsCfg)
-  cloudType <- asks (.cloudType)
-  let url = if cloudType == mbCloudType then ltsCfg.url else fromMaybe ltsCfg.url ltsCfg.secondaryUrl
-  let fallbackUrl = if url == ltsCfg.url then ltsCfg.secondaryUrl else Just ltsCfg.url
+  let url = urlForCloud ltsCfg mbCloudType
   let req =
         DriversLocationReq
           { driverIds
@@ -350,13 +361,14 @@ driversLocationByCloudType driverIds mbCloudType = do
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocationByCloudType: " <> show driversLocationRes
-  case (driversLocationRes, fallbackUrl) of
-    ([], Just secondaryUrl) -> do
-      logDebug "driversLocationByCloudType: primary returned empty, trying fallback URL"
+  case driversLocationRes of
+    [] -> do
+      logDebug "driversLocationByCloudType: target cloud returned empty, trying the other clouds"
       fallbackRes <-
-        withQuickRetry $
-          callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
-            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
+        firstFromUrls (filter ((/= url) . snd) (allUrls ltsCfg)) (not . null) $ \otherUrl ->
+          withQuickRetry $
+            callAPI otherUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+              >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") otherUrl)
       logDebug $ "lts driversLocationByCloudType fallback: " <> show fallbackRes
-      return fallbackRes
+      return $ fromMaybe driversLocationRes fallbackRes
     _ -> return driversLocationRes

@@ -25,6 +25,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideStatus as Ride
+import EulerHS.KVConnector.Types (localKvRedis)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (ByteString, forM_, whenNothingM_)
 import EulerHS.Types (KVDBAnswer)
@@ -555,7 +556,7 @@ findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Enc
 findLatestByDriverPhoneNumber driverMobileNumber = do
   driverMobileNumberHash <- getDbHash driverMobileNumber
   let lookupKey = driverMobileNumberKey driverMobileNumberHash
-  rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
+  rideIds_ <- L.runKVDB (localKvRedis meshConfig) $ L.smembers lookupKey
   let rideIds = extractRideIds rideIds_
   logTagDebug "findLatestByDriverPhoneNumber" $ "KVDBAnswer:-" <> show rideIds_ <> ", decoded rideIds:-" <> show rideIds
   case rideIds of
@@ -602,7 +603,7 @@ appendByDriverPhoneNumber ride = do
         rideId = [TE.encodeUtf8 $ getId ride.id]
         expTime = toInteger storeRidesTimeLimit
     void $
-      L.runKVDB meshConfig.kvRedis $ do
+      L.runKVDB (localKvRedis meshConfig) $ do
         void $ L.sadd lookupKey rideId
         L.expire lookupKey expTime
 

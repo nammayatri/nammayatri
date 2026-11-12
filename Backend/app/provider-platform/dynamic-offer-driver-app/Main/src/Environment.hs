@@ -104,10 +104,8 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool, -- TODO: remove once data migration is done.
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
-    hedisClusterCfg :: HedisCfg,
-    hedisSecondaryClusterCfg :: HedisCfg,
-    ltsRedisCfg :: HedisCfg,
-    secondaryLTSRedisCfg :: Maybe HedisCfg,
+    hedisClusterCfgs :: [HedisCloudCfg],
+    ltsRedisCfgs :: [HedisCloudCfg],
     ltsReplicaRedisCfg :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
@@ -277,12 +275,12 @@ data AppEnv = AppEnv
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
-    secondaryLTSHedisEnv :: Maybe HedisEnv,
+    peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
@@ -458,15 +456,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   eventRequestCounter <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
-  ltsHedisEnv <- connectHedis ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
-  secondaryLTSHedisEnv <- case secondaryLTSRedisCfg of
-    Nothing -> pure Nothing
-    Just cfg' ->
-      try (connectHedis cfg' ("dynamic-offer-driver-app-lts:" <>)) >>= \case
-        Left (e :: SomeException) -> do
-          putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
-          pure Nothing
-        Right env -> pure (Just env)
+  (ltsHedisEnv, peerLTSHedisEnvs) <- connectHedisStandaloneClouds ltsRedisCfgs ("dynamic-offer-driver-app-lts:" <>)
   ltsReplicaHedisEnv <- case ltsReplicaRedisCfg of
     Nothing -> pure Nothing
     Just replicaCfg ->
@@ -476,20 +466,15 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
           pure Nothing
         Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds hedisClusterCfgs modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg modifierFunc
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
-  secondaryHedisClusterEnv <-
-    try (connectHedisCluster hedisSecondaryClusterCfg modifierFunc) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
@@ -544,10 +529,10 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
-  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  mapM_ (disconnectHedis . snd) peerLTSHedisEnvs
   maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
 
 type Env = EnvR AppEnv
 
