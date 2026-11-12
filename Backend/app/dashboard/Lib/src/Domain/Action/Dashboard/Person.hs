@@ -371,10 +371,10 @@ createPerson tokenInfo personEntity = do
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   personId <-
     if DRole.isBppSyncRole role
       then do
-        merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
         roleName <- driverRoleName role.dashboardAccessType
         let createReq =
               InternalClient.CreatePersonReq
