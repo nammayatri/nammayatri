@@ -23,6 +23,9 @@ import {
   devboxCcStatus,
   devboxCcStart,
   devboxCcStop,
+  hopperStatus,
+  hopperUp,
+  HopperStatus,
   DevboxCcStatus,
   RemoteTarget,
   DevboxAssignment,
@@ -41,6 +44,7 @@ interface PanelState {
   clearSession?: string;
   cabalCleanSession?: string;
   sshCopySession?: string;
+  hopperUpSession?: string;
   startCols?: number;
   startRows?: number;
   status?: string;
@@ -222,6 +226,10 @@ export const RemoteStackPanel: React.FC = () => {
   const [devboxErr, setDevboxErr] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
+  // Dev-Box mode needs hopper: null = not checked yet.
+  const [hopper, setHopper] = useState<HopperStatus | null>(null);
+  const [hopperChecking, setHopperChecking] = useState(false);
+  const [hopperCopied, setHopperCopied] = useState(false);
   const [editorOk, setEditorOk] = useState(false);
   const [urlCopied, setUrlCopied] = useState<string | null>(null);
 
@@ -466,6 +474,14 @@ export const RemoteStackPanel: React.FC = () => {
         const res = await setupSsh(a.host, a.sshUser, a.port || 22);
         if (res.status === 'ok') {
           setSshStatus({ ok: true, message: res.message });
+        } else if (a.route === 'overlay') {
+          // Over hopper the dev-box's Tailscale SSH decides who gets in, by your
+          // hopper (Google) login — a key or password does not change that.
+          setSshStatus({
+            ok: false,
+            message: `Tailscale SSH did not let ${a.sshUser}@${a.machine || a.host} in over hopper. ` +
+              `Check \`hopper ssh ${a.machine || a.host}\` works; if not, ask the hopper admin to allow you in the SSH ACL.`,
+          });
         } else {
           // No passwordless path yet — run ssh-copy-id right here so the only
           // thing left for the user is typing the dev-box password once.
@@ -505,8 +521,61 @@ export const RemoteStackPanel: React.FC = () => {
     }
   };
 
+  // Dev-Box mode reaches the dev-boxes over hopper only: check hopper first and
+  // pick a dev-box only once this laptop is on it.
+  const checkHopper = async (): Promise<boolean> => {
+    setHopperChecking(true);
+    try {
+      const h = await hopperStatus();
+      setHopper(h);
+      if (!h.connected) {
+        setDevbox(null);
+        setDevboxErr(null);
+        setSshStatus(null);
+      }
+      return h.connected;
+    } catch (e) {
+      setHopper({ installed: false, connected: false, me: null, devboxes: [], install: '',
+                  error: `could not ask local-api about hopper: ${e}` });
+      return false;
+    } finally {
+      setHopperChecking(false);
+    }
+  };
+
+  const checkHopperThenResolve = async () => {
+    if (await checkHopper()) await resolveAssignment(false);
+  };
+
+  const onHopperJoin = async () => {
+    try {
+      const started = await hopperUp();
+      if (started.session) setState(prev => ({ ...prev, hopperUpSession: started.session }));
+      else setHopper(h => h && { ...h, error: started.error || 'could not start hopper up' });
+    } catch (e) {
+      setHopper(h => h && { ...h, error: `could not start hopper up: ${e}` });
+    }
+  };
+
+  // While `hopper up` runs, re-check every 3s; once joined, close its terminal
+  // and pick the dev-box.
+  useEffect(() => {
+    if (!state.hopperUpSession || mode !== 'devbox') return;
+    const t = window.setInterval(async () => {
+      const h = await hopperStatus().catch(() => null);
+      if (h?.connected) {
+        window.clearInterval(t);
+        setHopper(h);
+        setState(prev => ({ ...prev, hopperUpSession: undefined }));
+        resolveAssignment(false);
+      }
+    }, 3000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.hopperUpSession, mode]);
+
   // Mode switch: Local uses this machine directly (no SSH/rsync); Dev-Box
-  // resolves the pinned/auto-assigned fleet machine.
+  // checks hopper, then resolves the pinned/auto-assigned fleet machine.
   useEffect(() => {
     try { window.localStorage.setItem(MODE_STORAGE_KEY, mode); } catch { /* ignore */ }
     if (mode === 'local') {
@@ -518,7 +587,7 @@ export const RemoteStackPanel: React.FC = () => {
       // left from an earlier dev-box session cannot keep syncing.
       setAutoDeploy({ enabled: false, reason: 'Local mode selected' }).catch(() => { /* local-api down */ });
     } else {
-      resolveAssignment(false);
+      checkHopperThenResolve();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
@@ -950,6 +1019,73 @@ export const RemoteStackPanel: React.FC = () => {
 
       {mode === 'devbox' && (
         <div className="rsp-meta" style={{ marginTop: 8 }}>
+          <div className={`rsp-hopper-card rsp-hopper-${!hopper ? 'checking' : hopper.connected ? 'ok' : hopper.installed ? 'join' : 'install'}`}>
+            <div className="rsp-hopper-head">
+              <span className="rsp-hopper-title">hopper</span>
+              {!hopper || hopperChecking ? (
+                <span className="rsp-hopper-state">◌ checking…</span>
+              ) : hopper.connected ? (
+                <span className="rsp-hopper-state">
+                  ✓ connected{hopper.me ? ` as ${hopper.me.name} (${hopper.me.overlayIp})` : ''}
+                </span>
+              ) : hopper.installed ? (
+                <span className="rsp-hopper-state">⚠ not connected</span>
+              ) : (
+                <span className="rsp-hopper-state">✕ not installed</span>
+              )}
+              <span className="rsp-spacer" />
+              {hopper && !hopper.connected && hopper.installed && !state.hopperUpSession && (
+                <button className="rsp-btn-primary" onClick={onHopperJoin}
+                        title="Runs `hopper up` here; log in with your nammayatri.in Google account">
+                  Join hopper
+                </button>
+              )}
+              <button className="rsp-btn-ghost" onClick={checkHopperThenResolve} disabled={hopperChecking}
+                      title="Ask hopper again">
+                ⟳ Check again
+              </button>
+            </div>
+            {hopper && !hopper.installed && (
+              <div className="rsp-hopper-body">
+                Dev-Box mode runs over hopper (our tailnet). Install it, then press Check again:
+                <div className="rsp-hopper-cmd">
+                  <code>{hopper.install}</code>
+                  <button className="rsp-btn-ghost" onClick={() => {
+                    navigator.clipboard?.writeText(hopper.install).then(() => {
+                      setHopperCopied(true);
+                      window.setTimeout(() => setHopperCopied(false), 1500);
+                    }).catch(() => { /* ignore */ });
+                  }}>
+                    {hopperCopied ? '✓ Copied' : '⧉ Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {hopper && hopper.installed && !hopper.connected && (
+              <div className="rsp-hopper-body">
+                Join hopper to use a dev-box: press <b>Join hopper</b> and log in with your
+                nammayatri.in Google account. Or run <code>hopper up</code> in a terminal.
+                {hopper.error && <div className="rsp-hopper-err">{hopper.error}</div>}
+              </div>
+            )}
+            {hopper?.connected && (
+              <div className="rsp-hopper-body">
+                {hopper.devboxes.length === 0 ? (
+                  'hopper lists no dev-box right now.'
+                ) : (
+                  <span className="rsp-hopper-boxes">
+                    dev-boxes:{' '}
+                    {hopper.devboxes.map(b => (
+                      <span key={b.name} className={`rsp-hopper-box ${b.reachable ? 'up' : 'down'}`}
+                            title={`${b.overlayIp || 'no tailnet IP'} — ${b.reachable ? 'answers over hopper' : 'not answering over hopper'}`}>
+                        {b.reachable ? '●' : '○'} {b.name}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           {resolving && <div>Resolving dev-box assignment…</div>}
           {devboxErr && (
             <div className="rsp-devbox-error" role="alert">
@@ -1307,7 +1443,10 @@ export const RemoteStackPanel: React.FC = () => {
         {/* Endpoint/port readouts live in Tools → Service Ports. */}
         {state.status && <div className="rsp-status">{state.status}</div>}
         {state.error && <div className="rsp-error">{state.error}</div>}
-        {sshStatus && !isLocalhost && !sshStatus.ok && (
+        {sshStatus && !isLocalhost && !sshStatus.ok && devbox?.route === 'overlay' && (
+          <div className="rsp-error" style={{ whiteSpace: 'pre-wrap' }}>{sshStatus.message}</div>
+        )}
+        {sshStatus && !isLocalhost && !sshStatus.ok && devbox?.route !== 'overlay' && (
           <div className="rsp-error" style={{ whiteSpace: 'pre-wrap' }}>
                 SSH not set up. Run this command in your terminal:{'\n\n'}
                 <code style={{ background: '#333', padding: '4px 8px', borderRadius: '4px', userSelect: 'all' }}>
@@ -1319,6 +1458,18 @@ export const RemoteStackPanel: React.FC = () => {
       </div>
 
       <div className="rsp-terminals">
+        {state.hopperUpSession && mode === 'devbox' && (
+          <div className="rsp-terminal">
+            <div className="rsp-term-title">
+              hopper up — open the Google login link below and log in with your nammayatri.in account
+            </div>
+            <Terminal
+              baseUrl={LOCAL_API_BASE}
+              pathPrefix="/api/remote"
+              attachSessionId={state.hopperUpSession}
+            />
+          </div>
+        )}
         {state.sshCopySession && !sshStatus?.ok && (
           <div className="rsp-terminal">
             <div className="rsp-term-title">

@@ -595,3 +595,38 @@
   color: #9aa0a6;
   white-space: nowrap;
 }
+
+/* ── Hopper card: Dev-Box mode runs over hopper (tailnet) only ── */
+.rsp-hopper-card {
+  border: 1px solid #2a2f38;
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: #171a20;
+  padding: 8px 11px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.rsp-hopper-ok { border-left-color: #4ade80; }
+.rsp-hopper-join { border-left-color: #f5b74e; }
+.rsp-hopper-install { border-left-color: #f87171; }
+.rsp-hopper-checking { border-left-color: #6b7280; }
+.rsp-hopper-head { display: flex; align-items: center; gap: 8px; }
+.rsp-hopper-title { font-weight: 600; color: #eaeef2; }
+.rsp-hopper-ok .rsp-hopper-state { color: #7ee2a8; }
+.rsp-hopper-join .rsp-hopper-state { color: #f5c97a; }
+.rsp-hopper-install .rsp-hopper-state { color: #f8a0a0; }
+.rsp-hopper-checking .rsp-hopper-state { color: #9aa1ab; }
+.rsp-hopper-body { margin-top: 6px; color: #aab1bb; line-height: 1.6; }
+.rsp-hopper-cmd { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.rsp-hopper-cmd code { user-select: all; background: #11141a; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+.rsp-hopper-cmd .rsp-btn-ghost { margin-left: 0; }
+.rsp-hopper-err { margin-top: 4px; color: #f8a0a0; font-size: 11px; word-break: break-word; }
+.rsp-hopper-boxes { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; }
+.rsp-hopper-box.up { color: #7ee2a8; }
+.rsp-hopper-box.down { color: #8a8f98; }
+.rsp-btn-primary {
+  background: #2a64d8; color: #fff; border: 0; border-radius: 999px;
+  padding: 3px 12px; font: inherit; font-size: 11px; line-height: 1.6; cursor: pointer;
+}
+.rsp-btn-primary:hover { background: #3572ea; }
+.rsp-btn-primary:focus-visible { outline: 2px solid #8fb3ff; outline-offset: 1px; }
