@@ -35,7 +35,7 @@ run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
     & crossCloudProxy proxyManager modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
-    & addServantInfo modifiedEnv.appEnv.version driverOfferAPI
+    & addServantInfoWithConfigVersion (readConfigVersionLabel modifiedEnv) modifiedEnv.appEnv.version driverOfferAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where
