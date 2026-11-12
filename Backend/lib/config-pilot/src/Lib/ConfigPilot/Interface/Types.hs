@@ -124,6 +124,7 @@ data SConfigType (cfg :: ConfigType) where
   SDocumentVerificationStagesConfig :: SConfigType 'DocumentVerificationStagesConfig
   SRideFeedbackConfig :: SConfigType 'RideFeedbackConfig
   SFleetConfig :: SConfigType 'FleetConfig
+  SNavigationPointConfig :: SConfigType 'NavigationPointConfig
 
 deriving instance Show (SConfigType cfg)
 

@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Data.String.Conversions (cs)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.NavigationPointConfig as DNPC
 import qualified Domain.Types.UiRiderConfig as DTU
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as SQIC
 import Kernel.Prelude
@@ -46,6 +47,7 @@ import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDi
 import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.NavigationPointConfig (NavigationPointConfigDimensions (..))
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
@@ -56,6 +58,7 @@ import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
+import qualified Storage.Queries.NavigationPointConfig as SQNPC
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Translations as SQTL
 import qualified Storage.Queries.UiRiderConfig as SQU
@@ -98,6 +101,9 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
       hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
+    LYTU.RIDER_CONFIG LYTU.NavigationPointConfig -> do
+      npCfg <- getConfig (NavigationPointConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList npCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       mpmCfgs <- getConfigList (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON mpmCfgs}
@@ -161,6 +167,9 @@ returnDBConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
       hsCfg <- getConfigFromDB (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId})
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
+    LYTU.RIDER_CONFIG LYTU.NavigationPointConfig -> do
+      npCfg <- getConfigFromDB (NavigationPointConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList npCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       mpmCfgs <- getConfigFromDB (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON mpmCfgs}
@@ -210,6 +219,13 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson CQExo.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.ExophoneRider) >> invalidateConfigInMem LYTU.ExophoneRider) CQExo.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
       handleConfigUpdateViaJson (\_ -> maybe (pure []) (fmap maybeToList . SQHSC.findConfigByMerchantId . cast) mbMerchantId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.HotSpotConfig) >> invalidateConfigInMem LYTU.HotSpotConfig) SQHSC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.NavigationPointConfig -> do
+      -- A patch must not move the row to another city: always write to the route's
+      -- city and keep that row's merchant, whatever the patched JSON says.
+      let updateKeepingIds patched = do
+            existing <- SQNPC.findByMerchantOperatingCityId (cast merchantOpCityId) >>= fromMaybeM (InvalidRequest "NavigationPointConfig not found")
+            SQNPC.updateByPrimaryKey (patched :: DNPC.NavigationPointConfig) {DNPC.merchantOperatingCityId = existing.merchantOperatingCityId, DNPC.merchantId = existing.merchantId}
+      handleConfigUpdateViaJson (normalizeMaybeFetchJson SQNPC.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.NavigationPointConfig) >> invalidateConfigInMem LYTU.NavigationPointConfig) updateKeepingIds (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       handleConfigUpdateViaJson SQMPM.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod) >> invalidateConfigInMem LYTU.MerchantPaymentMethod) SQMPM.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.Translation -> do
