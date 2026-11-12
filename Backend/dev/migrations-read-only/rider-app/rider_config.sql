@@ -976,3 +976,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_keep_journey_confirmed_until_departure boolean ;

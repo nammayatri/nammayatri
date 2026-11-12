@@ -215,6 +215,7 @@ RiderConfig:
     subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busApproachingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    frfsKeepJourneyConfirmedUntilDeparture: Maybe Bool
     frfsDriverDetailsLeadTimeSeconds: Maybe Seconds
     sharedCabConfig: "Maybe SharedCabConfig" # shared-cab per-city settings; a missing field takes the code default
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType

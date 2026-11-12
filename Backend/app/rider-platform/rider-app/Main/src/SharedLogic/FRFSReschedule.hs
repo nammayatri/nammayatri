@@ -240,6 +240,7 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
   -- (All GIMS/compute failures happen above, before any write, so they can never produce a partial state.)
   oldRouteDetails <- QRouteDetails.findAllByJourneyLegId Nothing Nothing oldLeg.id.getId
   mbOldJourney <- QJourney.findByPrimaryKey oldLeg.journeyId
+  mbRiderConfig <- if now < boardingT then getConfig (RiderConfigDimensions {merchantOperatingCityId = stagingBooking.merchantOperatingCityId.getId}) Nothing else pure Nothing
   when (isNothing mbOldJourney) $
     logWarning $ "FRFSReschedule:refreshJourneyLegDataOnReschedule journey not found journeyId=" <> oldLeg.journeyId.getId
   let -- (1) journey_leg columns: repoint search + new-trip timing + the NEW trip's boarded-vehicle/tracking + stops.
@@ -307,7 +308,7 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
       -- (3) journey row: start/end/duration reflect the new trip; a rescheduled trip is not over, so its status follows the new departure
       rescheduledStatus journey
         | journey.status `elem` [DJourney.CANCELLED, DJourney.FAILED, DJourney.EXPIRED] = journey.status
-        | now < boardingT = DJourney.CONFIRMED
+        | (mbRiderConfig >>= (.frfsKeepJourneyConfirmedUntilDeparture)) == Just True = DJourney.CONFIRMED
         | otherwise = DJourney.INPROGRESS
       writeNewJourney journey =
         QJourney.updateTripTimesAndStatus (rescheduledStatus journey) (Just boardingT) (Just alightingT) (Just . Seconds . round $ diffUTCTime alightingT boardingT) journey.id
