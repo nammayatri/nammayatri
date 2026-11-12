@@ -643,6 +643,7 @@ library
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.NavigationPoint
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Offer
@@ -866,6 +867,7 @@ library
       Storage.ConfigPilot.Config.MerchantPushNotification
       Storage.ConfigPilot.Config.MerchantServiceConfig
       Storage.ConfigPilot.Config.MerchantServiceUsageConfig
+      Storage.ConfigPilot.Config.NavigationPointConfig
       Storage.ConfigPilot.Config.PassCategory
       Storage.ConfigPilot.Config.PayoutConfig
       Storage.ConfigPilot.Config.RiderConfig
@@ -1428,6 +1430,7 @@ library
       Domain.Types.MerchantState
       Domain.Types.MetaWebhookConfig
       Domain.Types.MultimodalPreferences
+      Domain.Types.NavigationPointConfig
       Domain.Types.NotificationSoundsConfig
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
@@ -1608,6 +1611,7 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MetaWebhookConfig
       Storage.Beam.MultimodalPreferences
+      Storage.Beam.NavigationPointConfig
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
@@ -1793,6 +1797,7 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MetaWebhookConfig
       Storage.Queries.MultimodalPreferences
+      Storage.Queries.NavigationPointConfig
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription

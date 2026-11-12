@@ -87,6 +87,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.MerchantServiceConfig as DTMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DTMSUC
+import qualified Domain.Types.NavigationPointConfig as DNPC
 import qualified Domain.Types.PassCategory as DPC
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.Person as DP
@@ -163,6 +164,7 @@ import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDi
 import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.NavigationPointConfig (NavigationPointConfigDimensions (..))
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
@@ -174,6 +176,7 @@ import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.NavigationPointConfig as SQNPC
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as SQTL
@@ -193,6 +196,7 @@ $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
 $(YTH.generateGenericDefault ''DTBC.BecknConfig)
 $(YTH.generateGenericDefault ''DTE.Exophone)
 $(YTH.generateGenericDefault ''DHSC.HotSpotConfig)
+$(YTH.generateGenericDefault ''DNPC.NavigationPointConfig)
 $(YTH.generateGenericDefault ''DMPM.MerchantPaymentMethod)
 $(YTH.generateGenericDefault ''DCR.CancellationReason)
 $(YTH.generateGenericDefault ''DTL.Translations)
@@ -213,6 +217,7 @@ $(genToSchema ''DFRFS.FRFSConfig)
 $(genToSchema ''DTBC.BecknConfig)
 $(genToSchema ''DTE.Exophone)
 $(genToSchema ''DHSC.HotSpotConfig)
+$(genToSchema ''DNPC.NavigationPointConfig)
 $(genToSchema ''DCR.CancellationReason)
 $(genToSchema ''DTL.Translations)
 
@@ -471,6 +476,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DHSC.HotSpotConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DHSC.HotSpotConfig)) req logicData
+    LYTU.RIDER_CONFIG LYTU.NavigationPointConfig -> do
+      def' <- fromMaybeM (InvalidRequest "NavigationPointConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DNPC.NavigationPointConfig))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DNPC.NavigationPointConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DNPC.NavigationPointConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPaymentMethod not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMPM.MerchantPaymentMethod))
       let configWrap = LYTU.Config def' Nothing 1
@@ -764,6 +774,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DHSC.HotSpotConfig))
           }
+    LYTU.RIDER_CONFIG LYTU.NavigationPointConfig -> do
+      def' <- fromMaybeM (InvalidRequest "NavigationPointConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DNPC.NavigationPointConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DNPC.NavigationPointConfig))
+          }
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPaymentMethod not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMPM.MerchantPaymentMethod))
       return $
@@ -1050,6 +1067,9 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity configType
     LYTU.HotSpotConfig -> do
       cfgs <- maybeToList <$> getConfig (HotSpotConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.NavigationPointConfig -> do
+      cfg <- getConfig (NavigationPointConfigDimensions {merchantOperatingCityId = mocId}) Nothing
+      pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantPaymentMethod -> do
       cfgs <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQMPM.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
@@ -1099,6 +1119,8 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = d
       pure $ mkDimSchema (Proxy @RideRelatedNotificationConfigDimensions)
     LYTU.HotSpotConfig ->
       pure $ mkDimSchema (Proxy @HotSpotConfigDimensions)
+    LYTU.NavigationPointConfig ->
+      pure $ mkDimSchema (Proxy @NavigationPointConfigDimensions)
     LYTU.MerchantPaymentMethod ->
       pure $ mkDimSchema (Proxy @MerchantPaymentMethodDimensions)
     LYTU.Translation ->
@@ -1175,6 +1197,13 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity configType req = do
       cfg :: DHSC.HotSpotConfig <- parseConfigData req.configData
       SQHSC.create cfg
       invalidateConfigInMem LYTU.HotSpotConfig
+    LYTU.NavigationPointConfig -> do
+      cfg :: DNPC.NavigationPointConfig <- parseConfigData req.configData
+      existing <- SQNPC.findByMerchantOperatingCityId mocId
+      when (isJust existing) $ throwError $ InvalidRequest "NavigationPointConfig already exists for this merchantOperatingCityId"
+      -- The route decides the target city; ids in the body are ignored.
+      SQNPC.create (cfg :: DNPC.NavigationPointConfig) {DNPC.merchantId = merchantOperatingCity.merchantId, DNPC.merchantOperatingCityId = mocId}
+      invalidateConfigInMem LYTU.NavigationPointConfig
     LYTU.MerchantPaymentMethod -> do
       cfg :: DMPM.MerchantPaymentMethod <- parseConfigData req.configData
       SQMPM.create cfg

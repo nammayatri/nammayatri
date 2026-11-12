@@ -48,6 +48,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.NavigationPoint as NavigationPoint
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
@@ -103,7 +104,12 @@ getPlaceDetails (personId, merchantId) entityId req = do
 searchDestinations :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.SearchDestinationsReq -> m Maps.SearchDestinationsResp
 searchDestinations (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
-  Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+  mbNavPointConfig <- NavigationPoint.findEnabledNavPointConfig merchantOperatingCityId
+  let req' = maybe req (`NavigationPoint.withRequiredNavPointFields` req) mbNavPointConfig
+  resp <- Maps.searchDestinations merchantId merchantOperatingCityId entityId req'
+  whenJust mbNavPointConfig $ \navPointConfig ->
+    fork "cache navigation points" $ NavigationPoint.cacheNavPoints navPointConfig resp
+  pure resp
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do

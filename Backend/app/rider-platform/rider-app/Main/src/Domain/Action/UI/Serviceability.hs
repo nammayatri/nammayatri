@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified SharedLogic.NavigationPoint as NavigationPoint
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -74,6 +75,9 @@ data ServiceabilityRes = ServiceabilityRes
     specialLocation :: Maybe QSpecialLocation.SpecialLocationFull,
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
+    -- | Cached Google Destinations v4 drivable navigation points near the origin,
+    -- nearest first. Empty for destination checks and when caching is disabled.
+    navigationPoints :: [DHotSpot.HotSpotInfo],
     blockRadius :: Maybe Int,
     isMetroServiceable :: Maybe Bool, -- deprecated
     isSubwayServiceable :: Maybe Bool, -- deprecated
@@ -98,6 +102,10 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   mbNearestOpAndCurrentCity <- getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) shouldUpdatePerson location
   person <- CQP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  navigationPoints <-
+    if isOrigin
+      then maybe (pure []) (`NavigationPoint.getNearbyNavPoints` location) =<< NavigationPoint.findEnabledNavPointConfig person.merchantOperatingCityId
+      else pure []
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
