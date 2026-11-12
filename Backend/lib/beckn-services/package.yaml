@@ -87,8 +87,14 @@ dependencies:
   - euler-hs
   - unordered-containers
   - amazonka
+  - amazonka-kms
   - amazonka-s3
+  - cryptonite
+  - cryptostore >= 0.2.3.0
   - lens
+  - memory
+  - resourcet
+  - x509
 
 ghc-options:
   - -fwrite-ide-info

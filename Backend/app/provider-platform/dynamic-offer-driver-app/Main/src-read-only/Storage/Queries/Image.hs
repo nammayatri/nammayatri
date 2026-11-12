@@ -81,6 +81,11 @@ updateDocumentVersionIdByIds documentVersionId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.documentVersionId documentVersionId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
+updateEncryptedDataKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateEncryptedDataKey encryptedDataKey id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.encryptedDataKey encryptedDataKey, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateMerchantIdAndCityIdByPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -157,6 +162,7 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
   updateWithKV
     [ Se.Set Beam.documentExpiry documentExpiry,
       Se.Set Beam.documentVersionId documentVersionId,
+      Se.Set Beam.encryptedDataKey encryptedDataKey,
       Se.Set Beam.failureReason failureReason,
       Se.Set Beam.imageType imageType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

@@ -40,7 +40,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   )
 where
 
-import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (maybeM)
 import Data.Aeson hiding (Success)
@@ -90,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.FleetDriverSettings as FDS
@@ -350,7 +350,7 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withWaitAndLockRedis (imageS3Lock (imageMetadata.s3Path)) 5 50000 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        readDocument imageMetadata
 
     -- When enabled via transporterConfig, update any existing VehicleRegistrationCertificate
     -- row for this registration number with the new fleetOwnerId.

@@ -39,3 +39,4 @@ python dev/mock-servers/server.py --port 8080
 | `/openai/*` | Azure OpenAI LLM |
 | `/health` | Health check |
 | `POST /mock/s3/put-text` | Write a text object into `Backend/s3/local/test-bucket/<key>` for the local mock bucket |
+| `X-Amz-Target: TrentService.*` | AWS KMS; control via `/mock/kms/{state,reset,config,alias,open-archive}` (dev-only keys in `kms/`) |

@@ -547,7 +547,7 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       mbVersionMeta <- maybe (pure Nothing) (SDocVersion.mkVersionMetadata (Just imageId.getId)) mbVersionMetadata
       mbMeta <- maybe (metadataByImageId docType image) (pure . Just) mbVersionMeta
       let mbFinalMeta = mbMeta <|> (VDocs.imageMetadataToDocumentMetadata docType (Just imageId.getId) =<< image.metadata)
-      pure Common.GetDocumentResponse {imageBase64 = Just img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing, metadata = A.toJSON <$> mbFinalMeta}
+      pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing, metadata = A.toJSON <$> mbFinalMeta}
     Common.DocumentEntity -> do
       docType <- mbDocType & fromMaybeM (InvalidRequest "docType is required for DocumentEntity")
       (mbImgId, mbCommonDocData, mbRejectReason, mbDocStatus, mbMeta) <- resolveDocumentDetails (mapDocumentType docType) entityId
@@ -555,7 +555,7 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
         Just imgId -> do
           img <- getImage merchant.id imgId
           mbImage <- QImage.findById imgId
-          pure (Just img, mbImage)
+          pure (img, mbImage)
         Nothing -> pure (Nothing, Nothing)
       let mbFinalMeta = mbMeta <|> (mbImage >>= \image -> VDocs.imageMetadataToDocumentMetadata (mapDocumentType docType) (Just image.id.getId) =<< image.metadata)
       pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbImage <&> (.createdAt), commonDocumentData = mbCommonDocData, rejectReason = mbRejectReason, metadata = A.toJSON <$> mbFinalMeta}

@@ -18,6 +18,7 @@ import qualified Tools.Error
 data Image = Image
   { documentExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     documentVersionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    encryptedDataKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     failureReason :: Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError,
     id :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageType :: Domain.Types.DocumentVerificationConfig.DocumentType,

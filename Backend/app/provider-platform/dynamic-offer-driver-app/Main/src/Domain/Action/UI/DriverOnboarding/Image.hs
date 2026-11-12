@@ -73,6 +73,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.DocumentProtection (readDocument, readDocumentIfAvailable, storeDocument)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
@@ -458,16 +459,17 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         enforceSelfieReuploadPolicy person allImages
 
       imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension enforceFileTypeCheck mbUploadedFileType fileExtension)
+      unsavedImage <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
           Redis.withWaitAndLockRedis (imageS3Lock imagePath) 5 50000 $
-            S3.put (T.unpack imagePath) image
-      case s3Result of
+            storeDocument unsavedImage.id imageType workflowTransactionId imagePath image
+      encryptedDataKey <- case s3Result of
         Left err -> do
           logError $ "Image upload failed to S3:" <> show err
           throwError $ InternalError ("Image upload failed. Please try again")
-        Right _ -> pure ()
-      imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
+        Right dataKey -> pure dataKey
+      let imageEntity = (unsavedImage :: Domain.Image) {Domain.encryptedDataKey = encryptedDataKey}
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
@@ -650,6 +652,7 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         reviewerEmail = Nothing,
         metadata = Nothing,
         documentExpiry = Nothing,
+        encryptedDataKey = Nothing,
         createdAt = now,
         updatedAt = now,
         merchantOperatingCityId = mbMerchantOpCityId
@@ -665,12 +668,12 @@ createBulkRcPlaceholderImage personId merchantId merchantOpCityId = do
   Query.create image
   pure image.id
 
-getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text
+getImage :: Id DM.Merchant -> Id Domain.Image -> Flow (Maybe Text)
 getImage merchantId imageId = do
   imageMetadata <- Query.findById imageId
   case imageMetadata of
-    Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
-    _ -> pure T.empty
+    Just img | img.merchantId == merchantId -> readDocumentIfAvailable img
+    _ -> pure (Just T.empty)
 
 getImageWithAccessCheck :: Id Person.Person -> Id DM.Merchant -> Id Domain.Image -> Flow Text
 getImageWithAccessCheck personId merchantId imageId = do
@@ -682,4 +685,4 @@ getImageWithAccessCheck personId merchantId imageId = do
       imageOwner <- Person.findById imageMetadata.personId >>= fromMaybeM (PersonDoesNotExist imageMetadata.personId.getId)
       isValid <- DFOA.isAssociationBetweenTwoPerson requestor imageOwner
       unless isValid $ throwError (ImageAccessDenied imageId.getId)
-  S3.get $ T.unpack imageMetadata.s3Path
+  readDocument imageMetadata

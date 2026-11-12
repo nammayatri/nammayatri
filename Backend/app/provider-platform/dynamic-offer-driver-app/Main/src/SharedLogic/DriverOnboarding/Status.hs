@@ -98,6 +98,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.ApprovalComms as ApprovalComms
 import SharedLogic.DriverOnboarding.Common
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
+import SharedLogic.DriverOnboarding.DocumentProtection (dropProcessingAccess, dropVehicleProcessingAccess)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
@@ -439,6 +440,7 @@ refreshPersonOnboardingFlags mbPerson mbTransporterConfig makeSelfieAadhaarPanMa
             ofiVehicles = []
           }
         (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+    void $ withTryCatch "refreshPersonOnboardingFlags:dropProcessingAccess" $ dropProcessingAccess transporterConfig personId
     pure res.ofrPersonEnabled
 
 runRefreshOnboardingFlagsFleet :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
@@ -483,6 +485,7 @@ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory 
     (vehicleDocItem, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig merchantOperatingCity.language registrationNo (Just True) False True
     let withInspectionWaived = if shouldOverrideInspectionHub then vehicleDocItem {documents = map overrideInspectionHubAsValid vehicleDocItem.documents} else vehicleDocItem
         vehicleDocItem' = if forceBotApproval then withInspectionWaived {documents = map forceBotApprovalDocValid withInspectionWaived.documents} else withInspectionWaived
+    void $ withTryCatch "refreshVehicleOnboardingFlags:dropProcessingAccess" $ dropVehicleProcessingAccess rc
     void $
       recomputeOnboardingFlags
         OnboardingFlagsInput
