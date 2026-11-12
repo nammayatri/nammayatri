@@ -45,6 +45,7 @@ library
       Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOnExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExperimentGroupExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.KaalChakraJobRunExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
@@ -70,6 +71,7 @@ library
       Tools.Beam.UtilsTH
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicExperimentGroup
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
       Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun
@@ -82,6 +84,7 @@ library
       Lib.Yudhishthira.Storage.Beam.UserData
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExperimentGroup
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.KaalChakraJobRun
@@ -91,6 +94,7 @@ library
       Lib.Yudhishthira.Storage.Queries.NammaTagV2
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicExperimentGroup
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.KaalChakraJobRun
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
@@ -102,6 +106,7 @@ library
       Lib.Yudhishthira.Storage.Queries.UserData
       Lib.Yudhishthira.Types.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Types.AppDynamicLogicElement
+      Lib.Yudhishthira.Types.AppDynamicLogicExperimentGroup
       Lib.Yudhishthira.Types.AppDynamicLogicRollout
       Lib.Yudhishthira.Types.ChakraQueries
       Lib.Yudhishthira.Types.KaalChakraJobRun

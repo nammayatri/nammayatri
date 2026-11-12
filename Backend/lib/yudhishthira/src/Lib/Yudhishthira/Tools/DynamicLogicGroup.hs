@@ -2,114 +2,187 @@
 
 -- | Shared per-transaction "experiment group" machinery for app dynamic logic.
 --
--- A rollout may carry an @experimentGroup@ tag. Within one transaction (the same
--- 'TxnIdKey'), a group's fate is decided exactly once (IN or OUT) and then reused
--- by every domain that references it, so grouped rollouts across domains move
--- together.
+-- A rollout may carry an @experimentGroup@ tag that links it to a registered
+-- experiment group ('AppDynamicLogicExperimentGroup'), which owns a
+-- @rolloutPercentage@. Within one transaction (the same 'TxnIdKey'), a single
+-- group toss partitions @1..100@ among the city's active groups and selects at
+-- most one group (@A@ xor @B@ xor none). That selection is decided exactly once
+-- and reused by every domain: a domain only offers the rollout tagged with the
+-- selected group (plus its untagged/base rollouts), so grouped rollouts across
+-- domains move together. Once a group is selected, each domain still runs its
+-- own cumulative-percentage toss over @[selectedGroupRollout, base]@, so the
+-- per-domain @percentageRollout@ governs experiment-vs-base within the group.
 module Lib.Yudhishthira.Tools.DynamicLogicGroup
-  ( GroupDecision (..),
+  ( GroupSelection (..),
     chooseWithGroups,
   )
 where
 
-import Data.List (nub)
+import Data.List (sortOn)
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
+import Kernel.Randomizer (getRandomInRange)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Common (logDebug)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExperimentGroup as QADLEG
+import qualified Lib.Yudhishthira.Types as LYT
+import Lib.Yudhishthira.Types.AppDynamicLogicExperimentGroup (AppDynamicLogicExperimentGroup)
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout)
 
---   * 'GroupIn'   -- this group was chosen; its domains reuse its rollout.
---   * 'GroupOut'  -- this group lost to a /sibling/ group (some other group in
---                    its cluster was chosen instead).
---   * 'GroupNone' -- this group lost to an /ungrouped/ rollout: the transaction
---                    was offered this group and picked an untagged rollout
---                    instead.
-data GroupDecision = GroupIn | GroupOut | GroupNone
+-- | The per-transaction group decision: either exactly one experiment group was
+-- selected, or the toss landed in the ungrouped remainder (no group).
+data GroupSelection = GroupSelected Text | NoGroupSelected
   deriving (Generic, Show, Eq)
 
-instance ToJSON GroupDecision
+instance ToJSON GroupSelection
 
-instance FromJSON GroupDecision
+instance FromJSON GroupSelection
 
-groupLockKey :: Text -> Text -> Text
-groupLockKey txnId group = "dynamicLogicGroupLock:" <> txnId <> ":" <> group
+selectedGroupKey :: Text -> Text -> Text
+selectedGroupKey txnId cityId = "dynamicLogicSelectedGroup:" <> txnId <> ":" <> cityId
 
-groupLockTtlSec :: Int
-groupLockTtlSec = 7200
+selectedGroupTtlSec :: Int
+selectedGroupTtlSec = 7200
 
-readGroupDecision :: (BeamFlow m r) => Text -> Text -> m (Maybe GroupDecision)
-readGroupDecision txnId group = Hedis.withCrossAppRedis $ Hedis.safeGet (groupLockKey txnId group)
+-- | v1 scope: group selection considers only always-on ("Unbounded") groups.
+-- Named-window (time-bounded) groups are not yet resolved here because window
+-- schedules are keyed per domain, whereas a group spans domains.
+unboundedTimeBound :: Text
+unboundedTimeBound = "Unbounded"
 
-writeGroupDecision :: (BeamFlow m r) => Text -> Text -> GroupDecision -> m ()
-writeGroupDecision txnId group decision =
-  void $ Hedis.withCrossAppRedis $ Hedis.setNxExpire (groupLockKey txnId group) groupLockTtlSec decision
-
--- | Group-aware rollout selection. @chooseFn@ is the engine's own selection over a
--- candidate list (its cumulative-percentage toss). If a transaction id is in
--- scope ('TxnIdKey'), an experiment group's membership is decided once for the
--- whole transaction: the first domain that references a group tosses over the
--- applicable rollouts and locks each present group IN (if the toss selected it)
--- or OUT (otherwise); every later domain then reuses that decision -- picking an
--- already-IN group's rollout without a toss, and excluding OUT groups before
--- tossing over the rest. Ungrouped rollouts, and the no-transaction case, behave
--- exactly like @chooseFn@ alone.
+-- | Group-aware rollout selection. @chooseFn@ is the engine's own selection over
+-- a candidate list (its cumulative-percentage toss); it receives a shared toss
+-- value to use when one is in scope (@Just@), or draws its own when @Nothing@. If
+-- a transaction id is in scope ('TxnIdKey') and at least one applicable rollout
+-- is grouped, a single group is selected once per transaction (locked in Redis)
+-- and every domain then offers @chooseFn@ only the rollouts tagged with the
+-- selected group plus its untagged/base rollouts. To keep grouped domains
+-- correlated (a user who lands in one domain's experiment lands in the others'
+-- too), the within-group experiment-vs-base toss is a single per-transaction
+-- value shared across every grouped domain. Ungrouped rollouts, and the
+-- no-transaction case, behave exactly like @chooseFn@ alone (own toss).
 chooseWithGroups ::
   (BeamFlow m r) =>
   [AppDynamicLogicRollout] ->
-  ([AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)) ->
+  (Maybe Int -> [AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)) ->
   m (Maybe AppDynamicLogicRollout)
 chooseWithGroups applicable chooseFn = do
   mbTxnId <- L.getOptionLocal TxnIdKey
-  case mbTxnId of
+  case (mbTxnId, listToMaybe applicable) of
+    (Just txnId, Just anyRollout)
+      | any (isJust . (.experimentGroup)) applicable -> do
+        let cityId = anyRollout.merchantOperatingCityId
+        selection <- getOrDecideSelectedGroup txnId cityId
+        sharedToss <- getOrCreateTxnToss txnId
+        let candidates = filter (isCandidate selection) applicable
+        logDebug $
+          "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId
+            <> " selection="
+            <> show selection
+            <> " sharedToss="
+            <> show sharedToss
+            <> " candidateVersions="
+            <> show (map (.version) candidates)
+        chooseFn (Just sharedToss) candidates
+    _ -> do
+      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " no txnId/grouped rollouts -> plain toss (grouping disabled)"
+      chooseFn Nothing applicable
+  where
+    -- An untagged rollout (including base, which is ungrouped upstream) is always
+    -- a candidate; a grouped rollout is a candidate only if its group was selected.
+    isCandidate selection r = case r.experimentGroup of
+      Nothing -> True
+      Just g -> selection == GroupSelected g
+
+-- | Read the transaction's group selection from Redis, or decide it once: load
+-- the city's active groups, toss once over their cumulative percentages, and
+-- lock the result. Concurrent first-resolvers race on @setNx@; the stored value
+-- wins and is read back so every domain agrees.
+getOrDecideSelectedGroup ::
+  (BeamFlow m r) =>
+  Text ->
+  Id LYT.MerchantOperatingCity ->
+  m GroupSelection
+getOrDecideSelectedGroup txnId cityId = do
+  let key = selectedGroupKey txnId (getId cityId)
+  mbCached <- Hedis.withCrossAppRedis $ Hedis.safeGet key
+  case mbCached of
+    Just sel -> do
+      logDebug $ "DYNAMIC_LOGIC_GROUP: txnId=" <> txnId <> " city=" <> getId cityId <> " reuse selection=" <> show sel
+      pure sel
     Nothing -> do
-      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " no txnId in scope -> plain toss (grouping disabled)"
-      chooseFn applicable
-    Just txnId -> resolveWithGroups txnId applicable chooseFn
+      groups <- activeGroupsForCity cityId
+      tossed <- tossGroup groups
+      void $ Hedis.withCrossAppRedis $ Hedis.setNxExpire key selectedGroupTtlSec tossed
+      finalSel <- fromMaybe tossed <$> Hedis.withCrossAppRedis (Hedis.safeGet key)
+      logDebug $
+        "DYNAMIC_LOGIC_GROUP: txnId=" <> txnId <> " city=" <> getId cityId
+          <> " activeGroups="
+          <> show (map (\g -> (g.groupName, g.rolloutPercentage)) groups)
+          <> " tossedSelection="
+          <> show tossed
+          <> " finalSelection="
+          <> show finalSel
+      pure finalSel
+
+txnWithinTossKey :: Text -> Text
+txnWithinTossKey txnId = "dynamicLogicWithinToss:" <> txnId
+
+-- | The single within-group experiment-vs-base toss, shared across every grouped
+-- domain in the transaction so their experiment memberships are correlated
+-- (nested by percentage). Drawn once and locked; concurrent first-resolvers race
+-- on @setNx@ and the stored value wins.
+getOrCreateTxnToss ::
+  (BeamFlow m r) =>
+  Text ->
+  m Int
+getOrCreateTxnToss txnId = do
+  let key = txnWithinTossKey txnId
+  mbToss <- Hedis.withCrossAppRedis $ Hedis.safeGet key
+  case mbToss of
+    Just t -> pure t
+    Nothing -> do
+      t <- getRandomInRange (1, 100 :: Int)
+      void $ Hedis.withCrossAppRedis $ Hedis.setNxExpire key selectedGroupTtlSec t
+      fromMaybe t <$> Hedis.withCrossAppRedis (Hedis.safeGet key)
+
+-- | Active, selectable groups for a city: not discarded/reverted, always-on, and
+-- with a positive rollout percentage.
+activeGroupsForCity ::
+  (BeamFlow m r) =>
+  Id LYT.MerchantOperatingCity ->
+  m [AppDynamicLogicExperimentGroup]
+activeGroupsForCity cityId = do
+  allGroups <- QADLEG.findAllByMerchantOpCityId cityId
+  pure $ filter isActive allGroups
+  where
+    isActive g =
+      g.experimentStatus /= Just LYT.DISCARDED
+        && g.experimentStatus /= Just LYT.REVERTED
+        && g.timeBounds == unboundedTimeBound
+        && g.rolloutPercentage > 0
+
+-- | One toss over @1..100@ partitioned among the groups (ordered by name for a
+-- deterministic partition). A toss above the groups' cumulative share lands in
+-- the ungrouped remainder -> 'NoGroupSelected'.
+tossGroup ::
+  (BeamFlow m r) =>
+  [AppDynamicLogicExperimentGroup] ->
+  m GroupSelection
+tossGroup [] = pure NoGroupSelected
+tossGroup groups = do
+  toss <- getRandomInRange (1, 100 :: Int)
+  let ordered = sortOn (.groupName) groups
+      cumulative = scanl1 (+) (map (.rolloutPercentage) ordered)
+      zipped = zip ordered cumulative
+  pure $ case find (\(_, cumPct) -> toss <= cumPct) zipped of
+    Just (g, _) -> GroupSelected g.groupName
+    Nothing -> NoGroupSelected
 
 -- | Log-friendly label for the domain being resolved (all applicable rollouts
 -- share one domain). Only used for debug logging.
 domainLabelOf :: [AppDynamicLogicRollout] -> Text
 domainLabelOf = maybe "unknown" (show . (.domain)) . listToMaybe
-
-resolveWithGroups ::
-  (BeamFlow m r) =>
-  Text ->
-  [AppDynamicLogicRollout] ->
-  ([AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)) ->
-  m (Maybe AppDynamicLogicRollout)
-resolveWithGroups txnId applicable chooseFn = do
-  let presentGroups = nub $ mapMaybe (.experimentGroup) applicable
-  decisions <- forM presentGroups $ \g -> (g,) <$> readGroupDecision txnId g
-  let decidedIn = [g | (g, Just GroupIn) <- decisions]
-      decidedOut = [g | (g, Just GroupOut) <- decisions]
-      decidedNone = [g | (g, Just GroupNone) <- decisions]
-      clusterWentUngrouped = not (null decidedNone)
-  logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " presentGroups=" <> show presentGroups <> " decidedIn=" <> show decidedIn <> " decidedOut=" <> show decidedOut <> " decidedNone=" <> show decidedNone <> " clusterWentUngrouped=" <> show clusterWentUngrouped
-  case find (\r -> maybe False (`elem` decidedIn) r.experimentGroup) applicable of
-    Just r -> do
-      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " already-IN group=" <> show r.experimentGroup <> " -> reuse version=" <> show r.version <> " (no toss)"
-      pure (Just r)
-    Nothing -> do
-      let isCandidate r = case r.experimentGroup of
-            Nothing -> True
-            Just g
-              | g `elem` decidedOut -> False
-              | g `elem` decidedNone -> False
-              | otherwise -> not clusterWentUngrouped
-          candidates = filter isCandidate applicable
-          undecidedGroups = filter (\g -> g `notElem` decidedIn && g `notElem` decidedOut && g `notElem` decidedNone) presentGroups
-      mbWinner <- chooseFn candidates
-      let winnerGroup = mbWinner >>= (.experimentGroup)
-      forM_ undecidedGroups $ \g -> do
-        let desired
-              | Just g == winnerGroup = GroupIn
-              | clusterWentUngrouped = GroupNone -- ungrouped won earlier
-              | isNothing winnerGroup = GroupNone -- an ungrouped rollout won.
-              | otherwise = GroupOut
-        writeGroupDecision txnId g desired
-        logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " wrote group=" <> g <> " desired=" <> show desired
-      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " tossedWinnerVersion=" <> show (fmap (.version) mbWinner) <> " winnerGroup=" <> show winnerGroup
-      pure mbWinner

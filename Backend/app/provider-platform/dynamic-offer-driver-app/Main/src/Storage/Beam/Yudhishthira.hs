@@ -18,6 +18,7 @@ module Storage.Beam.Yudhishthira (module Reexport) where
 import qualified Data.Text as T
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn as Reexport
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Reexport
+import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicExperimentGroup as Reexport
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
 import Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as Reexport
@@ -34,6 +35,9 @@ instance HasSchemaName AppDynamicLogicAlwaysOnT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName AppDynamicLogicElementT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName AppDynamicLogicExperimentGroupT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName AppDynamicLogicRolloutT where
