@@ -27,12 +27,13 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisCloudCfg, HedisEnv, HedisFlow, disconnectHedis)
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (FromDhall)
@@ -50,8 +51,7 @@ data SchedulerConfig = SchedulerConfig
     esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
-    hedisClusterCfg :: HedisCfg,
-    hedisSecondaryClusterCfg :: HedisCfg,
+    hedisClusterCfgs :: [HedisCloudCfg],
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
@@ -98,7 +98,7 @@ data SchedulerEnv = SchedulerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     coreMetrics :: Metrics.CoreMetricsContainer,
@@ -156,7 +156,7 @@ releaseSchedulerEnv SchedulerEnv {..} = do
   disconnectHedis hedisNonCriticalClusterEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
 
 type SchedulerM = FlowR SchedulerEnv
 
@@ -185,8 +185,7 @@ runSchedulerM schedulerConfig env action = do
             ConnectionConfigDriver
               { esqDBCfg = schedulerConfig.esqDBCfg,
                 esqDBReplicaCfg = schedulerConfig.esqDBReplicaCfg,
-                hedisClusterCfg = schedulerConfig.hedisClusterCfg,
-                hedisSecondaryClusterCfg = schedulerConfig.hedisSecondaryClusterCfg
+                hedisClusterCfgs = schedulerConfig.hedisClusterCfgs
               }
             env.kvConfigUpdateFrequency
         )

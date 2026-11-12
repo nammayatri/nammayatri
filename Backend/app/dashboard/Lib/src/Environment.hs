@@ -22,7 +22,7 @@ import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisCloudCfg, HedisEnv, connectHedis, connectHedisCluster, connectHedisClusterClouds, disconnectHedis)
 import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Tools.Slack.Internal
@@ -30,6 +30,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -45,8 +46,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
-    hedisClusterCfg :: HedisCfg,
-    hedisSecondaryClusterCfg :: HedisCfg,
+    hedisClusterCfgs :: [HedisCloudCfg],
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
@@ -105,7 +105,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     port :: Int,
@@ -178,20 +178,15 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds hedisClusterCfgs modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg modifierFunc
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
-  secondaryHedisClusterEnv <-
-    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg modifierFunc) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
@@ -219,7 +214,7 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
 
 type FlowHandler = FlowHandlerR AppEnv
 

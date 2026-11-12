@@ -30,6 +30,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -64,7 +65,7 @@ getNextDriverPoolBatch ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "peerLTSHedisEnvs" r [(CloudType, Redis.HedisEnv)],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     HasField "enableLtsPoolDataForPooling" r Bool
@@ -121,7 +122,7 @@ prepareDriverPoolBatch ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "peerLTSHedisEnvs" r [(CloudType, Redis.HedisEnv)],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     HasField "enableLtsPoolDataForPooling" r Bool

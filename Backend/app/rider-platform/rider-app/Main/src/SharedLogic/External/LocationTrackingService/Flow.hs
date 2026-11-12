@@ -31,7 +31,7 @@ data VehicleTracking = ByRoute Text | ByTrips [Text]
 vehicleTrackingOnRoute :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => VehicleTracking -> m [VehicleTrackingOnRouteResp]
 vehicleTrackingOnRoute vehicleTracking = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req =
         case vehicleTracking of
           ByRoute routeCode -> VehicleTrackingOnRouteReq (Just routeCode) Nothing
@@ -46,41 +46,37 @@ vehicleTrackingOnRoute vehicleTracking = do
 nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => NearByDriverReq -> m [NearByDriverRes]
 nearBy req = do
   ltsCfg <- asks (.ltsCfg)
-  -- Call both APIs (primary and secondary cloud) concurrently and combine results
   let callNearByAPI url = do
         withShortRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
 
-  -- For secondary URL, gracefully handle errors
-  let secondaryCallNearByAPI url = do
+  let peerCallNearByAPI url = do
         withShortRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= \case
               Right locations -> pure locations
               Left err -> do
-                logError $ "Failed to call nearBy API for secondary url: " <> show url <> ", error: " <> show err
+                logError $ "Failed to call nearBy API for peer url: " <> show url <> ", error: " <> show err
                 pure []
 
-  primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
-  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . secondaryCallNearByAPI
+  localAwaitable <- awaitableFork "localLTS" $ callNearByAPI (localUrl ltsCfg)
+  peerAwaitables <- forM (peerUrls ltsCfg) $ \(_, url) -> awaitableFork "peerLTS" (peerCallNearByAPI url)
 
-  -- Primary call must succeed - propagate error if it fails
-  primaryResult <-
-    L.await Nothing primaryAwaitable >>= \case
-      Left err -> throwError $ InternalError $ "Failed to call nearBy API for primary url: " <> show ltsCfg.url <> ", error: " <> show err
+  localResult <-
+    L.await Nothing localAwaitable >>= \case
+      Left err -> throwError $ InternalError $ "Failed to call nearBy API for local url: " <> show (localUrl ltsCfg) <> ", error: " <> show err
       Right result -> pure result
-  -- Secondary call is optional - gracefully handle errors
-  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+  peerResults <- forM peerAwaitables $ \awaitable -> Either.fromRight [] <$> L.await Nothing awaitable
 
-  let combinedLocations = primaryResult <> secondaryResult
+  let combinedLocations = localResult <> concat peerResults
   logDebug $ "lts nearBy: " <> show combinedLocations
   return combinedLocations
 
 entityUpsertForSos :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Text -> Maybe SosErssConfigReq -> m ()
 entityUpsertForSos sosId personId merchantId mbBroadcasterConfig = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
       req = SosAPI.EntityUpsertReq {personId = personId, merchantId = merchantId, entityInfo = SosAPI.EntityStart, broadcasterConfig = mbBroadcasterConfig}
   void $
     withShortRetry $

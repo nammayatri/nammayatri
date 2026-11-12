@@ -183,7 +183,7 @@ type GetFareFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "peerLTSHedisEnvs" r [(CloudType, Hedis.HedisEnv)],
     HasField "ltsReplicaHedisEnv" r (Maybe Hedis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
     HasField "shortDurationRetryCfg" r RetryCfg,

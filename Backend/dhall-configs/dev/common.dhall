@@ -125,6 +125,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , transportKind = globalCommon.transportKind
+    , CloudType = globalCommon.CloudType
+    , HedisCloudCfg = globalCommon.HedisCloudCfg
     , internalEndPointMap
     , urlShortnerConfig
     , ondcRegistryUrl

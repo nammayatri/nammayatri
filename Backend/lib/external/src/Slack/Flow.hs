@@ -36,6 +36,7 @@ publishMessage config message = do
       case cloudType of
         AWS -> routeToAWS config message
         GCP -> routeToGCP config message
+        NAMMA -> routeToGCP config message
         UNAVAILABLE -> do
           putStrLn ("ERROR: Slack.Flow: CloudType UNAVAILABLE" :: Text)
           error "CloudType UNAVAILABLE: Cannot route slack message"

@@ -245,8 +245,7 @@ runDriverOfferAllocator configModifier = do
             ConnectionConfigDriver
               { esqDBCfg = handlerCfg.appCfg.esqDBCfg,
                 esqDBReplicaCfg = handlerCfg.appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg,
-                hedisSecondaryClusterCfg = handlerCfg.appCfg.hedisSecondaryClusterCfg
+                hedisClusterCfgs = handlerCfg.appCfg.hedisClusterCfgs
               }
             handlerCfg.appCfg.kvConfigUpdateFrequency
         )
