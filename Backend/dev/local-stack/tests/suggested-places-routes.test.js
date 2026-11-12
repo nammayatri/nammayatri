@@ -13,6 +13,7 @@
 //   6. « Mes lieux proposés »
 //   7. « search by type »              (5 km, 20, nearest; 15 km when 5 finds nothing)
 //   8. the module agrees with the SQL  (types, name length, the box, the three-argument mapping)
+//   9. the photos                      (day 4: the author, while it waits, an image by its bytes, 512 KB)
 //
 // The four questions only PostGIS and the place index can answer (country,
 // locality, OSM places near a pin, OSM places of a type) are a scripted fake
@@ -74,10 +75,10 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
   const opts = { pool: db.pool, riderUrl: who.url, driverUrl: who.url, geo };
 
   /** One request through the router, as server.js hands it over. */
-  const call = async (method, pathAndQuery, { token, body, raw, pool } = {}) => {
+  const call = async (method, pathAndQuery, { token, body, raw, pool, headers } = {}) => {
     const req = Readable.from(raw !== undefined ? [Buffer.from(raw)] : body !== undefined ? [Buffer.from(JSON.stringify(body))] : []);
     req.method = method;
-    req.headers = token ? { token } : {};
+    req.headers = { ...(token ? { token } : {}), ...(headers || {}) };
     const res = fakes.res();
     const url = new URL(pathAndQuery, 'http://localhost');
     await routes.handle(req, res, url, pool === undefined ? opts : { ...opts, pool });
@@ -372,6 +373,141 @@ const north = (p, metres) => ({ lat: p.lat + metres / 111195, lon: p.lon });
   t.ok(routes.cleanName('a'.repeat(78) + '😀😀') === 'a'.repeat(78) + '😀😀'
     && routes.cleanName('a'.repeat(79) + '😀😀') === null,
     'an emoji is one character, as char_length counts it: 78 letters + 2 emoji = 80 accepted, 81 refused');
+
+  /* ── 9 ─────────────────────────────────────────────────────────────── */
+  t.section('9. the photos: the author, while the place waits, an image by its bytes, 512 KB');
+  // Real first bytes, then filler: what matters to the shim is the start.
+  const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(2000, 7)]);
+  const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(1500, 9)]);
+  const put = (token, url, raw, headers) => call('PUT', url, { token, raw, headers });
+  const del = (token, url) => call('DELETE', url, { token });
+  const photos = (id) => db.sql(
+    `SELECT n, content_type, bytes FROM movin.suggested_place_photo WHERE suggested_place_id = $1 ORDER BY n`, [id]);
+  const version = async (id) => (await db.sql(
+    'SELECT (extract(epoch from updated_at) * 1000000)::bigint::text AS v FROM movin.suggested_place WHERE id = $1', [id]))[0].v;
+  const placeRow = async (pid) => (await rows('place_id = $1', [pid]))[0];
+
+  who.riders.set('tok-photo', 'rider-photo');
+  r = await suggest('tok-photo', place('Pharmacie aux Photos', 'pharmacy', north(ALG, 20000)));
+  const P = await placeRow(r.json().placeId);
+  const url1 = `/places/photos/${P.place_id}/1`;
+  const url2 = `/places/photos/${P.place_id}/2`;
+
+  let v0 = await version(P.id);
+  r = await put('tok-photo', url1, JPEG, { 'content-type': 'image/png' });
+  let stored = await photos(P.id);
+  t.ok(r.status === 200 && r.json().type === 'image/jpeg' && r.json().n === 1 && r.json().bytes === JPEG.length
+    && stored.length === 1 && stored[0].content_type === 'image/jpeg' && Buffer.from(stored[0].bytes).equals(JPEG),
+    'the author, while it waits: photo 1 stored, byte for byte -- as a JPEG, though the header said PNG (the bytes decide)',
+    `${r.status} ${r.text}`);
+  t.ok((await version(P.id)) !== v0, "the place's version moved: an office page loaded before the photo can no longer decide on it");
+  r = await put('tok-photo', url2, PNG);
+  t.ok(r.status === 200 && r.json().type === 'image/png', 'photo 2, a PNG, with no header at all', r.text);
+  r = await put('tok-photo', url1, PNG);
+  stored = await photos(P.id);
+  t.ok(r.status === 200 && stored.length === 2 && stored[0].content_type === 'image/png' && Buffer.from(stored[0].bytes).equals(PNG),
+    'a second PUT on photo 1 replaces it: still two photos, never three');
+  let mineP = (await mineOf('tok-photo')).find((p) => p.placeId === P.place_id);
+  t.ok(mineP && JSON.stringify(mineP.photos) === '[1,2]', '« Mes lieux proposés » says which photos the office has: [1,2]',
+    JSON.stringify(mineP && mineP.photos));
+  t.ok((await mineOf('tok-r1')).every((p) => Array.isArray(p.photos) && p.photos.length === 0),
+    'a place with no photo says [] -- never the photos themselves');
+
+  t.section('9b. somebody else, and no one');
+  const untouched = async (label, res, status) => {
+    const now = await photos(P.id);
+    t.ok(res.status === status && now.length === 2 && Buffer.from(now[0].bytes).equals(PNG), label, `${res.status} ${res.text}`);
+  };
+  v0 = await version(P.id);
+  await untouched('another passenger: 404, as if the place did not exist; nothing changed',
+    await put('tok-r2', url1, JPEG), 404);
+  await untouched("another passenger's DELETE: 404, both photos still there", await del('tok-r2', url2), 404);
+  who.drivers.set('tok-same-id', 'rider-photo');
+  await untouched('a DRIVER whose id happens to equal the author\'s: 404 -- the side is part of who', await put('tok-same-id', url1, JPEG), 404);
+  await untouched('no token: 401', await put(undefined, url1, JPEG), 401);
+  await untouched('a forged token: 401', await put('tok-forged', url1, JPEG), 401);
+  t.ok((await version(P.id)) === v0, "and none of them moved the place's version");
+  r = await put('tok-photo', '/places/photos/u999999999/1', JPEG);
+  t.ok(r.status === 404 && r.json().error === 'no_such_place', 'a place that does not exist: the same 404', r.text);
+
+  t.section('9c. what is not a photo');
+  const n9 = (await db.sql('SELECT count(*)::int AS n FROM movin.suggested_place_photo'))[0].n;
+  const refused9 = async (res, status, error, label) =>
+    t.ok(res.status === status && (!error || res.json().error === error), label, `${res.status} ${res.text}`);
+  await refused9(await put('tok-photo', url1, Buffer.from('GIF89a' + 'x'.repeat(50)), { 'content-type': 'image/jpeg' }),
+    415, 'not_an_image', 'a GIF that says it is a JPEG: 415');
+  await refused9(await put('tok-photo', url1, Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')), 415, 'not_an_image', 'an SVG: 415');
+  await refused9(await put('tok-photo', url1, Buffer.from([0xff, 0xd8, 0xff])), 415, 'not_an_image',
+    "a JPEG's first three bytes and nothing after: 415 (the table's CHECK would refuse it too)");
+  await refused9(await put('tok-photo', url1, Buffer.alloc(0)), 400, 'no_image', 'an empty body: 400');
+  const atLimit = Buffer.concat([JPEG.subarray(0, 4), Buffer.alloc(routes.PHOTO_MAX_BYTES - 4, 1)]);
+  await refused9(await put('tok-photo', url1, Buffer.concat([atLimit, Buffer.from([1])])), 413, 'too_large',
+    'one byte over 512 KB: 413');
+  t.ok((await db.sql('SELECT count(*)::int AS n FROM movin.suggested_place_photo'))[0].n === n9
+    && Buffer.from((await photos(P.id))[0].bytes).equals(PNG), 'none of those stored or replaced anything');
+  r = await put('tok-photo', url1, atLimit);
+  t.ok(r.status === 200 && r.json().bytes === routes.PHOTO_MAX_BYTES, 'exactly 512 KB: stored (the table agrees)', r.text);
+  for (const [path9, label] of [
+    [`/places/photos/${P.place_id}/3`, 'photo 3'], [`/places/photos/${P.place_id}/0`, 'photo 0'],
+    ['/places/photos/u0/1', 'u0'], [`/places/photos/${P.place_id.slice(1)}/1`, 'a number without its u'],
+    ['/places/photos/u1234567890123456789/1', '19 digits (past a bigint)'], [`/places/photos/${P.place_id}`, 'no number'],
+    [`/places/photos/${P.place_id}/1/x`, 'more after it'], ['/places/photos/n12/1', "an OpenStreetMap id (n…): not ours"]]) {
+    r = await put('tok-photo', path9, JPEG);
+    t.ok(r.status === 404 && r.json().error === 'no such places route', `${label}: 404 before anything is read`, `${r.status} ${r.text}`);
+  }
+  t.ok((await call('GET', url1, { token: 'tok-photo' })).status === 405, 'GET a photo: 405 -- nobody reads them back here (A3)');
+  t.ok((await call('POST', url1, { token: 'tok-photo', raw: JPEG })).status === 405, 'POST: 405');
+  t.ok((await call('PUT', url1, { token: 'tok-photo', raw: JPEG, pool: null })).status === 503, 'no database: 503');
+
+  t.section('9d. taking one back, and a place already decided');
+  v0 = await version(P.id);
+  r = await del('tok-photo', url2);
+  t.ok(r.status === 200 && r.json().deleted === true && (await photos(P.id)).map((x) => x.n).join() === '1'
+    && (await version(P.id)) !== v0, 'DELETE photo 2: gone, photo 1 kept, the version moved', r.text);
+  v0 = await version(P.id);
+  r = await del('tok-photo', url2);
+  t.ok(r.status === 200 && r.json().deleted === false && (await version(P.id)) === v0,
+    'DELETE again: 200, deleted false, and the version did NOT move (nothing changed)', r.text);
+  mineP = (await mineOf('tok-photo')).find((p) => p.placeId === P.place_id);
+  t.ok(JSON.stringify(mineP.photos) === '[1]', '« Mes lieux proposés »: [1] -- photo 2 is what « Réessayer » may send');
+
+  for (const [status, extra] of [['approved', ''], ['refused', ", refusal_reason = 'private'"]]) {
+    await db.sql(`UPDATE movin.suggested_place SET status = '${status}' ${extra}, decided_at = now(),
+                    decided_by_email = 'a@mova.test' WHERE id = $1`, [P.id]);
+    const before9 = await photos(P.id);
+    r = await put('tok-photo', url2, JPEG);
+    t.ok(r.status === 409 && r.json().error === 'decided' && r.json().status === status,
+      `${status}: a new photo is refused, 409 decided -- the office decided on what it saw`, r.text);
+    r = await del('tok-photo', url1);
+    t.ok(r.status === 409 && (await photos(P.id)).length === before9.length, `${status}: and its photo cannot be taken back either`);
+    await db.sql(`UPDATE movin.suggested_place SET status = 'pending', refusal_reason = NULL, decided_at = NULL,
+                    decided_by_email = NULL WHERE id = $1`, [P.id]);
+  }
+
+  // The order of the transaction: what keeps a photo and the office's
+  // decision from crossing on the live server (two connections; PGlite has one).
+  const seen9 = [];
+  const recording9 = {
+    ...db.pool,
+    connect: async () => {
+      const c = await db.pool.connect();
+      return { query: (text, params) => { seen9.push(text.replace(/\s+/g, ' ').trim()); return c.query(text, params); }, release: c.release };
+    },
+  };
+  await routes.handle(Object.assign(Readable.from([JPEG]), { method: 'PUT', headers: { token: 'tok-photo' } }),
+    fakes.res(), new URL(`http://localhost${url2}`), { ...opts, pool: recording9 });
+  const at9 = (re) => seen9.findIndex((q) => re.test(q));
+  t.ok(at9(/^BEGIN$/) === 0 && at9(/FROM movin\.suggested_place WHERE id = \$1 AND author_side = \$2 AND author_id = \$3 FOR UPDATE$/) === 1
+    && at9(/^INSERT INTO movin\.suggested_place_photo/) === 2 && at9(/^UPDATE movin\.suggested_place SET updated_at/) === 3
+    && at9(/^COMMIT$/) === 4,
+    'one transaction: the place locked (as the console locks it), checked against the token, then the photo, then the version',
+    seen9.join(' / '));
+
+  // The module and the table agree on the size.
+  const sizeDef = (await db.sql(
+    "SELECT pg_get_constraintdef(oid) AS d FROM pg_constraint WHERE conname = 'suggested_place_photo_size'"))[0].d;
+  t.ok(Number((sizeDef.match(/<= (\d+)/) || [])[1]) === routes.PHOTO_MAX_BYTES,
+    `PHOTO_MAX_BYTES (${routes.PHOTO_MAX_BYTES}) is the table's upper bound`, sizeDef);
 
   who.close();
   await db.close();

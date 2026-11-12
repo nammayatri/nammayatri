@@ -93,6 +93,12 @@ const REQUESTS = [
   'GET /places/mine',
   'POST /places/mine',
   'GET /places/nowhere',
+  // The photos of a proposal (day 4, 2026-11-12), at the end for the same reason.
+  'PUT /places/photos/u5/1',
+  'DELETE /places/photos/u5/2',
+  'GET /places/photos/u5/1',
+  'PUT /places/photos/u5/3',
+  'PUT /places/photos/u0/1',
 ];
 
 const listen = (handler) => new Promise((r) => { const s = http.createServer(handler); s.listen(0, '127.0.0.1', () => r(s)); });

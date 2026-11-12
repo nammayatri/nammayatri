@@ -1869,5 +1869,55 @@
   },
   "queries": [],
   "asked": []
+ },
+ {
+  "request": "PUT /places/photos/u5/1",
+  "status": 401,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "sign in first"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "DELETE /places/photos/u5/2",
+  "status": 401,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "sign in first"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /places/photos/u5/1",
+  "status": 405,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "method not allowed"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "PUT /places/photos/u5/3",
+  "status": 404,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "no such places route"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "PUT /places/photos/u0/1",
+  "status": 404,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "error": "no such places route"
+  },
+  "queries": [],
+  "asked": []
  }
 ]

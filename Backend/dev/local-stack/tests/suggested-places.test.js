@@ -9,6 +9,7 @@
 //   2. the types    -- the CHECK, the mapping and the website's list agree
 //   3. the mapping  -- OpenStreetMap tags to our types, one line per decision
 //   4. the rules    -- every CHECK refuses what it is there to refuse
+//   5. the photos   -- day 4: 1 or 2, an image by its first bytes, 512 KB, gone with the place
 //
 // Every line of the file runs here: it uses no PostGIS (no position index, on
 // purpose -- see the file), so PGlite is the same database for it as the
@@ -228,6 +229,52 @@ const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].s
             decided_at = now(), decided_by_email = 'agent@mova.test'
       WHERE id = $1 RETURNING status, refusal_reason`, [ok.id]);
   t.ok(back[0].status === 'refused', 'an approved place found wrong later is refused, not deleted');
+
+  /* ── 5. the photos ──────────────────────────────────────────────────── */
+  t.section('5. the photos: 1 or 2, an image by its bytes, 512 KB, gone with their place');
+  const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100, 7)]);
+  const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(100, 9)]);
+  const photo = (over = {}) => {
+    const row = { suggested_place_id: first.id, n: 1, content_type: 'image/jpeg', bytes: JPEG, ...over };
+    return db.sql(`INSERT INTO movin.suggested_place_photo (suggested_place_id, n, content_type, bytes)
+                   VALUES ($1, $2, $3, $4)`, [row.suggested_place_id, row.n, row.content_type, row.bytes]);
+  };
+  const photoRefused = async (over, pattern, label) => {
+    let err = null;
+    try { await photo(over); } catch (e) { err = e.message; }
+    t.ok(err !== null && pattern.test(err), label, err || 'it was accepted');
+  };
+  await photo();
+  await photo({ n: 2, content_type: 'image/png', bytes: PNG });
+  const kept = await db.sql(
+    'SELECT n, content_type, bytes FROM movin.suggested_place_photo WHERE suggested_place_id = $1 ORDER BY n', [first.id]);
+  t.ok(kept.length === 2 && Buffer.from(kept[0].bytes).equals(JPEG) && kept[1].content_type === 'image/png',
+    'a JPEG as photo 1 and a PNG as photo 2: stored, byte for byte');
+  await photoRefused({}, /suggested_place_photo_pkey|duplicate key/, 'a second photo 1 for the same place (the shim replaces instead)');
+  await photoRefused({ n: 3 }, /suggested_place_photo_n_check/, 'photo 3: a place has two at most');
+  await photoRefused({ n: 0 }, /suggested_place_photo_n_check/, 'photo 0');
+  await photoRefused({ suggested_place_id: dz.id, content_type: 'image/gif' }, /content_type_check/, 'a GIF, by its type');
+  await photoRefused({ suggested_place_id: dz.id, bytes: PNG }, /is_its_type/, 'PNG bytes that claim to be a JPEG');
+  await photoRefused({ suggested_place_id: dz.id, content_type: 'image/png' }, /is_its_type/, 'JPEG bytes that claim to be a PNG');
+  await photoRefused({ suggested_place_id: dz.id, bytes: Buffer.from('<svg/> pretending') }, /is_its_type/, 'text that claims to be a JPEG');
+  await photoRefused({ suggested_place_id: dz.id, bytes: Buffer.from([0xff, 0xd8, 0xff]) }, /photo_size/, "a JPEG's three first bytes alone");
+  const big = (n) => Buffer.concat([JPEG.subarray(0, 4), Buffer.alloc(n - 4, 1)]);
+  await photoRefused({ suggested_place_id: dz.id, bytes: big(512 * 1024 + 1) }, /photo_size/, 'one byte over 512 KB');
+  await photo({ suggested_place_id: dz.id, bytes: big(512 * 1024) });
+  t.ok((await db.sql('SELECT 1 FROM movin.suggested_place_photo WHERE suggested_place_id = $1', [dz.id])).length === 1,
+    'exactly 512 KB is accepted');
+  await photoRefused({ suggested_place_id: 999999 }, /foreign key/, 'a photo of a place that does not exist');
+  const storage = (await db.sql(
+    `SELECT attstorage FROM pg_attribute WHERE attrelid = 'movin.suggested_place_photo'::regclass AND attname = 'bytes'`))[0];
+  t.ok(storage.attstorage === 'e', 'the bytes are stored out of line and not compressed again (already JPEG/PNG)', storage.attstorage);
+  let again5 = null;
+  try { await db.exec(sqlText); } catch (e) { again5 = e.message; }
+  t.ok(again5 === null && (await db.sql('SELECT count(*)::int AS n FROM movin.suggested_place_photo'))[0].n === 3,
+    'the file applied again over a table holding photos: nothing raised, nothing lost', again5 || '');
+  await db.sql('DELETE FROM movin.suggested_place WHERE id = $1', [first.id]);
+  t.ok((await db.sql('SELECT count(*)::int AS n FROM movin.suggested_place_photo WHERE suggested_place_id = $1', [first.id]))[0].n === 0
+    && (await db.sql('SELECT count(*)::int AS n FROM movin.suggested_place_photo'))[0].n === 1,
+    'a place deleted takes its two photos with it, and only its own');
 
   await db.close();
   t.finish();

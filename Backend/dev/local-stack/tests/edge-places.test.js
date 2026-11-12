@@ -17,7 +17,7 @@ const path = require('path');
 const fakes = require('./lib/fakes');
 const { read, servers, locations, choose, label: labelOf } = require('./lib/nginx');
 
-const { BODY_LIMIT } = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'suggested-places.js'));
+const { BODY_LIMIT, PHOTO_MAX_BYTES } = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'suggested-places.js'));
 
 const t = fakes.checker();
 const text = read();
@@ -33,16 +33,37 @@ const body = (places[0] && places[0].body) || '';
 t.ok(/limit_req\s+zone=api\s+burst=20\s+nodelay;/.test(body), 'rate-limited in zone `api` (burst 20)');
 t.ok(/proxy_pass\s+http:\/\/127\.0\.0\.1:8030;/.test(body), 'sent to maps-shim on 127.0.0.1:8030');
 t.ok(/include\s+\/etc\/nginx\/conf\.d\/proxy-common\.inc;/.test(body), 'with the common proxy headers');
-const size = (body.match(/client_max_body_size\s+(\d+)([km]?);/) || []);
-const bytes = Number(size[1]) * ({ k: 1024, m: 1048576 }[size[2]] || 1);
-t.ok(bytes === BODY_LIMIT, `its body limit (${size[1]}${size[2]}) is the shim's BODY_LIMIT (${BODY_LIMIT} bytes)`);
+const sizeOf = (b) => {
+  const m = (b.match(/client_max_body_size\s+(\d+)([km]?);/) || []);
+  return { text: `${m[1]}${m[2]}`, bytes: Number(m[1]) * ({ k: 1024, m: 1048576 }[m[2]] || 1) };
+};
+const size = sizeOf(body);
+t.ok(size.bytes === BODY_LIMIT, `its body limit (${size.text}) is the shim's BODY_LIMIT (${BODY_LIMIT} bytes)`);
 t.ok(/limit_req_zone\s+\$binary_remote_addr\s+zone=api:/.test(text), 'the `api` zone is defined');
-t.ok(locs.filter((l) => l.path.startsWith('/places')).length === 1, 'and nothing else under /places');
+
+t.section('1b. the photos block (day 4): the same, with room for one image');
+const photosLoc = locs.filter((l) => l.path === '/places/photos/');
+t.ok(photosLoc.length === 1 && photosLoc[0].mod === '', 'exactly one `location /places/photos/`, a plain prefix');
+const pbody = (photosLoc[0] && photosLoc[0].body) || '';
+t.ok(/limit_req\s+zone=api\s+burst=20\s+nodelay;/.test(pbody), 'rate-limited in zone `api` (burst 20)');
+t.ok(/proxy_pass\s+http:\/\/127\.0\.0\.1:8030;/.test(pbody), 'sent to maps-shim on 127.0.0.1:8030');
+t.ok(/include\s+\/etc\/nginx\/conf\.d\/proxy-common\.inc;/.test(pbody), 'with the common proxy headers');
+const psize = sizeOf(pbody);
+t.ok(psize.bytes === PHOTO_MAX_BYTES, `its body limit (${psize.text}) is the shim's PHOTO_MAX_BYTES (${PHOTO_MAX_BYTES} bytes)`);
+t.ok(!/add_header|return\s/.test(pbody), 'no header or answer of its own: the shim answers');
+const underPlaces = locs.filter((l) => l.path.startsWith('/places')).map((l) => `${l.mod}${l.path}`).sort();
+t.ok(JSON.stringify(underPlaces) === JSON.stringify(['/places/', '/places/photos/']),
+  'and nothing else under /places: those two', underPlaces.join(', '));
 
 t.section('2. where each address goes, as nginx chooses');
-for (const uri of ['/places/suggest', '/places/mine', '/places/nearby', '/places/anything-else']) {
+for (const uri of ['/places/suggest', '/places/mine', '/places/nearby', '/places/anything-else',
+  '/places/photos', '/places/photosu12/1', '/places/u12/photo/1']) {
   const l = choose(locs, uri);
-  t.ok(l && l.path === '/places/', `${uri} -> location /places/`, label(l));
+  t.ok(l && l.path === '/places/', `${uri} -> location /places/ (4k)`, label(l));
+}
+for (const uri of ['/places/photos/u12/1', '/places/photos/u12/2', '/places/photos/anything']) {
+  const l = choose(locs, uri);
+  t.ok(l && l.path === '/places/photos/', `${uri} -> location /places/photos/ (512k)`, label(l));
 }
 const labels = choose(locs, '/place/labels/json');
 t.ok(labels && labels.mod === '=' && labels.path === '/place/labels/json',
@@ -55,7 +76,7 @@ for (const uri of ['/place/autocomplete/json', '/place/details/json', '/place/',
 }
 
 t.section('3. the backend\'s /place/ stays unpublished');
-const placeLocs = locs.filter((l) => l.path.startsWith('/place') && l.path !== '/places/');
+const placeLocs = locs.filter((l) => l.path.startsWith('/place') && !l.path.startsWith('/places/'));
 t.ok(placeLocs.length === 1 && placeLocs[0].mod === '=' && placeLocs[0].path === '/place/labels/json',
   'the only /place… location is `= /place/labels/json`', placeLocs.map(label).join(', '));
 t.ok(!locs.some((l) => (l.mod === '~' || l.mod === '~*') && /place|geocode/.test(l.path)),

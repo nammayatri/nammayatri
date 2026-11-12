@@ -3,9 +3,11 @@
  * Places proposed by passengers and drivers (« Lieux proposés », day 2,
  * 2026-11-09), and « search by type ». Everything under /places/:
  *
- *   POST /places/suggest   {name, type, lat, lon}   propose a missing place
- *   GET  /places/mine                               my proposals and their state
- *   GET  /places/nearby?type=&lat=&lon=             places of one type around me
+ *   POST   /places/suggest   {name, type, lat, lon}   propose a missing place
+ *   GET    /places/mine                               my proposals and their state
+ *   GET    /places/nearby?type=&lat=&lon=             places of one type around me
+ *   PUT    /places/photos/u<id>/<1|2>   (the image)   a photo of my proposal (day 4)
+ *   DELETE /places/photos/u<id>/<1|2>                 take it back
  *
  * The table is movin.suggested_place (stack/db/suggested-places.sql); the
  * office approves or refuses in the console (the website's admin-api), and an
@@ -49,6 +51,24 @@
  * and investigations/probe-suggested-places.sql runs these exact statements on
  * the live index before a release (no CI, and PGlite has no PostGIS).
  * Everything else here is plain SQL on movin.suggested_place, tested for real.
+ *
+ * ── The photos (day 4, 2026-11-12) ─────────────────────────────────────────
+ * One or two per proposal, optional, for the office to check the place by;
+ * nobody else sees them. The phone sends the proposal first, then each photo
+ * on its own (a failed photo never costs the proposal). The rules:
+ *   * only the AUTHOR, by the token. Somebody else's place answers 404, the
+ *     same as a place that does not exist: a pending place is nobody else's
+ *     to know about;
+ *   * only while the place WAITS: once decided, 409 `decided`. The office
+ *     decided on what it saw;
+ *   * a JPEG or a PNG, recognised by its first bytes. The Content-Type is
+ *     not read (avatars.js, 2026-09-27: a header is a claim, not a check);
+ *   * PHOTO_MAX_BYTES, 512 KB, counted while reading; the edge refuses more
+ *     before it reaches us (location /places/photos/, 512k).
+ * A PUT replaces the photo of that number; both PUT and DELETE move the
+ * place's `updated_at`, which is the version the console's decision must
+ * name -- so the office cannot approve a place whose photos changed after
+ * its page was loaded: it is told the place changed, and sees the new ones.
  */
 const identity = require('./identity');
 const { send } = require('./reply');
@@ -71,6 +91,15 @@ const NEARBY_WIDER_METRES = 15000;
 const NEARBY_LIMIT = 20;
 const MINE_LIMIT = 50;
 const BODY_LIMIT = 4096;
+/** 512 KB: the table's suggested_place_photo_size, and the edge's 512k. */
+const PHOTO_MAX_BYTES = 512 * 1024;
+/** /places/photos/u<id>/<1|2>. 18 digits at most: always a bigint. */
+const PHOTO_ROUTE = /^\/places\/photos\/u([1-9][0-9]{0,17})\/([12])$/;
+/** What an image's first bytes are, per type: the table's suggested_place_photo_is_its_type. */
+const PHOTO_MAGIC = [
+  ['image/jpeg', Buffer.from([0xff, 0xd8, 0xff])],
+  ['image/png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+];
 
 /** The box around both countries -- the table's suggested_place_in_our_box CHECK. */
 const inOurBox = (lat, lon) => lat >= 14 && lat <= 38 && lon >= -18 && lon <= 12.5;
@@ -330,11 +359,13 @@ async function suggest(env, me, body, res) {
 async function mine(env, me, res) {
   try {
     const { rows } = await env.pool.query(
-      `SELECT place_id, proposed_name, name, type, status, refusal_reason, locality, lat, lon,
-              created_at, decided_at
-         FROM movin.suggested_place
-        WHERE author_side = $1 AND author_id = $2
-        ORDER BY created_at DESC, id DESC
+      `SELECT sp.place_id, sp.proposed_name, sp.name, sp.type, sp.status, sp.refusal_reason,
+              sp.locality, sp.lat, sp.lon, sp.created_at, sp.decided_at,
+              ARRAY(SELECT ph.n::int FROM movin.suggested_place_photo ph
+                     WHERE ph.suggested_place_id = sp.id ORDER BY ph.n) AS photos
+         FROM movin.suggested_place sp
+        WHERE sp.author_side = $1 AND sp.author_id = $2
+        ORDER BY sp.created_at DESC, sp.id DESC
         LIMIT $3`,
       [me.side, me.id, MINE_LIMIT],
     );
@@ -353,6 +384,10 @@ async function mine(env, me, res) {
         lon: r.lon,
         createdAt: r.created_at,
         decidedAt: r.decided_at,
+        // The numbers of the photos the office has (A2): what is missing is
+        // what « Réessayer » may still send while the place waits. Never the
+        // photos themselves: they are for the office (A3).
+        photos: r.photos,
       })),
     });
   } catch (err) {
@@ -430,6 +465,83 @@ async function nearby(env, params, res) {
   }
 }
 
+/* ── PUT / DELETE /places/photos/u<id>/<1|2> ───────────────────────────── */
+
+/** 'image/jpeg', 'image/png', or null: what the bytes are, whatever the header said. */
+function photoType(bytes) {
+  const hit = PHOTO_MAGIC.find(([, magic]) =>
+    bytes.length > magic.length && bytes.subarray(0, magic.length).equals(magic));
+  return hit ? hit[0] : null;
+}
+
+/** The raw body, at most `limit` bytes; past it the rest is drained, not kept. */
+function readBytes(req, limit) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size <= limit) chunks.push(c);
+    });
+    req.on('end', () => resolve(size > limit ? { tooLarge: true } : { bytes: Buffer.concat(chunks) }));
+    req.on('error', () => resolve({ bytes: Buffer.alloc(0) }));
+  });
+}
+
+async function photo(env, me, method, id, n, bytes, res) {
+  const client = await env.pool.connect();
+  const stop = async (code, body) => {
+    await client.query('ROLLBACK');
+    return send(res, code, body);
+  };
+  try {
+    await client.query('BEGIN');
+    // Locked, as the console's decision locks it: a photo and a decision
+    // cannot cross -- one waits for the other, and then sees its result.
+    const { rows: [place] } = await client.query(
+      `SELECT id, place_id, status FROM movin.suggested_place
+        WHERE id = $1 AND author_side = $2 AND author_id = $3
+          FOR UPDATE`,
+      [id, me.side, me.id],
+    );
+    if (!place) return await stop(404, { error: 'no_such_place' });
+    if (place.status !== 'pending') return await stop(409, { error: 'decided', status: place.status });
+
+    let changed;
+    let type = null;
+    if (method === 'PUT') {
+      type = photoType(bytes);
+      if (!bytes.length) return await stop(400, { error: 'no_image' });
+      if (!type) return await stop(415, { error: 'not_an_image' });
+      await client.query(
+        `INSERT INTO movin.suggested_place_photo (suggested_place_id, n, content_type, bytes)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (suggested_place_id, n)
+           DO UPDATE SET content_type = EXCLUDED.content_type, bytes = EXCLUDED.bytes, created_at = now()`,
+        [place.id, n, type, bytes],
+      );
+      changed = true;
+    } else {
+      const del = await client.query(
+        'DELETE FROM movin.suggested_place_photo WHERE suggested_place_id = $1 AND n = $2', [place.id, n]);
+      changed = del.rowCount > 0;
+    }
+    // The console's version: an office page loaded before this is now stale.
+    if (changed) await client.query('UPDATE movin.suggested_place SET updated_at = now() WHERE id = $1', [place.id]);
+    await client.query('COMMIT');
+    console.log(`[places] ${place.place_id} photo ${n} ${method === 'PUT' ? `stored (${type}, ${bytes.length} B)` : changed ? 'deleted' : 'was not there'} by ${me.side} ${me.id}`);
+    return method === 'PUT'
+      ? send(res, 200, { placeId: place.place_id, n, type, bytes: bytes.length })
+      : send(res, 200, { placeId: place.place_id, n, deleted: changed });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error(`[places] photo ${n} of u${id} by ${me.side} ${me.id}: ${err.message}`);
+    return send(res, 503, { error: 'unavailable' });
+  } finally {
+    client.release();
+  }
+}
+
 /* ── the router ────────────────────────────────────────────────────────── */
 
 /** The JSON body of a POST, at most BODY_LIMIT bytes; null when it is not JSON. */
@@ -462,6 +574,7 @@ function readJson(req) {
  */
 async function handle(req, res, url, opts) {
   const route = url.pathname.replace(/\/+$/, '');
+  if (route.startsWith('/places/photos/')) return handlePhoto(req, res, route, opts);
   const known = { '/places/suggest': 'POST', '/places/mine': 'GET', '/places/nearby': 'GET' };
   if (!known[route]) return send(res, 404, { error: 'no such places route' });
   if (req.method !== known[route]) return send(res, 405, { error: 'method not allowed' });
@@ -485,9 +598,24 @@ async function handle(req, res, url, opts) {
   return nearby(env, url.searchParams, res);
 }
 
+/** /places/photos/u<id>/<1|2>: the path, the method, the body, THEN the token. */
+async function handlePhoto(req, res, route, opts) {
+  const m = PHOTO_ROUTE.exec(route);
+  if (!m) return send(res, 404, { error: 'no such places route' });
+  if (req.method !== 'PUT' && req.method !== 'DELETE') return send(res, 405, { error: 'method not allowed' });
+  if (!opts.pool) return send(res, 503, { error: 'unavailable' });
+  // Read (capped) before the token, as /places/suggest is: a refused upload
+  // is drained either way.
+  const read = req.method === 'PUT' ? await readBytes(req, PHOTO_MAX_BYTES) : { bytes: Buffer.alloc(0) };
+  if (read.tooLarge) return send(res, 413, { error: 'too_large', limit: PHOTO_MAX_BYTES });
+  const me = await whoIs(opts, req.headers.token || '');
+  if (!me) return send(res, 401, { error: 'sign in first' });
+  return photo(opts, me, req.method, m[1], Number(m[2]), read.bytes, res);
+}
+
 module.exports = {
   handle,
   // For the tests, which hold these to the SQL and to each other.
-  PLACE_TYPES, NAME_MIN, NAME_MAX, PER_DAY, MAX_PENDING, BODY_LIMIT,
+  PLACE_TYPES, NAME_MIN, NAME_MAX, PER_DAY, MAX_PENDING, BODY_LIMIT, PHOTO_MAX_BYTES, photoType,
   cleanName, normalise, metresBetween, liveGeo,
 };

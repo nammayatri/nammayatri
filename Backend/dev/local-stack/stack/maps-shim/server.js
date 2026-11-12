@@ -261,6 +261,7 @@ http.createServer((req, res) => {
   //   POST /places/suggest                  propose a missing place
   //   GET  /places/mine                     my proposals and their state
   //   GET  /places/nearby?type=&lat=&lon=   places of one type around me
+  //   PUT / DELETE /places/photos/u<id>/<1|2>   a photo of my proposal (day 4)
   if (url.pathname === '/places' || url.pathname.startsWith('/places/')) {
     return suggestedPlaces.handle(req, res, url, { pool, riderUrl: RIDER_URL, driverUrl: DRIVER_URL });
   }

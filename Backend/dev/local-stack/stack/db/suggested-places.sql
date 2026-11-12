@@ -7,10 +7,12 @@
 -- type » (café, pharmacie, mosquée…) over the OpenStreetMap places too.
 -- The plan: docs/maps.md, « Proposed places ».
 --
--- This file holds two things:
+-- This file holds three things:
 --   1. movin.place_type_of(class, subclass, name) -- which of our types an
 --      OpenStreetMap place is, from the tag the place index kept;
---   2. movin.suggested_place -- the proposals, and their current state.
+--   2. movin.suggested_place -- the proposals, and their current state;
+--   3. movin.suggested_place_photo -- the one or two photos a proposal may
+--      carry, for the office to check it by (day 4, 2026-11-12).
 --
 -- ── Why here, in stack/db/, and not beside the place index ─────────────────
 -- A release applies stack/db/*.sql that is new or changed, and nothing else
@@ -292,5 +294,59 @@ COMMENT ON COLUMN movin.suggested_place.country IS
 COMMENT ON COLUMN movin.suggested_place.locality IS
   'The nearest town or district (geo.locality_of on the pin), set by the server '
   'at proposal time: the second line of a suggestion. NULL when none is near.';
+
+-- ── The photos (day 4, 2026-11-12) ─────────────────────────────────────────
+-- One or two optional photos per proposal, sent by the phone after the
+-- proposal itself (maps-shim: PUT / DELETE /places/photos/u<id>/<1|2>), and
+-- shown only to the office in the console: they are there to check the place
+-- by, and nobody else ever sees them (not the person's own app either).
+--
+-- In the database and not on a volume (owner, decision D1): account deletion
+-- runs as SQL, and erases what is here in the same transaction as the rest;
+-- a file on a volume would be one more thing to remember, as the profile
+-- photographs are today. The console reads them through its usual connection.
+-- About 0.3 MB per place with photos, carried by the nightly backup with the
+-- rest of `movin`.
+--
+-- What the rows promise:
+--   * deleted with their place (ON DELETE CASCADE). This one foreign key is
+--     inside this file, so the « no foreign key » rule above -- about the two
+--     repositories' tables -- does not apply to it;
+--   * photo 1 or 2, nothing else: a place has at most two;
+--   * a JPEG or a PNG, and the bytes ARE one: the first bytes are checked
+--     here as well as in the shim, so no other writer can store a file that
+--     only claims to be an image;
+--   * 512 KB at most (D3: the phone sends 1,280 px at quality 0.7, about 150
+--     to 300 KB), the shim's PHOTO_MAX_BYTES and the edge's 512k.
+-- The rules on WHO may add one (the author, while the place waits) are the
+-- shim's: they need the token, which a CHECK cannot see.
+CREATE TABLE IF NOT EXISTS movin.suggested_place_photo (
+  -- movin.suggested_place.id, the number in `u<id>`.
+  suggested_place_id bigint      NOT NULL
+                                   REFERENCES movin.suggested_place (id) ON DELETE CASCADE,
+  n                  smallint    NOT NULL CHECK (n IN (1, 2)),
+  -- What the first bytes say, decided by the shim; never the request's header.
+  content_type       text        NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png')),
+  bytes              bytea       NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (suggested_place_id, n),
+
+  CONSTRAINT suggested_place_photo_size CHECK (octet_length(bytes) BETWEEN 9 AND 524288),
+  -- JPEG starts FF D8 FF; PNG with its eight-byte signature.
+  CONSTRAINT suggested_place_photo_is_its_type CHECK (
+    (content_type = 'image/jpeg' AND substring(bytes FROM 1 FOR 3) = decode('ffd8ff', 'hex'))
+    OR (content_type = 'image/png' AND substring(bytes FROM 1 FOR 8) = decode('89504e470d0a1a0a', 'hex')))
+);
+
+-- A JPEG or a PNG is compressed already: Postgres trying again on every
+-- write would cost time and save nothing. Stored out of line, uncompressed.
+ALTER TABLE movin.suggested_place_photo ALTER COLUMN bytes SET STORAGE EXTERNAL;
+
+COMMENT ON TABLE movin.suggested_place_photo IS
+  'The one or two photos a proposed place may carry, for the office only. '
+  'Deleted with the place; erased by account deletion even when the place '
+  'was approved (decision D2).';
+COMMENT ON COLUMN movin.suggested_place_photo.content_type IS
+  'image/jpeg or image/png, as the first bytes say (checked here and in maps-shim).';
 
 COMMIT;
