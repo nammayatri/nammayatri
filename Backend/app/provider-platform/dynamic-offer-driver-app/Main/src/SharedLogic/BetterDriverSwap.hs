@@ -25,6 +25,7 @@ module SharedLogic.BetterDriverSwap
 where
 
 import qualified Domain.Action.Beckn.Init as DInit
+import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideTransaction)
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -54,6 +55,7 @@ import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchTry as QST
@@ -176,6 +178,13 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
       -- Booking goes with the ride, else the rider ends up holding two live bookings.
       QRB.updateStatus oldBooking.id DRB.CANCELLED
       logInfo $ "Better-driver swap: cancelled old ride " <> oldRide.id.getId <> " and booking " <> oldBooking.id.getId
+      cleanupResult <-
+        withTryCatch "betterDriverSwapOldDriverCleanup" $ do
+          oldDriver <- QPerson.findById oldRide.driverId >>= fromMaybeM (PersonNotFound oldRide.driverId.getId)
+          cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.Allocator transporterConfig oldDriver
+      case cleanupResult of
+        Right _ -> pure ()
+        Left err -> logError $ "Better-driver swap: freeing old driver for ride " <> oldRide.id.getId <> " failed: " <> show err
       -- Best-effort: the swap is already committed and the rider already points at the new booking.
       fork "better-driver-swap cancel old booking on BAP" $ do
         cancelUpdateResult <-
