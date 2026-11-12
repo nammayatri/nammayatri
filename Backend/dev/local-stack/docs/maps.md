@@ -682,16 +682,25 @@ on the live server after the release: no `u…` row in `place_name_cache`). The 
 `stack/db/suggested-places.sql`: **change that file, copy it to the website**
 (`apps/api/src/modules/places/backend/`), or its drift test fails.
 
+**Day 4 (2026-11-12) is done**: the passenger's « Ajouter un lieu » and
+« Mes lieux proposés » in the app (its `docs/passenger.md`), and the photos
+end to end -- `movin.suggested_place_photo` and `PUT / DELETE
+/places/photos/u…/1|2` here (released 12:53 UTC, `investigations/
+probe-place-photos.sh` 15/15 live), the console's photos and exact position
+with « Copier » and Google Maps, and account deletion erasing every photo
+(website `0a865ab`, released 13:23 UTC). The app's part reaches phones with the
+next store build: `expo-image-manipulator` is a native module.
+
 Left:
 
-- **Days 4–5:** the app — « Ajouter un lieu », « Mes lieux proposés », the
-  type buttons, the driver's side; and the app's own deletion screen
-  (« Ce qui est supprimé / Ce qui reste ») gets the proposed places, to say
-  what the website already says.
+- **Day 5:** the driver's side -- the same screens from his menu, with his
+  token; and the app's own deletion screen (« Ce qui est supprimé / Ce qui
+  reste ») gets the proposed places and their photos, to say what the website
+  already says.
 - **Before the app goes to the stores:** the privacy policy page, Google
   Play's « Sécurité des données » and App Store Connect's « Confidentialité de
-  l'app » must name the proposed places — a place name and a pin, linked to
-  the account. Written in the plan, day 7.
+  l'app » must name the proposed places — a place name, a pin and up to two
+  photos, linked to the account (the app's `docs/store-readiness.md`, 6b). Written in the plan, day 7.
 - **Worth doing:** keep the localities' Arabic names in the shim's memory
   (they change only with a map rebuild) — the one query left that scans the
   index, usually ~100 ms, 879 ms once.
