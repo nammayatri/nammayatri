@@ -5,7 +5,6 @@ module Domain.Action.UI.OpenMeter
     postOpenMeterRideCancel,
     getOpenMeterRide,
     getOpenMeterRides,
-    deleteOpenMeterRide,
     autoEndRunningRides,
   )
 where
@@ -17,7 +16,6 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -147,18 +145,6 @@ getOpenMeterRides ::
 getOpenMeterRides (mbPersonId, _merchantId) mbLimit mbOffset mbStatus = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   map (mkOpenMeterRideRes False) <$> QOMR.findAllByPersonIdPaginated personId mbStatus mbLimit mbOffset
-
-deleteOpenMeterRide ::
-  (Maybe (Id DP.Person), Id DM.Merchant) ->
-  Id DOMR.OpenMeterRide ->
-  Flow APISuccess.APISuccess
-deleteOpenMeterRide (mbPersonId, _merchantId) rideId = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  withOpenMeterLock (rideLockKey rideId) $ do
-    ride <- findOwnedRide personId rideId
-    when (ride.status == DOMR.RUNNING) $ throwError $ OpenMeterRideInvalidState (show ride.status)
-    QOMR.deleteById rideId
-  pure APISuccess.Success
 
 -- | Auto-ends a ride that decideStart found stale. It takes the ride's own lock and re-reads
 -- the ride, so it cannot overwrite a concurrent end or cancel. If a heartbeat revived the ride
