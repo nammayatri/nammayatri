@@ -149,6 +149,17 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
+-- | Every row this driver got for the search try, whatever its status. A driver who rejected or
+-- passed the popup has only an Inactive row, but the request was still sent to them.
+findAllByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m [SearchRequestForDriver]
+findAllByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId,
+          Se.Is BeamSRFD.driverId $ Se.Eq driverId
+        ]
+    ]
+
 deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m ()
 deleteByDriverId (Id personId) = do
   (personOS, merchantOpCityId) <- getDriverMobileType (Id personId)
