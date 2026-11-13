@@ -16,6 +16,7 @@
 module Domain.Action.Rewards.Consumer
   ( evaluateRewardsForRider,
     evaluateRewardsIfEnabled,
+    recordValidRideAndEvaluateRewardsIfEnabled,
   )
 where
 
@@ -28,6 +29,7 @@ import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
 import qualified Domain.Types.RewardContext as DRCtx
 import qualified Domain.Types.RewardUnlock as DRU
+import qualified Domain.Types.Ride as DRide
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -44,6 +46,7 @@ import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Rewards.RedisPool as Pool
 import qualified Tools.Rewards.RiderContextReader as Ctx
+import qualified Tools.Rewards.ValidRideLog as ValidRideLog
 
 maxPushesPerMessage :: Int
 maxPushesPerMessage = 5
@@ -66,8 +69,38 @@ evaluateRewardsIfEnabled ::
   DRCtx.RewardRideInput ->
   m ()
 evaluateRewardsIfEnabled riderId moCityId completedAt rideInput = do
-  enabled <- maybe False (.enableRewardsManagement) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = moCityId.getId}) Nothing
+  enabled <- isRewardsEnabled moCityId
   when enabled $ evaluateRewardsForRider riderId moCityId completedAt rideInput
+
+-- | Ride-completion entry point. Only in cities with rewards enabled: records a
+-- valid ride in the campaign-block valid-ride log, then evaluates rewards. The
+-- ride is recorded first so it is included in its own evaluation's counts.
+-- Cities without rewards write nothing to the log.
+recordValidRideAndEvaluateRewardsIfEnabled ::
+  ( MonadFlow m,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Hedis.HedisFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
+  UTCTime ->
+  DRCtx.RewardRideInput ->
+  m ()
+recordValidRideAndEvaluateRewardsIfEnabled riderId moCityId rideId completedAt rideInput = do
+  enabled <- isRewardsEnabled moCityId
+  when enabled $ do
+    when (rideInput.isValid == Just True) $
+      void $ withTryCatch "rewards:recordValidRide" $ ValidRideLog.recordValidRide riderId moCityId rideId completedAt
+    evaluateRewardsForRider riderId moCityId completedAt rideInput
+
+isRewardsEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
+isRewardsEnabled moCityId =
+  maybe False (.enableRewardsManagement) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = moCityId.getId}) Nothing
 
 evaluateRewardsForRider ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>

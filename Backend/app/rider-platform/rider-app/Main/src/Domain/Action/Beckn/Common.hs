@@ -168,7 +168,6 @@ import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
-import qualified Tools.Rewards.ValidRideLog as ValidRideLog
 import qualified Tools.SMS as Sms
 import qualified Tools.Ticket as Ticket
 import qualified Tools.Whatsapp as Whatsapp
@@ -1251,12 +1250,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   void $ withTryCatch "rideCompleted:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   fork "Increment completed count + evaluate rewards" $ do
     void $ CCR.incrementCompletedCount booking.riderId 1
-    -- Before evaluation, so this ride is in the campaign-block valid-ride counts.
-    when (isValidRide == Just True) $
-      void $ withTryCatch "rideCompleted:recordValidRide" $ ValidRideLog.recordValidRide booking.riderId booking.merchantOperatingCityId updRide.id (fromMaybe now rideEndTime)
-    RewardsConsumer.evaluateRewardsIfEnabled
+    RewardsConsumer.recordValidRideAndEvaluateRewardsIfEnabled
       booking.riderId
       booking.merchantOperatingCityId
+      updRide.id
       (fromMaybe now rideEndTime)
       DRewardCtx.RewardRideInput
         { isValid = isValidRide,
