@@ -7,7 +7,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
-import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), blockingTimerDeadline)
+import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), ApproachPush (..), ApproachStage (..), Timer (..), blockingTimerDeadline)
 import SharedLogic.SharedCab.Config (SharedCabTunables (..), defaultTunables)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
@@ -97,8 +97,36 @@ tests =
         )
           @?= (Just (after 90), Nothing, Nothing, Nothing),
       testCase "moving timer: a cab accepted away from the stop starts the countdown on reaching it; a stand or moving timer is never replaced" $
-        let st timer = AllocationState {vehicleNumber = "P1", timer}
+        let st timer = AllocationState {vehicleNumber = "P1", timer, approachStage = Nothing, approachFrom = Nothing}
             armedWith timer = armMovingTimer cfg t0 (blockingTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
          in map armedWith [NoTimer, StandTimer (after 30), MovingTimer (after 30), AwayTimer (after 30)]
-              @?= [Just (after 90), Nothing, Nothing, Just (after 90)]
+              @?= [Just (after 90), Nothing, Nothing, Just (after 90)],
+      testCase "approach: the first fresh fix only records where the cab was; a cab already near the stop pushes arriving soon at once" $
+        ( approachUpdate cfg (fix 25.60 [stopAt 5 False]) "S5" (assigned Nothing),
+          snd <$> approachUpdate cfg (fix 25.6195 [stopAt 5 False]) "S5" (assigned Nothing)
+        )
+          @?= (Just (assigned (Just (LatLong 25.60 91.88)), Nothing), Just (Just PushArrivingSoon)),
+      testCase "approach: on the way once the cab is onTheWayM from where it was first seen, and only once" $
+        -- 0.005 deg of latitude is ~555 m, 0.004 deg ~444 m
+        ( push (fix 25.605 [stopAt 5 False]) (assigned (Just (LatLong 25.60 91.88))),
+          push (fix 25.604 [stopAt 5 False]) (assigned (Just (LatLong 25.60 91.88))),
+          approachUpdate cfg (fix 25.605 [stopAt 5 False]) "S5" (stage ApproachOnTheWay (Just (LatLong 25.60 91.88)))
+        )
+          @?= (Just (Just PushOnTheWay), Nothing, Nothing),
+      testCase "approach: within arrivingSoonRadiusM of the board stop, skipping on the way when both are reached" $
+        ( push (fix 25.6195 [stopAt 5 False]) (assigned (Just (LatLong 25.60 91.88))),
+          push (fix 25.6195 [stopAt 5 False]) (stage ApproachOnTheWay (Just (LatLong 25.60 91.88)))
+        )
+          @?= (Just (Just PushArrivingSoon), Just (Just PushArrivingSoon)),
+      testCase "approach: nothing after arriving soon or arrived, on an offer, or for a stop the cab has passed" $
+        ( approachUpdate cfg (fix 25.6195 [stopAt 5 False]) "S5" (stage ApproachArrivingSoon (Just (LatLong 25.60 91.88))),
+          approachUpdate cfg (fix 25.6195 [stopAt 5 False]) "S5" ((assigned (Just (LatLong 25.60 91.88))) {timer = MovingTimer (after 30), approachStage = Nothing}),
+          approachUpdate cfg (fix 25.6195 [stopAt 5 False]) "S5" ((assigned Nothing) {timer = OfferTimer (after 30), approachStage = Nothing}),
+          push (fix 25.6205 [stopAt 5 True, stopAt 6 False]) (stage ApproachOnTheWay (Just (LatLong 25.61 91.88)))
+        )
+          @?= (Nothing, Nothing, Nothing, Nothing)
     ]
+  where
+    stage s from = AllocationState {vehicleNumber = "P1", timer = NoTimer, approachStage = Just s, approachFrom = from}
+    assigned = stage ApproachAssigned
+    push cab st = snd <$> approachUpdate cfg cab "S5" st

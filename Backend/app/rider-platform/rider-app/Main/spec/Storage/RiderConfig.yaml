@@ -81,6 +81,8 @@ RiderConfig:
       enabled: Maybe Bool # ops off switch: Just False turns shared cab off for the city; null follows the SHARED_CAB IntegratedBPPConfig
       allocationWindowSec: Maybe Int
       atStopRadiusM: Maybe Int
+      arrivingSoonRadiusM: Maybe Int # rider's "arriving soon" push when the allocated cab is within this of the board stop; null = 100
+      onTheWayM: Maybe Int # rider's "on the way" push once the allocated cab has moved this far since the rider was told of it; null = 500
       standTimerSec: Maybe Int
       movingTimerSec: Maybe Int
       maxAttempts: Maybe Int

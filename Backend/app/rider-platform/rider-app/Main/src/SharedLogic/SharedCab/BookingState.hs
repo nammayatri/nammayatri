@@ -5,6 +5,7 @@ module SharedLogic.SharedCab.BookingState
   ( readAlloc,
     readAllocs,
     writeAlloc,
+    rewriteAlloc,
     clearAlloc,
     readAttempts,
     writeAttempts,
@@ -65,6 +66,13 @@ readAllocs bookingIds = do
 
 writeAlloc :: StateFlow m r => Int -> BookingId -> AllocationState -> m ()
 writeAlloc ttl bookingId = writeField ttl bookingId "alloc"
+
+-- | Rewrites the alloc record without extending the hash's TTL: that TTL is the allocation's outer bound (the rider's countdown with
+-- no timer running). A hash already gone is left gone, not recreated without a TTL.
+rewriteAlloc :: StateFlow m r => BookingId -> AllocationState -> m ()
+rewriteAlloc bookingId st = do
+  ttl <- bookingStateTtl bookingId
+  when (ttl > 0) $ writeAlloc (fromInteger ttl) bookingId st
 
 clearAlloc :: StateFlow m r => BookingId -> m ()
 clearAlloc bookingId = shared $ Redis.hDel (bookingStateKey bookingId) ["alloc"]
