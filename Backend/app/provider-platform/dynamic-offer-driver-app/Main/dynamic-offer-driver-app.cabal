@@ -572,6 +572,7 @@ library
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FarePolicy.PlatformFeeMethods
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
       Domain.Types.FleetOperatorIncidentType
@@ -971,6 +972,7 @@ library
       Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
+      Storage.CachedQueries.PlatformFeeSlab
       Storage.CachedQueries.PolicyAndComplianceDocument
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
@@ -1776,6 +1778,7 @@ library
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.PlatformFeeSlab
       Domain.Types.PolicyAndComplianceDocument
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
@@ -1986,6 +1989,7 @@ library
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
+      Storage.Beam.PlatformFeeSlab
       Storage.Beam.PolicyAndComplianceDocument
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
@@ -2309,6 +2313,7 @@ library
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.PlatformFeeSlab
       Storage.Queries.PolicyAndComplianceDocument
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation

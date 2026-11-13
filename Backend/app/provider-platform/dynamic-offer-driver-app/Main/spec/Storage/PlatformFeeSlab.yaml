@@ -1,0 +1,24 @@
+imports:
+  Text: Data.Text
+  HighPrecMoney: Kernel.Types.Common
+
+PlatformFeeSlab:
+  tableName: platform_fee_slab
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  fields:
+    slabSetId: Text
+    merchantOperatingCityId: Text
+    minDistanceMeters: Int
+    maxDistanceMeters: Maybe Int
+    platformFee: HighPrecMoney
+    cgstPercentage: HighPrecMoney
+    sgstPercentage: HighPrecMoney
+
+  constraints:
+    slabSetId: PrimaryKey
+    minDistanceMeters: PrimaryKey
+
+  queries:
+    findAllBySlabSetId:
+      kvFunction: findAllWithKV
+      where: slabSetId
