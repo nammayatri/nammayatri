@@ -867,6 +867,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         juspayCustomerPaymentID = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,
+        totalValidRidesCount = Just 0,
         customerNammaTags = Nothing,
         informPoliceSos = False,
         payoutVpa = Nothing,

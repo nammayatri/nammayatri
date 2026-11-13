@@ -280,6 +280,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.totalRatings totalRatings,
       Se.Set Beam.totalRidesCount totalRidesCount,
+      Se.Set Beam.totalValidRidesCount totalValidRidesCount,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.useFakeOtp useFakeOtp,
       Se.Set Beam.verificationChannel verificationChannel,

@@ -135,6 +135,7 @@ data OfferEligibilityInput = OfferEligibilityInput
     searchReq :: Maybe Y.SearchRequestData,
     hasTakenValidRide :: Bool,
     totalRidesCount :: Maybe Int,
+    totalValidRidesCount :: Maybe Int,
     personTags :: [Text],
     -- set only on the estimate list / quote list, null at booking and ride end
     estimate :: Maybe Y.EstimateData,
@@ -199,6 +200,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             searchReq = Nothing,
                             hasTakenValidRide = person.hasTakenValidRide,
                             totalRidesCount = person.totalRidesCount,
+                            totalValidRidesCount = person.totalValidRidesCount,
                             personTags = offerEligibilityTags person.customerNammaTags,
                             estimate = Nothing,
                             quote = Nothing
@@ -772,6 +774,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                           searchReq = mbSearchReqData,
                           hasTakenValidRide = person.hasTakenValidRide,
                           totalRidesCount = person.totalRidesCount,
+                          totalValidRidesCount = person.totalValidRidesCount,
                           personTags = offerEligibilityTags person.customerNammaTags,
                           estimate = mkEstimateData <$> mbEstimate,
                           quote = mkQuoteData <$> mbQuote

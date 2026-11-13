@@ -117,6 +117,23 @@ findCountByRiderIdAndStatus riderId status createdAt = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
   pure (listToMaybe res)
 
+findAllBookingIdsByRiderIdAndStatus ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  DB.BookingStatus ->
+  UTCTime ->
+  m [Id DB.Booking]
+findAllBookingIdsByRiderIdAndStatus riderId status createdAt =
+  CH.findAll $
+    CH.select_ (\booking -> CH.notGrouped booking.id) $
+      CH.filter_
+        ( \booking ->
+            booking.status CH.==. status
+              CH.&&. booking.riderId CH.==. riderId
+              CH.&&. booking.createdAt >=. createdAt
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+
 findAllCancelledBookingIdsByRider ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DP.Person ->

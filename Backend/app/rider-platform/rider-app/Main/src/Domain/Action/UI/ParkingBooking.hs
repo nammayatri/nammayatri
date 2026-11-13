@@ -224,6 +224,7 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
                   juspayCustomerPaymentID = Nothing,
                   enableOtpLessRide = Nothing,
                   totalRidesCount = Just 0,
+                  totalValidRidesCount = Just 0,
                   customerNammaTags = Nothing,
                   informPoliceSos = False,
                   payoutVpa = Nothing,
