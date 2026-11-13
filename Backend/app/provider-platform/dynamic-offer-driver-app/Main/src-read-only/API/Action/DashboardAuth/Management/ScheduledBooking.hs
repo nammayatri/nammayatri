@@ -24,13 +24,20 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign :<|> PostScheduledBookingOpsNote))
+type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingCityWiseCount :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign :<|> PostScheduledBookingOpsNote))
 
 type GetScheduledBookingList =
   ( DashboardUserAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       "PROVIDER_MANAGEMENT/SCHEDULED_BOOKING/GET_SCHEDULED_BOOKING_LIST"
       :> API.Types.ProviderPlatform.Management.ScheduledBooking.GetScheduledBookingList
+  )
+
+type GetScheduledBookingCityWiseCount =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_MANAGEMENT/SCHEDULED_BOOKING/GET_SCHEDULED_BOOKING_CITY_WISE_COUNT"
+      :> API.Types.ProviderPlatform.Management.ScheduledBooking.GetScheduledBookingCityWiseCount
   )
 
 type GetScheduledBookingInfo =
@@ -76,7 +83,7 @@ type PostScheduledBookingOpsNote =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> getScheduledBookingNearbyDrivers merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city :<|> postScheduledBookingOpsNote merchantId city
+handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingCityWiseCount merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> getScheduledBookingNearbyDrivers merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city :<|> postScheduledBookingOpsNote merchantId city
 
 getScheduledBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.ScheduledBooking.AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingListRes)
 getScheduledBookingList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
@@ -84,6 +91,14 @@ getScheduledBookingList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a8 a10 a9
         Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.ScheduledBooking.getScheduledBookingList a10 a9 a7 a6 a5 a4 a3 a2 a1
+    )
+
+getScheduledBookingCityWiseCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingCityWiseCountRes)
+getScheduledBookingCityWiseCount a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.ScheduledBooking.getScheduledBookingCityWiseCount a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
     )
 
 getScheduledBookingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingInfoRes)

@@ -102,6 +102,53 @@ findScheduledTransactionIdsLite merchantOpCityId statuses fromTime toTime limit 
       Kernel.Utils.Common.logTagError "findScheduledTransactionIdsLite" ("DB failure. Error: " <> show err)
       pure []
 
+-- | Per-(operating city, status) scheduled-booking counts over a start-time window, for the ops
+-- landing page. A single GROUP BY merchant_operating_city_id, status COUNT(*) that hits the partial
+-- composite index idx_booking_scheduled_ops_active (merchant_operating_city_id, start_time)
+-- WHERE is_scheduled AND status IN (NEW, TRIP_ASSIGNED, REALLOCATED), so it is an index range scan
+-- over just the active scheduled slice — no per-row fetch, no per-city round trip. The status filter
+-- below must stay a subset of that index predicate or the index will not be used.
+-- Counts only active statuses: COMPLETED and CANCELLED are intentionally excluded (the caller's
+-- completed/cancelled buckets are therefore always 0). Returns one row per (cityId, status) that has
+-- at least one booking; the caller folds it into totals.
+findScheduledStatusCountsByCitiesLite ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity] ->
+  UTCTime ->
+  UTCTime ->
+  m [(Text, Domain.Types.Booking.BookingStatus, Int)]
+findScheduledStatusCountsByCitiesLite [] _ _ = pure []
+findScheduledStatusCountsByCitiesLite merchantOpCityIds fromTime toTime = do
+  dbConf <- getReplicaBeamConfig
+  let cityIds = map (Just . Kernel.Types.Id.getId) merchantOpCityIds
+      activeStatuses = [Domain.Types.Booking.NEW, Domain.Types.Booking.TRIP_ASSIGNED, Domain.Types.Booking.REALLOCATED]
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \booking ->
+                ( B.group_ (Beam.merchantOperatingCityId booking),
+                  B.group_ (Beam.status booking),
+                  B.as_ @Int B.countAll_
+                )
+            )
+            $ B.filter_'
+              ( \booking ->
+                  B.sqlBool_ (Beam.merchantOperatingCityId booking `B.in_` (B.val_ <$> cityIds))
+                    B.&&?. B.sqlBool_ (Beam.isScheduled booking B.==. B.val_ (Just True))
+                    B.&&?. B.sqlBool_ (Beam.status booking `B.in_` (B.val_ <$> activeStatuses))
+                    B.&&?. B.sqlBool_ (Beam.startTime booking B.>=. B.val_ fromTime)
+                    B.&&?. B.sqlBool_ (Beam.startTime booking B.<=. B.val_ toTime)
+              )
+              $ B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+  case res of
+    -- Rows with a NULL merchant_operating_city_id cannot match the IN filter, so dropping Nothing is lossless.
+    Right rows -> pure [(cityId, status, cnt) | (Just cityId, status, cnt) <- rows]
+    Left err -> do
+      Kernel.Utils.Common.logTagError "findScheduledStatusCountsByCitiesLite" ("DB failure. Error: " <> show err)
+      pure []
+
 -- All bookings sharing a transactionId, lite (for reallocation-count without location joins).
 findAllByTransactionIdLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [BookingLite]
 findAllByTransactionIdLite txnId = findAllWithKV [Se.Is Beam.transactionId $ Se.Eq txnId]

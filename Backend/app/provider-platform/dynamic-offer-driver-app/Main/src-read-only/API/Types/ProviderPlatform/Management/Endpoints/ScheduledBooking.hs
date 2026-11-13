@@ -14,6 +14,7 @@ import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -132,6 +133,22 @@ data ReallocationEventItem = ReallocationEventItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ScheduledBookingCityCount = ScheduledBookingCityCount
+  { city :: Kernel.Types.Beckn.Context.City,
+    cityName :: Kernel.Prelude.Text,
+    total :: Kernel.Prelude.Int,
+    assigned :: Kernel.Prelude.Int,
+    unassigned :: Kernel.Prelude.Int,
+    completed :: Kernel.Prelude.Int,
+    cancelled :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ScheduledBookingCityWiseCountRes = ScheduledBookingCityWiseCountRes {cities :: [ScheduledBookingCityCount]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ScheduledBookingGateSummary = ScheduledBookingGateSummary {pickupArea :: Kernel.Prelude.Text, total :: Kernel.Prelude.Int, assigned :: Kernel.Prelude.Int, unassigned :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -203,7 +220,7 @@ data ScheduledBookingSpecialLocationSummary = ScheduledBookingSpecialLocationSum
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper))
+type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingCityWiseCountHelper :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper))
 
 type GetScheduledBookingList =
   ( "list" :> QueryParam "assignmentStatus" AssignmentStatus :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "isHistory" Kernel.Prelude.Bool
@@ -220,6 +237,16 @@ type GetScheduledBookingList =
       :> Get
            '[JSON]
            ScheduledBookingListRes
+  )
+
+type GetScheduledBookingCityWiseCount = ("cityWiseCount" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] ScheduledBookingCityWiseCountRes)
+
+type GetScheduledBookingCityWiseCountHelper =
+  ( "cityWiseCount" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get '[JSON] ScheduledBookingCityWiseCountRes
   )
 
 type GetScheduledBookingInfo = (Capture "transactionId" Kernel.Prelude.Text :> "info" :> Get '[JSON] ScheduledBookingInfoRes)
@@ -284,6 +311,7 @@ type PostScheduledBookingOpsNoteHelper =
 
 data ScheduledBookingAPIs = ScheduledBookingAPIs
   { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
+    getScheduledBookingCityWiseCount :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingCityWiseCountRes,
     getScheduledBookingInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingInfoRes,
     getScheduledBookingDriverDistance :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverDistanceRes,
     getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe NearbyDriverSortBy -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient NearbyDriversRes,
@@ -295,10 +323,11 @@ data ScheduledBookingAPIs = ScheduledBookingAPIs
 mkScheduledBookingAPIs :: (Client EulerHS.Types.EulerClient API -> ScheduledBookingAPIs)
 mkScheduledBookingAPIs scheduledBookingClient = (ScheduledBookingAPIs {..})
   where
-    getScheduledBookingList :<|> getScheduledBookingInfo :<|> getScheduledBookingDriverDistance :<|> getScheduledBookingNearbyDrivers :<|> postScheduledBookingAssign :<|> postScheduledBookingUnassign :<|> postScheduledBookingOpsNote = scheduledBookingClient
+    getScheduledBookingList :<|> getScheduledBookingCityWiseCount :<|> getScheduledBookingInfo :<|> getScheduledBookingDriverDistance :<|> getScheduledBookingNearbyDrivers :<|> postScheduledBookingAssign :<|> postScheduledBookingUnassign :<|> postScheduledBookingOpsNote = scheduledBookingClient
 
 data ScheduledBookingUserActionType
   = GET_SCHEDULED_BOOKING_LIST
+  | GET_SCHEDULED_BOOKING_CITY_WISE_COUNT
   | GET_SCHEDULED_BOOKING_INFO
   | GET_SCHEDULED_BOOKING_DRIVER_DISTANCE
   | GET_SCHEDULED_BOOKING_NEARBY_DRIVERS

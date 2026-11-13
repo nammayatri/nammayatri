@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Management.ScheduledBooking
   ( getScheduledBookingList,
+    getScheduledBookingCityWiseCount,
     getScheduledBookingInfo,
     getScheduledBookingDriverDistance,
     getScheduledBookingNearbyDrivers,
@@ -53,6 +54,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIssueCateg
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIssueReport
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QComment
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
+import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (getCoordinates)
 import qualified Kernel.External.Maps.Types as KEMT
@@ -91,6 +93,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified "lib-dashboard" Tools.Auth.Scope as DashboardScope
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -212,6 +215,50 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
         bookings,
         specialLocationSummary = mbSummary
       }
+
+-- | Per-city scheduled-booking counts for the ops landing page. The path city only gates base
+-- access (the generated wrapper's enforceMerchantCityAccessForUser); the counts span every city the
+-- requestor can access under this merchant, resolved from the same merchant_access set the profile
+-- city-map uses (resolveMerchantAccess). One GROUP BY per the accessible operating-city ids.
+getScheduledBookingCityWiseCount ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Flow Common.ScheduledBookingCityWiseCountRes
+getScheduledBookingCityWiseCount merchantShortId _opCity mbFrom mbTo mbRequestorId = do
+  requestorId <- fromMaybeM (InvalidRequest "requestorId is required") mbRequestorId
+  merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  let defaultFrom = addUTCTime (secondsToNominalDiffTime . Seconds $ negate liveLookbackSeconds) now
+      defaultTo = addUTCTime (secondsToNominalDiffTime $ Seconds defaultLookaheadSeconds) now
+      fromTime = fromMaybe defaultFrom mbFrom
+      toTime = fromMaybe defaultTo mbTo
+      earliestAllowedFrom = addUTCTime (secondsToNominalDiffTime . Seconds $ negate maxLookbackSeconds) now
+  when (fromTime > toTime) $ throwError (InvalidRequest "from must not be after to")
+  when (fromTime < earliestAllowedFrom) $
+    throwError (InvalidRequest $ "from cannot be older than " <> show (maxLookbackSeconds `div` (24 * 60 * 60)) <> " days")
+  -- The requestor's accessible cities for this merchant (cached merchant_access rows).
+  accessPairs <- runInDashboardDb $ DashboardScope.resolveMerchantAccess (Id requestorId)
+  let accessibleCities = [city | (mSid, city) <- accessPairs, mSid == merchantShortId.getShortId]
+  allMocs <- CQMOC.findAllByMerchantId merchant.id
+  let accessibleMocs = filter (\moc -> moc.city `elem` accessibleCities) allMocs
+  counts <- QBookingLite.findScheduledStatusCountsByCitiesLite (map (.id) accessibleMocs) fromTime toTime
+  let statusCountsByCity = Map.fromListWith (<>) [(mocId, [(st, cnt)]) | (mocId, st, cnt) <- counts]
+      mkRow moc =
+        let statusCounts = Map.findWithDefault [] moc.id.getId statusCountsByCity
+            cntOf st = sum [cnt | (s, cnt) <- statusCounts, s == st]
+         in Common.ScheduledBookingCityCount
+              { city = moc.city,
+                cityName = T.pack (show moc.city),
+                total = sum (map snd statusCounts),
+                assigned = cntOf SRB.TRIP_ASSIGNED,
+                unassigned = cntOf SRB.NEW,
+                completed = cntOf SRB.COMPLETED,
+                cancelled = cntOf SRB.CANCELLED
+              }
+  pure Common.ScheduledBookingCityWiseCountRes {cities = map mkRow accessibleMocs}
 
 pickupAreaOf :: QBookingLite.BookingLite -> Maybe SL.Area
 pickupAreaOf booking = do
