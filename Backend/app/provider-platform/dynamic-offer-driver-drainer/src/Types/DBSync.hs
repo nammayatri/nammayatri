@@ -42,7 +42,11 @@ data Env = Env
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],
     _connectionPool :: Pool Connection,
-    _esqDBCfg :: EsqDBConfig
+    _esqDBCfg :: EsqDBConfig,
+    _dropColumnsForDb :: [Text],
+    _dropColumnsForCh :: [Text],
+    _dropTablesForDb :: [Text],
+    _dropTablesForCh :: [Text]
   }
 
 data AppCfg = AppCfg
@@ -56,7 +60,13 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     dontEnableForDb :: [Text],
     dontEnableForKafka :: [Text],
-    kafkaProperties :: [KTC.KafkaProperties]
+    kafkaProperties :: [KTC.KafkaProperties],
+    dropColumnsForDb :: [Text],
+    dropColumnsForCh :: [Text],
+    dropColumnsForBoth :: [Text],
+    dropTablesForDb :: [Text],
+    dropTablesForCh :: [Text],
+    dropTablesForBoth :: [Text]
   }
   deriving (Generic, FromDhall)
 
