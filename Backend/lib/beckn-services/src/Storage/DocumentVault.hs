@@ -96,7 +96,7 @@ authTagSizeBytes :: Int
 authTagSizeBytes = 16
 
 processingKeyPurpose :: Text
-processingKeyPurpose = "ny-onboarding-document-processing"
+processingKeyPurpose = "docs-active-key"
 
 processingWindowClosedCodes :: [Amazonka.ErrorCode]
 processingWindowClosedCodes =
@@ -277,6 +277,14 @@ processingKeyPolicy cfg deadline =
                            "ForAllValues:StringEquals" A..= A.object ["kms:EncryptionContextKeys" A..= (["documentId"] :: [Text])],
                            "Null" A..= A.object ["kms:EncryptionContextKeys" A..= ("false" :: Text)]
                          ]
+                   ],
+                 A.object
+                   [ "Sid" A..= ("ProcessingAliasUntilDeadline" :: Text),
+                     "Effect" A..= ("Allow" :: Text),
+                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArn],
+                     "Action" A..= ("kms:CreateAlias" :: Text),
+                     "Resource" A..= ("*" :: Text),
+                     "Condition" A..= A.object ["DateLessThan" A..= A.object ["aws:CurrentTime" A..= formatInstant deadline]]
                    ]
                ]
       ]
