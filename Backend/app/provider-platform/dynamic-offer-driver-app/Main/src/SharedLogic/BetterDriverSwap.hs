@@ -40,14 +40,19 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import Environment
+import Kernel.External.Maps (HasCoordinates (getCoordinates))
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (cancelBetterDriverSearchAndPullOffers)
 import SharedLogic.Booking (cancelBooking)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.OneShotAssign (buildAssignedDriverRideRes, buildOneShotAssignPayload)
 import SharedLogic.QuickRetry (withQuickRetry)
@@ -83,6 +88,16 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
       & fromMaybeM (InternalError $ "BETTER_DRIVER_SEARCH searchTry " <> searchTry.id.getId <> " has no standInForBookingId")
   oldBooking <- QRB.findById (Id oldBookingIdText) >>= fromMaybeM (BookingDoesNotExist oldBookingIdText)
   oldRide <- QRide.findActiveByRBId oldBooking.id >>= fromMaybeM (RideNotFound $ "no active ride for old booking: " <> oldBookingIdText)
+  when (oldRide.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $ throwError (RideRequestAlreadyAcceptedOrCancelled oldRide.id.getId)
+  forM_ transporterConfig.betterDriverProximityAbortRadiusMeters $ \abortRadius -> do
+    locResult <- withTryCatch "betterDriverSwapOldDriverLocation" $ LTSF.pickupDriverLocation oldRide.id merchant.id oldRide.driverId
+    case locResult of
+      Left err -> logError $ "Better-driver swap: old driver location for ride " <> oldRide.id.getId <> " failed: " <> show err
+      Right locResp ->
+        forM_ (listToMaybe $ reverse locResp.loc) $ \latest ->
+          when (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates oldBooking.fromLocation) < abortRadius) $ do
+            cancelBetterDriverSearchAndPullOffers merchant.id oldBooking.id
+            throwError (RideRequestAlreadyAcceptedOrCancelled oldRide.id.getId)
   -- Same lock Beckn init takes: a concurrent cancel-search would deactivate the quote.
   isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchReq.transactionId) 30
   unless isLockAcquired $ throwError CustomerCancelled

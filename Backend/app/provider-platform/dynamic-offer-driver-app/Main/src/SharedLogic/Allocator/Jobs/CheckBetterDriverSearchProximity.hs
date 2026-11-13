@@ -19,11 +19,14 @@
 -- pickupStallMonitoringConfig and skips its distance maths for scheduled rides. Reads
 -- LTS directly each tick rather than waiting for bulkLocPickupUpdate, which only fires
 -- once ~100 points have piled up.
-module SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterDriverSearchProximity, betterDriverSearchProximityInitialDelaySec) where
+module SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterDriverSearchProximity, betterDriverSearchProximityInitialDelaySec, cancelBetterDriverSearchAndPullOffers) where
 
 import qualified AWS.S3 as S3
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
@@ -44,13 +47,19 @@ import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
+import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
 betterDriverSearchProximityInitialDelaySec :: NominalDiffTime
@@ -169,9 +178,51 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                     if distance < abortRadius
                       then do
                         QST.cancelBetterDriverSearchByBookingId bookingId.getId
+                        pullActiveRequests merchantId searchTry
                         return Complete
                       else rescheduleIn $ nextCheckDelay (realToFrac (distance - abortRadius)) (observedSpeedMps driverLocationResp.loc)
   where
     lastMaybe [] = Nothing
     lastMaybe [x] = Just x
     lastMaybe (_ : xs) = lastMaybe xs
+
+cancelBetterDriverSearchAndPullOffers ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id DM.Merchant ->
+  Id DB.Booking ->
+  m ()
+cancelBetterDriverSearchAndPullOffers merchantId bookingId =
+  QST.findActiveBetterDriverSearchByBookingId bookingId.getId >>= \mbSearchTry ->
+    whenJust mbSearchTry $ \searchTry -> do
+      QST.cancelBetterDriverSearchByBookingId bookingId.getId
+      pullActiveRequests merchantId searchTry
+
+pullActiveRequests ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id DM.Merchant ->
+  DST.SearchTry ->
+  m ()
+pullActiveRequests merchantId searchTry = do
+  activeSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId DSRD.Active
+  now <- getCurrentTime
+  let (driverSearchReqs, expiredSearchReqs) = QSRD.partitionRespondable now activeSearchReqs
+  QSRD.setInactiveAndPulledByIds driverSearchReqs
+  QSRD.setInactiveByIds expiredSearchReqs
+  QDQ.setInactiveBySRId searchTry.requestId
+  for_ driverSearchReqs $ \driverReq -> do
+    DP.removeSearchReqIdFromMap merchantId driverReq.driverId driverReq.requestId
+    DP.decrementSrdSentCount driverReq.createdAt driverReq.driverId
+    driver <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver driverReq.searchTryId searchTry.tripCategory
