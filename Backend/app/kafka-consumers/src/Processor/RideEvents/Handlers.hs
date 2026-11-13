@@ -270,7 +270,8 @@ handleGpsTollBehavior ev = withRideAndBooking ev $ \ride booking -> do
               { windowSizeDays = 30,
                 counters = [BTT.ACTION_COUNT],
                 periods = [BTT.mkPeriodConfig "window" (toInteger windowDays)],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
       eventTime <- getCurrentTime
       let actionEvent =

@@ -22,6 +22,7 @@ import qualified Lib.Yudhishthira.Tools.DynamicLogicGroup as LYG
 import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
 findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
@@ -141,6 +142,28 @@ getConfigLogic merchantOpCityId mbVersion configDomain = do
       return $ logics <&> (.logic)
     (Nothing, _) -> return $ baseLogics <&> (.logic)
 
+-- | Picks the city's live version (rollout %, time windows, experiment groups, transaction
+-- stickiness) and returns its rule rows whole (logic and settings). Callers that need only the
+-- rules use 'getAppDynamicLogic'.
+getAppDynamicLogicElements ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  LogicDomain ->
+  UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m ([DTADLE.AppDynamicLogicElement], Maybe Int)
+getAppDynamicLogicElements merchantOpCityId domain localTime mbVersion mbToss = do
+  mbFinalVersion <- pure mbVersion |<|>| selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss
+  case mbFinalVersion of
+    Just version -> do
+      elements <- DALE.findByDomainAndVersion domain version
+      when (null elements) $ logError $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain <> " and version: " <> show version
+      return (elements, Just version)
+    Nothing -> do
+      logWarning $ "Missing Version, No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
+      return ([], Nothing)
+
 getAppDynamicLogic ::
   BeamFlow m r =>
   Id MerchantOperatingCity ->
@@ -150,15 +173,8 @@ getAppDynamicLogic ::
   Maybe Int ->
   m ([A.Value], Maybe Int)
 getAppDynamicLogic merchantOpCityId domain localTime mbVersion mbToss = do
-  mbFinalVersion <- pure mbVersion |<|>| selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss
-  case mbFinalVersion of
-    Just version -> do
-      logics <- DALE.findByDomainAndVersion domain version
-      when (null logics) $ logError $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain <> " and version: " <> show version
-      return (logics <&> (.logic), Just version)
-    Nothing -> do
-      logWarning $ "Missing Version, No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
-      return ([], Nothing)
+  (elements, mbFinalVersion) <- getAppDynamicLogicElements merchantOpCityId domain localTime mbVersion mbToss
+  return (elements <&> (.logic), mbFinalVersion)
 
 selectVersionForConfigs ::
   BeamFlow m r =>

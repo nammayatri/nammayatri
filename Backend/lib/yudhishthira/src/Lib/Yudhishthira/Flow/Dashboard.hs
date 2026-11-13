@@ -522,6 +522,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ req logicData = do
               description = req.description,
               merchantId = mbMerchantId,
               patchedElement = Nothing,
+              settings = req.settings,
               ..
             }
     createRolloutForConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Int -> m ()
@@ -540,6 +541,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ req logicData = do
               domain = domain,
               description = Nothing,
               patchedElement = Nothing,
+              settings = Nothing,
               version = baseVersion,
               logic = baseElementPatch,
               order = 0
@@ -890,6 +892,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity 
           domain = domain',
           description = Nothing,
           patchedElement = Nothing,
+          settings = Nothing,
           ..
         }
     mkBaseAppDynamicLogicRollout :: Int -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Int -> AppDynamicLogicRollout
@@ -1197,6 +1200,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           domain = domain,
           description = Nothing,
           patchedElement = Nothing,
+          settings = Nothing,
           ..
         }
     mkBaseAppDynamicLogicRollout :: Int -> AppDynamicLogicRollout -> UTCTime -> LYT.LogicDomain -> AppDynamicLogicRollout

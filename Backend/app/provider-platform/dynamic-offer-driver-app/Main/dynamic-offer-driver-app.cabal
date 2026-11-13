@@ -669,6 +669,7 @@ library
       SharedLogic.BehaviourManagement.AutoAcceptCancellation
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
+      SharedLogic.BehaviourManagement.EventsWindow
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation

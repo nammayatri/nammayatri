@@ -19,6 +19,7 @@ where
 
 import Control.Applicative (liftA2)
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
 import Data.Time (utctDay)
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
@@ -39,6 +40,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorEngine.Types as BET
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -49,6 +51,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BehaviourManagement.EventsWindow as EventsWindow
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
@@ -65,7 +68,7 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
-import Tools.DynamicLogic (getAppDynamicLogic)
+import Tools.DynamicLogic (getAppDynamicLogicElements)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import Tools.MarketingEvents as TM
@@ -98,6 +101,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   void $ case mbDriverStats of
     Just driverStats -> incrementOrSetTotalRides driverId driverStats
     Nothing -> createDriverStat currency distanceUnit driverId
+  -- ELIGIBLE_COUNT +1; also appends '0' to the driver's events window (the counter config keeps one).
   DP.incrementTotalRidesCount merchantOpCityId driverId
 eventPayloadHandler _merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   -- Shared quote-response eligibility is NOT counted here: DP.incrementSrdSentCount (called
@@ -113,6 +117,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   -- Count this cancellation BEFORE the ladder reads the counters. ELIGIBLE_COUNT already
   -- includes this ride (incremented at assignment), so incrementing ACTION_COUNT after the
   -- evaluation made every rung fire one offence late and understated the rate.
+  -- The same call marks this cancel as a '1' in the driver's events window.
   when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
@@ -127,7 +132,11 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
                 [ BTT.mkPeriodConfig "daily" 1,
                   BTT.mkPeriodConfig "weekly" 7
                 ],
-              hashTagEntityId = DP.rideCancellationCounterConfig.hashTagEntityId
+              hashTagEntityId = DP.rideCancellationCounterConfig.hashTagEntityId,
+              -- The events window gets one '1' per at-fault cancel, written by
+              -- DP.incrementCancellationCount above. This config also serves a rule's
+              -- INCREMENT_COUNTER consequence, which must not add a second offence to it.
+              eventsWindow = Nothing
             }
     eventTime <- getCurrentTime
     let actionEvent =
@@ -146,11 +155,24 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             }
         entityState = A.object []
         cooldownTags = ["CancellationRateDaily", "CancellationRateWeekly"]
-        fetchRules = \domain -> do
-          localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
-          getAppDynamicLogic (cast merchantOpCityId) domain localTime Nothing Nothing
-    snapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
-    output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) LYT.CANCELLATION_RATE_BEHAVIOR fetchRules
+        domain = LYT.CANCELLATION_RATE_BEHAVIOR
+    localTime <- getLocalCurrentTime merchantConfig.timeDiffFromUtc
+    -- Snapshot builder: pick the live version once and fetch its rows once. They give the rules
+    -- (handed to the orchestrator, no second fetch) and the version's settings: TIME, or EVENTS
+    -- with X, in which case the driver's newest X events are added as counters.events.
+    (versionRows, mbVersion) <- getAppDynamicLogicElements (cast merchantOpCityId) domain localTime Nothing Nothing
+    cityZ <- DP.cityEventsWindowSize merchantOpCityId
+    eventsRead <- EventsWindow.cancellationEventsRead driverId cityZ mbVersion versionRows
+    baseSnapshot <- BTSnap.buildSnapshotWithCooldowns counterConfig actionEvent entityState cooldownTags
+    output <- case eventsRead of
+      EventsWindow.EventsUnreadable cause -> do
+        logError $ "BehaviorEngine: Skipped rules for domain " <> show domain <> " version " <> maybe "(none)" show mbVersion <> " because its events window could not be read: " <> cause
+        pure BET.defaultOrchestratedOutput
+      _ -> do
+        let snapshot = case eventsRead of
+              EventsWindow.EventsCounts counts -> (baseSnapshot :: BTT.BehaviorSnapshot) {BTT.counters = Map.insert EventsWindow.eventsCounterName counts baseSnapshot.counters}
+              _ -> baseSnapshot
+        BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) (BehaviorDispatch.behaviourEventCity (cast merchantOpCityId)) domain (\_ -> pure (map (.logic) versionRows, mbVersion))
     logInfo $ "CancellationRate behavior evaluation: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
     let dispatchCtx =
           BehaviorDispatch.DispatchContext

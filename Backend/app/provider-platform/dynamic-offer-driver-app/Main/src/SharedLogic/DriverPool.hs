@@ -34,6 +34,7 @@ module SharedLogic.DriverPool
     quoteResponseCooldownTags,
     rideCancellationActionType,
     rideCancellationCounterConfig,
+    cityEventsWindowSize,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getPopupDelay,
@@ -126,6 +127,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.BehaviorTracker.Accumulator as BTAcc
+import qualified Lib.BehaviorTracker.EventsWindowSettings as EWS
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -214,7 +216,8 @@ quoteResponseCounterConfig =
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
-      hashTagEntityId = True
+      hashTagEntityId = True,
+      eventsWindow = Nothing
     }
 
 -- | Snapshot for one quote-response outcome. Rates are computed against the shared
@@ -458,14 +461,41 @@ removeSearchReqIdFromMap merchantId driverId searchReqId = do
 -- Ride-lifecycle counters, stored as the bt: RIDE_CANCELLATION series (ELIGIBLE = rides
 -- assigned, ACTION = cancellations) — the same series getSrdStatsCountersBulk feeds to the
 -- POOLING dynamic logic and the behavior framework's snapshots read.
+-- It also keeps each driver's events window (the last Z rides as 0/1, Z = the city's
+-- eventsWindowSize) for Events rulebooks: a ride assigned appends '0', an at-fault cancel
+-- turns that ride's '0' into '1'.
 rideCancellationCounterConfig :: BTT.CounterConfig
 rideCancellationCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
-      hashTagEntityId = True
+      hashTagEntityId = True,
+      eventsWindow = Just BTT.MarkLatestEligible
     }
+
+-- | How many events each driver's cancellation window keeps in this city (Z): the city's
+-- TransporterConfig.eventsWindowSize (default 100). Config patches outside 1 to EWS.maxWindowSize
+-- are refused; a value that got in another way is clamped into that range and logged. The
+-- config is cached, so reading it on every ride costs no database call.
+cityEventsWindowSize ::
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  m Int
+cityEventsWindowSize merchantOpCityId = do
+  mbConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  case mbConfig of
+    Nothing -> do
+      logWarning $ "Events window: no TransporterConfig for city " <> merchantOpCityId.getId <> ", so drivers keep the default " <> show EWS.defaultWindowSize <> " events."
+      pure EWS.defaultWindowSize
+    Just config -> do
+      let z = config.eventsWindowSize
+          clamped = max 1 (min EWS.maxWindowSize z)
+      when (clamped /= z) $
+        logWarning $ "Events window: TransporterConfig.eventsWindowSize is " <> show z <> " in city " <> merchantOpCityId.getId <> ", outside 1 to " <> show EWS.maxWindowSize <> ", so drivers keep " <> show clamped <> " events. Fix the city's config."
+      pure clamped
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -475,7 +505,9 @@ incrementTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementTotalRidesCount _merchantOpCityId driverId = BTRecorder.incrementCounterOnly rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ELIGIBLE_COUNT
+incrementTotalRidesCount merchantOpCityId driverId = do
+  keep <- cityEventsWindowSize merchantOpCityId
+  BTRecorder.incrementCounterOnlyKeeping keep rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ELIGIBLE_COUNT
 
 getTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -495,7 +527,9 @@ incrementCancellationCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementCancellationCount _merchantOpCityId driverId = BTRecorder.incrementCounterOnly rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ACTION_COUNT
+incrementCancellationCount merchantOpCityId driverId = do
+  keep <- cityEventsWindowSize merchantOpCityId
+  BTRecorder.incrementCounterOnlyKeeping keep rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ACTION_COUNT
 
 getLatestCancellationRatio' ::
   ( EsqDBFlow m r,

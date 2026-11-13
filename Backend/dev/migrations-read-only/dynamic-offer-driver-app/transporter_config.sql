@@ -1351,3 +1351,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_dail
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN events_window_size integer NOT NULL default 100;

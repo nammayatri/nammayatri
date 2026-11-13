@@ -18,3 +18,12 @@ ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN merchant_id character
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN patched_element text ;
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN settings text ;

@@ -85,7 +85,7 @@ handleTollRelatedIssue ride = do
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
   -- Framework pipeline
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  let counterConfig = BTT.CounterConfig {windowSizeDays = 30, counters = [BTT.ACTION_COUNT], periods = [BTT.mkPeriodConfig "window" 30], hashTagEntityId = False}
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 30, counters = [BTT.ACTION_COUNT], periods = [BTT.mkPeriodConfig "window" 30], hashTagEntityId = False, eventsWindow = Nothing}
   -- Increment Redis counter for visibility
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "TOLL_RELATED_ISSUE" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
@@ -123,7 +123,8 @@ handleExtraFareMitigation ride serviceTierType = do
                   [ BTT.mkPeriodConfig "daily" 1,
                     BTT.mkPeriodConfig "weekly" 7
                   ],
-                hashTagEntityId = False
+                hashTagEntityId = False,
+                eventsWindow = Nothing
               }
       eventTime <- getCurrentTime
       let actionEvent =
@@ -153,7 +154,7 @@ handleDrunkAndDriveViolation ride = do
   void $ QDI.updateDrunkAndDriveViolationCount (Just drunkAndDriveViolationCount) ride.driverId
   -- Framework pipeline
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False}
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False, eventsWindow = Nothing}
   -- Increment Redis counter for visibility
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "DRUNK_AND_DRIVE" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
@@ -228,7 +229,7 @@ handleVehicleQualityViolation ride getCount updateCount actionType logicDomain s
   let violationCount = fromMaybe 0 (getCount driverInfo) + 1
   void $ updateCount (Just violationCount) ride.driverId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False}
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False, eventsWindow = Nothing}
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId actionType BTT.ACTION_COUNT
   eventTime <- getCurrentTime
   let actionEvent =
@@ -251,7 +252,7 @@ handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
 handleAcRestriction ride driverInfo = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let airConditionScore = fromMaybe 0 driverInfo.airConditionScore
-      counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False}
+      counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = [], hashTagEntityId = False, eventsWindow = Nothing}
   -- Increment Redis counter for visibility
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "AC_RESTRICTION" BTT.ACTION_COUNT
   eventTime <- getCurrentTime
