@@ -82,6 +82,7 @@ data RideData = RideData
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     rideStartTime :: Maybe UTCTime,
+    rideTags :: Maybe [Text],
     safetyCheckStatus :: Maybe Bool,
     showDriversPreviousRideDropLoc :: Bool,
     startOdometerReading :: Maybe Centesimal,
