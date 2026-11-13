@@ -354,7 +354,7 @@ mkSessionRespFrom cabReads s = do
   (mbTrack, available) <- case snapshotCab of
     Just c -> pure (c.track, Seats.freeOver c.seats (Seats.nextStopIdx c.seats c.track, Seats.routeEnd c.seats))
     Nothing -> do
-      mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
+      mbTrack <- Lts.readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
       (mbTrack,) <$> Seats.freeAhead s mbTrack
   let vehicle = (.position) <$> mbTrack
       nextIdx = fromMaybe 0 (mbTrack >>= Lts.nextStopCode >>= \code -> findIndex ((== code) . (.stopCode)) stops)
