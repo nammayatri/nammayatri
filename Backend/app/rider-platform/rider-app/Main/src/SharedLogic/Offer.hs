@@ -132,6 +132,7 @@ data OfferEligibilityInput = OfferEligibilityInput
     searchReq :: Maybe Y.SearchRequestData,
     hasTakenValidRide :: Bool,
     totalRidesCount :: Maybe Int,
+    totalValidRidesCount :: Maybe Int,
     personTags :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -193,6 +194,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             searchReq = Nothing,
                             hasTakenValidRide = person.hasTakenValidRide,
                             totalRidesCount = person.totalRidesCount,
+                            totalValidRidesCount = person.totalValidRidesCount,
                             personTags = offerEligibilityTags person.customerNammaTags
                           }
               DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
@@ -749,6 +751,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       searchReq = mbSearchReqData,
                       hasTakenValidRide = person.hasTakenValidRide,
                       totalRidesCount = person.totalRidesCount,
+                      totalValidRidesCount = person.totalValidRidesCount,
                       personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
