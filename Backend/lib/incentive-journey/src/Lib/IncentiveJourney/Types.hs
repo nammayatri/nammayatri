@@ -18,6 +18,9 @@ module Lib.IncentiveJourney.Types
     SubscriptionWaiveOffMetadata (..),
     encodeSubscriptionWaiveOffMetadata,
     mkSubscriptionWaiveOffSpec,
+    CouponSpec (..),
+    encodeCouponMetadata,
+    mkCouponSpec,
     RewardDispatchCtx (..),
     AwardResult (..),
     EvalMilestone (..),
@@ -140,11 +143,38 @@ mkSubscriptionWaiveOffSpec mbPercentage mbDaysValidFor mbMetadata = do
         waiveOffMode = waiveOffMode
       }
 
+data CouponSpec = CouponSpec
+  { offerCode :: Text,
+    validityHours :: Int
+  }
+  deriving (Eq, Show, Generic)
+
+instance A.FromJSON CouponSpec where
+  parseJSON = withObject "CouponSpec" $ \o ->
+    CouponSpec
+      <$> o .: "offerCode"
+      <*> o .: "validityHours"
+
+instance A.ToJSON CouponSpec where
+  toJSON CouponSpec {..} =
+    object ["offerCode" .= offerCode, "validityHours" .= validityHours]
+
+encodeCouponMetadata :: CouponSpec -> Value
+encodeCouponMetadata = A.toJSON
+
+mkCouponSpec :: Maybe Value -> Maybe CouponSpec
+mkCouponSpec mbMetadata = do
+  metaVal <- mbMetadata
+  case A.fromJSON metaVal of
+    A.Success couponSpec -> Just couponSpec
+    A.Error _ -> Nothing
+
 data RewardSpec = RewardSpec
   { rewardKind :: RewardKind,
     rewardValue :: Maybe Int,
     rewardExpirationAt :: Maybe Int,
-    subscriptionWaiveOff :: Maybe SubscriptionWaiveOffSpec
+    subscriptionWaiveOff :: Maybe SubscriptionWaiveOffSpec,
+    coupon :: Maybe CouponSpec
   }
   deriving (Eq, Show, Generic)
 

@@ -8,6 +8,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -474,6 +475,13 @@ mkCumulativeOfferRespWithLogics logics merchantOperatingCityId offerListRes legI
 
 autoApplyOfferTagName :: Text
 autoApplyOfferTagName = "AutoApplyOffer"
+
+addAutoApplyOfferTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Person.Person -> Text -> Int -> m ()
+addAutoApplyOfferTag person offerCode validityHours = do
+  now <- getCurrentTime
+  let tag = LYTUtils.mkTagNameValueExpiry (LYT.TagName autoApplyOfferTagName) (LYT.TextValue offerCode) (Just $ Hours validityHours) now
+      newTags = LYTUtils.removeTagNameValue person.customerNammaTags tag ++ [tag]
+  QPerson.updateCustomerTags (Just (nub newTags)) person.id
 
 offerEligibilityTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
 offerEligibilityTags = maybe [] (map ((.getTagNameValue) . LYTUtils.removeTagExpiry))

@@ -8,6 +8,7 @@
 module SharedLogic.IncentiveJourney
   ( hasAssignedJourneys,
     findAssignmentsByUserId,
+    findAssignmentsForPerson,
     mkJourneyPeriodKey,
     mkWeeklyPeriodKey,
     mkMonthlyPeriodKey,
@@ -32,10 +33,35 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as 
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
+import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.IncentiveJourney ()
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error
 
-hasAssignedJourneys :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m Bool
-hasAssignedJourneys personId = not . null <$> CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId)
+hasAssignedJourneys ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  m Bool
+hasAssignedJourneys personId merchantId merchantOpCityId mbRideVehicleCategory =
+  not . null <$> findAssignmentsForPerson personId merchantId merchantOpCityId mbRideVehicleCategory
+
+findAssignmentsForPerson ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  m [IJ.JourneyAssignment]
+findAssignmentsForPerson personId merchantId merchantOpCityId mbRideVehicleCategory =
+  CQAssignment.findAssignmentsForPerson
+    IJ.RiderActor
+    (cast personId)
+    (cast merchantId)
+    (cast merchantOpCityId)
+    mbRideVehicleCategory
 
 findAssignmentsByUserId :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
 findAssignmentsByUserId personId = CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId)
@@ -62,32 +88,35 @@ loadJourneyMilestones ::
 loadJourneyMilestones = CQMilestone.findByJourneyId IJ.RiderActor
 
 mkRiderHandle ::
-  (Log m, CacheFlow m r, EsqDBFlow m r) =>
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
   IJ.IncentiveJourneyHandle m
-mkRiderHandle =
+mkRiderHandle personId =
   IJ.IncentiveJourneyHandle
     { actor = IJ.RiderActor,
       loadJourneysByIds = CQJourney.findByIds IJ.RiderActor,
       loadMilestones = loadJourneyMilestones,
-      dispatchReward = \_journey -> dispatchRiderReward,
-      dispatchStreakEndReward = dispatchRiderStreakEndReward,
+      dispatchReward = \_journey -> dispatchRiderReward personId,
+      dispatchStreakEndReward = dispatchRiderStreakEndReward personId,
       mbOnMilestoneCompleted = Nothing
     }
 
 evaluateRiderJourney ::
-  (Log m, CacheFlow m r, EsqDBFlow m r) =>
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Seconds ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   UTCTime ->
   IJ.RideDeltas ->
   m ()
-evaluateRiderJourney personId merchantId merchantOpCityId timeDiffFromUtc mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas =
+evaluateRiderJourney personId merchantId merchantOpCityId timeDiffFromUtc mbPickupSpecialLocationId mbDropSpecialLocationId mbRideVehicleCategory mbRideServiceTierType timeBoundReferenceUtc rideDeltas =
   IJ.evaluateIncentiveJourneys
-    mkRiderHandle
+    (mkRiderHandle personId)
     IJ.EvaluateInput
       { personId = cast personId,
         merchantId = cast merchantId,
@@ -97,12 +126,12 @@ evaluateRiderJourney personId merchantId merchantOpCityId timeDiffFromUtc mbPick
         rideDeltas = rideDeltas,
         mbPickupSpecialLocationId = mbPickupSpecialLocationId,
         mbDropSpecialLocationId = mbDropSpecialLocationId,
-        mbRideVehicleCategory = Nothing,
-        mbRideServiceTierType = Nothing
+        mbRideVehicleCategory = mbRideVehicleCategory,
+        mbRideServiceTierType = mbRideServiceTierType
       }
 
 waiveRiderMilestone ::
-  (Log m, CacheFlow m r, EsqDBFlow m r) =>
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -114,7 +143,7 @@ waiveRiderMilestone ::
 waiveRiderMilestone personId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey =
   void $
     IJ.waiveMilestoneForPeriod
-      mkRiderHandle
+      (mkRiderHandle personId)
       (cast personId)
       (cast merchantId)
       (cast merchantOpCityId)
@@ -125,12 +154,19 @@ waiveRiderMilestone personId merchantId merchantOpCityId journey cohortJourneyMa
       periodKey
 
 dispatchRiderReward ::
-  (Monad m, Log m) =>
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
   IJ.RewardDispatchCtx ->
   IJ.RewardSpec ->
   m IJ.AwardResult
-dispatchRiderReward ctx spec = do
+dispatchRiderReward personId ctx spec = do
   case spec.rewardKind of
+    IJ.Coupons ->
+      case spec.coupon of
+        Just couponSpec -> grantJourneyCoupon personId couponSpec ("milestone " <> ctx.milestoneId)
+        Nothing -> do
+          logError $ "Rider incentive journey Coupons reward has no offer code for milestone " <> ctx.milestoneId
+          pure IJ.AwardSkipped
     IJ.Coins -> do
       logError $ "Rider incentive journey refused Coins reward for milestone " <> ctx.milestoneId
       pure IJ.AwardSkipped
@@ -143,13 +179,20 @@ dispatchRiderReward ctx spec = do
       pure IJ.AwardSkipped
 
 dispatchRiderStreakEndReward ::
-  (Monad m, Log m) =>
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
   DIJ.IncentiveJourney ->
   Text ->
   IJ.RewardSpec ->
   m IJ.AwardResult
-dispatchRiderStreakEndReward journey campaignKey spec = do
+dispatchRiderStreakEndReward personId journey campaignKey spec = do
   case spec.rewardKind of
+    IJ.Coupons ->
+      case spec.coupon of
+        Just couponSpec -> grantJourneyCoupon personId couponSpec ("streak-end " <> campaignKey)
+        Nothing -> do
+          logError $ "Rider streak-end Coupons reward has no offer code journey=" <> journey.id.getId <> " campaignKey=" <> campaignKey
+          pure IJ.AwardSkipped
     IJ.Coins -> do
       logError $
         "Rider streak-end refused Coins reward journey="
@@ -173,3 +216,21 @@ dispatchRiderStreakEndReward journey campaignKey spec = do
           <> " campaignKey="
           <> campaignKey
       pure IJ.AwardSkipped
+
+grantJourneyCoupon ::
+  (Log m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  IJ.CouponSpec ->
+  Text ->
+  m IJ.AwardResult
+grantJourneyCoupon personId couponSpec rewardSource = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  SOffer.addAutoApplyOfferTag person couponSpec.offerCode couponSpec.validityHours
+  logInfo $
+    "Rider incentive journey granted offer "
+      <> couponSpec.offerCode
+      <> " to person "
+      <> personId.getId
+      <> " for "
+      <> rewardSource
+  pure (IJ.Awarded 0)
