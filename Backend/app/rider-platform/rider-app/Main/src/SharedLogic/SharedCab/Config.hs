@@ -21,6 +21,11 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 data SharedCabTunables = SharedCabTunables
   { allocationWindowSec :: Int,
     atStopRadiusM :: Int,
+    -- | The rider's "arriving soon" push: the allocated cab within this of the board stop. Arrived is the existing push at atStopRadiusM
+    -- (or gps-processor's is_on_stop), so this only shows when it is the larger of the two.
+    arrivingSoonRadiusM :: Int,
+    -- | The rider's "on the way" push: the allocated cab this far from where it was when the rider was told of it.
+    onTheWayM :: Int,
     standTimerSec :: Int,
     movingTimerSec :: Int,
     maxAttempts :: Int,
@@ -74,6 +79,8 @@ defaultTunables =
   SharedCabTunables
     { allocationWindowSec = 8 * 60,
       atStopRadiusM = 100,
+      arrivingSoonRadiusM = 100,
+      onTheWayM = 500,
       standTimerSec = 180,
       movingTimerSec = 90,
       maxAttempts = 2,
@@ -116,6 +123,8 @@ tunablesOf busPingMaxAgeSec mbConfig =
   SharedCabTunables
     { allocationWindowSec = pick (.allocationWindowSec) (.allocationWindowSec),
       atStopRadiusM = pick (.atStopRadiusM) (.atStopRadiusM),
+      arrivingSoonRadiusM = pickPositive (.arrivingSoonRadiusM) (.arrivingSoonRadiusM),
+      onTheWayM = pickPositive (.onTheWayM) (.onTheWayM),
       standTimerSec = pick (.standTimerSec) (.standTimerSec),
       movingTimerSec = pick (.movingTimerSec) (.movingTimerSec),
       maxAttempts = pick (.maxAttempts) (.maxAttempts),

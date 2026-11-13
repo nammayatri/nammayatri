@@ -21,6 +21,7 @@ module SharedLogic.SharedCab.Allocation.Select
     timerForStance,
     armedTimer,
     pushForStance,
+    pushedStage,
     ClaimPush (..),
     claimPush,
     silentReleaseMult,
@@ -217,6 +218,12 @@ pushForStance = \case
   CabAtStop -> PushArriving
   CabMoving -> PushAssigned
   CabAway -> PushAssigned
+
+-- | The approach stage the rider is at once told of the cab by this push.
+pushedStage :: ClaimPush -> ApproachStage
+pushedStage = \case
+  PushArriving -> ApproachArrived
+  PushAssigned -> ApproachAssigned
 
 silentReleaseMult :: Int
 silentReleaseMult = 5
