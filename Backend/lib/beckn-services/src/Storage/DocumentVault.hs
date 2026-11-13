@@ -13,6 +13,7 @@ import qualified Amazonka.Auth as AmazonkaAuth
 import Amazonka.Env (env_region)
 import qualified Amazonka.KMS as KMS
 import qualified Amazonka.KMS.Lens as KMS
+import Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import Control.Lens ((.~), (?~), (^.), (^?))
 import Control.Monad.Trans.Resource (runResourceT)
 import Crypto.Cipher.AES (AES256)
@@ -23,17 +24,19 @@ import qualified Crypto.PubKey.RSA as RSA
 import qualified Crypto.PubKey.RSA.OAEP as OAEP
 import Crypto.Random (getRandomBytes)
 import Crypto.Store.X509 (readPubKeyFileFromMemory)
+import qualified Data.Aeson as A
 import Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteArray as BA
 import Data.ByteArray.Encoding (Base (Base64), convertToBase)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HM
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Calendar (Day, addDays)
-import Data.Time.Clock (getCurrentTime, utctDay)
+import Data.Time.Clock (UTCTime (..), getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Data.X509 as X509
 import Kernel.Prelude
@@ -43,6 +46,9 @@ import Servant.Client (Scheme (Https))
 data DocumentVaultConfig = DocumentVaultConfig
   { region :: Text,
     processingKeyAliasPrefix :: Text,
+    processingWindowDays :: Integer,
+    processingRoleArn :: Text,
+    keyAdminRoleArn :: Text,
     archiveKeyArn :: Text,
     kmsEndpoint :: Maybe BaseUrl,
     sealNewUploads :: Bool,
@@ -52,8 +58,7 @@ data DocumentVaultConfig = DocumentVaultConfig
 
 data SealedDocument = SealedDocument
   { object :: ByteString,
-    encryptedDataKey :: ByteString,
-    processingKeyAgeDays :: Integer
+    encryptedDataKey :: ByteString
   }
 
 data DocumentVault = DocumentVault
@@ -65,7 +70,7 @@ data DocumentVault = DocumentVault
 
 data DocumentVaultError
   = ProcessingWindowClosed
-  | NoProcessingKey
+  | ProcessingKeyUnavailable Text
   | VaultFailure Text
   deriving (Show)
 
@@ -90,8 +95,8 @@ nonceSizeBytes = 12
 authTagSizeBytes :: Int
 authTagSizeBytes = 16
 
-processingKeyFallbackDays :: Integer
-processingKeyFallbackDays = 3
+processingKeyPurpose :: Text
+processingKeyPurpose = "ny-onboarding-document-processing"
 
 processingWindowClosedCodes :: [Amazonka.ErrorCode]
 processingWindowClosedCodes =
@@ -105,16 +110,27 @@ isSealedObject = BS.isPrefixOf objectMagic
 
 buildDocumentVault :: DocumentVaultConfig -> IO DocumentVault
 buildDocumentVault cfg = do
-  env <- buildKmsEnv cfg
+  envRef <- newIORef Nothing
   archiveKeyRef <- newIORef Nothing
-  let archiveKey = cachedArchiveKey env cfg archiveKeyRef
+  keyCreationLock <- newMVar ()
+  let kmsEnv = cachedKmsEnv cfg envRef
+      archiveKey env = cachedArchiveKey env cfg archiveKeyRef
   pure
     DocumentVault
       { shouldSeal = \documentType -> cfg.sealNewUploads && documentType `elem` cfg.documentTypes,
-        sealForProcessing = \documentId document -> archiveKey >>= \key -> sealWithProcessingKey env cfg key documentId document,
-        sealForArchive = \documentId document -> archiveKey >>= \key -> sealWithArchiveKeyOnly key documentId document,
-        openWithProcessingKey = openObject env
+        sealForProcessing = \documentId document -> kmsEnv >>= \env -> archiveKey env >>= \key -> sealWithProcessingKey env cfg keyCreationLock key documentId document,
+        sealForArchive = \documentId document -> kmsEnv >>= archiveKey >>= \key -> sealWithArchiveKeyOnly key documentId document,
+        openWithProcessingKey = \documentId dataKey object -> kmsEnv >>= \env -> openObject env documentId dataKey object
       }
+
+cachedKmsEnv :: DocumentVaultConfig -> IORef (Maybe Amazonka.Env) -> IO Amazonka.Env
+cachedKmsEnv cfg envRef =
+  readIORef envRef >>= \case
+    Just env -> pure env
+    Nothing -> do
+      env <- try (buildKmsEnv cfg) >>= either (\(err :: SomeException) -> throwIO . VaultFailure $ "KMS client unavailable: " <> show err) pure
+      writeIORef envRef (Just env)
+      pure env
 
 cachedArchiveKey :: Amazonka.Env -> DocumentVaultConfig -> IORef (Maybe RSA.PublicKey) -> IO RSA.PublicKey
 cachedArchiveKey env cfg archiveKeyRef =
@@ -166,37 +182,113 @@ parseArchiveKey der = case readPubKeyFileFromMemory pem of
 documentContext :: Text -> HM.HashMap Text Text
 documentContext documentId = HM.singleton "documentId" documentId
 
-sealWithProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> RSA.PublicKey -> Text -> ByteString -> IO SealedDocument
-sealWithProcessingKey env cfg archiveKey documentId document = do
-  (response, keyAgeDays) <- generateProcessingKey env cfg documentId
+sealWithProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> MVar () -> RSA.PublicKey -> Text -> ByteString -> IO SealedDocument
+sealWithProcessingKey env cfg keyCreationLock archiveKey documentId document = do
+  response <- generateProcessingKey env cfg keyCreationLock documentId
   sealedBytes <- sealObject archiveKey documentId (response ^. KMS.generateDataKeyResponse_plaintext) document
-  pure
-    SealedDocument
-      { object = sealedBytes,
-        encryptedDataKey = response ^. KMS.generateDataKeyResponse_ciphertextBlob,
-        processingKeyAgeDays = keyAgeDays
-      }
+  pure SealedDocument {object = sealedBytes, encryptedDataKey = response ^. KMS.generateDataKeyResponse_ciphertextBlob}
 
-generateProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> Text -> IO (KMS.GenerateDataKeyResponse, Integer)
-generateProcessingKey env cfg documentId = do
+generateProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> MVar () -> Text -> IO KMS.GenerateDataKeyResponse
+generateProcessingKey env cfg keyCreationLock documentId = do
   today <- utctDay <$> getCurrentTime
-  tryDays today [0 .. processingKeyFallbackDays]
+  let alias = processingKeyAlias cfg today
+  requestDataKey alias >>= \case
+    Right response -> pure response
+    Left err
+      | hasErrorCode "NotFoundException" err ->
+        withMVar keyCreationLock $ \_ ->
+          requestDataKey alias >>= \case
+            Right response -> pure response
+            Left retryErr
+              | hasErrorCode "NotFoundException" retryErr -> do
+                keyRef <- createProcessingKey env cfg today
+                requestDataKey keyRef >>= either (throwIO . ProcessingKeyUnavailable . show) pure
+              | otherwise -> throwIO . VaultFailure $ show retryErr
+      | otherwise -> throwIO . VaultFailure $ show err
   where
-    tryDays _ [] = throwIO NoProcessingKey
-    tryDays today (daysBack : olderDays) = do
-      result <- runResourceT . Amazonka.sendEither env . dataKeyRequest $ addDays (negate daysBack) today
-      case result of
-        Right response -> pure (response, daysBack)
-        Left err
-          | hasErrorCode "NotFoundException" err -> tryDays today olderDays
-          | otherwise -> throwIO . VaultFailure $ show err
-    dataKeyRequest day =
-      KMS.newGenerateDataKey (processingKeyAlias cfg day)
-        & KMS.generateDataKey_keySpec ?~ KMS.DataKeySpec_AES_256
-        & KMS.generateDataKey_encryptionContext ?~ documentContext documentId
+    requestDataKey alias =
+      runResourceT . Amazonka.sendEither env $
+        KMS.newGenerateDataKey alias
+          & KMS.generateDataKey_keySpec ?~ KMS.DataKeySpec_AES_256
+          & KMS.generateDataKey_encryptionContext ?~ documentContext documentId
+
+createProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> Day -> IO Text
+createProcessingKey env cfg day = do
+  let alias = processingKeyAlias cfg day
+      deadline = processingDeadline cfg day
+      request =
+        KMS.newCreateKey
+          & KMS.createKey_keySpec ?~ KMS.KeySpec_SYMMETRIC_DEFAULT
+          & KMS.createKey_keyUsage ?~ KMS.KeyUsageType_ENCRYPT_DECRYPT
+          & KMS.createKey_description ?~ ("Onboarding document processing key for " <> formatDay day)
+          & KMS.createKey_policy ?~ processingKeyPolicy cfg deadline
+          & KMS.createKey_bypassPolicyLockoutSafetyCheck ?~ True
+          & KMS.createKey_tags
+            ?~ [ KMS.newTag "purpose" processingKeyPurpose,
+                 KMS.newTag "processingDay" (formatDay day),
+                 KMS.newTag "expiresAt" (formatInstant deadline)
+               ]
+  created <- runResourceT (Amazonka.sendEither env request) >>= either (throwIO . ProcessingKeyUnavailable . ("CreateKey failed: " <>) . show) pure
+  keyId <- maybe (throwIO $ ProcessingKeyUnavailable "CreateKey returned no key metadata") (pure . (^. KMS.keyMetadata_keyId)) (created ^. KMS.createKeyResponse_keyMetadata)
+  runResourceT (Amazonka.sendEither env $ KMS.newCreateAlias alias keyId) >>= \case
+    Right _ -> pure keyId
+    Left err
+      | hasErrorCode "AlreadyExistsException" err -> pure alias
+      | otherwise -> throwIO . ProcessingKeyUnavailable $ "CreateAlias failed: " <> show err
+
+processingDeadline :: DocumentVaultConfig -> Day -> UTCTime
+processingDeadline cfg day = UTCTime (addDays (cfg.processingWindowDays + 1) day) 0
+
+processingKeyPolicy :: DocumentVaultConfig -> UTCTime -> Text
+processingKeyPolicy cfg deadline =
+  TE.decodeUtf8 . BSL.toStrict . A.encode $
+    A.object
+      [ "Version" A..= ("2012-10-17" :: Text),
+        "Statement"
+          A..= [ A.object
+                   [ "Sid" A..= ("KeyAdministrationWithoutDataAccess" :: Text),
+                     "Effect" A..= ("Allow" :: Text),
+                     "Principal" A..= A.object ["AWS" A..= cfg.keyAdminRoleArn],
+                     "Action"
+                       A..= ( [ "kms:DescribeKey",
+                                "kms:GetKeyPolicy",
+                                "kms:ListResourceTags",
+                                "kms:EnableKey",
+                                "kms:DisableKey",
+                                "kms:ScheduleKeyDeletion",
+                                "kms:CancelKeyDeletion",
+                                "kms:DeleteAlias",
+                                "kms:TagResource",
+                                "kms:UntagResource"
+                              ] ::
+                                [Text]
+                            ),
+                     "Resource" A..= ("*" :: Text)
+                   ],
+                 A.object
+                   [ "Sid" A..= ("ProcessingUntilDeadline" :: Text),
+                     "Effect" A..= ("Allow" :: Text),
+                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArn],
+                     "Action" A..= (["kms:GenerateDataKey", "kms:Decrypt"] :: [Text]),
+                     "Resource" A..= ("*" :: Text),
+                     "Condition"
+                       A..= A.object
+                         [ "DateLessThan" A..= A.object ["aws:CurrentTime" A..= formatInstant deadline],
+                           "ForAllValues:StringEquals" A..= A.object ["kms:EncryptionContextKeys" A..= (["documentId"] :: [Text])],
+                           "Null" A..= A.object ["kms:EncryptionContextKeys" A..= ("false" :: Text)]
+                         ]
+                   ]
+               ]
+      ]
+
+formatDay :: Day -> Text
+formatDay = T.pack . formatTime defaultTimeLocale "%Y-%m-%d"
+
+formatInstant :: UTCTime -> Text
+formatInstant = T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
 processingKeyAlias :: DocumentVaultConfig -> Day -> Text
-processingKeyAlias cfg day = cfg.processingKeyAliasPrefix <> T.pack (formatTime defaultTimeLocale "%Y-%m-%d" day)
+processingKeyAlias cfg day = cfg.processingKeyAliasPrefix <> formatDay day
 
 sealWithArchiveKeyOnly :: RSA.PublicKey -> Text -> ByteString -> IO ByteString
 sealWithArchiveKeyOnly archiveKey documentId document = do
