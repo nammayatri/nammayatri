@@ -7,7 +7,10 @@ module Tools.OpenAPIInstances () where
 
 import Data.OpenApi (ToSchema (..))
 import Kernel.External.Encryption (DbHash)
+import Kernel.External.Notification (OverlayNotificationData)
 import Kernel.Prelude
 
 instance ToSchema DbHash where
   declareNamedSchema _ = declareNamedSchema (Proxy @Text)
+
+instance ToSchema OverlayNotificationData

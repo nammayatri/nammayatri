@@ -2022,7 +2022,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       if searchTry.status /= DST.ACTIVE
         then pure Nothing
-        else Just <$> buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry
+        else Just <$> (USRD.getSentEntity nearbyReq >>= maybe (buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry) pure)
     buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)

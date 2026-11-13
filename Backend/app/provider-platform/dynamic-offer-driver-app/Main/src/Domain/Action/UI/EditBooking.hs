@@ -59,6 +59,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
   bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with id:" <> bookingUpdateReqId.getId)
   when (bookingUpdateReq.status /= USER_CONFIRMED) $ throwError $ InvalidRequest "BookingUpdateRequest is not in USER_CONFIRMED state"
   when (bookingUpdateReq.validTill < now) $ throwError $ InvalidRequest "BookingUpdateRequest is expired"
+  let clearIOSPayload = void $ Redis.withCrossAppRedis $ Redis.del (Notify.editDestinationPayloadKey driverId bookingUpdateReqId)
   booking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
   lockEditDestination <- Redis.tryLockRedis (editDestinationLockKey driverId) 20
   if action == ACCEPT && lockEditDestination
@@ -71,6 +72,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
           throwError $ InvalidRequest "You have an upcoming ride near your current drop location."
         else do
+          clearIOSPayload
           QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
           QB.updateIsPickupOrDestinationEdited (Just True) booking.id
           fork "updateIsReallocationEnabled" $ do
@@ -118,6 +120,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
     else do
       let (errorType, errorMessage) = errorMessageByBookingType lockEditDestination
       CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId errorType errorMessage
+      clearIOSPayload
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId
       return Success
   where
@@ -167,3 +170,16 @@ promoteEditFarePolicyToQuote booking bookingUpdateReq =
       | SFP.keepFarePolicyForWholeTrip booking.isScheduled booking.tripCategory -> SFP.cacheFarePolicyByScheduledEstOrQuoteId booking.quoteId booking.startTime booking.returnTime farePolicy
       | otherwise -> SFP.cacheFarePolicyByQuoteId booking.quoteId farePolicy
     Nothing -> logError $ "Edit destination fare policy not found for bookingUpdateRequestId: " <> bookingUpdateReq.id.getId <> ", quote fare policy left unchanged for bookingId: " <> booking.id.getId
+
+getEditDestination ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+    Environment.Flow Notify.EditDestinationPayload
+  )
+getEditDestination (mbPersonId, _, _) bookingUpdateReqId = do
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  Redis.withCrossAppRedis (Redis.safeGet (Notify.editDestinationPayloadKey driverId bookingUpdateReqId))
+    >>= fromMaybeM (InvalidRequest "Edit destination request expired or not found")
