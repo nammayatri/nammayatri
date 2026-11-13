@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Allocation.Types
     allocationDeadline,
     blockingTimerDeadline,
     clearOnMove,
+    awayWarnDeadline,
     isOffered,
     usesRiderSkip,
     visiblePlate,
@@ -35,7 +36,7 @@ module SharedLogic.SharedCab.Allocation.Types
   )
 where
 
-import Data.Time.Clock (diffUTCTime)
+import Data.Time.Clock (addUTCTime, diffUTCTime)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -117,6 +118,13 @@ clearOnMove = \case
   StandTimer _ -> NoTimer
   AwayTimer _ -> NoTimer
   other -> other
+
+-- | An away timer within `leadSec` of running out: the deadline the driver is warned of. Only the away timer: a stand timer waits for
+-- the rider, a moving timer for the cab to pass the stop, and neither is the driver's to fix by moving. A lead of 0 warns never.
+awayWarnDeadline :: Int -> UTCTime -> AllocationState -> Maybe UTCTime
+awayWarnDeadline leadSec now st = case st.timer of
+  AwayTimer d | leadSec > 0, now >= addUTCTime (fromIntegral (negate leadSec)) d, now <= d -> Just d
+  _ -> Nothing
 
 -- | The claim still waits for the driver's answer.
 isOffered :: AllocationState -> Bool
@@ -256,10 +264,12 @@ findingTimeoutAction now findingTimeoutSec findingSince createdAt
 totalAgeMult :: Int
 totalAgeMult = 3
 
--- | The TTL every armer of `sharedcab:alloc:{bookingId}` must use: the stand and moving timers stack under one key, so a TTL below
--- their sum closes as TimerLost (no attempt) and the no-show path is unreachable. Only a GC backstop, so widening is safe.
+-- | The TTL every writer of the booking-state hash must use. It must outlive the longest wait armed with no write in between: the
+-- stacked stand + moving timers, and the away timer (allocationWindowSec, which also bounds a moving cab's ETA at claim). A TTL below
+-- either drops the whole hash mid-allocation: the close is TimerLost (no attempt, no skip) and the skipped plates and attempts are lost
+-- with it, so the same cab is offered again. Only a GC backstop, so widening is safe.
 allocKeyTtl :: SharedCabTunables -> Int
-allocKeyTtl cfg = max cfg.findingTimeoutSec (cfg.standTimerSec + cfg.movingTimerSec + allocKeyTtlMarginSec)
+allocKeyTtl cfg = max cfg.findingTimeoutSec (max (cfg.standTimerSec + cfg.movingTimerSec) cfg.allocationWindowSec + allocKeyTtlMarginSec)
 
 allocKeyTtlMarginSec :: Int
 allocKeyTtlMarginSec = 10

@@ -14,7 +14,7 @@
 
 module Domain.Action.Internal.SharedCabAllocation where
 
-import API.Types.UI.SharedCabInternal (SharedCabCheckInReq)
+import API.Types.UI.SharedCabInternal (SharedCabCheckInReq, SharedCabMoveWarningReq (..))
 import Domain.Types.Person (Person)
 import Environment
 import EulerHS.Prelude
@@ -41,6 +41,12 @@ sharedCabCheckInFCM :: SharedCabCheckInReq -> Maybe Text -> Flow APISuccess
 sharedCabCheckInFCM req apiKey = do
   person <- verifiedDriver req.driverId apiKey
   notifySharedCabCheckIn person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req.routeCode
+  pure Success
+
+sharedCabMoveWarningFCM :: SharedCabMoveWarningReq -> Maybe Text -> Flow APISuccess
+sharedCabMoveWarningFCM req apiKey = do
+  person <- verifiedDriver req.driverId apiKey
+  notifySharedCabMoveWarning person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req.bookingId req.boardStop req.releaseInSec
   pure Success
 
 -- | Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
