@@ -22,3 +22,11 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /edit/destination/{bookingUpdateRequestId}
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Tools.Notifications.EditDestinationPayload

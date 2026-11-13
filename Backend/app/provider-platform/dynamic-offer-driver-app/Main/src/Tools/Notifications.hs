@@ -17,6 +17,8 @@ module Tools.Notifications where
 import Control.Applicative ((<|>))
 import DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Default.Class
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
@@ -71,6 +73,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
+import Tools.OpenAPIInstances ()
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
@@ -1214,7 +1217,8 @@ sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityDa
             sound = Just "driver_trip_update_pop_up.mp3",
             overlayNotificationData = Just $ buildOverlayNotificationData req
           }
-  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+  cachePayloadForIOS person.clientDevice (editDestinationPayloadKey person.id entityData.bookingUpdateRequestId) (EditDestinationPayload entityData (buildOverlayNotificationData req)) entityData.validTill
+  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq trimEditDestinationForIOS (clearDeviceToken person.id)
 
 sendPickupLocationChangedOverlay ::
   ( ServiceFlow m r,
@@ -1246,6 +1250,30 @@ sendPickupLocationChangedOverlay person req entityData = do
             overlayNotificationData = Just $ buildOverlayNotificationData req
           }
   runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+
+data EditDestinationPayload = EditDestinationPayload
+  { details :: UpdateLocationNotificationReq,
+    overlay :: Notification.OverlayNotificationData
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+editDestinationPayloadKey :: Id Person -> Id DBUR.BookingUpdateRequest -> Text
+editDestinationPayloadKey driverId bookingUpdateReqId = "EditLoc:Dest:" <> driverId.getId <> ":" <> bookingUpdateReqId.getId
+
+cachePayloadForIOS :: (Hedis.HedisFlow m r, MonadTime m, ToJSON a) => Maybe Version.Device -> Text -> a -> UTCTime -> m ()
+cachePayloadForIOS mbDevice key payload validTill =
+  when ((mbDevice <&> (.deviceType)) == Just Version.IOS) $ do
+    now <- getCurrentTime
+    Hedis.withCrossAppRedis $ Hedis.setExp key payload (max 1 (ceiling $ diffUTCTime validTill now))
+
+trimEditDestinationForIOS :: FCMData Value -> FCMData Value
+trimEditDestinationForIOS fcmData =
+  fcmData
+    { fcmEntityData = case fcmData.fcmEntityData of
+        Object o -> Object (AKM.filterWithKey (\k _ -> AK.toText k `elem` ["rideId", "bookingUpdateRequestId", "validTill"]) o)
+        other -> other,
+      fcmOverlayNotificationJSON = Nothing
+    }
 
 sendCancellationRateNudgeOverlay ::
   ( CacheFlow m r,

@@ -24,17 +24,29 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
+import qualified Tools.Notifications
 
 type API =
   ( TokenAuth :> "edit" :> "result" :> Capture "bookingUpdateRequestId" (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.EditBooking.EditBookingRespondAPIReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "edit"
+      :> "destination"
+      :> Capture
+           "bookingUpdateRequestId"
+           (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest)
+      :> Get
+           ('[JSON])
+           Tools.Notifications.EditDestinationPayload
   )
 
 handler :: Environment.FlowServer API
-handler = postEditResult
+handler = postEditResult :<|> getEditDestination
 
 postEditResult ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -46,3 +58,13 @@ postEditResult ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postEditResult a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.EditBooking.postEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getEditDestination ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+    Environment.FlowHandler Tools.Notifications.EditDestinationPayload
+  )
+getEditDestination a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EditBooking.getEditDestination (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
