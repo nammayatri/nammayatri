@@ -89,6 +89,7 @@ data TransporterConfig = TransporterConfig
     betterDriverProximityAbortRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     betterDriverSearchMaxRadiusMeters :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     blockDriverOwnRCForFleetDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    blockUnconfiguredVehicleCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     bulkWaiveOffLimit :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,

@@ -185,6 +185,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.betterDriverProximityAbortRadiusMeters betterDriverProximityAbortRadiusMeters,
       Se.Set Beam.betterDriverSearchMaxRadiusMeters betterDriverSearchMaxRadiusMeters,
       Se.Set Beam.blockDriverOwnRCForFleetDrivers blockDriverOwnRCForFleetDrivers,
+      Se.Set Beam.blockUnconfiguredVehicleCategory blockUnconfiguredVehicleCategory,
       Se.Set Beam.bookAnyVehicleDowngradeLevel bookAnyVehicleDowngradeLevel,
       Se.Set Beam.bulkWaiveOffLimit (Just bulkWaiveOffLimit),
       Se.Set Beam.cacheOfferListByDriverId cacheOfferListByDriverId,

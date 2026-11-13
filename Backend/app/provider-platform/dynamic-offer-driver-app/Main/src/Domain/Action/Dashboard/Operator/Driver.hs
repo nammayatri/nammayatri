@@ -212,6 +212,13 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         Kernel.Utils.Common.throwError (InvalidRequest "Request has already been rejected; rejection is terminal")
       _ -> do
         (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
+        -- A vehicle whose RC failed verification can't pass an inspection. Refuse before anything is
+        -- written, so the request stays PENDING and can still be rejected.
+        when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType `elem` [ONBOARDING_INSPECTION, REGULAR_INSPECTION]) $
+          whenJust opHubReq.registrationNo $ \registrationNo -> do
+            mbRc <- QVRCE.findLastVehicleRCWrapper registrationNo
+            when (fmap (.verificationStatus) mbRc == Just Documents.INVALID) $
+              Kernel.Utils.Common.throwError (InvalidRequest "Cannot approve inspection: RC is invalid")
         -- Persist the per-request inspection checklist snapshot (answers + media ids) for audit/history, and
         -- validate + finalize each referenced media (must be confirmed, present, in-size, unchanged) -> COMPLETED,
         -- so the cleanup job keeps it (un-referenced / un-confirmed uploads are swept from S3).
