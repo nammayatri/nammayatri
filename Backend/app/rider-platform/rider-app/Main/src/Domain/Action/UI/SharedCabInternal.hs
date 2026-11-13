@@ -53,6 +53,7 @@ import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
+import qualified SharedLogic.SharedCab.StopProgress as StopProgress
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -214,7 +215,9 @@ getSharedCabSession :: Text -> Text -> Text -> Maybe Text -> Environment.Flow Vi
 getSharedCabSession agencyId driver plate mbToken = do
   checkToken mbToken
   merchantId <- agencyMerchant agencyId
-  ownSession merchantId driver plate >>= mkSessionRespFrom CachedCab
+  s <- ownSession merchantId driver plate
+  fork "sharedCabSessionStopProgress" $ StopProgress.stepSessionCab s
+  mkSessionRespFrom CachedCab s
 
 -- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
 -- pushes and re-ticks go out after it.
