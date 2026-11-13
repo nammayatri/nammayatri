@@ -37,6 +37,7 @@ import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.Beam.Functions
@@ -55,6 +56,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -106,10 +108,22 @@ fetchBookingDetails ride booking = do
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
   let paymentUrl = Nothing
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  vehicle <- fetchVehicleForRide ride booking
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   pure DCommon.BookingDetails {..}
+
+fetchVehicleForRide :: DRide.Ride -> DB.Booking -> Flow DVeh.Vehicle
+fetchVehicleForRide ride booking = do
+  mbVehicle <- QVeh.findById ride.driverId
+  case mbVehicle of
+    Just vehicle -> pure vehicle
+    Nothing
+      | ride.status `elem` [DRide.COMPLETED, DRide.CANCELLED] -> do
+        logWarning $ "Vehicle missing for driver " <> ride.driverId.getId <> " on " <> show ride.status <> " ride " <> ride.id.getId <> "; using ride_details snapshot (status sync)"
+        rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+        pure $ CallBAP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
+      | otherwise -> throwError (VehicleNotFound ride.driverId.getId)
 
 -- IN_PROGRESS --
 
