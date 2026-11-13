@@ -1520,6 +1520,7 @@ TransporterConfig:
     dontAutoEnableDriver: Maybe Bool
     enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
     unifiedOnboardingFlagsRecompute: Maybe Bool
+    blockUnconfiguredVehicleCategory: Maybe Bool # Just True ⇒ a vehicle whose category has no document config in the city is never verified (its flags recompute is skipped). False/NULL ⇒ existing behaviour.
     forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
     driverOnboardingLinkExpiryHours: Maybe Int # Lifetime of the onboarding-link SMS code (and its short link). NULL ⇒ 24.
@@ -2100,6 +2101,7 @@ TransporterConfig:
   default:
     enableLegalComplianceDocuments: "false"
     enableGoOnlinePolicyBlocker: "false"
+    blockUnconfiguredVehicleCategory: "false"
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
     mediaFileSizeUpperLimit: "10000000"

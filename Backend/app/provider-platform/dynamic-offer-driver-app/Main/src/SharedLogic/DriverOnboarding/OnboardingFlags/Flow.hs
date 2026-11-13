@@ -72,7 +72,9 @@ data VehicleDocsEntry = VehicleDocsEntry
     -- | The caller's value when known (statusHandler); standalone recomputes pass Nothing.
     vdeMakeSelfieAadhaarPanMandatory :: Maybe Bool,
     -- | The RC's city has enableBotFlow: `approved` is BOT-owned.
-    vdeEnableBotFlow :: Bool
+    vdeEnableBotFlow :: Bool,
+    -- | The RC's city has blockUnconfiguredVehicleCategory: a category with no doc config is never verified.
+    vdeBlockUnconfiguredCategory :: Bool
   }
 
 -- | Everything the person-side recompute needs besides the documents themselves.
@@ -147,7 +149,7 @@ recomputeOnboardingFlags input useUnifiedOnboardingFlagsRecompute = do
               pfc.pfcVehicleDocs
               useUnifiedOnboardingFlagsRecompute
   forM_ input.ofiVehicles $ \entry ->
-    recomputeVehicleFlagsArm entry.vdeRegistrationNo entry.vdeItem entry.vdeConfigs entry.vdeMakeSelfieAadhaarPanMandatory entry.vdeEnableBotFlow useUnifiedOnboardingFlagsRecompute
+    recomputeVehicleFlagsArm entry.vdeRegistrationNo entry.vdeItem entry.vdeConfigs entry.vdeMakeSelfieAadhaarPanMandatory entry.vdeEnableBotFlow entry.vdeBlockUnconfiguredCategory useUnifiedOnboardingFlagsRecompute
   pure OnboardingFlagsResult {ofrPersonEnabled = personEnabled, ofrVehiclesTouched = length input.ofiVehicles}
 
 mkUnavailableDoc :: DVC.DocumentType -> DocumentStatusItem
@@ -387,6 +389,9 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
     (bucketsOfFlags' verifiedToWrite approvedAfterWrites newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
   pure newEnabled
 
+-- | With blockUnconfiguredVehicleCategory on, a vehicle whose category has no document config in the city
+--   is not onboarded there: with no rules to check, every doc would pass and the RC would be marked
+--   verified (e.g. an auto RC in a car-only city). Its flags are left as they are instead.
 recomputeVehicleFlagsArm ::
   OnboardingFlow m r =>
   Text ->
@@ -395,48 +400,55 @@ recomputeVehicleFlagsArm ::
   Maybe Bool ->
   Bool ->
   Bool ->
+  Bool ->
   m ()
-recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationConfigs makeSelfieAadhaarPanMandatory botFlow useUnifiedOnboardingFlagsRecompute = do
-  let vehicleDocItem' = vehicleDocItem
-      allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' makeSelfieAadhaarPanMandatory
-  rcHash <- getDbHash registrationNo
-  mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
-  let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
-      approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
-  case mbRc of
-    Just rc -> do
-      let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not botFlow && not approvalSupported && rc.verified == Just True
-          newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
-          newApproved
-            | holdEnabledWithoutDocsVerifiedEnabledOrApproved = rc.approved
-            | botFlow = botOwnedApproved
-            | otherwise = case derivedApproved of
-              Just True | not allVehicleMandatoryDocsValid -> Nothing
-              other -> other
-          -- BOT owns the RC's `approved`: only the BOT review sets it True. Losing `verified` (True -> False)
-          -- revokes it, and so does a rejected approval doc on a verified RC. A new RC (verified NULL) whose
-          -- first recompute gives False was never verified, so it stays pending instead of counting as rejected.
-          botOwnedApproved
-            | rc.verified == Just True && newVerified == Just False = Just False
-            | newVerified == Just True && derivedApproved == Just False = Just False
-            | otherwise = rc.approved
-      when (newVerified /= rc.verified || newApproved /= rc.approved) $
-        VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
-      when (approvalSupported && rc.approved /= Just True && newApproved == Just True) $
-        ApprovalComms.notifyVehicleApproved rc registrationNo
-      when (useUnifiedOnboardingFlagsRecompute && rc.approved /= Just True && newApproved == Just True) $
-        activateRcForSoleLinkedEnabledDriver rc.id registrationNo
-      -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
-      when (useUnifiedOnboardingFlagsRecompute && rc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) rc.id
-      whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
-        adjustOnboardingCounters
-          useUnifiedOnboardingFlagsRecompute
-          CounterVehicle
-          rcMerchantOpCityId
-          rc.fleetOwnerId
-          (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
-          (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
-    Nothing -> RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationConfigs makeSelfieAadhaarPanMandatory botFlow blockUnconfiguredCategory useUnifiedOnboardingFlagsRecompute = do
+  let vehicleCategory = vehicleDocCategory vehicleDocItem
+      -- Only vehicle-side rows count: driver-side configs (DL, PAN, ...) also carry a vehicle category.
+      isVehicleCategoryConfigured = any (\config -> config.vehicleCategory == vehicleCategory && isVehicleSideDocType config.documentCategory config.documentType) allDocumentVerificationConfigs
+  if blockUnconfiguredCategory && not isVehicleCategoryConfigured
+    then logWarning $ "Skipping vehicle flags recompute: no document verification config for vehicle category " <> show vehicleCategory
+    else do
+      let vehicleDocItem' = vehicleDocItem
+          allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' makeSelfieAadhaarPanMandatory
+      rcHash <- getDbHash registrationNo
+      mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
+      let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
+          approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
+      case mbRc of
+        Just rc -> do
+          let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not botFlow && not approvalSupported && rc.verified == Just True
+              newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
+              newApproved
+                | holdEnabledWithoutDocsVerifiedEnabledOrApproved = rc.approved
+                | botFlow = botOwnedApproved
+                | otherwise = case derivedApproved of
+                  Just True | not allVehicleMandatoryDocsValid -> Nothing
+                  other -> other
+              -- BOT owns the RC's `approved`: only the BOT review sets it True. Losing `verified` (True -> False)
+              -- revokes it, and so does a rejected approval doc on a verified RC. A new RC (verified NULL) whose
+              -- first recompute gives False was never verified, so it stays pending instead of counting as rejected.
+              botOwnedApproved
+                | rc.verified == Just True && newVerified == Just False = Just False
+                | newVerified == Just True && derivedApproved == Just False = Just False
+                | otherwise = rc.approved
+          when (newVerified /= rc.verified || newApproved /= rc.approved) $
+            VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
+          when (approvalSupported && rc.approved /= Just True && newApproved == Just True) $
+            ApprovalComms.notifyVehicleApproved rc registrationNo
+          when (useUnifiedOnboardingFlagsRecompute && rc.approved /= Just True && newApproved == Just True) $
+            activateRcForSoleLinkedEnabledDriver rc.id registrationNo
+          -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
+          when (useUnifiedOnboardingFlagsRecompute && rc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) rc.id
+          whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
+            adjustOnboardingCounters
+              useUnifiedOnboardingFlagsRecompute
+              CounterVehicle
+              rcMerchantOpCityId
+              rc.fleetOwnerId
+              (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
+              (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
+        Nothing -> RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
 
 activateRcForSoleLinkedEnabledDriver :: OnboardingFlow m r => Id RC.VehicleRegistrationCertificate -> Text -> m ()
 activateRcForSoleLinkedEnabledDriver rcId registrationNo =

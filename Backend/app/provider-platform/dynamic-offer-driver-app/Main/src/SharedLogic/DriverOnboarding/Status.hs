@@ -288,7 +288,8 @@ fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language
   pure (vehicleDocWithReasons, allDocumentVerificationConfigs)
 
 -- | Append this RC's @failedRules@ to the RC document's verificationMessage (only when it already has a base
---   message and is not VALID); every other document is left untouched.
+--   message and is not VALID or INVALID); every other document is left untouched. An INVALID RC's message
+--   already is its failed rules (VehicleDocs builds it from them), so appending them again would repeat it.
 appendRcFailedRulesToVehicleDoc :: OnboardingFlow m r => Language -> RC.VehicleRegistrationCertificate -> VehicleDocumentItem -> m VehicleDocumentItem
 appendRcFailedRulesToVehicleDoc language rc vehicleDoc
   | null rc.failedRules = pure vehicleDoc
@@ -296,7 +297,7 @@ appendRcFailedRulesToVehicleDoc language rc vehicleDoc
     documents <- forM vehicleDoc.documents $ \doc ->
       case (doc.documentType, doc.verificationStatus, doc.verificationMessage) of
         (DVC.VehicleRegistrationCertificate, status, Just msg)
-          | status /= VALID -> do
+          | status `notElem` [VALID, INVALID] -> do
             msgWithReasons <- addVerificationReasons language (Just rc.failedRules) msg
             pure doc {verificationMessage = Just msgWithReasons}
         _ -> pure doc
@@ -493,7 +494,8 @@ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory 
                     vdeItem = vehicleDocItem',
                     vdeConfigs = allDocumentVerificationConfigs,
                     vdeMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory,
-                    vdeEnableBotFlow = transporterConfig.enableBotFlow == Just True
+                    vdeEnableBotFlow = transporterConfig.enableBotFlow == Just True,
+                    vdeBlockUnconfiguredCategory = transporterConfig.blockUnconfiguredVehicleCategory == Just True
                   }
               ]
           }
@@ -1065,6 +1067,7 @@ botApproveVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> Id RC.Vehicl
 botApproveVehicle transporterConfig rcId =
   Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
     rc <- RCQuery.findById rcId >>= fromMaybeM (VehicleNotFound rcId.getId)
+    when (rc.verificationStatus == Documents.INVALID) $ throwError (InvalidRequest "RC is invalid")
     when (rc.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
     unless (rc.approved == Just True) $ do
       RCQuery.updateApprovedAndVerifiedById (Just True) rc.verified rc.id
