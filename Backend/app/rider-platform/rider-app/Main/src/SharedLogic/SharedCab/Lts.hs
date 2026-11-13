@@ -13,7 +13,6 @@ module SharedLogic.SharedCab.Lts
   )
 where
 
-import Control.Monad.Extra (firstJustM)
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import qualified Data.Text as T
@@ -92,8 +91,8 @@ readRoutePositions ::
   Text ->
   m [CabTrack]
 readRoutePositions integratedBppConfigId routeCode = do
-  keys <- routeKeys integratedBppConfigId routeCode
-  pairs <- fromMaybe [] <$> firstJustM (\key -> mfilter (not . null) . Just <$> Redis.runInMultiCloudLTSRedisForListFromReplica (Redis.hGetAll @A.Value key)) keys
+  key <- routeKey integratedBppConfigId routeCode
+  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll @A.Value key
   fmap catMaybes . forM pairs $ \(plate, raw) -> case A.fromJSON raw of
     A.Success entry -> pure (Just (fromGps plate entry))
     A.Error err -> Nothing <$ logWarning ("shared-cab: dropping gps field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
@@ -106,8 +105,8 @@ readRoutePosition ::
   Text ->
   m (Maybe CabTrack)
 readRoutePosition integratedBppConfigId routeCode plate = do
-  keys <- routeKeys integratedBppConfigId routeCode
-  fields <- either (const []) identity <$> withTryCatch "sharedCab:readRoutePosition" (maybeToList <$> firstJustM (\key -> listToMaybe <$> Redis.runInMultiCloudLTSRedisForListFromReplica (maybeToList <$> Redis.hGet @A.Value key plate)) keys)
+  key <- routeKey integratedBppConfigId routeCode
+  fields <- either (const []) identity <$> withTryCatch "sharedCab:readRoutePosition" (Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value key plate)
   pure $ case listToMaybe fields of
     Just raw | A.Success entry <- A.fromJSON raw -> Just (fromGps plate entry)
     _ -> Nothing
@@ -127,14 +126,10 @@ arrivalUtc e = posixSecondsToUTCTime (fromInteger e.arrivalTimeUnix)
 nextStopCode :: CabTrack -> Maybe Text
 nextStopCode cab = (.stopCode) <$> listToMaybe cab.etas
 
--- | The cab feed's prefixed hash, then the unprefixed one.
--- ponytail: the unprefixed fallback covers gps-processor until its shared-cab feed sets external_key_prefix; drop it after.
-routeKeys :: (CacheFlow m r, EsqDBFlow m r) => Id DIBC.IntegratedBPPConfig -> Text -> m [Text]
-routeKeys integratedBppConfigId routeCode = do
+routeKey :: (CacheFlow m r, EsqDBFlow m r) => Id DIBC.IntegratedBPPConfig -> Text -> m Text
+routeKey integratedBppConfigId routeCode = do
   prefix <- (>>= redisPrefixOf) <$> CQIBC.findById integratedBppConfigId
-  let prefixed = CQMMB.mkRouteKey prefix routeCode
-      bare = CQMMB.mkRouteKey Nothing routeCode
-  pure $ prefixed : [bare | bare /= prefixed]
+  pure $ CQMMB.mkRouteKey prefix routeCode
 
 redisPrefixOf :: DIBC.IntegratedBPPConfig -> Maybe Text
 redisPrefixOf config = case config.providerConfig of
