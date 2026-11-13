@@ -7,6 +7,7 @@ where
 
 import Data.List (nub, (\\))
 import qualified Data.Map.Strict as M
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Types (ServiceFlow)
@@ -64,7 +65,7 @@ expireSilentSessions merchantId mocId = do
   liveBookings <- Allocation.cityLiveBookings mocId
   sessions <- cityLiveSessions merchantId mocId [plate | b <- liveBookings, Just plate <- [b.booking.vehicleNumber]]
   now <- getCurrentTime
-  pings <- M.fromList . catMaybes <$> mapM (lastPings now) (nub $ map (.routeCode) sessions)
+  pings <- M.fromList . catMaybes <$> mapM (lastPings now) (nub [(s.integratedBppConfigId, s.routeCode) | s <- sessions])
   forM_ sessions $ \s ->
     withTryCatch "sharedCab:expiry" (checkSession pings now s) >>= \case
       Left err -> logError $ "sharedCab expiry failed for " <> s.vehicleNumber <> ": " <> show err
@@ -82,9 +83,9 @@ cityLiveSessions merchantId mocId bookingPlates = do
   pure $ indexed <> filter (\s -> s.status /= ENDED && s.merchantOperatingCityId == mocId) (catMaybes rebuilt)
 
 -- | plate → latest ping on the route, or Nothing if LTS couldn't be read.
-lastPings :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => UTCTime -> Text -> m (Maybe (Text, M.Map Text Ping))
-lastPings now route =
-  withTryCatch "sharedCab:trackVehicles" (Lts.readRoutePositions route) >>= \case
+lastPings :: ExpiryFlow m r c => UTCTime -> (Id DIBC.IntegratedBPPConfig, Text) -> m (Maybe (Text, M.Map Text Ping))
+lastPings now (integratedBppConfigId, route) =
+  withTryCatch "sharedCab:trackVehicles" (Lts.readRoutePositions integratedBppConfigId route) >>= \case
     Left err -> do
       logError $ "sharedCab expiry: LTS read failed for route " <> route <> ", skipping it: " <> show err
       pure Nothing

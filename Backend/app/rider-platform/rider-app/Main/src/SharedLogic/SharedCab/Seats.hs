@@ -256,7 +256,7 @@ setWalkups :: (SeatFlow m r, Redis.HedisLTSFlowEnv r) => Session -> Int -> m Int
 setWalkups s wanted = do
   c <- cabSeats s
   alarmIfOverbooked s c
-  mbTrack <- Lts.readRoutePosition s.routeCode s.vehicleNumber
+  mbTrack <- Lts.readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
   pure $ walkupsFitting c (nextStopIdx c mbTrack) wanted
 
 -- | A route change starts a new trip: the riders aboard count on it to the new route's end ('rideOn'), and the walk-ups come along
