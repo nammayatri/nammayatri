@@ -79,6 +79,7 @@ import qualified SharedLogic.Association.Change as AC
 import SharedLogic.DriverOnboarding.DocumentIdentifier
 import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -240,11 +241,22 @@ disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
 
 checkAndUpdateAirConditioned :: OnboardingFlow m r => Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> m ()
 checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCityId cityVehicleServiceTiers downgradeReason shouldUpdateServiceTiers = do
-  driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
-  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  -- Both from the primary DB and Redis: the fleet AC lock needs the current AC score (an ops lift resets it) and the
+  -- current airConditioned (it blocks only a real on->off). These are KV reads, which runInReplica doesn't move.
+  (mbDriverInfo, mbVehicle) <- runInMasterDbAndRedis $ (,) <$> DIQuery.findById personId <*> QVehicle.findById personId
+  driverInfo <- fromMaybeM DriverInfoNotFound mbDriverInfo
+  vehicle <- fromMaybeM (VehicleNotFound personId.getId) mbVehicle
   let serviceTierACThresholds = map (\DVST.VehicleServiceTier {isAirConditioned = _a, ..} -> airConditionedThreshold) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
+      liftsACRestriction = isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))
 
-  when (isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))) $ do
+  -- The fleet's AC lock holds the driver only; ops can still turn AC off.
+  when (not isDashboard && not isAirConditioned && vehicle.airConditioned /= Just False) $ do
+    driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    mbFleetLock <- FDS.getFleetLock merchantOpCityId driver driverInfo vehicle cityVehicleServiceTiers
+    when (maybe False (.acLocked) mbFleetLock) $
+      throwError $ InvalidRequest "AC is managed by your fleet. Contact your fleet owner to change it."
+
+  when liftsACRestriction $ do
     when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
       if isDashboard
         then do
@@ -262,6 +274,9 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCit
         driverInfo' = if acRestricted then driverInfo {DI.airConditionScore = Just 0.0} else driverInfo
         vehicle' = vehicle {DV.airConditioned = Just isAirConditioned}
     recomputeSelectedServiceTiers (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  -- AC tiers are eligible again: a fleet that locks auto-assign puts them back.
+  when (liftsACRestriction || (isAirConditioned && vehicle.airConditioned == Just False)) $
+    fork "applyLockedFleetSettings" $ FDS.applyLockedFleetSettingsToDriver personId merchantOpCityId
 
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
 checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
