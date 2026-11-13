@@ -4,7 +4,7 @@ module SharedLogic.SharedCab.Allocation.Types
     Timer (..),
     timerDeadline,
     allocationDeadline,
-    runningTimerDeadline,
+    blockingTimerDeadline,
     clearOnMove,
     isOffered,
     usesRiderSkip,
@@ -65,10 +65,13 @@ allocationDeadline st = case st.timer of
   OfferTimer _ -> Nothing
   timer -> timerDeadline timer
 
--- | The deadline of whatever timer runs, away timer included. The stop-progress tick uses this to arm the moving timer only when
--- no timer runs: an away timer ends as a blameless AwayTimeout, and a rider-blamed moving timer must not replace it.
-runningTimerDeadline :: AllocationState -> Maybe UTCTime
-runningTimerDeadline = timerDeadline . (.timer)
+-- | The deadline of a timer the stop-progress tick must not replace when the cab reaches the board stop. An away timer only bounds
+-- how long a cab not at the stop is held; once the cab is at the stop the rider's countdown takes over, or a cab accepted away from
+-- the stop (the usual case: a driver accepting at the stand) never shows as arrived and is released at AwayTimeout.
+blockingTimerDeadline :: AllocationState -> Maybe UTCTime
+blockingTimerDeadline st = case st.timer of
+  AwayTimer _ -> Nothing
+  timer -> timerDeadline timer
 
 -- | A cab seen moving no longer waits at a stop: its stand and away timers are cleared; the moving timer is not.
 clearOnMove :: Timer -> Timer
