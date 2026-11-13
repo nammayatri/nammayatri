@@ -110,10 +110,8 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
-    hedisClusterCfg :: HedisCfg,
-    hedisSecondaryClusterCfg :: HedisCfg,
-    ltsRedis :: HedisCfg,
-    ltsSecondaryRedis :: HedisCfg,
+    hedisClusterCfgs :: [HedisCloudCfg],
+    ltsRedisCfgs :: [HedisCloudCfg],
     ltsReplicaRedis :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
@@ -339,12 +337,12 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
-    secondaryLTSHedisEnv :: Maybe HedisEnv,
+    peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
-    secondaryHedisClusterEnv :: Maybe HedisEnv,
+    peerHedisClusterEnvs :: [(CloudType, HedisEnv)],
     cutOffHedisCluster :: Bool,
     cutOffNonCriticalHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -473,20 +471,15 @@ buildAppEnv cfg@AppCfg {..} = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   let kafkaProducerForART = Just kafkaProducerTools
+  (localHedisClusterEnv, peerHedisClusterEnvs) <- connectHedisClusterClouds hedisClusterCfgs riderAppPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
-      then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg riderAppPrefix
+      then disconnectHedis localHedisClusterEnv >> pure hedisEnv
+      else pure localHedisClusterEnv
   hedisNonCriticalClusterEnv <-
     if cutOffNonCriticalHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
-  secondaryHedisClusterEnv <-
-    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg riderAppPrefix) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
   s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
   s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
   let s3RewardsEnv = buildS3Env cfg.s3RewardsConfig
@@ -496,13 +489,7 @@ buildAppEnv cfg@AppCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
-  ltsHedisEnv <- connectHedis ltsRedis identity
-  secondaryLTSHedisEnv <-
-    Kernel.Prelude.try (connectHedis ltsSecondaryRedis identity) >>= \case
-      Left (e :: SomeException) -> do
-        putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
-        pure Nothing
-      Right env -> pure (Just env)
+  (ltsHedisEnv, peerLTSHedisEnvs) <- connectHedisStandaloneClouds ltsRedisCfgs identity
   ltsReplicaHedisEnv <- case ltsReplicaRedis of
     Nothing -> pure Nothing
     Just replicaCfg ->
@@ -538,9 +525,9 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
-  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  mapM_ (disconnectHedis . snd) peerHedisClusterEnvs
   disconnectHedis ltsHedisEnv
-  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  mapM_ (disconnectHedis . snd) peerLTSHedisEnvs
   maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
 
 type Env = EnvR AppEnv

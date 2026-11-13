@@ -179,11 +179,8 @@ readQueueLastTsPresence :: [Text] -> Environment.Flow [Bool]
 readQueueLastTsPresence [] = pure []
 readQueueLastTsPresence lastTsKeys = do
   primary <- Redis.withLTSReplicaRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
-  mbSecondary <- asks (.secondaryLTSHedisEnv)
-  secondary <- case mbSecondary of
-    Nothing -> pure $ map (const Nothing) lastTsKeys
-    Just _ -> Redis.withSecondaryLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
-  pure $ zipWith (\p s -> isJust p || isJust s) primary secondary
+  peers <- Redis.runOnAllPeerLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
+  pure $ foldl' (zipWith (\present peer -> present || isJust peer)) (map isJust primary) peers
 
 getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow SZQT.SpecialZoneQueueStatsRes)
 getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do

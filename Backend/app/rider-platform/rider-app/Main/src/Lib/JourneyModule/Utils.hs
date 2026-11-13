@@ -398,7 +398,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
 
 fetchLiveTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "peerLTSHedisEnvs" r [(CloudType, Hedis.HedisEnv)],
     HasField "ltsReplicaHedisEnv" r (Maybe Hedis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
     CacheFlow m r,

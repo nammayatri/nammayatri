@@ -131,12 +131,18 @@ let cacConfig =
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { hedisCfg
-    , hedisClusterCfg
-    , hedisSecondaryClusterCfg
+    , hedisClusterCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = hedisClusterCfg }
+      , { hedisCloud = common.CloudType.GCP
+        , hedisCloudCfg = hedisSecondaryClusterCfg
+        }
+      ]
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , ltsRedisCfg = hedisCfg
-    , secondaryLTSRedisCfg = Some hedisCfg
+    , ltsRedisCfgs =
+      [ { hedisCloud = common.CloudType.AWS, hedisCloudCfg = hedisCfg }
+      , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = hedisCfg }
+      ]
     , ltsReplicaRedisCfg = Some hedisCfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
