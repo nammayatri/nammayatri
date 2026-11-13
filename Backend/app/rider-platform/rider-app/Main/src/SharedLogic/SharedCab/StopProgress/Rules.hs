@@ -7,6 +7,7 @@ module SharedLogic.SharedCab.StopProgress.Rules
     boardStopPassed,
     armMovingTimer,
     dropAction,
+    reachedDropStop,
     offRouteAction,
   )
 where
@@ -71,8 +72,12 @@ dropAction cfg now clock mbFix dropStop = case clock of
     | diffUTCTime now since >= fromIntegral cfg.autoEndAfterDropSec -> AutoEnd
     | otherwise -> KeepWaiting
   Nothing
-    | any (\cab -> any (\s -> s.stopCode == dropStop && arrivedAt (fromIntegral cfg.atStopRadiusM) cab s) cab.stops) mbFix -> StartDropClock
+    | any (\cab -> reachedDropStop cfg cab dropStop) mbFix -> StartDropClock
     | otherwise -> KeepWaiting
+
+-- | The cab has got to the drop stop: passed it, or within atStopRadiusM of it (the route's last stop is never marked reached).
+reachedDropStop :: Config.SharedCabTunables -> CabFix -> Text -> Bool
+reachedDropStop cfg cab dropStop = any (\s -> s.stopCode == dropStop && arrivedAt (fromIntegral cfg.atStopRadiusM) cab s) cab.stops
 
 -- | gps-processor flags a fresh fix `off_route`; flagged for `offRouteSec` straight pauses the session, and the driver is asked to
 -- confirm the route `checkInLeadSec` before that. No fresh fix decides nothing, so the clock is neither started nor cleared.

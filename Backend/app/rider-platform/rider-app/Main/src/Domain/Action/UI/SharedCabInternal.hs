@@ -216,7 +216,12 @@ getSharedCabSession agencyId driver plate mbToken = do
   checkToken mbToken
   merchantId <- agencyMerchant agencyId
   s <- ownSession merchantId driver plate
-  fork "sharedCabSessionStopProgress" $ StopProgress.stepSessionCab s
+  -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
+  -- journey completed (the next poll shows it), then the cab's tick step runs
+  fork "sharedCabSessionStopProgress" $ do
+    withTryCatch "sharedCabCompleteArrivedRides" (StopProgress.completeArrivedRides s)
+      >>= either (\e -> logError $ "shared-cab: completing arrived rides failed for " <> s.vehicleNumber <> ": " <> show e) pure
+    StopProgress.stepSessionCab s
   mkSessionRespFrom CachedCab s
 
 -- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
@@ -358,7 +363,7 @@ mkSessionRespFrom cabReads s = do
       (mbTrack,) <$> Seats.freeAhead s mbTrack
   let vehicle = (.position) <$> mbTrack
       nextIdx = fromMaybe 0 (mbTrack >>= Lts.nextStopCode >>= \code -> findIndex ((== code) . (.stopCode)) stops)
-      ahead = drop nextIdx stops
+      ahead = if atRouteEnd cfg.atStopRadiusM stops nextIdx mbTrack then [] else drop nextIdx stops
   riderRows <- liveRiderRows cfg s.vehicleTripId [(stop.stopCode, stop.stopPoint) | stop <- stops] polyline addresses s.vehicleNumber
   now <- getCurrentTime
   checkIn <- if s.status == ACTIVE then (>>= CheckIn.checkInView now) <$> CheckIn.readCheckIn s.vehicleNumber else pure Nothing
@@ -385,6 +390,15 @@ mkSessionRespFrom cabReads s = do
         tripEarnings,
         checkIn
       }
+
+-- | The cab is at the route's last stop: LTS still lists it as the next stop and never marks it reached, so being within the at-stop
+-- radius of it counts as arrived and the session shows no stops ahead.
+atRouteEnd :: Int -> [DRSM.RouteStopMapping] -> Int -> Maybe Lts.CabTrack -> Bool
+atRouteEnd radiusM stops nextIdx mbTrack = case (listToMaybe (reverse stops), mbTrack) of
+  (Just lastStop, Just track) ->
+    nextIdx == length stops - 1
+      && realToFrac (distanceBetweenInMeters track.position lastStop.stopPoint) <= (fromIntegral radiusM :: Double)
+  _ -> False
 
 -- | The rider's number for a driver-initiated masked call; only for the driver whose live cab holds the booking, inside the call window.
 getSharedCabBookingCallNumber :: Id DFTB.FRFSTicketBooking -> Text -> Text -> Maybe Text -> Environment.Flow API.RiderCallNumberResp
