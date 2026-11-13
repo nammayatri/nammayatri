@@ -104,9 +104,13 @@ findScheduledTransactionIdsLite merchantOpCityId statuses fromTime toTime limit 
 
 -- | Per-(operating city, status) scheduled-booking counts over a start-time window, for the ops
 -- landing page. A single GROUP BY merchant_operating_city_id, status COUNT(*) that hits the partial
--- composite index idx_booking_scheduled_ops (merchant_operating_city_id, start_time) WHERE is_scheduled,
--- so it is an index range scan over just the scheduled slice — no per-row fetch, no per-city round trip.
--- Returns one row per (cityId, status) that has at least one booking; the caller folds it into totals.
+-- composite index idx_booking_scheduled_ops_active (merchant_operating_city_id, start_time)
+-- WHERE is_scheduled AND status IN (NEW, TRIP_ASSIGNED, REALLOCATED), so it is an index range scan
+-- over just the active scheduled slice — no per-row fetch, no per-city round trip. The status filter
+-- below must stay a subset of that index predicate or the index will not be used.
+-- Counts only active statuses: COMPLETED and CANCELLED are intentionally excluded (the caller's
+-- completed/cancelled buckets are therefore always 0). Returns one row per (cityId, status) that has
+-- at least one booking; the caller folds it into totals.
 findScheduledStatusCountsByCitiesLite ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity] ->
@@ -117,6 +121,7 @@ findScheduledStatusCountsByCitiesLite [] _ _ = pure []
 findScheduledStatusCountsByCitiesLite merchantOpCityIds fromTime toTime = do
   dbConf <- getReplicaBeamConfig
   let cityIds = map (Just . Kernel.Types.Id.getId) merchantOpCityIds
+      activeStatuses = [Domain.Types.Booking.NEW, Domain.Types.Booking.TRIP_ASSIGNED, Domain.Types.Booking.REALLOCATED]
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -132,6 +137,7 @@ findScheduledStatusCountsByCitiesLite merchantOpCityIds fromTime toTime = do
               ( \booking ->
                   B.sqlBool_ (Beam.merchantOperatingCityId booking `B.in_` (B.val_ <$> cityIds))
                     B.&&?. B.sqlBool_ (Beam.isScheduled booking B.==. B.val_ (Just True))
+                    B.&&?. B.sqlBool_ (Beam.status booking `B.in_` (B.val_ <$> activeStatuses))
                     B.&&?. B.sqlBool_ (Beam.startTime booking B.>=. B.val_ fromTime)
                     B.&&?. B.sqlBool_ (Beam.startTime booking B.<=. B.val_ toTime)
               )
