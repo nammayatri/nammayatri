@@ -7,7 +7,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
-import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), runningTimerDeadline)
+import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), blockingTimerDeadline)
 import SharedLogic.SharedCab.Config (SharedCabTunables (..), defaultTunables)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
@@ -96,9 +96,9 @@ tests =
           armMovingTimer cfg t0 Nothing (Just (fixOn (Just True) 25.6195 [stopAt 4 False, stopAt 5 False, stopAt 6 False])) "S5"
         )
           @?= (Just (after 90), Nothing, Nothing, Nothing),
-      testCase "moving timer: an away timer running at the stop is never replaced by the rider-blamed moving timer; a stand or moving timer is not either" $
+      testCase "moving timer: a cab accepted away from the stop starts the countdown on reaching it; a stand or moving timer is never replaced" $
         let st timer = AllocationState {vehicleNumber = "P1", timer}
-            armedWith timer = armMovingTimer cfg t0 (runningTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
+            armedWith timer = armMovingTimer cfg t0 (blockingTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
          in map armedWith [NoTimer, StandTimer (after 30), MovingTimer (after 30), AwayTimer (after 30)]
-              @?= [Just (after 90), Nothing, Nothing, Nothing]
+              @?= [Just (after 90), Nothing, Nothing, Just (after 90)]
     ]
