@@ -83,7 +83,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendLegalPolicyNotification (handleSendLegalPolicyNotification)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendScheduledSearchRequestToTopDrivers, sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runPgSettlementIngestionJob, runSettlementReportIngestionJob)
@@ -154,6 +154,7 @@ allocatorHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInListWrapper flowRt env sendSearchRequestToDrivers
           & putJobHandlerInListWrapper flowRt env sendScheduledSearchRequestToDrivers
+          & putJobHandlerInListWrapper flowRt env sendScheduledSearchRequestToTopDrivers
           & putJobHandlerInListWrapper flowRt env unblockDriver
           & putJobHandlerInListWrapper flowRt env unblockAirportDriver
           & putJobHandlerInListWrapper flowRt env softBlockNotifyDriver

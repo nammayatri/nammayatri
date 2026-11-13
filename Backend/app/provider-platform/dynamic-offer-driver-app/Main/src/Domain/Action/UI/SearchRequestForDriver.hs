@@ -125,6 +125,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isPaymentOnline :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
     isScheduled :: Bool,
+    -- Only present when the driver is short of the minimum wallet balance this scheduled ride needs.
+    scheduledRideMinWalletBalance :: Maybe HighPrecMoney,
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
     -- Only present when at least one of the driver's own preferences applied to this request.
@@ -192,6 +194,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           -- customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
           tripCategory = searchTry.tripCategory,
           isScheduled = searchTry.isScheduled,
+          scheduledRideMinWalletBalance = Nothing,
           preferenceMatchScore =
             if fromMaybe False nearbyReq.hasApplicablePreferences
               then nearbyReq.preferenceMatchScore

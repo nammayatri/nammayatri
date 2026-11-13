@@ -57,6 +57,7 @@ data Handle m r = Handle
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
     isScheduledBooking :: Bool,
+    topDriversRoundDone :: Maybe (m ()),
     mbTopUpSize :: Maybe Int,
     popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
     markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
@@ -103,19 +104,25 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
   logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
   if isBatchNumExceedLimit'
     then do
-      if isScheduledBooking
+      if isJust topDriversRoundDone
         then do
-          void initiateDriverSearchBatch
+          logInfo "Top drivers round finished; regular scheduled rounds take over."
+          fromMaybe (pure ()) topDriversRoundDone
           return (Complete, NormalPool, Nothing)
-        else do
-          metrics.incrementFailedTaskCounter
-          logInfo "No driver accepted"
-          appBackendBapInternal <- asks (.appBackendBapInternal)
-          let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
-          void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
-          cancelSearchTry
-          cancelBookingIfApplies
-          return (Complete, NormalPool, Nothing)
+        else
+          if isScheduledBooking
+            then do
+              void initiateDriverSearchBatch
+              return (Complete, NormalPool, Nothing)
+            else do
+              metrics.incrementFailedTaskCounter
+              logInfo "No driver accepted"
+              appBackendBapInternal <- asks (.appBackendBapInternal)
+              let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
+              void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
+              cancelSearchTry
+              cancelBookingIfApplies
+              return (Complete, NormalPool, Nothing)
     else do
       batchStartTime <- getCurrentTime
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
