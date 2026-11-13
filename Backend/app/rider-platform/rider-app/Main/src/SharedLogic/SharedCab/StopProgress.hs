@@ -75,7 +75,7 @@ runStopProgress cityId live positionsByRoute = do
     routeRead <- case lookup routeCode positionsByRoute of
       Just read' -> pure read'
       Nothing ->
-        withTryCatch "sharedCabStopProgressRead" (RouteRead <$> readRoutePositions routeCode <*> routeStopRows cab.integratedBppConfigId routeCode)
+        withTryCatch "sharedCabStopProgressRead" (RouteRead <$> readRoutePositions cab.integratedBppConfigId routeCode <*> routeStopRows cab.integratedBppConfigId routeCode)
           >>= either (\e -> RouteRead [] [] <$ logError ("shared-cab stop progress: position read failed for route " <> routeCode <> ": " <> show e)) pure
     eachIsolated
       (withTryCatch "sharedCabStopProgressCab")
@@ -88,7 +88,7 @@ stepSessionCab s = unless (s.status == ENDED) $ do
   cfg <- Config.getTunables s.merchantOperatingCityId
   now <- getCurrentTime
   bookings <- plateBookings [s.vehicleNumber] [CONFIRMED] >>= liveBookingsOf
-  track <- readRoutePosition s.routeCode s.vehicleNumber
+  track <- readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
   stops <- routeStopRows s.integratedBppConfigId s.routeCode
   stepCab cfg now bookings (RouteRead (maybeToList track) stops) s
 

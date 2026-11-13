@@ -50,7 +50,7 @@ postSharedCabBookingSkip (mbPersonId, _) bookingId req = do
   plate <- Select.allocatedPlate (Select.LiveBooking booking (map (.status) tickets)) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
   when (usesRiderSkip reason) $ do
     now <- getCurrentTime
-    mbEta <- maybe (pure Nothing) (\routeCode -> Approach.etaToStopSec now cfg routeCode plate booking.fromStationCode) booking.routeCode
+    mbEta <- maybe (pure Nothing) (\routeCode -> Approach.etaToStopSec now cfg booking.integratedBppConfigId routeCode plate booking.fromStationCode) booking.routeCode
     when (decideRiderSkip cfg.skipMinEtaSec False False mbEta /= SkipOk) $ throwError SharedCabSkipTooLate
   skipped <- Allocation.skipSharedCabAllocation cfg booking.id booking.searchId.getId plate reason
   unless skipped $ throwError $ InvalidRequest "This booking has no cab to skip"
