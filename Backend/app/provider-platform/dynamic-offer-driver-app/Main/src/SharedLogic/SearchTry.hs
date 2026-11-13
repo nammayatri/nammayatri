@@ -231,9 +231,12 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                 logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` batchingStartedAt)
                 scheduleTopDriversRound searchTry driverPoolConfig now
               Nothing -> do
-                booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
                 QST.updateStatus DST.CANCELLED searchTry.id
-                SBooking.cancelBooking booking Nothing merchant
+                -- On the first confirm the booking is cancelled by API.Beckn.Confirm once on_confirm is out, off this
+                -- CANCELLED search try: cancelling here would send the BAP on_cancel ahead of on_confirm.
+                when (isRepeatSearch || isAllocatorBatch) $ do
+                  booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
+                  SBooking.cancelBooking booking Nothing merchant
     )
     >>= \case
       Left e -> do
