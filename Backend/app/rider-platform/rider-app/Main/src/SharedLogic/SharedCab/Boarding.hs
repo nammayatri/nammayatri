@@ -122,7 +122,7 @@ sessionServesBoardDrop booking session = do
 
 lookupCabPing :: Session -> Environment.Flow (Maybe (UTCTime, LatLong))
 lookupCabPing session = do
-  outcome <- withTryCatch "lookupCabPing" $ Lts.readRoutePositions session.routeCode
+  outcome <- withTryCatch "lookupCabPing" $ Lts.readRoutePositions session.integratedBppConfigId session.routeCode
   pure $ case outcome of
     Left _ -> Nothing -- LTS outage behaves identically to NO_LIVE_CAB_DATA (8.2 ladder floor)
     Right tracked -> do

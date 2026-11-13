@@ -94,7 +94,7 @@ buildSnapshot ::
   m [SnapshotCab]
 buildSnapshot cityId routeCode = do
   sessions <- Session.activeSessionsOnRoute cityId routeCode
-  positions <- either (const []) identity <$> withTryCatch "sharedCab:snapshot:positions" (Lts.readRoutePositions routeCode)
+  positions <- either (const []) identity <$> withTryCatch "sharedCab:snapshot:positions" (maybe (pure []) (\s -> Lts.readRoutePositions s.integratedBppConfigId routeCode) (listToMaybe sessions))
   seats <- Seats.cabsSeats sessions
   pure [SnapshotCab {session = s, track = find ((== s.vehicleNumber) . (.vehicleNumber)) positions, seats = c} | (s, c) <- zip sessions seats]
 
