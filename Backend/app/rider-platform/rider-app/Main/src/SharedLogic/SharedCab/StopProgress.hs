@@ -4,6 +4,7 @@ module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
     stepSessionCab,
     bookingsByPlate,
+    completeArrivedRides,
   )
 where
 
@@ -28,7 +29,7 @@ import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, rel
 import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
-import SharedLogic.SharedCab.Booking (boardedTouchDue, plateBookings, readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, plateBookings, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
@@ -173,6 +174,33 @@ dropStep cfg now mbCab plate b = do
         when switched $ releaseUnboarded plate RouteChanged
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
       KeepWaiting -> pure ()
+
+-- | Run (forked) on the driver's session poll: a boarded rider whose cab has reached their drop stop has the ride completed and the
+-- journey ended now, instead of after the tick's drop clock. Needs a fresh fix, like the tick; a degraded booking is left to the
+-- degraded sweep. markDropped only ends INPROGRESS tickets under the booking lock, so a rider not yet boarded, or a ride a concurrent
+-- poll or the tick already ended, is untouched.
+completeArrivedRides :: StopProgressFlow m r c => Session -> m ()
+completeArrivedRides s = unless (s.status == ENDED) $ do
+  cfg <- Config.getTunables s.merchantOperatingCityId
+  now <- getCurrentTime
+  mbTrack <- mfilter (isFreshPosition now cfg.ltsMaxAgeSec) <$> readRoutePosition s.integratedBppConfigId s.routeCode plate
+  whenJust mbTrack $ \track -> do
+    cab <- (`cabFix` track) <$> routeStopRows s.integratedBppConfigId s.routeCode
+    arrived <- filter (reachedDropStop cfg cab . (.toStationCode)) <$> liveBookingsForVehicle plate
+    completed <- fmap catMaybes . forM arrived $ \b -> do
+      degraded <- isJust <$> shared (Redis.get @A.Value (degradedKey b.id))
+      if degraded
+        then pure Nothing
+        else do
+          markDropped b
+          Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
+          logInfo $ "shared-cab: completed ride " <> b.id.getId <> " on reaching drop stop " <> b.toStationCode <> " for " <> plate
+          pure (Just b)
+    unless (null completed) $ do
+      switched <- Session.applyQueuedRoute plate
+      when switched $ releaseUnboarded plate RouteChanged
+  where
+    plate = s.vehicleNumber
 
 -- | A driver who confirmed the route keeps the riders for one more `offRouteSec`, and is asked again within it.
 offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe Bool -> Session -> m ()
