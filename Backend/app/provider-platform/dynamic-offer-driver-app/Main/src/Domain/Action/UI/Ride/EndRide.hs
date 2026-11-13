@@ -101,6 +101,7 @@ import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (validateRideLocation)
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
@@ -947,6 +948,7 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
             mbRideDetails <- QRD.findById ride.id
             SPFE.isParkingFeeExemptByVehicleNumber ((.vehicleNumber) <$> mbRideDetails)
           else pure False
+      mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits booking.merchantOperatingCityId booking.vehicleServiceTier booking.numberOfCheckInBags booking.numberOfCabinBags
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -987,6 +989,7 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               merchantOperatingCityId = Just booking.merchantOperatingCityId,
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages,
+              excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
               govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType,

@@ -83,6 +83,9 @@ buildSelectReqV2 subscriber req = do
       customerRating = readTag Tag.CUSTOMER_RATING item.itemTags
       customerTotalRatings = readTag Tag.CUSTOMER_TOTAL_RATINGS item.itemTags
       customerGender = readTag Tag.CUSTOMER_GENDER item.itemTags
+      numberOfPassengers = readTag Tag.NUMBER_OF_PASSENGERS item.itemTags
+      numberOfCheckInBags = readTag Tag.NUMBER_OF_CHECKIN_BAGS item.itemTags
+      numberOfCabinBags = readTag Tag.NUMBER_OF_CABIN_BAGS item.itemTags
   logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment

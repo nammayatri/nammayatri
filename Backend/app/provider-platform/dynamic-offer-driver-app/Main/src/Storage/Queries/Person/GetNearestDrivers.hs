@@ -48,6 +48,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.WalletAccount
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.Finance ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -133,7 +134,9 @@ data NearestDriversReq = NearestDriversReq
     applyParallelRequestFilter :: Bool,
     maxParallelSearchRequests :: Int,
     airportEntryFee :: Maybe HighPrecMoney,
-    isAirportRequest :: Bool
+    isAirportRequest :: Bool,
+    -- | The counts stored at select, present only when the policy has the feature on.
+    passengerLuggage :: Maybe SPL.PassengerLuggage
   }
 
 -- | A driver location candidate sorted by straight-line distance, with the
@@ -312,8 +315,13 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
           if null serviceTiers
             then selectedDriverServiceTiers'
             else filter (`elem` selectedDriverServiceTiers') serviceTiers
-  guard $ not $ null matchingTiers
-  Just $ mapMaybe (mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) matchingTiers
+  -- A vehicle with no luggage capacity uses the trunk of the requested tier, and the seats are those of that tier.
+  let fitsPassengerLuggageOnTier tier =
+        let mbServiceTier = HashMap.lookup tier cityServiceTiersHashMap
+         in maybe True (SPL.fitsLuggageCapacity dpd.luggageCapacity (mbServiceTier >>= (.luggageCapacity)) (mbServiceTier >>= (.seatingCapacity))) passengerLuggage
+      luggageFitTiers = filter fitsPassengerLuggageOnTier matchingTiers
+  guard $ not $ null luggageFitTiers
+  Just $ mapMaybe (mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) luggageFitTiers
 
 mkResultHelper ::
   UTCTime ->

@@ -117,7 +117,8 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     conditionalCharges :: [DTAC.ConditionalCharges],
     driverCancellationNotAllowed :: Maybe Bool,
     negotiationFareMinTolerancePct :: Maybe Double,
-    negotiationFareMaxTolerancePct :: Maybe Double
+    negotiationFareMaxTolerancePct :: Maybe Double,
+    luggageFitEnabled :: Maybe Bool
   }
   deriving (Generic, Show, ToSchema)
 
@@ -431,7 +432,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     negotiationFareMinTolerancePct :: Maybe Double,
     negotiationFareMaxTolerancePct :: Maybe Double,
     -- Not stored: Just True only on the spot-ride copies made by addSpotRidePolicies.
-    isDerived :: Maybe Bool
+    isDerived :: Maybe Bool,
+    luggageFitEnabled :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -535,3 +537,13 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
 congestionChargeMultiplierToCentesimal :: CongestionChargeMultiplier -> Centesimal
 congestionChargeMultiplierToCentesimal (BaseFareAndExtraDistanceFare charge) = charge
 congestionChargeMultiplierToCentesimal (ExtraDistanceFare charge) = charge
+
+-- The default price of one unit bag. A check-in bag is one unit and a cabin bag half.
+defaultPerLuggageCharge :: HighPrecMoney
+defaultPerLuggageCharge = 0
+
+-- A policy with the feature on and no rate uses the default. A rate of 0 stays free.
+perUnitLuggageCharge :: Maybe Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney
+perUnitLuggageCharge luggageFitEnabled mbPerLuggageCharge
+  | luggageFitEnabled == Just True = Just $ fromMaybe defaultPerLuggageCharge mbPerLuggageCharge
+  | otherwise = mbPerLuggageCharge

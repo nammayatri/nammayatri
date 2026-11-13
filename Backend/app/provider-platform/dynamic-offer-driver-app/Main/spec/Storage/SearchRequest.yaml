@@ -98,6 +98,9 @@ SearchRequest:
     isPetRide: Bool
     isReserveRide: Maybe Bool
     numberOfLuggages: Maybe Int
+    numberOfCheckInBags: Maybe Int
+    numberOfCabinBags: Maybe Int
+    numberOfPassengers: Maybe Int
     paymentMode: Maybe PaymentMode
     cloudType: Maybe CloudType
     userClientDevice: Maybe Device

@@ -100,6 +100,7 @@ Estimate:
     vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool
     driverCancellationNotAllowed: Maybe Bool
+    luggageFitEnabled: Maybe Bool
     itemId : Text
     estimateBreakupList : "[EstimateBreakup]"
     nightShiftInfo : Maybe NightShiftInfo

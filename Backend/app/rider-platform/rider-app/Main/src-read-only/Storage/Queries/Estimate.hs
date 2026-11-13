@@ -94,6 +94,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.isInsured (Kernel.Prelude.Just isInsured),
       Se.Set Beam.isMultimodalSearch isMultimodalSearch,
       Se.Set Beam.itemId itemId,
+      Se.Set Beam.luggageFitEnabled luggageFitEnabled,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.navigationInstruction navigationInstruction,

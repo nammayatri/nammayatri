@@ -74,7 +74,10 @@ updateMultipleByRequestId searchRequest isScheduled =
             Se.Set BeamSR.parcelQuantity searchRequest.parcelQuantity,
             Se.Set BeamSR.disabilityTag searchRequest.disabilityTag,
             Se.Set BeamSR.preferSafetyPlus $ Just searchRequest.preferSafetyPlus,
-            Se.Set BeamSR.isPetRide $ Just searchRequest.isPetRide
+            Se.Set BeamSR.isPetRide $ Just searchRequest.isPetRide,
+            Se.Set BeamSR.numberOfPassengers searchRequest.numberOfPassengers,
+            Se.Set BeamSR.numberOfCheckInBags searchRequest.numberOfCheckInBags,
+            Se.Set BeamSR.numberOfCabinBags searchRequest.numberOfCabinBags
           ]
         )
       condition = [Se.Is BeamSR.id (Se.Eq searchRequest.id.getId)]

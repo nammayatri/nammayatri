@@ -153,6 +153,9 @@ data DSelectReq = DSelectReq
     preferSafetyPlus :: Maybe Bool,
     driverPreference :: Maybe [Text],
     selectedOfferId :: Maybe Text,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int,
     -- | What the app's own geocoder calls a walk-and-save pickup/drop the customer is
     -- selecting. Ignored for an ordinary estimate, whose locations the customer named
     -- themselves when they searched. See 'updateSuggestedLocationAddresses'.
@@ -168,6 +171,37 @@ minNegativeFareAdjustment = -1000
 minNegativeFareAdjustmentAmount :: HighPrecMoney
 minNegativeFareAdjustmentAmount = -1000.0
 
+maxPassengersPerSelect :: Int
+maxPassengersPerSelect = 9
+
+-- The limit applies to check-in bags and cabin bags separately.
+maxBagsPerKindPerSelect :: Int
+maxBagsPerKindPerSelect = 20
+
+-- The most bags a group may carry above the free luggage space of the car.
+maxExtraLuggageBags :: Int
+maxExtraLuggageBags = 2
+
+-- Checked only when the counts would be stored, which is when every selected estimate has the feature on.
+-- Passengers must fit the seats. The load, in half-units, must stay within the free space plus the extra bags
+-- and within the free space plus the empty seats.
+-- A missing free space counts as 0. A missing seat count leaves only the extra bag limit.
+validatePassengerLuggageFit :: MonadFlow m => Maybe Int -> Maybe Int -> Maybe Int -> [DEstimate.Estimate] -> m ()
+validatePassengerLuggageFit mbPassengers mbCheckInBags mbCabinBags selectedEstimates =
+  whenJust mbPassengers $ \passengers ->
+    when (all (\selected -> selected.luggageFitEnabled == Just True) selectedEstimates) $
+      forM_ selectedEstimates $ \selected -> do
+        let tierName = show selected.vehicleServiceTierType
+            loadHalfUnits = 2 * fromMaybe 0 mbCheckInBags + fromMaybe 0 mbCabinBags
+            freeSpace = fromMaybe 0 selected.vehicleServiceTierLuggageCapacity
+            extraBagLimit = 2 * (freeSpace + maxExtraLuggageBags)
+            allowedHalfUnits = maybe extraBagLimit (\seats -> min extraBagLimit (2 * (freeSpace + seats - passengers))) selected.vehicleServiceTierSeatingCapacity
+        whenJust selected.vehicleServiceTierSeatingCapacity $ \seats ->
+          when (passengers > seats) $
+            throwError $ InvalidRequest $ show passengers <> " passengers do not fit the " <> show seats <> " seats of " <> tierName
+        when (loadHalfUnits > allowedHalfUnits) $
+          throwError $ InvalidRequest $ "Too much luggage for " <> tierName <> " with " <> show passengers <> " passengers: at most " <> show allowedHalfUnits <> " half-bag units, got " <> show loadHalfUnits
+
 validateDSelectReq :: Validate DSelectReq
 validateDSelectReq DSelectReq {..} =
   sequenceA_
@@ -176,6 +210,9 @@ validateDSelectReq DSelectReq {..} =
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0,
       validateField "negativeFareAdjustment" negativeFareAdjustment $ InMaybe $ InRange @Money minNegativeFareAdjustment 0,
+      validateField "numberOfPassengers" numberOfPassengers $ InMaybe $ InRange @Int 1 maxPassengersPerSelect,
+      validateField "numberOfCheckInBags" numberOfCheckInBags $ InMaybe $ InRange @Int 0 maxBagsPerKindPerSelect,
+      validateField "numberOfCabinBags" numberOfCabinBags $ InMaybe $ InRange @Int 0 maxBagsPerKindPerSelect,
       whenJust negativeFareAdjustmentWithCurrency $ \obj ->
         validateObject "negativeFareAdjustmentWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney minNegativeFareAdjustmentAmount 0.0,
@@ -230,7 +267,10 @@ data DSelectRes = DSelectRes
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Int,
-    customerGender :: DPerson.Gender
+    customerGender :: DPerson.Gender,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -275,6 +315,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   let searchRequestId = estimate.requestId
   remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
+  validatePassengerLuggageFit numberOfPassengers numberOfCheckInBags numberOfCabinBags (estimate : remainingEstimates)
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP

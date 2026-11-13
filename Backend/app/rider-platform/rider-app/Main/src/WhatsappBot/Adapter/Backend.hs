@@ -336,6 +336,9 @@ mkBackendHandle merchantId mocId _ctx =
           preferSafetyPlus = Nothing,
           driverPreference = Nothing,
           selectedOfferId = Nothing,
+          numberOfPassengers = Nothing,
+          numberOfCheckInBags = Nothing,
+          numberOfCabinBags = Nothing,
           -- The bot books what the customer asked for over chat; there is no map to move a
           -- marker on, so no walk-and-save endpoint to name.
           suggestedPickupAddress = Nothing,

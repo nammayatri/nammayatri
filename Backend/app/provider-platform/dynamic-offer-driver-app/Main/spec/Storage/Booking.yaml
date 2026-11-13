@@ -114,6 +114,9 @@ Booking:
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
+    numberOfCheckInBags: Maybe Int
+    numberOfCabinBags: Maybe Int
+    numberOfPassengers: Maybe Int
     isPickupOrDestinationEdited: Maybe Bool
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode

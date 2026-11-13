@@ -303,6 +303,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               merchantOperatingCityId = Just merchantOpCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = Nothing,
+              excessLuggageHalfUnits = Nothing,
               govtChargesRate = mbTransporterConfig <&> (.taxConfig.rideGst),
               pickupGateId = Just pickupGateId,
               fareSettlementType = fullFarePolicy.fareSettlementType,

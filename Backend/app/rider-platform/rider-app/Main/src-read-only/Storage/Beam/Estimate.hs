@@ -57,6 +57,7 @@ data EstimateT f = EstimateT
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     itemId :: B.C f Kernel.Prelude.Text,
+    luggageFitEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

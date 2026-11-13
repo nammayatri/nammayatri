@@ -130,6 +130,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     scheduledRideMinWalletBalance :: Maybe HighPrecMoney,
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
+    luggageCharges :: Maybe HighPrecMoney,
     -- Only present when at least one of the driver's own preferences applied to this request.
     preferenceMatchScore :: Maybe Double
   }
@@ -137,8 +138,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe DTConf.DriverWalletConfig -> Maybe DRD.RiderDetails -> Maybe Bool -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges mbDriverWalletConfig mbRiderDetails showRoutePerRequest = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe DTConf.DriverWalletConfig -> Maybe DRD.RiderDetails -> Maybe Bool -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges mbDriverWalletConfig mbRiderDetails showRoutePerRequest luggageCharges = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee

@@ -68,6 +68,7 @@ data FarePolicyT f = FarePolicyT
     driverCancellationNotAllowed :: B.C f (Maybe Bool),
     negotiationFareMinTolerancePct :: B.C f (Maybe Double),
     negotiationFareMaxTolerancePct :: B.C f (Maybe Double),
+    luggageFitEnabled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantId :: B.C f (Maybe Text),

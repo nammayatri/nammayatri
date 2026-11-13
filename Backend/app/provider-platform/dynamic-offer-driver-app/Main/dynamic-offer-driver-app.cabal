@@ -815,6 +815,7 @@ library
       SharedLogic.OneShotAssign
       SharedLogic.OTP
       SharedLogic.ParkingFeeExemption
+      SharedLogic.PassengerLuggage
       SharedLogic.Payment
       SharedLogic.Payout.Bulk.Claim
       SharedLogic.Payout.Bulk.Driver

@@ -123,6 +123,14 @@ getDriverCancellationNotAllowed provider item = do
         Utils.getTag Tag.DRIVER_CANCELLATION_NOT_ALLOWED (fulfillment.fulfillmentTags)
   return $ mbTagValue >>= (readMaybe . T.unpack)
 
+getLuggageFitEnabled :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Bool)
+getLuggageFitEnabled provider item = do
+  let mbTagValue = do
+        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
+        Utils.getTag Tag.IS_LUGGAGE_FIT_ENABLED (fulfillment.fulfillmentTags)
+  return $ mbTagValue >>= (readMaybe . T.unpack)
+
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
