@@ -61,6 +61,8 @@ module Lib.Yudhishthira.Types
     UpdateRolloutGroupObject (..),
     UpdateRolloutGroupReq,
     RolloutGroupInfo (..),
+    UpsertExperimentGroupConfigReq (..),
+    ExperimentGroupConfigInfo (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
     MerchantCitiesEntry (..),
@@ -1070,6 +1072,29 @@ data RolloutGroupInfo = RolloutGroupInfo
     experimentGroup :: Maybe Text,
     experimentStatus :: Maybe ExperimentStatus,
     isBaseVersion :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Upsert one experiment-group registry entry (its own rollout percentage, used
+-- by the group-level toss). @timeBounds@ defaults to "Unbounded". Setting
+-- @experimentStatus@ to DISCARDED/REVERTED turns the group off without deleting it.
+data UpsertExperimentGroupConfigReq = UpsertExperimentGroupConfigReq
+  { groupName :: Text,
+    timeBounds :: Maybe Text,
+    rolloutPercentage :: Int,
+    experimentStatus :: Maybe ExperimentStatus
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertExperimentGroupConfigReq where
+  hideSecrets = identity
+
+-- | Read-only view of the experiment-group registry for a city.
+data ExperimentGroupConfigInfo = ExperimentGroupConfigInfo
+  { groupName :: Text,
+    timeBounds :: Text,
+    rolloutPercentage :: Int,
+    experimentStatus :: Maybe ExperimentStatus
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
