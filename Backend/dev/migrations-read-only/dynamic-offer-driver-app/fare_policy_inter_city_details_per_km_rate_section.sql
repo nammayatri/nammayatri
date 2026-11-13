@@ -1,0 +1,9 @@
+CREATE TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ();
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN fare_policy_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN is_round_trip boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN per_km_rate double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN start_distance integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details_per_km_rate_section ADD PRIMARY KEY ( fare_policy_id, is_round_trip, start_distance);

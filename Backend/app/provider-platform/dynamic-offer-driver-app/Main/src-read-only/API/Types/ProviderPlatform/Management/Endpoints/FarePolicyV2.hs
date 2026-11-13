@@ -263,6 +263,8 @@ data FPV2InterCityDetails = FPV2InterCityDetails
     perHourCharge :: Kernel.Types.Common.HighPrecMoney,
     perKmRateOneWay :: Kernel.Types.Common.HighPrecMoney,
     perKmRateRoundTrip :: Kernel.Types.Common.HighPrecMoney,
+    perKmRateSectionsOneWay :: Kernel.Prelude.Maybe [FPV2InterCityPerKmRateSection],
+    perKmRateSectionsRoundTrip :: Kernel.Prelude.Maybe [FPV2InterCityPerKmRateSection],
     perExtraKmRate :: Kernel.Types.Common.HighPrecMoney,
     perExtraMinRate :: Kernel.Types.Common.HighPrecMoney,
     kmPerPlannedExtraHour :: Kernel.Types.Common.Kilometers,
@@ -275,6 +277,10 @@ data FPV2InterCityDetails = FPV2InterCityDetails
     waitingChargeInfo :: Kernel.Prelude.Maybe FPV2WaitingChargeInfo,
     nightShiftCharge :: Kernel.Prelude.Maybe FPV2NightShiftCharge
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FPV2InterCityPerKmRateSection = FPV2InterCityPerKmRateSection {startDistance :: Kernel.Types.Common.Meters, perKmRate :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
