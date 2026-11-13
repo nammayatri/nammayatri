@@ -46,9 +46,9 @@ in  { grpc_port = env:GRPC_PORT ? 50051
     , driver_api_base_url = "http://127.0.0.1:${driverAppPort}"
     , logger_cfg
     , redis_cfg
-    , max_shards = +5
+    , max_shards = +128
     , channel_buffer = 100000
-    , request_timeout_seconds = 60
+    , request_timeout_seconds = 3600
     , retry_delay_millis = 1000
     , read_all_connected_client_notifications = True
     }
