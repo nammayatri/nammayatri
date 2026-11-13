@@ -2,6 +2,7 @@ module SharedLogic.IntegratedBPPConfig
   ( findMaybeIntegratedBPPConfig,
     findIntegratedBPPConfig,
     findFirstIbppConfigByCityAndVehicle,
+    findIbppConfigByCityVehicleAndFeedKey,
     findAllIntegratedBPPConfig,
     findAllIntegratedBPPConfigAcrossCities,
     getGimsBaseUrl,
@@ -56,6 +57,17 @@ findFirstIbppConfigByCityAndVehicle merchantOpCityId vehicleCategory = do
   moc <- QMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
   configs <- QIBC.findByDomainAndCityAndVehicleCategoryAnyPlatform (show Spec.FRFS) (Just moc.city) (Just vehicleCategory)
   listToMaybe configs & fromMaybeM IntegratedBPPConfigNotFound
+
+findIbppConfigByCityVehicleAndFeedKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Text ->
+  Text ->
+  m IntegratedBPPConfig
+findIbppConfigByCityVehicleAndFeedKey merchantOpCityId vehicleCategory feedKey' = do
+  moc <- QMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
+  configs <- QIBC.findByDomainAndCityAndVehicleCategoryAnyPlatform (show Spec.FRFS) (Just moc.city) (Just vehicleCategory)
+  find ((== feedKey') . (.feedKey)) configs & fromMaybeM (InvalidRequest ("gtfsId " <> feedKey' <> " does not belong to this city"))
 
 findAllIntegratedBPPConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

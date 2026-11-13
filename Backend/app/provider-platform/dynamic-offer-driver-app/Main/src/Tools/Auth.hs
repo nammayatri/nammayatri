@@ -179,8 +179,15 @@ verifyDashboard incomingToken = do
     then pure Dashboard
     else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
 
-clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r) => Id Person.Person -> m ()
+clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Person -> m ()
 clearDriverSession personId = do
   regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     void $ Redis.del $ authTokenCacheKey regToken.token
+    clearLtsTokenCache regToken.token
+
+ltsDriverIdTokenKey :: Text -> Text
+ltsDriverIdTokenKey token = "lts:driver_id:" <> token
+
+clearLtsTokenCache :: (Redis.HedisFlow m r, MonadFlow m, HasField "ltsHedisEnv" r Redis.HedisEnv) => Text -> m ()
+clearLtsTokenCache token = Redis.withLTSRedis . Redis.withCrossAppRedis . void $ Redis.del (ltsDriverIdTokenKey token)
