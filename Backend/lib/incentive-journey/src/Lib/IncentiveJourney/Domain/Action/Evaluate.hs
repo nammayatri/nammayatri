@@ -89,7 +89,7 @@ evaluateIncentiveJourneys ::
   EvaluateInput ->
   m ()
 evaluateIncentiveJourneys ijHandle input = do
-  assignments <- CQAssignment.findAssignmentsForDriver ijHandle.actor input.personId input.merchantId input.merchantOperatingCityId input.mbRideVehicleCategory
+  assignments <- CQAssignment.findAssignmentsForPerson ijHandle.actor input.personId input.merchantId input.merchantOperatingCityId input.mbRideVehicleCategory
   let uniqueAssignments = nubBy (\assignment other -> assignment.cohortJourneyMapping.id == other.cohortJourneyMapping.id) assignments
   when (null uniqueAssignments) $
     logInfo $
@@ -204,7 +204,7 @@ waiveMilestoneForPeriod ijHandle personId merchantId merchantOpCityId mbVehicleC
   unless (cjm.journeyId == journey.id && cjm.merchantId == merchantId && cjm.merchantOperatingCityId == merchantOpCityId) $
     throwError (InvalidRequest "Cohort journey mapping does not match this journey and city")
   assignments <-
-    CQAssignment.findAssignmentsForDriver
+    CQAssignment.findAssignmentsForPerson
       ijHandle.actor
       personId
       merchantId

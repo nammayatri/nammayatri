@@ -77,6 +77,7 @@ import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
+import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.ParkingBooking as ParkingBooking
@@ -172,6 +173,7 @@ type API =
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
+           :<|> IncentiveJourney.API
            :<|> DeletedPerson.API
            :<|> EditLocation.API
            :<|> SocialLogin.API
@@ -317,6 +319,7 @@ handler =
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler
+    :<|> IncentiveJourney.handler
     :<|> DeletedPerson.handler
     :<|> EditLocation.handler
     :<|> SocialLogin.handler
