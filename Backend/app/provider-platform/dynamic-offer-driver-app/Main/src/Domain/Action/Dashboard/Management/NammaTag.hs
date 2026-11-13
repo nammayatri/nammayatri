@@ -25,6 +25,8 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
     postNammaTagAppDynamicLogicUpdateExperimentGroup,
     getNammaTagAppDynamicLogicExperimentGroups,
+    postNammaTagAppDynamicLogicUpsertExperimentGroupConfig,
+    getNammaTagAppDynamicLogicExperimentGroupConfigs,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
@@ -738,6 +740,18 @@ getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity mbDomain = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.getExperimentGroups (cast merchantOpCityId) mbDomain
+
+postNammaTagAppDynamicLogicUpsertExperimentGroupConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpsertExperimentGroupConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpsertExperimentGroupConfig merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.postAppDynamicLogicUpsertExperimentGroupConfig (cast merchantOpCityId) req
+
+getNammaTagAppDynamicLogicExperimentGroupConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [LYT.ExperimentGroupConfigInfo]
+getNammaTagAppDynamicLogicExperimentGroupConfigs merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getExperimentGroupConfigs (cast merchantOpCityId)
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do

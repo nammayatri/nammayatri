@@ -254,7 +254,7 @@ chooseLogic logics mbToss = do
 -- experiment-group resolver (reads 'TxnIdKey' via option-local), using this
 -- engine's cumulative-percentage 'chooseLogic' as the candidate selector.
 chooseLogicWithGroups :: (BeamFlow m r) => [AppDynamicLogicRollout] -> Maybe Int -> m (Maybe AppDynamicLogicRollout)
-chooseLogicWithGroups applicable mbToss = LYG.chooseWithGroups applicable (\cands -> chooseLogic cands mbToss)
+chooseLogicWithGroups applicable mbToss = LYG.chooseWithGroups applicable (\mbSharedToss cands -> chooseLogic cands (maybe mbToss Just mbSharedToss))
 
 -- Function to find the logic corresponding to the random number
 findLogic :: Int -> [(AppDynamicLogicRollout, Int)] -> Maybe AppDynamicLogicRollout

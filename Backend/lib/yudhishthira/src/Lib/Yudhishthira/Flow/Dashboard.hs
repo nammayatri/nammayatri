@@ -29,6 +29,7 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement a
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CQTBC
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExperimentGroup as LYSQADLEG
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra as LYSQADLRE
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
@@ -42,6 +43,7 @@ import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicAlwaysOn as DTADAO
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicExperimentGroup as DTADLEG
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
@@ -747,6 +749,80 @@ getExperimentGroups merchantOpCityId mbDomain = do
           experimentGroup = r.experimentGroup,
           experimentStatus = r.experimentStatus,
           isBaseVersion = r.isBaseVersion
+        }
+
+-- | Upsert an experiment-group registry entry (the group's own rollout
+-- percentage, consumed by the per-transaction group toss). Validates that the sum
+-- of active group percentages for the same time window stays within 100.
+postAppDynamicLogicUpsertExperimentGroupConfig ::
+  BeamFlow m r =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.UpsertExperimentGroupConfigReq ->
+  m Kernel.Types.APISuccess.APISuccess
+postAppDynamicLogicUpsertExperimentGroupConfig merchantOpCityId req = do
+  let timeBounds' = fromMaybe "Unbounded" req.timeBounds
+  when (req.rolloutPercentage < 0 || req.rolloutPercentage > 100) $
+    throwError (InvalidRequest "rolloutPercentage must be between 0 and 100")
+  existing <- LYSQADLEG.findAllByMerchantOpCityId merchantOpCityId
+  let reqActive = req.experimentStatus /= Just LYT.DISCARDED && req.experimentStatus /= Just LYT.REVERTED
+      otherActiveSameWindow =
+        filter
+          ( \g ->
+              g.timeBounds == timeBounds'
+                && g.groupName /= req.groupName
+                && g.experimentStatus /= Just LYT.DISCARDED
+                && g.experimentStatus /= Just LYT.REVERTED
+          )
+          existing
+      newTotal = sum (map (.rolloutPercentage) otherActiveSameWindow) + (if reqActive then req.rolloutPercentage else 0)
+  when (newTotal > 100) $
+    throwError (InvalidRequest $ "Sum of active experiment group percentages for timeBounds '" <> timeBounds' <> "' would exceed 100 (got " <> show newTotal <> ")")
+  now <- getCurrentTime
+  mbExisting <- LYSQADLEG.findByPrimaryKey req.groupName merchantOpCityId timeBounds'
+  case mbExisting of
+    Just g ->
+      LYSQADLEG.updateByPrimaryKey
+        DTADLEG.AppDynamicLogicExperimentGroup
+          { groupName = req.groupName,
+            merchantOperatingCityId = merchantOpCityId,
+            timeBounds = timeBounds',
+            rolloutPercentage = req.rolloutPercentage,
+            merchantId = g.merchantId,
+            modifiedBy = g.modifiedBy,
+            experimentStatus = req.experimentStatus,
+            createdAt = g.createdAt,
+            updatedAt = now
+          }
+    Nothing ->
+      LYSQADLEG.create
+        DTADLEG.AppDynamicLogicExperimentGroup
+          { groupName = req.groupName,
+            merchantOperatingCityId = merchantOpCityId,
+            timeBounds = timeBounds',
+            rolloutPercentage = req.rolloutPercentage,
+            merchantId = Nothing,
+            modifiedBy = Nothing,
+            experimentStatus = req.experimentStatus,
+            createdAt = now,
+            updatedAt = now
+          }
+  return Kernel.Types.APISuccess.Success
+
+-- | List the experiment-group registry entries (names + percentages) for a city.
+getExperimentGroupConfigs ::
+  BeamFlow m r =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  m [Lib.Yudhishthira.Types.ExperimentGroupConfigInfo]
+getExperimentGroupConfigs merchantOpCityId = do
+  groups <- LYSQADLEG.findAllByMerchantOpCityId merchantOpCityId
+  pure $ map toInfo groups
+  where
+    toInfo g =
+      Lib.Yudhishthira.Types.ExperimentGroupConfigInfo
+        { groupName = g.groupName,
+          timeBounds = g.timeBounds,
+          rolloutPercentage = g.rolloutPercentage,
+          experimentStatus = g.experimentStatus
         }
 
 getFrontendLogicUrlAndToken :: BeamFlow m r => m (BaseUrl, Text)

@@ -22,6 +22,8 @@ module Domain.Action.Dashboard.NammaTag
     postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
     postNammaTagAppDynamicLogicUpdateExperimentGroup,
     getNammaTagAppDynamicLogicExperimentGroups,
+    postNammaTagAppDynamicLogicUpsertExperimentGroupConfig,
+    getNammaTagAppDynamicLogicExperimentGroupConfigs,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
@@ -613,6 +615,16 @@ getNammaTagAppDynamicLogicExperimentGroups :: Kernel.Types.Id.ShortId Domain.Typ
 getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity mbDomain = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   YudhishthiraFlow.getExperimentGroups (cast merchantOperatingCity.id) mbDomain
+
+postNammaTagAppDynamicLogicUpsertExperimentGroupConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UpsertExperimentGroupConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpsertExperimentGroupConfig merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postAppDynamicLogicUpsertExperimentGroupConfig (cast merchantOperatingCity.id) req
+
+getNammaTagAppDynamicLogicExperimentGroupConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [LYTU.ExperimentGroupConfigInfo]
+getNammaTagAppDynamicLogicExperimentGroupConfigs merchantShortId opCity = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.getExperimentGroupConfigs (cast merchantOperatingCity.id)
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do

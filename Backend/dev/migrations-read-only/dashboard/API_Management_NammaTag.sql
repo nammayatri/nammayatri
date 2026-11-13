@@ -139,3 +139,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"GetNammaTagChakraJobsUpcoming","migration":"capability","param":"system-config.kaal_chakra.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.kaal_chakra.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CHAKRA_JOBS_UPCOMING' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagAppDynamicLogicUpsertExperimentGroupConfig","migration":"capability","param":"system-config.dynamic_logic.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_EXPERIMENT_GROUP_CONFIG' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetNammaTagAppDynamicLogicExperimentGroupConfigs","migration":"capability","param":"system-config.dynamic_logic.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_EXPERIMENT_GROUP_CONFIGS' ) ON CONFLICT DO NOTHING;
