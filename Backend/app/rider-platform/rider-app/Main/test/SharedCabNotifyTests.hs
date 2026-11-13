@@ -26,7 +26,9 @@ tests =
                 "SHARED_CAB_BOARD_ANY",
                 "SHARED_CAB_ROUTE_CHANGE",
                 "SHARED_CAB_BOOKING_CANCELLED",
-                "SHARED_CAB_FINDING_TIMEOUT"
+                "SHARED_CAB_FINDING_TIMEOUT",
+                "SHARED_CAB_ON_THE_WAY",
+                "SHARED_CAB_ARRIVING_SOON"
               ],
       testCase "the app sees the same string as the key" $
         map toJSON [minBound .. maxBound :: SharedCabNotificationType]

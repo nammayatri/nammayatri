@@ -28,9 +28,9 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), ApproachStage (ApproachArrived), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, plateBookings, readRiderFix, shared, withBookingLock)
-import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
+import SharedLogic.SharedCab.BookingState (readAlloc, rewriteAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
@@ -124,8 +124,10 @@ stepCab cfg now bookings routeRead s = do
             blame = maybe BlameNone (\stop -> passedStopBlame cfg.atStopRadiusM cfg.ltsMaxAgeSec now stop riderFix) boardStop
         void $ releaseSharedCabAllocation cfg b.id plate (PassedStop blame)
       else do
+        mbState <- readAlloc b.id
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
-        movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b
+        movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b mbState
+        approachStep cfg freshCab plate b mbState
   forM_ onBoard $ dropStep cfg now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep cfg now ((.offRoute) <$> freshTrack) s
 
@@ -144,9 +146,8 @@ cabFix stops cab =
     mark idx stop = StopMark {stopCode = stop.stopCode, stopIdx = idx, reached = maybe False (idx <) nextIdx, coordinate = stop.stopPoint}
 
 -- | Under the booking lock the key is re-read, so a close or re-bind racing the tick is never overwritten.
-movingTimerStep :: StopProgressFlow m r c => Int -> Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
-movingTimerStep keyTtlSec cfg now freshCab plate b = do
-  mbState <- readAlloc b.id
+movingTimerStep :: StopProgressFlow m r c => Int -> Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> Maybe AllocationState -> m ()
+movingTimerStep keyTtlSec cfg now freshCab plate b mbState =
   whenJust mbState $ \st -> whenJust (armMovingTimer cfg now (blockingTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
       current <- readAlloc b.id
@@ -154,10 +155,27 @@ movingTimerStep keyTtlSec cfg now freshCab plate b = do
         Just cur
           | cur.vehicleNumber == plate,
             Just deadline <- armMovingTimer cfg now (blockingTimerDeadline cur) freshCab b.fromStationCode -> do
-            writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
+            writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline, approachStage = Just ApproachArrived}
             pure True
         _ -> pure False
     when armed $ Notify.notifyArriving plate cfg.movingTimerSec b
+
+-- | The rider's "on the way" and "arriving soon" pushes. Decided on the tick's read, then again on a fresh read under the booking lock,
+-- so a claim, accept or moving timer racing the tick never gets a stage pushed twice or out of order (the moving timer armed just
+-- above already counts as arrived). The record is rewritten without extending the key's TTL.
+approachStep :: StopProgressFlow m r c => Config.SharedCabTunables -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> Maybe AllocationState -> m ()
+approachStep cfg freshCab plate b mbState =
+  whenJust freshCab $ \cab -> whenJust (mbState >>= approachUpdate cfg cab b.fromStationCode) $ \_ -> do
+    due <- withBookingLock b.id $ do
+      current <- readAlloc b.id
+      case current of
+        Just cur
+          | cur.vehicleNumber == plate,
+            Just (next, push) <- approachUpdate cfg cab b.fromStationCode cur -> do
+            rewriteAlloc b.id next
+            pure push
+        _ -> pure Nothing
+    whenJust due $ \stage -> Notify.notifyApproach plate stage b
 
 dropStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 dropStep cfg now mbCab plate b = do

@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.Notify
     templateParams,
     notifyAssigned,
     notifyArriving,
+    notifyApproach,
     notifyReassigned,
     reassignReasonFor,
     notifyBoardAny,
@@ -23,7 +24,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..))
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), ApproachPush (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
 
@@ -35,6 +36,8 @@ data SharedCabNotificationType
   | SHARED_CAB_ROUTE_CHANGE
   | SHARED_CAB_BOOKING_CANCELLED
   | SHARED_CAB_FINDING_TIMEOUT
+  | SHARED_CAB_ON_THE_WAY
+  | SHARED_CAB_ARRIVING_SOON
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 data ReassignReason = SEAT_LOST | TIMEOUT | CAB_PULLED
@@ -104,6 +107,14 @@ notifyAssigned plate = send SHARED_CAB_ASSIGNED Nothing Nothing (Just plate) []
 -- | The allocated cab is within `atStopRadiusM` of the board stop. `deadlineSec` is the timer just armed: the countdown the app shows.
 notifyArriving :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> Int -> DFTB.FRFSTicketBooking -> m ()
 notifyArriving plate deadlineSec = send SHARED_CAB_ARRIVING Nothing Nothing (Just plate) [("boardDeadlineSec", show deadlineSec), ("vehicleLast4", T.takeEnd 4 plate)]
+
+-- | The tick's approach pushes between assigned and arrived.
+notifyApproach :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> ApproachPush -> DFTB.FRFSTicketBooking -> m ()
+notifyApproach plate p = send key Nothing Nothing (Just plate) [("vehicleLast4", T.takeEnd 4 plate)]
+  where
+    key = case p of
+      PushOnTheWay -> SHARED_CAB_ON_THE_WAY
+      PushArrivingSoon -> SHARED_CAB_ARRIVING_SOON
 
 notifyReassigned :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => ReassignReason -> DFTB.FRFSTicketBooking -> m ()
 notifyReassigned reason = send SHARED_CAB_REASSIGNED Nothing (Just reason) Nothing []

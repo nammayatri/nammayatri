@@ -315,6 +315,7 @@ data SharedCabCallMode = MASKED | DIRECT deriving (Eq, Ord, Show, Read, Generic,
 
 data SharedCabConfig = SharedCabConfig
   { allocationWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    arrivingSoonRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     atStopRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     autoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -341,6 +342,7 @@ data SharedCabConfig = SharedCabConfig
     offRouteSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerRetryTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onTheWayM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     riderSkipTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     skipCancelCountTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

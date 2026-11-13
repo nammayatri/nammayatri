@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.StopProgress.Rules
     OffRouteAction (..),
     boardStopPassed,
     armMovingTimer,
+    approachUpdate,
     dropAction,
     reachedDropStop,
     offRouteAction,
@@ -16,6 +17,7 @@ import Data.Time (addUTCTime, diffUTCTime)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), ApproachPush (..), ApproachStage (..), approachPushStage, approachStageSent, isOffered)
 import qualified SharedLogic.SharedCab.Config as Config
 
 data StopMark = StopMark
@@ -64,6 +66,26 @@ armMovingTimer cfg now expiresAt freshCab boardStop
     atBoardStop cab = case cab.onStop of
       Just held -> held && ((.stopCode) <$> find (not . (.reached)) cab.stops) == Just boardStop
       Nothing -> any (\s -> s.stopCode == boardStop && not s.reached && meters cab.position s.coordinate <= fromIntegral cfg.atStopRadiusM) cab.stops
+
+-- | The tick's approach pushes for an allocated rider, from a fresh fix: "arriving soon" once the cab is within arrivingSoonRadiusM of
+-- the board stop (still ahead), "on the way" once it is onTheWayM from where it was first seen after the rider was told of it. Only
+-- the highest stage reached is pushed, and only above the one the rider already has, so a fast cab never sends two at once, GPS
+-- jitter never repeats one, and nothing goes after "arrived". The new record to write and the push due; Nothing writes nothing.
+approachUpdate :: Config.SharedCabTunables -> CabFix -> Text -> AllocationState -> Maybe (AllocationState, Maybe ApproachPush)
+approachUpdate cfg cab boardStop st
+  | isOffered st || sent >= Just ApproachArrivingSoon = Nothing
+  | Just p <- due = Just (st {approachStage = Just (approachPushStage p), approachFrom = Just from}, Just p)
+  | isNothing st.approachFrom = Just (st {approachFrom = Just from}, Nothing)
+  | otherwise = Nothing
+  where
+    sent = approachStageSent st
+    from = fromMaybe cab.position st.approachFrom
+    due = mfilter ((> sent) . Just . approachPushStage) reached
+    reached
+      | any nearBoardStop cab.stops = Just PushArrivingSoon
+      | meters from cab.position >= fromIntegral cfg.onTheWayM = Just PushOnTheWay
+      | otherwise = Nothing
+    nearBoardStop s = s.stopCode == boardStop && not s.reached && meters cab.position s.coordinate <= fromIntegral cfg.arrivingSoonRadiusM
 
 -- | The clock starts when the cab gets to the drop stop and ends the ride `autoEndAfterDropSec` later, wherever the cab is by then.
 dropAction :: Config.SharedCabTunables -> UTCTime -> Maybe UTCTime -> Maybe CabFix -> Text -> DropAction

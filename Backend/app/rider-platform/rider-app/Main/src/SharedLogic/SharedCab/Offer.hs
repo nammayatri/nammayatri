@@ -17,7 +17,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
-import SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), cabStance, isFreshPosition, pushForStance, timerForStance)
+import SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), cabStance, isFreshPosition, pushForStance, pushedStage, timerForStance)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
@@ -74,7 +74,7 @@ acceptOffer driver plate bookingId = do
         AlreadyAccepted -> pure Nothing
         AcceptNow st -> do
           stance <- cabStanceNow cfg now s booking.fromStationCode
-          writeAlloc (allocKeyTtl cfg) bookingId st {timer = timerForStance cfg now stance}
+          writeAlloc (allocKeyTtl cfg) bookingId st {timer = timerForStance cfg now stance, approachStage = Just (pushedStage (pushForStance stance))}
           pure (Just (booking, stance, cfg))
   forM_ accepted $ \(booking, stance, cfg) -> case pushForStance stance of
     PushArriving -> Notify.notifyArriving plate cfg.standTimerSec booking

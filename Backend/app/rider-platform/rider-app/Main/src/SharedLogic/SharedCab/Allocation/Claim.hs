@@ -25,7 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, skippedWhileFinding)
+import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, pushedStage, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (shared, stopAddresses, withBookingLock)
 import SharedLogic.SharedCab.BookingState
@@ -127,8 +127,10 @@ claimUnderLocks cfg booking cand s = do
     commit now = do
       offersMade <- readOffersMade booking.bookingId
       QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
+      -- an offer tells the rider nothing yet; otherwise the claim's push (claimFirst) is the rider's first approach stage
+      let claimed = newAllocation s.vehicleNumber (armedTimer cfg now offersMade cand.rcStance) Nothing
+          st = if isOffered claimed then claimed else claimed {approachStage = Just (pushedStage (claimPush cand))}
       -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
-      let st = AllocationState {vehicleNumber = s.vehicleNumber, timer = armedTimer cfg now offersMade cand.rcStance}
       writeAlloc (allocKeyTtl cfg) booking.bookingId st
       when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
       pure st
