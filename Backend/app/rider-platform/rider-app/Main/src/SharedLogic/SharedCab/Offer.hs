@@ -83,7 +83,7 @@ acceptOffer driver plate bookingId = do
   where
     -- where the cab stands now decides the timer; without a fresh fix the wait is bounded like an away cab's
     cabStanceNow cfg now s boardStopCode = do
-      mbTrack <- Lts.readRoutePosition s.routeCode plate
+      mbTrack <- Lts.readRoutePosition s.integratedBppConfigId s.routeCode plate
       stops <- Seats.routeStopRows s.integratedBppConfigId s.routeCode
       pure . fromMaybe CabAway $ do
         cab <- mbTrack

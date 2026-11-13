@@ -160,7 +160,7 @@ readCity cityId = do
   live <- cityLiveBookings cityId
   let routes = nub [(route, lb.booking.integratedBppConfigId) | lb <- live, isFinding lb || isJust (allocatedPlate lb), Just route <- [lb.booking.routeCode]]
   positionsByRoute <- fmap catMaybes . forM (nubOn fst routes) $ \(routeCode, integratedBppConfigId) ->
-    try ((,) <$> readRoutePositions routeCode <*> Seats.routeStopRows integratedBppConfigId routeCode) >>= \case
+    try ((,) <$> readRoutePositions integratedBppConfigId routeCode <*> Seats.routeStopRows integratedBppConfigId routeCode) >>= \case
       -- Known limitation: a gps outage is not told apart from every cab being silent. A failed read skips the route, which is
       -- fail-safe: no allocation from stale data, no stand timer cleared.
       Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: position read failed for route " <> routeCode <> ": " <> show e)

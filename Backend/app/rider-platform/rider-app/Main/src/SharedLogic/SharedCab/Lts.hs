@@ -13,15 +13,19 @@ module SharedLogic.SharedCab.Lts
   )
 where
 
+import Control.Monad.Extra (firstJustM)
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.RouteStopMapping as DRSM
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 
 -- | One cab as gps-processor reports it.
@@ -83,23 +87,27 @@ fromGps plate e =
 -- | Read straight from the LTS Redis, the hot path (the tick every few seconds, every rider poll). Fields decode one by one: a bad one is
 -- dropped, not the route.
 readRoutePositions ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, Log m) =>
+  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DIBC.IntegratedBPPConfig ->
   Text ->
   m [CabTrack]
-readRoutePositions routeCode = do
-  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll @A.Value (routeKey routeCode)
+readRoutePositions integratedBppConfigId routeCode = do
+  keys <- routeKeys integratedBppConfigId routeCode
+  pairs <- fromMaybe [] <$> firstJustM (\key -> mfilter (not . null) . Just <$> Redis.runInMultiCloudLTSRedisForListFromReplica (Redis.hGetAll @A.Value key)) keys
   fmap catMaybes . forM pairs $ \(plate, raw) -> case A.fromJSON raw of
     A.Success entry -> pure (Just (fromGps plate entry))
     A.Error err -> Nothing <$ logWarning ("shared-cab: dropping gps field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
 
 -- | One cab's position; a read failure is Nothing, like a cab with no position.
 readRoutePosition ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, CacheFlow m r, EsqDBFlow m r) =>
+  Id DIBC.IntegratedBPPConfig ->
   Text ->
   Text ->
   m (Maybe CabTrack)
-readRoutePosition routeCode plate = do
-  fields <- either (const []) identity <$> withTryCatch "sharedCab:readRoutePosition" (Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value (routeKey routeCode) plate)
+readRoutePosition integratedBppConfigId routeCode plate = do
+  keys <- routeKeys integratedBppConfigId routeCode
+  fields <- either (const []) identity <$> withTryCatch "sharedCab:readRoutePosition" (maybeToList <$> firstJustM (\key -> listToMaybe <$> Redis.runInMultiCloudLTSRedisForListFromReplica (maybeToList <$> Redis.hGet @A.Value key plate)) keys)
   pure $ case listToMaybe fields of
     Just raw | A.Success entry <- A.fromJSON raw -> Just (fromGps plate entry)
     _ -> Nothing
@@ -119,6 +127,17 @@ arrivalUtc e = posixSecondsToUTCTime (fromInteger e.arrivalTimeUnix)
 nextStopCode :: CabTrack -> Maybe Text
 nextStopCode cab = (.stopCode) <$> listToMaybe cab.etas
 
--- | gps-processor writes cab positions under the unprefixed key; a bus feed's redisPrefix names a partner feed's own hash.
-routeKey :: Text -> Text
-routeKey = CQMMB.mkRouteKey Nothing
+-- | The cab feed's prefixed hash, then the unprefixed one.
+-- ponytail: the unprefixed fallback covers gps-processor until its shared-cab feed sets external_key_prefix; drop it after.
+routeKeys :: (CacheFlow m r, EsqDBFlow m r) => Id DIBC.IntegratedBPPConfig -> Text -> m [Text]
+routeKeys integratedBppConfigId routeCode = do
+  prefix <- (>>= redisPrefixOf) <$> CQIBC.findById integratedBppConfigId
+  let prefixed = CQMMB.mkRouteKey prefix routeCode
+      bare = CQMMB.mkRouteKey Nothing routeCode
+  pure $ prefixed : [bare | bare /= prefixed]
+
+redisPrefixOf :: DIBC.IntegratedBPPConfig -> Maybe Text
+redisPrefixOf config = case config.providerConfig of
+  DIBC.ONDC c -> c.redisPrefix
+  DIBC.DIRECT c -> c.redisPrefix
+  _ -> Nothing
