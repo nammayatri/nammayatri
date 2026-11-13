@@ -17,6 +17,8 @@ types:
   RouteStopMappingWithPolyline:
     routeStopMappings: "[RouteStopMapping]"
     polyline: Maybe Text
+    routeShortName: Maybe Text
+    routeLongName: Maybe Text
 
 apis:
   - GET:

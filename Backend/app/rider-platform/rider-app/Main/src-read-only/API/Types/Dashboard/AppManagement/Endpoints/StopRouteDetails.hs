@@ -15,7 +15,12 @@ import Kernel.Types.Common
 import Servant
 import Servant.Client
 
-data RouteStopMappingWithPolyline = RouteStopMappingWithPolyline {polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text, routeStopMappings :: [Domain.Types.RouteStopMapping.RouteStopMapping]}
+data RouteStopMappingWithPolyline = RouteStopMappingWithPolyline
+  { polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeStopMappings :: [Domain.Types.RouteStopMapping.RouteStopMapping]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

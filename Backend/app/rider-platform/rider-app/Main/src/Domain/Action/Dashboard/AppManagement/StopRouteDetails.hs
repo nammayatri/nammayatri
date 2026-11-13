@@ -26,7 +26,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
 import Tools.Error
 
 resolveBppConfig ::
@@ -89,9 +88,12 @@ stopRouteDetailsGetRouteStopMappingByRoute :: (Kernel.Types.Id.ShortId Domain.Ty
 stopRouteDetailsGetRouteStopMappingByRoute merchantShortId opCity routeCode vehicleCategory = do
   bppConfig <- resolveBppConfig merchantShortId opCity vehicleCategory
   routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode bppConfig
-  mbPolyline <- QRoutePolylines.getByRouteIdAndCity routeCode bppConfig.merchantOperatingCityId
+  -- GIMS encodedPolyline (gtfs_route for editor feeds), else rider-db route_polylines.
+  mbRoute <- OTPRest.getRouteByRouteId bppConfig routeCode
   pure $
     StopRouteDetailsAPI.RouteStopMappingWithPolyline
       { routeStopMappings = routeStopMappings,
-        polyline = mbPolyline >>= (.polyline)
+        polyline = mbRoute >>= (.polyline),
+        routeShortName = (.shortName) <$> mbRoute,
+        routeLongName = (.longName) <$> mbRoute
       }
