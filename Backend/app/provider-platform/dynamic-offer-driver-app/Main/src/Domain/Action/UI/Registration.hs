@@ -121,7 +121,7 @@ import qualified System.Environment as SE
 import qualified TempAppCode.Flow as TempAppCode
 import TempAppCode.Types
 import qualified Text.Hex as Hex
-import Tools.Auth (authTokenCacheKey, decryptAES128)
+import Tools.Auth (authTokenCacheKey, clearLtsTokenCache, decryptAES128)
 import Tools.Error
 import qualified Tools.Event as TE
 import qualified Tools.EventTracking as ET
@@ -958,12 +958,13 @@ resend tokenId mbSenderHash = do
         person = Nothing
       }
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
+    clearLtsTokenCache regToken.token
 
 authHitOTPChannel :: Id SP.Person -> Text
 authHitOTPChannel personId = "BPP:Registration:auth" <> getId personId <> ":OtpChannel"

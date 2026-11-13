@@ -68,6 +68,15 @@ gimsCurrentTripDetails :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShort
 gimsCurrentTripDetails baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorCurrentTripDetails gtfsId req) "gimsCurrentTripDetails" NandiAPI.operatorCurrentTripDetailsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_CURRENT_TRIP_DETAILS_API") baseUrl)
 
+gimsCurrentTripDetailsIfOnline :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsCurrentTripDetailsReq -> m (Maybe GimsCurrentTripDetailsResp)
+gimsCurrentTripDetailsIfOnline baseUrl gtfsId req =
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.postOperatorCurrentTripDetails gtfsId req) "gimsCurrentTripDetails" NandiAPI.operatorCurrentTripDetailsAPI >>= \case
+      Right resp -> pure (Just resp)
+      Left err
+        | isNotFoundResponse err -> pure Nothing
+        | otherwise -> throwError $ ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_CURRENT_TRIP_DETAILS_API") baseUrl err
+
 -- | Fails open (Nothing) rather than throwing -- callers fall back to a client-supplied tripId/routeId
 -- when GIMS is slow/unreachable, so a GIMS blip degrades to stale-but-working, not broken.
 gimsActiveTrip :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsOperationAnchor -> m (Maybe GimsActiveTripResp)
