@@ -2,6 +2,7 @@
 -- drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
 module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
+    stepSessionCab,
     bookingsByPlate,
   )
 where
@@ -11,6 +12,7 @@ import qualified Data.Aeson as A
 import Data.List (findIndex)
 import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -23,14 +25,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
+import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline, seatIsRiders)
-import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
+import SharedLogic.SharedCab.Booking (boardedTouchDue, plateBookings, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
-import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePositions)
+import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePosition, readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Seats (markDropped, routeStopRows)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -79,6 +82,15 @@ runStopProgress cityId live positionsByRoute = do
       (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
       (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) routeRead s)
       cabs
+
+stepSessionCab :: StopProgressFlow m r c => Session -> m ()
+stepSessionCab s = unless (s.status == ENDED) $ do
+  cfg <- Config.getTunables s.merchantOperatingCityId
+  now <- getCurrentTime
+  bookings <- plateBookings [s.vehicleNumber] [CONFIRMED] >>= liveBookingsOf
+  track <- readRoutePosition s.routeCode s.vehicleNumber
+  stops <- routeStopRows s.integratedBppConfigId s.routeCode
+  stepCab cfg now bookings (RouteRead (maybeToList track) stops) s
 
 -- | The tick's live bookings by their cab, built once per tick instead of a scan of all of them per cab.
 bookingsByPlate :: [LiveBooking] -> M.Map Text [LiveBooking]
@@ -134,13 +146,13 @@ cabFix stops cab =
 movingTimerStep :: StopProgressFlow m r c => Int -> Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 movingTimerStep keyTtlSec cfg now freshCab plate b = do
   mbState <- readAlloc b.id
-  whenJust mbState $ \st -> whenJust (armMovingTimer cfg now (runningTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
+  whenJust mbState $ \st -> whenJust (armMovingTimer cfg now (blockingTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
       current <- readAlloc b.id
       case current of
         Just cur
           | cur.vehicleNumber == plate,
-            Just deadline <- armMovingTimer cfg now (runningTimerDeadline cur) freshCab b.fromStationCode -> do
+            Just deadline <- armMovingTimer cfg now (blockingTimerDeadline cur) freshCab b.fromStationCode -> do
             writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
             pure True
         _ -> pure False
