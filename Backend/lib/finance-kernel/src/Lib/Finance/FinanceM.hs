@@ -126,7 +126,7 @@ data FinanceCtx = FinanceCtx
     supplierName :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierVatNumber :: Maybe Text, -- fleet owner's VAT registration number
-    supplierAddress :: Maybe Text, -- fleet owner's address (from stripeAddress) for VAT invoices
+    supplierAddress :: Maybe Text, -- the supplier's own address (fleet owner or driver)
     merchantGstin :: Maybe Text, -- merchant's own GSTIN, for issued_by_tax_no (GST)
     merchantVatNumber :: Maybe Text, -- merchant's VAT number, for issued_by_tax_no (VAT)
     supplierId :: Maybe Text,
@@ -877,7 +877,7 @@ invoiceInner ctx config = do
             issuedByName = ctx.merchantName,
             issuedByAddress = ctx.issuedByAddress,
             supplierName = ctx.supplierName,
-            supplierAddress = if config.isVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.issuedByAddress,
+            supplierAddress = if config.isVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.supplierAddress,
             supplierGSTIN = ctx.supplierGSTIN,
             supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
             supplierId = ctx.supplierId,
