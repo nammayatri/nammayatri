@@ -773,6 +773,35 @@ notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
     [("routeCode", routeCode)]
     Nothing
 
+-- | rider-app warns the driver of an accepted shared cab still standing away from the board stop: start moving within
+-- {#releaseInMin#} min or the ride goes to another cab. {#boardStop#} falls back to "the pickup stop".
+notifySharedCabMoveWarning ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  Text ->
+  Maybe Text ->
+  Int ->
+  m ()
+notifySharedCabMoveWarning merchantOpCityId personId mbDeviceToken lang bookingIdText mbBoardStop releaseInSec =
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    personId
+    mbDeviceToken
+    lang
+    Nothing
+    (createFCMReq "SHARED_CAB_MOVE_WARNING" bookingIdText FCM.Product identity)
+    (Just ())
+    [ ("boardStop", fromMaybe "the pickup stop" mbBoardStop),
+      ("releaseInMin", show (max 1 ((releaseInSec + 59) `div` 60)))
+    ]
+    Nothing
+
 -- FCM.ALLOCATION_REQUEST
 -- title = FCM.FCMNotificationTitle "New allocation request."
 -- body =

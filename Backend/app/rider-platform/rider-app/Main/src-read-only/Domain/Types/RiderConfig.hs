@@ -317,6 +317,7 @@ data SharedCabConfig = SharedCabConfig
   { allocationWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     atStopRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     autoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    awayWarnLeadSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boardProximityM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     callEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
