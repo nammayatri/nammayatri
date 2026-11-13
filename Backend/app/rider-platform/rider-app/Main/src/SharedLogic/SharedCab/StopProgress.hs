@@ -83,9 +83,6 @@ runStopProgress cityId live positionsByRoute = do
       (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) routeRead s)
       cabs
 
--- | One cab's stop progress, run on its driver's session poll: its bookings are read by id from KV, so an allocation still
--- draining to the DB (which the tick's city scan reads as FINDING) still gets its board countdown, drop clock and passed-stop check.
--- The tick stays the backstop for a cab whose app stopped polling; every step re-checks under its lock, so running both is safe.
 stepSessionCab :: StopProgressFlow m r c => Session -> m ()
 stepSessionCab s = unless (s.status == ENDED) $ do
   cfg <- Config.getTunables s.merchantOperatingCityId
