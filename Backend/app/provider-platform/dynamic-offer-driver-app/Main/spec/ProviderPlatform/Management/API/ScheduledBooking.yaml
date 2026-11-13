@@ -149,15 +149,11 @@ types:
   ScheduledBookingCityWiseCountRes:
     - cities: [ScheduledBookingCityCount]
 
-  # Per-city scheduled-booking counts over the requested window, one row per city the requestor can access.
+  # Per-city count of scheduled bookings still unassigned (NEW), one row per city the requestor can access.
   ScheduledBookingCityCount:
     - city: City # Beckn city; serializes to the std code the dashboard uses as the drill-down key
     - cityName: Text # human-readable city name
-    - total: Int # all scheduled bookings in the window, any status
-    - assigned: Int # TRIP_ASSIGNED
-    - unassigned: Int # NEW
-    - completed: Int # COMPLETED
-    - cancelled: Int # CANCELLED
+    - unassigned: Int # scheduled bookings still pending/unassigned, read from the live driver-board Redis list
 
   ScheduledBookingListItem:
     - transactionId: Text

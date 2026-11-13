@@ -134,15 +134,7 @@ data ReallocationEventItem = ReallocationEventItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ScheduledBookingCityCount = ScheduledBookingCityCount
-  { city :: Kernel.Types.Beckn.Context.City,
-    cityName :: Kernel.Prelude.Text,
-    total :: Kernel.Prelude.Int,
-    assigned :: Kernel.Prelude.Int,
-    unassigned :: Kernel.Prelude.Int,
-    completed :: Kernel.Prelude.Int,
-    cancelled :: Kernel.Prelude.Int
-  }
+data ScheduledBookingCityCount = ScheduledBookingCityCount {city :: Kernel.Types.Beckn.Context.City, cityName :: Kernel.Prelude.Text, unassigned :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

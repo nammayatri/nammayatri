@@ -31,6 +31,7 @@ import Data.List (nub, nubBy, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
+import Data.Time (UTCTime (..), utctDay)
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
@@ -74,6 +75,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Booking as SLB
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -132,6 +134,12 @@ defaultHistoryLookbackSeconds = 24 * 60 * 60
 
 maxLookbackSeconds :: Int
 maxLookbackSeconds = 7 * 24 * 60 * 60
+
+-- | Widest from→to interval the city-wise count will enumerate per-day Redis hashes over. Bounds the
+-- per-day/per-city `hLen` fan-out; chosen so the widest allowed window (earliest `from` to the default
+-- `to`) stays valid: maxLookbackSeconds (7d back) + defaultLookaheadSeconds (2d ahead).
+maxWindowSeconds :: Int
+maxWindowSeconds = maxLookbackSeconds + defaultLookaheadSeconds
 
 -- does not pass one.
 defaultNearbyRadiusKm :: Double
@@ -242,29 +250,32 @@ getScheduledBookingCityWiseCount merchantShortId _opCity mbFrom mbTo mbRequestor
       fromTime = fromMaybe defaultFrom mbFrom
       toTime = fromMaybe defaultTo mbTo
       earliestAllowedFrom = addUTCTime (secondsToNominalDiffTime . Seconds $ negate maxLookbackSeconds) now
+      latestAllowedTo = addUTCTime (secondsToNominalDiffTime . Seconds $ maxWindowSeconds) fromTime
   when (fromTime > toTime) $ throwError (InvalidRequest "from must not be after to")
   when (fromTime < earliestAllowedFrom) $
     throwError (InvalidRequest $ "from cannot be older than " <> show (maxLookbackSeconds `div` (24 * 60 * 60)) <> " days")
+  when (toTime > latestAllowedTo) $
+    throwError (InvalidRequest $ "from→to window cannot exceed " <> show (maxWindowSeconds `div` (24 * 60 * 60)) <> " days")
   -- The requestor's accessible cities for this merchant (cached merchant_access rows).
   accessPairs <- runInDashboardDb $ DashboardScope.resolveMerchantAccess (Id requestorId)
   let accessibleCities = [city | (mSid, city) <- accessPairs, mSid == merchantShortId.getShortId]
   allMocs <- CQMOC.findAllByMerchantId merchant.id
   let accessibleMocs = filter (\moc -> moc.city `elem` accessibleCities) allMocs
-  counts <- QBookingLite.findScheduledStatusCountsByCitiesLite (map (.id) accessibleMocs) fromTime toTime
-  let statusCountsByCity = Map.fromListWith (<>) [(mocId, [(st, cnt)]) | (mocId, st, cnt) <- counts]
-      mkRow moc =
-        let statusCounts = Map.findWithDefault [] moc.id.getId statusCountsByCity
-            cntOf st = sum [cnt | (s, cnt) <- statusCounts, s == st]
-         in Common.ScheduledBookingCityCount
-              { city = moc.city,
-                cityName = T.pack (show moc.city),
-                total = sum (map snd statusCounts),
-                assigned = cntOf SRB.TRIP_ASSIGNED,
-                unassigned = cntOf SRB.NEW,
-                completed = cntOf SRB.COMPLETED,
-                cancelled = cntOf SRB.CANCELLED
-              }
-  pure Common.ScheduledBookingCityWiseCountRes {cities = map mkRow accessibleMocs}
+  -- unassigned = sum of HLEN over the per-city/local-day hashes (ScheduledBookings:{cityId}:{localDate}) that SharedLogic.Booking.addScheduledBookingInRedis keeps (member only while scheduled & NEW); day-granular, and 0 for cities with the driver board disabled (disableListScheduledBookingAPI).
+  cities <- forM accessibleMocs $ \moc -> do
+    mbTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing
+    let timeDiff = maybe 0 (secondsToNominalDiffTime . (.timeDiffFromUtc)) mbTC
+        localFrom = addUTCTime timeDiff fromTime
+        localTo = addUTCTime timeDiff toTime
+        dayKeys = [SLB.createRedisKeyForHset (UTCTime d 0) moc.id | d <- [utctDay localFrom .. utctDay localTo]]
+    pending <- fromIntegral . sum <$> mapM Redis.hLen dayKeys
+    pure
+      Common.ScheduledBookingCityCount
+        { city = moc.city,
+          cityName = T.pack (show moc.city),
+          unassigned = pending
+        }
+  pure Common.ScheduledBookingCityWiseCountRes {cities = cities}
 
 pickupAreaOf :: QBookingLite.BookingLite -> Maybe SL.Area
 pickupAreaOf booking = do
