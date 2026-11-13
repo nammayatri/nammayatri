@@ -21,6 +21,7 @@ module SharedLogic.FleetDriverSettings
     clearAutoAssign,
     reconcileAutoAssignAfterMgSync,
     onCampaignMembershipCleared,
+    reconcileStartedCampaignAutoAssign,
     getDriverFleetAutoAssignConfig,
     FleetLock (..),
     getFleetLock,
@@ -88,6 +89,8 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
 data AutoAssignControl = AutoAssignControl
   { -- | A control campaign runs the driver: the fleet's settings and its per-driver switch are ignored.
     campaignInCharge :: Bool,
+    -- | The control campaign in charge, if any.
+    chargingCampaignId :: Maybe Text,
     autoAssignConfig :: Maybe DFC.AutoAssignConfig
   }
 
@@ -104,9 +107,14 @@ getAutoAssignControl driverId merchantOpCityId = do
   mbInfo <- QDI.findById driverId
   MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo >>= \case
     MgCampaign.CampaignMember {snapshot} ->
-      pure AutoAssignControl {campaignInCharge = True, autoAssignConfig = MgCampaign.mgAutoAssignConfigFromSnapshot snapshot}
+      pure
+        AutoAssignControl
+          { campaignInCharge = True,
+            chargingCampaignId = Just snapshot.cohortJourneyMappingId,
+            autoAssignConfig = MgCampaign.mgAutoAssignConfigFromSnapshot snapshot
+          }
     MgCampaign.UseNoCampaign ->
-      AutoAssignControl False
+      AutoAssignControl False Nothing
         <$> (QFDA.findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId))
 
 -- | The auto-assign settings of whoever is in charge of the driver ('getAutoAssignControl'): the area/distance preference
@@ -260,6 +268,7 @@ onCampaignMembershipCleared ::
   Id DCJM.CohortJourneyMapping ->
   m ()
 onCampaignMembershipCleared driverId cjmId = do
+  void $ Redis.del (campaignAutoAssignAppliedKey driverId cjmId.getId)
   wasInCharge <- MgCampaign.isControlCampaign cjmId
   when wasInCharge $
     QPerson.findById driverId >>= mapM_ \driver -> applyFleetSettingsOnJoin driverId driver.merchantOperatingCityId
@@ -350,6 +359,32 @@ resetAutoAssign shouldReset driverId merchantOpCityId =
       whenJust mbVehicle \vehicle -> do
         cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
         applyFleetSettingsWith control False cityTiers driver' vehicle
+      whenJust control.chargingCampaignId \cjmId ->
+        Redis.setExp (campaignAutoAssignAppliedKey driverId cjmId) True campaignAutoAssignAppliedTtl
+
+-- | A control campaign takes charge only once it starts ('MgCampaign.resolveFromControls'), but an OptIn driver can opt
+-- in before that, when the fleet's settings are kept. So the campaign's settings go on at the first check after it
+-- starts: when the campaign in charge hasn't been applied to the driver yet, it is applied now ('resetAutoAssign' marks
+-- it applied). A no-op otherwise, so a driver's own changes under the campaign stay.
+reconcileStartedCampaignAutoAssign ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, IJBeam.BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id Person ->
+  Id MerchantOperatingCity ->
+  m ()
+reconcileStartedCampaignAutoAssign driverId merchantOpCityId = do
+  control <- getAutoAssignControl driverId merchantOpCityId
+  whenJust control.chargingCampaignId \cjmId -> do
+    applied <- Redis.get (campaignAutoAssignAppliedKey driverId cjmId)
+    when (isNothing (applied :: Maybe Bool)) $
+      resetAutoAssign (\c -> c.chargingCampaignId == Just cjmId) driverId merchantOpCityId
+
+-- | Set once a control campaign's settings have been applied to the driver; cleared when the driver leaves it.
+campaignAutoAssignAppliedKey :: Id Person -> Text -> Text
+campaignAutoAssignAppliedKey driverId cjmId = "FleetDriverSettings:CampaignAutoAssignApplied:" <> driverId.getId <> ":" <> cjmId
+
+-- | Outlives any campaign window.
+campaignAutoAssignAppliedTtl :: Int
+campaignAutoAssignAppliedTtl = 120 * 24 * 60 * 60
 
 -- | Takes the driver off fleet auto-assign: the whole AutoAssign tag, whatever it holds (also tiers the city no longer
 -- has), and those tiers' auto-accept on the vehicle. Selected service tiers are left as they are. Returns the driver and

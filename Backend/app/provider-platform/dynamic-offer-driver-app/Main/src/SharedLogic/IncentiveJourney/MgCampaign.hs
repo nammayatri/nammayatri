@@ -290,7 +290,7 @@ extractIjCampaignMemberships = \case
   _ -> []
 
 -- | One membership's 'MgPerkSource': 'CampaignMember' only for an enabled campaign with control features
--- ('controlsTakeCharge'); a behaviour-only campaign leaves the fleet in charge.
+-- ('controlsTakeCharge') that has started; a behaviour-only campaign, or one not started yet, leaves the fleet in charge.
 resolveFromControls ::
   UTCTime ->
   CampaignTag.CampaignMembership ->
@@ -302,6 +302,8 @@ resolveFromControls localTime membership optedIn = \case
   Just controls
     | not controls.enabled -> UseNoCampaign
     | not (controlsTakeCharge controls) -> UseNoCampaign
+    -- An OptIn tag can be written before the campaign starts; until then the fleet stays in charge.
+    | localTime < controls.campaignStartDate -> UseNoCampaign
     | otherwise ->
       let snap =
             Mg.MgCampaignSnapshot

@@ -494,6 +494,7 @@ forkSettleClosedPeriodsForList driverId merchantId merchantOpCityId transporterC
 -- Tag expiry = min(UCM.validTill, streak end) so Unbounded timeBounds cannot keep
 -- cancel/AA/pooling alive after the campaign or assignment ends.
 -- Also clears tags for CJMs no longer in active assignments. OptIn tags left to their own expiry.
+-- Then applies a control campaign's auto-assign if it started after the driver opted in.
 forkEnsureAssignedCampaignTags ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -584,6 +585,8 @@ forkEnsureAssignedCampaignTags driverId =
               ((.snapshot) <$> find (\p -> p.membership.cjmId `elem` controlsIds) ps)
                 <|> ((.snapshot) <$> listToMaybe ps)
         FDS.reconcileAutoAssignAfterMgSync personId mbSnap
+    -- An OptIn control campaign the driver joined before it started takes charge only now: apply its settings once.
+    whenJust mbPerson \person -> FDS.reconcileStartedCampaignAutoAssign driverId person.merchantOperatingCityId
 
 -- No assignment / bag / stats work here (that would hit the app pod). Consumer loads
 -- assignments and no-ops when empty — same isolation as ride-end → RIDE_EVENTS_CONSUMER.
