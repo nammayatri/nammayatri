@@ -126,6 +126,7 @@ library
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
       API.UI.ExotelEndRide
+      API.UI.GoogleTranslate
       API.UI.IncentiveJourney
       API.UI.Issue
       API.UI.KioskLocation
