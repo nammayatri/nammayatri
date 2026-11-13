@@ -1530,7 +1530,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
 
     epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, HasField "ltsHedisEnv" r Redis.HedisEnv) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId

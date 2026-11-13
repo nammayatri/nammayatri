@@ -25,13 +25,15 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth (verifyPerson)
 
 data InternalResp = InternalResp
   { driverId :: Id DP.Person,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
-    cloudType :: Maybe Version.CloudType
+    cloudType :: Maybe Version.CloudType,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -42,10 +44,17 @@ internalAuth token apiKey = do
     throwError $ InvalidRequest "Invalid API key"
   (driverId, currentMerchantId, merchantOpCityId) <- verifyPerson (fromMaybe "" token)
   merchant <- QM.findById currentMerchantId >>= fromMaybeM (MerchantNotFound currentMerchantId.getId)
+  mbPerson <- QPerson.findById driverId
   pure $
     InternalResp
       { driverId,
         merchantId = currentMerchantId,
         merchantOperatingCityId = merchantOpCityId,
-        cloudType = merchant.cloudType
+        cloudType = merchant.cloudType,
+        operatorBadgeToken = mbPerson >>= busCrewBadge
       }
+  where
+    busCrewBadge :: DP.Person -> Maybe Text
+    busCrewBadge person
+      | person.role `elem` [DP.BUS_DRIVER, DP.BUS_CONDUCTOR] = person.operatorBadgeToken
+      | otherwise = Nothing
