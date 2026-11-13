@@ -4,6 +4,7 @@ module Domain.Action.UI.RideEvidence
     loadMediaFiles,
     checkEvidenceUploadRate,
     isRideEvidenceEnabled,
+    maxFilesPerRide,
     evidenceLinkExpirySeconds,
     storeThumbnail,
     EvidenceLinks (..),
@@ -35,9 +36,8 @@ import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
-import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions (..))
 import Kernel.Utils.Common
-import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -55,6 +55,12 @@ defaultMaxFilesPerRide = 100
 
 defaultCompletedRideWindowHours :: Int
 defaultCompletedRideWindowHours = 72
+
+uploadsPerHourMultiplier :: Int
+uploadsPerHourMultiplier = 3
+
+uploadRateWindowSeconds :: Int
+uploadRateWindowSeconds = 3600
 
 defaultLinkExpirySeconds :: Int
 defaultLinkExpirySeconds = 300
@@ -187,12 +193,15 @@ discardUploadedFile mediaFile =
     whenJust mediaFile.s3FilePath $ \filePath -> S3.delete (T.unpack filePath)
     QMediaFile.deleteById mediaFile.id
 
--- A driver cannot upload more evidence files in an hour than a single ride may hold.
+-- A driver may upload up to three times the per-ride limit in an hour. Proofs for several rides in a row fit, and a driver who keeps uploading gets its own error and not the generic rate limit error.
 checkEvidenceUploadRate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> DTConf.TransporterConfig -> Environment.Flow ()
-checkEvidenceUploadRate driverId transporterConfig =
-  checkSlidingWindowLimitWithOptions
-    ("RideEvidence:Upload:DriverId-" <> driverId.getId)
-    (APIRateLimitOptions {limit = maxFilesPerRide transporterConfig, limitResetTimeInSec = 3600})
+checkEvidenceUploadRate driverId transporterConfig = do
+  isAllowed <-
+    slidingWindowLimiter
+      ("RideEvidence:Upload:DriverId-" <> driverId.getId)
+      (uploadsPerHourMultiplier * maxFilesPerRide transporterConfig)
+      uploadRateWindowSeconds
+  unless isAllowed $ throwError RideEvidenceUploadLimitReached
 
 -- Proofs are off until a city sets enabled to true. Turning them off again stops new proofs only. The proofs already stored stay readable, and ops hide them one by one through the dashboard.
 isRideEvidenceEnabled :: DTConf.TransporterConfig -> Bool
