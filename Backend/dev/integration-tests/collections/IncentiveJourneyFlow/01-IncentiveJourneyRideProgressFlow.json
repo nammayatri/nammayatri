@@ -2374,7 +2374,7 @@
               "pm.test('Dashboard stats/history 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
               "var rows = d.stats || [];",
-              "var rideRows = rows.filter(function (s) { return s.conditionType === 'RideCompleted' && ['Completed', 'Rewarded'].indexOf(s.status) >= 0; });",
+              "var rideRows = rows.filter(function (s) { return s.conditionType === 'RideCompleted' && ['Completed', 'Rewarded', 'RewardPending'].indexOf(s.status) >= 0; });",
               "pm.test('Both ride milestones have completed stats', function () { pm.expect(rideRows.length).to.be.at.least(2); });",
               "if (rideRows.length > 0) {",
               "  pm.environment.set('ij_period_key', rideRows[0].periodKey);",

@@ -47,6 +47,12 @@ toSpecialLocationNames specialLocationNames =
 resolveDisplayRewardValue :: DIJM.IncentiveJourneyMilestone -> Maybe Int
 resolveDisplayRewardValue = (.rewardValue)
 
+resolveCouponOfferCode :: DIJM.IncentiveJourneyMilestone -> Maybe Text
+resolveCouponOfferCode milestone =
+  case milestone.rewardType of
+    DIJC.Coupons -> (.offerCode) <$> IJ.mkCouponSpec milestone.rewardMetadata
+    _ -> Nothing
+
 getIncentiveJourneyList ::
   BeamFlow m r =>
   ServiceHandle m ->
@@ -127,6 +133,7 @@ toMilestoneItem specialLocationNames statsRows milestone = do
         conditionType = milestone.conditionType,
         conditionOperator = milestone.conditionOperator,
         conditionValue = milestone.conditionValue,
+        couponOfferCode = resolveCouponOfferCode milestone,
         areaType = milestone.areaType,
         specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
         vehicleCategory = milestone.vehicleCategory,
@@ -294,6 +301,7 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               conditionType = stats.conditionType,
               conditionOperator = stats.conditionOperator,
               conditionValue = stats.conditionValue,
+              couponOfferCode = resolveCouponOfferCode milestone,
               areaType = milestone.areaType,
               specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
               currentValue = stats.currentValue,
@@ -316,6 +324,7 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
               conditionType = milestone.conditionType,
               conditionOperator = milestone.conditionOperator,
               conditionValue = milestone.conditionValue,
+              couponOfferCode = resolveCouponOfferCode milestone,
               areaType = milestone.areaType,
               specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
               currentValue = 0,

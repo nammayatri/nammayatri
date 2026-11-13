@@ -48,7 +48,6 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.IncentiveJourney.Storage.Queries.AutoApplyCohortMappingExtra as QAuto
 import qualified Lib.IncentiveJourney.Storage.Queries.BulkUserCohortMappingRunExtra as QBulkRunExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
@@ -373,7 +372,7 @@ getIncentiveJourneyCohortList ::
   Maybe Text ->
   m Common.CohortDetailsListRes
 getIncentiveJourneyCohortList _handle _merchantShortId _opCity mbLimit mbOffset mbCohortName mbCohortCategory = do
-  cohorts <- QCDExtra.listWithOptionalNameAndCategory mbLimit mbOffset mbCohortName mbCohortCategory
+  cohorts <- Core.listCohorts mbLimit mbOffset mbCohortName mbCohortCategory
   pure
     Common.CohortDetailsListRes
       { cohorts =
@@ -945,24 +944,16 @@ postIncentiveJourneyAutoApplyCohortCreate ::
   Common.CreateAutoApplyCohortMappingReq ->
   m Common.CreateAutoApplyCohortMappingRes
 postIncentiveJourneyAutoApplyCohortCreate handle merchantShortId opCity req = do
-  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
-  let cjmId = ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId
-  cjm <- QCJMExtra.findCohortJourneyMappingById cjmId >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
-  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
-    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
-  mbExisting <- QAuto.findByCohortJourneyMappingIdAndVehicleCategory cjmId req.vehicleCategory
-  when (isJust mbExisting) $
-    throwError (InvalidRequest "Auto apply cohort mapping already exists for this cohort journey mapping and vehicle category")
-  row <-
-    QAuto.createAutoApplyCohortMapping
-      cjmId
-      (ID.cast merchant.id)
-      (ID.cast merchantOpCityId)
+  rowId <-
+    Core.createAutoApplyMapping
+      handle
+      merchantShortId
+      opCity
+      (ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId)
       req.vehicleCategory
       req.allowIfNoMapping
       req.enabled
-  handle.clearAutoApplyCacheByMerchantAndCity (ID.cast merchant.id) (ID.cast merchantOpCityId) [req.vehicleCategory]
-  pure Common.CreateAutoApplyCohortMappingRes {autoApplyCohortMappingId = ID.cast row.id}
+  pure Common.CreateAutoApplyCohortMappingRes {autoApplyCohortMappingId = ID.cast rowId}
 
 putIncentiveJourneyAutoApplyCohortUpdate ::
   BeamFlow m r =>
@@ -972,39 +963,15 @@ putIncentiveJourneyAutoApplyCohortUpdate ::
   Common.UpdateAutoApplyCohortMappingReq ->
   m APISuccess
 putIncentiveJourneyAutoApplyCohortUpdate handle merchantShortId opCity req = do
-  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
-  let rowId = ID.cast @Dashboard.Common.AutoApplyCohortMapping @DAuto.AutoApplyCohortMapping req.autoApplyCohortMappingId
-  row <- QAuto.findAutoApplyCohortMappingById rowId >>= fromMaybeM (InvalidRequest "Auto apply cohort mapping not found")
-  unless (row.merchantId == ID.cast merchant.id && row.merchantOperatingCityId == ID.cast merchantOpCityId) $
-    throwError (InvalidRequest "Auto apply cohort mapping does not belong to this merchant/city")
-  cjm <-
-    QCJMExtra.findCohortJourneyMappingById row.cohortJourneyMappingId
-      >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
-  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
-    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
-  vehicleCategory <- case (req.allVehicleCategories, req.vehicleCategory) of
-    (Just True, Just _) ->
-      throwError (InvalidRequest "Set either vehicleCategory or allVehicleCategories, not both")
-    (Just True, _) -> pure Nothing
-    (_, Just category) -> pure (Just category)
-    _ -> pure row.vehicleCategory
-  let allowIfNoMapping = fromMaybe row.allowIfNoMapping req.allowIfNoMapping
-      enabled = fromMaybe row.enabled req.enabled
-  when (vehicleCategory /= row.vehicleCategory) $ do
-    mbExisting <- QAuto.findByCohortJourneyMappingIdAndVehicleCategory row.cohortJourneyMappingId vehicleCategory
-    when (maybe False (\existing -> existing.id /= row.id) mbExisting) $
-      throwError (InvalidRequest "Auto apply cohort mapping already exists for this cohort journey mapping and vehicle category")
-  void $
-    QAuto.updateAutoApplyCohortMapping
-      row{DAuto.vehicleCategory = vehicleCategory,
-          DAuto.allowIfNoMapping = allowIfNoMapping,
-          DAuto.enabled = enabled
-         }
-  let categoriesToClear =
-        if row.vehicleCategory == vehicleCategory
-          then [vehicleCategory]
-          else [row.vehicleCategory, vehicleCategory]
-  handle.clearAutoApplyCacheByMerchantAndCity row.merchantId row.merchantOperatingCityId categoriesToClear
+  Core.updateAutoApplyMapping
+    handle
+    merchantShortId
+    opCity
+    (ID.cast @Dashboard.Common.AutoApplyCohortMapping @DAuto.AutoApplyCohortMapping req.autoApplyCohortMappingId)
+    req.vehicleCategory
+    req.allVehicleCategories
+    req.allowIfNoMapping
+    req.enabled
   pure Success
 
 getIncentiveJourneyAutoApplyCohortList ::
@@ -1018,52 +985,32 @@ getIncentiveJourneyAutoApplyCohortList ::
   Maybe Bool ->
   m Common.AutoApplyCohortMappingListRes
 getIncentiveJourneyAutoApplyCohortList handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled = do
-  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
-  rows <-
-    QAuto.findByMerchantAndCity
-      (Just $ fromMaybe 20 mbLimit)
-      (Just $ fromMaybe 0 mbOffset)
-      (ID.cast merchant.id)
-      (ID.cast merchantOpCityId)
-      mbVehicleCategory
-      mbEnabled
-  cjms <- QCJMExtra.findByIds (map (.cohortJourneyMappingId) rows)
-  cohorts <- QCDExtra.findByIds (map (.cohortId) cjms)
-  journeys <- QJourney.findByIds (map (.journeyId) cjms)
-  let cjmById = HM.fromList $ map (\cjm -> (cjm.id, cjm)) cjms
-      cohortById = HM.fromList $ map (\cohort -> (cohort.id, cohort)) cohorts
-      journeyById = HM.fromList $ map (\journey -> (journey.id, journey)) journeys
-  pure
-    Common.AutoApplyCohortMappingListRes
-      { mappings =
-          mapMaybe
-            ( \row -> do
-                cjm <- HM.lookup row.cohortJourneyMappingId cjmById
-                cohort <- HM.lookup cjm.cohortId cohortById
-                journey <- HM.lookup cjm.journeyId journeyById
-                pure $
-                  Common.AutoApplyCohortMappingListItem
-                    { autoApplyCohortMappingId = ID.cast row.id,
-                      cohortJourneyMappingId = ID.cast row.cohortJourneyMappingId,
-                      cohortId = ID.cast cohort.id,
-                      cohortName = cohort.name,
-                      cohortCategory = cohort.category,
-                      cohortRule = cohort.cohortRule,
-                      journeyId = ID.cast journey.id,
-                      journeyName = journey.name,
-                      journeyType = toApiJourneyType journey.journeyType,
-                      cohortMappingEnabled = cjm.enabled,
-                      merchantId = row.merchantId.getId,
-                      merchantOperatingCityId = row.merchantOperatingCityId.getId,
-                      vehicleCategory = row.vehicleCategory,
-                      allowIfNoMapping = row.allowIfNoMapping,
-                      enabled = row.enabled,
-                      createdAt = row.createdAt,
-                      updatedAt = row.updatedAt
-                    }
-            )
-            rows
-      }
+  rows <- Core.listAutoApplyRows handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled
+  pure Common.AutoApplyCohortMappingListRes {mappings = map toAutoApplyListItem rows}
+
+toAutoApplyListItem ::
+  (DAuto.AutoApplyCohortMapping, DCJM.CohortJourneyMapping, DCD.CohortDetails, DIJ.IncentiveJourney) ->
+  Common.AutoApplyCohortMappingListItem
+toAutoApplyListItem (row, cjm, cohort, journey) =
+  Common.AutoApplyCohortMappingListItem
+    { autoApplyCohortMappingId = ID.cast row.id,
+      cohortJourneyMappingId = ID.cast row.cohortJourneyMappingId,
+      cohortId = ID.cast cohort.id,
+      cohortName = cohort.name,
+      cohortCategory = cohort.category,
+      cohortRule = cohort.cohortRule,
+      journeyId = ID.cast journey.id,
+      journeyName = journey.name,
+      journeyType = toApiJourneyType journey.journeyType,
+      cohortMappingEnabled = cjm.enabled,
+      merchantId = row.merchantId.getId,
+      merchantOperatingCityId = row.merchantOperatingCityId.getId,
+      vehicleCategory = row.vehicleCategory,
+      allowIfNoMapping = row.allowIfNoMapping,
+      enabled = row.enabled,
+      createdAt = row.createdAt,
+      updatedAt = row.updatedAt
+    }
 
 isValidSubscriptionServiceName :: Text -> Bool
 isValidSubscriptionServiceName serviceName =

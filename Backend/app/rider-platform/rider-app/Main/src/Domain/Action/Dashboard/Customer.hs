@@ -62,8 +62,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -74,7 +72,6 @@ import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.SocialLogin as SSocialLogin
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
@@ -372,10 +369,7 @@ applyOfferToPerson merchant person offerCode validityHours amount = do
   offers <- SOffer.listOffersForPerson merchant.id person amount
   unless (any ((== offerCode) . (.offerCode)) offers) $
     throwError (InvalidRequest $ "Offer code " <> offerCode <> " is not eligible for customer")
-  now <- getCurrentTime
-  let tag = LYTU.mkTagNameValueExpiry (LYT.TagName SOffer.autoApplyOfferTagName) (LYT.TextValue offerCode) (Just $ Hours validityHours) now
-      newTags = LYTU.removeTagNameValue person.customerNammaTags tag ++ [tag]
-  CQPerson.updateCustomerTags (Just newTags) person.id
+  SOffer.addAutoApplyOfferTag person offerCode validityHours
   logTagInfo "dashboard -> applyOffer : " (show person.id <> " offerCode: " <> offerCode)
 
 postCustomerApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.ApplyCustomerOfferReq -> Flow APISuccess

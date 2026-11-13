@@ -113,6 +113,7 @@ library
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot
+      API.UI.IncentiveJourney
       API.UI.Issue
       API.UI.Maps
       API.UI.ParkingBooking
@@ -363,6 +364,7 @@ library
       Domain.Action.UI.GetFRFSLiveAlerts
       Domain.Action.UI.HotSpot
       Domain.Action.UI.IGM
+      Domain.Action.UI.IncentiveJourney
       Domain.Action.UI.Insurance
       Domain.Action.UI.InsuranceInternal
       Domain.Action.UI.InterCityDetails

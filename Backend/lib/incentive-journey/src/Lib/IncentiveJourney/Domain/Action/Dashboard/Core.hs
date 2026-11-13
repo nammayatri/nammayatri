@@ -14,7 +14,11 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Core
     listMilestones,
     statsHistory,
     createCohort,
+    listCohorts,
     listCohortJourneyRows,
+    createAutoApplyMapping,
+    updateAutoApplyMapping,
+    listAutoApplyRows,
     AssignmentView (..),
     listAssignmentViews,
     assignUser,
@@ -27,6 +31,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Data.Text as T
 import Data.Time (Day)
+import qualified Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, sortOn)
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
@@ -35,6 +40,7 @@ import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as DAuto
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
@@ -43,6 +49,7 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as 
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as Fields
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Queries.AutoApplyCohortMappingExtra as QAuto
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as QJourney
@@ -156,6 +163,15 @@ createCohort name category description cohortRule = do
   when (isJust mbExisting) $
     throwError (InvalidRequest "cohort with the same name and category already exists")
   QCDExtra.createCohortDetails name category description cohortRule
+
+listCohorts ::
+  BeamFlow m r =>
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  m [DCD.CohortDetails]
+listCohorts = QCDExtra.listWithOptionalNameAndCategory
 
 listCohortJourneyRows ::
   BeamFlow m r =>
@@ -343,3 +359,114 @@ unassignUser handle merchantShortId opCity personId cjmId notFoundMessage cityMe
     throwError (InvalidRequest cityMessage)
   QUCMExtra.disableUserCohortMapping personId cjmId
   handle.clearAssignmentCacheByPersonId personId
+
+createAutoApplyMapping ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ID.Id DCJM.CohortJourneyMapping ->
+  Maybe DTV.VehicleCategory ->
+  Bool ->
+  Bool ->
+  m (ID.Id DAuto.AutoApplyCohortMapping)
+createAutoApplyMapping handle merchantShortId opCity cjmId mbVehicleCategory allowIfNoMapping enabled = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  cjm <- QCJMExtra.findCohortJourneyMappingById cjmId >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
+  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  mbExisting <- QAuto.findByCohortJourneyMappingIdAndVehicleCategory cjmId mbVehicleCategory
+  when (isJust mbExisting) $
+    throwError (InvalidRequest "Auto apply cohort mapping already exists for this cohort journey mapping and vehicle category")
+  row <-
+    QAuto.createAutoApplyCohortMapping
+      cjmId
+      (ID.cast merchant.id)
+      (ID.cast merchantOpCityId)
+      mbVehicleCategory
+      allowIfNoMapping
+      enabled
+  handle.clearAutoApplyCacheByMerchantAndCity (ID.cast merchant.id) (ID.cast merchantOpCityId) [mbVehicleCategory]
+  pure row.id
+
+-- | Just True in allVehicleCategories stores the vehicle category as null (every category in the city).
+updateAutoApplyMapping ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ID.Id DAuto.AutoApplyCohortMapping ->
+  Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  m ()
+updateAutoApplyMapping handle merchantShortId opCity rowId mbVehicleCategory mbAllVehicleCategories mbAllowIfNoMapping mbEnabled = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  row <- QAuto.findAutoApplyCohortMappingById rowId >>= fromMaybeM (InvalidRequest "Auto apply cohort mapping not found")
+  unless (row.merchantId == ID.cast merchant.id && row.merchantOperatingCityId == ID.cast merchantOpCityId) $
+    throwError (InvalidRequest "Auto apply cohort mapping does not belong to this merchant/city")
+  cjm <-
+    QCJMExtra.findCohortJourneyMappingById row.cohortJourneyMappingId
+      >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
+  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  vehicleCategory <- case (mbAllVehicleCategories, mbVehicleCategory) of
+    (Just True, Just _) ->
+      throwError (InvalidRequest "Set either vehicleCategory or allVehicleCategories, not both")
+    (Just True, _) -> pure Nothing
+    (_, Just category) -> pure (Just category)
+    _ -> pure row.vehicleCategory
+  let allowIfNoMapping = fromMaybe row.allowIfNoMapping mbAllowIfNoMapping
+      enabled = fromMaybe row.enabled mbEnabled
+  when (vehicleCategory /= row.vehicleCategory) $ do
+    mbExisting <- QAuto.findByCohortJourneyMappingIdAndVehicleCategory row.cohortJourneyMappingId vehicleCategory
+    when (maybe False (\existing -> existing.id /= row.id) mbExisting) $
+      throwError (InvalidRequest "Auto apply cohort mapping already exists for this cohort journey mapping and vehicle category")
+  void $
+    QAuto.updateAutoApplyCohortMapping
+      row{DAuto.vehicleCategory = vehicleCategory,
+          DAuto.allowIfNoMapping = allowIfNoMapping,
+          DAuto.enabled = enabled
+         }
+  let categoriesToClear =
+        if row.vehicleCategory == vehicleCategory
+          then [vehicleCategory]
+          else [row.vehicleCategory, vehicleCategory]
+  handle.clearAutoApplyCacheByMerchantAndCity row.merchantId row.merchantOperatingCityId categoriesToClear
+
+listAutoApplyRows ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
+  m [(DAuto.AutoApplyCohortMapping, DCJM.CohortJourneyMapping, DCD.CohortDetails, DIJ.IncentiveJourney)]
+listAutoApplyRows handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  rows <-
+    QAuto.findByMerchantAndCity
+      (Just $ fromMaybe 20 mbLimit)
+      (Just $ fromMaybe 0 mbOffset)
+      (ID.cast merchant.id)
+      (ID.cast merchantOpCityId)
+      mbVehicleCategory
+      mbEnabled
+  cjms <- QCJMExtra.findByIds (map (.cohortJourneyMappingId) rows)
+  cohorts <- QCDExtra.findByIds (map (.cohortId) cjms)
+  journeys <- QJourney.findByIds (map (.journeyId) cjms)
+  let cjmById = HM.fromList $ map (\cjm -> (cjm.id, cjm)) cjms
+      cohortById = HM.fromList $ map (\cohort -> (cohort.id, cohort)) cohorts
+      journeyById = HM.fromList $ map (\journey -> (journey.id, journey)) journeys
+  pure $
+    mapMaybe
+      ( \row -> do
+          cjm <- HM.lookup row.cohortJourneyMappingId cjmById
+          cohort <- HM.lookup cjm.cohortId cohortById
+          journey <- HM.lookup cjm.journeyId journeyById
+          pure (row, cjm, cohort, journey)
+      )
+      rows
