@@ -117,6 +117,7 @@ data PersonT f = PersonT
     totalRatingScore :: B.C f Kernel.Prelude.Int,
     totalRatings :: B.C f Kernel.Prelude.Int,
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    totalValidRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFakeOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verificationChannel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

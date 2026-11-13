@@ -330,3 +330,9 @@ ALTER TABLE atlas_app.person ADD COLUMN comms_consent boolean ;
 
 ALTER TABLE atlas_app.person ADD COLUMN email_verified boolean ;
 ALTER TABLE atlas_app.person ADD COLUMN email_source text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN total_valid_rides_count integer ;
