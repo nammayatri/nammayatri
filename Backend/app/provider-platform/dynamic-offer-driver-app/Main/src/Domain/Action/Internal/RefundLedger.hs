@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.RefundLedger where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -275,7 +276,9 @@ createRefundInvoice ctx booking refundsRequestId comps = do
           issuedByName = ctx.merchantName,
           issuedByAddress = ctx.issuedByAddress,
           supplierName = ctx.supplierName,
-          supplierAddress = ctx.issuedByAddress,
+          supplierAddress =
+            (mbParentRideInvoice >>= (.supplierAddress))
+              <|> (if anyVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.supplierAddress),
           supplierGSTIN = ctx.supplierGSTIN,
           supplierTaxNo = Nothing,
           supplierId = ctx.supplierId,
@@ -377,7 +380,8 @@ createCommissionRefundInvoice ctx req ride booking transporterConfig cancellatio
             issuedByName = ctx.merchantName,
             issuedByAddress = ctx.issuedByAddress,
             supplierName = ctx.supplierName,
-            supplierAddress = ctx.issuedByAddress,
+            -- Mirror the parent commission invoice so both documents name the same supplier address.
+            supplierAddress = (mbParentCommissionInvoice >>= (.supplierAddress)) <|> ctx.issuedByAddress,
             supplierGSTIN = ctx.supplierGSTIN,
             supplierTaxNo = Nothing,
             supplierId = ctx.supplierId,

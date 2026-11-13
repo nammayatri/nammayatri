@@ -236,15 +236,16 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
+import SharedLogic.DriverPool (isScheduledOpenToAll)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance)
-import SharedLogic.DriverPool (isScheduledOpenToAll)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, tdsReimbursementReferenceType)
 import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletClassConfig, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Tools.Error (MerchantPaymentMethodError (..), TransporterError (TransporterConfigNotFound))
 
@@ -584,7 +585,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
       let customRate = mbFleetInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
-          formattedAddress = mbFleetInfo >>= (.stripeAddress) <&> formatStripeAddress
+          formattedAddress = nonBlank (mbFleetInfo >>= (.stripeAddress) <&> formatStripeAddress) <|> nonBlank (mbFleetInfo >>= (.address))
       pure
         ( mbFleetInfo >>= (.fleetName),
           mbFleetInfo >>= (.gstNumberDec),
@@ -595,11 +596,13 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         )
     Nothing -> do
       let customRate = mbDriverInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
+      mbIdentityInfo <- QDII.findByDriverId ride.driverId
+      let driverAddress = nonBlank (mbIdentityInfo >>= (.address)) <|> nonBlank (mbDriverInfo >>= (.address))
       pure
         ( mbDriver <&> \d -> d.firstName <> maybe "" (" " <>) d.lastName,
           Nothing,
           Nothing,
-          Nothing,
+          driverAddress,
           Just ride.driverId.getId,
           isJust customRate
         )
@@ -652,7 +655,13 @@ normaliseBuyerCounterpartyId raw =
 -- | Format a Stripe Address into a single text string for supplier_address on invoices.
 formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
-  T.intercalate ", " $ catMaybes [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country]
+  T.intercalate ", " $ mapMaybe nonBlank [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country]
+
+-- | Treat empty / whitespace-only text as missing so '<|>' falls through to the next source.
+nonBlank :: Maybe Text -> Maybe Text
+nonBlank mbText = do
+  stripped <- T.strip <$> mbText
+  if T.null stripped then Nothing else Just stripped
 
 -- | Resolve online-vs-cash for a booking from its attached payment method.
 --   Cash / BoothOnline → False; any other instrument (Card / Wallet / UPI /
@@ -1221,7 +1230,7 @@ getScheduledRideMinBalanceIfShort ::
 getScheduledRideMinBalanceIfShort transporterConfig isScheduled pickupTime now getFarePolicyFloor driverId
   | not isScheduled || isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pickupTime now = pure Nothing
   | otherwise = do
-      mbFarePolicyFloor <- getFarePolicyFloor
-      let minBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
-      walletOk <- hasMinWalletBalance counterpartyDriver minBalance driverId
-      pure $ if walletOk then Nothing else minBalance
+    mbFarePolicyFloor <- getFarePolicyFloor
+    let minBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+    walletOk <- hasMinWalletBalance counterpartyDriver minBalance driverId
+    pure $ if walletOk then Nothing else minBalance
