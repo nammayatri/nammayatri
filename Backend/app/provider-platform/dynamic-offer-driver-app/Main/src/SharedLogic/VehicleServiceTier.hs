@@ -335,7 +335,8 @@ selectedServiceTiersLockKey :: Id DP.Person -> Text
 selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId
 
 -- | Re-checks every wallet-gated tier a driver holds and drops any they can no longer afford.
---   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
+--   Called automatically after every driver-wallet posting via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
+--   Only removes; the way back for a locked-fleet driver is FleetDriverSettings.applyLockedFleetSettingsOnWalletPosting (forked from PostActions).
 checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 checkAndAutoDisableWalletGatedTiers driverId merchantOpCityId =
   Redis.withWaitAndLockRedisWithTimeout (selectedServiceTiersLockKey driverId) 5 10 50000 $ do

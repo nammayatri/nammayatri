@@ -295,7 +295,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
-import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
@@ -1623,6 +1623,12 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   whenJust req.enableCashRide $ \_ -> do
     mbActiveFda <- QFDA.findByDriverId personId True
     when (isJust mbActiveFda) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet"
+  -- The deprecated downgrade switches can't take a fleet-locked driver off the fleet's tiers or intracity rides either.
+  mbFleetLock <- case mVehicle of
+    Just vehicle | isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.canSwitchToIntraCity -> do
+      cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+      FDS.getFleetLock merchantOpCityId person driverInfo vehicle cityTiers
+    _ -> pure Nothing
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1635,7 +1641,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
             fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi,
             fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental,
             fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity,
-            fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity,
+            maybe False (.intraCityLocked) mbFleetLock || fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity,
             req.availableUpiApps <|> driverInfo.availableUpiApps
           )
       _ -> pure (driverInfo.canDowngradeToSedan, driverInfo.canDowngradeToHatchback, driverInfo.canDowngradeToTaxi, driverInfo.canSwitchToRental, driverInfo.canSwitchToInterCity, driverInfo.canSwitchToIntraCity, driverInfo.availableUpiApps)
@@ -1683,8 +1689,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.EV_SEDAN -> [DVST.EV_SEDAN, DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.EV_SUV -> [DVST.EV_SUV, DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.SHARED_CAB -> [DVST.SHARED_CAB]
-      -- a shared-cab tier switched on for another variant survives these toggles
-      QVehicle.updateSelectedServiceTiers (selectedServiceTiers <> [DVST.SHARED_CAB | vehicle.variant /= DV.SHARED_CAB, DVST.SHARED_CAB `elem` vehicle.selectedServiceTiers]) person.id
+      -- a shared-cab tier switched on for another variant survives these toggles;
+      -- only fleet tiers still selected: one a recompute or the wallet strip took off stays off.
+      QVehicle.updateSelectedServiceTiers (nub (selectedServiceTiers <> [DVST.SHARED_CAB | vehicle.variant /= DV.SHARED_CAB, DVST.SHARED_CAB `elem` vehicle.selectedServiceTiers] <> maybe [] (filter (`elem` vehicle.selectedServiceTiers) . (.fleetTiers)) mbFleetLock)) person.id
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
     if nomineeOrAddressChanged
@@ -1723,7 +1730,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
   clearDistanceTag <-
     if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
-      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> FDS.getDriverFleetAutoAssignConfig personId merchantOpCityId
       else pure False
   let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
   unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
