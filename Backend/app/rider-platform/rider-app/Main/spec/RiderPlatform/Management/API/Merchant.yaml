@@ -320,6 +320,22 @@ apis:
         type: UpdateRiderConfigEstimatesOrderReq
       response:
         type: APISuccess
+  - GET: # GetRiderConfigCallingAPI
+      endpoint: /riderConfig/calling
+      auth: ApiAuthV2
+      response:
+        type: RiderCallingConfigRes
+      migrate:
+        capability: city-config.launch.read
+  - POST: # PostRiderConfigCallingUpdateAPI
+      endpoint: /riderConfig/calling/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateRiderCallingConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.launch.write
   - POST: # MerchantConfigDebugLogUpdateAPI
       endpoint: /config/debugLog/update
       auth: ApiAuthV2
@@ -424,6 +440,14 @@ types:
     - userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
     - defaultServiceTierOrderConfig: "Maybe [ServiceTierType]"
     - noOfRideRequestsConfig: Maybe Int
+    - derive: "'HideSecrets"
+  CallingMode:
+    - enum: "EXOTEL, RIDER_PREFERENCE, EMERGENCY"
+  RiderCallingConfigRes:
+    - enableShareNumberWithDriver: Bool
+    - pushConsentToBpp: Bool
+  UpdateRiderCallingConfigReq:
+    - mode: CallingMode
     - derive: "'HideSecrets"
   RiderMerchantMessageCatalogResp:
     - values: "[Text]"

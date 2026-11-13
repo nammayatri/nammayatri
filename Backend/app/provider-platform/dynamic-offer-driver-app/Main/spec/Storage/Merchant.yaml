@@ -2357,6 +2357,10 @@ TransporterConfig:
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    updateCallingMode:
+      kvFunction: updateOneWithKV
+      params: [callingMode, driverCallingOption, forceDirectCalling]
+      where: merchantOperatingCityId
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE

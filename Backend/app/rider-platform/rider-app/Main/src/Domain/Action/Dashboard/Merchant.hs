@@ -46,6 +46,8 @@ module Domain.Action.Dashboard.Merchant
     putMerchantConfigGeometryUpdate,
     getMerchantRiderConfigEstimatesOrder,
     postMerchantRiderConfigEstimatesOrderUpdate,
+    getMerchantRiderConfigCalling,
+    postMerchantRiderConfigCallingUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
@@ -2358,6 +2360,52 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
   invalidateConfigInMem LYT.RiderConfig
 
   logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
+  pure Success
+
+getMerchantRiderConfigCalling ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderCallingConfigRes
+getMerchantRiderConfigCalling merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  pure
+    Common.RiderCallingConfigRes
+      { enableShareNumberWithDriver = fromMaybe False riderConfig.enableShareNumberWithDriver,
+        pushConsentToBpp = fromMaybe False riderConfig.pushConsentToBpp
+      }
+
+postMerchantRiderConfigCallingUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateRiderCallingConfigReq ->
+  Flow APISuccess
+postMerchantRiderConfigCallingUpdate merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  _ <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  let mbShareNumber = case req.mode of
+        Common.EXOTEL -> Just False
+        Common.RIDER_PREFERENCE -> Just True
+        Common.EMERGENCY -> Nothing
+
+  whenJust mbShareNumber $ \shareNumber -> do
+    QRiderConfig.updateCallingConfig (Just shareNumber) (Just shareNumber) merchantOperatingCity.id
+    QRC.clearCache merchantOperatingCity.id
+    invalidateConfigInMem LYT.RiderConfig
+
+  logTagInfo "dashboard -> postMerchantRiderConfigCallingUpdate : " (show merchantOperatingCity.id <> " mode: " <> show req.mode)
   pure Success
 
 -- Type conversion helpers for VehicleServiceTierOrderConfig
