@@ -26,6 +26,7 @@ data IntegratedBPPConfigT f = IntegratedBPPConfigT
     ondcRegistryPublicKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     operatorConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     passOverrideApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    passTicketOverlapWarningTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     platformType :: B.C f Domain.Types.IntegratedBPPConfig.PlatformType,
     configJSON :: B.C f Data.Aeson.Value,
     providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
