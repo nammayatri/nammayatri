@@ -17,7 +17,7 @@ _PRIVATE_KEY_PATH = os.path.join(os.path.dirname(__file__), "..", "kms", "dev-ar
 _PUBLIC_KEY_PATH = os.path.join(os.path.dirname(__file__), "..", "kms", "dev-archive-public-key.pem")
 _KEY_STATES = ("Enabled", "Disabled", "PendingDeletion", "Deleted")
 
-_STATE = {"autoProvision": True, "aliases": {}, "keys": {}}
+_STATE = {"autoProvision": False, "aliases": {}, "keys": {}, "keyDetails": {}}
 
 
 def _key_id_for(alias):
@@ -126,10 +126,41 @@ def _get_public_key(handler, req):
     })
 
 
+def _create_key(handler, req):
+    key_id = "mock-" + secrets.token_hex(16)
+    try:
+        policy = json.loads(req.get("Policy") or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return _error(handler, "MalformedPolicyDocumentException", "The key policy is not valid JSON.")
+    with _LOCK:
+        _STATE["keys"][key_id] = "Enabled"
+        _STATE["keyDetails"][key_id] = {
+            "policy": policy,
+            "tags": req.get("Tags") or [],
+            "description": req.get("Description"),
+            "bypassPolicyLockoutSafetyCheck": bool(req.get("BypassPolicyLockoutSafetyCheck")),
+        }
+    return _ok(handler, {"KeyMetadata": {"KeyId": key_id, "Arn": _ACCOUNT_ARN + key_id, "KeyState": "Enabled", "Enabled": True}})
+
+
+def _create_alias(handler, req):
+    alias = req.get("AliasName") or ""
+    target = (req.get("TargetKeyId") or "").rsplit("/", 1)[-1]
+    with _LOCK:
+        if alias in _STATE["aliases"]:
+            return _error(handler, "AlreadyExistsException", f"An alias with the name {alias} already exists")
+        if target not in _STATE["keys"]:
+            return _error(handler, "NotFoundException", f"Key '{_ACCOUNT_ARN}{target}' does not exist")
+        _STATE["aliases"][alias] = target
+    return _ok(handler, {})
+
+
 _OPERATIONS = {
     "GenerateDataKey": _generate_data_key,
     "Decrypt": _decrypt,
     "GetPublicKey": _get_public_key,
+    "CreateKey": _create_key,
+    "CreateAlias": _create_alias,
 }
 
 
@@ -190,7 +221,7 @@ def handle_admin(handler, path, raw_body):
 
     if action == "reset":
         with _LOCK:
-            _STATE.update({"autoProvision": True, "aliases": {}, "keys": {}})
+            _STATE.update({"autoProvision": False, "aliases": {}, "keys": {}, "keyDetails": {}})
             return handler._json(_STATE)
 
     if action == "config":

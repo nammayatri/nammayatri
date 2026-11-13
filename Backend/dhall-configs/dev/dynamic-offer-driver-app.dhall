@@ -568,6 +568,9 @@ let documentVaultConfig =
       None
         { region : Text
         , processingKeyAliasPrefix : Text
+        , processingWindowDays : Integer
+        , processingRoleArn : Text
+        , keyAdminRoleArn : Text
         , archiveKeyArn : Text
         , kmsEndpoint : Optional Text
         , sealNewUploads : Bool

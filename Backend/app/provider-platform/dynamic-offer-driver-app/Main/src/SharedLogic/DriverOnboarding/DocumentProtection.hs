@@ -54,19 +54,18 @@ storeDocument imageId imageType workflowTransactionId path image = do
       document <- base64Decode image & fromMaybeM (InvalidRequest "Failed to decode base64 image")
       if isVerifiedAtSource imageType workflowTransactionId
         then do
-          object <- liftIO $ vault.sealForArchive imageId.getId document
+          result <- liftIO . try $ vault.sealForArchive imageId.getId document
+          object <- either vaultFailed pure result
           putSealedObject object
           pure Nothing
         else do
           result <- liftIO . try $ vault.sealForProcessing imageId.getId document
           sealed <- case result of
             Right sealed -> pure sealed
-            Left NoProcessingKey -> do
-              Metrics.incrementGenericMetrics "document_vault_no_key"
-              throwError $ InternalError "No document processing key is available"
-            Left err -> throwError . InternalError $ show err
-          when (sealed.processingKeyAgeDays > 0) $
-            Metrics.incrementGenericMetrics "document_vault_key_fallback"
+            Left (ProcessingKeyUnavailable reason) -> do
+              Metrics.incrementGenericMetrics "document_vault_key_unavailable"
+              throwError . InternalError $ "No document processing key is available: " <> reason
+            Left err -> vaultFailed err
           putSealedObject sealed.object
           pure . Just $ base64Encode sealed.encryptedDataKey
     _ -> do
@@ -74,6 +73,9 @@ storeDocument imageId imageType workflowTransactionId path image = do
       pure Nothing
   where
     putSealedObject object = S3.putRaw (T.unpack path) object "application/octet-stream"
+    vaultFailed (err :: DocumentVaultError) = do
+      Metrics.incrementGenericMetrics "document_vault_failure"
+      throwError . InternalError $ show err
 
 readDocument :: DocumentProtectionFlow m r => DImage.Image -> m Text
 readDocument image = readDocumentIfAvailable image >>= fromMaybeM (DocumentArchived image.id.getId)
