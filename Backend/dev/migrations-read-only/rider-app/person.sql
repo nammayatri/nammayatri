@@ -364,3 +364,9 @@ ALTER TABLE atlas_app.person ADD COLUMN email_source text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN total_valid_rides_count integer ;
