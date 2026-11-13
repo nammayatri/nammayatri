@@ -1,6 +1,11 @@
 -- | Shared-cab allocation types: alloc key value, outcomes, blame rules and the tick's decisions.
 module SharedLogic.SharedCab.Allocation.Types
   ( AllocationState (..),
+    ApproachStage (..),
+    ApproachPush (..),
+    approachPushStage,
+    newAllocation,
+    approachStageSent,
     Timer (..),
     timerDeadline,
     allocationDeadline,
@@ -40,9 +45,42 @@ import SharedLogic.SharedCab.Config (SharedCabTunables)
 -- no timer, and the tick clears a stand or away timer once the cab moves.
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
-    timer :: Timer
+    timer :: Timer,
+    -- | The highest approach push the rider got for this allocation, so each goes once and never out of order; Nothing while it is
+    -- an offer, or on a key written before the field existed.
+    approachStage :: Maybe ApproachStage,
+    -- | The cab's fix the first tick after the rider was told of it: "on the way" is measured from here.
+    approachFrom :: Maybe LatLong
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | The rider's pushes as their cab comes to the board stop, in order. Assigned and Arrived are the existing SHARED_CAB_ASSIGNED and
+-- SHARED_CAB_ARRIVING (sent by the claim, the accept and the moving timer); the tick adds the two between them.
+data ApproachStage = ApproachAssigned | ApproachOnTheWay | ApproachArrivingSoon | ApproachArrived
+  deriving (Show, Eq, Ord, Enum, Bounded, Generic, ToJSON, FromJSON)
+
+-- | The two pushes the tick sends itself; Assigned and Arrived go out with the claim, the accept and the moving timer.
+data ApproachPush = PushOnTheWay | PushArrivingSoon
+  deriving (Show, Eq)
+
+approachPushStage :: ApproachPush -> ApproachStage
+approachPushStage = \case
+  PushOnTheWay -> ApproachOnTheWay
+  PushArrivingSoon -> ApproachArrivingSoon
+
+-- | A fresh allocation: no approach tracked yet.
+newAllocation :: Text -> Timer -> Maybe ApproachStage -> AllocationState
+newAllocation vehicleNumber timer approachStage = AllocationState {vehicleNumber, timer, approachStage, approachFrom = Nothing}
+
+-- | The highest push the rider has had. A stand or moving timer is only ever armed with the arriving push, which also covers a key
+-- written before 'approachStage' existed.
+approachStageSent :: AllocationState -> Maybe ApproachStage
+approachStageSent st = max st.approachStage (if arrivedTimer st.timer then Just ApproachArrived else Nothing)
+  where
+    arrivedTimer = \case
+      StandTimer _ -> True
+      MovingTimer _ -> True
+      _ -> False
 
 -- | The armed timer and its deadline, as one value: a deadline always knows what it times out as.
 -- | OfferTimer: the claim waits for the driver's accept or decline (a city with driverAcceptEnabled); the rider is not told of the cab yet.
