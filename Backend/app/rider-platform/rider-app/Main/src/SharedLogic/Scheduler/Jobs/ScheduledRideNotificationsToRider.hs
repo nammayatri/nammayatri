@@ -83,14 +83,14 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
     sendCommunicationToCustomer $
       SendCommunicationToCustomerReq
         { rideId = Just ride.id,
-          messageTransformer = formatMessageTransformer booking ride,
+          messageTransformer = formatMessageTransformer riderConfig.timeDiffFromUtc booking ride,
           configInExperimentVersions = booking.configInExperimentVersions,
           merchantId = booking.merchantId,
           ..
         }
   return Complete
   where
-    formatMessageTransformer booking ride (title, body) = do
+    formatMessageTransformer timeDiffFromUtc booking ride (title, body) = do
       let isRentalOrIntercity = case booking.bookingDetails of
             DB.RentalDetails _ -> "Rental"
             DB.InterCityDetails _ -> "InterCity"
@@ -98,7 +98,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           rideStartOtp = ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
-          rideStartTime = showTimeIst booking.startTime
+          rideStartTime = showLocalTime timeDiffFromUtc booking.startTime
           formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" rideStartTime body
       (formattedTitle, formattedBody)
 
