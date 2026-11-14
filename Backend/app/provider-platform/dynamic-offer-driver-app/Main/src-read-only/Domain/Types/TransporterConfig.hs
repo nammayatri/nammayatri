@@ -190,6 +190,7 @@ data TransporterConfig = TransporterConfig
     emailEventSnsTopicArn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     emailEventWebhookToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableBlacklistDriverOnRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableBotFlow :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableBppReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableCoinsToDirectPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
