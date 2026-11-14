@@ -812,7 +812,7 @@ rideAssignedReqHandler req = do
                     MessageBuilder.senderName = senderParty.partyName,
                     MessageBuilder.receiverName = receiverParty.partyName,
                     MessageBuilder.trackingUrl = Just trackLink,
-                    MessageBuilder.otp = ride.otp,
+                    MessageBuilder.otp = if fromMaybe False ride.enableOtpLessRide then "" else ride.otp,
                     MessageBuilder.hasEnded = False,
                     MessageBuilder.pickedUp = False,
                     MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
@@ -2138,8 +2138,8 @@ updateAndNotifyDriverArrivalStatus booking ride newStatus =
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
       case newStatus of
         DRide.DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
-        DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
-        DRide.DRIVER_REACHED -> Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
+        DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride
+        DRide.DRIVER_REACHED -> Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride
 
 driverArrivalStatusLockKey :: Text -> Text
 driverArrivalStatusLockKey rideId = "Ride:DriverArrivalStatus:Lock:" <> rideId
