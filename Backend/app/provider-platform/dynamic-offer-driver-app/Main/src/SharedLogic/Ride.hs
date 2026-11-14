@@ -262,8 +262,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
   if booking.isScheduled
-    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
-    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken
+    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -278,18 +278,18 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
 
-    message uBooking =
+    message timeDiffFromUtc uBooking =
       cs $
         unwords
           [ "You have been assigned a ride for",
-            cs (showTimeIst uBooking.startTime) <> ".",
+            cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    messageForScheduled uBooking =
+    messageForScheduled timeDiffFromUtc uBooking =
       cs $
         unwords
           [ "You have been assigned a scheduled ride for",
-            cs (showTimeIst uBooking.startTime) <> ".",
+            cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
 

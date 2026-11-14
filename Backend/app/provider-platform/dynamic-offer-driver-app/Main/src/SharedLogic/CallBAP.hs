@@ -863,16 +863,17 @@ notifyDriverOnScheduledRideAssigned ::
   SRide.Ride ->
   DP.Person ->
   m ()
-notifyDriverOnScheduledRideAssigned booking ride driver =
-  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+notifyDriverOnScheduledRideAssigned booking ride driver = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
-    message uBooking =
+    message timeDiffFromUtc uBooking =
       cs $
         unwords
           [ "You have been assigned a ride for",
-            cs (showTimeIst uBooking.startTime) <> ".",
+            cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
 

@@ -21,7 +21,7 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import Data.Default.Class
 import qualified Data.Map as M
-import Data.String.Conversions (cs)
+import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
 import Domain.Action.UI.SearchRequestForDriver
@@ -154,6 +154,9 @@ instance Default FCMReq where
 createFCMReq :: Text -> Text -> FCM.FCMEntityType -> (FCMReq -> FCMReq) -> FCMReq
 createFCMReq notificationKey entityId entityType modifier = modifier $ def {entityId = entityId, notificationKey = notificationKey, entityType = entityType}
 
+showLocalTime :: Seconds -> UTCTime -> Text
+showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %b, %I:%M %p" $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) time
+
 findFCMConfigWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id Person -> m FCMConfig
 findFCMConfigWithFallback merchantOpCityId personId = do
   driver <- QPerson.findById personId
@@ -255,8 +258,9 @@ data FeedbackBadgeEntityData = FeedbackBadgeEntityData
   }
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
-notifySoftBlocked :: (CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Person -> IssueBreachEntityData -> m ()
+notifySoftBlocked :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Person -> IssueBreachEntityData -> m ()
 notifySoftBlocked person entity = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   dynamicFCMNotifyPerson
     person.merchantOperatingCityId
     person.id
@@ -265,7 +269,7 @@ notifySoftBlocked person entity = do
     Nothing
     (createFCMReq entity.ibName person.id.getId FCM.Person identity)
     (Just entity)
-    [ ("blockExpirationTime", showTimeIst entity.blockExpirationTime),
+    [ ("blockExpirationTime", showLocalTime transporterConfig.timeDiffFromUtc entity.blockExpirationTime),
       ("blockedSTiers", blockedSTiers)
     ]
     Nothing
@@ -351,7 +355,8 @@ buildCancelNotificationData ::
   Notification.SubCategory ->
   m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
 buildCancelNotificationData merchantOpCityId driverId mbDeviceToken rideId booking subCategory = do
-  let params = [("startTime", showTimeIst booking.startTime)]
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let params = [("startTime", showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)]
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NOTIFY_DRIVER_ON_CANCEL" (Just booking.tripCategory) (Just subCategory) Nothing (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
   return $
     Notification.NotificationReq
@@ -1450,13 +1455,14 @@ buildSendSearchRequestNotificationData ::
     ToJSON EmptyDynamicParam
   ) =>
   Id DMOC.MerchantOperatingCity ->
+  Seconds ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SearchRequestForDriverAPIEntity ->
   EmptyDynamicParam ->
   Maybe TripCategory ->
   m (Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam)
-buildSendSearchRequestNotificationData merchantOpCityId driverId mbDeviceToken entityData dynamicParam tripCategory = do
+buildSendSearchRequestNotificationData merchantOpCityId timeDiffFromUtc driverId mbDeviceToken entityData dynamicParam tripCategory = do
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NEW_RIDE_AVAILABLE" tripCategory Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for NEW_RIDE_AVAILABLE")
   return $
     Notification.NotificationReq
@@ -1475,7 +1481,7 @@ buildSendSearchRequestNotificationData merchantOpCityId driverId mbDeviceToken e
       }
   where
     params =
-      [ ("startTime", cs $ showTimeIst entityData.startTime),
+      [ ("startTime", showLocalTime timeDiffFromUtc entityData.startTime),
         ("distanceToPickup", distanceToText entityData.distanceToPickupWithUnit),
         ("baseFare", show entityData.baseFare),
         ("distance", maybe "unknown" distanceToText entityData.distanceWithUnit)

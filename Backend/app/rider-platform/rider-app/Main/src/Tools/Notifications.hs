@@ -108,6 +108,9 @@ templateText txt = "{#" <> txt <> "#}"
 createNotificationReq :: Text -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
 createNotificationReq key modifier = modifier $ def {notificationKey = key}
 
+showLocalTime :: Seconds -> UTCTime -> Text
+showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %b, %I:%M %p" $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) time
+
 data NotificationRequest = NotificationRequest
   { subCategory :: Maybe Notification.SubCategory,
     notificationKey :: Text,
@@ -573,6 +576,7 @@ notifyOnScheduledRideAccepted booking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability personId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
@@ -596,7 +600,7 @@ notifyOnScheduledRideAccepted booking ride = do
         unwords
           [ driverName,
             "will be your driver for your scheduled trip starting at ",
-            showTimeIst booking.startTime
+            showLocalTime riderConfig.timeDiffFromUtc booking.startTime
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
@@ -883,6 +887,7 @@ notifyOnBookingCancelled ::
   m ()
 notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let notificationSoundType = case cancellationSource of
         SBCR.ByDriver -> do
           case mbRide of
@@ -936,7 +941,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       dynamicParams
       entity
       booking.tripCategory
-      [ ("bookingStartTime", showTimeIst (booking.startTime)),
+      [ ("bookingStartTime", showLocalTime riderConfig.timeDiffFromUtc booking.startTime),
         ("orgName", bppDetails.name)
       ]
       (Just booking.configInExperimentVersions)
@@ -1048,6 +1053,7 @@ notifyOnBookingReallocated ::
   m ()
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let entity = Notification.Entity Notification.Product booking.id.getId ()
       dynamicParams = BookingReallocatedParam booking.startTime booking.id
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
@@ -1059,7 +1065,7 @@ notifyOnBookingReallocated booking = do
       dynamicParams
       entity
       booking.tripCategory
-      [("bookingStartTime", showTimeIst (booking.startTime))]
+      [("bookingStartTime", showLocalTime riderConfig.timeDiffFromUtc booking.startTime)]
       (Just booking.configInExperimentVersions)
       Nothing
 
@@ -1079,6 +1085,7 @@ notifyOnEstOrQuoteReallocated ::
   m ()
 notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   tag <- getDisabilityTag person.hasDisability person.id
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   let entity = Notification.Entity Notification.Product estOrQuoteId (BookingReallocatedParam booking.startTime booking.id)
@@ -1103,7 +1110,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
     EmptyDynamicParam
     entity
     booking.tripCategory
-    [("bookingStartTime", showTimeIst (booking.startTime))]
+    [("bookingStartTime", showLocalTime riderConfig.timeDiffFromUtc booking.startTime)]
     (Just booking.configInExperimentVersions)
     ( case person.liveActivityToken of
         Just _liveActivityToken ->
@@ -2526,7 +2533,7 @@ notifyShuttleBookingConfirmed personId bookingId = do
           let routeName = fromMaybe "" booking.routeName
               origin = fromMaybe "" booking.fromStationName
               destination = fromMaybe "" booking.toStationName
-              departure = maybe "" showTimeIst booking.startTime
+              departure = maybe "" (showLocalTime (maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig)) booking.startTime
               entityData =
                 BusNotificationEntityData
                   { tripId = Nothing,
