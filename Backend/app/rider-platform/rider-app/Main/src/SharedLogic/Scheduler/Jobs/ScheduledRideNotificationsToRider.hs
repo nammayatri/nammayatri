@@ -96,7 +96,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
             DB.InterCityDetails _ -> "InterCity"
             _ -> ""
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
-          rideStartOtp = ride.otp
+          rideStartOtp = if fromMaybe False ride.enableOtpLessRide then "" else ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
           rideStartTime = showTimeIst booking.startTime
           formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" rideStartTime body

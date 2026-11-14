@@ -466,7 +466,7 @@ notifyOnDriverAssignedWith category messageKey booking ride = do
                         driverInfo =
                           Just $
                             FCMType.DriverInfo
-                              { rideOtp = Just ride.otp,
+                              { rideOtp = Just (if fromMaybe False ride.enableOtpLessRide then "" else ride.otp),
                                 driverName = Nothing,
                                 distanceLeft = Nothing,
                                 totalDistance = Nothing,
@@ -1245,7 +1245,7 @@ notifyDriverOnTheWay personId tripCategory ride = do
                       driverInfo =
                         Just $
                           FCMType.DriverInfo
-                            { rideOtp = Just ride.otp,
+                            { rideOtp = Just (if fromMaybe False ride.enableOtpLessRide then "" else ride.otp),
                               driverName = Nothing,
                               distanceLeft = Nothing,
                               totalDistance = Nothing,
@@ -1287,24 +1287,23 @@ notifyDriverHasReached ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
-  Text ->
-  Text ->
-  Maybe Text ->
-  Text ->
-  VehicleVariant.VehicleVariant ->
+  SRide.Ride ->
   m ()
-notifyDriverHasReached personId tripCategory otp vehicleNumber mbVehicleColor vehicleModel vehicleVariant = do
+notifyDriverHasReached personId tripCategory ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let entity = Notification.Entity Notification.Product personId.getId ()
-      dynamicParams = DriverReachedParam vehicleNumber otp
+  let otpLessRide = fromMaybe False ride.enableOtpLessRide
+      otp = if otpLessRide then "" else ride.otp
+      notificationKey = if otpLessRide then "DRIVER_HAS_REACHED_OTP_LESS" else "DRIVER_HAS_REACHED"
+      entity = Notification.Entity Notification.Product personId.getId ()
+      dynamicParams = DriverReachedParam ride.vehicleNumber otp
   dynamicNotifyPerson
     person
-    (createNotificationReq "DRIVER_HAS_REACHED" identity)
+    (createNotificationReq notificationKey identity)
     dynamicParams
     entity
     tripCategory
     [ ("otp", otp),
-      ("vehicleNumber", vehicleNumber)
+      ("vehicleNumber", ride.vehicleNumber)
     ]
     Nothing
     ( case person.liveActivityToken of
@@ -1330,10 +1329,10 @@ notifyDriverHasReached personId tripCategory otp vehicleNumber mbVehicleColor ve
                       bookingInfo =
                         Just $
                           FCMType.BookingInfo
-                            { vehicleColor = mbVehicleColor,
-                              vehicleName = Just vehicleModel,
-                              vehicleNumber = Just vehicleNumber,
-                              vehicleVariant = Just (show vehicleVariant),
+                            { vehicleColor = ride.vehicleColor,
+                              vehicleName = Just ride.vehicleModel,
+                              vehicleNumber = Just ride.vehicleNumber,
+                              vehicleVariant = Just (show ride.vehicleVariant),
                               source = Nothing,
                               destination = Nothing,
                               estimatedFare = Nothing
@@ -1356,14 +1355,12 @@ notifyDriverReaching ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
-  Text ->
-  Text ->
   SRide.Ride ->
   m ()
-notifyDriverReaching personId tripCategory otp vehicleNumber ride = do
+notifyDriverReaching personId tripCategory ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product personId.getId ()
-      dynamicParams = DriverReachedParam vehicleNumber otp
+      dynamicParams = DriverReachedParam ride.vehicleNumber (if fromMaybe False ride.enableOtpLessRide then "" else ride.otp)
   dynamicNotifyPerson
     person
     (createNotificationReq "DRIVER_REACHING" identity)
@@ -1385,7 +1382,7 @@ notifyDriverReaching personId tripCategory otp vehicleNumber ride = do
                       driverInfo =
                         Just $
                           FCMType.DriverInfo
-                            { rideOtp = Just ride.otp,
+                            { rideOtp = Just (if fromMaybe False ride.enableOtpLessRide then "" else ride.otp),
                               driverName = Nothing,
                               distanceLeft = Nothing,
                               totalDistance = Nothing,
