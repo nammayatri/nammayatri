@@ -87,6 +87,17 @@ findAllByDriverIdList driverIds =
     then pure []
     else findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> driverIds)]
 
+-- | Same rows as 'findAllByDriverIdList', but Redis is read once and Postgres is queried only for
+-- the drivers with no stats row in Redis. driverId is the primary key, so a driver found in Redis is complete.
+findAllByDriverIdListInBatch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverStats]
+findAllByDriverIdListInBatch driverIds =
+  if null driverIds
+    then pure []
+    else findAllWithKVInBatch (clauseFor ids) BeamDS.driverId ids clauseFor
+  where
+    ids = getId <$> driverIds
+    clauseFor driverIdTexts = [Se.Is BeamDS.driverId $ Se.In driverIdTexts]
+
 findAllByDriverIdListFromDb :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverStats]
 findAllByDriverIdListFromDb driverIds =
   if null driverIds

@@ -114,6 +114,28 @@ findByDriverIdAndServiceName (Id driverId) serviceName =
         ]
     ]
 
+-- | One query for many drivers' plans of a single service (batch form of
+-- 'Storage.Queries.DriverPlan.findByDriverIdWithServiceName').
+-- Redis is read once; Postgres is queried only for the drivers with no plan in Redis.
+-- A driver found in Redis is taken as complete, which holds as long as (driverId, serviceName) is unique.
+findAllByDriverIdsAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  DPlan.ServiceNames ->
+  m [DriverPlan]
+findAllByDriverIdsAndServiceName driverIds serviceName =
+  if null driverIds
+    then pure []
+    else findAllWithKVInBatch (clauseFor ids) BeamDF.driverId ids clauseFor
+  where
+    ids = getId <$> driverIds
+    clauseFor driverIdTexts =
+      [ Se.And
+          [ Se.Is BeamDF.driverId $ Se.In driverIdTexts,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+          ]
+      ]
+
 findAllByDriverIdsPaymentModeAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id Person] ->
@@ -121,17 +143,17 @@ findAllByDriverIdsPaymentModeAndServiceName ::
   DPlan.ServiceNames ->
   Maybe DriverAutoPayStatus ->
   m [DriverPlan]
-findAllByDriverIdsPaymentModeAndServiceName driverIds paymentMode serviceName autoPayStatus = do
-  -- need DSL Fix
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
-          Se.Is BeamDF.planType $ Se.Eq paymentMode,
-          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
-          Se.Is BeamDF.autoPayStatus $ Se.Eq autoPayStatus,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
-        ]
-    ]
+findAllByDriverIdsPaymentModeAndServiceName driverIds paymentMode serviceName autoPayStatus =
+  -- Fetch the plans by key (Redis first, Postgres only for drivers missing from Redis) and apply the
+  -- mutable filters in memory. Filtering inside the batch query would let a stale Postgres row come back
+  -- for a driver whose newer Redis row no longer matches (e.g. autopay just paused).
+  filter
+    ( \plan ->
+        plan.planType == paymentMode
+          && plan.enableServiceUsageCharge
+          && plan.autoPayStatus == autoPayStatus
+    )
+    <$> findAllByDriverIdsAndServiceName driverIds serviceName
 
 findAllDriversEligibleForService ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
