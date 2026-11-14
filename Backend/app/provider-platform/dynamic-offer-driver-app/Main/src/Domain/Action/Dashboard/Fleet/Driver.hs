@@ -2471,7 +2471,7 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let actor = maybe SGuard.None (\entityId -> SGuard.ActorFleetAndDriver (Id entityId) personId) mbEntityId
   SGuard.withOnboardingAction transporterConfig actor (if req.isActivate then SGuard.ActivateVehicle else SGuard.DeactivateVehicle) (SGuard.TargetDriverVehicle personId req.rcNo) $
-    void $ DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
+    void $ DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) DomainRC.Fleet (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
 

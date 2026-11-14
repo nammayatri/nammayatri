@@ -1090,7 +1090,7 @@ postDriverSetRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..}
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig SGuard.None (if isActivate then SGuard.ActivateVehicle else SGuard.DeactivateVehicle) (SGuard.TargetDriverVehicle personId rcNo) $
-    DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
+    DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) DomainRC.DashboardOps (DomainRC.RCStatusReq {..})
 
 ---------------------------------------------------------------------
 postDriverExemptDriverFee ::

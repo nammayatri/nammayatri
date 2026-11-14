@@ -1255,6 +1255,20 @@ TransporterConfig:
     TripConfig:
       interCity: Maybe InterCityConfig
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    TakeoverScoring:
+      # Score formula: v1-geomean (recommended) or placeholder-weighted-mean (local testing); an unknown version makes every takeover photo INVALID.
+      formulaVersion: Text
+      # Weights of the four 0-1 scores combined into takeoverScore.
+      plateVisibleWeight: Double
+      plateMatchesRcWeight: Double
+      isRealPhotoWeight: Double
+      photoQualityWeight: Double
+      # A photo is VALID only if takeoverScore >= this (0-1).
+      takeoverScoreThreshold: Double
+      # Optional hard minimums (0-1) the other scores can't compensate for.
+      plateMatchesRcFloor: Maybe Double
+      isRealPhotoFloor: Maybe Double
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     StclConfig:
       # Cap on total shares a single driver may hold across all SUBMITTED rows.
       maxSharesPerDriver: Maybe Int
@@ -1656,6 +1670,8 @@ TransporterConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
+    requireRcTakeoverPhoto: Maybe Bool # When True, a driver taking over an RC active on another driver's account must first pass the vehicle photo check (/driver/rc/takeover/verifyPhoto). Nothing = off. Set the city's Grid_Grid merchant_service_config and takeoverScoring first: without them verify always fails with RC_TAKEOVER_CHECK_UNAVAILABLE and no driver-app takeover can succeed
+    takeoverScoring: Maybe TakeoverScoring # Scoring of the RC takeover photo check. Must be set before requireRcTakeoverPhoto; Nothing = verify fails with RC_TAKEOVER_CHECK_UNAVAILABLE
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
@@ -1738,6 +1754,7 @@ TransporterConfig:
     communicationChannelCharLimits: Maybe Value
     tripConfig: Maybe Value
     stclConfig: Maybe Value
+    takeoverScoring: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1855,6 +1872,7 @@ TransporterConfig:
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
     tripConfig: Data.Aeson.toJSON <$> tripConfig|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
+    takeoverScoring: Data.Aeson.toJSON <$> takeoverScoring|E
 
   intermediateTransformers:
     fromTType:
@@ -2002,6 +2020,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripConfig|E
     stclConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
+    takeoverScoring: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< takeoverScoring|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -2093,6 +2113,7 @@ TransporterConfig:
     tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
+    takeoverScoring: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean

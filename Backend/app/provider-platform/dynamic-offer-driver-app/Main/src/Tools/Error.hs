@@ -1526,6 +1526,11 @@ data DriverOnboardingError
   | RCActivationRCNotValid
   | RCActivationRCNotLinked
   | RCActivationRCNotInFleet
+  | RCTakeoverPhotoRequired
+  | RCTakeoverVerificationStale
+  | RCTakeoverNoClash
+  | RCTakeoverCheckUnavailable
+  | RCActivationAutoTakeoverRefused
   | RCDataMismatch Text
   | VehicleIsNotRegistered
   | InvalidOperatingCity Text
@@ -1635,6 +1640,11 @@ instance IsBaseError DriverOnboardingError where
     RCActivationRCNotValid -> Just "This vehicle's RC is not verified yet."
     RCActivationRCNotLinked -> Just "This RC is not linked to your account. Upload it before activating."
     RCActivationRCNotInFleet -> Just "This vehicle does not belong to you or your fleet."
+    RCTakeoverPhotoRequired -> Just "Take a photo of the vehicle to switch it to your account."
+    RCTakeoverVerificationStale -> Just "This vehicle's status changed. Take a new photo to continue."
+    RCTakeoverNoClash -> Just "No photo is needed to switch to this vehicle."
+    RCTakeoverCheckUnavailable -> Just "The vehicle photo check is unavailable right now. Try again later."
+    RCActivationAutoTakeoverRefused -> Just "This vehicle is active on another driver account and was not switched automatically."
     RCDataMismatch fields -> Just $ "Submitted RC data does not match the approved Vehicle Registration Certificate. Mismatched fields: " <> fields <> "."
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
@@ -1743,6 +1753,11 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationRCNotValid -> "INVALID_REQUEST"
     RCActivationRCNotLinked -> "INVALID_REQUEST"
     RCActivationRCNotInFleet -> "INVALID_REQUEST"
+    RCTakeoverPhotoRequired -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCTakeoverVerificationStale -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCTakeoverNoClash -> "INVALID_REQUEST"
+    RCTakeoverCheckUnavailable -> "SERVICE_UNAVAILABLE"
+    RCActivationAutoTakeoverRefused -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     RCDataMismatch _ -> "RC_DATA_MISMATCH"
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
@@ -1843,6 +1858,11 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationRCNotValid -> E400
     RCActivationRCNotLinked -> E400
     RCActivationRCNotInFleet -> E400
+    RCTakeoverPhotoRequired -> E400
+    RCTakeoverVerificationStale -> E400
+    RCTakeoverNoClash -> E400
+    RCTakeoverCheckUnavailable -> E503
+    RCActivationAutoTakeoverRefused -> E400
     RCDataMismatch _ -> E400
     RCActivationFailedPaymentDue _ -> E400
     RCDependentDocExpired _ -> E400
@@ -1917,6 +1937,11 @@ rcActivationReasonCode = \case
   RCActivationRCNotValid -> Just "RC_ACTIVATION_RC_NOT_VALID"
   RCActivationRCNotLinked -> Just "RC_ACTIVATION_RC_NOT_LINKED"
   RCActivationRCNotInFleet -> Just "RC_ACTIVATION_RC_NOT_IN_FLEET"
+  RCTakeoverPhotoRequired -> Just "RC_TAKEOVER_PHOTO_REQUIRED"
+  RCTakeoverVerificationStale -> Just "RC_TAKEOVER_VERIFICATION_STALE"
+  RCTakeoverNoClash -> Just "RC_TAKEOVER_NO_CLASH"
+  RCTakeoverCheckUnavailable -> Just "RC_TAKEOVER_CHECK_UNAVAILABLE"
+  RCActivationAutoTakeoverRefused -> Just "RC_AUTO_TAKEOVER_REFUSED"
   _ -> Nothing
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError

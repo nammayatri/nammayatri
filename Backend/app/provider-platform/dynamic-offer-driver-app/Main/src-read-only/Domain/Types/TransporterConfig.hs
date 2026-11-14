@@ -326,6 +326,7 @@ data TransporterConfig = TransporterConfig
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireFleetOwnerRegistrationForEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    requireRcTakeoverPhoto :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,
     requiresDriverOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -363,6 +364,7 @@ data TransporterConfig = TransporterConfig
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
     supportedMapProviders :: Kernel.Prelude.Maybe [Domain.Types.DriverInformation.MapProvider],
+    takeoverScoring :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TakeoverScoring,
     taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
     tdsEmailConfigurationSet :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tdsFromEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -698,6 +700,18 @@ data SubscriptionConfig = SubscriptionConfig
     vehicleCategoryScopedPrepaidEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TakeoverScoring = TakeoverScoring
+  { formulaVersion :: Kernel.Prelude.Text,
+    isRealPhotoFloor :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    isRealPhotoWeight :: Kernel.Prelude.Double,
+    photoQualityWeight :: Kernel.Prelude.Double,
+    plateMatchesRcFloor :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    plateMatchesRcWeight :: Kernel.Prelude.Double,
+    plateVisibleWeight :: Kernel.Prelude.Double,
+    takeoverScoreThreshold :: Kernel.Prelude.Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,

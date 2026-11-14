@@ -46,6 +46,14 @@ imports:
 
 module: DriverOnboardingV2
 types:
+  # No Show: image is a base64 photo.
+  RCTakeoverPhotoReq:
+    rcNo: Text
+    image: Text # base64 JPEG, PNG or WebP; a data: URI prefix is allowed
+  RCTakeoverPhotoResult:
+    enum: "VALID,INVALID"
+  RCTakeoverPhotoResp:
+    result: RCTakeoverPhotoResult
   ValidationStatus:
     enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
     derive: "Read"
@@ -329,6 +337,15 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: VehiclePhotosResp
+  # Vehicle photo check before taking over an RC that is active on another driver's account. A VALID result
+  # is held server-side for this driver and RC, and consumed by the next /rc/setStatus takeover.
+  - POST:
+      endpoint: /driver/rc/takeover/verifyPhoto
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: RCTakeoverPhotoReq
+      response:
+        type: RCTakeoverPhotoResp
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE

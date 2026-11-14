@@ -563,7 +563,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               { rcNo = vehicleNumber,
                 isActivate = True
               }
-      void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
+      void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) DomainRC.WMB rcStatusReq
       wmbLinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       when (wmbLinkTC.unifiedOnboardingFlagsRecompute == Just True) $
         void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbLinkTC) driverId
@@ -592,7 +592,7 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
           { rcNo = vehicleNumber,
             isActivate = False
           }
-  void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
+  void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) DomainRC.WMB rcStatusReq
   RCQuery.findLastVehicleRCWrapper vehicleNumber
     >>= \case
       Just rc -> DAQuery.endAssociationForRC driverId rc.id
