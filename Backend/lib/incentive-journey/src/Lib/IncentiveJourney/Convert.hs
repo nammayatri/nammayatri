@@ -58,6 +58,10 @@ toEvalMilestone milestone =
                     milestone.rewardValue
                     milestone.rewardExpirationAt
                     milestone.rewardMetadata
+                _ -> Nothing,
+            coupon =
+              case milestone.rewardType of
+                Common.Coupons -> IJ.mkCouponSpec milestone.rewardMetadata
                 _ -> Nothing
           }
     }

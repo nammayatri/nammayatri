@@ -17,6 +17,7 @@ where
 
 import qualified API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney as Common
 import qualified Dashboard.Common
+import qualified Data.Text as T
 import Data.Time (Day)
 import EulerHS.Prelude hiding (id, sortOn)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -136,7 +137,7 @@ postIncentiveJourneyMilestoneCreate handle merchantShortId opCity req = do
             rewardType = toDomainRewardType req.rewardType,
             rewardValue = req.rewardValue,
             rewardExpirationAt = req.rewardExpirationAt,
-            rewardMetadata = Nothing,
+            rewardMetadata = IJ.encodeCouponMetadata . toCouponSpec <$> req.couponReward,
             timeBounds = req.timeBounds,
             createdAt = now,
             updatedAt = now,
@@ -237,7 +238,7 @@ postIncentiveJourneyCohortJourneyCreate handle merchantShortId opCity req = do
       maxWaiveOffCount = Just (fromMaybe 1 req.maxWaiveOffCount)
   whenJust maxWaiveOffCount $ \n ->
     when (n < 0) $ throwError (InvalidRequest "maxWaiveOffCount must be >= 0")
-  validateStreakEndRewardOnMapping (toDomainRewardType <$> req.streakEndRewardType) req.streakEndRewardValue
+  validateStreakEndRewardOnMapping (toDomainRewardType <$> req.streakEndRewardType)
   cjm <-
     QCJMExtra.createCohortJourneyMapping
       (ID.cast merchant.id)
@@ -281,7 +282,7 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
   case IJStreak.validateMappingStartDate journey.journeyType startDate of
     Left err -> throwError (InvalidRequest err)
     Right () -> pure ()
-  validateStreakEndRewardOnMapping streakEndRewardType streakEndRewardValue
+  validateStreakEndRewardOnMapping streakEndRewardType
   void $
     QCJMExtra.updateCohortJourneyMappingFields
       cjm{DCJM.startDate = startDate,
@@ -422,6 +423,7 @@ toMilestoneListItem milestone =
       rewardValue = milestone.rewardValue,
       rewardExpirationAt = milestone.rewardExpirationAt,
       subscriptionWaiveOff = Nothing,
+      couponReward = toApiCouponReward <$> IJ.mkCouponSpec milestone.rewardMetadata,
       timeBounds = milestone.timeBounds,
       createdAt = milestone.createdAt,
       updatedAt = milestone.updatedAt
@@ -451,37 +453,36 @@ validateMilestoneCondition milestone =
 validateMilestoneReward :: BeamFlow m r => DIJM.IncentiveJourneyMilestone -> m ()
 validateMilestoneReward milestone =
   case milestone.rewardType of
-    DIJC.Coins ->
-      case milestone.rewardValue of
-        Just coins | coins > 0 -> pure ()
-        Just _ -> throwError (InvalidRequest "Coins milestone requires rewardValue > 0")
-        Nothing -> throwError (InvalidRequest "Coins milestone requires rewardValue > 0")
-    DIJC.Cash ->
-      throwError (InvalidRequest "Cash reward type is not supported")
-    DIJC.Coupons ->
-      throwError (InvalidRequest "Coupons reward type is not supported")
-    DIJC.WalletMoney ->
-      throwError (InvalidRequest "WalletMoney reward type is not supported")
-    DIJC.SubscriptionWaiveOff ->
-      throwError (InvalidRequest "SubscriptionWaiveOff reward type is not supported")
-    DIJC.PoolingPriority ->
-      throwError (InvalidRequest "PoolingPriority reward type is not supported")
     DIJC.NoReward -> pure ()
+    DIJC.Coupons ->
+      case IJ.mkCouponSpec milestone.rewardMetadata of
+        Just coupon
+          | not (T.null (T.strip coupon.offerCode)) && coupon.validityHours > 0 -> pure ()
+        _ -> throwError (InvalidRequest "Coupons milestone requires couponReward with an offerCode and validityHours > 0")
+    other -> throwError (InvalidRequest $ show other <> " reward type is not supported")
+
+toCouponSpec :: Common.CouponRewardConfig -> IJ.CouponSpec
+toCouponSpec couponConfig =
+  IJ.CouponSpec
+    { offerCode = T.strip couponConfig.offerCode,
+      validityHours = couponConfig.validityHours
+    }
+
+toApiCouponReward :: IJ.CouponSpec -> Common.CouponRewardConfig
+toApiCouponReward coupon =
+  Common.CouponRewardConfig
+    { offerCode = coupon.offerCode,
+      validityHours = coupon.validityHours
+    }
 
 validateStreakEndRewardOnMapping ::
   BeamFlow m r =>
   Maybe DIJC.MilestoneRewardType ->
-  Maybe Int ->
   m ()
-validateStreakEndRewardOnMapping mbRewardType mbRewardValue =
-  case mbRewardType of
-    Nothing -> pure ()
-    Just DIJC.Coins ->
-      case mbRewardValue of
-        Just coins | coins > 0 -> pure ()
-        _ -> throwError (InvalidRequest "Streak-end Coins reward requires streakEndRewardValue > 0")
-    Just DIJC.NoReward -> pure ()
-    Just other -> throwError (InvalidRequest $ show other <> " streak-end reward is not supported yet")
+validateStreakEndRewardOnMapping = \case
+  Nothing -> pure ()
+  Just DIJC.NoReward -> pure ()
+  Just other -> throwError (InvalidRequest $ show other <> " streak-end reward is not supported yet")
 
 toPersonAssignmentItem :: Core.AssignmentView -> Common.IncentiveJourneyPersonAssignmentItem
 toPersonAssignmentItem assignmentView =

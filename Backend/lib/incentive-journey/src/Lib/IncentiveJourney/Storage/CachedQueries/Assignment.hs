@@ -2,7 +2,7 @@
 
 module Lib.IncentiveJourney.Storage.CachedQueries.Assignment
   ( findAssignmentsByUserId,
-    findAssignmentsForDriver,
+    findAssignmentsForPerson,
     clearCacheByPersonId,
     clearCacheByCohortMappingId,
   )
@@ -42,10 +42,10 @@ findAssignmentsByUserId actor personId = do
 
 -- | UCM assignments plus enabled city auto-apply rows.
 -- A null vehicle category on the auto row covers every category in the city.
--- allowIfNoMapping rows apply only when the driver has no active user_cohort_mapping.
--- The same cohort journey mapping is kept once, so a driver is not rewarded twice.
+-- allowIfNoMapping rows apply only when the person has no active user_cohort_mapping.
+-- The same cohort journey mapping is kept once, so a person is not rewarded twice.
 -- row.enabled turns off only this auto-apply. cjm.enabled still has to be true.
-findAssignmentsForDriver ::
+findAssignmentsForPerson ::
   (BeamFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
@@ -53,7 +53,7 @@ findAssignmentsForDriver ::
   Id Common.MerchantOperatingCity ->
   Maybe Text ->
   m [Assignment.JourneyAssignment]
-findAssignmentsForDriver actor personId merchantId merchantOperatingCityId mbVehicleCategory = do
+findAssignmentsForPerson actor personId merchantId merchantOperatingCityId mbVehicleCategory = do
   ucms <- findUserCohortMappingsByPersonId actor personId
   ucmCjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
   let ucmAssignments =

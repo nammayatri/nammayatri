@@ -180,6 +180,10 @@ types:
     - serviceName: Text
     - waiveOffMode: Text
 
+  CouponRewardConfig:
+    - offerCode: Text
+    - validityHours: Int
+
   IncentiveJourneyType:
     - enum: "Daily, Weekly, Monthly"
     - derive: "HttpInstance"
@@ -223,6 +227,7 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - couponReward: Maybe CouponRewardConfig
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
 
@@ -246,6 +251,7 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - couponReward: Maybe CouponRewardConfig
     - timeBounds: Maybe TimeBound
     - createdAt: UTCTime
     - updatedAt: UTCTime
