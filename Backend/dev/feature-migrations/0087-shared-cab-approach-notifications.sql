@@ -27,7 +27,8 @@ SELECT
 FROM atlas_app.merchant_operating_city moc
 CROSS JOIN (VALUES
     ('SHARED_CAB_ON_THE_WAY', 'Your cab is on the way', 'Cab {#vehicleLast4#} is heading to {#boardStop#}.'),
-    ('SHARED_CAB_ARRIVING_SOON', 'Your cab is arriving soon', 'Cab {#vehicleLast4#} is almost at {#boardStop#}. Please be ready to board.')
+    ('SHARED_CAB_ARRIVING_SOON', 'Your cab is arriving soon', 'Cab {#vehicleLast4#} is almost at {#boardStop#}. Please be ready to board.'),
+    ('SHARED_CAB_PREV_STOP_CROSSED', 'Your cab has crossed the previous stop', 'Cab {#vehicleLast4#} is heading to {#boardStop#}. Please be ready to board.')
 ) AS copy (key, title, body)
 WHERE EXISTS (
     SELECT 1

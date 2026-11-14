@@ -38,6 +38,7 @@ data SharedCabNotificationType
   | SHARED_CAB_FINDING_TIMEOUT
   | SHARED_CAB_ON_THE_WAY
   | SHARED_CAB_ARRIVING_SOON
+  | SHARED_CAB_PREV_STOP_CROSSED
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 data ReassignReason = SEAT_LOST | TIMEOUT | CAB_PULLED
@@ -114,6 +115,7 @@ notifyApproach plate p = send key Nothing Nothing (Just plate) [("vehicleLast4",
   where
     key = case p of
       PushOnTheWay -> SHARED_CAB_ON_THE_WAY
+      PushPrevStopCrossed -> SHARED_CAB_PREV_STOP_CROSSED
       PushArrivingSoon -> SHARED_CAB_ARRIVING_SOON
 
 notifyReassigned :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => ReassignReason -> DFTB.FRFSTicketBooking -> m ()

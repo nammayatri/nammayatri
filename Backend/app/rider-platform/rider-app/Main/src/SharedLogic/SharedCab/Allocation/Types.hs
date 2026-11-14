@@ -55,17 +55,18 @@ data AllocationState = AllocationState
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | The rider's pushes as their cab comes to the board stop, in order. Assigned and Arrived are the existing SHARED_CAB_ASSIGNED and
--- SHARED_CAB_ARRIVING (sent by the claim, the accept and the moving timer); the tick adds the two between them.
-data ApproachStage = ApproachAssigned | ApproachOnTheWay | ApproachArrivingSoon | ApproachArrived
+-- SHARED_CAB_ARRIVING (sent by the claim, the accept and the moving timer); the tick adds the three between them.
+data ApproachStage = ApproachAssigned | ApproachOnTheWay | ApproachPrevStopCrossed | ApproachArrivingSoon | ApproachArrived
   deriving (Show, Eq, Ord, Enum, Bounded, Generic, ToJSON, FromJSON)
 
--- | The two pushes the tick sends itself; Assigned and Arrived go out with the claim, the accept and the moving timer.
-data ApproachPush = PushOnTheWay | PushArrivingSoon
+-- | The three pushes the tick sends itself; Assigned and Arrived go out with the claim, the accept and the moving timer.
+data ApproachPush = PushOnTheWay | PushPrevStopCrossed | PushArrivingSoon
   deriving (Show, Eq)
 
 approachPushStage :: ApproachPush -> ApproachStage
 approachPushStage = \case
   PushOnTheWay -> ApproachOnTheWay
+  PushPrevStopCrossed -> ApproachPrevStopCrossed
   PushArrivingSoon -> ApproachArrivingSoon
 
 -- | A fresh allocation: no approach tracked yet.
