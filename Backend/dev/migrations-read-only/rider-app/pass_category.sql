@@ -14,3 +14,8 @@ ALTER TABLE atlas_app.pass_category ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass_category ADD COLUMN "order" integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_category ADD COLUMN enable boolean ;

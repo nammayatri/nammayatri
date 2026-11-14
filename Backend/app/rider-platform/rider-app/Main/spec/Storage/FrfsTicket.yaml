@@ -392,6 +392,7 @@ FRFSTicketBooking:
     overrideType: Maybe OverrideType
     overriddenAmount: Maybe HighPrecMoney
     overrideAppliedEntityId: Maybe Text
+    settleableAmount: Maybe HighPrecMoney
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
@@ -601,7 +602,7 @@ FRFSTicketBooking:
       where: id
     updatePassOverrideById:
       kvFunction: updateWithKV
-      params: [overrideType, overriddenAmount, overrideAppliedEntityId, updatedAt]
+      params: [overrideType, overriddenAmount, overrideAppliedEntityId, settleableAmount, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV

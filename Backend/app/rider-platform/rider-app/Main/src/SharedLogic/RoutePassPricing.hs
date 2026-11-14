@@ -97,6 +97,7 @@ resolveRoutePassTerm person pass config selection = do
             fixedSaving = config.benefit.fixedSaving,
             unlimitedTripCount = config.benefit.unlimitedTripCount,
             maximumTripCount = if unlimited then Nothing else Just tripCount,
+            breakoffTripCount = if unlimited then config.benefit.breakoffTripCount <|> config.pricing.unlimitedPricedTripCount else Just tripCount,
             maxTicketQuantityPerOverride = config.benefit.maxTicketQuantityPerOverride,
             enforceStopPair = config.benefit.enforceStopPair,
             allowRoundTrip = Just (selection.roundTrip == Just True),

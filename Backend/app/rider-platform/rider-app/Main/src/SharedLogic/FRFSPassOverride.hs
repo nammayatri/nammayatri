@@ -41,6 +41,7 @@ module SharedLogic.FRFSPassOverride
     loadPassCandidates,
     filterCandidatesForLeg,
     localTripDay,
+    localTripDayForCity,
     bookingTripDay,
     ticketQuantityForBooking,
     withinQuantityCap,
@@ -55,6 +56,14 @@ module SharedLogic.FRFSPassOverride
     spendTripForBooking,
     passLegsNotCoverable,
     refundTrip,
+    adjustTrips,
+    revertTripAdjustment,
+    passPaymentEntityType,
+    zeroTrips,
+    breakoffTripCountFor,
+    settleableAmountFor,
+    netTripAdjustment,
+    tryWithTripCountLock,
     BookedTripWindow (..),
     checkOverlappingBookingLimit,
     recordBookedTrip,
@@ -66,8 +75,11 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (nubBy)
 import qualified Data.Time as T
+import qualified Domain.Types.EntityValueLog as DEntityValueLog
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
@@ -87,6 +99,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.EntityValueLog as QEntityValueLog
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
@@ -214,6 +227,8 @@ validateBenefitWith requireTripCount benefit
     Left "maximum_trip_count must be positive"
   | maybe False (<= 0) benefit.maxTicketQuantityPerOverride =
     Left "max_ticket_quantity_per_override must be positive"
+  | maybe False (<= 0) benefit.breakoffTripCount =
+    Left "breakoff_trip_count must be positive"
   | otherwise = Right benefit
 
 savingEnabled :: Maybe a -> (a -> Maybe Bool) -> Bool
@@ -788,7 +803,7 @@ consumeTripOnce searchId payment benefit quantity = do
 consumeTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ConsumeResult
 consumeTrip payment benefit quantity
   | isUnlimitedBenefit benefit = pure Unmetered
-  | otherwise = do
+  | otherwise = withTripCountLock payment.id $ do
     let allowance = allowanceFor payment benefit
         toSpend = max 1 quantity
     void $ seededRemainingTrips payment allowance
@@ -821,24 +836,144 @@ consumeTrip payment benefit quantity
       pure remaining
 
 refundTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ()
-refundTrip payment benefit quantity = unless (isUnlimitedBenefit benefit) $ do
+refundTrip payment benefit quantity = unless (isUnlimitedBenefit benefit) . withTripCountLock payment.id $ do
+  mbCurrent <- QPurchasedPassPayment.findByPrimaryKey payment.id
+  case mbCurrent of
+    Just current
+      | current.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] ->
+        logInfo $ "FRFSPassOverride:refundTrip payment is " <> show current.status <> ", not crediting the trip back paymentId=" <> payment.id.getId
+    _ -> do
+      let key = makeTripCountKey payment.id
+      -- Clamp to what the pass was SOLD with, not to allowanceFor -- that prefers the live remaining
+      -- count, so using it here would clamp every refund straight back to the pre-refund value.
+      -- The release guards are per-search, so without a ceiling a second release for a different
+      -- search on the same pass leaves the rider holding more trips than the pass ever granted.
+      mbCapacity <- forM benefit.maximumTripCount $ \soldCapacity -> max 0 . (soldCapacity +) <$> netTripAdjustment payment
+      void $ seededRemainingTrips payment (allowanceFor payment benefit)
+      credited <- Redis.incrby key (fromIntegral (max 1 quantity))
+      remaining <- case mbCapacity of
+        Just capacity
+          | credited > fromIntegral capacity -> do
+            logWarning $ "FRFSPassOverride:refundTrip credit exceeded the pass capacity, clamping paymentId=" <> payment.id.getId <> " credited=" <> show credited <> " capacity=" <> show capacity
+            Redis.set key capacity
+            pure (fromIntegral capacity)
+        _ -> pure credited
+      refreshTripCountTtl payment key
+      QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
+      logInfo $ "FRFSPassOverride:refundTrip paymentId=" <> payment.id.getId <> " -> " <> show remaining
+
+adjustTrips :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefitEntry -> Int -> m (Either Text Int)
+adjustTrips payment entry delta
+  | isUnlimitedBenefit benefit = pure (Left "This pass has unlimited trips")
+  | otherwise = do
+    let key = makeTripCountKey payment.id
+    void $ seededRemainingTrips payment (allowanceFor payment benefit)
+    adjusted <- Redis.incrby key (fromIntegral delta)
+    if adjusted < 0
+      then do
+        void $ Redis.incrby key (fromIntegral (negate delta))
+        pure . Left $ "Only " <> show (adjusted - fromIntegral delta) <> " trips left, cannot remove " <> show (negate delta)
+      else do
+        let remaining = fromIntegral adjusted
+        withTryCatch "FRFSPassOverride:adjustTrips:persist" (refreshTripCountTtl payment key >> QPurchasedPassPayment.updateAvailableTripCountById (Just remaining) payment.id) >>= \case
+          Left err -> do
+            void $ Redis.incrby key (fromIntegral (negate delta))
+            logError $ "FRFSPassOverride:adjustTrips persisting failed, reverted the Redis count paymentId=" <> payment.id.getId <> " delta=" <> show delta <> " err=" <> show err
+            throwM err
+          Right () -> do
+            logInfo $ "FRFSPassOverride:adjustTrips paymentId=" <> payment.id.getId <> " delta=" <> show delta <> " -> " <> show remaining
+            pure (Right remaining)
+  where
+    benefit = entryBenefit entry
+
+revertTripAdjustment :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Int -> m ()
+revertTripAdjustment payment delta = do
   let key = makeTripCountKey payment.id
-  void $ seededRemainingTrips payment (allowanceFor payment benefit)
-  credited <- Redis.incrby key (fromIntegral (max 1 quantity))
-  -- Clamp to what the pass was SOLD with, not to allowanceFor -- that prefers the live remaining
-  -- count, so using it here would clamp every refund straight back to the pre-refund value.
-  -- The release guards are per-search, so without a ceiling a second release for a different
-  -- search on the same pass leaves the rider holding more trips than the pass ever granted.
-  remaining <- case benefit.maximumTripCount of
-    Just capacity
-      | credited > fromIntegral capacity -> do
-        logWarning $ "FRFSPassOverride:refundTrip credit exceeded the pass capacity, clamping paymentId=" <> payment.id.getId <> " credited=" <> show credited <> " capacity=" <> show capacity
-        Redis.set key capacity
-        pure (fromIntegral capacity)
-    _ -> pure credited
+  remaining <- Redis.incrby key (fromIntegral (negate delta))
+  void $ withTryCatch "FRFSPassOverride:revertTripAdjustment:persist" (QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id)
+  logWarning $ "FRFSPassOverride:revertTripAdjustment paymentId=" <> payment.id.getId <> " delta=" <> show delta <> " -> " <> show remaining
+
+breakoffTripCountFor :: OverrideBenefit -> Maybe Int
+breakoffTripCountFor benefit =
+  mfilter (> 0) $ benefit.breakoffTripCount <|> (if isUnlimitedBenefit benefit then Nothing else benefit.maximumTripCount)
+
+settleableAmountFor :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id DFRFSQuote.FRFSQuote -> HighPrecMoney -> m (Maybe HighPrecMoney)
+settleableAmountFor mbEntityId quoteId bookingTotal =
+  passForOverrideAppliedEntity mbEntityId >>= \case
+    Nothing -> pure Nothing
+    Just (payment, pass) ->
+      (benefitForPayment payment pass <&> (>>= breakoffTripCountFor)) >>= \case
+        Nothing -> pure Nothing
+        Just breakoff -> do
+          quantity <- max 1 . sum . map (.selectedQuantity) <$> QFRFSQuoteCategory.findAllByQuoteId quoteId
+          let perTripShare = payment.amount / fromIntegral breakoff
+          pure . Just $ min (fromIntegral quantity * perTripShare) bookingTotal
+
+zeroTrips :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Maybe OverrideBenefit -> m (Maybe Int)
+zeroTrips payment mbBenefit = do
+  let key = makeTripCountKey payment.id
+  before <- case mbBenefit of
+    Just benefit | not (isUnlimitedBenefit benefit) -> Just <$> seededRemainingTrips payment (allowanceFor payment benefit)
+    _ -> pure Nothing
+  Redis.set key (0 :: Int)
   refreshTripCountTtl payment key
-  QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
-  logInfo $ "FRFSPassOverride:refundTrip paymentId=" <> payment.id.getId <> " -> " <> show remaining
+  QPurchasedPassPayment.updateAvailableTripCountById (Just 0) payment.id
+  logInfo $ "FRFSPassOverride:zeroTrips paymentId=" <> payment.id.getId <> " before=" <> show before
+  pure before
+
+passPaymentEntityType :: Text
+passPaymentEntityType = "PurchasedPassPayment"
+
+netTripAdjustment :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> m Int
+netTripAdjustment payment =
+  sum . mapMaybe (.delta) . filter isAppliedTripAdjust <$> QEntityValueLog.findAllByEntityTypeAndEntityId passPaymentEntityType payment.id.getId
+  where
+    isAppliedTripAdjust logEntry =
+      logEntry.operationType == DEntityValueLog.TripCountAdjust
+        && logEntry.status == DEntityValueLog.APPLIED
+
+tripCountLockKey :: Id DPPP.PurchasedPassPayment -> Text
+tripCountLockKey paymentId = "FRFSPassOverride:TripCountLock-" <> paymentId.getId
+
+tripCountLockTtlSec :: Int
+tripCountLockTtlSec = 10
+
+tripCountLockRetries :: Int
+tripCountLockRetries = 5
+
+tripCountLockRetryDelayMicros :: Int
+tripCountLockRetryDelayMicros = 100000
+
+acquireTripCountLock :: (MonadFlow m, Redis.HedisFlow m r) => Id DPPP.PurchasedPassPayment -> m Bool
+acquireTripCountLock paymentId = go tripCountLockRetries
+  where
+    go retriesLeft = do
+      acquired <- Redis.tryLockRedis (tripCountLockKey paymentId) tripCountLockTtlSec
+      if acquired || retriesLeft <= 0
+        then pure acquired
+        else threadDelay tripCountLockRetryDelayMicros >> go (retriesLeft - 1)
+
+runHoldingTripCountLock :: (MonadFlow m, Redis.HedisFlow m r) => Id DPPP.PurchasedPassPayment -> m a -> m a
+runHoldingTripCountLock paymentId act = do
+  result <- withTryCatch "FRFSPassOverride:runHoldingTripCountLock" act
+  Redis.unlockRedis (tripCountLockKey paymentId)
+  either throwM pure result
+
+withTripCountLock :: (MonadFlow m, Redis.HedisFlow m r) => Id DPPP.PurchasedPassPayment -> m a -> m a
+withTripCountLock paymentId act = do
+  acquired <- acquireTripCountLock paymentId
+  if acquired
+    then runHoldingTripCountLock paymentId act
+    else do
+      logWarning $ "FRFSPassOverride: trip count lock still held after " <> show tripCountLockRetries <> " attempts, proceeding without it paymentId=" <> paymentId.getId
+      act
+
+tryWithTripCountLock :: (MonadFlow m, Redis.HedisFlow m r) => Id DPPP.PurchasedPassPayment -> m a -> m (Maybe a)
+tryWithTripCountLock paymentId act = do
+  acquired <- acquireTripCountLock paymentId
+  if acquired
+    then Just <$> runHoldingTripCountLock paymentId act
+    else pure Nothing
 
 registerHasPass :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> T.Day -> m ()
 registerHasPass personId endDate = do
