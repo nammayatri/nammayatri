@@ -73,12 +73,12 @@ findQuoteBreakupCH quoteId createdAt = do
     itemToApi item =
       DQ.QuoteBreakupAPIEntity
         { title = item.title,
-          priceWithCurrency = PriceAPIEntity item.price.amount item.price.currency
+          priceWithCurrency = mkRoundedPriceAPIEntity item.price
         }
 
 transformQuoteBreakup :: CHQ.QuoteBreakup -> DQ.QuoteBreakupAPIEntity
 transformQuoteBreakup quoteBreakup =
   DQ.QuoteBreakupAPIEntity
     { title = CHQ.title quoteBreakup,
-      priceWithCurrency = PriceAPIEntity (HighPrecMoney $ toRational (CHQ.priceValue quoteBreakup)) (CHQ.priceCurrency quoteBreakup)
+      priceWithCurrency = mkRoundedPriceAPIEntity (mkPrice (Just (CHQ.priceCurrency quoteBreakup)) (HighPrecMoney $ toRational (CHQ.priceValue quoteBreakup)))
     }

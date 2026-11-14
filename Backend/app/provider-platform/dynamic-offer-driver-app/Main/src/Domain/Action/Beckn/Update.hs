@@ -203,16 +203,42 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   -- and the quote's fare was valid at search time. If we need expiry checks
   -- later, add: unless (quote.validTill > now) $ throwError QuoteExpired
 
-  -- Use the quote's pre-calculated fare params directly
-  let newEstimatedFare = quote.estimatedFare
-  let newFareParams = quote.fareParams
+  mbQuoteFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
+  commission <- FC.calculateCommission quote.fareParams mbQuoteFarePolicy
+  let cancellationDuesCommission = FC.calculateCancellationDuesCommission booking.cancellationDuesCommission quote.fareParams
+  refreshedDiscount <- CallBAPInternal.refreshOfferDiscount booking booking.discountAmount (Just newVehicleServiceTier) booking.fareParams quote.fareParams
+  let discountAmount = FC.clampDiscountToDiscountable quote.fareParams refreshedDiscount
+      chargeRes = FC.finalisePaymentCharge booking.paymentChargeDetails quote.estimatedFare (fromMaybe 0 quote.fareParams.paymentProcessingFee + fromMaybe 0 quote.fareParams.paymentProcessingFeeTax) discountAmount quote.fareParams
+      newEstimatedFare = chargeRes.adjustedFare
+      newFareParams = chargeRes.adjustedFareParams
 
   -- Look up VehicleServiceTier config for AC/seating info
   mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  let tollApplicable = DVST.isTollApplicableForTrip newVehicleServiceTier booking.tripCategory
 
   -- Persist new fare params and update booking
-  QFP.create newFareParams
-  QRB.updateVehicleServiceTierAndFare booking.id newVehicleServiceTier newFareParams.id newEstimatedFare quote.vehicleServiceTierName (getId quote.id) (mbVehicleServiceTierItem >>= (.airConditionedThreshold)) ((.seatingCapacity) =<< mbVehicleServiceTierItem) (mbVehicleServiceTierItem >>= (.isAirConditioned)) newFareParams.congestionCharge
+  QFP.updatePaymentCharge quote.fareParams newFareParams
+  QRB.updateVehicleServiceTierAndFare
+    booking
+      { DBooking.vehicleServiceTier = newVehicleServiceTier,
+        DBooking.vehicleServiceTierName = fromMaybe booking.vehicleServiceTierName quote.vehicleServiceTierName,
+        DBooking.quoteId = getId quote.id,
+        DBooking.fareParams = newFareParams,
+        DBooking.estimatedFare = newEstimatedFare,
+        DBooking.estimatedCongestionCharge = newFareParams.congestionCharge,
+        DBooking.vehicleServiceTierAirConditioned = (mbVehicleServiceTierItem >>= (.airConditionedThreshold)) <|> booking.vehicleServiceTierAirConditioned,
+        DBooking.vehicleServiceTierSeatingCapacity = (mbVehicleServiceTierItem >>= (.seatingCapacity)) <|> booking.vehicleServiceTierSeatingCapacity,
+        DBooking.isAirConditioned = (mbVehicleServiceTierItem >>= (.isAirConditioned)) <|> booking.isAirConditioned,
+        DBooking.commission = commission,
+        DBooking.cancellationDuesCommission = cancellationDuesCommission,
+        DBooking.cancellationDuesCommissionTaxBreakup = FC.calculateCancellationDuesCommissionTax booking.cancellationDuesCommissionTaxBreakup quote.fareParams,
+        DBooking.paymentCharge = chargeRes.paymentCharge,
+        DBooking.paymentChargeBearer = chargeRes.paymentChargeBearer,
+        DBooking.discountAmount = discountAmount,
+        DBooking.tollCharges = if tollApplicable then booking.tollCharges else Nothing,
+        DBooking.tollIds = if tollApplicable then booking.tollIds else Nothing,
+        DBooking.tollNames = if tollApplicable then booking.tollNames else Nothing
+      }
 
   -- NOTE: We skip BookingUpdateRequest for now. The confirm is a single atomic
   -- operation with no driver in the loop (RideOTP: status=NEW, no driver assigned).
@@ -220,7 +246,7 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   -- assigned and may need to accept/reject the tier change.
 
   -- Send on_update to BAP to confirm the change
-  sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId
+  sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId newFareParams
 handler (UAddBaggageReq AddBaggageReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.status == DBooking.NEW) $
@@ -253,6 +279,8 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             computationPhase = FCEstimate,
             mbCapConfig = Nothing,
             mbEstimateFareParams = Nothing,
+            paymentChargeDetails = booking.paymentChargeDetails,
+            buyerOfferDiscount = booking.discountAmount,
             actualDistance = booking.estimatedDistance,
             rideTime = booking.startTime,
             returnTime = booking.returnTime,
@@ -269,6 +297,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             negotiatedFareDelta = origFareParams.negotiatedFareDelta,
             nightShiftCharge = origFareParams.nightShiftCharge,
             customerCancellationDues = origFareParams.customerCancellationDues,
+            customerCancellationDuesTaxBreakup = (FC.fareTaxesOf origFareParams).cancellationFee,
             estimatedCongestionCharge = booking.estimatedCongestionCharge,
             isScheduled = booking.isScheduled,
             nightShiftOverlapChecking = nightShiftOverlapChecking,
@@ -283,10 +312,9 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             distanceUnit = booking.distanceUnit,
             shouldApplyBusinessDiscount = False,
             shouldApplyPersonalDiscount = False,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             mbAdditonalChargeCategories = if null origAdditionalCategories then Nothing else Just origAdditionalCategories,
             numberOfLuggages = Just numberOfLuggages,
-            govtChargesRate = Just transporterCfg.taxConfig.rideGst,
             pickupGateId = booking.pickupGateId,
             fareSettlementType = booking.fareSettlementType,
             isParkingFeeExempt = False
@@ -471,6 +499,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     computationPhase = FCEstimate,
                     mbCapConfig = Nothing,
                     mbEstimateFareParams = Nothing,
+                    paymentChargeDetails = booking.paymentChargeDetails,
+                    buyerOfferDiscount = booking.discountAmount,
                     actualDistance = Just estimatedDistance,
                     rideTime = booking.startTime,
                     returnTime = booking.returnTime,
@@ -488,6 +518,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     negativeFareAdjustment = booking.fareParams.negativeFareAdjustment,
                     nightShiftCharge = booking.fareParams.nightShiftCharge,
                     customerCancellationDues = booking.fareParams.customerCancellationDues,
+                    customerCancellationDuesTaxBreakup = (FC.fareTaxesOf booking.fareParams).cancellationFee,
                     nightShiftOverlapChecking = False,
                     estimatedDistance = Just estimatedDistance,
                     estimatedRideDuration = Just duration,
@@ -501,36 +532,17 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,
                     isScheduled = booking.isScheduled,
-                    merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
                     mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
                     numberOfLuggages = booking.numberOfLuggages,
-                    govtChargesRate = Just transporterConfig.taxConfig.rideGst,
                     pickupGateId = booking.pickupGateId,
                     fareSettlementType = booking.fareSettlementType,
                     isParkingFeeExempt = rcParkingFeeExempt
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
-                newEstimatedFare = HighPrecMoney $ toRational $ fareSum fareParameters Nothing
                 currentDiscount = (mbRide >>= (.discountAmount)) <|> booking.discountAmount
-            rawDiscountAmount <-
-              if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
-                then do
-                  appBackendBapInternal <- asks (.appBackendBapInternal)
-                  let reqBody =
-                        CallBAPInternal.OfferDiscountReq
-                          { fareAmount = Just newEstimatedFare,
-                            projectFareParamsBreakup = FC.projectFareParamsBreakup fareParameters
-                          }
-                  result <-
-                    withTryCatch "getOfferDiscount:softUpdateEditDestination" $
-                      CallBAPInternal.getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
-                  case result of
-                    Right resp -> pure resp.discountAmount
-                    Left err -> do
-                      logError $ "Error getting offer discount at SOFT edit destination, falling back to current discount: " <> show err
-                      pure currentDiscount
-                else pure currentDiscount
+            rawDiscountAmount <- CallBAPInternal.refreshOfferDiscount booking currentDiscount Nothing booking.fareParams fareParameters
             let clampedDiscount = FC.clampDiscountToDiscountable fareParameters rawDiscountAmount
             bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance duration shortestRoute.staticDuration validTill mapsRouteReqInText routeInfoInText snapToRoadFailed clampedDiscount
             startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)

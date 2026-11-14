@@ -295,7 +295,7 @@ types:
     - entityId: Text
     - entityType: FareBreakupEntityType
   FareBreakupEntityType:
-    - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING
+    - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING, ESTIMATE, QUOTE
   MultipleRideSyncReq:
     - recordType: NewType
     - rides: [MultipleRideItem]

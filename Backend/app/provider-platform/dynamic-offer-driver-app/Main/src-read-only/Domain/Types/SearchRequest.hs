@@ -3,6 +3,7 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
@@ -35,6 +36,9 @@ data SearchRequest = SearchRequest
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    customerCancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    customerCancellationDuesCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
+    customerCancellationDuesTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     customerLanguage :: Kernel.Prelude.Maybe Tools.Maps.Language,
     customerNammaTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

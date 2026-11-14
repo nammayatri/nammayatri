@@ -4,22 +4,22 @@ import Domain.Types.RentalDetails
 import Kernel.Prelude
 import Kernel.Types.Common
 
-mkRentalDetailsAPIEntity :: RentalDetails -> Maybe PriceAPIEntity -> RentalDetailsAPIEntity
-mkRentalDetailsAPIEntity RentalDetails {..} tollCharges = do
+mkRentalDetailsAPIEntity :: (Price -> Price) -> RentalDetails -> Maybe PriceAPIEntity -> RentalDetailsAPIEntity
+mkRentalDetailsAPIEntity grossRate RentalDetails {..} tollCharges = do
   RentalDetailsAPIEntity
-    { baseFare = baseFare.amountInt,
-      perHourCharge = perHourCharge.amountInt,
-      perExtraMinRate = perExtraMinRate.amountInt,
-      baseFareWithCurrency = mkPriceAPIEntity baseFare,
-      perHourChargeWithCurrency = mkPriceAPIEntity perHourCharge,
-      perExtraMinRateWithCurrency = mkPriceAPIEntity perExtraMinRate,
-      plannedPerKmRate = plannedPerKmRate.amountInt,
-      perExtraKmRate = perExtraKmRate.amountInt,
-      plannedPerKmRateWithCurrency = mkPriceAPIEntity plannedPerKmRate,
-      perExtraKmRateWithCurrency = mkPriceAPIEntity perExtraKmRate,
+    { baseFare = (grossRate baseFare).amountInt,
+      perHourCharge = (grossRate perHourCharge).amountInt,
+      perExtraMinRate = (grossRate perExtraMinRate).amountInt,
+      baseFareWithCurrency = mkPriceAPIEntity (grossRate baseFare),
+      perHourChargeWithCurrency = mkPriceAPIEntity (grossRate perHourCharge),
+      perExtraMinRateWithCurrency = mkPriceAPIEntity (grossRate perExtraMinRate),
+      plannedPerKmRate = (grossRate plannedPerKmRate).amountInt,
+      perExtraKmRate = (grossRate perExtraKmRate).amountInt,
+      plannedPerKmRateWithCurrency = mkPriceAPIEntity (grossRate plannedPerKmRate),
+      perExtraKmRateWithCurrency = mkPriceAPIEntity (grossRate perExtraKmRate),
       nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
       includedKmPerHr = metersToKilometers $ distanceToMeters includedDistancePerHr,
       includedDistancePerHrWithUnit = includedDistancePerHr,
-      deadKmFare = mkPriceAPIEntity deadKmFare,
+      deadKmFare = mkPriceAPIEntity (grossRate deadKmFare),
       ..
     }

@@ -19,6 +19,9 @@ module Domain.Types.Booking.API where
 
 import qualified API.Types.UI.BookingDeposit as DepositAPI
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import Data.Aeson (eitherDecode, encode)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -26,7 +29,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
 import Domain.Action.UI.TollChargeApproval (TollChargeApprovalRequestRes, acknowledgeSurfacedTollChargeApproval, getPendingTollChargeApproval)
-import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
@@ -81,6 +83,7 @@ import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.Settlement as Settlement
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -182,6 +185,8 @@ data BookingAPIEntity = BookingAPIEntity
     driverPreference :: Maybe [Text],
     specialLocationSupportNumber :: Maybe Text,
     commissionCharge :: Maybe HighPrecMoney,
+    componentGrossMultipliers :: Maybe (FB.RideTaxRates PaymentCharge.GrossMultiplier),
+    taxRates :: Maybe Tax.RiderTaxRates,
     bookingDepositAmount :: Maybe HighPrecMoney,
     bookingDeposit :: Maybe BookingDepositInfo,
     refunds :: [RideRefundInfo],
@@ -425,6 +430,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   fleetEngineEnabled <- lookupFleetEngineEnabled booking.merchantId booking.merchantOperatingCityId
+  mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
   return $
     BookingAPIEntity
       { id = booking.id,
@@ -436,16 +442,16 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         estimatedFare = booking.estimatedFare.amountInt,
         discount = booking.discount <&> (.amountInt),
         estimatedTotalFare = booking.estimatedTotalFare.amountInt,
-        estimatedFareWithCurrency = mkPriceAPIEntity booking.estimatedFare,
-        discountWithCurrency = mkPriceAPIEntity <$> booking.discount,
-        estimatedTotalFareWithCurrency = mkPriceAPIEntity booking.estimatedTotalFare,
+        estimatedFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedFare,
+        discountWithCurrency = mkRoundedPriceAPIEntity <$> booking.discount,
+        estimatedTotalFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedTotalFare,
         fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
         initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
         rideList = rides,
         hasNightIssue = hasNightIssue,
         tripTerms = [],
-        estimatedFareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups),
-        fareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups),
+        estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups,
+        fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
         rideScheduledTime = booking.startTime,
         returnTime = booking.returnTime,
         bookingDetails,
@@ -501,6 +507,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         driverPreference = booking.driverPreference,
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
         commissionCharge = booking.commission,
+        componentGrossMultipliers = PaymentCharge.grossMultipliers mbPaymentCharge <$> booking.riderTaxRates,
+        taxRates = booking.riderTaxRates,
         bookingDepositAmount = booking.bookingDepositAmount,
         bookingDeposit = Nothing,
         refunds = refunds,
@@ -757,7 +765,7 @@ buildBookingStatusAPIEntity booking = do
   -- approval rides along here instead of needing its own poll. Only an in-progress ride can have one.
   tollChargeApproval <- case mbActiveRide of
     Just ride | ride.status == DRide.INPROGRESS -> do
-      mbPending <- getPendingTollChargeApproval ride.id
+      mbPending <- getPendingTollChargeApproval booking ride.id
       -- Surfacing the prompt here is what acknowledges it to the driver side.
       case mbPending of
         Just _ -> acknowledgeSurfacedTollChargeApproval booking ride.id
@@ -800,7 +808,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) ride@DRide.Ride {..
           then pure mbBookingOfferEntity
           else QOfferEntity.findByEntityIdAndEntityType id.getId DOfferEntity.RIDE |<|>| pure mbBookingOfferEntity
       let currency = booking.estimatedFare.currency
-          mkPriceEntity = mkPriceAPIEntity . mkPrice (Just currency)
+          mkPriceEntity = mkRoundedPriceAPIEntity . mkPrice (Just currency)
       case mbOfferEntity of
         Just offerEntity -> do
           let estimatedOfferEntity = fromMaybe offerEntity mbBookingOfferEntity
@@ -840,19 +848,22 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) ride@DRide.Ride {..
   tollChargeApproval <-
     if status == DRide.INPROGRESS
       then do
-        mbPending <- getPendingTollChargeApproval id
+        mbPending <- getPendingTollChargeApproval booking id
         Kernel.Prelude.whenJust mbPending $ \_ -> acknowledgeSurfacedTollChargeApproval booking id
         pure mbPending
       else pure Nothing
+  mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
   return $
     RideAPIEntity
       { shortRideId = shortId,
+        componentGrossMultipliers = PaymentCharge.grossMultipliers mbPaymentCharge <$> booking.riderTaxRates,
+        taxRates = booking.riderTaxRates,
         driverNumber = mbDriverNumber,
         driverRatings = driverRating',
         driverRegisteredAt = Just driverRegisteredAt',
         rideOtp = otp,
         computedPrice = totalFare <&> (.amountInt),
-        computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
+        computedPriceWithCurrency = mkRoundedPriceAPIEntity <$> totalFare,
         chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
         chargeableRideDistanceWithUnit = chargeableDistance,
         traveledRideDistance = traveledDistance,

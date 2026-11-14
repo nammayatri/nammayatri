@@ -4,6 +4,7 @@
 
 module Storage.Queries.RiderDetails (module Storage.Queries.RiderDetails, module ReExport) where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
@@ -30,10 +31,19 @@ findAllReferredByDriverId referredByDriver = do findAllWithDb [Se.Is Beam.referr
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationDues :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateCancellationDues cancellationDues id = do
+updateCancellationDues ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateCancellationDues cancellationDues cancellationDuesTaxBreakup cancellationDuesCommission cancellationDuesCommissionTaxBreakup id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.cancellationDues cancellationDues,
+      Se.Set Beam.cancellationDuesTaxBreakup (toJSON <$> cancellationDuesTaxBreakup),
+      Se.Set Beam.cancellationDuesCommission cancellationDuesCommission,
+      Se.Set Beam.cancellationDuesCommissionTaxBreakup (toJSON <$> cancellationDuesCommissionTaxBreakup),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateConsentToShareMobileNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateConsentToShareMobileNumber consentToShareMobileNumber id = do
@@ -121,7 +131,10 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
     [ Se.Set Beam.bapId bapId,
       Se.Set Beam.cancellationDueRides (Kernel.Prelude.Just cancellationDueRides),
       Se.Set Beam.cancellationDues cancellationDues,
+      Se.Set Beam.cancellationDuesCommission cancellationDuesCommission,
+      Se.Set Beam.cancellationDuesCommissionTaxBreakup (toJSON <$> cancellationDuesCommissionTaxBreakup),
       Se.Set Beam.cancellationDuesPaid (Kernel.Prelude.Just cancellationDuesPaid),
+      Se.Set Beam.cancellationDuesTaxBreakup (toJSON <$> cancellationDuesTaxBreakup),
       Se.Set Beam.cancelledRides (Kernel.Prelude.Just cancelledRides),
       Se.Set Beam.completedRides (Kernel.Prelude.Just completedRides),
       Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber,

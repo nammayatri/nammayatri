@@ -7,7 +7,7 @@ imports:
   Person: Domain.Types.Person
   RefundRequestCode: Domain.Types.Extra.RefundRequest
   Currency: Kernel.Utils.Common
-  FareComponent: Domain.Types.FareBreakup
+  RefundFareComponent: Domain.Types.FareBreakup
   Value: Data.Aeson
 
 RefundRequest:
@@ -48,7 +48,7 @@ RefundRequest:
       enum: "RIDE_FARE, CANCELLATION_FEE, BOOKING_DEPOSIT"
     RefundComponentAmount:
       derive: "Eq"
-      component: FareComponent
+      component: RefundFareComponent
       amount: HighPrecMoney
 
   beamType:

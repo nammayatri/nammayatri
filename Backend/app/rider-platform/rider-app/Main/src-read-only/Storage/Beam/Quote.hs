@@ -61,6 +61,8 @@ data QuoteT f = QuoteT
     providerUrl :: B.C f Kernel.Prelude.Text,
     quoteBreakupListJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     requestId :: B.C f Kernel.Prelude.Text,
+    riderTaxRates :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    selectedOfferDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     selectedOfferId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

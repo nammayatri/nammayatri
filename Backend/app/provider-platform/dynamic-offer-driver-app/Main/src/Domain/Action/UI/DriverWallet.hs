@@ -30,6 +30,7 @@ module Domain.Action.UI.DriverWallet
 where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -148,7 +149,7 @@ getWalletBalance (mbPersonId, _merchantId, _mocId) = do
   let dwc = transporterConfig.driverWalletConfig
       baseResponse =
         DriverWallet.WalletBalanceResponse
-          { currentBalance,
+          { currentBalance = roundAmountByCurrency' transporterConfig.currency currentBalance,
             walletStage = Nothing,
             minimumBalance = Nothing,
             blockerEnforced = Nothing,
@@ -159,6 +160,8 @@ getWalletBalance (mbPersonId, _merchantId, _mocId) = do
   if not dwc.enableDriverWallet
     then pure baseResponse
     else do
+      withdrawable <- getWithdrawableBalance person counterparty
+      let walletResponse = baseResponse {DriverWallet.withdrawableBalance = roundAmountByCurrency' transporterConfig.currency <$> withdrawable}
       mbVariant <- fmap (.variant) <$> QVehicle.findById driverId
       tiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
       isLive <- WA.isWalletSubscriptionCity transporterConfig
@@ -167,9 +170,8 @@ getWalletBalance (mbPersonId, _merchantId, _mocId) = do
       -- A wallet that isn't charged from yet, in a city where no tier minimum is configured, has nothing
       -- new to show: the response stays what it always was.
       if not isLive && isNothing mbMinimum
-        then pure baseResponse
+        then pure walletResponse
         else do
-          withdrawable <- getWithdrawableBalance person counterparty
           mbDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId YATRI_SUBSCRIPTION
           mbMandate <- maybe (pure Nothing) QMandate.findById (mbDriverPlan >>= (.mandateId))
           mbRecharge <- WalletAutopay.findOpenAutopayRecharge driverId
@@ -184,22 +186,20 @@ getWalletBalance (mbPersonId, _merchantId, _mocId) = do
           if not isLive
             then
               pure
-                baseResponse
+                walletResponse
                   { DriverWallet.walletStage = Just DriverWallet.COMING_SOON,
                     DriverWallet.minimumBalance = mbMinimum,
                     -- The minimum can be enforced before the subscription moves to the wallet.
                     DriverWallet.blockerEnforced = Just minBalanceEnforced,
-                    DriverWallet.withdrawableBalance = withdrawable,
                     DriverWallet.autopay = Just autopayInfo
                   }
             else
               pure
-                baseResponse
+                walletResponse
                   { DriverWallet.walletStage = Just DriverWallet.LIVE,
                     DriverWallet.minimumBalance = mbMinimum,
                     DriverWallet.blockerEnforced = Just minBalanceEnforced,
                     DriverWallet.isSubscriptionWalletManaged = Just True,
-                    DriverWallet.withdrawableBalance = withdrawable,
                     DriverWallet.autopay = Just autopayInfo
                   }
 
@@ -302,14 +302,15 @@ walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndiv
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
           redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
+          rounded = roundAmountByCurrency' transporterConfig.currency
       pure $
         DriverWallet.WalletSummaryResponse
-          { currentBalance,
-            redeemableBalance,
-            nonRedeemableBalance = eligibility.nonRedeemableBalance,
-            processingPayoutBalance = eligibility.processingPayoutBalance,
-            holdBalance = Just holdBalance,
-            netEarningsBalance,
+          { currentBalance = rounded currentBalance,
+            redeemableBalance = rounded redeemableBalance,
+            nonRedeemableBalance = rounded eligibility.nonRedeemableBalance,
+            processingPayoutBalance = rounded eligibility.processingPayoutBalance,
+            holdBalance = Just (rounded holdBalance),
+            netEarningsBalance = rounded netEarningsBalance,
             payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
@@ -371,7 +372,7 @@ fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = d
       Nothing
       Nothing
       mbConcernedIndividualId
-  pure $ map ledgerEntryToWalletRow entries
+  pure $ map ledgerEntryToWalletRow (filter ((/= FLedgerEntry.VOIDED) . (.status)) entries)
 
 ledgerEntryToWalletRow :: FLedgerEntry.LedgerEntry -> CHLE.WalletEntryRow
 ledgerEntryToWalletRow e =
@@ -539,35 +540,33 @@ referenceTypeToItemName isVat ref
   | ref == walletReferenceBaseRide = "Ride Earnings"
   | ref == walletReferenceTollCharges = "Toll Charges"
   | ref == walletReferenceParkingCharges = "Parking Charges"
+  | ref == walletReferenceAirportEntryFeeCharges = "Airport Entry Fee"
+  | ref `elem` [walletReferenceTollChargesTax Tax.VAT, walletReferenceTollChargesTax Tax.GST] = "Toll Charges " <> taxLabel
+  | ref `elem` [walletReferenceParkingChargesTax Tax.VAT, walletReferenceParkingChargesTax Tax.GST] = "Parking Charges " <> taxLabel
+  | ref `elem` [walletReferenceAirportEntryFeeChargesTax Tax.VAT, walletReferenceAirportEntryFeeChargesTax Tax.GST] = "Airport Entry Fee " <> taxLabel
   | ref == walletReferenceTopup = "Wallet Top-up"
-  | ref == walletReferenceGSTOnline = "GST (Online)"
-  | ref == walletReferenceGSTCash = "GST (Cash)"
-  | ref == walletReferenceVATOnline = "VAT (Online)"
-  | ref == walletReferenceVATCash = "VAT (Cash)"
-  | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
-  | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
+  | ref == walletReferenceRideTax Tax.GST = "GST"
+  | ref == walletReferenceRideTax Tax.VAT = "VAT"
+  | ref == walletReferenceTDSDeduction = "TDS"
   | ref == walletReferenceTDSDeductionCancellation = "TDS (Cancellation)"
   | ref == tdsReimbursementReferenceType = "TDS Reimbursement"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceGateDriverFee = "Gate Fee"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
-  | ref == walletReferenceDiscountsOnline = "Discounts Incl. " <> taxLabel <> " (Online)"
-  | ref == walletReferenceDiscountsCash = "Discounts Incl. " <> taxLabel <> " (Cash)"
+  | ref == walletReferenceDiscounts = "Discounts Incl. " <> taxLabel
   | ref == walletReferenceIncentiveJourneyCash = "Journey Reward"
   | ref == walletReferenceCustomerCancellationCharges = "Cancellation Fee"
-  | ref == walletReferenceCustomerCancellationGST = "Cancellation Fee " <> taxLabel
-  | ref == walletReferenceCommissionOnline = "Commission (Online)"
-  | ref == walletReferenceCommissionCash = "Commission (Cash)"
-  | ref == walletReferenceCommissionVATOnline = "Commission " <> taxLabel <> " (Online)"
-  | ref == walletReferenceCommissionVATCash = "Commission " <> taxLabel <> " (Cash)"
+  | ref `elem` [walletReferenceCustomerCancellationTax Tax.GST, walletReferenceCustomerCancellationTax Tax.VAT] = "Cancellation Fee " <> taxLabel
+  | ref == walletReferenceCommission = "Commission"
+  | ref `elem` [walletReferenceCommissionTax Tax.VAT, walletReferenceCommissionTax Tax.GST] = "Commission " <> taxLabel
   | ref == walletReferenceCancellationCommission = "Cancellation Commission"
-  | ref == walletReferenceCancellationCommissionVAT = "Cancellation Commission " <> taxLabel
-  | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
+  | ref `elem` [walletReferenceCancellationCommissionTax Tax.VAT, walletReferenceCancellationCommissionTax Tax.GST] = "Cancellation Commission " <> taxLabel
+  | ref == walletReferenceDeductedAtPaymentByPlatform = "Deducted at Payment by Platform"
   | ref == walletReferencePaymentChargePaidByCustomer = "Payment Charge Paid by Customer"
-  | ref == walletReferencePaymentChargeVatPaidByCustomer = "Payment Charge VAT Paid by Customer"
+  | ref `elem` [walletReferencePaymentChargeTaxPaidByCustomer Tax.VAT, walletReferencePaymentChargeTaxPaidByCustomer Tax.GST] = "Payment Charge " <> taxLabel <> " Paid by Customer"
   | ref == walletReferencePGPaymentCharges = "Payment Charge"
-  | ref == walletReferencePGPaymentChargesVAT = "Payment Charge VAT"
+  | ref `elem` [walletReferencePGPaymentChargesTax Tax.VAT, walletReferencePGPaymentChargesTax Tax.GST] = "Payment Charge " <> taxLabel
   | ref == walletReferencePGPayoutCharges = "Payout Charge"
   | ref == walletReferenceConnectAccountCharges = "Connect Account Charge"
   | ref == WalletSubscription.walletReferenceSubscriptionFee = "Subscription Fee"
@@ -584,7 +583,7 @@ referenceTypeToItemName isVat ref
     taxLabel = if isVat then "VAT" else "GST"
 
 isVatMerchant :: DTConf.TransporterConfig -> Bool
-isVatMerchant transporterConfig = isJust transporterConfig.taxConfig.serviceVatPercentage
+isVatMerchant transporterConfig = transporterConfig.taxConfig.taxRegime == Just Tax.VAT
 
 -- | Per-row item name. A gate DriverFeeItem is booked under one shared reference
 --   type but is configured per gate, so the gate's item names are carried on the ledger entry
@@ -791,9 +790,10 @@ getWalletLedgerHistory ::
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow DriverWallet.WalletLedgerEntriesResponse
   )
-getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset = do
+getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset mbEntityId = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   now <- getCurrentTime
   let fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
@@ -808,8 +808,15 @@ getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLi
     (Just (_, _, mbConcernedIndividualId), Just walletAcc) -> do
       let limit = min 100 (max 1 (fromMaybe 20 mbLimit))
           offset = max 0 (fromMaybe 0 mbOffset)
+      entityIds <- case mbEntityId of
+        Nothing -> pure []
+        Just entityId -> do
+          mbRide <- QRide.findById (Id entityId)
+          pure $ entityId : [ride.bookingId.getId | Just ride <- [mbRide], ride.driverId == driverId]
+      let matchesEntity e = e.referenceId `elem` entityIds || maybe False (`elem` entityIds) e.entityReferenceId
+          keepEntry e = if null entityIds then e.status == FLedgerEntry.SETTLED else matchesEntity e
       entries <-
-        filter (\e -> e.status == FLedgerEntry.SETTLED)
+        filter keepEntry
           <$> QLedgerEntry.findByAccountsWithConcernedIndividual [walletAcc.id] [] (Just fromDate) (Just toDate) Nothing Nothing mbConcernedIndividualId
       accountConfig <- FinanceAccountConfig.getAccountConfigForAccount walletAcc
       let isVat = isVatMerchant transporterConfig
@@ -941,7 +948,12 @@ mkLedgerEntryItem isVat walletAccId e =
       itemValue = e.amount,
       isCredit = e.toAccountId == walletAccId,
       isReversal = e.entryType == FLedgerEntry.Reversal,
-      date = e.timestamp
+      date = e.timestamp,
+      status = Just e.status,
+      settlementStatus = e.settlementStatus,
+      entityReferenceType = e.entityReferenceType,
+      entityReferenceId = e.entityReferenceId,
+      reversalOf = e.reversalOf
     }
 
 --------------------------------------------------------------------------------
@@ -960,8 +972,10 @@ getWalletPayoutHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow DriverWallet.PayoutHistoryResponse
   )
-getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses mbLimit mbOffset = do
+getWalletPayoutHistory (mbPersonId, _merchantId, mocId) mbFrom mbTo mbStatuses mbLimit mbOffset = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  let rounded = roundAmountByCurrency' transporterConfig.currency
   let statuses = fromMaybe [] mbStatuses
       limit = mbLimit
       offset = mbOffset
@@ -970,10 +984,10 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
   -- EXCLUDED rows are for admins (the driver gets a push); dropped in the query so limit/offset stay right.
   items <- PayoutItems.getPayoutItems driverId.getId mbFrom mbTo statuses [PR.EXCLUDED] limit offset
 
-  let apiItems = map toHistoryItem items
-      totalPaidOut = sum [fromMaybe 0 i.amount | i <- items, isPaidOut i.status]
-      totalPending = sum [fromMaybe 0 i.amount | i <- items, isPending i.status]
-      lastPayout = Kernel.Prelude.listToMaybe [toHistoryItem i | i <- items, isPaidOut i.status]
+  let apiItems = map (toHistoryItem rounded) items
+      totalPaidOut = rounded $ sum [fromMaybe 0 i.amount | i <- items, isPaidOut i.status]
+      totalPending = rounded $ sum [fromMaybe 0 i.amount | i <- items, isPending i.status]
+      lastPayout = Kernel.Prelude.listToMaybe [toHistoryItem rounded i | i <- items, isPaidOut i.status]
 
   pure $
     DriverWallet.PayoutHistoryResponse
@@ -994,11 +1008,11 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
     isPaidOut s = s == PR.CREDITED || s == PR.CASH_PAID
     isPending s = s == PR.INITIATED || s == PR.PROCESSING
 
-    toHistoryItem :: PayoutItems.PayoutItem -> DriverWallet.PayoutHistoryItem
-    toHistoryItem i =
+    toHistoryItem :: (HighPrecMoney -> HighPrecMoney) -> PayoutItems.PayoutItem -> DriverWallet.PayoutHistoryItem
+    toHistoryItem rounded i =
       DriverWallet.PayoutHistoryItem
-        { amount = i.amount,
-          payoutFee = i.payoutFee,
+        { amount = rounded <$> i.amount,
+          payoutFee = rounded i.payoutFee,
           entityName = i.entityName,
           status = i.status,
           timestamp = i.timestamp,
@@ -1010,7 +1024,8 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
           transactionId = i.transactionId,
           bankReference = i.bankReference,
           bankReferenceType = i.bankReferenceType,
-          statusUpdatedAt = Just i.statusUpdatedAt
+          statusUpdatedAt = Just i.statusUpdatedAt,
+          merchantTopUpAmount = rounded <$> i.merchantTopUpAmount
         }
 
 --------------------------------------------------------------------------------

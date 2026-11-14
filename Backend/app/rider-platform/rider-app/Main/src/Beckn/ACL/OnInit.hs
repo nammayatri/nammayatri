@@ -16,6 +16,7 @@ module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
 import Beckn.ACL.Common as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -47,7 +48,7 @@ buildOnInitReqV2 req = do
     let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
         commission = extractCommissionFromPaymentTags order.orderPayments
         paymentCharge = extractHighPrecTagFromPaymentTags Tags.PAYMENT_CHARGE order.orderPayments
-        paymentChargeBearer = extractTextTagFromPaymentTags Tags.PAYMENT_CHARGE_BEARER order.orderPayments
+        paymentChargeBearer = show . (.bearer) <$> PaymentCharge.paymentChargeDetailsFromTags (order.orderPayments >>= listToMaybe >>= (.paymentTags))
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do

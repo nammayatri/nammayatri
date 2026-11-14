@@ -44,7 +44,6 @@ import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types as DTC
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -92,7 +91,6 @@ import SharedLogic.DriverFleetOperatorAssociation (checkFleetDriverAndDriverOper
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -1196,11 +1194,7 @@ fareBreakUp merchantShortId opCity reqRideId = do
       }
 
 buildFareBreakUp :: Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
-buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
-  let mbProjectedBreakup = FC.projectFareParamsBreakup fp
-      discountAmount = fromMaybe 0 mbDiscount
-      mbApplied = mbProjectedBreakup <&> \b -> RD.applyRideDiscount b discountAmount
-      postDiscountTax = mbApplied <&> (.postDiscountApplicableTax)
+buildFareBreakUp mbDiscount DFP.FareParameters {..} = do
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
       driverSelectedFare = roundToIntegral <$> driverSelectedFare,
@@ -1223,10 +1217,9 @@ buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
       customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> customerCancellationDues,
       tollChargesWithCurrency = flip PriceAPIEntity currency <$> tollCharges,
       congestionChargeWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
-      parkingChargeWithCurrency = flip PriceAPIEntity currency <$> parkingCharge,
+      parkingChargeWithCurrency = flip PriceAPIEntity currency <$> (if isNothing parkingCharge && isNothing airportEntryFee then Nothing else Just (fromMaybe 0 parkingCharge + fromMaybe 0 airportEntryFee + fromMaybe 0 airportEntryFeeTax)),
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
-      discountTaxWithCurrency = flip PriceAPIEntity currency <$> postDiscountTax,
       negotiatedFareDeltaWithCurrency = flip PriceAPIEntity currency <$> negotiatedFareDelta,
       ..
     }

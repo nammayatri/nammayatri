@@ -48,6 +48,21 @@ create fareParameters = do
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
+updatePaymentCharge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParameters -> FareParameters -> m ()
+updatePaymentCharge oldFareParams fareParams =
+  when paymentChargeChanged $
+    updateOneWithKV
+      [ Se.Set BeamFP.paymentProcessingFee fareParams.paymentProcessingFee,
+        Se.Set BeamFP.paymentProcessingFeeVat fareParams.paymentProcessingFeeTax,
+        Se.Set BeamFP.paymentChargeTaxCgst fareParams.paymentChargeTaxCgst,
+        Se.Set BeamFP.paymentChargeTaxSgst fareParams.paymentChargeTaxSgst,
+        Se.Set BeamFP.paymentChargeTaxIgst fareParams.paymentChargeTaxIgst
+      ]
+      [Se.Is BeamFP.id $ Se.Eq fareParams.id.getId]
+  where
+    paymentChargeChanged = chargeFields oldFareParams /= chargeFields fareParams
+    chargeFields fp = (fp.paymentProcessingFee, fp.paymentProcessingFeeTax, fp.paymentChargeTaxCgst, fp.paymentChargeTaxSgst, fp.paymentChargeTaxIgst)
+
 updateCancellationCharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe HighPrecMoney -> Maybe HighPrecMoney -> Id FareParameters -> m ()
 updateCancellationCharges cancellationFeeTaxExclusive cancellationTax (Id fareParametersId) =
   updateOneWithKV
@@ -201,7 +216,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 conditionalCharges = conditionalCharges',
                 customerGateFeeItems = customerGateFeeItems',
                 paymentProcessingFee = paymentProcessingFee,
-                paymentProcessingFeeVat = paymentProcessingFeeVat,
+                paymentProcessingFeeTax = paymentProcessingFeeVat,
                 isVatTaxType = isVatTaxType,
                 businessDiscount = businessDiscount,
                 personalDiscount = personalDiscount,
@@ -230,7 +245,28 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 fareSettlementType = fareSettlementType,
                 negotiatedFareDelta = negotiatedFareDelta,
                 addOnCharges = addOnCharges,
-                bufferedFare = bufferedFare
+                bufferedFare = bufferedFare,
+                rideTaxCgst = rideTaxCgst,
+                rideTaxSgst = rideTaxSgst,
+                rideTaxIgst = rideTaxIgst,
+                parkingTaxCgst = parkingTaxCgst,
+                parkingTaxSgst = parkingTaxSgst,
+                parkingTaxIgst = parkingTaxIgst,
+                tollTaxCgst = tollTaxCgst,
+                tollTaxSgst = tollTaxSgst,
+                tollTaxIgst = tollTaxIgst,
+                airportEntryFee = airportEntryFee,
+                airportEntryFeeTax = airportEntryFeeTax,
+                airportEntryFeeTaxCgst = airportEntryFeeTaxCgst,
+                airportEntryFeeTaxSgst = airportEntryFeeTaxSgst,
+                airportEntryFeeTaxIgst = airportEntryFeeTaxIgst,
+                paymentChargeTaxCgst = paymentChargeTaxCgst,
+                paymentChargeTaxSgst = paymentChargeTaxSgst,
+                paymentChargeTaxIgst = paymentChargeTaxIgst,
+                cancellationDuesTax = cancellationDuesTax,
+                cancellationDuesTaxCgst = cancellationDuesTaxCgst,
+                cancellationDuesTaxSgst = cancellationDuesTaxSgst,
+                cancellationDuesTaxIgst = cancellationDuesTaxIgst
               }
       Nothing -> return Nothing
 
@@ -278,7 +314,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
         BeamFP.customerGateFeeItems = toJSON <$> customerGateFeeItems,
         BeamFP.paymentProcessingFee = paymentProcessingFee,
-        BeamFP.paymentProcessingFeeVat = paymentProcessingFeeVat,
+        BeamFP.paymentProcessingFeeVat = paymentProcessingFeeTax,
         BeamFP.isVatTaxType = isVatTaxType,
         BeamFP.commission = Nothing,
         BeamFP.discountApplicableRideFareTaxExclusive = discountApplicableRideFareTaxExclusive,
@@ -311,5 +347,26 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.fareSettlementType = fareSettlementType,
         BeamFP.negotiatedFareDelta = negotiatedFareDelta,
         BeamFP.addOnCharges = addOnCharges,
-        BeamFP.bufferedFare = bufferedFare
+        BeamFP.bufferedFare = bufferedFare,
+        BeamFP.rideTaxCgst = rideTaxCgst,
+        BeamFP.rideTaxSgst = rideTaxSgst,
+        BeamFP.rideTaxIgst = rideTaxIgst,
+        BeamFP.parkingTaxCgst = parkingTaxCgst,
+        BeamFP.parkingTaxSgst = parkingTaxSgst,
+        BeamFP.parkingTaxIgst = parkingTaxIgst,
+        BeamFP.tollTaxCgst = tollTaxCgst,
+        BeamFP.tollTaxSgst = tollTaxSgst,
+        BeamFP.tollTaxIgst = tollTaxIgst,
+        BeamFP.airportEntryFee = airportEntryFee,
+        BeamFP.airportEntryFeeTax = airportEntryFeeTax,
+        BeamFP.airportEntryFeeTaxCgst = airportEntryFeeTaxCgst,
+        BeamFP.airportEntryFeeTaxSgst = airportEntryFeeTaxSgst,
+        BeamFP.airportEntryFeeTaxIgst = airportEntryFeeTaxIgst,
+        BeamFP.paymentChargeTaxCgst = paymentChargeTaxCgst,
+        BeamFP.paymentChargeTaxSgst = paymentChargeTaxSgst,
+        BeamFP.paymentChargeTaxIgst = paymentChargeTaxIgst,
+        BeamFP.cancellationDuesTax = cancellationDuesTax,
+        BeamFP.cancellationDuesTaxCgst = cancellationDuesTaxCgst,
+        BeamFP.cancellationDuesTaxSgst = cancellationDuesTaxSgst,
+        BeamFP.cancellationDuesTaxIgst = cancellationDuesTaxIgst
       }

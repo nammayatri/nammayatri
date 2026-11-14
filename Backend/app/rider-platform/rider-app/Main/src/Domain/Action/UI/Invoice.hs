@@ -2,11 +2,13 @@ module Domain.Action.UI.Invoice
   ( getInvoice,
     getInvoiceList,
     govtChargesTitle,
+    taxBreakupItems,
   )
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import qualified Data.Text as T
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
@@ -73,6 +75,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("BOOTH_CHARGE", "Booth Charge"),
                   ("SCHEDULING_CHARGE", "Scheduling Charge")
                 ]
+                  <> taxBreakupItems govtChargesLabel
           mbInfoItems <- CHFBI.findFareBreakupItemsByEntityIdAndType booking.id.getId DFareBreakup.BOOKING booking.createdAt
           fareBreakups <- mapM (getFareBreakup booking mbInfoItems) breakupItems
           gateFeeBreakups <- getGateFeeBreakups booking mbInfoItems
@@ -187,6 +190,17 @@ getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing
             }
+
+taxBreakupItems :: Text -> [(Text, Text)]
+taxBreakupItems govtChargesLabel =
+  [ (FB.tagTitle FB.taxTags.rideFare.tax, govtChargesLabel),
+    (FB.tagTitle FB.taxTags.toll.tax, "Toll Tax"),
+    (FB.tagTitle FB.taxTags.parking.tax, "Parking Tax"),
+    (show Enums.AIRPORT_ENTRY_FEE, "Airport Entry Fee"),
+    (FB.tagTitle FB.taxTags.airportEntryFee.tax, "Airport Entry Fee Tax"),
+    (show Enums.PAYMENT_CHARGE, "Payment Charge"),
+    (FB.tagTitle FB.taxTags.paymentCharge.tax, "Payment Charge Tax")
+  ]
 
 -- | Invoice title of the fare's government charges: "GST" for a booking in an Indian city; elsewhere
 --   (e.g. European cities) the tax is not GST, so the generic title stays. The booking's own city

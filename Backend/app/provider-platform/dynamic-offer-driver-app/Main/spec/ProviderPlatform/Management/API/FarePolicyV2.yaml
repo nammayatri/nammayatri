@@ -10,6 +10,7 @@ imports:
   DistanceUnit: Kernel.Types.Common
   Months: Kernel.Types.Time
   TimeBound: Kernel.Types.TimeBound
+  TaxConfig: BecknV2.OnDemand.FareBreakup.Tax
   Area: Lib.Types.SpecialLocation
   IndianState: Kernel.Types.Beckn.Context
   TripCategory: Dashboard.Common
@@ -343,10 +344,11 @@ types:
     - congestionChargeMultiplier: Maybe FPV2CongestionChargeMultiplier
     - perDistanceUnitInsuranceCharge: Maybe HighPrecMoney
     - cardCharge: Maybe FPV2CardCharge
-    - vatChargeConfig: Maybe FPV2FareChargeConfig
     - commissionChargeConfig: Maybe FPV2FareChargeConfig
-    - cancellationCommissionChargeConfig: Maybe FPV2FareChargeConfig
-    - tollTaxChargeConfig: Maybe FPV2FareChargeConfig
+    - rideTaxConfig: Maybe TaxConfig
+    - tollTaxConfig: Maybe TaxConfig
+    - parkingTaxConfig: Maybe TaxConfig
+    - commissionTaxConfig: Maybe TaxConfig
     - platformFee: Maybe HighPrecMoney
     - platformFeeCgst: Maybe HighPrecMoney
     - platformFeeSgst: Maybe HighPrecMoney
@@ -437,6 +439,8 @@ types:
     - serviceTier: Maybe ServiceTierType
     - tripCategory: Maybe TripCategory
     - sampleTrips: "[FPV2SampleTrip]"
+    - paymentInstrument: Maybe Text
+    - discountAmount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
   FPV2FareBreakupItem:
     - title: Text
@@ -448,6 +452,10 @@ types:
     - minFare: HighPrecMoney
     - maxFare: HighPrecMoney
     - breakup: "[FPV2FareBreakupItem]"
+    - riderTotalFare: HighPrecMoney
+    - riderAdditions: "[FPV2FareBreakupItem]"
+    - netEarnings: HighPrecMoney
+    - driverDeductions: "[FPV2FareBreakupItem]"
   FPV2PreviewRes:
     - trips: "[FPV2TripPreview]"
 

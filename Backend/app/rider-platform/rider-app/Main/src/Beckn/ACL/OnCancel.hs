@@ -18,6 +18,8 @@ module Beckn.ACL.OnCancel
 where
 
 import qualified Beckn.ACL.Common as ACLCommon
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import qualified BecknV2.OnDemand.Settlement as Settlement
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -25,7 +27,6 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as BecknV2Utils
 import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
-import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -64,14 +65,13 @@ bookingCancelledEvent order = do
   let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
   let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
   let cancellationReasonCode = order.orderCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode)
-  -- Parse cancellation fee + tax from quotation breakup using parseProjectFareParamsBreakup
   let currency = fromMaybe INR cancellationFeeCurrency
       mbBreakupPairs =
         order.orderQuote >>= (.quotationBreakup) <&> \breakups ->
           mapMaybe (\b -> (,) <$> b.quotationBreakupInnerTitle <*> (b.quotationBreakupInnerPrice >>= (.priceValue) >>= highPrecMoneyFromText)) breakups
-      parsedBreakup = mbBreakupPairs >>= RD.parseProjectFareParamsBreakup
-      mbCancellationBase = (parsedBreakup <&> (.cancellationFeeTaxExclusive) >>= \v -> if v > 0 then Just v else Nothing) <|> (mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText)
-      mbCancellationTax = parsedBreakup <&> (.cancellationTax) >>= \v -> if v > 0 then Just v else Nothing
+      parsedCancellation = (.cancellationFee) . FB.componentLines . map (uncurry FB.BreakupLine) <$> mbBreakupPairs
+      mbCancellationBase = (parsedCancellation <&> fst >>= \v -> if v > 0 then Just v else Nothing) <|> (mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText)
+      mbCancellationTax = parsedCancellation <&> snd >>= \v -> if v > 0 then Just v else Nothing
       -- cancellationFee = base (tax-exclusive) from breakup; cancellationFeeTax = tax from breakup.
       -- BAP sums base + tax where the total is needed (Stripe charge, ride table) — no GST negation.
       effectiveFee = mbCancellationBase <&> \amount -> PriceAPIEntity amount currency
@@ -80,14 +80,25 @@ bookingCancelledEvent order = do
       -- Cancellation-consequence handoff from the BPP consequence matrix (absent on old BPPs)
       mbCollectionMode = BecknV2Utils.getTag Tag.CANCELLATION_COLLECTION_MODE order.orderTags
       mbCustomerNotificationKey = BecknV2Utils.getTag Tag.CUSTOMER_CANCELLATION_NOTIFICATION_KEY order.orderTags
+      orderSettlement = Settlement.settlementFromTags order.orderTags
+      paymentSettlement = Settlement.settlementFromTags (order.orderPayments >>= listToMaybe >>= (.paymentTags))
+      cancellationSettlement =
+        Settlement.SettlementTags
+          (orderSettlement.commission <|> paymentSettlement.commission)
+          (orderSettlement.commissionTaxBreakup <|> paymentSettlement.commissionTaxBreakup)
+          (orderSettlement.paymentCharge <|> paymentSettlement.paymentCharge)
+          (orderSettlement.paymentChargeTaxBreakup <|> paymentSettlement.paymentChargeTaxBreakup)
+          (orderSettlement.paymentChargeDetails <|> paymentSettlement.paymentChargeDetails)
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
         cancellationSource = cancellationSource,
         cancellationFee = effectiveFee,
         cancellationFeeTax = effectiveTax,
+        cancellationFeeTotal = (\amount -> PriceAPIEntity amount currency) <$> (mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText),
         cancellationReasonCode = cancellationReasonCode,
         fareBreakups = fareBreakups,
         collectionMode = mbCollectionMode,
-        customerCancellationNotificationKey = mbCustomerNotificationKey
+        customerCancellationNotificationKey = mbCustomerNotificationKey,
+        cancellationSettlement
       }

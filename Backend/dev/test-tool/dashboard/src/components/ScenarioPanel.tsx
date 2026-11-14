@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Scenario, StepResult } from '../types';
 import { ApiCatalog } from '../api-catalog';
 import './ScenarioPanel.css';
+import { Base64MediaButtons } from './Base64Media';
 
 interface Props {
   scenario: Scenario;
@@ -97,6 +98,7 @@ export const ScenarioPanel: React.FC<Props> = ({
               {isExpanded && result?.response && (
                 <div className="step-response">
                   <div className="response-status">HTTP {result.statusCode} • {result.durationMs}ms</div>
+                  <Base64MediaButtons data={result.response} />
                   <pre>{JSON.stringify(result.response, null, 2)}</pre>
                 </div>
               )}

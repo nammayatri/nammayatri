@@ -107,6 +107,7 @@ apis:
         - toDate: UTCTime
         - limit: Int
         - offset: Int
+        - entityId: Text
       response:
         type: WalletLedgerEntriesResponse
       migrate:

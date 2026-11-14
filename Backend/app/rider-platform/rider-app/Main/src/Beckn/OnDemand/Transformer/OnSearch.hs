@@ -2,8 +2,10 @@ module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.OnSearch
+import qualified BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
+import qualified BecknV2.Utils
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
 import EulerHS.Prelude hiding (id)
@@ -12,6 +14,7 @@ import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import qualified Kernel.Utils.Text
 import Tools.Error
 
 buildOnSearchReq :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Item] -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> m Domain.Action.Beckn.OnSearch.DOnSearchReq
@@ -141,6 +144,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               discount = discount_,
               driversLocation = driversLocation_,
               estimateBreakupList = estimateBreakupList_,
+              fareBreakups = Beckn.OnDemand.Utils.OnSearch.buildFareParamsBreakups item currency,
               estimatedFare = estimatedFare_,
               estimatedTotalFare = estimatedTotalFare_,
               itemId = itemId_,
@@ -175,7 +179,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               qar = qar_,
               smartTipReason,
               area = area_,
-              navigationInstruction = navigationInstruction_
+              navigationInstruction = navigationInstruction_,
+              riderTaxRates = BecknV2.Utils.getTag BecknV2.OnDemand.Tags.RIDE_TAX_RATES item.itemTags >>= Kernel.Utils.Text.decodeFromText
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
@@ -228,6 +233,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
               vehicleServiceTierLuggageCapacity = vehicleLuggageCapacity_,
               quoteBreakupList = quoteBreakupList_,
+              fareBreakups = Beckn.OnDemand.Utils.OnSearch.buildFareParamsBreakups item currency,
+              riderTaxRates = BecknV2.Utils.getTag BecknV2.OnDemand.Tags.RIDE_TAX_RATES item.itemTags >>= Kernel.Utils.Text.decodeFromText,
               tripCategory = tripCategory,
               vehicleCategory,
               vehicleIconUrl = vehicleIconUrl,

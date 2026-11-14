@@ -1,8 +1,9 @@
 module Domain.Action.Internal.OfferDiscount where
 
-import Data.Maybe (listToMaybe)
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.OpenApi (ToSchema)
-import qualified Domain.SharedLogic.RideDiscount as RD
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
@@ -21,13 +22,10 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
--- | Request body for the BPP → BAP internal offer-discount lookup.
---   BPP sends the post-EndRide eight-slot breakup ('projectFareParamsBreakup');
---   BAP applies the offer against the discount-applicable ride fare
---   inclusive of its VAT. 'fareAmount' is a legacy fallback.
 data OfferDiscountReq = OfferDiscountReq
   { fareAmount :: Maybe HighPrecMoney,
-    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
+    fareBreakups :: Maybe [FB.BreakupLine],
+    serviceTier :: Maybe DVST.ServiceTierType
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -54,23 +52,18 @@ getOfferDiscount apiKey bppBookingId req = do
   internalAPIKey <- asks (.internalAPIKey)
   SIA.checkInternalKey "offerDiscount" [internalAPIKey] apiKey
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  let mbOfferBase = case req.projectFareParamsBreakup of
-        Just b -> Just (b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax)
-        Nothing -> req.fareAmount
+  let mbOfferBase = req.fareAmount <&> \fare -> maybe fare (\breakupLines -> if null breakupLines then fare else FB.discountableAmount fare breakupLines) req.fareBreakups
   case (booking.selectedOfferId, mbOfferBase) of
     (Just offerId, Just offerBase) -> do
-      let productId = show booking.vehicleServiceTierType
+      let serviceTier = fromMaybe booking.vehicleServiceTierType req.serviceTier
+          offerBooking = booking {DRB.vehicleServiceTierType = serviceTier}
+          productId = show serviceTier
           price = mkPrice (Just booking.estimatedTotalFare.currency) offerBase
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"
       mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
-      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] [] [] mbRide (Just booking) Nothing
-      case snd <$> find (\(pid, _) -> pid == productId) productOffers of
-        Nothing -> throwError $ InternalError "No product offer found"
-        Just resp -> do
-          let filteredOffers = filter (\o -> o.offerId == offerId) resp.offerResp
-          case listToMaybe filteredOffers of
-            Nothing -> throwError $ InternalError "No filtered offer found"
-            Just offer -> pure $ OfferDiscountResp {discountAmount = Just offer.discountAmount}
-    _ -> throwError $ InternalError "No offer found"
+      productOffers <- SOffer.offerListWithBasket booking.merchantId booking.riderId booking.merchantOperatingCityId DOrder.RideHailing [(productId, price)] [] [] mbRide (Just offerBooking) Nothing
+      let mbEligibleOffer = find (\(pid, _) -> pid == productId) productOffers >>= find (\o -> o.offerId == offerId) . (.offerResp) . snd
+      pure $ OfferDiscountResp {discountAmount = (.discountAmount) <$> mbEligibleOffer}
+    _ -> pure $ OfferDiscountResp {discountAmount = Nothing}

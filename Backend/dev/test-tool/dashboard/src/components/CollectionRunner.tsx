@@ -14,6 +14,7 @@ import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { LoadTestModal } from './LoadTestModal';
+import { Base64MediaButtons, InlineMediaButton } from './Base64Media';
 import { StepResult, LogEntry } from '../types';
 import { startQaCollectionRun, stopQaCollectionRun, qaCollectionEventsUrl, syncQaCollectionsRepo, checkActiveQaRun, QaRunConflictError } from '../services/qaCollectionsRunner';
 
@@ -281,7 +282,7 @@ function JsonNode({ data, path, search, depth }: { data: any; path: string; sear
   if (typeof data === 'number') return <span className="jv-num">{data}</span>;
   if (typeof data === 'string') {
     const highlighted = search && data.toLowerCase().includes(search);
-    return <span className={`jv-str ${highlighted ? 'jv-highlight' : ''}`}>"{data}"</span>;
+    return <><span className={`jv-str ${highlighted ? 'jv-highlight' : ''}`}>"{data}"</span><InlineMediaButton value={data} path={path} /></>;
   }
 
   const isArray = Array.isArray(data);
@@ -1760,6 +1761,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                           &#128203; Copy
                         </button>
                       </div>
+                      <Base64MediaButtons data={state.result.data} />
                       <pre className="cr-response-body">{JSON.stringify(state.result.data, null, 2)}</pre>
                       {mockHitCount > 0 && <MockHitsPanel hits={state.mockHits!} />}
                     </div>

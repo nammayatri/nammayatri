@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.OnSearch where
 
 import Beckn.OnDemand.Utils.Common as Common
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Context as ContextUtils
@@ -25,6 +26,7 @@ import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
+import Domain.Types.FareBreakupInfo (FareBreakupInfoItem (..))
 import Domain.Types.SearchRequest
 import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
@@ -157,15 +159,27 @@ getTotalFareRange item currency = do
 
 buildQuoteBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.QuoteBreakupInfo]
 buildQuoteBreakupList item currency = do
-  let tagListRateCard = getTagListRateCardFromItem item
-      breakups = maybe [] (map (buildQuoteBreakUpItem currency)) tagListRateCard
+  let breakups = map (buildQuoteBreakUpItem currency) (fareBreakupTags False item)
   return (catMaybes breakups)
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item currency = do
-  let tagListRateCard = getTagListRateCardFromItem item
-      breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
+  let breakups = map (buildEstimateBreakUpItem currency) (fareBreakupTags False item)
   return (catMaybes breakups)
+
+buildFareParamsBreakups :: Spec.Item -> Currency -> Maybe [FareBreakupInfoItem]
+buildFareParamsBreakups item currency =
+  case mapMaybe toItem (fareBreakupTags True item) of
+    [] -> Nothing
+    items -> Just items
+  where
+    toItem tag = do
+      (title, price) <- getDetailsFromTag tag currency
+      lineTitle <- FB.rateCardLineTitle title
+      pure FareBreakupInfoItem {description = lineTitle, amount = price.amount, currency = price.currency}
+
+fareBreakupTags :: Bool -> Spec.Item -> [Spec.Tag]
+fareBreakupTags isFareParam item = filter (\tag -> isJust ((tag.tagDescriptor >>= (.descriptorCode)) >>= FB.rateCardLineTitle) == isFareParam) (fromMaybe [] (getTagListRateCardFromItem item))
 
 getTagListRateCardFromItem :: Spec.Item -> Maybe [Spec.Tag]
 getTagListRateCardFromItem item = do

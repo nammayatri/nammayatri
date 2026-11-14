@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
@@ -43,6 +44,8 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
             cancellationFeeImmediateCapture = cancellationFeeImmediateCapture,
             cancellationFeeStatus = cancellationFeeStatus,
+            cancellationPaymentCharge = cancellationPaymentCharge,
+            cancellationPaymentChargeTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationPaymentChargeTaxBreakup,
             chargeableDistance = Kernel.Types.Common.mkDistanceWithDefault distanceUnit chargeableDistanceValue <$> chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
@@ -141,6 +144,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
         Beam.cancellationFeeImmediateCapture = cancellationFeeImmediateCapture,
         Beam.cancellationFeeStatus = cancellationFeeStatus,
+        Beam.cancellationPaymentCharge = cancellationPaymentCharge,
+        Beam.cancellationPaymentChargeTaxBreakup = Kernel.Prelude.toJSON <$> cancellationPaymentChargeTaxBreakup,
         Beam.chargeableDistance = Kernel.Prelude.fmap Kernel.Types.Common.distanceToHighPrecMeters chargeableDistance,
         Beam.chargeableDistanceValue = Kernel.Prelude.fmap (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,

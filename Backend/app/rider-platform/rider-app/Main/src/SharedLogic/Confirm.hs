@@ -14,6 +14,8 @@
 
 module SharedLogic.Confirm where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Monad.Extra (anyM, maybeM)
 import qualified Data.HashMap.Strict as HM
@@ -21,7 +23,6 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingPartiesLink as DBPL
 import qualified Domain.Types.BookingStatus as DRB
@@ -29,6 +30,7 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -60,10 +62,12 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.DisplayBookingId as DBI
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Settlement as Settlement
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -144,6 +148,7 @@ data DConfirmRes = DConfirmRes
     paymentMode :: Maybe DMPM.PaymentMode,
     riderGender :: Maybe Text,
     bookingOfferEntity :: Maybe DOfferEntity.OfferEntity,
+    paymentChargeDetails :: Maybe PaymentCharge.PaymentChargeDetails,
     bookingFeePending :: Bool
   }
   deriving (Show, Generic)
@@ -228,15 +233,19 @@ confirm DConfirmReq {..} = do
   mbBookingOfferEntity <-
     case booking0.selectedOfferId of
       Just offerId -> do
-        let fareCtx = RD.parseProjectFareParamsBreakup $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
-            offerBaseAmount = case fareCtx of
-              Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-              Nothing -> booking0.estimatedTotalFare.amount
+        fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback quote.id.getId DFareBreakup.QUOTE (pure [])
+        let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx booking0.estimatedTotalFare.amount fareBreakups
             offerBasePrice = mkPrice (Just booking0.estimatedTotalFare.currency) offerBaseAmount
         mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking0) (Just searchRequest)
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID
+            let (entityDiscount, entityAmountSaved, entityPostOfferAmount) = case mfilter (> 0) quote.selectedOfferDiscountAmount of
+                  Just pinnedDiscount
+                    | computed.discountAmount > 0 ->
+                      let applied = maybe pinnedDiscount (\(fare, breakupLines) -> FB.clampDiscount fare breakupLines pinnedDiscount) fareCtx
+                       in (pinnedDiscount, applied + computed.payoutAmount, maybe computed.postOfferAmount (subtract applied . fst) fareCtx)
+                  _ -> (computed.discountAmount, computed.amountSaved, computed.postOfferAmount)
             return $
               Just $
                 DOfferEntity.OfferEntity
@@ -251,10 +260,10 @@ confirm DConfirmReq {..} = do
                     offerSponsoredBy = offerDetails.offerSponsoredBy,
                     autoApply = offerDetails.autoApply,
                     isHidden = offerDetails.isHidden,
-                    discountAmount = computed.discountAmount,
+                    discountAmount = entityDiscount,
                     payoutAmount = computed.payoutAmount,
-                    amountSaved = computed.amountSaved,
-                    postOfferAmount = computed.postOfferAmount,
+                    amountSaved = entityAmountSaved,
+                    postOfferAmount = entityPostOfferAmount,
                     frequencyType = offerDetails.frequencyType,
                     appliedCount = offerDetails.appliedCount,
                     maxApplyCount = offerDetails.maxApplyCount,
@@ -348,6 +357,7 @@ confirm DConfirmReq {..} = do
             then pure (Nothing, True)
             else pure (Nothing, False)
 
+  paymentChargeDetails <- Settlement.resolvePaymentChargeDetails merchantOperatingCityId paymentInstrument
   return $
     DConfirmRes
       { booking,
@@ -584,6 +594,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           commission = mbOneShotDetails >>= (.commission),
           paymentCharge = mbOneShotDetails >>= (.paymentCharge),
           paymentChargeBearer = mbOneShotDetails >>= (.paymentChargeBearer),
+          riderTaxRates = quote.riderTaxRates,
           selectedOfferId = quote.selectedOfferId,
           offersFraudCheckFailureReason = Nothing,
           issuedById = Nothing,
@@ -593,6 +604,8 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           supplierAddress = Nothing,
           supplierGSTIN = Nothing,
           supplierTaxNo = Nothing,
+          issuedByGstin = Nothing,
+          issuedByTaxNo = Nothing,
           supplierId = Nothing,
           -- Both are filled in later, once a driver is assigned (eligibility roll / swap link).
           eligibleForBetterDriverSearch = Nothing,

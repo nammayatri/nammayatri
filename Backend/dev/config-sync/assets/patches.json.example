@@ -2267,6 +2267,29 @@
         "replace": "localhost:8016/beckn"
       },
       {
+        "_comment": "Prod c2 cloud, sandbox and OCR hosts"
+      },
+      {
+        "find": "https://api.c2.moving.tech/dobpp",
+        "replace": "http://localhost:8016"
+      },
+      {
+        "find": "https://api.c2.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://api.sandbox.moving.tech/gtfs-inmemory",
+        "replace": "http://localhost:8080/gtfs-inmemory"
+      },
+      {
+        "find": "https://api.sandbox.moving.tech/nandi",
+        "replace": "http://localhost:8080/nandi"
+      },
+      {
+        "find": "https://ocr.moving.tech",
+        "replace": "http://localhost:8080/ocr"
+      },
+      {
         "_comment": "Prod BAP (rider) URLs — /bap/beckn/ path → rider-app at localhost:8013/bap/beckn/"
       },
       {
@@ -4313,6 +4336,45 @@
       {
         "find": "api.moving.tech/dobpp/beckn",
         "replace": "localhost:8016/beckn"
+      },
+      {
+        "_comment": "Prod international c2 cloud hosts"
+      },
+      {
+        "find": "https://api.c2.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://dashboard.c2.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://admin.c2.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://control-center.c2.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "api.c2.eu.moving.tech",
+        "replace": "localhost:8013"
+      },
+      {
+        "find": "https://dashboard.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://control-center.eu.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://api.sandbox.moving.tech/gtfs-inmemory",
+        "replace": "http://localhost:8080/gtfs-inmemory"
+      },
+      {
+        "find": "https://api.sandbox.moving.tech/nandi",
+        "replace": "http://localhost:8080/nandi"
       },
       {
         "_comment": "Prod BAP (rider) URLs — /bap/beckn/ path → rider-app at localhost:8013/bap/beckn/"

@@ -1,6 +1,5 @@
 module SharedLogic.FareBreakupInfo
   ( getFareBreakupInfo,
-    findFareBreakupItems,
     findFareBreakupsFromInfo,
     getFareBreakupsWithFallback,
     fareBreakupToItem,

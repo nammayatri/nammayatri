@@ -327,6 +327,7 @@ parseChangeServiceTierEvent transactionId order = do
   let newEstimatedFare = order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack
   -- The BPP quote ID can be used by BAP to look up the corresponding BAP-side quote
   let newQuoteId = order.orderItems >>= listToMaybe >>= (.itemId)
+  let fareBreakups = maybe [] (mapMaybe Common.mkDFareBreakup) (order.orderQuote >>= (.quotationBreakup))
   return $
     DOnUpdate.OUChangeServiceTierReq
       DOnUpdate.ChangeServiceTierReq
@@ -334,6 +335,7 @@ parseChangeServiceTierEvent transactionId order = do
           newVehicleServiceTier = newServiceTier,
           newEstimatedFare,
           newQuoteId,
+          fareBreakups,
           transactionId
         }
 

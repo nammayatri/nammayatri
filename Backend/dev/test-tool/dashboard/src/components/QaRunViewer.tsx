@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import './QaRunViewer.css';
 import { fetchQaRunDetail, qaCollectionEventsUrl, stopQaCollectionRun, QaRunDetail, QaRunEvent } from '../services/qaCollectionsRunner';
 import { LogPanel } from './LogPanel';
+import { Base64MediaButtons } from './Base64Media';
 import type { LogEntry } from '../types';
 import type { PostmanStepResult } from '../services/api';
 
@@ -361,6 +362,7 @@ export const QaRunViewer: React.FC = () => {
                                 ))}
                               </div>
                             )}
+                            <Base64MediaButtons data={step.result.data} />
                             <pre className="cr-response-body">{JSON.stringify(step.result.data, null, 2)}</pre>
                           </div>
                         )}

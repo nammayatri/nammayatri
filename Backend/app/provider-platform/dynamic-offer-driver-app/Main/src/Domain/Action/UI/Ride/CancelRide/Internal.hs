@@ -16,7 +16,8 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
     cancelRideTransaction,
     createCancellationLedgerEntries,
-    applyCancellationLedgerAction,
+    settleCancellationLedger,
+    markCancellationLedgerDue,
     -- re-exported from SharedLogic.CancellationOrchestrator for existing callers
     driverDistanceToPickup,
     buildCancellationContext,
@@ -26,6 +27,8 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -42,6 +45,7 @@ import Domain.Types.FinancialYear (financialYearOf)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -62,7 +66,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry, withOwnerLock)
+import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, FinanceM, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), getEntriesByReference, includeEntryIds, invoice, settleEntry, transferPending, updateEntryStatus, voidEntry, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
@@ -219,7 +223,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             -- blacklist, driver overlay, coin event, driver money, rate counting — then
             -- the customer-side charge (dues + counters + ledger entries).
             applyImmediateConsequences consequenceCtx doCancellationRateBasedBlocking
-            chargesOutcome <- applyTerminalConsequences consequenceCtx (\base gst mbCreditDebit -> createCancellationLedgerEntries booking ride base gst transporterConfig mbCreditDebit)
+            chargesOutcome <- applyTerminalConsequences consequenceCtx (\base feeTax mbCreditDebit -> createCancellationLedgerEntries booking ride base feeTax transporterConfig mbCreditDebit)
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
             -- Release pickup-zone counters (idempotent). ByDriver triggers reallocation,
             -- so demand stays live for the next match; every other source terminates the booking.
@@ -242,7 +246,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               unless isReallocated $ do
                 -- Reload ride to get persisted cancellationFee/cancellationFeeTax
                 updatedRide <- QRide.findById ride.id
-                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (chargesOutcome >>= (.fee)) (chargesOutcome >>= (.tax)) updatedRide
+                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (chargesOutcome >>= (.fee)) ((.total) <$> (chargesOutcome >>= (.feeTax))) updatedRide
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
@@ -322,12 +326,13 @@ createCancellationLedgerEntries ::
   SRB.Booking ->
   DRide.Ride ->
   HighPrecMoney ->
-  HighPrecMoney ->
+  Maybe TaxBreakup ->
   DTC.TransporterConfig ->
   Maybe HighPrecMoney ->
   m ()
-createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation transporterConfig mbRideCreditDebit = do
+createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax transporterConfig mbRideCreditDebit = do
   let riderId = booking.riderId
+      taxOnCancellation = Tax.taxTotal cancellationFeeTax
   case riderId of
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
@@ -355,7 +360,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             cancellationTaxDest = if cancelIsVat then OwnerLiability else GovtIndirect
             cancellationComponents =
               [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
-                (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
+                (taxOnCancellation, walletReferenceCustomerCancellationTax (if cancelIsVat then Tax.VAT else Tax.GST), cancellationTaxDest)
               ]
             mbTdsRate =
               if panAadhaarLinkTdsEnabled transporterConfig.taxConfig
@@ -405,17 +410,19 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             ride
             mbFleetInfo
             mbDriverInfo
-            gstOnCancellation
+            taxOnCancellation
+        mbPendingDues <- mfilter ((== DCDD.PENDING) . (.paymentStatus)) <$> QCDD.findByRideId ride.id
         result <- runFinance ctx $ do
           -- Post ledger entries only when there is an actual charge. For a ₹0 valid buyer
           -- cancellation we skip the transfers and still create a standalone ₹0 invoice below
           -- (no linked entries → no GST tax transaction).
-          when (baseCancellation + gstOnCancellation > 0) $ do
+          when (baseCancellation + taxOnCancellation > 0) $ do
             mapM_
               (\(amt, ref, dest) -> void $ transferPending BuyerAsset dest amt ref)
               cancellationComponents
             whenJust mbTdsAmount $ \tdsAmount ->
               void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+            cancellationChargeTransfers booking (mbPendingDues >>= (.cancellationCommission)) (mbPendingDues >>= (.cancellationCommissionTaxBreakup)) mbPendingDues
           invoice
             InvoiceConfig
               { invoiceType = RideCancellation,
@@ -425,35 +432,25 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                 issuedToAddress = booking.fromLocation.address.fullAddress,
                 gstBreakdown = rideGstBreakdown,
                 lineItems =
-                  let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
-                      inclusiveCancellation = baseCancellation + gstOnCancellation
-                   in if clubVatInclusive
+                  catMaybes
+                    [ if baseCancellation > 0 || baseCancellation + taxOnCancellation == 0
+                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
+                        else Nothing,
+                      if taxOnCancellation > 0
                         then
-                          catMaybes
-                            [ if inclusiveCancellation >= 0
-                                then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", descriptionType = Just CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
-                                else Nothing
-                            ]
-                        else
-                          catMaybes
-                            [ if baseCancellation > 0 || inclusiveCancellation == 0
-                                then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
-                                else Nothing,
-                              if gstOnCancellation > 0
-                                then
-                                  Just
-                                    InvoiceLineItem
-                                      { description = if cancelIsVat then "Cancellation Fee VAT" else "GST on Cancellation Fee",
-                                        descriptionType = Just (if cancelIsVat then CancellationFeeVat else GstOnCancellationFee),
-                                        quantity = 1,
-                                        unitPrice = gstOnCancellation,
-                                        lineTotal = gstOnCancellation,
-                                        isExternalCharge = False,
-                                        groupId = Just "g-cancel",
-                                        itemType = Just Tax
-                                      }
-                                else Nothing
-                            ],
+                          Just
+                            InvoiceLineItem
+                              { description = if cancelIsVat then "Cancellation Fee VAT" else "GST on Cancellation Fee",
+                                descriptionType = Just (if cancelIsVat then CancellationFeeVat else GstOnCancellationFee),
+                                quantity = 1,
+                                unitPrice = taxOnCancellation,
+                                lineTotal = taxOnCancellation,
+                                isExternalCharge = False,
+                                groupId = Just "g-cancel",
+                                itemType = Just Tax
+                              }
+                        else Nothing
+                    ],
                 referenceId = Just booking.id.getId,
                 isVat = cancelIsVat,
                 issuedToTaxNo = Nothing,
@@ -478,7 +475,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
                 createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
                   GenerateInvoicePdfJobData {invoiceId = invId.getId}
-        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show taxOnCancellation <> " tds=" <> show mbTdsAmount
         whenJust mbRideCreditDebit $ \creditDebit ->
           SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig
 
@@ -500,12 +497,64 @@ buildCancellationFinanceCtx booking ride transporterConfig = do
 cancellationLedgerRefs :: [Text]
 cancellationLedgerRefs =
   [ walletReferenceCustomerCancellationCharges,
-    walletReferenceCustomerCancellationGST,
+    walletReferenceCustomerCancellationTax Tax.GST,
+    walletReferenceCustomerCancellationTax Tax.VAT,
     walletReferenceTDSDeductionCancellation,
-    walletReferenceCancellationVATInput
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePaymentChargeTaxPaidByCustomer Tax.GST,
+    walletReferencePaymentChargeTaxPaidByCustomer Tax.VAT,
+    walletReferencePGPaymentCharges,
+    walletReferencePGPaymentChargesTax Tax.GST,
+    walletReferencePGPaymentChargesTax Tax.VAT
+  ]
+    <> cancellationCommissionLedgerRefs
+
+cancellationCommissionLedgerRefs :: [Text]
+cancellationCommissionLedgerRefs =
+  [ walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionTax Tax.GST,
+    walletReferenceCancellationCommissionTax Tax.VAT
   ]
 
-applyCancellationLedgerAction ::
+cancellationChargeTransfers ::
+  forall m r.
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  SRB.Booking ->
+  Maybe HighPrecMoney ->
+  Maybe TaxBreakup ->
+  Maybe DCDD.CancellationDuesDetails ->
+  FinanceM m ()
+cancellationChargeTransfers booking mbCommission mbCommissionTax mbDues = do
+  let taxRegime = if fromMaybe False booking.fareParams.isVatTaxType then Tax.VAT else Tax.GST
+      commissionTax = Tax.taxTotal mbCommissionTax
+      commissionBase = fromMaybe 0 mbCommission - commissionTax
+      charge = fromMaybe 0 (mbDues >>= (.paymentCharge))
+      chargeTax = Tax.taxTotal (mbDues >>= (.paymentChargeTaxBreakup))
+      mbBearer = (.bearer) <$> booking.paymentChargeDetails
+      postIfPositive :: AccountRole -> AccountRole -> HighPrecMoney -> Text -> FinanceM m ()
+      postIfPositive from to amount ref = when (amount > 0) $ void $ transferPending from to amount ref
+  postIfPositive OwnerLiability SellerRevenue commissionBase walletReferenceCancellationCommission
+  postIfPositive OwnerLiability SellerRevenue commissionTax (walletReferenceCancellationCommissionTax taxRegime)
+  when (mbBearer == Just PAYMENT_CUSTOMER) $ do
+    postIfPositive BuyerAsset OwnerLiability charge walletReferencePaymentChargePaidByCustomer
+    postIfPositive BuyerAsset OwnerLiability chargeTax (walletReferencePaymentChargeTaxPaidByCustomer taxRegime)
+  when (mbBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER]) $ do
+    postIfPositive OwnerLiability SellerLiability charge walletReferencePGPaymentCharges
+    postIfPositive OwnerLiability SellerLiability chargeTax (walletReferencePGPaymentChargesTax taxRegime)
+
+markCancellationLedgerDue ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  SRB.Booking ->
+  m ()
+markCancellationLedgerDue booking = do
+  entries <- concat <$> mapM (`getEntriesByReference` booking.id.getId) cancellationLedgerRefs
+  Kernel.Prelude.forM_ (filter ((== PENDING) . (.status)) entries) $ \e -> updateEntryStatus e.id DUE
+  logInfo $ "Marked cancellation ledger entries due for bookingId: " <> booking.id.getId
+
+settleCancellationLedger ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
@@ -515,149 +564,62 @@ applyCancellationLedgerAction ::
   ) =>
   SRB.Booking ->
   DRide.Ride ->
-  SCD.CancellationLedgerAction ->
   DTC.TransporterConfig ->
   m ()
-applyCancellationLedgerAction booking ride action transporterConfig =
+settleCancellationLedger booking ride transporterConfig =
   withOwnerLock (maybe ride.driverId.getId (.getId) ride.fleetOwnerId) $ do
     mbCancellationDuesDetails <- QCDD.findByRideId ride.id
     let refId = booking.id.getId
-        cancellationFee = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFee))
-        cancellationFeeTax = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFeeTax))
-        -- No overdue amounts configured => no reduction: the driver keeps the full fee.
-        overdueCharge = fromMaybe cancellationFee (mbCancellationDuesDetails >>= (.overdueCancellationCharge))
-        overdueTax = fromMaybe cancellationFeeTax (mbCancellationDuesDetails >>= (.overdueCancellationTax))
-        -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-        cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
-        -- When a cancellation goes overdue the driver only gets the (lower) overdue charge; the
-        -- platform keeps the (cancellation - overdue) difference as SellerRevenue.
-        overdueBenefit = max 0 (cancellationFee - overdueCharge)
-        overdueBenefitTax = max 0 (cancellationFeeTax - overdueTax)
-        -- Benefit tax: VAT portion is the platform's revenue, GST is remitted to govt.
-        overdueBenefitTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then SellerRevenue else GovtIndirect
-        -- Only the driver's entries reach a payout, so only these ever carry a settlementStatus.
-        overdueDriverRefs = [walletReferenceOverdueCancellationCharge, walletReferenceOverdueCancellationTax]
-        overdueAllRefs = overdueDriverRefs <> [walletReferenceCancellationOverdueBenefit, walletReferenceCancellationOverdueBenefitTax]
-    -- All four refs: a zero-amount entry is never written, so one ref alone can miss an overdue.
-    overdueEntries <- concat <$> mapM (`getEntriesByReference` refId) overdueAllRefs
-    let alreadyOverdue = not (Kernel.Prelude.null overdueEntries)
-    case action of
-      SCD.SettleCancellationLedger -> do
-        -- Decide once whether the settled charge is the actual cancellation fee (reversed overdue / never overdue)
-        -- or the overdue charge that still stands; this single choice drives fare params + service VAT.
-        let alreadyReversed = not (Kernel.Prelude.null (filter (\e -> isJust e.reversalOf) overdueEntries))
-            -- Reversal covers driver + benefit entries together, so it is only safe while none of the
-            -- driver's has been paid out. Benefit entries never reach a payout and must not be counted.
-            reversibleEntries = filter (\e -> isNothing e.reversalOf) overdueEntries
-            driverPaidOut = any (\e -> e.referenceType `elem` overdueDriverRefs && isJust e.settlementStatus) reversibleEntries
-            willReverse = not (alreadyReversed || driverPaidOut || Kernel.Prelude.null reversibleEntries)
-            useCancellationAmount = not alreadyOverdue || willReverse
-        if alreadyOverdue
-          then -- Settled after going overdue: reverse the overdue AND benefit entries, then book the actual cancellation charge.
-          when willReverse $ do
-            Kernel.Prelude.forM_ reversibleEntries $ \e -> void $ createReversal e.id "CancellationSettledAfterOverdue"
-            let baseCancellation = cancellationFee
-                gstCancellation = cancellationFeeTax
-            when (baseCancellation > 0 || gstCancellation > 0) $ do
-              ctx <- buildCancellationFinanceCtx booking ride transporterConfig
-              result <- runFinance ctx $ do
-                when (baseCancellation > 0) $ do
-                  transfer_ BuyerAsset OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
-                when (gstCancellation > 0) $ do
-                  transfer_ BuyerAsset cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
-              case result of
-                Left err -> logError $ "Failed to book settled cancellation charge after overdue for bookingId: " <> refId <> " - " <> show err
-                Right _ -> logInfo $ "Reversed overdue and booked settled cancellation charge for bookingId: " <> refId <> " base=" <> show baseCancellation <> " tax=" <> show gstCancellation
-          else do
-            entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs
-            Kernel.Prelude.forM_ entries $ \e ->
-              when (e.status == PENDING || e.status == DUE) $ settleEntry e.id
-            logInfo $ "Settled cancellation ledger entries for bookingId: " <> refId
-        SCD.settleCustomerCancellationDues booking ride
-        -- Effective cancellation charge that now stands; drives both fare params and service VAT.
-        -- The overdue side reads the fallback-applied amounts, not the raw columns.
-        let (effectiveCancellationFee, effectiveCancellationTax) =
-              if useCancellationAmount
-                then (mbCancellationDuesDetails >>= (.cancellationFee), mbCancellationDuesDetails >>= (.cancellationFeeTax))
-                else (overdueCharge <$ mbCancellationDuesDetails, overdueTax <$ mbCancellationDuesDetails)
-        whenJust ride.fareParametersId $ QFP.updateCancellationCharges effectiveCancellationFee effectiveCancellationTax
-        let cancelInclusive = fromMaybe 0 effectiveCancellationFee + fromMaybe 0 effectiveCancellationTax
-            cancelServiceVatAmount = case transporterConfig.taxConfig.serviceVatPercentage of
-              Just pct -> HighPrecMoney (cancelInclusive.getHighPrecMoney * (toRational pct / 100))
-              Nothing -> 0
-        when (cancelServiceVatAmount > 0) $ do
-          ctx <- buildCancellationFinanceCtx booking ride transporterConfig
-          result <- runFinance ctx $ void $ transferWithoutAttribution GovtExpense OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
-          case result of
-            Left err -> logError $ "Failed to book cancellation service VAT for bookingId: " <> refId <> " - " <> show err
-            Right _ -> logInfo $ "Booked cancellation service VAT for bookingId: " <> refId <> " amount=" <> show cancelServiceVatAmount
-        -- Commission on the settled cancellation fee. The PENDING guard keeps it single: a fee folded
-        -- into the next ride's fare is marked PAID and commissioned at EndRide, yet can still reach
-        -- this branch afterwards. Never emitted at cancel time — an unpaid fee would leave a Draft
-        -- invoice in the monthly aggregate.
-        -- The commission follows the fee: no overdue charge configured means the driver keeps the full
-        -- fee, so the full commission applies. Hence the guard reads the charge, not the commission.
-        let effectiveCancellationCommission
-              | useCancellationAmount = mbCancellationDuesDetails >>= (.cancellationCommission)
-              | isNothing (mbCancellationDuesDetails >>= (.overdueCancellationCharge)) =
-                mbCancellationDuesDetails >>= (.cancellationCommission)
-              | otherwise = mbCancellationDuesDetails >>= (.overdueCancellationCommission)
-            cddWasPending = maybe False (\cdd -> cdd.paymentStatus == DCDD.PENDING) mbCancellationDuesDetails
-            cancellationCommissionGross = fromMaybe 0 effectiveCancellationCommission
-        when (cddWasPending && cancellationCommissionGross > 0) $ do
-          let (ccBase, ccVat) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionGross
-          driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-          ctx <- buildCancellationFinanceCtx booking ride transporterConfig
-          commissionResult <- runFinance ctx $ do
-            void $ transfer OwnerLiability SellerRevenue ccBase walletReferenceCancellationCommission Nothing
-            when (ccVat > 0) $
-              void $ transfer OwnerLiability SellerRevenue ccVat walletReferenceCancellationCommissionVAT Nothing
-            invoice
-              InvoiceConfig
-                { invoiceType = Commission,
-                  issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
-                  issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-                  issuedToName = Just driver.firstName,
-                  issuedToAddress = Nothing,
-                  referenceId = Just booking.id.getId,
-                  lineItems =
-                    catMaybes
-                      [ Just InvoiceLineItem {description = "Cancellation Commission", descriptionType = Just CancellationCommission, quantity = 1, unitPrice = ccBase, lineTotal = ccBase, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Fare},
-                        if ccVat > 0
-                          then Just InvoiceLineItem {description = "Cancellation Commission VAT", descriptionType = Just CancellationCommissionTax, quantity = 1, unitPrice = ccVat, lineTotal = ccVat, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Tax}
-                          else Nothing
-                      ],
-                  gstBreakdown = Nothing,
-                  isVat = fromMaybe False booking.fareParams.isVatTaxType,
-                  issuedToTaxNo = Nothing,
-                  issuedByTaxNo = Nothing,
-                  paymentMode = Nothing,
-                  periodStart = Nothing,
-                  periodEnd = Nothing
-                }
-          case commissionResult of
-            Left err -> logError $ "Failed to book cancellation commission for bookingId: " <> refId <> " - " <> show err
-            Right _ -> logInfo $ "Booked cancellation commission for bookingId: " <> refId <> " gross=" <> show cancellationCommissionGross
-      SCD.OverdueCancellationLedger ->
-        unless alreadyOverdue $ do
-          entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs
-          Kernel.Prelude.forM_ entries $ \e ->
-            when (e.status == PENDING || e.status == DUE) $ voidEntry e.id "CancellationOverdue"
-          when (overdueCharge > 0 || overdueTax > 0 || overdueBenefit > 0 || overdueBenefitTax > 0) $ do
-            ctx <- buildCancellationFinanceCtx booking ride transporterConfig
-            result <- runFinance ctx $ do
-              when (overdueCharge > 0) $ do
-                transfer_ BuyerAsset OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
-              when (overdueTax > 0) $ do
-                transfer_ BuyerAsset cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
-              -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer.
-              when (overdueBenefit > 0) $ do
-                transfer_ BuyerAsset SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
-              when (overdueBenefitTax > 0) $ do
-                transfer_ BuyerAsset overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
-            case result of
-              Left err -> logError $ "Failed to create overdue cancellation ledger entries: " <> show err
-              Right _ -> logInfo $ "Created overdue cancellation ledger entries for bookingId: " <> refId <> " charge=" <> show overdueCharge <> " tax=" <> show overdueTax <> " benefit=" <> show overdueBenefit <> " benefitTax=" <> show overdueBenefitTax
+        taxRegime = if fromMaybe False booking.fareParams.isVatTaxType then Tax.VAT else Tax.GST
+        cancellationPaymentCharge = fromMaybe 0 (mbCancellationDuesDetails >>= (.paymentCharge))
+        cancellationPaymentChargeTax = Tax.taxTotal (mbCancellationDuesDetails >>= (.paymentChargeTaxBreakup))
+        collectedOnNextRide = maybe False (\cdd -> SCD.carriedInRiderBalance cdd && cdd.paymentStatus == DCDD.PAID) mbCancellationDuesDetails
+    entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs
+    Kernel.Prelude.forM_ entries $ \e ->
+      when (e.status == PENDING || e.status == DUE) $
+        if collectedOnNextRide then voidEntry e.id "CancellationDuesPostedAtRideEnd" else settleEntry e.id
+    logInfo $ "Settled cancellation ledger entries for bookingId: " <> refId
+    SCD.settleCustomerCancellationDues booking ride
+    whenJust ride.fareParametersId $ QFP.updateCancellationCharges (mbCancellationDuesDetails >>= (.cancellationFee)) (mbCancellationDuesDetails >>= (.cancellationFeeTax))
+    whenJust (mfilter ((== DCDD.PENDING) . (.paymentStatus)) mbCancellationDuesDetails) $ \_ -> do
+      commissionEntries <- filter ((== SETTLED) . (.status)) . concat <$> mapM (`getEntriesByReference` refId) cancellationCommissionLedgerRefs
+      let ccBase = Kernel.Prelude.sum [e.amount | e <- commissionEntries, e.referenceType == walletReferenceCancellationCommission]
+          ccVat = Kernel.Prelude.sum [e.amount | e <- commissionEntries, e.referenceType /= walletReferenceCancellationCommission]
+      unless (Kernel.Prelude.null commissionEntries) $ do
+        driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        ctx <- buildCancellationFinanceCtx booking ride transporterConfig
+        commissionResult <- runFinance ctx $ do
+          includeEntryIds ((.id) <$> commissionEntries)
+          invoice
+            InvoiceConfig
+              { invoiceType = Commission,
+                issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
+                issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+                issuedToName = Just driver.firstName,
+                issuedToAddress = Nothing,
+                referenceId = Just booking.id.getId,
+                lineItems =
+                  catMaybes
+                    [ Just InvoiceLineItem {description = "Cancellation Commission", descriptionType = Just CancellationCommission, quantity = 1, unitPrice = ccBase, lineTotal = ccBase, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Fare},
+                      if ccVat > 0
+                        then Just InvoiceLineItem {description = "Cancellation Commission VAT", descriptionType = Just CancellationCommissionTax, quantity = 1, unitPrice = ccVat, lineTotal = ccVat, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Tax}
+                        else Nothing
+                    ],
+                gstBreakdown = Nothing,
+                isVat = fromMaybe False booking.fareParams.isVatTaxType,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing,
+                paymentMode = Nothing,
+                periodStart = Nothing,
+                periodEnd = Nothing
+              }
+        case commissionResult of
+          Left err -> logError $ "Failed to book cancellation commission for bookingId: " <> refId <> " - " <> show err
+          Right _ -> logInfo $ "Settled cancellation commission for bookingId: " <> refId <> " base=" <> show ccBase <> " tax=" <> show ccVat
+      when (cancellationPaymentCharge > 0 && ((.bearer) <$> booking.paymentChargeDetails) == Just PAYMENT_PLATFORM) $ do
+        ctx <- buildCancellationFinanceCtx booking ride transporterConfig
+        chargeResults <- mapM (\(chargeAmount, chargeRef) -> recordStripeChargeLedger ctx FundByPlatform chargeAmount chargeRef) [(cancellationPaymentCharge, walletReferencePGPaymentCharges), (cancellationPaymentChargeTax, walletReferencePGPaymentChargesTax taxRegime)]
+        Kernel.Prelude.forM_ chargeResults $ either (\err -> logError $ "Failed to book platform-borne cancellation payment charge for bookingId: " <> refId <> " - " <> show err) (const (pure ()))
 
 -- buildPenaltyCheckContext was removed: the driver penalty preview (postPenaltyCheck)
 -- now resolves the consequence matrix directly instead of simulating PenaltyCheck tags.

@@ -9,6 +9,7 @@ imports:
   BillingCategory: SharedLogic.Type
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   AddOnData: Domain.Types.AddOnConfig
+  PaymentChargeDetails: BecknV2.OnDemand.Settlement
   Value: Data.Aeson
 
 SearchTry:
@@ -62,6 +63,8 @@ SearchTry:
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
     paymentInstrument: Maybe PaymentInstrument
+    paymentChargeDetails: Maybe PaymentChargeDetails
+    discountAmount: Maybe HighPrecMoney
     addOnData: "[AddOnData]"
     standInForBookingId: Maybe Text
     createdAt: UTCTime
@@ -80,6 +83,7 @@ SearchTry:
     driverPreference: "Maybe [Text]"
     billingCategory: Maybe BillingCategory
     addOnData: Maybe Value
+    paymentChargeDetails: Maybe Value
 
   beamFields:
     vehicleServiceTier:
@@ -125,6 +129,7 @@ SearchTry:
     driverPreference: driverPreference|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     addOnData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData)|E
+    paymentChargeDetails: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeDetails|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -147,6 +152,7 @@ SearchTry:
     preferSafetyPlus: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just|I
     addOnData: Just $ toJSON addOnData|E
+    paymentChargeDetails: toJSON <$> paymentChargeDetails|E
 
 
   constraints:
@@ -173,6 +179,7 @@ SearchTry:
     searchRepeatType: character varying (255)
     reallocationOutcome: character varying (255)
     addOnData: "json"
+    paymentChargeDetails: "json"
 
   excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
 

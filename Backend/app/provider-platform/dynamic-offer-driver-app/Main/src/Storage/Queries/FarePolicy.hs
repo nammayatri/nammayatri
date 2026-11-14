@@ -63,10 +63,11 @@ update' farePolicy = do
       Se.Set BeamFP.businessDiscountPercentage $ farePolicy.businessDiscountPercentage,
       Se.Set BeamFP.personalDiscountPercentage $ farePolicy.personalDiscountPercentage,
       Se.Set BeamFP.priorityCharges $ farePolicy.priorityCharges,
-      Se.Set BeamFP.vatChargeConfig $ encodeChargeConfig <$> farePolicy.vatChargeConfig,
       Se.Set BeamFP.commissionChargeConfig $ encodeChargeConfig <$> farePolicy.commissionChargeConfig,
-      Se.Set BeamFP.cancellationCommissionChargeConfig $ encodeChargeConfig <$> farePolicy.cancellationCommissionChargeConfig,
-      Se.Set BeamFP.tollTaxChargeConfig $ encodeChargeConfig <$> farePolicy.tollTaxChargeConfig,
+      Se.Set BeamFP.rideTaxConfig $ encodeChargeConfig <$> farePolicy.rideTaxConfig,
+      Se.Set BeamFP.tollTaxConfig $ encodeChargeConfig <$> farePolicy.tollTaxConfig,
+      Se.Set BeamFP.parkingTaxConfig $ encodeChargeConfig <$> farePolicy.parkingTaxConfig,
+      Se.Set BeamFP.commissionTaxConfig $ encodeChargeConfig <$> farePolicy.commissionTaxConfig,
       Se.Set BeamFP.pickupBufferInSecsForNightShiftCal $ farePolicy.pickupBufferInSecsForNightShiftCal,
       Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
       Se.Set BeamFP.currency $ Just farePolicy.currency,
@@ -137,10 +138,11 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.perStopCharge = perStopCharge,
         BeamFP.tollCharges = tollCharges,
         BeamFP.priorityCharges = priorityCharges,
-        BeamFP.vatChargeConfig = encodeChargeConfig <$> vatChargeConfig,
         BeamFP.commissionChargeConfig = encodeChargeConfig <$> commissionChargeConfig,
-        BeamFP.cancellationCommissionChargeConfig = encodeChargeConfig <$> cancellationCommissionChargeConfig,
-        BeamFP.tollTaxChargeConfig = encodeChargeConfig <$> tollTaxChargeConfig,
+        BeamFP.rideTaxConfig = encodeChargeConfig <$> rideTaxConfig,
+        BeamFP.tollTaxConfig = encodeChargeConfig <$> tollTaxConfig,
+        BeamFP.parkingTaxConfig = encodeChargeConfig <$> parkingTaxConfig,
+        BeamFP.commissionTaxConfig = encodeChargeConfig <$> commissionTaxConfig,
         BeamFP.pickupBufferInSecsForNightShiftCal = pickupBufferInSecsForNightShiftCal,
         BeamFP.tipOptions = tipOptions,
         BeamFP.currency = Just currency,
@@ -201,7 +203,7 @@ fromTTypeFarePolicy ::
   FarePolicyHandler m ->
   BeamFP.FarePolicy ->
   m (Maybe Domain.FarePolicy)
-fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeConfig, commissionChargeConfig = beamCommissionChargeConfig, cancellationCommissionChargeConfig = beamCancellationCommissionChargeConfig, tollTaxChargeConfig = beamTollTaxChargeConfig, ..} = do
+fromTTypeFarePolicy handler BeamFP.FarePolicyT {commissionChargeConfig = beamCommissionChargeConfig, rideTaxConfig = beamRideTaxConfig, tollTaxConfig = beamTollTaxConfig, parkingTaxConfig = beamParkingTaxConfig, commissionTaxConfig = beamCommissionTaxConfig, ..} = do
   fullDEFB <- handler.findAllDriverExtraFeeBounds
   let fDEFB = snd <$> fullDEFB
   mFarePolicyDetails <-
@@ -275,10 +277,11 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeC
                     { perDistanceUnitMultiplier = cardChargePerDistanceUnitMultiplier,
                       fixed = fixedCardCharge
                     },
-              vatChargeConfig = decodeChargeConfig beamVatChargeConfig,
               commissionChargeConfig = decodeChargeConfig beamCommissionChargeConfig,
-              cancellationCommissionChargeConfig = decodeChargeConfig beamCancellationCommissionChargeConfig,
-              tollTaxChargeConfig = decodeChargeConfig beamTollTaxChargeConfig,
+              rideTaxConfig = decodeChargeConfig beamRideTaxConfig,
+              tollTaxConfig = decodeChargeConfig beamTollTaxConfig,
+              parkingTaxConfig = decodeChargeConfig beamParkingTaxConfig,
+              commissionTaxConfig = decodeChargeConfig beamCommissionTaxConfig,
               description = description,
               cancellationFarePolicyId = Id <$> cancellationFarePolicyId,
               platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
@@ -291,8 +294,8 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeC
             }
     Nothing -> return Nothing
 
-encodeChargeConfig :: FareChargeConfig -> Text
+encodeChargeConfig :: Aeson.ToJSON a => a -> Text
 encodeChargeConfig = TE.decodeUtf8 . BL.toStrict . Aeson.encode
 
-decodeChargeConfig :: Maybe Text -> Maybe FareChargeConfig
+decodeChargeConfig :: Aeson.FromJSON a => Maybe Text -> Maybe a
 decodeChargeConfig = (>>= Aeson.decode . BL.fromStrict . TE.encodeUtf8)

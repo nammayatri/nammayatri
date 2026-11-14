@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Quote as Beam
@@ -63,6 +64,8 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             quoteBreakupList = quoteBreakupList',
             quoteDetails = quoteDetails',
             requestId = Kernel.Types.Id.Id requestId,
+            riderTaxRates = Kernel.Utils.JSON.valueToMaybe =<< riderTaxRates,
+            selectedOfferDiscountAmount = selectedOfferDiscountAmount,
             selectedOfferId = selectedOfferId,
             serviceTierName = serviceTierName,
             serviceTierShortDesc = serviceTierShortDesc,
@@ -125,6 +128,8 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.providerUrl = Kernel.Prelude.showBaseUrl providerUrl,
         Beam.quoteBreakupListJson = Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.riderTaxRates = Kernel.Prelude.toJSON <$> riderTaxRates,
+        Beam.selectedOfferDiscountAmount = selectedOfferDiscountAmount,
         Beam.selectedOfferId = selectedOfferId,
         Beam.serviceTierName = serviceTierName,
         Beam.serviceTierShortDesc = serviceTierShortDesc,

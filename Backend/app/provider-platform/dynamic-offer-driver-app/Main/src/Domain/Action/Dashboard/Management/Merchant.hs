@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantCloudCityUpdate,
     getMerchantConfigFareBreakup,
     postMerchantConfigFareBreakupUpdate,
+    postMerchantConfigDriverWalletAccountClassUpdate,
     getMerchantServiceUsageConfig,
     postMerchantServiceConfigSmsUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
@@ -193,8 +194,12 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.AccountConfig as FinanceAccountConfig
 import qualified Lib.Finance.Domain.Types.Account as FAccount
+import Lib.Finance.Domain.Types.Extra.FinanceAccountConfig (CutoffSpec (..))
+import qualified Lib.Finance.Domain.Types.FinanceAccountConfig as DFAC
 import qualified Lib.Finance.Reconciliation.Job
+import qualified Lib.Finance.Storage.Queries.FinanceAccountConfig as QFAC
 import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -1880,9 +1885,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     returnFee :: Text,
     boothCharges :: Text,
     schedulingCharge :: Text,
-    vatChargeConfig :: Text,
     commissionChargeConfig :: Text,
-    tollTaxCharge :: Text,
     negotiationFareMinTolerancePct :: Text,
     negotiationFareMaxTolerancePct :: Text
   }
@@ -1998,9 +2001,7 @@ instance ToNamedRecord FarePolicyCSVRow where
           "return_fee" .= returnFee,
           "booth_charges" .= boothCharges,
           "scheduling_charge" .= schedulingCharge,
-          "vat_charge_config" .= vatChargeConfig,
           "commission_charge_config" .= commissionChargeConfig,
-          "toll_tax_charge_config" .= tollTaxCharge,
           "negotiation_fare_min_tolerance_pct" .= negotiationFareMinTolerancePct,
           "negotiation_fare_max_tolerance_pct" .= negotiationFareMaxTolerancePct
         ]
@@ -2112,9 +2113,7 @@ farePolicyCSVHeader =
       "return_fee",
       "booth_charges",
       "scheduling_charge",
-      "vat_charge_config",
       "commission_charge_config",
-      "toll_tax_charge_config",
       "negotiation_fare_min_tolerance_pct",
       "negotiation_fare_max_tolerance_pct"
     ]
@@ -2231,9 +2230,7 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> r .: "booth_charges"
           -- optional column: old fare-policy CSV templates don't have it
           <*> (r .: "scheduling_charge" <|> pure "")
-          <*> r .: "vat_charge_config"
           <*> r .: "commission_charge_config"
-          <*> r .: "toll_tax_charge_config"
           -- optional columns: old fare-policy CSV templates don't have them
           <*> (r .: "negotiation_fare_min_tolerance_pct" <|> pure "")
           <*> (r .: "negotiation_fare_max_tolerance_pct" <|> pure "")
@@ -2670,9 +2667,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
 
           -- JSON encode complex fields
           conditionalChargesJson = if null farePolicy.conditionalCharges then "" else TEnc.decodeUtf8 $ LBS.toStrict $ A.encode farePolicy.conditionalCharges
-          vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
           commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
-          tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
           fareRecomputeCapConfigJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.fareRecomputeCapConfig
           returnFeeVal = maybe "" showT farePolicy.returnFee
           boothChargesVal = maybe "" showT farePolicy.boothCharges
@@ -2905,9 +2900,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     returnFee = returnFeeVal,
                     boothCharges = boothChargesVal,
                     schedulingCharge = schedulingChargeVal,
-                    vatChargeConfig = vatChargeJson,
                     commissionChargeConfig = commissionChargeJson,
-                    tollTaxCharge = tollTaxChargeJson,
                     negotiationFareMinTolerancePct = maybe "" showT farePolicy.negotiationFareMinTolerancePct,
                     negotiationFareMaxTolerancePct = maybe "" showT farePolicy.negotiationFareMaxTolerancePct
                   }
@@ -3374,26 +3367,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           DAT.Success (resp :: [DAC.ConditionalCharges]) -> return resp
           DAT.Error err -> throwError $ InvalidRequest ("Additional charges Parsing failed :: " <> show err)
 
-      -- Parse charge configs (vat, commission, toll tax) from JSON strings
-      let vatChargeConfigText = cleanMaybeCSVField idx row.vatChargeConfig "VAT Charge Config"
-      vatChargeConfig <- case vatChargeConfigText of
-        Nothing -> return Nothing
-        Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
-          Left err -> throwError $ InvalidRequest ("VAT Charge Config parsing failed :: " <> T.pack err)
-          Right config -> return (Just config)
-
       let commissionChargeConfigText = cleanMaybeCSVField idx row.commissionChargeConfig "Commission Charge Config"
       commissionChargeConfig <- case commissionChargeConfigText of
         Nothing -> return Nothing
         Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
           Left err -> throwError $ InvalidRequest ("Commission Charge Config parsing failed :: " <> T.pack err)
-          Right config -> return (Just config)
-
-      let tollTaxChargeConfigText = cleanMaybeCSVField idx row.tollTaxCharge "Toll Tax Charge"
-      tollTaxChargeConfig <- case tollTaxChargeConfigText of
-        Nothing -> return Nothing
-        Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
-          Left err -> throwError $ InvalidRequest ("Toll Tax Charge Config parsing failed :: " <> T.pack err)
           Right config -> return (Just config)
 
       currency :: Currency <- readCSVField idx row.currency "Currency"
@@ -3633,7 +3611,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             Left validationErr -> throwError $ InvalidRequest ("Fare Recompute Cap Config invalid (row " <> show idx <> ") :: " <> validationErr)
             Right () -> return (Just config)
 
-      return (((Just . mapToBool) row.disableRecompute, (Just . mapToBool) row.disableDownwardRecompute), city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, schedulingCharge = schedulingCharge, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, fareRecomputeCapConfig = fareRecomputeCapConfig, ..})
+      return (((Just . mapToBool) row.disableRecompute, (Just . mapToBool) row.disableDownwardRecompute), city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, schedulingCharge = schedulingCharge, commissionChargeConfig = commissionChargeConfig, rideTaxConfig = Nothing, tollTaxConfig = Nothing, parkingTaxConfig = Nothing, commissionTaxConfig = Nothing, fareRecomputeCapConfig = fareRecomputeCapConfig, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
@@ -5878,6 +5856,12 @@ getMerchantConfigDriverWallet merchantShortId opCity = do
         forceOnlineLedger = dwc.forceOnlineLedger,
         subscriptionFromWallet = Just driverWalletClass.subscriptionFromBalance,
         enforceMinWalletBalance = Just driverWalletClass.enforceMinBalance,
+        allowNegativeBalance = Just driverWalletClass.allowNegativeBalance,
+        instantTransferOutEnabled = Just driverWalletClass.instantTransferOutEnabled,
+        minTransferOutAmount = Just driverWalletClass.minTransferOutAmount,
+        redeemableCutoffDays = (.days) <$> driverWalletClass.redeemableCutoff,
+        redeemableCutoffTimeOfDay = (.timeOfDay) =<< driverWalletClass.redeemableCutoff,
+        redeemableCutoffTzOffsetSeconds = (.tzOffsetSeconds) <$> driverWalletClass.redeemableCutoff,
         rideCgstPercentage = rideGst.cgstPercentage,
         rideSgstPercentage = rideGst.sgstPercentage,
         rideIgstPercentage = rideGst.igstPercentage
@@ -5896,6 +5880,68 @@ postMerchantConfigDriverWalletMigratePendingDues merchantShortId opCity = do
   unless started $ throwError $ InvalidRequest "Pending dues are already being moved into the wallets for this city"
   createJobIn @_ @'MigratePendingDuesToWallet (Just merchant.id) (Just merchantOpCityId) 0 $
     MigratePendingDuesToWalletJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCityId}
+  pure Success
+
+postMerchantConfigDriverWalletAccountClassUpdate :: ShortId DM.Merchant -> Context.City -> Common.DriverWalletAccountClassUpdateReq -> Flow APISuccess
+postMerchantConfigDriverWalletAccountClassUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  now <- getCurrentTime
+  rows <- QFAC.findAllByMerchantId merchant.id.getId
+  let isDriverWalletClass r = r.merchantOperatingCityId == merchantOpCityId.getId && r.accountType == FAccount.Liability && r.counterpartyType == Just FAccount.DRIVER && isNothing r.subLedger
+      applyCutoff current
+        | req.clearRedeemableCutoff == Just True = Nothing
+        | isNothing req.redeemableCutoffDays && isNothing req.redeemableCutoffTimeOfDay && isNothing req.redeemableCutoffTzOffsetSeconds = current
+        | otherwise =
+          Just
+            CutoffSpec
+              { days = fromMaybe (maybe 0 (.days) current) req.redeemableCutoffDays,
+                timeOfDay = req.redeemableCutoffTimeOfDay <|> (current >>= (.timeOfDay)),
+                tzOffsetSeconds = fromMaybe (maybe 0 (.tzOffsetSeconds) current) req.redeemableCutoffTzOffsetSeconds
+              }
+      applyReq r =
+        r
+          { DFAC.allowNegativeBalance = fromMaybe r.allowNegativeBalance req.allowNegativeBalance,
+            DFAC.transferOutEnabled = fromMaybe r.transferOutEnabled req.transferOutEnabled,
+            DFAC.instantTransferOutEnabled = fromMaybe r.instantTransferOutEnabled req.instantTransferOutEnabled,
+            DFAC.minTransferOutAmount = fromMaybe r.minTransferOutAmount req.minTransferOutAmount,
+            DFAC.redeemableCutoff = applyCutoff r.redeemableCutoff,
+            DFAC.updatedAt = now
+          }
+  case find isDriverWalletClass rows of
+    Just row -> QFAC.updateByPrimaryKey (applyReq row)
+    Nothing -> do
+      newId <- generateGUID
+      let defaults = FinanceAccountConfig.defaultAccountConfig
+      QFAC.create $
+        applyReq
+          DFAC.FinanceAccountConfig
+            { id = newId,
+              merchantId = merchant.id.getId,
+              merchantOperatingCityId = merchantOpCityId.getId,
+              accountType = FAccount.Liability,
+              counterpartyType = Just FAccount.DRIVER,
+              subLedger = Nothing,
+              allowNegativeBalance = defaults.allowNegativeBalance,
+              minRetainedBalance = defaults.minRetainedBalance,
+              redeemableCutoff = defaults.redeemableCutoff,
+              transferOutEnabled = defaults.transferOutEnabled,
+              instantTransferOutEnabled = defaults.instantTransferOutEnabled,
+              minTransferOutAmount = defaults.minTransferOutAmount,
+              maxTransferOutPerDay = defaults.maxTransferOutPerDay,
+              transferOutFee = defaults.transferOutFee,
+              transferInEnabled = defaults.transferInEnabled,
+              statusCheckIntervalSec = defaults.statusCheckIntervalSec,
+              statusCheckMaxAttempts = defaults.statusCheckMaxAttempts,
+              pointsConversionRate = defaults.pointsConversionRate,
+              autoTransferOut = defaults.autoTransferOut,
+              subscriptionFromBalance = Just defaults.subscriptionFromBalance,
+              enforceMinBalance = Just defaults.enforceMinBalance,
+              createdAt = now,
+              updatedAt = now
+            }
+  FinanceAccountConfig.clearAccountConfigCache merchant.id.getId
+  logTagInfo "dashboard -> postMerchantConfigDriverWalletAccountClassUpdate : " (show merchantOpCityId)
   pure Success
 
 getMerchantConfigFareBreakup :: ShortId DM.Merchant -> Context.City -> Flow Common.FareBreakupConfigRes

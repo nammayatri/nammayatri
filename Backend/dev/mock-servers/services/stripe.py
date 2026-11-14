@@ -30,7 +30,7 @@ import time
 from urllib.parse import unquote_plus
 
 from ._env import MOCK_SERVER_PORT
-from status_store import register_body_decoder
+from status_store import deep_merge, register_body_decoder
 
 
 # ── In-memory state ──
@@ -587,12 +587,18 @@ def handle(handler, path, body):
             })
             # Ensure requirements always present on retrieve (overrides via _get_override may
             # have set charges_enabled etc. but not these nested objects)
+            _, extra = handler._get_override("stripe", parts[1])
+            if extra:
+                acc = deep_merge(dict(acc), extra)
             acc.setdefault("requirements", {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None})
             acc.setdefault("future_requirements", {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None})
             return handler._json(acc)
 
     # ── Account Links ──
     if resource == "account_links" and method == "POST":
+        linked = accounts.get(params.get("account", ""))
+        if linked is not None:
+            linked.update({"charges_enabled": True, "details_submitted": True, "payouts_enabled": True})
         return handler._json({
             "object": "account_link",
             "url": f"http://localhost:{MOCK_SERVER_PORT}/stripe/connect/mock/{uuid.uuid4().hex[:8]}",

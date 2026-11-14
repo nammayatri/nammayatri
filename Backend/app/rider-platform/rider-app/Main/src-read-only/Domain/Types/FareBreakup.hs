@@ -21,10 +21,10 @@ data FareBreakup = FareBreakup
 data FareBreakupAPIEntity = FareBreakupAPIEntity {amount :: Kernel.Types.Common.Money, amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity, description :: Kernel.Prelude.Text}
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING | ESTIMATE | QUOTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FareComponent = RIDE_FARE | TOLL | PARKING | CANCELLATION_FEE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data RefundFareComponent = RIDE_FARE | TOLL | PARKING | CANCELLATION_FEE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FareBreakupEntityType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FareComponent)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RefundFareComponent)

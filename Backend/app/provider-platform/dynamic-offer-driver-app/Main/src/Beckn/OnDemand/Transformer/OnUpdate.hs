@@ -122,7 +122,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -347,7 +347,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -446,6 +446,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderUpdatedAt = Just booking.updatedAt
         }
   OU.ChangeServiceTierBuildReq OU.DChangeServiceTierReq {..} -> do
+    isValueAddNP <- CQVAN.isValueAddNP outerBooking.bapId
     let changeServiceTierTags =
           [ Tag.getFullTagGroup
               Tag.CHANGE_SERVICE_TIER_DETAILS
@@ -503,12 +504,12 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderQuote =
             Just $
               Spec.Quotation
-                { quotationBreakup = Nothing,
+                { quotationBreakup = Utils.mkQuotationBreakup isValueAddNP fareParams,
                   quotationPrice =
                     Just $
                       Spec.Price
                         { priceComputedValue = Just $ show newEstimatedFare,
-                          priceCurrency = Just "INR",
+                          priceCurrency = Just (show fareParams.currency),
                           priceMaximumValue = Nothing,
                           priceMinimumValue = Nothing,
                           priceOfferedValue = Nothing,
@@ -571,7 +572,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                     Just $
                       Spec.Price
                         { priceComputedValue = Just $ show newEstimatedFare,
-                          priceCurrency = Just "INR",
+                          priceCurrency = Just (show fareParams.currency),
                           priceMaximumValue = Nothing,
                           priceMinimumValue = Nothing,
                           priceOfferedValue = Nothing,

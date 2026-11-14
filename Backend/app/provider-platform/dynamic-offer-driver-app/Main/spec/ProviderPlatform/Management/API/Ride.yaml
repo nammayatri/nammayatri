@@ -722,7 +722,6 @@ types:
     - parkingChargeWithCurrency: Maybe PriceAPIEntity
     - tollFareTaxWithCurrency: Maybe PriceAPIEntity
     - discountWithCurrency: Maybe PriceAPIEntity
-    - discountTaxWithCurrency: Maybe PriceAPIEntity
     - negotiatedFareDeltaWithCurrency: Maybe PriceAPIEntity
     - updatedAt: UTCTime
   FareParametersDetails:

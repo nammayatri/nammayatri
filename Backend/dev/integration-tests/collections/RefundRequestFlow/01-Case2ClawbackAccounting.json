@@ -1,0 +1,2753 @@
+{
+  "info": {
+    "name": "01-Case2ClawbackAccounting",
+    "description": "Synchronous refund, Stripe answers immediately, on a fresh card ride built in this run. Refund raised PER-COMPONENT (refundComponents=[{RIDE_FARE, rf1}]). Success Case-2 (deductFromDriver=true): raise -> dashboard list (OPEN, transactionAmount = charged fare) -> approve -> dashboard info REFUNDED with the approved RIDE_FARE component, booking gateway refund SUCCESS, rider list REFUNDED; BPP: negative Commission refund invoice = -round2(rf1*commission/cap) left Draft, driver-wallet clawback legs (RideFareRefund + RideFareRefundVAT) SETTLED, debiting the driver and summing to rf1 minus the commission slice, ride earning legs not voided, CUSTOMER refund invoice Paid = -rf1, DRIVER refund invoice Paid; BAP: rider Refund invoice Paid = -rf1 with per-component Fare + Tax lines; both PDFs render.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _num(){ return '04' + Math.floor(10000000 + Math.random() * 89999999); }",
+              "var _l = function(){ return String.fromCharCode(65 + Math.floor(Math.random() * 26)); };",
+              "pm.collectionVariables.set('_test_driver_number', _num());",
+              "pm.collectionVariables.set('_test_reg_no', _l() + _l() + _l() + String(Math.floor(100 + Math.random() * 899)));",
+              "pm.collectionVariables.set('_test_rider_mobile', _num());",
+              "console.log('Fresh run: driver', pm.collectionVariables.get('_test_driver_number'), 'reg', pm.collectionVariables.get('_test_reg_no'), 'rider', pm.collectionVariables.get('_test_rider_mobile'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle?fleetOwnerId={{fleet_owner_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ],
+          "query": [
+            {
+              "key": "fleetOwnerId",
+              "value": "{{fleet_owner_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Bank Account (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked without bank account', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_BANK_ACCOUNT_NOT_FOUND', function () { pm.expect(d.errorCode).to.equal('DRIVER_BANK_ACCOUNT_NOT_FOUND'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Bank Account (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bank_verify_request_id', d.requestId);",
+              "console.log('Bank verify requestId:', d.requestId);",
+              "pm.test('Verification initiated', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/verify/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "verify",
+            "bankAccount"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"bankAccountNo\": \"1234567890\", \"bankIfscCode\": \"HDFC0001234\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Poll Bank Account Status (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Bank account verified', function () { pm.response.to.have.status(200); });",
+              "pm.test('Account exists', function () { pm.expect(d.accountExists).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/info/{{bank_verify_request_id}}/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "info",
+            "{{bank_verify_request_id}}",
+            "bankAccount"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Charges Enabled (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked - charges not enabled (400)', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_CHARGES_DISABLED', function () { pm.expect(d.errorCode).to.equal('DRIVER_CHARGES_DISABLED'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Link (Stripe Connect)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Account link:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/link?paymentMode=%22LIVE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "link"
+          ],
+          "query": [
+            {
+              "key": "paymentMode",
+              "value": "%22LIVE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Status (Stripe)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Charges enabled', function () { pm.expect(d.chargesEnabled).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/status?forceRefresh=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "status"
+          ],
+          "query": [
+            {
+              "key": "forceRefresh",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_mobile}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.environment.set('rider_person_id', d.person && d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('rider person id captured', function () { pm.expect(d.person && d.person.id).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Stripe Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Customer:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/customer",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "customer"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Payment Methods",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d && d.length > 0) {",
+              "    pm.environment.set('payment_method_id', d[0].paymentMethodId || d[0].id);",
+              "    console.log('Payment method:', d[0].paymentMethodId || d[0].id);",
+              "} else {",
+              "    pm.environment.set('payment_method_id', 'pm_card_visa');",
+              "    console.log('No methods, using default pm_card_visa');",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make Payment Method Default",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods/{{payment_method_id}}/makeDefault",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods",
+            "{{payment_method_id}}",
+            "makeDefault"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ride Search",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"quotesUnifiedFlow\": true, \"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"00100\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"01530\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Search Results",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results?paymentInstrument=Card_DefaultCardType",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ],
+          "query": [
+            {
+              "key": "paymentInstrument",
+              "value": "Card_DefaultCardType"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Select Estimate (Card Payment)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _resolve(u){ return String(u||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _url(){ return _resolve(pm.environment.get('baseURL_namma_P')) + '/driver/nearbyRideRequest'; }",
+              "function _finish(d){",
+              "  if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
+              "    pm.test('Has search requests', function(){ pm.expect(d.searchRequestsForDriver.length).to.be.above(0); });",
+              "  } else {",
+              "    pm.test('Has search requests', function(){ pm.expect(0, 'driver pool empty after ~50s polling - driver not matched (check LTS driver_id / producer dispatch)').to.be.above(0); });",
+              "  }",
+              "}",
+              "function _poll(n){",
+              "  pm.sendRequest({ url:_url(), method:'GET', header:{'Content-Type':'application/json','token':pm.environment.get('driver_token')} }, function(err,res){",
+              "    var d={}; try{ d=res.json(); }catch(e){}",
+              "    if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) { _finish(d); }",
+              "    else if (n > 0) { setTimeout(function(){ _poll(n-1); }, 5000); }",
+              "    else { _finish(d || {}); }",
+              "  });",
+              "}",
+              "var d0={}; try{ d0=pm.response.json(); }catch(e){}",
+              "if (d0 && d0.searchRequestsForDriver && d0.searchRequestsForDriver.length > 0) { _finish(d0); }",
+              "else { console.log('Pool empty on first check - polling driver pool (~22s batches)...'); _poll(10); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var b = d.list[0];",
+              "    pm.environment.set('customer_bookingId', b.id);",
+              "    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+              "    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Driver Ride Invoices",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 2000) { }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
+              "if (d.invoices && d.invoices.length > 0) {",
+              "    d.invoices.forEach(function(inv, i) {",
+              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+              "    });",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "subscription",
+            "invoices"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride Invoice (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 3000) { }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Rider invoices:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
+              "if (d.invoices && d.invoices.length > 0) {",
+              "    d.invoices.forEach(function(inv, i) {",
+              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' status=' + inv.invoiceStatus + ' total=' + inv.totalAmount);",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/invoice/list?invoiceType=%22Ride%22&limit=10&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Booking COMPLETED + card charge captured (rider booking list)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var _t=Date.now(); while(Date.now()-_t<3000){}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0\"), method:'GET', header:{'token': pm.environment.get('rider_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "function _b(d){ return (d && d.list && d.list[0]) || null; }",
+              "function _ok(d){ var b=_b(d); return !!(b && b.status==='COMPLETED' && b.cardInfo && b.rideList && b.rideList.length); }",
+              "function _done(d, code){",
+              "  var b=_b(d);",
+              "  pm.test('booking list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('booking COMPLETED', function(){ pm.expect(b, 'no booking for the fresh rider').to.exist; pm.expect(b.status).to.eql('COMPLETED'); });",
+              "  pm.test('card charge captured (cardInfo comes from the CHARGED payment transaction)', function(){ pm.expect(b && b.cardInfo, 'no CHARGED transaction after polling').to.be.an('object'); });",
+              "  var ride = b && b.rideList && b.rideList[0];",
+              "  pm.test('BAP rideId captured and distinct from the booking id', function(){ pm.expect(ride && ride.id).to.be.a('string').and.not.empty; pm.expect(ride.id).to.not.eql(b.id); });",
+              "  if (b) { pm.environment.set('customer_bookingId', b.id); }",
+              "  if (ride) { pm.environment.set('rideId', ride.id); }",
+              "  pm.test('no refunds on a fresh ride', function(){ pm.expect((b && b.refunds) || []).to.have.length(0); });",
+              "  console.log('Booking', b && b.id, 'status', b && b.status, 'rideId', ride && ride.id, 'card', JSON.stringify(b && b.cardInfo));",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(20); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture BPP ride commission (driver ride financeData)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "var c = Number(d.commissionCharges == null ? 0 : d.commissionCharges);",
+              "pm.environment.set('bpp_commission', String(c));",
+              "console.log('BPP ride', d.id, 'status', d.status, 'commission', c, 'earnings', JSON.stringify(d.rideEarnings));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('BPP ride COMPLETED', function () { pm.expect(d.status).to.eql('COMPLETED'); });",
+              "pm.test('BPP ride commission > 0 (Case-2 clawback asserts must not be vacuous)', function () { pm.expect(c).to.be.above(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}?financeData=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}"
+          ],
+          "query": [
+            {
+              "key": "financeData",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture RIDE_FARE cap + fare total (rider fareBreakup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "var comps = d.components || [];",
+              "function _c(name){ return comps.filter(function(x){ return x.component === name; })[0]; }",
+              "function _tot(name){ var x = _c(name); return x ? Number(x.total.amount) : 0; }",
+              "function _r2(x){ return Math.round(x * 100) / 100; }",
+              "var rf = _c('RIDE_FARE');",
+              "var cap = _r2(_tot('RIDE_FARE'));",
+              "var total = Number(d.totalAmount && d.totalAmount.amount);",
+              "pm.environment.set('rideFareCap', String(cap));",
+              "pm.environment.set('tollCap', String(_r2(_tot('TOLL'))));",
+              "pm.environment.set('parkingCap', String(_r2(_tot('PARKING'))));",
+              "pm.environment.set('fareTotal', String(total));",
+              "if (d.totalAmount && d.totalAmount.currency) { pm.environment.set('currency', d.totalAmount.currency); }",
+              "if (cap > 0) {",
+              "  pm.environment.set('rf1', String(_r2(cap * 0.5)));",
+              "  pm.environment.set('rf2', String(_r2(cap * 0.25)));",
+              "  pm.environment.set('rf3', String(_r2(cap * 0.5)));",
+              "}",
+              "console.log('fareBreakup', JSON.stringify(comps), 'total', total, '| rf1', pm.environment.get('rf1'), 'rf2', pm.environment.get('rf2'));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('RIDE_FARE component cap > 0', function () { pm.expect(rf, 'no RIDE_FARE component').to.exist; pm.expect(cap).to.be.above(0); });",
+              "pm.test('RIDE_FARE exclTax + tax = total', function () { pm.expect(Number(rf.exclTax.amount) + Number(rf.tax.amount)).to.be.closeTo(Number(rf.total.amount), 0.011); });",
+              "pm.test('components sum to totalAmount', function () { pm.expect(comps.reduce(function(a, x){ return a + Number(x.total.amount); }, 0)).to.be.closeTo(total, 0.011); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/fareBreakup",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "fareBreakup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Raise Refund Request rf1 = cap/2 (Customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('raise accepted', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf1}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test refund (success case)\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture refundRequestId + orderId (BAP dashboard list, OPEN)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var _t=Date.now(); while(Date.now()-_t<2000){}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/list?customerId={{rider_person_id}}&limit=10&offset=0\"), method:'GET', header:{'token': pm.environment.get('bap_dashboard_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _excl = '';",
+              "function _open(d){ return ((d && d.refundRequests) || []).filter(function(r){ return r.status === 'OPEN' && r.id !== _excl; }); }",
+              "function _ok(d){ return _open(d).length > 0; }",
+              "function _done(d, code){",
+              "  var o = _open(d);",
+              "  var r = o[0] || {};",
+              "  var R = Number(pm.environment.get('rf1'));",
+              "  pm.test('dashboard refund list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('exactly one OPEN refund request for the fresh rider', function(){ pm.expect(o.length, JSON.stringify(d)).to.eql(1); });",
+              "  if (r.id) { pm.environment.set('refundRequestId', r.id); pm.environment.set('orderId', r.orderId); pm.environment.set('txn_amount', String(r.transactionAmount && r.transactionAmount.amount)); }",
+              "  pm.test('requestedAmount = rf1', function(){ pm.expect(Number(r.requestedAmount && r.requestedAmount.amount)).to.be.closeTo(R, 0.011); });",
+              "  pm.test('transactionAmount = the charged fare total', function(){ pm.expect(Number(r.transactionAmount && r.transactionAmount.amount)).to.be.closeTo(Number(pm.environment.get('fareTotal')), 0.011); });",
+              "  pm.test('not yet sent to the gateway (refundsId null, tries 0)', function(){ pm.expect(r.refundsId == null).to.eql(true); pm.expect(r.refundsTries).to.eql(0); });",
+              "  pm.test('payment order id is a real id distinct from the rideId', function(){ pm.expect(r.orderId).to.be.a('string').and.not.empty; pm.expect(r.orderId).to.not.eql(pm.environment.get('rideId')); });",
+              "  pm.test('code CUSTOMER_REQUEST', function(){ pm.expect(r.code).to.eql('CUSTOMER_REQUEST'); });",
+              "  pm.environment.unset('bppCustomerRefundInvoice');",
+              "  pm.environment.unset('commRefundSlice');",
+              "  console.log('refundRequestId', r.id, 'orderId', r.orderId, 'T', r.transactionAmount && r.transactionAmount.amount, 'purpose', r.refundPurpose);",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/list?customerId={{rider_person_id}}&limit=10&offset=0",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "customerId",
+              "value": "{{rider_person_id}}"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider sees the OPEN rf1 request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseUrl_app}}/payment/{{rideId}}/refundRequest\"), method:'GET', header:{'token': pm.environment.get('rider_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _exp = [{\"status\": \"OPEN\", \"rf\": \"rf1\"}];",
+              "function _reqs(d){ return ((d && d.refundRequests) || []).slice().sort(function(a, b){ return String(a.createdAt).localeCompare(String(b.createdAt)); }); }",
+              "function _ok(d){ var l=_reqs(d); return l.length === _exp.length && _exp.every(function(e, i){ return l[i].status === e.status; }); }",
+              "function _done(d, code){",
+              "  var l = _reqs(d);",
+              "  pm.test('rider refund request list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('rider sees ' + _exp.length + ' refund request(s) on the ride', function(){ pm.expect(l.length, JSON.stringify(d)).to.eql(_exp.length); });",
+              "  _exp.forEach(function(e, i){",
+              "    var r = l[i] || {};",
+              "    var R = Number(pm.environment.get(e.rf));",
+              "    pm.test('request ' + (i + 1) + ' is ' + e.status + ' for ' + e.rf, function(){",
+              "      pm.expect(r.status).to.eql(e.status);",
+              "      pm.expect(r.rideId).to.eql(pm.environment.get('rideId'));",
+              "      pm.expect(Number(r.requestedAmount && r.requestedAmount.amount)).to.be.closeTo(R, 0.011);",
+              "      pm.expect(Number(r.transactionAmount && r.transactionAmount.amount)).to.be.closeTo(Number(pm.environment.get('txn_amount')), 0.011);",
+              "      if (e.status !== 'OPEN') { pm.expect(Number(r.refundsAmount && r.refundsAmount.amount)).to.be.closeTo(R, 0.011); }",
+              "    });",
+              "  });",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Approve Refund — Case 2 deductFromDriver=true (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('approve -> REFUNDED/SUCCESS', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.status).to.eql('REFUNDED');",
+              "  pm.expect(d.refundStatus).to.eql('SUCCESS');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"approved by integration test\",\"deductFromDriver\":true}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert refund request REFUNDED + approved RIDE_FARE component (dashboard info)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/info\"), method:'GET', header:{'token': pm.environment.get('bap_dashboard_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _rs = null;",
+              "function _ok(d){ return d && d.status === 'REFUNDED'; }",
+              "function _done(d, code){",
+              "  var R = Number(pm.environment.get('rf1'));",
+              "  pm.test('dashboard refund info 200', function(){ pm.expect(code, JSON.stringify(d)).to.eql(200); });",
+              "  pm.test('refund request REFUNDED', function(){ pm.expect(d.status).to.eql('REFUNDED'); });",
+              "  if (_rs) { pm.test('gateway refundStatus ' + _rs, function(){ pm.expect(d.refundStatus).to.eql(_rs); }); }",
+              "  pm.test('linked to the ride + payment order', function(){ pm.expect(d.rideId).to.eql(pm.environment.get('rideId')); pm.expect(d.orderId).to.eql(pm.environment.get('orderId')); });",
+              "  pm.test('sent to the gateway once (refundsId set, refundsTries = 1)', function(){ pm.expect(d.refundsId).to.be.a('string').and.not.empty; pm.expect(d.refundsTries).to.eql(1); });",
+              "  pm.test('approved = requested = one RIDE_FARE component of rf1; refundsAmount = rf1', function(){",
+              "    var a = d.approvedRefundComponents || [], q = d.requestedRefundComponents || [];",
+              "    pm.expect(a.length).to.eql(1); pm.expect(a[0].component).to.eql('RIDE_FARE'); pm.expect(Number(a[0].amount.amount)).to.be.closeTo(R, 0.011);",
+              "    pm.expect(q.length).to.eql(1); pm.expect(q[0].component).to.eql('RIDE_FARE'); pm.expect(Number(q[0].amount.amount)).to.be.closeTo(R, 0.011);",
+              "    pm.expect(Number(d.refundsAmount && d.refundsAmount.amount)).to.be.closeTo(R, 0.011);",
+              "  });",
+              "  if (d.refundsId) { pm.environment.set('refundsId', d.refundsId); }",
+              "  console.log('info', JSON.stringify({status:d.status, refundStatus:d.refundStatus, refundsId:d.refundsId, errorCode:d.errorCode}));",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/info",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "info"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert gateway refund SUCCESS for rf1 (rider booking refunds)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0\"), method:'GET', header:{'token': pm.environment.get('rider_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _exp = [{\"status\": \"SUCCESS\", \"rf\": \"rf1\", \"refundsIdVar\": \"refundsId\"}];",
+              "function _refs(d){ var b = d && d.list && d.list[0]; return ((b && b.refunds) || []).slice().sort(function(a, x){ return String(a.createdAt).localeCompare(String(x.createdAt)); }); }",
+              "function _ok(d){ var l=_refs(d); return l.length === _exp.length && _exp.every(function(e, i){ return l[i].status === e.status; }); }",
+              "function _done(d, code){",
+              "  var l = _refs(d);",
+              "  pm.test('booking list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('booking carries ' + _exp.length + ' gateway refund attempt(s)', function(){ pm.expect(l.length, JSON.stringify(l)).to.eql(_exp.length); });",
+              "  _exp.forEach(function(e, i){",
+              "    var r = l[i] || {};",
+              "    pm.test('gateway refund ' + (i + 1) + ' is ' + e.status + ' for ' + e.rf, function(){",
+              "      pm.expect(r.status).to.eql(e.status);",
+              "      pm.expect(Number(r.amount)).to.be.closeTo(Number(pm.environment.get(e.rf)), 0.011);",
+              "      if (e.refundsIdVar) { pm.expect(r.id).to.eql(pm.environment.get(e.refundsIdVar)); }",
+              "    });",
+              "  });",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider sees the request REFUNDED for rf1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseUrl_app}}/payment/{{rideId}}/refundRequest\"), method:'GET', header:{'token': pm.environment.get('rider_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _exp = [{\"status\": \"REFUNDED\", \"rf\": \"rf1\"}];",
+              "function _reqs(d){ return ((d && d.refundRequests) || []).slice().sort(function(a, b){ return String(a.createdAt).localeCompare(String(b.createdAt)); }); }",
+              "function _ok(d){ var l=_reqs(d); return l.length === _exp.length && _exp.every(function(e, i){ return l[i].status === e.status; }); }",
+              "function _done(d, code){",
+              "  var l = _reqs(d);",
+              "  pm.test('rider refund request list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('rider sees ' + _exp.length + ' refund request(s) on the ride', function(){ pm.expect(l.length, JSON.stringify(d)).to.eql(_exp.length); });",
+              "  _exp.forEach(function(e, i){",
+              "    var r = l[i] || {};",
+              "    var R = Number(pm.environment.get(e.rf));",
+              "    pm.test('request ' + (i + 1) + ' is ' + e.status + ' for ' + e.rf, function(){",
+              "      pm.expect(r.status).to.eql(e.status);",
+              "      pm.expect(r.rideId).to.eql(pm.environment.get('rideId'));",
+              "      pm.expect(Number(r.requestedAmount && r.requestedAmount.amount)).to.be.closeTo(R, 0.011);",
+              "      pm.expect(Number(r.transactionAmount && r.transactionAmount.amount)).to.be.closeTo(Number(pm.environment.get('txn_amount')), 0.011);",
+              "      if (e.status !== 'OPEN') { pm.expect(Number(r.refundsAmount && r.refundsAmount.amount)).to.be.closeTo(R, 0.011); }",
+              "    });",
+              "  });",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert BPP Commission refund invoice amount + Draft (dashboard finance)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('invoice_from', new Date(Date.now() - 3600*1000).toISOString());",
+              "pm.environment.set('invoice_to', new Date(Date.now() + 600*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Commission%22&issuedToType=%22DRIVER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0\"), method:'GET', header:{'token': pm.environment.get('dashboard_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "function _r2(x){ return Math.round(x * 100) / 100; }",
+              "function _neg(d){ return ((d && d.invoices) || []).filter(function(i){ return i.invoiceType === 'Commission' && Number(i.totalInvoiceValue) < 0; }); }",
+              "function _ok(d){ return _neg(d).length >= 1; }",
+              "function _dt(x){ var v = x && (x.descriptionType || x.description_type); return (v && typeof v === 'object') ? v.tag : v; }",
+              "function _li(v){ if (v == null) return []; if (Array.isArray(v)) return v; if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return []; } } return []; }",
+              "function _done(d, code){",
+              "  var l = _neg(d);",
+              "  var C = Number(pm.environment.get('bpp_commission'));",
+              "  var R = Number(pm.environment.get('rf1'));",
+              "  var cap = Number(pm.environment.get('rideFareCap'));",
+              "  var expected = _r2(R * C / cap);",
+              "  var inv = l[l.length - 1] || {};",
+              "  console.log('BPP Commission refund invoices:', JSON.stringify(l.map(function(i){ return {n:i.invoiceNumber, st:i.invoiceStatus, total:i.totalInvoiceValue}; })), '| C', C, 'rf1', R, 'cap', cap, 'expected', -expected);",
+              "  pm.test('BPP finance invoice list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('exactly 1 negative Commission refund invoice(s) for the driver', function(){ pm.expect(C, 'commission must be > 0').to.be.above(0); pm.expect(l.length).to.eql(1); });",
+              "  pm.test('Commission refund invoice total = -round2(rf1 * commission / rideFareCap)', function(){ pm.expect(Number(inv.totalInvoiceValue)).to.be.closeTo(-expected, 0.02); });",
+              "  pm.test('Commission refund invoice left Draft (agg-commission scheduler nets it in)', function(){ pm.expect(inv.invoiceStatus).to.eql('Draft'); });",
+              "  pm.test('Commission refund invoice issued to the driver', function(){ pm.expect(inv.counterpartyId).to.eql(pm.environment.get('driver_id')); });",
+              "  pm.test('Commission refund invoice line items: CommissionRefund (+ CommissionRefundTax), g-commission-refund, negative', function(){",
+              "    var li = _li(inv.lineItems).filter(function(x){ return Number(x.lineTotal != null ? x.lineTotal : x.line_total) !== 0; });",
+              "    pm.expect(li.length, JSON.stringify(inv.lineItems)).to.be.oneOf([1, 2]);",
+              "    pm.expect(_dt(li[0])).to.eql('CommissionRefund');",
+              "    pm.expect(li[0].groupId || li[0].group_id).to.eql('g-commission-refund');",
+              "    if (li.length === 2) { pm.expect(_dt(li[1])).to.eql('CommissionRefundTax'); pm.expect(li[1].itemType || li[1].item_type).to.eql('Tax'); }",
+              "    li.forEach(function(x){ pm.expect(Number(x.lineTotal != null ? x.lineTotal : x.line_total)).to.be.below(0); });",
+              "  });",
+              "  pm.environment.set('commRefundSlice', String(-Number(inv.totalInvoiceValue || 0)));",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Commission%22&issuedToType=%22DRIVER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Commission%22"
+            },
+            {
+              "key": "issuedToType",
+              "value": "%22DRIVER%22"
+            },
+            {
+              "key": "fleetOwnerOrDriverId",
+              "value": "{{driver_id}}"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert BPP Case-2 driver clawback legs SETTLED (driver wallet ledger, entityId=refundRequestId)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('ledger_from', new Date(Date.now() - 2*3600*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseURL_namma_P}}/wallet/ledgerHistory?entityId={{refundRequestId}}&fromDate={{ledger_from}}&limit=100&offset=0\"), method:'GET', header:{'token': pm.environment.get('driver_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "var _rid = pm.environment.get('refundRequestId');",
+              "function _entries(d){ var out=[]; ((d && d.groups) || []).forEach(function(g){ (g.entries || []).forEach(function(e){ out.push(e); }); }); return out; }",
+              "function _legs(d){ return _entries(d).filter(function(e){ return e.entityReferenceId === _rid; }); }",
+              "function _r2(x){ return Math.round(x * 100) / 100; }",
+              "var R = Number(pm.environment.get('rf1'));",
+              "var comm = Number(pm.environment.get('commRefundSlice'));",
+              "var expected = _r2(R - comm);",
+              "function _sum(l){ return l.reduce(function(a, e){ return a + Number(e.itemValue); }, 0); }",
+              "function _ok(d){ var l=_legs(d); return l.length > 0 && l.every(function(e){ return e.status === 'SETTLED'; }) && _sum(l) >= expected - 0.02; }",
+              "function _done(d, code){",
+              "  var l = _legs(d);",
+              "  console.log('driver wallet legs for refundRequestId:', JSON.stringify(l.map(function(e){ return {ref:e.itemReference, amt:e.itemValue, st:e.status, cr:e.isCredit, rev:e.isReversal}; })), '| rf1', R, 'commission slice', comm);",
+              "  pm.test('ledgerHistory 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('Case-2 driver clawback legs present and all SETTLED', function(){ pm.expect(l.length, 'no driver-wallet refund legs (BAP->BPP refundLedger did not fire?)').to.be.above(0); l.forEach(function(e){ pm.expect(e.status, e.itemReference).to.eql('SETTLED'); }); });",
+              "  pm.test('driver legs use the per-component RIDE_FARE refTypes', function(){ var refs = l.map(function(e){ return e.itemReference; }); pm.expect(refs).to.include('RideFareRefund'); refs.forEach(function(x){ pm.expect(['RideFareRefund','RideFareRefundVAT']).to.include(x); }); });",
+              "  pm.test('driver legs debit the driver wallet (isCredit=false, not reversals)', function(){ l.forEach(function(e){ pm.expect(e.isCredit, e.itemReference).to.eql(false); pm.expect(e.isReversal, e.itemReference).to.eql(false); pm.expect(e.reversalOf == null).to.eql(true); }); });",
+              "  pm.test('legs carry the RefundRequest entity reference', function(){ l.forEach(function(e){ pm.expect(e.entityReferenceType).to.eql('RefundRequest'); pm.expect(e.entityReferenceId).to.eql(_rid); }); });",
+              "  pm.test('driver bears rf1 minus the platform commission slice', function(){ pm.expect(_sum(l)).to.be.closeTo(expected, 0.02); });",
+              "  pm.test('group net = -(driver clawback)', function(){ var net = ((d && d.groups) || []).reduce(function(a, g){ return a + Number(g.netAmount); }, 0); pm.expect(net).to.be.closeTo(-_sum(l), 0.011); });",
+              "  pm.environment.set('driverRefundLegIds', JSON.stringify(l.map(function(e){ return e.entryId; }).sort()));",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/wallet/ledgerHistory?entityId={{refundRequestId}}&fromDate={{ledger_from}}&limit=100&offset=0",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "wallet",
+            "ledgerHistory"
+          ],
+          "query": [
+            {
+              "key": "entityId",
+              "value": "{{refundRequestId}}"
+            },
+            {
+              "key": "fromDate",
+              "value": "{{ledger_from}}"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert the ride's OWN driver-wallet legs are NOT voided by the refund (entityId=driver ride)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('ledger_from', new Date(Date.now() - 2*3600*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "var RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
+              "var all = []; (d.groups || []).forEach(function(g){ (g.entries || []).forEach(function(e){ all.push(e); }); });",
+              "var original = all.filter(function(e){ return RT.indexOf(e.itemReference) < 0; });",
+              "var refunds = all.filter(function(e){ return RT.indexOf(e.itemReference) >= 0; });",
+              "console.log('ride wallet legs:', JSON.stringify(all.map(function(e){ return {ref:e.itemReference, amt:e.itemValue, st:e.status, cr:e.isCredit}; })));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ride own driver-wallet legs intact: present and none VOIDED by the refund', function(){",
+              "  pm.expect(original.length, 'no ride earning legs on the driver wallet').to.be.above(0);",
+              "  pm.expect(original.filter(function(e){ return e.status === 'VOIDED'; }).length).to.eql(0);",
+              "});",
+              "pm.test('ride-id lookup also returns this ride\\'s refund legs (booking resolution)', function(){ var ids = refunds.filter(function(e){ return e.entityReferenceType === 'RefundRequest'; }).map(function(e){ return e.entryId; }).sort(); pm.expect(JSON.stringify(ids)).to.eql(pm.environment.get('driverRefundLegIds')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/wallet/ledgerHistory?entityId={{driver_ride_id}}&fromDate={{ledger_from}}&limit=100&offset=0",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "wallet",
+            "ledgerHistory"
+          ],
+          "query": [
+            {
+              "key": "entityId",
+              "value": "{{driver_ride_id}}"
+            },
+            {
+              "key": "fromDate",
+              "value": "{{ledger_from}}"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert BPP CUSTOMER refund invoice Paid = -rf1 (dashboard finance)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('invoice_from', new Date(Date.now() - 3600*1000).toISOString());",
+              "pm.environment.set('invoice_to', new Date(Date.now() + 600*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Refund%22&issuedToType=%22CUSTOMER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0\"), method:'GET', header:{'token': pm.environment.get('dashboard_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "function _neg(d){ return ((d && d.invoices) || []).filter(function(i){ return i.invoiceType === 'Refund' && Number(i.totalInvoiceValue) < 0; }); }",
+              "function _ok(d){ return _neg(d).length >= 1; }",
+              "function _done(d, code){",
+              "  var l = _neg(d);",
+              "  var inv = l.filter(function(i){ return Math.abs(Number(i.totalInvoiceValue) + Number(pm.environment.get('rf1'))) < 0.011; })[0] || l[0] || {};",
+              "  console.log('BPP CUSTOMER refund invoices:', JSON.stringify(l.map(function(i){ return {n:i.invoiceNumber, st:i.invoiceStatus, total:i.totalInvoiceValue, to:i.counterpartyType}; })));",
+              "  pm.test('BPP finance invoice list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('exactly 1 BPP CUSTOMER refund invoice(s) for this driver', function(){ pm.expect(l.length).to.eql(1); });",
+              "  pm.test('BPP CUSTOMER refund invoice Paid, issued to CUSTOMER, total = -rf1', function(){",
+              "    pm.expect(inv.invoiceStatus).to.eql('Paid');",
+              "    pm.expect(inv.counterpartyType).to.eql('CUSTOMER');",
+              "    pm.expect(Number(inv.totalInvoiceValue)).to.be.closeTo(-Number(pm.environment.get('rf1')), 0.011);",
+              "  });",
+              "  if (inv.invoiceNumber) { pm.environment.set('bppCustomerRefundInvoice', inv.invoiceNumber); pm.environment.set('bppInvoiceNumber', inv.invoiceNumber); }",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Refund%22&issuedToType=%22CUSTOMER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "issuedToType",
+              "value": "%22CUSTOMER%22"
+            },
+            {
+              "key": "fleetOwnerOrDriverId",
+              "value": "{{driver_id}}"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert BPP DRIVER refund invoice Paid/negative (Case-2, dashboard finance)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('invoice_from', new Date(Date.now() - 3600*1000).toISOString());",
+              "pm.environment.set('invoice_to', new Date(Date.now() + 600*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Refund%22&issuedToType=%22DRIVER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0\"), method:'GET', header:{'token': pm.environment.get('dashboard_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "function _neg(d){ return ((d && d.invoices) || []).filter(function(i){ return i.invoiceType === 'Refund' && Number(i.totalInvoiceValue) < 0; }); }",
+              "function _ok(d){ return _neg(d).length >= 1; }",
+              "function _done(d, code){",
+              "  var l = _neg(d);",
+              "  console.log('BPP DRIVER refund invoices:', JSON.stringify(l.map(function(i){ return {n:i.invoiceNumber, st:i.invoiceStatus, total:i.totalInvoiceValue, to:i.counterpartyId}; })));",
+              "  pm.test('BPP finance invoice list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('Case-2: exactly 1 driver-facing refund invoice(s)', function(){ pm.expect(l.length).to.eql(1); });",
+              "  pm.test('driver refund invoice Paid, negative, issued to the driver', function(){ l.forEach(function(i){ pm.expect(i.invoiceStatus).to.eql('Paid'); pm.expect(Number(i.totalInvoiceValue)).to.be.below(0); pm.expect(i.counterpartyType).to.eql('DRIVER'); pm.expect(i.counterpartyId).to.eql(pm.environment.get('driver_id')); }); });",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Refund%22&issuedToType=%22DRIVER%22&fleetOwnerOrDriverId={{driver_id}}&from={{invoice_from}}&to={{invoice_to}}&limit=50&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "issuedToType",
+              "value": "%22DRIVER%22"
+            },
+            {
+              "key": "fleetOwnerOrDriverId",
+              "value": "{{driver_id}}"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Assert BAP rider refund invoice Paid = -rf1 with PER-COMPONENT line items",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _u(t){ return pm.variables.replaceIn(t).replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _get(n){ pm.sendRequest({ url:_u(\"{{baseUrl_app}}/invoice/list?invoiceType=%22Refund%22&limit=10&offset=0\"), method:'GET', header:{'token': pm.environment.get('rider_token')} }, function(err,res){ var d={}; try{ d=res.json(); }catch(e){} if(_ok(d)||n<=0){ _done(d, res ? res.code : 0); } else { setTimeout(function(){ _get(n-1); }, 3000); } }); }",
+              "function _paid(d){ return ((d && d.invoices) || []).filter(function(i){ return i.invoiceType === 'Refund' && i.invoiceStatus === 'Paid'; }); }",
+              "function _ok(d){ return _paid(d).length >= 1; }",
+              "function _done(d, code){",
+              "  var l = _paid(d);",
+              "  var inv = l.filter(function(i){ return Math.abs(Number(i.totalAmount) + Number(pm.environment.get('rf1'))) < 0.011; })[0] || l[0] || {};",
+              "  console.log('BAP rider refund invoices:', JSON.stringify(((d && d.invoices) || []).map(function(i){ return {n:i.invoiceNumber, st:i.invoiceStatus, total:i.totalAmount, sub:i.subtotal, tax:i.taxAmount}; })));",
+              "  pm.test('rider invoice list 200', function(){ pm.expect(code).to.eql(200); });",
+              "  pm.test('exactly 1 Paid BAP refund invoice(s) (one per refunded request)', function(){ pm.expect(l.length).to.eql(1); });",
+              "  pm.test('BAP refund invoice total = -rf1 (subtotal + tax)', function(){",
+              "    pm.expect(Number(inv.totalAmount)).to.be.closeTo(-Number(pm.environment.get('rf1')), 0.011);",
+              "    pm.expect(Number(inv.subtotal) + Number(inv.taxAmount)).to.be.closeTo(Number(inv.totalAmount), 0.011);",
+              "  });",
+              "",
+              "  function _li(v){ if (v == null) return []; if (Array.isArray(v)) return v; if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return []; } } return []; }",
+              "  function _amt(x){ return Number(x.lineTotal != null ? x.lineTotal : (x.unitPrice != null ? x.unitPrice : (x.line_total != null ? x.line_total : x.unit_price))); }",
+              "  function _typ(x){ return x.itemType || x.item_type; }",
+              "  function _dt(x){ var v = x.descriptionType || x.description_type; return (v && typeof v === 'object') ? v.tag : v; }",
+              "  var items = _li(inv.lineItems);",
+              "  console.log('BAP refund invoice lineItems:', JSON.stringify(items));",
+              "  pm.test('BAP refund invoice carries PER-COMPONENT line items (a Fare + a Tax), not one lumped line', function(){ pm.expect(items.length, JSON.stringify(items)).to.be.above(1); });",
+              "  pm.test('every refund line item amount is NEGATIVE', function(){ items.forEach(function(x){ pm.expect(_amt(x)).to.be.below(0); }); });",
+              "  pm.test('line items split into distinct Fare + Tax components', function(){",
+              "    pm.expect(items.filter(function(x){ return _typ(x) === 'Fare'; }).length).to.be.above(0);",
+              "    pm.expect(items.filter(function(x){ return _typ(x) === 'Tax'; }).length).to.be.above(0);",
+              "    var dts = []; items.forEach(function(x){ var t = _dt(x); if (t && dts.indexOf(t) < 0) dts.push(t); });",
+              "    pm.expect(dts.length, JSON.stringify(dts)).to.be.above(1);",
+              "  });",
+              "  pm.test('line items sum to the invoice total', function(){ pm.expect(items.reduce(function(a, x){ return a + _amt(x); }, 0)).to.be.closeTo(Number(inv.totalAmount), 0.011); });",
+              "",
+              "}",
+              "var _d0={}; try{ _d0=pm.response.json(); }catch(e){}",
+              "if(_ok(_d0)){ _done(_d0, pm.response.code); } else { _get(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/invoice/list?invoiceType=%22Refund%22&limit=10&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP refund invoice PDF base64 (renders once the invoice-template JL rule is seeded)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BPP refund invoice PDF renders (base64 %PDF magic)', function () {",
+              "  pm.expect(d.pdfBase64, 'pdfBase64 must be present - the INVOICE_TEMPLATE JL rule must be seeded').to.be.a('string');",
+              "  pm.expect(/^JVBERi0/.test(String(d.pdfBase64)), 'pdfBase64 must start with the %PDF magic (JVBERi0)').to.be.true;",
+              "  pm.expect(d.invoiceNumber).to.eql(pm.environment.get('bppCustomerRefundInvoice'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/pdf?invoiceType=%22Refund%22&invoiceNumber={{bppCustomerRefundInvoice}}&limit=1&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "invoiceNumber",
+              "value": "{{bppCustomerRefundInvoice}}"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP rider refund invoice PDF base64 (renders once the invoice-template JL rule is seeded)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BAP refund invoice PDF renders (base64 %PDF magic)', function () {",
+              "  pm.expect(d.pdfBase64, 'pdfBase64 must be present - the INVOICE_TEMPLATE JL rule must be seeded').to.be.a('string');",
+              "  pm.expect(/^JVBERi0/.test(String(d.pdfBase64)), 'pdfBase64 must start with the %PDF magic (JVBERi0)').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/finance/invoice/pdf?invoiceType=%22Refund%22&referenceId={{rideId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "referenceId",
+              "value": "{{rideId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

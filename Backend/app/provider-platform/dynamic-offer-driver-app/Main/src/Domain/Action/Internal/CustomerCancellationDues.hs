@@ -101,7 +101,7 @@ getCancellationDuesDetails merchantId _merchantCity apiKey mbIncludeBreakup Canc
       else pure Nothing
   return $
     CancellationDuesDetailsRes
-      { cancellationDues = PriceAPIEntity riderDetails.cancellationDues riderDetails.currency,
+      { cancellationDues = PriceAPIEntity (roundAmountByCurrency' riderDetails.currency riderDetails.cancellationDues) riderDetails.currency,
         cancellationDuesPaid = riderDetails.cancellationDuesPaid,
         noOfTimesCancellationDuesPaid = riderDetails.noOfTimesCanellationDuesPaid,
         waivedOffAmount = riderDetails.waivedOffAmount,
@@ -112,7 +112,7 @@ getCancellationDuesDetails merchantId _merchantCity apiKey mbIncludeBreakup Canc
     mkBreakup row =
       CancellationDueBreakup
         { rideId = row.rideId,
-          dueAmount = PriceAPIEntity row.cancellationAmount row.currency,
+          dueAmount = PriceAPIEntity (roundAmountByCurrency' row.currency row.cancellationAmount) row.currency,
           dueStatus = row.paymentStatus
         }
 
@@ -139,5 +139,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = ActorInfo.with
   Kernel.Prelude.whenJust mbRide $ \ride -> do
     mbBooking <- QBooking.findById ride.bookingId
     Kernel.Prelude.whenJust mbBooking $ \booking ->
-      RideCancelInternal.applyCancellationLedgerAction booking ride req.cancellationLedgerAction transporterConfig
+      case req.cancellationLedgerAction of
+        SCD.SettleCancellationLedger -> RideCancelInternal.settleCancellationLedger booking ride transporterConfig
+        SCD.DueCancellationLedger -> RideCancelInternal.markCancellationLedgerDue booking
   return Success

@@ -18,13 +18,16 @@ import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
 import qualified API.Types.UI.TicketVerify as TicketVerifyAPI
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
-import qualified Domain.SharedLogic.RideDiscount as RD
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.MultimodalTicketVerify as TicketVerifyExtra
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
@@ -43,6 +46,7 @@ import qualified Kernel.Utils.Servant.Client as EC
 import Network.HTTP.Types (Status (..))
 import Servant hiding (throwError)
 import Servant.Client (ClientError (..), ResponseF (..))
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Type as SLT
 import Tools.Error (BapProxyError (..))
 import Tools.Metrics (CoreMetrics)
@@ -318,6 +322,7 @@ data OneShotAssignReq = OneShotAssignReq
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
     paymentChargeBearer :: Maybe Text,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
     fareBreakups :: [OneShotFareBreakupItem],
     quoteValidTill :: UTCTime,
     otp :: Text,
@@ -469,7 +474,8 @@ type OfferDiscountAPI =
 
 data OfferDiscountReq = OfferDiscountReq
   { fareAmount :: Maybe HighPrecMoney,
-    projectFareParamsBreakup :: Maybe RD.ProjectFareParamsBreakup
+    fareBreakups :: Maybe [FB.BreakupLine],
+    serviceTier :: Maybe DVST.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -499,6 +505,41 @@ getOfferDiscount apiKey internalUrl bppBookingId req = do
   logInfo $ "CallBAPInternal: Getting offer discount for bppBookingId: " <> bppBookingId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (offerDiscountClient (Just apiKey) bppBookingId req) "GetOfferDiscount" offerDiscountAPI
+
+refreshOfferDiscount ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "appBackendBapInternal" r AppBackendBapInternal,
+    HasRequestId r
+  ) =>
+  DRB.Booking ->
+  Maybe HighPrecMoney ->
+  Maybe DVST.ServiceTierType ->
+  DFP.FareParameters ->
+  DFP.FareParameters ->
+  m (Maybe HighPrecMoney)
+refreshOfferDiscount booking currentDiscount mbNewServiceTier currentFareParams newFareParams
+  | isNothing currentDiscount = pure Nothing
+  | not serviceTierChanged && breakupLines currentFareParams == breakupLines newFareParams = pure currentDiscount
+  | otherwise = do
+    appBackendBapInternal <- asks (.appBackendBapInternal)
+    let reqBody =
+          OfferDiscountReq
+            { fareAmount = Just (FC.fareSum (withoutPaymentCharge newFareParams) Nothing),
+              fareBreakups = Just (breakupLines newFareParams),
+              serviceTier = if serviceTierChanged then mbNewServiceTier else Nothing
+            }
+    result <- withTryCatch "refreshOfferDiscount" $ getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
+    case result of
+      Right resp -> pure resp.discountAmount
+      Left err -> do
+        logError $ "Error refreshing offer discount for booking " <> booking.id.getId <> ", keeping current discount: " <> show err
+        pure currentDiscount
+  where
+    serviceTierChanged = maybe False (/= booking.vehicleServiceTier) mbNewServiceTier
+    withoutPaymentCharge fp = fp {DFP.paymentProcessingFee = Nothing, DFP.paymentProcessingFeeTax = Nothing}
+    breakupLines = FC.mkFareParamsBreakups True identity FB.BreakupLine . withoutPaymentCharge
 
 -- FRFS Trip Manifest (proxy to rider-app only - needs FRFS ticket tables)
 
@@ -642,6 +683,37 @@ requestTollChargeApproval apiKey internalUrl bppBookingId req = do
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (requestTollChargeApprovalClient (Just apiKey) bppBookingId req) "RequestTollChargeApproval" requestTollChargeApprovalAPI
 
 -- POST /internal/multimodal/ticket/verify - Proxy to BAP for scanned-QR ticket verification.
+type PaymentChargeDetailsAPI =
+  "internal"
+    :> "paymentChargeDetails"
+    :> Header "token" Text
+    :> QueryParam' '[Required, Strict] "merchantId" Text
+    :> QueryParam' '[Required, Strict] "city" Context.City
+    :> QueryParam' '[Required, Strict] "paymentInstrument" Text
+    :> Get '[JSON] (Maybe PaymentChargeDetails)
+
+paymentChargeDetailsClient :: Maybe Text -> Text -> Context.City -> Text -> EulerClient (Maybe PaymentChargeDetails)
+paymentChargeDetailsClient = client (Proxy @PaymentChargeDetailsAPI)
+
+paymentChargeDetailsAPI :: Proxy PaymentChargeDetailsAPI
+paymentChargeDetailsAPI = Proxy
+
+getPaymentChargeDetails ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Context.City ->
+  Text ->
+  m (Maybe PaymentChargeDetails)
+getPaymentChargeDetails apiKey internalUrl merchantShortId city paymentInstrument = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (paymentChargeDetailsClient (Just apiKey) merchantShortId city paymentInstrument) "GetPaymentChargeDetails" paymentChargeDetailsAPI
+
 type MultimodalTicketVerifyAPI =
   "internal"
     :> "multimodal"

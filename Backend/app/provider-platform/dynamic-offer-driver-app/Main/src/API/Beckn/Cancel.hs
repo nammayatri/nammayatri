@@ -21,6 +21,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -47,6 +48,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.CancellationOrchestrator as SCO
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
@@ -148,12 +151,18 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                   cancelRideReq.cancellationReason
               mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> resolvedReasonCode)) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
-              let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
+              let mbFeeTax = mbChargesOutcome >>= (.feeTax)
+                  cancellationCharges = (\base -> PriceAPIEntity {amount = base + Tax.taxTotal mbFeeTax, currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
+                  customerPaymentCharge = maybe 0 (\(charge, chargeTax) -> FC.customerBorneCancellationCharge booking.paymentChargeDetails (Just charge) chargeTax) $ do
+                    outcome <- mbChargesOutcome
+                    total <- (.amount) <$> cancellationCharges
+                    SCO.cancellationPaymentChargeOf booking outcome.collectionMode total
+                  grossCancellationCharges = (\charges -> PriceAPIEntity {amount = charges.amount + customerPaymentCharge, currency = charges.currency}) <$> cancellationCharges
               let mbQuotedRide =
                     mbRide <&> \ride ->
                       ride
                         { DRide.cancellationFeeIfCancelled = (.amount) <$> cancellationCharges,
-                          DRide.cancellationFeeTaxIfCancelled = mbChargesOutcome >>= (.tax),
+                          DRide.cancellationFeeTaxIfCancelled = (.total) <$> mbFeeTax,
                           DRide.cancellationConsequenceRowIdIfCancelled = mbChargesOutcome >>= (.consequenceRowId)
                         }
               whenJust mbQuotedRide $ \ride ->
@@ -162,7 +171,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
-                        cancellationFee = cancellationCharges,
+                        cancellationFee = grossCancellationCharges,
                         cancellationReasonCode = resolvedReasonCode,
                         mbRide = mbQuotedRide,
                         -- soft-cancel is a pre-cancel fee preview; no invoice exists yet

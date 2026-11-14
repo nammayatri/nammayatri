@@ -41,7 +41,6 @@ data FareParameters = FareParameters
     nightShiftCharge :: Maybe HighPrecMoney,
     nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails,
-    customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
@@ -78,7 +77,7 @@ data FareParameters = FareParameters
     paymentProcessingFee :: Maybe HighPrecMoney,
     -- | VAT on the payment charge. 'Nothing' on rows priced before the split,
     --   where 'paymentProcessingFee' still holds the VAT-inclusive blend.
-    paymentProcessingFeeVat :: Maybe HighPrecMoney,
+    paymentProcessingFeeTax :: Maybe HighPrecMoney,
     isVatTaxType :: Maybe Bool,
     -- | Canonical fare-breakup partition, populated by
     --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
@@ -116,7 +115,29 @@ data FareParameters = FareParameters
     -- decided per fare policy by listing that component in the charge config's
     -- appliesOn (absent => neither applies). Shown to the rider as its own
     -- ADD_ON_CHARGES breakup line.
-    addOnCharges :: Maybe HighPrecMoney
+    addOnCharges :: Maybe HighPrecMoney,
+    rideTaxCgst :: Maybe HighPrecMoney,
+    rideTaxSgst :: Maybe HighPrecMoney,
+    rideTaxIgst :: Maybe HighPrecMoney,
+    parkingTaxCgst :: Maybe HighPrecMoney,
+    parkingTaxSgst :: Maybe HighPrecMoney,
+    parkingTaxIgst :: Maybe HighPrecMoney,
+    tollTaxCgst :: Maybe HighPrecMoney,
+    tollTaxSgst :: Maybe HighPrecMoney,
+    tollTaxIgst :: Maybe HighPrecMoney,
+    airportEntryFee :: Maybe HighPrecMoney,
+    airportEntryFeeTax :: Maybe HighPrecMoney,
+    airportEntryFeeTaxCgst :: Maybe HighPrecMoney,
+    airportEntryFeeTaxSgst :: Maybe HighPrecMoney,
+    airportEntryFeeTaxIgst :: Maybe HighPrecMoney,
+    paymentChargeTaxCgst :: Maybe HighPrecMoney,
+    paymentChargeTaxSgst :: Maybe HighPrecMoney,
+    paymentChargeTaxIgst :: Maybe HighPrecMoney,
+    customerCancellationDues :: Maybe HighPrecMoney, -- Stores Tax Inclusive cancellation dues
+    cancellationDuesTax :: Maybe HighPrecMoney,
+    cancellationDuesTaxCgst :: Maybe HighPrecMoney,
+    cancellationDuesTaxSgst :: Maybe HighPrecMoney,
+    cancellationDuesTaxIgst :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

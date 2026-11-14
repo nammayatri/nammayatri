@@ -4,6 +4,7 @@
 
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.Booking
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
@@ -37,10 +38,18 @@ markPaymentStatus paymentStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentStatus (Kernel.Prelude.Just paymentStatus), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
+updateCancellationChargesOnCancel ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationChargesOnCancel cancellationChargesOnCancel cancellationPaymentCharge cancellationPaymentChargeTaxBreakup id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel,
+      Se.Set Beam.cancellationPaymentCharge cancellationPaymentCharge,
+      Se.Set Beam.cancellationPaymentChargeTaxBreakup (Kernel.Prelude.toJSON <$> cancellationPaymentChargeTaxBreakup),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationFeeIfCancelledField ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

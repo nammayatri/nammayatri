@@ -70,6 +70,7 @@ import qualified Storage.Beam.LedgerAdjustmentRequest as BeamLA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -366,10 +367,7 @@ validateBaseRideAdjustment personId direction booking req = do
       Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
         B.runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
       _ -> pure booking.fareParams
-    let gstAmount = fromMaybe 0 fareParams.govtCharges
-        tollAmount = fromMaybe 0 fareParams.tollCharges
-        parkingAmount = fromMaybe 0 fareParams.parkingCharge
-        baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+    let baseFare = SFC.netRideFare fareParams totalFare
     when (req.amount.amount > baseFare) $
       throwError (InvalidRequest $ "Could not debit more than ride base fare: " <> show baseFare)
 
@@ -382,7 +380,7 @@ validateCancellationAdjustment ::
   Id DP.Person ->
   DBooking.Booking ->
   Flow ()
-validateCancellationAdjustment isDriverCancellation transporterConfig direction amount personId booking = do
+validateCancellationAdjustment isDriverCancellation _transporterConfig direction amount personId booking = do
   unless (booking.status == DBooking.CANCELLED) $
     throwError (BookingInvalidStatus "Booking should be CANCELLED")
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
@@ -396,12 +394,8 @@ validateCancellationAdjustment isDriverCancellation transporterConfig direction 
         throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
     else do
       maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InvalidRequest "User cancellation amount is not present.")
-      let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
-          gstPct :: Double = fromMaybe 0.0 mbGstRate
-          maxAmountExcludingGst =
-            if gstPct > 0
-              then HighPrecMoney $ maxAmountWithGst.getHighPrecMoney / (1 + toRational gstPct)
-              else maxAmountWithGst
+      mbCancellationDuesDetails <- QCDD.findByRideId ride.id
+      let maxAmountExcludingGst = maxAmountWithGst - fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFeeTax))
       when (direction == DLA.Debit && amount > maxAmountExcludingGst) $
         throwError (InvalidRequest $ "Could not debit more than cancellation charges, exluding gst: " <> show maxAmountExcludingGst)
 
@@ -605,8 +599,7 @@ validateTdsDeductionAdjustment ::
   Flow ()
 validateTdsDeductionAdjustment transporterConfig personId req = do
   let tdsDeductionReferenceTypes =
-        [ Wallet.walletReferenceTDSDeductionOnline,
-          Wallet.walletReferenceTDSDeductionCash,
+        [ Wallet.walletReferenceTDSDeduction,
           Wallet.walletReferenceTDSDeductionCancellation
         ]
   validateReferenceType req tdsDeductionReferenceTypes

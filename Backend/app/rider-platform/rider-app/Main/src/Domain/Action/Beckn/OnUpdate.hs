@@ -445,6 +445,7 @@ data ChangeServiceTierReq = ChangeServiceTierReq
     newVehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     newEstimatedFare :: Maybe HighPrecMoney,
     newQuoteId :: Maybe Text,
+    fareBreakups :: [Common.DFareBreakup],
     transactionId :: Text
   }
 
@@ -452,7 +453,8 @@ data ValidatedChangeServiceTierReq = ValidatedChangeServiceTierReq
   { booking :: DRB.Booking,
     newVehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     newEstimatedFare :: Maybe HighPrecMoney,
-    newQuoteId :: Maybe Text
+    newQuoteId :: Maybe Text,
+    fareBreakups :: [Common.DFareBreakup]
   }
 
 data AddBaggageReq = AddBaggageReq
@@ -728,6 +730,9 @@ onUpdate = \case
         mbLuggageCapacity = mbNewQuote >>= (.vehicleServiceTierLuggageCapacity)
     -- Single DB update with all changed fields after BPP confirms
     QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity mbLuggageCapacity
+    unless (null fareBreakups) $ do
+      newBreakups <- traverse (Common.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareBreakups
+      SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) newBreakups
     let newServiceTierName = fromMaybe (show newVehicleServiceTier) mbServiceTierName
     Notify.notifyOnServiceTierChange booking newServiceTierName
   OUValidatedAddBaggageReq ValidatedAddBaggageReq {..} -> do

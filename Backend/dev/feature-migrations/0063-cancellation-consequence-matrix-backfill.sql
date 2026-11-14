@@ -69,7 +69,8 @@ SELECT
   true, NULL, NULL, true,
   now(), now()
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
-LEFT JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id;
+LEFT JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id
+WHERE NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.cancellation_consequence_matrix m WHERE m.merchant_operating_city_id = moc.id AND m.fault_verdict IS NOT DISTINCT FROM NULL AND m.fault_rule IS NOT DISTINCT FROM NULL AND m.cancelled_by IS NOT DISTINCT FROM 'CancellationByCustomer' AND m.payment_instrument IS NOT DISTINCT FROM NULL AND m.trip_category IS NULL AND m.vehicle_service_tier IS NULL AND m.area IS NULL);
 
 -- 2b. CustomerAtFault (no-show on driver cancel): charge template + counters.
 --     REVIEW AMOUNTS PER CITY before activating (template inserts as active=false).
@@ -91,7 +92,8 @@ SELECT
   false, true,
   true, NULL, NULL, false,
   now(), now()
-FROM atlas_driver_offer_bpp.merchant_operating_city moc;
+FROM atlas_driver_offer_bpp.merchant_operating_city moc
+WHERE NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.cancellation_consequence_matrix m WHERE m.merchant_operating_city_id = moc.id AND m.fault_verdict IS NOT DISTINCT FROM 'CustomerAtFault' AND m.fault_rule IS NOT DISTINCT FROM 'customer_no_show' AND m.cancelled_by IS NOT DISTINCT FROM 'CancellationByDriver' AND m.payment_instrument IS NOT DISTINCT FROM NULL AND m.trip_category IS NULL AND m.vehicle_service_tier IS NULL AND m.area IS NULL);
 
 -- 2c. CustomerAtFault (late cancel by customer): charge template + customer stats counter.
 INSERT INTO atlas_driver_offer_bpp.cancellation_consequence_matrix
@@ -113,7 +115,8 @@ SELECT
   true, NULL, NULL, false,
   now(), now()
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
-LEFT JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id;
+LEFT JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id
+WHERE NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.cancellation_consequence_matrix m WHERE m.merchant_operating_city_id = moc.id AND m.fault_verdict IS NOT DISTINCT FROM 'CustomerAtFault' AND m.fault_rule IS NOT DISTINCT FROM 'customer_late_cancel' AND m.cancelled_by IS NOT DISTINCT FROM 'CancellationByCustomer' AND m.payment_instrument IS NOT DISTINCT FROM NULL AND m.trip_category IS NULL AND m.vehicle_service_tier IS NULL AND m.area IS NULL);
 
 -- 2d. Cash exemption: replaces transporter_config.cancellation_fee_payment_method_exceptions.
 --     Backfill ONLY for cities that had Cash in the exception list (adjust WHERE as per env).
@@ -135,7 +138,8 @@ SELECT
   now(), now()
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
 JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id
-WHERE array_to_string(tc.cancellation_fee_payment_method_exceptions, ',') LIKE '%Cash%';
+WHERE array_to_string(tc.cancellation_fee_payment_method_exceptions, ',') LIKE '%Cash%'
+  AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.cancellation_consequence_matrix m WHERE m.merchant_operating_city_id = moc.id AND m.fault_verdict IS NOT DISTINCT FROM 'CustomerAtFault' AND m.fault_rule IS NOT DISTINCT FROM NULL AND m.cancelled_by IS NOT DISTINCT FROM NULL AND m.payment_instrument IS NOT DISTINCT FROM 'Cash' AND m.trip_category IS NULL AND m.vehicle_service_tier IS NULL AND m.area IS NULL);
 
 -- 2e. DriverAtFault: coin penalty backfilled from coin_config's (vestigial) value, plus
 --     driver money penalty backfilled from fare_policy.driver_cancellation_penalty_amount.
@@ -185,7 +189,8 @@ LEFT JOIN LATERAL (
   ORDER BY cc0.coins ASC
   LIMIT 1
 ) cc ON true
-WHERE penalty.amount IS NOT NULL OR cc.coins IS NOT NULL;
+WHERE (penalty.amount IS NOT NULL OR cc.coins IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM atlas_driver_offer_bpp.cancellation_consequence_matrix m WHERE m.merchant_operating_city_id = moc.id AND m.fault_verdict IS NOT DISTINCT FROM 'DriverAtFault' AND m.fault_rule IS NOT DISTINCT FROM NULL AND m.cancelled_by IS NOT DISTINCT FROM 'CancellationByDriver' AND m.payment_instrument IS NOT DISTINCT FROM NULL AND m.trip_category IS NULL AND m.vehicle_service_tier IS NULL AND m.area IS NULL);
 
 -- NOTE: rows in 2b/2c/2e are inserted with active=false — review amounts per city on the
 -- dashboard (or flip active=true here) before enabling. The matrix is authoritative:

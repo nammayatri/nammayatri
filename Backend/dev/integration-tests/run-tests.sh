@@ -41,6 +41,7 @@ RIDE_DIR="$SCRIPT_DIR/collections/RideBookingFlow"
 AUTO_RIDE_DIR="$SCRIPT_DIR/collections/AutoRideFlow"
 TAXI_RIDE_DIR="$SCRIPT_DIR/collections/TaxiRideFlow"
 ONLINE_DIR="$SCRIPT_DIR/collections/OnlineRideBookingFlow"
+INTERNATIONAL_DIR="$SCRIPT_DIR/collections/InternationalRideBookingFlow"
 ONLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OnlineRideBookingOffers"
 OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
 BUS_DIR="$SCRIPT_DIR/collections/BusTicketBookingFlow"
@@ -101,7 +102,6 @@ flush_redis() {
 }
 
 check_stuck_entities() {
-    flush_redis
     echo "Checking for stuck entities..."
     local stuck
     stuck=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -tAc \
@@ -239,6 +239,28 @@ setup() {
     echo "       or: ./run-tests.sh incentive-journey NY_Bangalore"
 }
 
+sync_config() {
+    local from="${1:-prod_international}"
+    local sync_dir="$SCRIPT_DIR/../config-sync"
+    local fetch=""
+    [ -d "$sync_dir/assets/data/${from}_to_local" ] || fetch="--fetch"
+    echo "=== Config sync: $from -> local ==="
+    (cd "$sync_dir" && python3 config_transfer.py import --from "$from" --to local $fetch --skip-feature-migrations) || return 1
+    local f
+    for f in "$SCRIPT_DIR"/../local-testing-data/*.sql; do
+        psql -h localhost -p 5434 -U atlas_superuser -d atlas_dev -q -v ON_ERROR_STOP=1 --single-transaction -f "$f" >/dev/null 2>&1 \
+            && echo "  seeded $(basename "$f")" || echo "  seed FAILED $(basename "$f")"
+    done
+    (cd "$sync_dir" && python3 config_transfer.py import --from "$from" --to local --only-feature-migrations) || return 1
+    flush_redis
+    local exe pid backend_dir
+    backend_dir="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    for exe in rider-app-exe dynamic-offer-driver-app-exe; do
+        pid=$(pgrep -f "$backend_dir/dist-newstyle/.*$exe" | head -1)
+        [ -n "$pid" ] && kill "$pid" && echo "  restarted $exe (process-compose brings it back)"
+    done
+}
+
 # ── List ──
 
 list_suites() {
@@ -346,7 +368,6 @@ run_single() {
     env_name=$(basename "$env_file" .json)
     env_file=$(resolve_env_file "$env_file")
 
-    flush_redis
     enable_all_drivers
 
     mkdir -p "$REPORTS_DIR"
@@ -381,6 +402,7 @@ run_single() {
             -e "$env_file" \
             --bail \
             --timeout-request 60000 \
+            --timeout-script 300000 \
             --reporters cli,json \
             --reporter-json-export "$json_out" \
             "${verbose_flags[@]+"${verbose_flags[@]}"}" \
@@ -391,6 +413,7 @@ run_single() {
             -e "$env_file" \
             --bail \
             --timeout-request 60000 \
+            --timeout-script 300000 \
             --reporters cli \
             "${verbose_flags[@]+"${verbose_flags[@]}"}" \
             || { echo "FAILED: $suite_name ($env_name)"; return 1; }
@@ -569,11 +592,9 @@ run_bus() { run_frfs "$BUS_DIR" "BUS" "${1:-}" "${2:-}"; }
 run_metro() { run_frfs "$METRO_DIR" "METRO" "${1:-}" "${2:-}"; }
 run_subway() { run_frfs "$SUBWAY_DIR" "SUBWAY" "${1:-}" "${2:-}"; }
 run_online() { run_frfs "$ONLINE_DIR" "ONLINE RIDE" "${1:-}" "${2:-}"; }
+run_international() { run_frfs "$INTERNATIONAL_DIR" "INTERNATIONAL RIDE" "${1:-}" "${2:-}"; }
 run_online_offers() { run_frfs "$ONLINE_OFFERS_DIR" "ONLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
 run_offline_offers() { run_frfs "$OFFLINE_OFFERS_DIR" "OFFLINE RIDE OFFERS" "${1:-}" "${2:-}"; }
-# Scheduler tests skip flush_redis — FLUSHALL kills Redis stream consumer groups
-# and scheduler threads don't recover. Each scheduler suite is responsible for
-# its own targeted cleanup via POST /mock/scheduler/clear (see SchedulerFlow/README.md).
 run_scheduler() {
     local filter_env="${1:-}"
     local filter_suite="${2:-}"
@@ -786,6 +807,7 @@ show_help() {
     echo "  subway              Run all subway ticket booking suites"
     echo "  online              Run online (Stripe) ride booking suites"
     echo "  online-offers       Run online ride discount offer suites"
+    echo "  international       Run international (Helsinki) ride booking suites"
     echo "  offline-offers      Run offline ride cashback offer suites"
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
@@ -814,6 +836,7 @@ show_help() {
     echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
     echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
     echo "  --setup             Seed toll dashboard access_matrix + dashboard.sql"
+    echo "  sync-config [ENV]   Import synced config into local (default prod_international)"
     echo "  driver-image        Run driver image fetch API tests"
     echo "  pan-hard-check      Run PAN hard-check tests (business PAN rejected for DRIVER/FLEET_OWNER)"
     echo "  --list              List all available suites and cities"
@@ -868,6 +891,9 @@ case "${1:-}" in
     --setup)
         setup
         ;;
+    sync-config)
+        sync_config "${2:-}"
+        ;;
     --list)
         list_suites
         ;;
@@ -894,6 +920,9 @@ case "${1:-}" in
         ;;
     online)
         run_online "${2:-}" "${3:-}"
+        ;;
+    international)
+        run_international "${2:-}" "${3:-}"
         ;;
     online-offers)
         run_online_offers "${2:-}" "${3:-}"

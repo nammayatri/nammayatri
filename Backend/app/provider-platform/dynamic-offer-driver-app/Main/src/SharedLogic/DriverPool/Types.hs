@@ -15,6 +15,7 @@
 
 module SharedLogic.DriverPool.Types where
 
+import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as A
@@ -492,6 +493,8 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
+    buyerOfferDiscount :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,

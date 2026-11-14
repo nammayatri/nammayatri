@@ -4,6 +4,7 @@
 
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Ride
@@ -85,12 +86,13 @@ updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.
 
 updateCommissionAndDiscount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCommissionAndDiscount commission cancellationCommission discountAmount id = do
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCommissionAndDiscount commission cancellationDuesCommission cancellationDuesCommissionTaxBreakup discountAmount id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.commission commission,
-      Se.Set Beam.cancellationCommission cancellationCommission,
+      Se.Set Beam.cancellationDuesCommission cancellationDuesCommission,
+      Se.Set Beam.cancellationDuesCommissionTaxBreakup (toJSON <$> cancellationDuesCommissionTaxBreakup),
       Se.Set Beam.discountAmount discountAmount,
       Se.Set Beam.updatedAt _now
     ]

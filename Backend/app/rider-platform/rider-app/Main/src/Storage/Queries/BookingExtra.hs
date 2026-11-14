@@ -171,7 +171,9 @@ data BPPInvoiceProviderFields = BPPInvoiceProviderFields
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGstin :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
 
 updateBPPBookingIdAndProviderUrl ::
@@ -195,6 +197,8 @@ updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl BPPInvoiceProviderFi
         <> maybe [] (\v -> [Se.Set BeamB.supplierAddress (Just v)]) supplierAddress
         <> maybe [] (\v -> [Se.Set BeamB.supplierGSTIN (Just v)]) supplierGSTIN
         <> maybe [] (\v -> [Se.Set BeamB.supplierTaxNo (Just v)]) supplierTaxNo
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByGstin (Just v)]) issuedByGstin
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByTaxNo (Just v)]) issuedByTaxNo
         <> maybe [] (\v -> [Se.Set BeamB.supplierId (Just v)]) supplierId
     )
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]

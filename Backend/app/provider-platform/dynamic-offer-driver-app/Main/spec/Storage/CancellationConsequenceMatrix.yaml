@@ -41,7 +41,7 @@ CancellationConsequenceMatrix:
 
   types:
     ConsequenceCollectionMode:
-      enum: "NextRideDues,ImmediateCapture"
+      enum: "NextRideDues,ImmediateCapture,PayBeforeNextRide"
 
   fields:
     id: Id CancellationConsequenceMatrix

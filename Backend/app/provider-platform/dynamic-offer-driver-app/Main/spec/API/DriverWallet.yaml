@@ -4,6 +4,8 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
   EntryStatus: Lib.Finance.Domain.Types.LedgerEntry
+  SettlementStatus: Lib.Finance.Domain.Types.LedgerEntry
+  EntityReferenceType: Lib.Finance.Domain.Types.LedgerEntry
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
@@ -71,6 +73,7 @@ types:
     bankReference: Maybe Text  # Bank reference once paid (UTR, RRN, ...)
     bankReferenceType: Maybe Text  # UTR, RRN, FT_NUMBER or PARTNER_REF
     statusUpdatedAt: Maybe UTCTime  # Last status change
+    merchantTopUpAmount: Maybe HighPrecMoney
   PayoutHistoryResponse:
     totalPaidOut: HighPrecMoney
     lastPayout: Maybe PayoutHistoryItem
@@ -137,6 +140,11 @@ types:
     isCredit: Bool
     isReversal: Bool
     date: UTCTime
+    status: Maybe EntryStatus
+    settlementStatus: Maybe SettlementStatus
+    entityReferenceType: Maybe EntityReferenceType
+    entityReferenceId: Maybe Text
+    reversalOf: Maybe (Id LedgerEntry)
   WalletLedgerRideInfo:
     rideId: Id Ride
     rideShortId: Text
@@ -217,5 +225,6 @@ apis:
         - toDate: UTCTime
         - limit: Int
         - offset: Int
+        - entityId: Text
       response:
         type: WalletLedgerEntriesResponse

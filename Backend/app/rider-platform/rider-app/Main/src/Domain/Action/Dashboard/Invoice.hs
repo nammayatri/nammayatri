@@ -81,6 +81,7 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("BOOTH_CHARGE", "Booth Charge"),
                   ("SCHEDULING_CHARGE", "Scheduling Charge")
                 ]
+                  <> UIInvoice.taxBreakupItems govtChargesLabel
           fareBreakups <- mapM (getFareBreakup booking) breakupItems
           gateFeeBreakups <- getGateFeeBreakups booking
           mbSource <- case booking.fromLocationId of

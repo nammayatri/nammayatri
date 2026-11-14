@@ -6,13 +6,14 @@ module SharedLogic.Offer
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (utctDay)
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -209,20 +210,15 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
         DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
   pure $ overrideOfferListRespAutoApply autoApplyOfferCodes offerListResp
 
--- | Optional fare context — when provided, postOfferAmount is recomputed
---   via the shared 'Domain.SharedLogic.RideDiscount.applyRideDiscount'
---   algorithm so the VAT portion is scaled with the discount. When omitted,
---   offer.finalOrderAmount is used as-is (FRFS / pass flows etc.).
-type OfferFareCtx = Maybe RD.ProjectFareParamsBreakup
+type OfferFareCtx = Maybe (HighPrecMoney, [FB.BreakupLine])
 
--- | Recompute the post-offer amount: VAT-aware and payment-charge-aware when
---   fare context + discount are both present, falls back to the payment
---   library's finalOrderAmount otherwise.
---
---   When @offer.discountAmount > 0@ but no fare context was threaded
---   through, we emit a warning — that path produces a stale figure that
---   doesn't reflect VAT redistribution, and should be fixed by threading
---   the ctx from the caller.
+offerFareCtx :: HighPrecMoney -> [DFareBreakup.FareBreakup] -> (OfferFareCtx, HighPrecMoney)
+offerFareCtx fare fareBreakups
+  | null fareBreakups = (Nothing, fare)
+  | otherwise =
+    let breakupLines = [FB.BreakupLine fb.description fb.amount.amount | fb <- fareBreakups]
+     in (Just (fare, breakupLines), FB.discountableAmount fare breakupLines)
+
 recomputePostOfferAmount ::
   (MonadFlow m) =>
   OfferFareCtx ->
@@ -235,8 +231,7 @@ recomputePostOfferAmount mbCtx offer = case mbCtx of
       -- re-priced on the post-discount fare rather than carried through or
       -- rescaled. This is why the saving exceeds the offer's face value, and it
       -- must match what the BPP captures.
-      let (updatedBreakup, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
-       in pure $ RD.projectFareParamsBreakupTotal updatedBreakup
+      pure (fst b - uncurry FB.clampDiscount b offer.discountAmount)
   Nothing | offer.discountAmount > 0 -> do
     logWarning $
       "recomputePostOfferAmount: offer " <> offer.offerId
@@ -296,8 +291,7 @@ offerAmountSaved mbCtx offer =
   case mbCtx of
     Just b
       | offer.discountAmount > 0 ->
-        let (updated, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
-         in max 0 (RD.projectFareParamsBreakupTotal b - RD.projectFareParamsBreakupTotal updated) + offer.cashbackAmount
+        uncurry FB.clampDiscount b offer.discountAmount + offer.cashbackAmount
     _ -> offer.discountAmount + offer.cashbackAmount
 
 -------------------------------------------------------------------------------------------------------

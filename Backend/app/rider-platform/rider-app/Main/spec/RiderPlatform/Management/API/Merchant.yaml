@@ -49,6 +49,9 @@ imports:
   MerchantOperatingCityCloudUpdateReq: Dashboard.Common.Merchant
   MerchantOperatingCityCloudUpdateRes: Dashboard.Common.Merchant
   Value: Data.Aeson
+  PaymentChargeType: Domain.Types.PaymentChargeBearer
+  PaymentChargeBearer: Domain.Types.PaymentChargeBearer
+  TaxConfig: BecknV2.OnDemand.FareBreakup.Tax
 
 module: Merchant
 
@@ -320,6 +323,24 @@ apis:
         type: UpdateRiderConfigEstimatesOrderReq
       response:
         type: APISuccess
+  - GET: # MerchantConfigPaymentMethodListAPI
+      endpoint: /config/paymentMethod/list
+      auth: ApiAuthV2
+      response:
+        type: PaymentMethodChargeListRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - POST: # MerchantConfigPaymentMethodChargeUpdateAPI
+      endpoint: /config/paymentMethod/{paymentMethodId}/paymentCharge/update
+      params:
+        paymentMethodId: Text
+      auth: ApiAuthV2
+      request:
+        type: UpdatePaymentMethodChargeReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
   - POST: # MerchantConfigDebugLogUpdateAPI
       endpoint: /config/debugLog/update
       auth: ApiAuthV2
@@ -424,6 +445,24 @@ types:
     - userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
     - defaultServiceTierOrderConfig: "Maybe [ServiceTierType]"
     - noOfRideRequestsConfig: Maybe Int
+    - derive: "'HideSecrets"
+  PaymentMethodChargeAPIEntity:
+    - id: Text
+    - paymentType: Text
+    - paymentInstrument: Text
+    - collectedBy: Text
+    - priority: Int
+    - paymentChargeType: Maybe PaymentChargeType
+    - paymentCharge: Maybe HighPrecMoney
+    - paymentChargeTax: Maybe TaxConfig
+    - paymentChargeBearer: Maybe PaymentChargeBearer
+  PaymentMethodChargeListRes:
+    - paymentMethods: "[PaymentMethodChargeAPIEntity]"
+  UpdatePaymentMethodChargeReq:
+    - paymentChargeType: Maybe PaymentChargeType
+    - paymentCharge: Maybe HighPrecMoney
+    - paymentChargeTax: Maybe TaxConfig
+    - paymentChargeBearer: Maybe PaymentChargeBearer
     - derive: "'HideSecrets"
   RiderMerchantMessageCatalogResp:
     - values: "[Text]"

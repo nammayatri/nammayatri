@@ -3,6 +3,7 @@
 
 module Domain.Types.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
@@ -38,8 +39,9 @@ data Ride = Ride
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationConsequenceRowIdIfCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     cancellationFaultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFaultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -164,12 +166,12 @@ data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (
 
 data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | AssignedByOps | AssignedByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)

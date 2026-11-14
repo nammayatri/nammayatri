@@ -1,0 +1,26 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN ride_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN ride_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN ride_tax_igst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN parking_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN parking_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN parking_tax_igst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN toll_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN toll_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN toll_tax_igst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN airport_entry_fee double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN airport_entry_fee_tax double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN airport_entry_fee_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN airport_entry_fee_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN airport_entry_fee_tax_igst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN payment_charge_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN payment_charge_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN payment_charge_tax_igst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN cancellation_dues_tax double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN cancellation_dues_tax_cgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN cancellation_dues_tax_sgst double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN cancellation_dues_tax_igst double precision;
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN ride_tax_config text;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN toll_tax_config text;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN parking_tax_config text;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN commission_tax_config text;

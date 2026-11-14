@@ -240,33 +240,47 @@ data QuoteBreakupTitle
   | NIGHT_CHARGES -- v2.1.0: night shift charges (spec name)
   | WAITING_CHARGES -- v2.1.0: waiting charges (spec name)
   | PARKING_CHARGES -- v2.1.0: parking charges (spec name)
-  | TOLL_FARE_TAX_EXCLUSIVE
-  | -- Canonical fare-breakup contract: every BPP fare sum partitions into
-    -- categories × {tax-exclusive, tax}. The ride portion is split by whether
-    -- the customer offer discount applies. Ten fare slots, plus the two
-    -- payment-charge slots below; the twelve sum to what the customer pays.
-    RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
-  | RIDE_FARE_DISCOUNT_APPLICABLE_TAX
-  | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
-  | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX
   | TOLL_FARE_TAX
-  | CANCELLATION_FEE_TAX_EXCLUSIVE
   | CANCELLATION_TAX
-  | PARKING_CHARGE_TAX_EXCLUSIVE
   | PARKING_CHARGE_TAX
-  | -- The payment charge completes the partition: it is levied on the post-discount
-    -- total of the ten fare slots, so the twelve together equal what the customer pays.
-    -- Populated only when the rider bears the charge.
-    PAYMENT_CHARGE_TAX_EXCLUSIVE
   | PAYMENT_CHARGE_TAX
-  | -- The rate the charge was priced at, so the BAP can re-derive it on the
-    -- post-discount base rather than rescaling and rounding differently.
-    PAYMENT_CHARGE_RATE
-  | PAYMENT_CHARGE_VAT_PCT
   | -- This ride's cancellation charge is distinct from CANCELLATION_CHARGES, which is a previous ride's carry-forward due.
     RIDE_CANCELLATION_CHARGES
   | RIDE_CANCELLATION_TAX
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  | AIRPORT_ENTRY_FEE
+  | RIDE_FARE_TAX
+  | RIDE_FARE_CGST
+  | RIDE_FARE_SGST
+  | RIDE_FARE_IGST
+  | RIDE_FARE_VAT
+  | TOLL_TAX
+  | TOLL_CGST
+  | TOLL_SGST
+  | TOLL_IGST
+  | PARKING_TAX
+  | PARKING_CGST
+  | PARKING_SGST
+  | PARKING_IGST
+  | PARKING_VAT
+  | AIRPORT_ENTRY_FEE_TAX
+  | AIRPORT_ENTRY_FEE_CGST
+  | AIRPORT_ENTRY_FEE_SGST
+  | AIRPORT_ENTRY_FEE_IGST
+  | AIRPORT_ENTRY_FEE_VAT
+  | PLATFORM_FEE_CGST
+  | PLATFORM_FEE_SGST
+  | PLATFORM_FEE_IGST
+  | PLATFORM_FEE_VAT
+  | CANCELLATION_FEE_TAX
+  | CANCELLATION_FEE_CGST
+  | CANCELLATION_FEE_SGST
+  | CANCELLATION_FEE_IGST
+  | CANCELLATION_FEE_VAT
+  | PAYMENT_CHARGE_CGST
+  | PAYMENT_CHARGE_SGST
+  | PAYMENT_CHARGE_IGST
+  | PAYMENT_CHARGE_VAT
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 data CancellationReasonId
   = -- message.cancellation_reason_id -- sent by BAP in cancel

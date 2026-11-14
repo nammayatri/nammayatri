@@ -1032,6 +1032,9 @@ types:
     - totalRides: Int
     - cancellationCharges: Money
     - tipAmount: Money
+    - totalEarningsWithCurrency: Maybe PriceAPIEntity
+    - cancellationChargesWithCurrency: Maybe PriceAPIEntity
+    - tipAmountWithCurrency: Maybe PriceAPIEntity
   TdsOwnerType:
     enum: "DRIVER, FLEET_OWNER"
   UpdateTdsRateReq:

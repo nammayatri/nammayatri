@@ -1,4 +1,5 @@
 imports:
+  Regime: BecknV2.OnDemand.FareBreakup.Tax
   City: Kernel.Types.Beckn.Context
   IndianState: Kernel.Types.Beckn.Context
   Country: Kernel.Types.Beckn.Context
@@ -1113,17 +1114,10 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
-    PaymentChargeBearer:
-      enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
     # FLEET_ACCOUNT: the fleet owner's account, filtered to this driver's rides.
     # OWN_ACCOUNT: the driver's own account. HIDDEN: an empty wallet.
     FleetLinkedDriverWalletView:
       enum: "FLEET_ACCOUNT, OWN_ACCOUNT, HIDDEN"
-    # The components of the ten-slot fare partition, plus the payment charge, that
-    # a surface may club together rather than itemise. Listing a component means
-    # "show it as one row"; omitting it means "show its parts separately".
-    ProjectFareParamsComponent:
-      enum: "RIDE_FARE, TOLL_FARE, CANCELLATION_FARE, PARKING_CHARGE, PAYMENT_CHARGE"
     PayoutChargeBearer:
       enum: "DRIVER_BEARER, PLATFORM_BEARER"
     ConnectChargeBearer:
@@ -1165,19 +1159,11 @@ TransporterConfig:
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
-      onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
       # Roles barred from instant wallet payout in this city (scheduled, bulk and adhoc are unaffected).
       # FLEET_OWNER also covers FLEET_BUSINESS. Absent: nobody is barred.
       instantPayoutExcludedRoles: Maybe [Role]
-      paymentChargeBearer: Maybe PaymentChargeBearer
-      paymentChargeRate: Maybe Double
-      paymentChargeVat: Maybe Double
-      clubProjectFareInRideInvoice: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInRefundsInvoice: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInEarnings: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInPayouts: Maybe [ProjectFareParamsComponent]
       connectAccountCharge: Maybe HighPrecMoney
       connectAccountChargeFrequency: Maybe ChargeFrequency
       connectAccountChargeBearer: Maybe ConnectChargeBearer
@@ -1197,9 +1183,11 @@ TransporterConfig:
       igstPercentage: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TaxConfig:
+      taxRegime: Maybe Regime
       rideGst: GstBreakup
       subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
+      airportEntryFeeTaxConfig: Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig
       securityDepositGst: Maybe GstBreakup
       defaultTdsRate: Maybe TdsConfig
       subscriptionTdsRate: Maybe TdsConfig
@@ -1207,15 +1195,11 @@ TransporterConfig:
       individualLinked: Maybe TdsConfig
       individualNotLinked: Maybe TdsConfig
       businessTds: Maybe TdsConfig
-      serviceVatPercentage: Maybe Double
-      commissionVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
     InvoiceConfig:
-      driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
-      showVatInputLineItem: Maybe Bool
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency

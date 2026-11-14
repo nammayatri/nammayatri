@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { LogEntry } from '../types';
+import { Base64MediaButtons } from './Base64Media';
 import './LogPanel.css';
 
 interface Props {
@@ -157,7 +158,10 @@ function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string
                 <HeaderTable headers={entry.response.headers} highlight={effective} />
               )}
               {entry.response.body !== undefined && entry.response.body !== null && entry.response.body !== '' && (
-                <pre className="log-detail-body">{highlightInline(filterBody(entry.response.body), effective)}</pre>
+                <>
+                  <Base64MediaButtons data={entry.response.body} />
+                  <pre className="log-detail-body">{highlightInline(filterBody(entry.response.body), effective)}</pre>
+                </>
               )}
             </div>
           )}

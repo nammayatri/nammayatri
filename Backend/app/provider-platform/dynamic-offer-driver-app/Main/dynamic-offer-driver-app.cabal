@@ -849,6 +849,7 @@ library
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.Settlement
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SharedCab.Trip
       SharedLogic.SocialLogin

@@ -520,7 +520,7 @@ type CustomerCancellationDuesSyncAPI =
     :> ReqBody '[JSON] CustomerCancellationDuesSyncReq
     :> Post '[JSON] APISuccess
 
-data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
+data CancellationLedgerAction = SettleCancellationLedger | DueCancellationLedger
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
@@ -773,9 +773,10 @@ data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
 --   Generic JSON encodes it as "RIDE_FARE"/"TOLL"/"PARKING"/"CANCELLATION_FEE". Field names
 --   byte-identical to BPP.
 data RefundLedgerComponent = RefundLedgerComponent
-  { component :: DFareBreakup.FareComponent,
+  { component :: DFareBreakup.RefundFareComponent,
     fareAmount :: HighPrecMoney,
-    vatAmount :: HighPrecMoney
+    taxAmount :: HighPrecMoney,
+    refundShare :: HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -786,9 +787,7 @@ data RefundLedgerReq = RefundLedgerReq
     refundsAmount :: HighPrecMoney,
     deductFromDriver :: Maybe Bool,
     refundRequestStatus :: RefundLedgerStatus,
-    refundComponents :: Maybe [RefundLedgerComponent],
-    rideFareComponentTotal :: Maybe HighPrecMoney,
-    cancellationComponentTotal :: Maybe HighPrecMoney
+    refundComponents :: Maybe [RefundLedgerComponent]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

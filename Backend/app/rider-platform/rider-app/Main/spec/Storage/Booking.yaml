@@ -34,6 +34,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  RiderTaxRates: BecknV2.OnDemand.FareBreakup.Tax
   FareSettlementType: Lib.Types.SpecialLocation
   ParcelType: Domain.Types.ParcelType
   JourneyLeg: Domain.Types.JourneyLeg
@@ -275,6 +276,7 @@ Booking:
     commission: Maybe HighPrecMoney
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text
+    riderTaxRates: Maybe RiderTaxRates
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
@@ -289,6 +291,8 @@ Booking:
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
     supplierId: Maybe Text
+    issuedByGstin: Maybe Text
+    issuedByTaxNo: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -348,6 +352,7 @@ Booking:
     isPetRide: Maybe Bool
     requiresPaymentBeforeConfirm: Maybe Bool
     parentSearchRequestLocationInfo: Maybe Value
+    riderTaxRates: Maybe Value
 
 
   sqlType:
@@ -398,6 +403,7 @@ Booking:
     estimatedDistanceValue: double precision
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
+    riderTaxRates: "json"
     displayBookingId: character varying(25)
     requiresPaymentBeforeConfirm: boolean
     parentSearchRequestLocationInfo: jsonb
@@ -412,6 +418,7 @@ Booking:
   # distanceUnit should be the same for all fields
   toTType:
     fareProductType: getFareProductType
+    riderTaxRates: Kernel.Prelude.toJSON <$> riderTaxRates|E
     toLocationId: getToLocationId
     distance: (Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
     distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
@@ -459,6 +466,7 @@ Booking:
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
+    riderTaxRates: Kernel.Utils.JSON.valueToMaybe =<< riderTaxRates|E
     fromLocation: (fst toBookingDetailsAndFromLocation')|E
     bookingDetails: (snd toBookingDetailsAndFromLocation')|E
     merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM

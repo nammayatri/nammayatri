@@ -37,10 +37,17 @@ findBySRIdAndStatus ::
   (Domain.Types.EstimateStatus.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
 findBySRIdAndStatus status requestId = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]]
 
-updateSelectedOfferId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
-updateSelectedOfferId selectedOfferId id = do
+updateSelectedOfferId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateSelectedOfferId selectedOfferId selectedOfferDiscountAmount id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.selectedOfferId selectedOfferId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.selectedOfferId selectedOfferId,
+      Se.Set Beam.selectedOfferDiscountAmount selectedOfferDiscountAmount,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.EstimateStatus.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -112,6 +119,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.providerUrl (Kernel.Prelude.showBaseUrl providerUrl),
       Se.Set Beam.qar qar,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.riderTaxRates (Kernel.Prelude.toJSON <$> riderTaxRates),
+      Se.Set Beam.selectedOfferDiscountAmount selectedOfferDiscountAmount,
       Se.Set Beam.selectedOfferId selectedOfferId,
       Se.Set Beam.serviceTierName serviceTierName,
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,

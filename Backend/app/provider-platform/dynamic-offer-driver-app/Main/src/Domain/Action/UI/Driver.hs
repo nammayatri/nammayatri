@@ -105,6 +105,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.Message as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -176,6 +177,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.PaymentChargeBearer as DPCB
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
@@ -272,6 +274,7 @@ import qualified SharedLogic.BetterDriverSwap as BetterDriverSwap
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendRideAssignedUpdateToBAP)
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
@@ -307,6 +310,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import SharedLogic.ScheduledRideVisibility (BookingVisibilityFacts (..), DriverVisibilityFacts (..), VisibilityFactNeeds (..), factsNeededBy, isVisibleUnderRules, resolveVisibilityStage)
 import qualified SharedLogic.SearchTryLocker as CS
+import SharedLogic.Settlement (driverTaxRates, netTotalTaxInclusive)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
@@ -342,6 +346,7 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Geometry as QGeometry
@@ -717,6 +722,8 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: HighPrecMoney,
+    estimatedFareNet :: Maybe HighPrecMoney,
+    taxRates :: Maybe Tax.DriverTaxRates,
     currency :: Currency,
     estimatedDuration :: Maybe Seconds,
     fareParams :: FareParameters,
@@ -2039,7 +2046,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       nowForWalletFlag <- getCurrentTime
       mbScheduledRideMinWalletBalance <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime nowForWalletFlag (pure $ scheduledRideMinWalletFloor farePolicy.conditionalCharges) driverId.getId
       -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2356,9 +2363,10 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
     unless (reusedBooking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
     mbFarePolicyForCommission <- getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote'.id.getId
     commission <- FC.calculateCommission driverQuote'.fareParams mbFarePolicyForCommission
-    cancellationCommission <- FC.calculateCancellationCommission driverQuote'.fareParams mbFarePolicyForCommission
-    let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote'.fareParams reusedBooking.discountAmount
-        chargeRes = FC.finalisePaymentCharge (Just transporterConfig.driverWalletConfig) driverQuote'.estimatedFare (fromMaybe 0 driverQuote'.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote'.fareParams.paymentProcessingFeeVat) mbClampedDiscount driverQuote'.fareParams
+    let cancellationDuesCommission = FC.calculateCancellationDuesCommission reusedBooking.cancellationDuesCommission driverQuote'.fareParams
+    refreshedDiscount <- CallBAPInternal.refreshOfferDiscount reusedBooking reusedBooking.discountAmount (Just driverQuote'.vehicleServiceTier) reusedBooking.fareParams driverQuote'.fareParams
+    let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote'.fareParams refreshedDiscount
+        chargeRes = FC.finalisePaymentCharge reusedBooking.paymentChargeDetails driverQuote'.estimatedFare (fromMaybe 0 driverQuote'.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote'.fareParams.paymentProcessingFeeTax) mbClampedDiscount driverQuote'.fareParams
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
     now <- getCurrentTime
@@ -2370,13 +2378,15 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
     let uBookingPre =
           reusedBooking
             { DRB.quoteId = driverQuote'.id.getId,
-              DRB.estimatedFare = driverQuote'.estimatedFare,
-              DRB.fareParams = driverQuote'.fareParams,
+              DRB.estimatedFare = chargeRes.adjustedFare,
+              DRB.fareParams = chargeRes.adjustedFareParams,
               DRB.estimatedCongestionCharge = driverQuote'.fareParams.congestionCharge,
               DRB.commission = commission,
-              DRB.cancellationCommission = cancellationCommission,
+              DRB.cancellationDuesCommission = cancellationDuesCommission,
+              DRB.cancellationDuesCommissionTaxBreakup = FC.calculateCancellationDuesCommissionTax reusedBooking.cancellationDuesCommissionTaxBreakup driverQuote'.fareParams,
               DRB.paymentCharge = mbPaymentCharge,
               DRB.paymentChargeBearer = mbPaymentChargeBearer,
+              DRB.discountAmount = mbClampedDiscount,
               DRB.isPetRide = isJust driverQuote'.fareParams.petCharges,
               DRB.vehicleServiceTier = driverQuote'.vehicleServiceTier,
               DRB.vehicleServiceTierName = vehicleServiceTierItem.name,
@@ -2396,6 +2406,7 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
               DRB.startTime = now,
               DRB.updatedAt = now
             }
+    QFP.updatePaymentCharge driverQuote'.fareParams uBookingPre.fareParams
     QBE.updateReallocationResetDynamic uBookingPre now
     (ride, _, vehicle) <- initializeRide merchant driver uBookingPre Nothing Nothing driverQuote'.clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True False Nothing
     -- after initializeRide: a pre-ride failure then leaves the searchTry dispatchable, so the allocator's
@@ -2584,22 +2595,23 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
         throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " days (inclusive)."
       driverStats <- runInReplica $ SQDS.findAllInRangeByDriverId_ driverId from to
       let dailyEarningData = CHDS.mkEarningsBar <$> map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats
-      pure $ mkEarningPeriodStatsRes dailyEarningData
+      pure $ mkEarningPeriodStatsRes transporterConfig.currency dailyEarningData
     DCommon.WEEKLY -> do
       when (weeksBetween > earningsWindowSize) $
         throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " weeks (inclusive)."
       let weekStartMode = transporterConfig.analyticsConfig.weekStartMode
       weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats weekStartMode)
-      pure $ mkEarningPeriodStatsRes weeklyEarningData
+      pure $ mkEarningPeriodStatsRes transporterConfig.currency weeklyEarningData
     DCommon.MONTHLY -> do
       when (monthsBetween > earningsWindowSize) $
         throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " months (inclusive)."
       monthlyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to CHDS.MonthlyStats
-      pure $ mkEarningPeriodStatsRes monthlyEarningData
+      pure $ mkEarningPeriodStatsRes transporterConfig.currency monthlyEarningData
   where
-    mkEarningPeriodStatsRes :: [CHDS.EarningsBar] -> DCommon.EarningPeriodStatsRes
-    mkEarningPeriodStatsRes earningsBar =
-      let earningData = map (\e -> DCommon.EarningPeriodStats {periodStart = e.periodStartDate, totalEarnings = roundToIntegral e.earnings, totalDistance = e.distance, totalRides = e.rides, cancellationCharges = roundToIntegral e.cancellationChargesReceived, tipAmount = roundToIntegral e.bonusEarningsReceived}) earningsBar
+    mkEarningPeriodStatsRes :: Currency -> [CHDS.EarningsBar] -> DCommon.EarningPeriodStatsRes
+    mkEarningPeriodStatsRes currency earningsBar =
+      let earningData = map (\e -> DCommon.EarningPeriodStats {periodStart = e.periodStartDate, totalEarnings = roundToIntegral e.earnings, totalDistance = e.distance, totalRides = e.rides, cancellationCharges = roundToIntegral e.cancellationChargesReceived, tipAmount = roundToIntegral e.bonusEarningsReceived, totalEarningsWithCurrency = Just (roundedPrice e.earnings), cancellationChargesWithCurrency = Just (roundedPrice e.cancellationChargesReceived), tipAmountWithCurrency = Just (roundedPrice e.bonusEarningsReceived)}) earningsBar
+          roundedPrice amount = PriceAPIEntity (roundAmountByCurrency' currency amount) currency
        in DCommon.EarningPeriodStatsRes {earnings = earningData}
 
     daysBetween :: Int
@@ -2969,7 +2981,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       return
         DriverPaymentHistoryResp
           { totalEarnings = roundToIntegral totalEarnings,
-            totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+            totalEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarnings) currency,
             charges = roundToIntegral charges,
             chargesWithCurrency = PriceAPIEntity charges currency,
             ..
@@ -3597,14 +3609,14 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
   mbQuote <- QQuote.findById (Id quoteId)
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-  let govtChargesRate = mbTransporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))
   case mbQuote of
     Nothing -> do
       fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
       pure Nothing
     Just quote -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate (not $ null stops) . withPricedStateEntryPermitCharges fareParams) quote.farePolicy
-      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
+      let mbBearer = paymentChargeBearer >>= (readMaybe . T.unpack)
+          farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp mbTransporterConfig (not $ null stops) . withPricedStateEntryPermitCharges fareParams) quote.farePolicy
+      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) [fareParams.govtCharges, fareParams.tollFareTax, fareParams.parkingChargeTax, fareParams.cancellationDuesTax])) (fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
 mkBreakupItem currency title valueInText = do
@@ -4227,10 +4239,10 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             totalEarnings = roundToIntegral stats.totalEarnings,
             totalDistance = stats.totalDistance,
             bonusEarnings = roundToIntegral stats.bonusEarned,
-            totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+            totalEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency stats.totalEarnings) currency,
             totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-            totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-            bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency,
+            totalEarningsPerKmWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarningsPerKm) currency,
+            bonusEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency stats.bonusEarned) currency,
             onlineDuration = stats.onlineDuration
           }
     (Just fromDate, Just toDate) | fromDate == toDate -> do
@@ -4247,10 +4259,10 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 totalEarnings = roundToIntegral stats.totalEarnings,
                 totalDistance = stats.totalDistance,
                 bonusEarnings = roundToIntegral stats.bonusEarnings,
-                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                totalEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency stats.totalEarnings) currency,
                 totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarningsPerKm) currency,
+                bonusEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency stats.bonusEarnings) currency,
                 onlineDuration = fromMaybe (Seconds 0) stats.onlineDuration
               }
     (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= earningsWindowSize -> do
@@ -4274,10 +4286,10 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 totalEarnings = roundToIntegral totalEarnings,
                 totalDistance = totalDistance,
                 bonusEarnings = roundToIntegral bonusEarnings,
-                totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+                totalEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarnings) currency,
                 totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarningsPerKm) currency,
+                bonusEarningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency bonusEarnings) currency,
                 onlineDuration = aggMbSeconds (.onlineDuration)
               }
     _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")

@@ -18,6 +18,8 @@
 -- drift apart.
 module SharedLogic.CancellationDues where
 
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.List (sortOn)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationConsequenceMatrix as DCCM
@@ -32,10 +34,7 @@ import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
 
--- | Ledger-side action requested through the internal dues-sync API: settle the
--- customer-cancellation ledger entries, or mark them overdue. (Moved here from the
--- deleted SharedLogic.UserCancellationDues; JSON encoding unchanged.)
-data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
+data CancellationLedgerAction = SettleCancellationLedger | DueCancellationLedger
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data ApplyCancellationChargeReq = ApplyCancellationChargeReq
@@ -45,11 +44,11 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
     totalCharges :: HighPrecMoney,
     currency :: Currency,
     cancellationFee :: Maybe HighPrecMoney,
-    cancellationFeeTax :: Maybe HighPrecMoney,
-    overdueCancellationCharge :: Maybe HighPrecMoney,
-    overdueCancellationTax :: Maybe HighPrecMoney,
+    cancellationFeeTax :: Maybe TaxBreakup,
     cancellationCommission :: Maybe HighPrecMoney,
-    overdueCancellationCommission :: Maybe HighPrecMoney,
+    cancellationCommissionTax :: Maybe TaxBreakup,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeTax :: Maybe TaxBreakup,
     carryForwardEnabled :: Bool,
     -- id of the CancellationConsequenceMatrix row that produced this charge (audit trail)
     consequenceRowId :: Maybe Text,
@@ -89,7 +88,9 @@ applyCancellationCharge req =
         -- ImmediateCapture rows are collected at cancel time, so they must never
         -- enter the running balance (see CancellationOrchestrator.carriesForwardDues).
         when req.carryForwardEnabled $
-          void $ QRD.updateCancellationDues (max 0 (req.totalCharges + riderDetails.cancellationDues)) req.riderId
+          if req.totalCharges > 0
+            then addRiderCancellationDues riderDetails req.totalCharges req.cancellationFeeTax req.cancellationCommission req.cancellationCommissionTax
+            else removeRiderCancellationDues riderDetails (negate req.totalCharges) []
         when (req.totalCharges > 0) $ do
           duesDetailsId <- generateGUID
           now <- getCurrentTime
@@ -100,11 +101,12 @@ applyCancellationCharge req =
                 riderId = req.riderId,
                 cancellationAmount = req.totalCharges,
                 cancellationFee = req.cancellationFee,
-                cancellationFeeTax = req.cancellationFeeTax,
-                overdueCancellationCharge = req.overdueCancellationCharge,
-                overdueCancellationTax = req.overdueCancellationTax,
+                cancellationFeeTax = (.total) <$> req.cancellationFeeTax,
+                cancellationFeeTaxBreakup = req.cancellationFeeTax,
                 cancellationCommission = req.cancellationCommission,
-                overdueCancellationCommission = req.overdueCancellationCommission,
+                cancellationCommissionTaxBreakup = req.cancellationCommissionTax,
+                paymentCharge = req.paymentCharge,
+                paymentChargeTaxBreakup = req.paymentChargeTax,
                 cancellationConsequenceRowId = req.consequenceRowId,
                 cancellationCollectionMode = req.collectionMode,
                 currency = req.currency,
@@ -124,11 +126,11 @@ settleCancellationDuesUpTo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id 
 settleCancellationDuesUpTo riderId amountCollected =
   withCancellationDuesLock riderId $ do
     riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-    pendingDues <- QCDD.findAllPendingByRiderId riderId
+    pendingDues <- filter carriedInRiderBalance <$> QCDD.findAllPendingByRiderId riderId
     let coveredRows = takeCovered 0 (sortOn (.createdAt) pendingDues)
     unless (null coveredRows) $
       QCDD.updateStatusByIds DCDD.PAID ((.id) <$> coveredRows)
-    void $ QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - amountCollected)) riderId
+    removeRiderCancellationDues riderDetails amountCollected coveredRows
     pure ((.rideId) <$> coveredRows)
   where
     takeCovered _ [] = []
@@ -136,12 +138,44 @@ settleCancellationDuesUpTo riderId amountCollected =
       | coveredSoFar + dues.cancellationAmount <= amountCollected = dues : takeCovered (coveredSoFar + dues.cancellationAmount) rest
       | otherwise = []
 
+addRiderCancellationDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRD.RiderDetails -> HighPrecMoney -> Maybe TaxBreakup -> Maybe HighPrecMoney -> Maybe TaxBreakup -> m ()
+addRiderCancellationDues riderDetails charge feeTax commission commissionTax = do
+  let isFresh = riderDetails.cancellationDues == 0
+      existingCommission = if isFresh then Nothing else riderDetails.cancellationDuesCommission
+      existingTax = if isFresh then Nothing else riderDetails.cancellationDuesTaxBreakup
+      existingCommissionTax = if isFresh then Nothing else riderDetails.cancellationDuesCommissionTaxBreakup
+  void $
+    QRD.updateCancellationDues
+      (riderDetails.cancellationDues + charge)
+      (Tax.addTaxBreakup existingTax feeTax)
+      (if isNothing existingCommission && isNothing commission then Nothing else Just (fromMaybe 0 existingCommission + fromMaybe 0 commission))
+      (Tax.addTaxBreakup existingCommissionTax commissionTax)
+      riderDetails.id
+
+removeRiderCancellationDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRD.RiderDetails -> HighPrecMoney -> [DCDD.CancellationDuesDetails] -> m ()
+removeRiderCancellationDues riderDetails amount rows = do
+  let newDues = max 0 (riderDetails.cancellationDues - amount)
+      sumTax field = foldr (Tax.addTaxBreakup . field) Nothing rows
+      removedCommission = sum (mapMaybe (.cancellationCommission) rows)
+      remaining = newDues > 0
+      remainingCommission = (\commission -> max 0 (commission - removedCommission)) <$> riderDetails.cancellationDuesCommission
+  void $
+    QRD.updateCancellationDues
+      newDues
+      (if remaining then Tax.subtractTaxBreakup riderDetails.cancellationDuesTaxBreakup (sumTax (.cancellationFeeTaxBreakup)) else Nothing)
+      (if remaining then remainingCommission else Nothing)
+      (if remaining then Tax.subtractTaxBreakup riderDetails.cancellationDuesCommissionTaxBreakup (sumTax (.cancellationCommissionTaxBreakup)) else Nothing)
+      riderDetails.id
+
 -- | Was this charge collected at cancel time rather than carried as a due? The row
 -- stores the mode as free text (written as @show \@ConsequenceCollectionMode@), so
 -- compare against the constructor rather than a bare literal — a rename of the
 -- constructor then fails to compile here instead of silently never matching.
-wasCollectedImmediately :: DCDD.CancellationDuesDetails -> Bool
-wasCollectedImmediately cdd = cdd.cancellationCollectionMode == Just (show DCCM.ImmediateCapture)
+carriedInRiderBalance :: DCDD.CancellationDuesDetails -> Bool
+carriedInRiderBalance cdd = carriedCollectionMode cdd.cancellationCollectionMode
+
+carriedCollectionMode :: Maybe Text -> Bool
+carriedCollectionMode = (`notElem` (Just . show <$> [DCCM.ImmediateCapture, DCCM.PayBeforeNextRide]))
 
 -- | Settle exactly one ride's pending dues row (Stripe immediate-capture path):
 -- decrement the balance by that row's amount and mark it PAID.
@@ -159,10 +193,10 @@ settleCustomerCancellationDues booking ride =
       mbCancellationDuesDetails <- QCDD.findByRideId ride.id
       case mbCancellationDuesDetails of
         Just cancellationDuesDetails | cancellationDuesDetails.paymentStatus == DCDD.PENDING -> do
-          unless (wasCollectedImmediately cancellationDuesDetails) $ do
+          when (carriedInRiderBalance cancellationDuesDetails) $ do
             riderDetails <- QRD.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
-            QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - cancellationDuesDetails.cancellationAmount)) rid
+            removeRiderCancellationDues riderDetails cancellationDuesDetails.cancellationAmount [cancellationDuesDetails]
             QRD.updateCancellationDuesPaymentInfo cancellationDuesDetails.cancellationAmount riderDetails
           QCDD.updatePaymentStatusByRideId DCDD.PAID ride.id
-          logInfo $ "Cleared customer cancellation dues for rideId: " <> ride.id.getId <> " amount=" <> show cancellationDuesDetails.cancellationAmount <> " immediateCapture=" <> show (wasCollectedImmediately cancellationDuesDetails)
+          logInfo $ "Cleared customer cancellation dues for rideId: " <> ride.id.getId <> " amount=" <> show cancellationDuesDetails.cancellationAmount <> " carriedInRiderBalance=" <> show (carriedInRiderBalance cancellationDuesDetails)
         _ -> logInfo $ "No pending cancellation dues to settle for rideId: " <> ride.id.getId

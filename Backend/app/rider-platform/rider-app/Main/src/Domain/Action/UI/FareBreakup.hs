@@ -1,7 +1,7 @@
 module Domain.Action.UI.FareBreakup where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Aeson
-import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -32,7 +32,7 @@ mkFareBreakupAPIEntity :: FareBreakup -> FareBreakupAPIEntity
 mkFareBreakupAPIEntity FareBreakup {..} =
   FareBreakupAPIEntity
     { amount = roundToIntegral amount.amount,
-      amountWithCurrency = mkPriceAPIEntity amount,
+      amountWithCurrency = mkRoundedPriceAPIEntity amount,
       ..
     }
 
@@ -54,6 +54,6 @@ getBookingFareBreakup _ entityId mbEntityType = do
       estimatedFareBreakups = breakdown.estimateRows
   pure
     BookingFareBreakupRes
-      { fareBreakup = filter (not . isProjectedFareParamTag . (.description)) (mkFareBreakupAPIEntity <$> fareBreakups),
-        estimatedFareBreakup = filter (not . isProjectedFareParamTag . (.description)) (mkFareBreakupAPIEntity <$> estimatedFareBreakups)
+      { fareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
+        estimatedFareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups
       }

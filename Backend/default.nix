@@ -219,9 +219,9 @@
           self'.packages.run-mobility-stack-dev
           self'.packages.run-mobility-stack-dev-on-available-ports
         ] ++ (lib.optionals pkgs.stdenv.isLinux [
-          # TODO: Use wkhtmltopdf  (with macOS support) after updating common/nixpkgs-latest
-          # common/nixpkgs-latest update requires https://github.com/NixOS/nixpkgs/pull/465567
           pkgs.wkhtmltopdf-bin
+        ]) ++ (lib.optionals pkgs.stdenv.isDarwin [
+          (pkgs.callPackage ./nix/wkhtmltopdf-darwin.nix { })
         ]);
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [

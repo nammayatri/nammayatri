@@ -402,7 +402,8 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run --option warn-dirty false .#run-mobility-stack-nix -- -S NAME -d "$@"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix run --option warn-dirty false .#run-mobility-stack-nix -- -U -u "''${FLAKE_ROOT}/data/process-compose.sock" -S NAME -d "$@"
           '';
         };
 
@@ -438,7 +439,8 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run --option warn-dirty false .#run-mobility-stack-dev -- -S NAME -d "$@"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix run --option warn-dirty false .#run-mobility-stack-dev -- -U -u "''${FLAKE_ROOT}/data/process-compose.sock" -S NAME -d "$@"
           '';
         };
 
@@ -646,7 +648,8 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run --impure --option warn-dirty false .#run-mobility-stack-dev-on-available-ports -- -S NAME -d "$@"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix run --impure --option warn-dirty false .#run-mobility-stack-dev-on-available-ports -- -U -u "''${FLAKE_ROOT}/data/process-compose.sock" -S NAME -d "$@"
           '';
         };
 
@@ -663,7 +666,8 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            nix run --option warn-dirty false .#run-mobility-stack-full -- -S NAME -d "$@"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix run --option warn-dirty false .#run-mobility-stack-full -- -U -u "''${FLAKE_ROOT}/data/process-compose.sock" -S NAME -d "$@"
           '';
         };
 
@@ -678,7 +682,8 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            nix run .#run-local-test-dashboard -- -S NAME -d "$@"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix run .#run-local-test-dashboard -- -U -u "''${FLAKE_ROOT}/data/process-compose-test-dashboard.sock" -S NAME -d "$@"
           '';
         };
 

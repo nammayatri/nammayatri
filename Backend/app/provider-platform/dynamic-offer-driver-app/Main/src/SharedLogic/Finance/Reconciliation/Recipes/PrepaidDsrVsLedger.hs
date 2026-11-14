@@ -25,6 +25,7 @@ module SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
@@ -48,23 +49,19 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.Reconciliation.EntitySync as EntitySync
 import SharedLogic.Finance.Wallet
   ( walletReferenceBaseRide,
-    walletReferenceCommissionCash,
-    walletReferenceCommissionOnline,
+    walletReferenceCommission,
     walletReferenceCustomerCancellationCharges,
-    walletReferenceCustomerCancellationGST,
+    walletReferenceCustomerCancellationTax,
     walletReferenceDriverCancellationCharges,
-    walletReferenceGSTCash,
-    walletReferenceGSTOnline,
     walletReferenceParkingCharges,
+    walletReferenceRideTax,
+    walletReferenceTDSDeduction,
     walletReferenceTDSDeductionCancellation,
-    walletReferenceTDSDeductionCash,
-    walletReferenceTDSDeductionOnline,
     walletReferenceTollCharges,
-    walletReferenceVATCash,
-    walletReferenceVATOnline,
   )
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -95,17 +92,13 @@ data ExpectedComponents = ExpectedComponents
 -- | Target-side breakdown packed into 'ReconT.tgtMeta'.
 data ActualComponents = ActualComponents
   { baseRide :: Maybe KTC.HighPrecMoney,
-    gstOnline :: Maybe KTC.HighPrecMoney,
-    gstCash :: Maybe KTC.HighPrecMoney,
-    vatOnline :: Maybe KTC.HighPrecMoney,
-    vatCash :: Maybe KTC.HighPrecMoney,
+    rideTax :: Maybe KTC.HighPrecMoney,
     custCancel :: Maybe KTC.HighPrecMoney,
     driverCancel :: Maybe KTC.HighPrecMoney,
     custCancelGst :: Maybe KTC.HighPrecMoney,
     toll :: Maybe KTC.HighPrecMoney,
     parking :: Maybe KTC.HighPrecMoney,
-    tdsOnline :: Maybe KTC.HighPrecMoney,
-    tdsCash :: Maybe KTC.HighPrecMoney,
+    tds :: Maybe KTC.HighPrecMoney,
     tdsCancel :: Maybe KTC.HighPrecMoney
   }
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -231,20 +224,17 @@ fetchTargets _scope bookingIds = do
   where
     allRefTypes =
       [ walletReferenceBaseRide,
-        walletReferenceGSTOnline,
-        walletReferenceGSTCash,
-        walletReferenceVATOnline,
-        walletReferenceVATCash,
+        walletReferenceRideTax Tax.GST,
+        walletReferenceRideTax Tax.VAT,
         walletReferenceCustomerCancellationCharges,
         walletReferenceDriverCancellationCharges,
-        walletReferenceCustomerCancellationGST,
+        walletReferenceCustomerCancellationTax Tax.GST,
+        walletReferenceCustomerCancellationTax Tax.VAT,
         walletReferenceTollCharges,
         walletReferenceParkingCharges,
-        walletReferenceTDSDeductionOnline,
-        walletReferenceTDSDeductionCash,
+        walletReferenceTDSDeduction,
         walletReferenceTDSDeductionCancellation,
-        walletReferenceCommissionOnline,
-        walletReferenceCommissionCash
+        walletReferenceCommission
       ]
 
     firstEntryTimestamp = fmap (.createdAt) . listToMaybe
@@ -288,15 +278,15 @@ compareComponents expected actual =
     (COMPLETED, Just ONLINE) ->
       firstMismatchOfPairs
         [ ("BaseRide", expected.expectedGross, actual.baseRide),
-          ("TaxOnline", expected.expectedTax, actual.gstOnline <|> actual.vatOnline),
+          ("RideTax", expected.expectedTax, actual.rideTax),
           ("TollCharges", expected.expectedToll, actual.toll),
           ("ParkingCharges", expected.expectedParking, actual.parking),
-          ("TDSOnline", expected.expectedTds, actual.tdsOnline)
+          ("TDSDeduction", expected.expectedTds, actual.tds)
         ]
     (COMPLETED, Just CASH) ->
       firstMismatchOfPairs
-        [ ("TaxCash", expected.expectedTax, actual.gstCash <|> actual.vatCash),
-          ("TDSCash", expected.expectedTds, actual.tdsCash)
+        [ ("RideTax", expected.expectedTax, actual.rideTax),
+          ("TDSDeduction", expected.expectedTds, actual.tds)
         ]
     (COMPLETED, Nothing) ->
       ReconT.ReconResult ReconT.MISSING_IN_TARGET (Just "Unknown ride mode")
@@ -364,8 +354,7 @@ computeExpected booking mbRide mbFareParams indirectTaxTxns directTaxTxns =
       baseFare = fromMaybe booking.estimatedFare (mbRide >>= (.fare))
       tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
       parkingCharges = fromMaybe 0 fareParams.parkingCharge
-      govtCharges = fromMaybe 0 fareParams.govtCharges
-      expectedGross = Just (baseFare - tollCharges - parkingCharges - govtCharges)
+      expectedGross = Just (FC.netRideFare fareParams baseFare)
       expectedToll = Just tollCharges
       expectedParking = Just parkingCharges
       expectedCust = mbRide >>= (.cancellationChargesOnCancel)
@@ -422,16 +411,12 @@ computeActualFromLedger entries =
       look k = HM.lookup k byType
    in ActualComponents
         { baseRide = look walletReferenceBaseRide,
-          gstOnline = look walletReferenceGSTOnline,
-          gstCash = look walletReferenceGSTCash,
-          vatOnline = look walletReferenceVATOnline,
-          vatCash = look walletReferenceVATCash,
+          rideTax = look (walletReferenceRideTax Tax.GST) <|> look (walletReferenceRideTax Tax.VAT),
           custCancel = look walletReferenceCustomerCancellationCharges,
           driverCancel = look walletReferenceDriverCancellationCharges,
-          custCancelGst = look walletReferenceCustomerCancellationGST,
+          custCancelGst = look (walletReferenceCustomerCancellationTax Tax.GST) <|> look (walletReferenceCustomerCancellationTax Tax.VAT),
           toll = look walletReferenceTollCharges,
           parking = look walletReferenceParkingCharges,
-          tdsOnline = look walletReferenceTDSDeductionOnline,
-          tdsCash = look walletReferenceTDSDeductionCash,
+          tds = look walletReferenceTDSDeduction,
           tdsCancel = look walletReferenceTDSDeductionCancellation
         }

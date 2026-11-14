@@ -19,6 +19,7 @@ import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -257,7 +258,7 @@ parseRideCompletedEvent order msgId txnId = do
       paymentChargeBearer = do
         payment <- order.orderPayments >>= listToMaybe
         tags <- payment.paymentTags
-        Utils.getTag Tag.PAYMENT_CHARGE_BEARER (Just tags)
+        show . (.bearer) <$> PaymentCharge.paymentChargeDetailsFromTags (Just tags)
   pure $
     Common.RideCompletedReq
       { bookingDetails,

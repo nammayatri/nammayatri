@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.Transformers.Estimate
@@ -75,6 +76,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             providerUrl = providerUrl',
             qar = qar,
             requestId = Kernel.Types.Id.Id requestId,
+            riderTaxRates = Kernel.Utils.JSON.valueToMaybe =<< riderTaxRates,
+            selectedOfferDiscountAmount = selectedOfferDiscountAmount,
             selectedOfferId = selectedOfferId,
             serviceTierName = serviceTierName,
             serviceTierShortDesc = serviceTierShortDesc,
@@ -156,6 +159,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.providerUrl = Kernel.Prelude.showBaseUrl providerUrl,
         Beam.qar = qar,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.riderTaxRates = Kernel.Prelude.toJSON <$> riderTaxRates,
+        Beam.selectedOfferDiscountAmount = selectedOfferDiscountAmount,
         Beam.selectedOfferId = selectedOfferId,
         Beam.serviceTierName = serviceTierName,
         Beam.serviceTierShortDesc = serviceTierShortDesc,

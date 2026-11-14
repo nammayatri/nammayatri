@@ -53,6 +53,6 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data ConsequenceCollectionMode = NextRideDues | ImmediateCapture deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ConsequenceCollectionMode = NextRideDues | ImmediateCapture | PayBeforeNextRide deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConsequenceCollectionMode)

@@ -2,6 +2,9 @@
 
 module Domain.Types.Extra.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Settlement as Settlement
 import Data.Aeson
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.RefundRequest
@@ -99,6 +102,8 @@ data RideAPIEntity = RideAPIEntity
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     -- Rentals poll the full booking rather than the v2 status endpoint, so a pending toll approval
     -- has to be readable from here too. Mirrors BookingStatusAPIEntity.tollChargeApproval.
-    tollChargeApproval :: Maybe TollChargeApprovalRequestRes
+    tollChargeApproval :: Maybe TollChargeApprovalRequestRes,
+    componentGrossMultipliers :: Maybe (FB.RideTaxRates Settlement.GrossMultiplier),
+    taxRates :: Maybe Tax.RiderTaxRates
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

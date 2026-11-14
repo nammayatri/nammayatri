@@ -23,6 +23,7 @@ module API.UI.Quote
 where
 
 import qualified Domain.Action.UI.Quote as DQuote
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as SSR
@@ -43,13 +44,14 @@ type QuotesAPI =
     :> TokenAuth
     :> "results"
     :> QueryParam "allowMultiple" Bool
+    :> QueryParam "paymentInstrument" DMPM.PaymentInstrument
     :> Get '[JSON] DQuote.GetQuotesRes
 
 handler :: FlowServer API
 handler = getQuotes
 
-getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId (personId, merchantId) mbAllowMultiple = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getQuotes' searchRequestId (personId, merchantId) mbAllowMultiple
+getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe DMPM.PaymentInstrument -> FlowHandler DQuote.GetQuotesRes
+getQuotes searchRequestId (personId, merchantId) mbAllowMultiple mbPaymentInstrument = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getQuotes' searchRequestId (personId, merchantId) mbAllowMultiple mbPaymentInstrument
 
-getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
-getQuotes' searchRequestId _ mbAllowMultiple = DQuote.getQuotes searchRequestId mbAllowMultiple
+getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe DMPM.PaymentInstrument -> Flow DQuote.GetQuotesRes
+getQuotes' searchRequestId _ mbAllowMultiple mbPaymentInstrument = DQuote.getQuotes searchRequestId mbAllowMultiple mbPaymentInstrument

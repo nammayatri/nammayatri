@@ -28,6 +28,7 @@ imports:
   DeviceType: Kernel.Types.Version
   RiderPreferredOption: Domain.Types.RiderPreferredOption
   BecknProtocol: Domain.Types
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -60,6 +61,9 @@ SearchRequest:
     customerLanguage: Maybe Language
     disabilityTag: Maybe Text
     customerCancellationDues: Maybe HighPrecMoney
+    customerCancellationDuesTaxBreakup: Maybe TaxBreakup
+    customerCancellationDuesCommission: Maybe HighPrecMoney
+    customerCancellationDuesCommissionTaxBreakup: Maybe TaxBreakup
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
     tollIds: Maybe [Text]
@@ -123,6 +127,8 @@ SearchRequest:
     userBundleVersion: Maybe Text
     userSdkVersion: Maybe Text
     riderPreferredOption: Maybe RiderPreferredOption
+    customerCancellationDuesTaxBreakup: Maybe Value
+    customerCancellationDuesCommissionTaxBreakup: Maybe Value
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -164,6 +170,8 @@ SearchRequest:
     userBundleVersion: Kernel.Utils.Version.versionToText <$> userBundleVersion|E
     userSdkVersion: Kernel.Utils.Version.versionToText <$> userSdkVersion|E
     riderPreferredOption: Just riderPreferredOption|E
+    customerCancellationDuesTaxBreakup: toJSON <$> customerCancellationDuesTaxBreakup|E
+    customerCancellationDuesCommissionTaxBreakup: toJSON <$> customerCancellationDuesCommissionTaxBreakup|E
 
   intermediateTransformers:
     fromTType:
@@ -195,6 +203,8 @@ SearchRequest:
     userBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)|EM
     userSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)|EM
     riderPreferredOption: fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption|E
+    customerCancellationDuesTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< customerCancellationDuesTaxBreakup|E
+    customerCancellationDuesCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< customerCancellationDuesCommissionTaxBreakup|E
 
   constraints:
     id: PrimaryKey
@@ -237,6 +247,8 @@ SearchRequest:
     userSdkVersion: character varying(255)
     userBackendAppVersion: character varying(255)
     riderPreferredOption: character varying(255)
+    customerCancellationDuesTaxBreakup: "json"
+    customerCancellationDuesCommissionTaxBreakup: "json"
 
   default:
     autoAssignEnabled: "false"

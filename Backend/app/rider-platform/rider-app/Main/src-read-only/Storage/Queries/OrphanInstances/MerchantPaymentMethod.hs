@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.MerchantPaymentMethod as Beam
 import Storage.Queries.Transformers.MerchantPaymentMethod
 
@@ -23,6 +24,10 @@ instance FromTType' Beam.MerchantPaymentMethod Domain.Types.MerchantPaymentMetho
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            paymentCharge = paymentCharge,
+            paymentChargeBearer = paymentChargeBearer,
+            paymentChargeTax = Kernel.Utils.JSON.valueToMaybe =<< paymentChargeTax,
+            paymentChargeType = paymentChargeType,
             paymentInstrument = paymentInstrument,
             paymentType = paymentTypeTrans paymentType,
             priority = priority,
@@ -37,6 +42,10 @@ instance ToTType' Beam.MerchantPaymentMethod Domain.Types.MerchantPaymentMethod.
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.paymentCharge = paymentCharge,
+        Beam.paymentChargeBearer = paymentChargeBearer,
+        Beam.paymentChargeTax = toJSON <$> paymentChargeTax,
+        Beam.paymentChargeType = paymentChargeType,
         Beam.paymentInstrument = paymentInstrument,
         Beam.paymentType = paymentType,
         Beam.priority = priority,

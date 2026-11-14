@@ -3,6 +3,7 @@
 
 module Storage.Beam.RiderDetails where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Person
@@ -18,7 +19,10 @@ data RiderDetailsT f = RiderDetailsT
   { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationDueRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationDuesCommissionTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationDuesPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationDuesTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancelledRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     completedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     consentToShareMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -17,8 +17,10 @@ module Lib.DriverScore
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative (liftA2)
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
@@ -27,6 +29,7 @@ import qualified Domain.Types.DriverStats as DS
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.VehicleVariant as DVV
@@ -54,7 +57,7 @@ import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
-import SharedLogic.FareCalculator (driverEffectiveFare)
+import SharedLogic.Settlement (netTotalTaxInclusive)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
@@ -215,7 +218,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           -- allRides <- RQ.findAllRidesByDriverId driverId
           let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
               farePramIds = mapMaybe (.fareParametersId) completedRides
-              totalEarnings = sum $ map (\r -> driverEffectiveFare r.fare r.paymentCharge r.paymentChargeBearer) completedRides
+          totalEarnings <- sum <$> forM completedRides (\r -> (`rideNetEarnings` r) . join <$> forM r.fareParametersId (B.runInReplica . FPQ.findById))
           driverSelectedFareEarnings <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
           -- driverSelectedFareEarnings <- FPQ.findDriverSelectedFareEarnings farePramIds
           customerExtraFeeEarnings <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
@@ -230,7 +233,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           -- mbBooking <- BQ.findById ride.bookingId
           let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking' -> Just $ fromMaybe 0.0 booking'.fareParams.driverSelectedFare + fromMaybe 0.0 booking'.fareParams.customerExtraFee) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide fareParameter
-          pure (driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
+          pure (rideNetEarnings fareParameter ride, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
 
@@ -274,7 +277,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
             DDS.DailyStats
               { id = id,
                 driverId = driverId,
-                totalEarnings = driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer,
+                totalEarnings = rideNetEarnings fareParameter ride,
                 numRides = 1,
                 totalDistance = fromMaybe 0 ride.chargeableDistance,
                 merchantLocalDate = utctDay localTime,
@@ -307,7 +310,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do
-      let totalEarnings = dailyStats.totalEarnings + driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer
+      let totalEarnings = dailyStats.totalEarnings + rideNetEarnings fareParameter ride
           numRides = dailyStats.numRides + 1
           totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
           merchantLocalDate = utctDay localTime
@@ -315,6 +318,15 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
           bonusEarnings = dailyStats.bonusEarnings + fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares
           totalRideDuration = dailyStats.totalRideTime + rideDuration
       SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings totalRideDuration driverId merchantLocalDate
+
+rideNetEarnings :: Maybe FareParameters -> DR.Ride -> HighPrecMoney
+rideNetEarnings mbFareParams ride =
+  netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (maybe 0 componentTax mbFareParams) (maybe 0 airportEntryFeeWithTax mbFareParams) (fromMaybe 0 ride.fare - customerCharge)
+  where
+    taxRegime = if maybe False (fromMaybe False . (.isVatTaxType)) mbFareParams then Tax.VAT else Tax.GST
+    componentTax fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax])
+    airportEntryFeeWithTax fp = fromMaybe 0 fp.airportEntryFee + fromMaybe 0 fp.airportEntryFeeTax
+    customerCharge = if (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) == Just PAYMENT_CUSTOMER then fromMaybe 0 ride.paymentCharge else 0
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
 createDriverStat currency distanceUnit driverId = do
@@ -330,12 +342,13 @@ createDriverStat currency distanceUnit driverId = do
   driverSelectedFare <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
   deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
   customerExtraFee <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+  totalEarnings <- sum <$> forM completedRides (\r -> (`rideNetEarnings` r) . join <$> forM r.fareParametersId (B.runInReplica . FPQ.findById))
   let driverStat =
         DS.DriverStats
           { driverId = cast driverId,
             idleSince = now,
             totalRides = length completedRides,
-            totalEarnings = sum $ map (\r -> driverEffectiveFare r.fare r.paymentCharge r.paymentChargeBearer) completedRides,
+            totalEarnings = totalEarnings,
             bonusEarned = driverSelectedFare + customerExtraFee + deadKmFare,
             lateNightTrips = lateNightTripsCount,
             earningsMissed = missedEarnings,
