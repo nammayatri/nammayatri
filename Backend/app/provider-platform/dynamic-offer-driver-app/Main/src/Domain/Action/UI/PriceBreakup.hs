@@ -23,7 +23,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.LocationUpdates.Internal as LU
 import qualified SharedLogic.External.LocationTrackingService.Types as LTS
-import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.FarePolicy
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -43,10 +42,9 @@ getPriceBreakup (_, _, merchantOpCityId) rideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   quote <- B.runInReplica $ QQuote.findById (Id booking.quoteId)
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-  let govtChargesRate = mbTransporterConfig >>= (SFC.computeTotalGstRate . (.taxConfig.rideGst))
   case quote of
     Just quote' -> do
-      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp govtChargesRate (not $ null booking.stops) . withPricedStateEntryPermitCharges booking.fareParams) quote'.farePolicy
+      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp mbTransporterConfig (not $ null booking.stops) . withPricedStateEntryPermitCharges booking.fareParams) quote'.farePolicy
       pure fareDetails_
     _ -> pure []
   where

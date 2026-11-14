@@ -27,6 +27,8 @@ imports:
   BillingCategory: SharedLogic.Type
   RefundRequestStatus: Domain.Types.RefundRequest
   Sos: Safety.Domain.Types.Sos
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
+  Value: Data.Aeson
 
 Ride:
   tableName: ride
@@ -83,6 +85,8 @@ Ride:
     vehicleColor: Maybe Text
     pickupSpeedInMPS : Maybe Double
     cancellationChargesOnCancel : Maybe HighPrecMoney
+    cancellationPaymentCharge: Maybe HighPrecMoney
+    cancellationPaymentChargeTaxBreakup: Maybe TaxBreakup
     vehicleVariant: VehicleVariant|NoRelation
     vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
@@ -154,6 +158,7 @@ Ride:
 
   sqlType:
     allowedEditLocationAttempts: int
+    cancellationPaymentChargeTaxBreakup: "json"
     allowedEditPickupLocationAttempts: int
     bookingId: character(36)
     bppRideId: character(36)
@@ -226,6 +231,7 @@ Ride:
       tipAmount: Maybe HighPrecMoney
 
   fromTType:
+    cancellationPaymentChargeTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationPaymentChargeTaxBreakup|E
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
     stops: Storage.Queries.Extra.Transformers.Ride.getStops id hasStops|EM
@@ -256,6 +262,7 @@ Ride:
 
   # distanceUnit should be the same for all fields
   toTType:
+    cancellationPaymentChargeTaxBreakup: Kernel.Prelude.toJSON <$> cancellationPaymentChargeTaxBreakup|E
     fare: Kernel.Prelude.fmap (.amount)|I
     totalFare: Kernel.Prelude.fmap (.amount)|I
     currency: Kernel.Prelude.fmap (.currency)|I
@@ -292,6 +299,7 @@ Ride:
     billingCategory: Kernel.Prelude.Just billingCategory|E
   beamType:
     fare: Maybe HighPrecMoney
+    cancellationPaymentChargeTaxBreakup: Maybe Value
     totalFare: Maybe HighPrecMoney
     trackingUrl: Maybe Text
     clientBundleVersion: Maybe Text
@@ -377,7 +385,7 @@ Ride:
       where: id
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
-      params: [cancellationChargesOnCancel]
+      params: [cancellationChargesOnCancel, cancellationPaymentCharge, cancellationPaymentChargeTaxBreakup]
       where: id
     updateCancellationFeeStatus:
       kvFunction: updateOneWithKV

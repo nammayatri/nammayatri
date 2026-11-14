@@ -21,6 +21,7 @@ module Domain.Action.Beckn.Select
 where
 
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect as OSROnSelect
+import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
@@ -92,6 +93,8 @@ data DSelectReq = DSelectReq
     -- dynamic-offer flow -- this one is the bid's absolute proposed total.
     negotiatedFare :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
+    offerDiscountAmount :: Maybe HighPrecMoney,
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     -- | Customer display name from fulfillment.customer.person (value-add-NP BAPs
@@ -198,6 +201,8 @@ handler merchant sReq searchReq estimates addOnData = do
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             negativeFareAdjustment = sReq.negativeFareAdjustment,
+            paymentChargeDetails = sReq.paymentChargeDetails,
+            buyerOfferDiscount = sReq.offerDiscountAmount,
             messageId = sReq.messageId,
             isRepeatSearch = False,
             billingCategory = sReq.billingCategory,

@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.CancellationConsequence where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -69,8 +70,12 @@ data CoinDeductionAPI = CoinDeductionAPI {coins :: Kernel.Prelude.Int, expirySec
 
 data CommissionAndTaxAPI = CommissionAndTaxAPI
   { taxPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    igstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     commission :: Kernel.Prelude.Maybe ChargeRateAPI,
-    amountsInclusiveOfTax :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    amountsInclusiveOfTax :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    commissionTax :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -99,7 +104,7 @@ data FaultRuleRegistryListRes = FaultRuleRegistryListRes {entries :: [FaultRuleR
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FixedMoneyAPI = FixedMoneyAPI {amount :: Kernel.Types.Common.HighPrecMoney, overdueAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+data FixedMoneyAPI = FixedMoneyAPI {amount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

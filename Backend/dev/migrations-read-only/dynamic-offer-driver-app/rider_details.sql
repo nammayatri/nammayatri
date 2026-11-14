@@ -83,3 +83,10 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN consent_to_share_mob
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN customer_total_ratings integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN customer_rating double precision ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN customer_gender character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_commission_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_commission double precision ;

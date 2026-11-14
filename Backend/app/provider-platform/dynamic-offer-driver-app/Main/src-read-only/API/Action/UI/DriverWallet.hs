@@ -108,6 +108,9 @@ type API =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
+      :> QueryParam
+           "entityId"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
@@ -192,6 +195,7 @@ getWalletLedgerHistory ::
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
   )
-getWalletLedgerHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverWallet.getWalletLedgerHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getWalletLedgerHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.DriverWallet.getWalletLedgerHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1

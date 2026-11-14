@@ -30,6 +30,8 @@ imports:
   Sos: Safety.Domain.Types.Sos
   PayoutFlagReason: Domain.Types.RiderDetails
   CancellationReasonCode: Domain.Types.CancellationReason
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
+  Value: Data.Aeson
 
 Ride:
   tableName: ride
@@ -153,7 +155,8 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
-    cancellationCommission: Maybe HighPrecMoney
+    cancellationDuesCommission: Maybe HighPrecMoney
+    cancellationDuesCommissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
@@ -190,6 +193,7 @@ Ride:
     rideTags: "text[]"
     finalFarePolicyId: character(36)
     subscriptionPurchaseIds: "text[]"
+    cancellationDuesCommissionTaxBreakup: "json"
 
   default:
     traveledDistance: '0'
@@ -264,6 +268,7 @@ Ride:
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     cancellationReasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> cancellationReasonCode|E
+    cancellationDuesCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -302,6 +307,7 @@ Ride:
     isInsured: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
     cancellationReasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode|E
+    cancellationDuesCommissionTaxBreakup: toJSON <$> cancellationDuesCommissionTaxBreakup|E
 
   beamType:
     trackingUrl: Text
@@ -324,6 +330,7 @@ Ride:
     isInsured: Maybe Bool
     billingCategory: Maybe BillingCategory
     cancellationReasonCode: Maybe Text
+    cancellationDuesCommissionTaxBreakup: Maybe Value
 
   constraints:
     id: PrimaryKey
@@ -368,7 +375,7 @@ Ride:
       where: id
     updateCommissionAndDiscount:
       kvFunction: updateOneWithKV
-      params: [commission, cancellationCommission, discountAmount]
+      params: [commission, cancellationDuesCommission, cancellationDuesCommissionTaxBreakup, discountAmount]
       where: id
     updatePaymentCharge:
       kvFunction: updateOneWithKV

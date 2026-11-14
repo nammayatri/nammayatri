@@ -40,6 +40,14 @@ VALUES
   ('7f1c9b40-0000-4000-8000-00000000bb93', 'MSIL_PARTNER', 'DRIVER_OFFER_BPP', now(),
    'Delhi', ARRAY['Delhi','Hyderabad'],
    ARRAY['DRIVER_OFFER_BPP','DRIVER_OFFER_BPP_MANAGEMENT'],
+   'localhost', 'http://localhost', true),
+  ('7f1c9b40-0000-4000-8000-00000000bf94', 'BRIDGE_FINLAND', 'APP_BACKEND', now(),
+   'Helsinki', ARRAY['Helsinki'],
+   ARRAY['APP_BACKEND','APP_BACKEND_MANAGEMENT'],
+   'localhost', 'http://localhost', true),
+  ('7f1c9b40-0000-4000-8000-00000000bf95', 'BRIDGE_FINLAND_PARTNER', 'DRIVER_OFFER_BPP', now(),
+   'Helsinki', ARRAY['Helsinki'],
+   ARRAY['DRIVER_OFFER_BPP','DRIVER_OFFER_BPP_MANAGEMENT','APP_BACKEND','APP_BACKEND_MANAGEMENT'],
    'localhost', 'http://localhost', true)
 ON CONFLICT (short_id) DO NOTHING;
 
@@ -52,7 +60,8 @@ FROM (VALUES
     ('7f1c9b40-0000-4000-8000-0000000c1701', 'Bangalore', 'std:080'),
     ('7f1c9b40-0000-4000-8000-0000000c1702', 'Kolkata',   'std:033'),
     ('7f1c9b40-0000-4000-8000-0000000c1703', 'Delhi',     'std:011'),
-    ('7f1c9b40-0000-4000-8000-0000000c1704', 'Hyderabad', 'std:040')
+    ('7f1c9b40-0000-4000-8000-0000000c1704', 'Hyderabad', 'std:040'),
+    ('7f1c9b40-0000-4000-8000-0000000c1705', 'Helsinki',  'std:09')
 ) AS v(id, city, std_code)
 WHERE NOT EXISTS (
   SELECT 1 FROM atlas_dashboard.merchant_operating_city e WHERE e.city = v.city);
@@ -65,6 +74,12 @@ INSERT INTO atlas_dashboard.merchant_pair (logical_short_id, bap_merchant_id, bp
 SELECT 'NAMMA_YATRI',
        (SELECT id FROM atlas_dashboard.merchant WHERE short_id = 'NAMMA_YATRI'),
        (SELECT id FROM atlas_dashboard.merchant WHERE short_id = 'NAMMA_YATRI_PARTNER')
+ON CONFLICT (logical_short_id) DO NOTHING;
+
+INSERT INTO atlas_dashboard.merchant_pair (logical_short_id, bap_merchant_id, bpp_merchant_id)
+SELECT 'BRIDGE_FINLAND',
+       (SELECT id FROM atlas_dashboard.merchant WHERE short_id = 'BRIDGE_FINLAND'),
+       (SELECT id FROM atlas_dashboard.merchant WHERE short_id = 'BRIDGE_FINLAND_PARTNER')
 ON CONFLICT (logical_short_id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -86,8 +101,8 @@ WHERE NOT EXISTS (
     AND ma.operating_city::text = c.city);
 
 -- ---------------------------------------------------------------------------
--- 5. Check. Expect 3 merchants, 4 cities, 1 pair with both sides, and one
--- access row per admin x merchant x city (6 per admin).
+-- 5. Check. Expect 5 merchants, 5 cities, 2 pairs with both sides, and one
+-- access row per admin x merchant x city (8 per admin).
 SELECT 'merchants' AS what, count(*)::text AS n FROM atlas_dashboard.merchant
 UNION ALL SELECT 'operating cities', count(*)::text FROM atlas_dashboard.merchant_operating_city
 UNION ALL SELECT 'pairs (both sides set)', count(*)::text FROM atlas_dashboard.merchant_pair

@@ -22,6 +22,7 @@ module SharedLogic.AirportEntryFee
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Common as DVST
@@ -194,7 +195,7 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
     isOnline <- Wallet.resolveIsOnlineFromBooking booking
     let gstBreakup =
           fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
-        gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
+        gstRate = maybe (sum (mapMaybe (fmap (fromRational . (.getHighPrecMoney))) [gstBreakup.cgstPercentage, gstBreakup.sgstPercentage, gstBreakup.igstPercentage])) ((/ 100) . (.tax)) transporterConfig.taxConfig.airportEntryFeeTaxConfig :: Double
         airportPortion = if gstRate >= 0 then totalFee / (1 + realToFrac gstRate) else totalFee
         gstAmount = totalFee - airportPortion
         ctx =
@@ -237,7 +238,7 @@ deductAirportEntryFeeAtStartRide enabled ride booking = do
     result <- withOwnerLock ride.driverId.getId $
       runFinance ctx $ do
         when (totalFee > 0) $ do
-          void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+          void $ transfer OwnerLiability GovtIndirect gstAmount (Wallet.walletReferenceAirportEntryFeeTax (if fromMaybe False booking.fareParams.isVatTaxType then Tax.VAT else Tax.GST)) Nothing
           void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
         when (gateFeeTotal > 0) $
           void $ transfer OwnerLiability ParkingFeeRecipient gateFeeTotal Wallet.walletReferenceGateDriverFee (mkGateFeeMetadata chargedGateItems)

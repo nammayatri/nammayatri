@@ -3,6 +3,7 @@
 
 module Storage.Beam.Ride where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.RefundRequest
@@ -35,6 +36,8 @@ data RideT f = RideT
     cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationFeeImmediateCapture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     cancellationFeeStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus),
+    cancellationPaymentCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationPaymentChargeTaxBreakup :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     chargeableDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

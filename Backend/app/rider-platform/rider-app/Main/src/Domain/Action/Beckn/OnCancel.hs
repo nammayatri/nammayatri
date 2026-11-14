@@ -25,6 +25,7 @@ module Domain.Action.Beckn.OnCancel
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Settlement as Settlement
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Payment as DPaymentAction
@@ -59,11 +60,13 @@ data OnCancelReq = BookingCancelledReq
     cancellationSource :: Maybe Text,
     cancellationFee :: Maybe PriceAPIEntity,
     cancellationFeeTax :: Maybe PriceAPIEntity,
+    cancellationFeeTotal :: Maybe PriceAPIEntity,
     cancellationReasonCode :: Maybe Text,
     fareBreakups :: [Common.DFareBreakup],
     -- BPP consequence-matrix handoff (on_cancel order tags); Nothing on old BPPs
     collectionMode :: Maybe Text,
-    customerCancellationNotificationKey :: Maybe Text
+    customerCancellationNotificationKey :: Maybe Text,
+    cancellationSettlement :: Settlement.SettlementTags
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
@@ -72,11 +75,13 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
     booking :: SRB.Booking,
     cancellationFee :: Maybe PriceAPIEntity,
     cancellationFeeTax :: Maybe PriceAPIEntity,
+    cancellationFeeTotal :: Maybe PriceAPIEntity,
     mbRide :: Maybe SRide.Ride,
     cancellationReasonCode :: Maybe Text,
     fareBreakups :: [Common.DFareBreakup],
     collectionMode :: Maybe Text,
-    customerCancellationNotificationKey :: Maybe Text
+    customerCancellationNotificationKey :: Maybe Text,
+    cancellationSettlement :: Settlement.SettlementTags
   }
 
 onCancel :: ValidatedOnCancelReq -> Flow ()
@@ -93,7 +98,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   whenJust booking.bookingDepositAmount $ \_ ->
     void . withTryCatch "onCancel:reconcileDeposit" $ DPaymentAction.reconcileDepositPayment True booking
   abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking castedCancellationSource
-  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
+  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge (resolveBapCollectsFee riderConfig collectionMode) cancellationSettlement
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
   unless abandonedPayScreen $
     whenJust customerCancellationNotificationKey $ \pnKey ->
@@ -124,11 +129,11 @@ getSoftCancelQuote = Redis.safeGet . softCancelQuoteKey
 
 onSoftCancel :: Text -> ValidatedOnCancelReq -> Flow ()
 onSoftCancel messageId ValidatedBookingCancelledReq {..} = do
-  let feeTotal = cancellationFee <&> \fee -> PriceAPIEntity {amount = fee.amount + maybe 0 (.amount) cancellationFeeTax, currency = fee.currency}
   mbImmediateCapture <- forM cancellationFee $ \_ -> do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
     -- Soft cancel is always rider-initiated; tells the UI whether the fee would be captured now or carried to the next ride
     pure $ resolveImmediateCapture riderConfig collectionMode SBCR.ByUser
+  let feeTotal = cancellationFee *> cancellationFeeTotal
   -- always overwrite, so a no-fee quote clears an earlier one
   whenJust mbRide $ \ride ->
     QRide.updateCancellationFeeIfCancelledField ((.amount) <$> feeTotal) mbImmediateCapture ride.id
@@ -144,10 +149,18 @@ resolveImmediateCapture riderConfig collectionMode cancellationSource =
     -- on_cancel order tags) — it is authoritative when present.
     Just "ImmediateCapture" -> True
     Just "NextRideDues" -> False
+    Just "PayBeforeNextRide" -> False
     -- Old BPP (no mode on the wire): legacy rider-config flags decide.
     _ -> case cancellationSource of
       SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
       _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
+
+resolveBapCollectsFee :: DRC.RiderConfig -> Maybe Text -> Bool
+resolveBapCollectsFee riderConfig collectionMode = case collectionMode of
+  Just "ImmediateCapture" -> True
+  Just "PayBeforeNextRide" -> True
+  Just "NextRideDues" -> False
+  _ -> riderConfig.settleCancellationFeeBeforeNextRide == Just True
 
 validateRequest ::
   ( CacheFlow m r,

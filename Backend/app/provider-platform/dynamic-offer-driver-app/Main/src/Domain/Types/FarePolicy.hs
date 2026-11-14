@@ -25,6 +25,7 @@ module Domain.Types.FarePolicy
 where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.Aeson.Types
 import qualified Data.List as DL
 import Data.List.NonEmpty
@@ -99,10 +100,11 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
-    vatChargeConfig :: Maybe FareChargeConfig,
     commissionChargeConfig :: Maybe FareChargeConfig,
-    cancellationCommissionChargeConfig :: Maybe FareChargeConfig,
-    tollTaxChargeConfig :: Maybe FareChargeConfig,
+    rideTaxConfig :: Maybe Tax.TaxConfig,
+    tollTaxConfig :: Maybe Tax.TaxConfig,
+    parkingTaxConfig :: Maybe Tax.TaxConfig,
+    commissionTaxConfig :: Maybe Tax.TaxConfig,
     farePolicyDetails :: FarePolicyDetailsD s,
     cancellationFarePolicyId :: Maybe (Id DTC.CancellationFarePolicy),
     description :: Maybe Text,
@@ -404,10 +406,11 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     fareAdjustmentArm :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
-    vatChargeConfig :: Maybe FareChargeConfig,
     commissionChargeConfig :: Maybe FareChargeConfig,
-    cancellationCommissionChargeConfig :: Maybe FareChargeConfig,
-    tollTaxChargeConfig :: Maybe FareChargeConfig,
+    rideTaxConfig :: Maybe Tax.TaxConfig,
+    tollTaxConfig :: Maybe Tax.TaxConfig,
+    parkingTaxConfig :: Maybe Tax.TaxConfig,
+    commissionTaxConfig :: Maybe Tax.TaxConfig,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     cancellationFarePolicy :: Maybe DTC.CancellationFarePolicy,

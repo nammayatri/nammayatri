@@ -28,28 +28,25 @@ module SharedLogic.FareCalculator
     timeZoneIST,
     UTCTime (UTCTime, utctDay),
     computeRideDiscount,
-    computeTotalGstRate,
     countFullFareOfParamsDetails,
     interCityReservedTime,
     calculateFareParameters,
     calculateCommission,
-    calculateCancellationCommission,
+    calculateCancellationDuesCommission,
+    calculateCancellationDuesCommissionTax,
     applyPaymentChargeOnPayableFare,
     finalisePaymentCharge,
     PaymentChargeResult (..),
-    paymentChargeFromFareTotal,
-    paymentChargeTotalRate,
     driverBorneAppFee,
     driverEffectiveFare,
     customerBorneCharge,
+    customerBorneCancellationCharge,
+    commissionExcludedComponents,
+    fareTaxesOf,
     mkFareParamsBreakups,
-    mkFareParamsDisplayBreakups,
-    mkProjectFareParamsTagBreakupItems,
-    mkProjectFareParamsTagBreakupItemsForCancellation,
+    componentTaxLines,
     buildComponentMap,
     componentAmount,
-    discountApplicableComponents,
-    projectFareParamsBreakup,
     clampDiscountToDiscountable,
     ComponentMap,
     entryFeeForGateId,
@@ -60,12 +57,15 @@ where
 
 import "this" API.Types.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup, taxTotal)
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import BecknV2.OnDemand.Settlement (PaymentChargeDetails (..), chargeOn)
 import Data.Char (isDigit)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.FareParameters
@@ -74,8 +74,9 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.TransporterConfig as DTC
-import EulerHS.Prelude hiding (elem, id, map, sum)
+import EulerHS.Prelude hiding (elem, id, map, or, sum)
 import GHC.Float (int2Double)
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -91,85 +92,15 @@ import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
--- | Full quotation.breakup for a 'FareParameters': display tags followed by
---   the canonical eight-tag summary. Callers who want finer control can
---   use 'mkFareParamsDisplayBreakups' and 'mkProjectFareParamsTagBreakupItems'
---   separately.
-mkFareParamsBreakups :: Bool -> (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkFareParamsBreakups isValueAddNP mkPrice mkBreakupItem fareParams =
-  mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams
-    <> mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams
-
--- | Canonical twelve-tag summary, plus the rate the charge was priced at. Exposed so callers (e.g. rate-card
---   tag builders) can emit the summary with a custom 'mkBreakupItem'
---   constructor — the rate card uses 'mkRateCardBreakupItem' here so the
---   summary tag titles are preserved verbatim (no @_FARE_PARAM@ suffix),
---   unlike the display tags which go through
---   'mkRateCardFareParamsBreakupItem'. Returns empty when the
---   'projectFareParamsBreakup' projection is absent (pure GST mode).
-mkProjectFareParamsTagBreakupItems ::
-  (HighPrecMoney -> breakupItemPrice) ->
-  (Text -> breakupItemPrice -> breakupItem) ->
-  FareParameters ->
-  [breakupItem]
-mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams =
-  case projectFareParamsBreakup fareParams of
-    Nothing -> []
-    Just b ->
-      [ mkBreakupItem (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE) (mkPrice b.discountApplicableRideFareTaxExclusive),
-        mkBreakupItem (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX) (mkPrice b.discountApplicableRideFareTax),
-        mkBreakupItem (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE) (mkPrice b.nonDiscountApplicableRideFareTaxExclusive),
-        mkBreakupItem (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX) (mkPrice b.nonDiscountApplicableRideFareTax),
-        mkBreakupItem (show Enums.TOLL_FARE_TAX_EXCLUSIVE) (mkPrice b.tollFareTaxExclusive),
-        mkBreakupItem (show Enums.TOLL_FARE_TAX) (mkPrice b.tollFareTax),
-        mkBreakupItem (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE) (mkPrice b.cancellationFeeTaxExclusive),
-        mkBreakupItem (show Enums.CANCELLATION_TAX) (mkPrice b.cancellationTax),
-        mkBreakupItem (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE) (mkPrice b.parkingChargeTaxExclusive),
-        mkBreakupItem (show Enums.PARKING_CHARGE_TAX) (mkPrice b.parkingChargeTax),
-        mkBreakupItem (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE) (mkPrice b.paymentChargeTaxExclusive),
-        mkBreakupItem (show Enums.PAYMENT_CHARGE_TAX) (mkPrice b.paymentChargeTax)
-      ]
-        <> paymentChargeRateItems b
+componentTaxLines :: FB.TaxTags -> Maybe TaxBreakup -> [(Text, HighPrecMoney)]
+componentTaxLines tags = \case
+  Nothing -> []
+  Just t -> titled tags.tax (Just t.total) <> titled tags.cgst t.cgst <> titled tags.sgst t.sgst <> titled tags.igst t.igst
   where
-    -- The BAP re-derives the charge on the post-discount base rather than
-    -- rescaling the pre-discount figure, so it needs the rate. Recovering it
-    -- from the stored pair keeps the two sides exactly in step and avoids
-    -- threading DriverWalletConfig through every caller of this function.
-    -- Emitted only when there is a charge; absent tags leave the BAP's slots
-    -- as-sent, which is correct for the driver- and platform-borne bearers.
-    paymentChargeRateItems b'
-      | b'.paymentChargeTaxExclusive <= 0 = []
-      | otherwise =
-        let base = RD.fareOnlyTotal b'
-            pct num den = if den > 0 then num / den * 100 else 0
-         in [ mkBreakupItem (show Enums.PAYMENT_CHARGE_RATE) (mkPrice (pct b'.paymentChargeTaxExclusive base)),
-              mkBreakupItem (show Enums.PAYMENT_CHARGE_VAT_PCT) (mkPrice (pct b'.paymentChargeTax b'.paymentChargeTaxExclusive))
-            ]
+    titled tag = maybeToList . fmap (FB.tagTitle tag,) . mfilter (/= 0)
 
--- | Cancellation-specific breakup items read from the ride table.
--- Used by on_cancel to emit CANCELLATION_FEE_TAX_EXCLUSIVE and CANCELLATION_TAX.
-mkProjectFareParamsTagBreakupItemsForCancellation ::
-  (HighPrecMoney -> breakupItemPrice) ->
-  (Text -> breakupItemPrice -> breakupItem) ->
-  HighPrecMoney ->
-  HighPrecMoney ->
-  [breakupItem]
-mkProjectFareParamsTagBreakupItemsForCancellation mkPrice mkBreakupItem cancellationFee cancellationFeeTax =
-  [ mkBreakupItem (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE) (mkPrice cancellationFee),
-    mkBreakupItem (show Enums.CANCELLATION_TAX) (mkPrice cancellationFeeTax)
-  ]
-
--- | Display-tag portion of the quotation.breakup (BASE_FARE,
---   DISTANCE_FARE, PARKING_CHARGE, TOLL_CHARGES, …). Does NOT include
---   the canonical eight-tag summary — 'mkFareParamsBreakups' concats both.
---
---   Three components carry an extra copy under their ONDC v2.1.0 spec title
---   (@PARKING_CHARGES@, @NIGHT_CHARGES@, @WAITING_CHARGES@). Those exist purely
---   for external NPs that validate against the spec vocabulary, so they are
---   emitted only when the BAP is not a value-add NP — our own apps read the
---   legacy titles, and sending both would show the component twice.
-mkFareParamsDisplayBreakups :: Bool -> (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
+mkFareParamsBreakups :: Bool -> (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkFareParamsBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
   -- let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
   let baseFareFinal = HighPrecMoney $ fareParams.baseFare.getHighPrecMoney -- Temp fix :: have to fix properly
       baseFareCaption = show Enums.BASE_FARE
@@ -205,40 +136,24 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
           mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
 
       -- This is not supposed to be passed separately as it is already passed in Base Fare hence in the filter it is removed
-      nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
+      nightShiftCaption = if isValueAddNP then show Enums.NIGHT_SHIFT_CHARGE else show Enums.NIGHT_CHARGES
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
-      nightChargesCaption = show Enums.NIGHT_CHARGES
-      mbNightChargesItem = mkV2SpecAliasItem nightChargesCaption fareParams.nightShiftCharge
-
-      parkingChargeCaption = show Enums.PARKING_CHARGE
+      parkingChargeCaption = if isValueAddNP then show Enums.PARKING_CHARGE else show Enums.PARKING_CHARGES
       mbParkingChargeItem = mkBreakupItem parkingChargeCaption . mkPrice <$> fareParams.parkingCharge
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
-      parkingChargesCaption = show Enums.PARKING_CHARGES
-      mbParkingChargesItem = mkV2SpecAliasItem parkingChargesCaption fareParams.parkingCharge
-
-      waitingChargesCaption = show Enums.WAITING_OR_PICKUP_CHARGES
+      waitingChargesCaption = if isValueAddNP then show Enums.WAITING_OR_PICKUP_CHARGES else show Enums.WAITING_CHARGES
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
-      waitingChargesCaption2 = show Enums.WAITING_CHARGES
-      mbWaitingChargesItem2 = mkV2SpecAliasItem waitingChargesCaption2 fareParams.waitingCharge
-
-      mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
-      mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
-
-      -- Backward compat: emit RIDE_VAT for VAT-type rides (isVatTaxType=True)
-      -- govtCharges holds the merged VAT value (set by FareCalculatorV2)
-      mbRideVatCaption = show Enums.RIDE_VAT
-      mbRideVatItem =
-        if fromMaybe False fareParams.isVatTaxType
-          then mkBreakupItem mbRideVatCaption . mkPrice <$> fareParams.govtCharges
-          else Nothing
-
       customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
-      mbCustomerCancellationDues = mkBreakupItem customerCancellationDuesCaption . mkPrice <$> fareParams.customerCancellationDues
+      mbCustomerCancellationDues = mkBreakupItem customerCancellationDuesCaption . mkPrice . subtract (fromMaybe 0 fareParams.cancellationDuesTax) <$> fareParams.customerCancellationDues
+
+      gateFeeTotal = customerGateFeeItemsSum fareParams
+      airportEntryFeeCaption = show Enums.AIRPORT_ENTRY_FEE
+      airportEntryFeeAmount = fromMaybe 0 fareParams.airportEntryFee + (if isValueAddNP then 0 else gateFeeTotal)
+      mbAirportEntryFeeItem = if airportEntryFeeAmount /= 0 then Just (mkBreakupItem airportEntryFeeCaption (mkPrice airportEntryFeeAmount)) else Nothing
+
+      taxItems = map (\(t, amt) -> mkBreakupItem t (mkPrice amt)) taxBreakupLines
 
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
@@ -253,10 +168,10 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       mbAirportConvenienceFeeItem = mkBreakupItem airportConvenienceFeeCaption . mkPrice <$> fareParams.airportConvenienceFee
 
       mkBusinessDiscountCaption = show Enums.BUSINESS_DISCOUNT
-      mbBusinessDiscountItem = mkBreakupItem mkBusinessDiscountCaption . mkPrice <$> fareParams.businessDiscount
+      mbBusinessDiscountItem = if fareParams.shouldApplyBusinessDiscount then mkBreakupItem mkBusinessDiscountCaption . mkPrice . negate <$> fareParams.businessDiscount else Nothing
 
       mkPersonalDiscountCaption = show Enums.PERSONAL_DISCOUNT
-      mbPersonalDiscountItem = mkBreakupItem mkPersonalDiscountCaption . mkPrice <$> fareParams.personalDiscount
+      mbPersonalDiscountItem = if fareParams.shouldApplyPersonalDiscount then mkBreakupItem mkPersonalDiscountCaption . mkPrice . negate <$> fareParams.personalDiscount else Nothing
 
       priorityChargesCaption = show Enums.PRIORITY_CHARGES
       mbPriorityChargesItem = mkBreakupItem priorityChargesCaption . mkPrice <$> fareParams.priorityCharges
@@ -290,16 +205,8 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       schedulingChargeCaption = show Enums.SCHEDULING_CHARGE
       mbSchedulingChargeItem = mkBreakupItem schedulingChargeCaption . mkPrice <$> fareParams.schedulingCharge
 
-      tollVatCaption = show Enums.TOLL_VAT
-      mbTollVatItem = mkBreakupItem tollVatCaption . mkPrice <$> fareParams.tollFareTax
-
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
-      -- The itemName is operator-configured free text, not an ONDC v2.1.0 breakup
-      -- title, so this line goes only to our own apps -- an external NP validating
-      -- against the spec vocabulary would reject it. The amount still reaches every
-      -- BAP inside RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, so the fare total
-      -- and the canonical summary are unchanged either way.
       gateFeeItemsBreakup =
         if isValueAddNP
           then map (\item -> mkBreakupItem (Enums.mkGateFeeBreakupTitle item.itemName) $ mkPrice item.amount) (fromMaybe [] fareParams.customerGateFeeItems)
@@ -310,15 +217,10 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       mbAddOnChargesItem,
       mbCongestionChargeItem,
       mbNightShiftChargeItem,
-      mbNightChargesItem,
       mbParkingChargeItem,
-      mbParkingChargesItem,
       mbWaitingChargesItem,
-      mbWaitingChargesItem2,
       mbBusinessDiscountItem,
       mbPersonalDiscountItem,
-      mbFixedGovtRateItem,
-      mbRideVatItem,
       mbPetChargesItem,
       mbDriverAllowanceItem,
       mbAirportConvenienceFeeItem,
@@ -338,19 +240,13 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       mbReturnFeeChargeItem,
       mbBoothChargeItem,
       mbSchedulingChargeItem,
-      mbTollVatItem
+      mbAirportEntryFeeItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
     <> gateFeeItemsBreakup
+    <> taxItems
   where
-    -- The ONDC v2.1.0 spec title for a component we already emit under its legacy
-    -- title. Only external NPs need it; for our own apps it would be a duplicate.
-    mkV2SpecAliasItem caption mbAmount =
-      if isValueAddNP
-        then Nothing
-        else mkBreakupItem caption . mkPrice <$> mbAmount
-
     castAdditionalChargeCategoriesToEnum = \case
       DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Enums.NYREGULAR_SUBSCRIPTION_CHARGE
@@ -431,10 +327,25 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
         then Just fare
         else Nothing
 
+    taxBreakupLines :: [(Text, HighPrecMoney)]
+    taxBreakupLines = concat (componentTaxLines <$> FB.taxTags <*> fareTaxesOf fareParams)
+
 -- TODO: make some tests for it
 
 customerGateFeeItemsSum :: FareParameters -> HighPrecMoney
 customerGateFeeItemsSum fareParams = sum $ map (.amount) (fromMaybe [] fareParams.customerGateFeeItems)
+
+fareTaxesOf :: FareParameters -> Tax.FareTaxes
+fareTaxesOf fp =
+  FB.RideTaxRates
+    { rideFare = Tax.mkTaxBreakup fp.govtCharges fp.rideTaxCgst fp.rideTaxSgst fp.rideTaxIgst,
+      toll = Tax.mkTaxBreakup fp.tollFareTax fp.tollTaxCgst fp.tollTaxSgst fp.tollTaxIgst,
+      parking = Tax.mkTaxBreakup fp.parkingChargeTax fp.parkingTaxCgst fp.parkingTaxSgst fp.parkingTaxIgst,
+      airportEntryFee = Tax.mkTaxBreakup fp.airportEntryFeeTax fp.airportEntryFeeTaxCgst fp.airportEntryFeeTaxSgst fp.airportEntryFeeTaxIgst,
+      cancellationFee = Tax.mkTaxBreakup fp.cancellationDuesTax fp.cancellationDuesTaxCgst fp.cancellationDuesTaxSgst fp.cancellationDuesTaxIgst,
+      platformFee = Nothing,
+      paymentCharge = Tax.mkTaxBreakup fp.paymentProcessingFeeTax fp.paymentChargeTaxCgst fp.paymentChargeTaxSgst fp.paymentChargeTaxIgst
+    }
 
 -- | NOTE: every component summed here must be mapped in
 --   'buildComponentMap'/'rebuildWithComponents' so the fare-recompute cap stays
@@ -458,6 +369,7 @@ fareSum fareParams conditionalChargeCategories =
       let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
           parkingContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingCharge
           parkingTaxContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingChargeTax
+          airportEntryFeeContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.airportEntryFee + fromMaybe 0.0 fareParams.airportEntryFeeTax
       fareParams.baseFare
         + fromMaybe 0.0 fareParams.serviceCharge
         + fromMaybe 0.0 fareParams.waitingCharge
@@ -483,9 +395,10 @@ fareSum fareParams conditionalChargeCategories =
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
         + fromMaybe 0.0 fareParams.paymentProcessingFee
-        + fromMaybe 0.0 fareParams.paymentProcessingFeeVat
+        + fromMaybe 0.0 fareParams.paymentProcessingFeeTax
         + fromMaybe 0.0 fareParams.tollFareTax
         + parkingTaxContribution
+        + airportEntryFeeContribution
         -- Commission is intentionally excluded - stored for breakdown only
         + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
         + customerGateFeeItemsSum fareParams
@@ -499,10 +412,12 @@ netRideFare fareParams total =
       - fromMaybe 0.0 fareParams.tollFareTax
       - parkingAmount
       - parkingTaxAmount
+      - airportEntryFeeAmount
   where
     edcParkingCollected = SL.edcCollectsParking fareParams.fareSettlementType
     parkingAmount = if edcParkingCollected then 0.0 else fromMaybe 0.0 fareParams.parkingCharge
     parkingTaxAmount = if edcParkingCollected then 0.0 else fromMaybe 0.0 fareParams.parkingChargeTax
+    airportEntryFeeAmount = if edcParkingCollected then 0.0 else fromMaybe 0.0 fareParams.airportEntryFee + fromMaybe 0.0 fareParams.airportEntryFeeTax
 
 customerCancellationFareBasis :: FareParameters -> HighPrecMoney -> HighPrecMoney
 customerCancellationFareBasis fareParams total =
@@ -521,7 +436,7 @@ getPerMinuteRate :: FareParameters -> Maybe PriceAPIEntity
 getPerMinuteRate fareParams = do
   case fareParams.fareParametersDetails of
     DFParams.ProgressiveDetails det -> do
-      mkPriceAPIEntity . Price.mkPrice (Just det.currency) <$> det.rideDurationFare
+      mkRoundedPriceAPIEntity . Price.mkPrice (Just det.currency) <$> det.rideDurationFare
     _ -> Nothing
 
 data FareComputationPhase = FCEstimate | FCRecompute | FCBuffer
@@ -543,6 +458,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     negativeFareAdjustment :: Maybe HighPrecMoney,
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
+    customerCancellationDuesTaxBreakup :: Maybe TaxBreakup,
     estimatedRideDuration :: Maybe Seconds,
     estimatedRideStaticDuration :: Maybe Seconds, -- traffic-free duration from the routing provider; basis for TrafficDelayDuration pricing
     estimatedCongestionCharge :: Maybe HighPrecMoney,
@@ -562,10 +478,9 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     negotiatedFareDelta :: Maybe HighPrecMoney,
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     numberOfLuggages :: Maybe Int,
-    govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
     pickupGateId :: Maybe Text, -- Optional airport pickup gate id; used by V2 to apply airport entry fee
     fareSettlementType :: Maybe SL.FareSettlementType,
     isParkingFeeExempt :: Bool,
@@ -573,11 +488,13 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     -- component is capped (or buffered) against 'mbEstimateFareParams' as it
     -- is computed, so 'fullRideCostN' and 'govtCharges' follow automatically.
     mbCapConfig :: Maybe FareRecomputeCapConfig,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
+    buyerOfferDiscount :: Maybe HighPrecMoney,
     mbEstimateFareParams :: Maybe FareParameters
   }
 
-calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
-calculateFareParametersHandler params = do
+calculateFareParametersHandler :: MonadFlow m => DTC.TransporterConfig -> CalculateFareParametersParams -> m FareParameters
+calculateFareParametersHandler transporterConfig params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
   now <- getCurrentTime
   let fp = params.farePolicy
@@ -658,16 +575,19 @@ calculateFareParametersHandler params = do
           + fromMaybe 0.0 priorityChargesResult
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
-      govtChargesRate' = params.govtChargesRate >>= computeTotalGstRate
-      govtCharges =
-        HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> govtChargesRate'
+      taxRegime = fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime
+      govtCharges = (.total) <$> Tax.taxOn taxRegime (rideTaxConfigFor transporterConfig fp) (Tax.Exclusive fullRideCostN)
       stopCharges =
         capComponentMb StopChargeComponent $ HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
       extraTimeFareInfo = capComponentMb RideExtraTimeFareComponent $ calculateExtraTimeFare params.estimatedRideDuration fp.rideExtraTimeChargeGracePeriod fp.perMinuteRideExtraTimeCharge params.actualRideDuration
       parkingChargeResult = capComponentMb ParkingChargeComponent fp.parkingCharge
       customerExtraFeeResult = capComponentMb CustomerExtraFeeComponent params.customerExtraFee
       customerCancellationDuesResult = capComponentMb CustomerCancellationChargeComponent params.customerCancellationDues
+      carriedDuesTax = params.customerCancellationDuesTaxBreakup
       tollChargesResult = if params.isManualTollCharge then addMaybes fp.tollCharges params.tollCharges else capComponentMb TollChargesComponent $ addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing)
+      finalParkingCharge = if params.isParkingFeeExempt && fromMaybe False fp.parkingFeeExemptionEnabled then Nothing else parkingChargeResult
+      tollTax = Tax.taxOn taxRegime fp.tollTaxConfig . Tax.Exclusive =<< tollChargesResult
+      parkingTax = Tax.taxOn taxRegime fp.parkingTaxConfig . Tax.Exclusive =<< finalParkingCharge
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
@@ -684,7 +604,7 @@ calculateFareParametersHandler params = do
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             shouldApplyPersonalDiscount = params.shouldApplyPersonalDiscount,
             serviceCharge = serviceChargeResult,
-            parkingCharge = if params.isParkingFeeExempt && fromMaybe False fp.parkingFeeExemptionEnabled then Nothing else parkingChargeResult,
+            parkingCharge = finalParkingCharge,
             baseFare = baseFare,
             petCharges = petChargesResult,
             driverAllowance = driverAllowanceResult,
@@ -721,7 +641,7 @@ calculateFareParametersHandler params = do
                   fareParametersDetails,
             customerCancellationDues = customerCancellationDuesResult,
             tollCharges = tollChargesResult,
-            govtCharges = govtCharges,
+            govtCharges = Nothing,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
             returnFeeCharge = returnFeeCharge,
@@ -743,30 +663,51 @@ calculateFareParametersHandler params = do
             tdsProcessedAt = Nothing,
             platformFeeChargesBy = fp.platformFeeChargesBy,
             merchantId = Just params.farePolicy.merchantId,
-            merchantOperatingCityId = params.merchantOperatingCityId,
+            merchantOperatingCityId = Just params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> DAC.isFareComponent addCharges.chargeCategory && maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             customerGateFeeItems = Nothing,
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
             paymentProcessingFee = Nothing,
-            paymentProcessingFeeVat = Nothing,
-            isVatTaxType = Nothing,
+            paymentProcessingFeeTax = Nothing,
+            isVatTaxType = Just (taxRegime == Tax.VAT),
             discountApplicableRideFareTaxExclusive = Nothing,
             discountApplicableRideFareTax = Nothing,
             nonDiscountApplicableRideFareTaxExclusive = Nothing,
             nonDiscountApplicableRideFareTax = Nothing,
             tollFareTaxExclusive = Nothing,
-            tollFareTax = Nothing,
+            tollFareTax = (.total) <$> tollTax,
             cancellationFeeTaxExclusive = Nothing,
             cancellationTax = Nothing,
             parkingChargeTaxExclusive = Nothing,
-            parkingChargeTax = Nothing,
+            parkingChargeTax = (.total) <$> parkingTax,
             fareSettlementType = params.fareSettlementType,
             negotiatedFareDelta = params.negotiatedFareDelta,
             addOnCharges = params.addOnCharges,
             -- Filled in by 'calculateFareParameters' once the full params exist.
-            bufferedFare = Nothing
+            bufferedFare = Nothing,
+            rideTaxCgst = Nothing,
+            rideTaxSgst = Nothing,
+            rideTaxIgst = Nothing,
+            parkingTaxCgst = parkingTax >>= (.cgst),
+            parkingTaxSgst = parkingTax >>= (.sgst),
+            parkingTaxIgst = parkingTax >>= (.igst),
+            tollTaxCgst = tollTax >>= (.cgst),
+            tollTaxSgst = tollTax >>= (.sgst),
+            tollTaxIgst = tollTax >>= (.igst),
+            airportEntryFee = Nothing,
+            airportEntryFeeTax = Nothing,
+            airportEntryFeeTaxCgst = Nothing,
+            airportEntryFeeTaxSgst = Nothing,
+            airportEntryFeeTaxIgst = Nothing,
+            paymentChargeTaxCgst = Nothing,
+            paymentChargeTaxSgst = Nothing,
+            paymentChargeTaxIgst = Nothing,
+            cancellationDuesTax = (.total) <$> carriedDuesTax,
+            cancellationDuesTaxCgst = carriedDuesTax >>= (.cgst),
+            cancellationDuesTaxSgst = carriedDuesTax >>= (.sgst),
+            cancellationDuesTaxIgst = carriedDuesTax >>= (.igst)
           }
   -- The FCBuffer pass re-runs this handler only to price the buffered ceiling;
   -- skip its info logs so a capped estimate doesn't emit the slab debug trail
@@ -1185,17 +1126,6 @@ calculateAllowanceMins timeDiffFromUtc perDayMaxAllowanceInMins startTime endTim
     startDay = localDay startIST
     endDay = localDay endIST
 
--- | Compute total GST rate as a fractional Double from TaxConfig GstBreakup.
---   E.g. cgstPercentage=9, sgstPercentage=9 → total = 0.18
---   Returns Nothing if the total percentage is 0 or all sub-rates are Nothing.
-computeTotalGstRate :: DTC.GstBreakup -> Maybe Double
-computeTotalGstRate gstBreakup =
-  let cgst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.cgstPercentage
-      sgst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.sgstPercentage
-      igst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.igstPercentage
-      total = cgst + sgst + igst
-   in if total > 0 then Just total else Nothing
-
 -- ==========================================================================
 -- Configurable charges (formerly FareCalculatorV2)
 -- ==========================================================================
@@ -1209,191 +1139,77 @@ data ParsedCodeValue
   = ParsedPercentage Rational -- e.g., "14%" -> 0.14
   | ParsedFixed HighPrecMoney -- e.g., "50" -> 50.0
 
--- | Calculate fare parameters with configurable charges (VAT, toll tax)
---
--- This function:
--- 1. Calls the base v1 fare calculation to get standard fare components
--- 2. Checks if enableFareCalculatorV2 is enabled in TransporterConfig
--- 3. If enabled, applies configurable charges (VAT, toll tax) based on fare_policy configuration
--- 4. If disabled, returns the base fare parameters (fallback to v1 behavior)
--- 5. Returns FareParameters with new breakdown fields (rideVat, tollVat)
---
--- Note: Commission is NOT stored in FareParameters. It's calculated separately using
--- calculateCommission and stored in Booking/Ride tables.
---
--- The new charges are stored separately in fare_parameters table for transparency,
--- and are included in pureFareSum for final fare calculation.
---
--- Example: If fare_policy has vat_charge_config = {"value":"14%","appliesOn":["RideFare","DeadKmFareComponent"]},
--- then VAT will be calculated as 14% of (RideFare + DeadKmFareComponent)
 calculateFareParameters ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
-  -- Fetch TransporterConfig once (V2 flag + DriverWalletConfig payment-charge
-  -- knobs); shared with the FCBuffer pass below so pricing the buffered
-  -- ceiling doesn't re-fetch it.
-  mbTransporterConfig <- case params.merchantOperatingCityId of
-    Just merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-    Nothing -> pure Nothing
-  fareWithGrossUp <- runFarePipeline mbTransporterConfig params
+  let merchantOpCityId = params.merchantOperatingCityId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fareWithGrossUp <- runFarePipeline transporterConfig params
   bufferedFare <- case (params.computationPhase, params.farePolicy.fareRecomputeCapConfig) of
     (FCEstimate, Just capConfig) -> do
-      bufferedParams <- runFarePipeline mbTransporterConfig params {computationPhase = FCBuffer, mbCapConfig = Just capConfig}
+      bufferedParams <- runFarePipeline transporterConfig params {computationPhase = FCBuffer, mbCapConfig = Just capConfig}
       pure $ Just (fareSum bufferedParams Nothing)
     _ -> pure Nothing
   pure fareWithGrossUp {bufferedFare = bufferedFare}
   where
-    runFarePipeline mbTransporterConfig prms = do
-      -- First, calculate base fare using v1 calculator
-      baseFareParams <- calculateFareParametersHandler prms
+    runFarePipeline transporterConfig prms = do
+      baseFareParams <- calculateFareParametersHandler transporterConfig prms
       fareWithGateItems <- applyGateCustomerFeeItems prms baseFareParams
-      let isV2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) mbTransporterConfig
-      -- Apply configurable charges only if V2 is enabled
-      fareWithV2 <-
-        if isV2Enabled
-          then applyConfiguredCharges prms.farePolicy fareWithGateItems
-          else pure fareWithGateItems
-      -- Apply airport entry fee (if any) to parkingCharge in FareParameters
-      fareWithAirport <- applyAirportEntryFee prms fareWithV2
-      -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
-      let mbDriverWalletConfig = (.driverWalletConfig) <$> mbTransporterConfig
-      pure $ applyPaymentChargeGrossUp mbDriverWalletConfig fareWithAirport
+      fareWithAirport <- applyAirportEntryFee transporterConfig prms fareWithGateItems
+      pure $ applyPaymentChargeGrossUp prms.paymentChargeDetails prms.buyerOfferDiscount (applyRideTax transporterConfig prms.farePolicy fareWithAirport)
 
--- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
---
--- Builds a component map from fare parameters and computes charges based on
--- fare_policy configuration. Charges are only calculated if explicitly configured.
---
--- Note: Commission is calculated and stored for breakdown/transparency but is NOT
--- added to the final fare sum (as per PRD requirements).
-applyConfiguredCharges :: MonadFlow m => FullFarePolicy -> FareParameters -> m FareParameters
-applyConfiguredCharges farePolicy fareParams = do
-  let componentMap = buildComponentMap fareParams
-      -- Ride VAT is split: VAT on components that are BOTH discount-applicable
-      -- AND in vatChargeConfig.appliesOn goes to 'discountApplicableRideFareTax';
-      -- VAT on the remainder of appliesOn (those not in the discount list) goes
-      -- to 'nonDiscountApplicableRideFareTax'. Toll / cancellation components
-      -- are excluded from the non-discount ride VAT — they have their own
-      -- buckets and their own VAT configs.
-      taxableSet = maybe [] (.appliesOn) farePolicy.vatChargeConfig
-      parkingTaxable = ParkingChargeComponent `elem` taxableSet
-      discTaxableBase = sum [componentAmount componentMap c | c <- taxableSet, c `elem` discountApplicableComponents]
-      -- Parking has its own bucket (parkingChargeTaxExclusive/parkingChargeTax)
-      -- so exclude ParkingChargeComponent here to avoid double-counting its
-      -- VAT into the non-discount ride tax.
-      nonDiscTaxableBase =
-        sum
-          [ componentAmount componentMap c
-            | c <- taxableSet,
-              c `KP.notElem` discountApplicableComponents,
-              c /= TollChargesComponent,
-              c /= TollVatComponent,
-              c /= RideVatComponent,
-              c /= CustomerCancellationChargeComponent,
-              c /= ParkingChargeComponent
-          ]
-      parkingBase = fromMaybe 0 fareParams.parkingCharge
-  (discAppTax, nonDiscAppTax, parkingTaxValue) <-
-    case farePolicy.vatChargeConfig of
-      Nothing -> pure (0, 0, 0)
-      Just config -> case parseCodeValue config.value of
-        Nothing -> do
-          logWarning $ "Unable to parse vatCharge value: " <> config.value
-          pure (0, 0, 0)
-        Just parsed ->
-          pure
-            ( applyParsedValue discTaxableBase parsed,
-              applyParsedValue nonDiscTaxableBase parsed,
-              if parkingTaxable then applyParsedValue parkingBase parsed else 0
-            )
+applyRideTax :: DTC.TransporterConfig -> FullFarePolicy -> FareParameters -> FareParameters
+applyRideTax transporterConfig fp fareParams =
+  fareParams
+    { govtCharges = (.total) <$> rideTax,
+      rideTaxCgst = rideTax >>= (.cgst),
+      rideTaxSgst = rideTax >>= (.sgst),
+      rideTaxIgst = rideTax >>= (.igst)
+    }
+  where
+    taxRegime = fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime
+    (_, _, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+    cardCharges = fromMaybe 0 (fareParams.cardCharge >>= (.onFare)) + fromMaybe 0 (fareParams.cardCharge >>= (.fixed))
+    taxableRideFare = max 0 (customerCancellationFareBasis fareParams (fareSum fareParams Nothing) - platformFee - cardCharges)
+    rideTax = Tax.taxOn taxRegime (rideTaxConfigFor transporterConfig fp) (Tax.Exclusive taxableRideFare)
 
-  tollVatValue <- case farePolicy.tollTaxChargeConfig of
-    Just config -> do
-      tollVatAmount <- computeConfiguredCharge "tollTaxCharge" componentMap (Just config)
-      pure $ if tollVatAmount > 0 then Just tollVatAmount else Nothing
-    Nothing -> pure Nothing
+rideTaxConfigFor :: DTC.TransporterConfig -> FullFarePolicy -> Maybe Tax.TaxConfig
+rideTaxConfigFor transporterConfig fp =
+  fp.rideTaxConfig <|> (if fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime == Tax.GST then gstTaxConfig transporterConfig.taxConfig.rideGst else Nothing)
 
-  let hasVatConfig = isJust farePolicy.vatChargeConfig
-      -- Total ride VAT now also includes parkingTax — it flows through
-      -- govtCharges for historical reporting.
-      totalRideVat = discAppTax + nonDiscAppTax + parkingTaxValue
-      mergedGovtCharges = fromMaybe 0 fareParams.govtCharges + totalRideVat
+gstTaxConfig :: DTC.GstBreakup -> Maybe Tax.TaxConfig
+gstTaxConfig gst = if totalPct > 0 then Just Tax.TaxConfig {tax = totalPct, cgst = asPct gst.cgstPercentage, sgst = asPct gst.sgstPercentage, igst = asPct gst.igstPercentage} else Nothing
+  where
+    asPct = fmap (\fraction -> fromRational (fraction.getHighPrecMoney * 100))
+    totalPct = sum (mapMaybe asPct [gst.cgstPercentage, gst.sgstPercentage, gst.igstPercentage])
 
-      -- Canonical ten-slot fare partition.
-      discAppTaxExcl = sum $ map (componentAmount componentMap) discountApplicableComponents
-      tollExcl = fromMaybe 0 fareParams.tollCharges
-      tollTax = fromMaybe 0 tollVatValue
-      cancellationExcl = fromMaybe 0 fareParams.customerCancellationDues
-      cancellationTaxV = fromMaybe 0 fareParams.cancellationTax
-      parkingExcl = parkingBase
-      parkingTax = parkingTaxValue
-
-      -- Partially-updated fareParams carrying every field that's known at
-      -- this point — only 'nonDiscountApplicableRideFareTaxExclusive'
-      -- depends on 'postUpdateFareSum' and is filled in as the final
-      -- record update below. The 10 partition slots are populated in
-      -- EVERY mode (even pure GST with no VAT config, where the VAT
-      -- subtotals are just 0) so downstream discount math works
-      -- uniformly without branching on hasVatConfig.
-      partiallyUpdatedFareParams =
-        fareParams
-          { paymentProcessingFee = Nothing,
-            paymentProcessingFeeVat = Nothing,
-            govtCharges = if mergedGovtCharges > 0 then Just mergedGovtCharges else fareParams.govtCharges,
-            isVatTaxType = Just hasVatConfig,
-            discountApplicableRideFareTaxExclusive = Just discAppTaxExcl,
-            discountApplicableRideFareTax = Just discAppTax,
-            nonDiscountApplicableRideFareTax = Just nonDiscAppTax,
-            tollFareTaxExclusive = Just tollExcl,
-            tollFareTax = Just tollTax,
-            cancellationFeeTaxExclusive = Just cancellationExcl,
-            cancellationTax = Just cancellationTaxV,
-            parkingChargeTaxExclusive = Just parkingExcl,
-            parkingChargeTax = Just parkingTax
-          }
-      postUpdateFareSum = fareSum partiallyUpdatedFareParams Nothing
-
-      -- 'nonDiscountApplicableRideFareTaxExclusive' catches the residual —
-      -- everything in pureFareSum that isn't in D / toll / cancellation /
-      -- parking. Its corresponding tax slot is VAT computed on the subset
-      -- (V \ D \ parking \ toll \ cancellation) only.
-      accountedFor =
-        discAppTaxExcl + discAppTax
-          + tollExcl
-          + tollTax
-          + cancellationExcl
-          + cancellationTaxV
-          + parkingExcl
-          + parkingTax
-          + nonDiscAppTax
-      nonDiscAppTaxExcl = max 0 (postUpdateFareSum - accountedFor)
-
-  pure $
-    partiallyUpdatedFareParams
-      { nonDiscountApplicableRideFareTaxExclusive = Just nonDiscAppTaxExcl
-      }
-
--- | Apply airport entry fee into parkingCharge, based on pickupGateId and transporter config.
 applyAirportEntryFee ::
   (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
+  DTC.TransporterConfig ->
   CalculateFareParametersParams ->
   FareParameters ->
   m FareParameters
-applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, params.pickupGateId) of
-  (Just merchantOperatingCityId, Just gateIdText) -> do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+applyAirportEntryFee transporterConfig params fareParams = case params.pickupGateId of
+  Just gateIdText ->
     if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
       then pure fareParams
       else do
         airportFee <- entryFeeForGateId (Id gateIdText) (Just params.farePolicy.vehicleServiceTier)
-        let currentParking = fromMaybe 0 fareParams.parkingCharge
+        let taxRegime = fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime
+            gstFallback = if taxRegime == Tax.GST then gstTaxConfig (fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst) else Nothing
+            tax = Tax.taxOn taxRegime (transporterConfig.taxConfig.airportEntryFeeTaxConfig <|> gstFallback) (Tax.Inclusive airportFee)
         pure $
           if airportFee > 0
-            then fareParams {parkingCharge = Just (currentParking + airportFee)}
+            then
+              fareParams
+                { airportEntryFee = Just (airportFee - taxTotal tax),
+                  airportEntryFeeTax = (.total) <$> tax,
+                  airportEntryFeeTaxCgst = tax >>= (.cgst),
+                  airportEntryFeeTaxSgst = tax >>= (.sgst),
+                  airportEntryFeeTaxIgst = tax >>= (.igst)
+                }
             else fareParams
   _ -> pure fareParams
 
@@ -1550,7 +1366,7 @@ buildComponentMap FareParameters {..} =
             (CustomerExtraFeeComponent, maybeZero customerExtraFee),
             (AddOnChargeComponent, maybeZero addOnCharges),
             (TollVatComponent, maybeZero tollFareTax),
-            (RideVatComponent, maybeZero discountApplicableRideFareTax),
+            (RideVatComponent, maybeZero govtCharges),
             (DriverAllowanceComponent, maybeZero driverAllowance),
             (AirportConvenienceFeeComponent, maybeZero airportConvenienceFee),
             (ReturnFeeChargeComponent, maybeZero returnFeeCharge),
@@ -1634,76 +1450,43 @@ calculateCommission fareParams mbFarePolicy = do
   case mbFarePolicy of
     Nothing -> pure Nothing
     Just farePolicy -> do
-      let componentMap = buildComponentMap fareParams
+      let componentMap = KP.foldr Map.delete (buildComponentMap fareParams) commissionExcludedComponents
       case farePolicy.commissionChargeConfig of
         Just config -> do
           commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
 
--- | Commission on the CustomerCancellationChargeComponent alone — a past cancellation due folded
---   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
---   Config invariant: the component must appear in exactly one of the two commission configs —
---   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
---   Controlled entirely by the (Maybe) cancellationCommissionChargeConfig on the fare policy:
---   absent config => Nothing, so estimate, payout, stored values and the ledger booking stay consistent.
-calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
-calculateCancellationCommission fareParams mbFarePolicy = do
-  case mbFarePolicy of
-    Nothing -> pure Nothing
-    Just farePolicy -> do
-      let componentMap = buildComponentMap fareParams
-      case farePolicy.cancellationCommissionChargeConfig of
-        Just config -> do
-          commAmount <- computeConfiguredCharge "cancellationCommissionCharge" componentMap (Just config)
-          pure $ if commAmount > 0 then Just commAmount else Nothing
-        Nothing -> pure Nothing
+commissionExcludedComponents :: [FareChargeComponent]
+commissionExcludedComponents = [PaymentChargePaidByCustomerComponent, CustomerCancellationChargeComponent]
 
--- | Whether the given bearer means the RIDER pays the Stripe payment charge (so their fare grosses up).
-isCustomerPaymentBearer :: DTC.PaymentChargeBearer -> Bool
-isCustomerPaymentBearer = \case
-  DTC.PAYMENT_CUSTOMER -> True
-  _ -> False
+calculateCancellationDuesCommission :: Maybe HighPrecMoney -> FareParameters -> Maybe HighPrecMoney
+calculateCancellationDuesCommission mbDuesCommission fareParams = mfilter (> 0) fareParams.customerCancellationDues *> mbDuesCommission
 
-paymentChargeTotalRate :: DTC.DriverWalletConfig -> Double
-paymentChargeTotalRate dwc =
-  fromMaybe 0 dwc.paymentChargeRate * (1 + fromMaybe 0 dwc.paymentChargeVat / 100)
+calculateCancellationDuesCommissionTax :: Maybe TaxBreakup -> FareParameters -> Maybe TaxBreakup
+calculateCancellationDuesCommissionTax mbDuesCommissionTax fareParams = mfilter (> 0) fareParams.customerCancellationDues *> mbDuesCommissionTax
 
 driverBorneAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 driverBorneAppFee mbCharge mbBearerText =
   case (KP.readMaybe . T.unpack) =<< mbBearerText of
-    Just DTC.PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
-    Just DTC.PAYMENT_DRIVER -> fromMaybe 0 mbCharge
+    Just PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
+    Just PAYMENT_DRIVER -> fromMaybe 0 mbCharge
     _ -> 0
 
 driverEffectiveFare :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 driverEffectiveFare mbFare mbCharge mbBearerText =
   fromMaybe 0 mbFare - driverBorneAppFee mbCharge mbBearerText
 
+customerBorneCancellationCharge :: Maybe PaymentChargeDetails -> Maybe HighPrecMoney -> Maybe TaxBreakup -> HighPrecMoney
+customerBorneCancellationCharge mbPaymentChargeDetails mbCharge mbChargeTax
+  | ((.bearer) <$> mbPaymentChargeDetails) == Just PAYMENT_CUSTOMER = fromMaybe 0 mbCharge + Tax.taxTotal mbChargeTax
+  | otherwise = 0
+
 customerBorneCharge :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 customerBorneCharge mbCharge mbBearerText =
   case (KP.readMaybe . T.unpack) =<< mbBearerText of
-    Just DTC.PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
+    Just PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
     _ -> 0
-
--- | Split a fare base into (charge, vat) at the configured rate. The bearer is
---   returned so callers can tell "no charge configured" from "charge borne by
---   someone other than the rider" -- both yield a zero gross-up of the fare, but
---   the latter still deducts from the driver.
-applyPaymentChargeOnPayableFare ::
-  Maybe DTC.DriverWalletConfig ->
-  HighPrecMoney ->
-  (HighPrecMoney, HighPrecMoney, Maybe Text)
-applyPaymentChargeOnPayableFare mbDwc fareBase =
-  case mbDwc of
-    Just dwc
-      | Just rate <- dwc.paymentChargeRate,
-        Just bearer <- dwc.paymentChargeBearer,
-        rate > 0 ->
-        let charge = HighPrecMoney (max 0 fareBase.getHighPrecMoney * (toRational rate / 100))
-            vat = HighPrecMoney (charge.getHighPrecMoney * (toRational (fromMaybe 0 dwc.paymentChargeVat) / 100))
-         in (charge, vat, Just (show bearer))
-    _ -> (0, 0, Nothing)
 
 data PaymentChargeResult = PaymentChargeResult
   { adjustedFareParams :: FareParameters,
@@ -1712,162 +1495,54 @@ data PaymentChargeResult = PaymentChargeResult
     paymentChargeBearer :: Maybe Text
   }
 
--- | Re-price the payment charge on what the customer actually pays.
---
---   The charge is levied on the fare AFTER the offer discount, so the discount
---   removes the charge that sat on it and the rider's true saving exceeds the
---   offer's face value. 'currentFare' is the pre-discount fare including
---   whatever charge is already baked into it; 'appliedCharge' says how much
---   that is, so the base can be recovered without assuming where it came from.
---
---   'adjustedFareParams' keeps the PRE-discount charge, because the
---   fare_parameters row is the pre-discount record and every consumer re-derives
---   from it. Only 'adjustedFare' and 'paymentCharge' carry post-discount values.
+applyPaymentChargeOnPayableFare :: Maybe PaymentChargeDetails -> HighPrecMoney -> FareParameters -> FareParameters
+applyPaymentChargeOnPayableFare mbDetails fareBase fareParams = case mbDetails of
+  Just details
+    | details.bearer == PAYMENT_CUSTOMER,
+      Tax.taxedTotal charge > 0 ->
+      fareParams
+        { paymentProcessingFee = Just charge.taxExclusive,
+          paymentProcessingFeeTax = Just charge.tax,
+          paymentChargeTaxCgst = chargeTax >>= (.cgst),
+          paymentChargeTaxSgst = chargeTax >>= (.sgst),
+          paymentChargeTaxIgst = chargeTax >>= (.igst)
+        }
+    where
+      charge = chargeOn details fareBase
+      chargeTax = Tax.taxOn (maybe Tax.VAT Tax.chargeRegime details.chargeTax) details.chargeTax (Tax.Exclusive charge.taxExclusive)
+  _ -> fareParams {paymentProcessingFee = Nothing, paymentProcessingFeeTax = Nothing, paymentChargeTaxCgst = Nothing, paymentChargeTaxSgst = Nothing, paymentChargeTaxIgst = Nothing}
+
+applyPaymentChargeGrossUp :: Maybe PaymentChargeDetails -> Maybe HighPrecMoney -> FareParameters -> FareParameters
+applyPaymentChargeGrossUp mbDetails mbDiscount fareParams =
+  applyPaymentChargeOnPayableFare mbDetails (fareSum fareParams Nothing - fromMaybe 0 mbDiscount) fareParams
+
 finalisePaymentCharge ::
-  Maybe DTC.DriverWalletConfig ->
+  Maybe PaymentChargeDetails ->
   HighPrecMoney ->
   HighPrecMoney ->
   Maybe HighPrecMoney ->
   FareParameters ->
   PaymentChargeResult
-finalisePaymentCharge mbDwc currentFare appliedCharge mbDiscount fareParams =
+finalisePaymentCharge mbDetails currentFare appliedCharge mbDiscount fareParams =
   let fareOnly = max 0 (currentFare - appliedCharge)
       postDiscountBase = max 0 (fareOnly - fromMaybe 0 mbDiscount)
-      (charge, vat, mbBearer) = applyPaymentChargeOnPayableFare mbDwc postDiscountBase
-      (preCharge, preVat, _) = applyPaymentChargeOnPayableFare mbDwc fareOnly
-      customerBears = Just (show DTC.PAYMENT_CUSTOMER) == mbBearer
-      gross = charge + vat
+      charge = maybe (Tax.TaxedAmount 0 0) (`chargeOn` postDiscountBase) mbDetails
+      mbBearer = (.bearer) <$> mbDetails
+      customerBears = mbBearer == Just PAYMENT_CUSTOMER
+      gross = Tax.taxedTotal charge
    in PaymentChargeResult
-        { adjustedFareParams =
-            if customerBears
-              then fareParams {paymentProcessingFee = Just preCharge, paymentProcessingFeeVat = Just preVat}
-              else fareParams,
-          -- ride.fare stays pre-discount on the fare side (the discount is
-          -- subtracted downstream) but carries the post-discount charge, so
-          -- fare - discount is exactly what the rider pays.
+        { adjustedFareParams = applyPaymentChargeOnPayableFare mbDetails postDiscountBase fareParams,
           adjustedFare = fareOnly + (if customerBears then gross else 0),
           paymentCharge = if gross > 0 then Just gross else Nothing,
-          paymentChargeBearer = mbBearer
+          paymentChargeBearer = show <$> mbBearer
         }
 
-paymentChargeFromFareTotal :: Maybe DTC.DriverWalletConfig -> HighPrecMoney -> HighPrecMoney
-paymentChargeFromFareTotal mbDwc total =
-  case mbDwc of
-    Just dwc
-      | Just rate <- dwc.paymentChargeRate,
-        Just bearer <- dwc.paymentChargeBearer,
-        rate > 0,
-        total > 0 ->
-        let totalRate = paymentChargeTotalRate dwc
-         in case bearer of
-              DTC.PAYMENT_CUSTOMER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / toRational (100 + totalRate)))
-              DTC.PAYMENT_DRIVER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / 100))
-              DTC.PAYMENT_PLATFORM -> 0
-    _ -> 0
-
--- | Gross up the fare by the payment charge when the RIDER bears it.
---
---   The charge is levied on the whole fare -- including the non-discountable
---   components (pet, toll, parking, cancellation dues) -- because the customer
---   pays those too. It is stored in its own pair of slots, NOT folded into
---   'discountApplicableRideFareTaxExclusive': living there would both inflate
---   the ceiling 'clampDiscount' allows and let 'applyRideDiscount' scale the
---   charge by the discount ratio. It is re-priced on the post-discount total
---   instead, by 'RD.applyDiscountAndRepriceCharge'.
---
---   This runs before any discount is known, so the stored pair is the
---   pre-discount charge; every consumer re-derives the post-discount value.
-applyPaymentChargeGrossUp :: Maybe DTC.DriverWalletConfig -> FareParameters -> FareParameters
-applyPaymentChargeGrossUp mbDwc fareParams =
-  case mbDwc of
-    Just dwc
-      | Just rate <- dwc.paymentChargeRate,
-        Just bearer <- dwc.paymentChargeBearer,
-        rate > 0,
-        isCustomerPaymentBearer bearer ->
-        let base = fareSum fareParams Nothing
-            charge = HighPrecMoney (base.getHighPrecMoney * (toRational rate / 100))
-            vat = HighPrecMoney (charge.getHighPrecMoney * (toRational (fromMaybe 0 dwc.paymentChargeVat) / 100))
-         in fareParams {paymentProcessingFee = Just charge, paymentProcessingFeeVat = Just vat}
-    _ -> fareParams
-
--- | Hardcoded list of 'FareChargeComponent' values the customer offer
---   discount is allowed to apply to. Toll (TollChargesComponent +
---   TollVatComponent) is handled separately; RideVatComponent is
---   folded into discountApplicableTax via fp.rideTax — so neither
---   belongs in this list.
---
---   This list is the single deterministic source of truth for
---   "what participates in the customer offer discount" on BPP: grep
---   here to answer that question without reading other modules.
---   Add a component here to make it discount-applicable; remove to
---   exclude it. Anything not in this list (parking, airport fee,
---   platform fee, card charges, insurance, cancellation dues,
---   payment processing fee, etc.) is treated as non-discount-applicable.
-discountApplicableComponents :: [FareChargeComponent]
-discountApplicableComponents =
-  [ RideFare,
-    WaitingCharge,
-    ServiceChargeComponent,
-    CongestionChargeComponent,
-    PriorityChargeComponent,
-    NightShiftChargeComponent,
-    StopChargeComponent,
-    DeadKmFareComponent,
-    ExtraKmFareComponent,
-    RideDurationFareComponent,
-    TimeBasedFareComponent,
-    DistBasedFareComponent,
-    TimeFareComponent,
-    DistanceFareComponent,
-    PickupChargeComponent,
-    ExtraDistanceFareComponent,
-    ExtraTimeFareComponent,
-    AmbulanceDistBasedFareComponent
-  ]
-
--- | Project FareParameters into the canonical eight-slot wire breakup.
---   Trivial record-to-record projection — the numbers are computed at
---   'calculateFareParameters' time and stored directly on the
---   'FareParameters' record. Returns 'Nothing' when those V2 slots
---   aren't populated (pure GST mode); BAP then falls back to
---   estimatedFare-based math.
-projectFareParamsBreakup :: FareParameters -> Maybe RD.ProjectFareParamsBreakup
-projectFareParamsBreakup FareParameters {..}
-  | isNothing discountApplicableRideFareTaxExclusive
-      && isNothing discountApplicableRideFareTax
-      && isNothing nonDiscountApplicableRideFareTaxExclusive =
-    Nothing
-  | otherwise =
-    Just
-      RD.ProjectFareParamsBreakup
-        { RD.discountApplicableRideFareTaxExclusive = fromMaybe 0 discountApplicableRideFareTaxExclusive,
-          RD.discountApplicableRideFareTax = fromMaybe 0 discountApplicableRideFareTax,
-          RD.nonDiscountApplicableRideFareTaxExclusive = fromMaybe 0 nonDiscountApplicableRideFareTaxExclusive,
-          RD.nonDiscountApplicableRideFareTax = fromMaybe 0 nonDiscountApplicableRideFareTax,
-          RD.tollFareTaxExclusive = fromMaybe 0 tollFareTaxExclusive,
-          RD.tollFareTax = fromMaybe 0 tollFareTax,
-          RD.cancellationFeeTaxExclusive = fromMaybe 0 cancellationFeeTaxExclusive,
-          RD.cancellationTax = fromMaybe 0 cancellationTax,
-          RD.parkingChargeTaxExclusive = fromMaybe 0 parkingChargeTaxExclusive,
-          RD.parkingChargeTax = fromMaybe 0 parkingChargeTax,
-          -- A row priced before the charge/VAT split has the blended amount in
-          -- paymentProcessingFee and NULL VAT; it still totals correctly.
-          RD.paymentChargeTaxExclusive = fromMaybe 0 paymentProcessingFee,
-          RD.paymentChargeTax = fromMaybe 0 paymentProcessingFeeVat
-        }
-
--- | Clamp a raw (BAP-reported) discount amount to the discount-applicable
---   base. The base is derived from the hardcoded
---   'discountApplicableComponents' list via 'projectFareParamsBreakup'
---   (NOT from a legacy toll+parking aggregate subtraction) — toll,
---   parking, airport fees, platform fee, insurance, etc. are all
---   excluded by construction. Returns 'Nothing' when the projection is
---   unavailable (pure GST mode — discount can't be applied safely) or
---   when the clamped amount is zero.
 clampDiscountToDiscountable :: FareParameters -> Maybe HighPrecMoney -> Maybe HighPrecMoney
 clampDiscountToDiscountable fareParams mbRaw = do
   raw <- mbRaw
-  b <- projectFareParamsBreakup fareParams
-  let clamped = RD.clampDiscount b raw
+  let edcCollects = FB.RideTaxRates {rideFare = False, toll = False, parking = True, airportEntryFee = True, cancellationFee = False, platformFee = False, paymentCharge = False}
+      edcLine l collects isCharge titles = collects && (isCharge l.title || l.title `elem` titles)
+      edcCollected l = SL.edcCollectsParking fareParams.fareSettlementType && or (edcLine l <$> edcCollects <*> FB.isChargeTitle <*> FB.taxTitles)
+      breakupLines = filter (not . edcCollected) (mkFareParamsBreakups True (\amount -> amount) FB.BreakupLine fareParams)
+      clamped = FB.clampDiscount (fareSum fareParams Nothing) breakupLines raw
   if clamped > 0 then Just clamped else Nothing

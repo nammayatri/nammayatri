@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.FarePolicyV2 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Dashboard.Common
 import Data.Aeson
 import Data.OpenApi (ToSchema)
@@ -352,10 +353,11 @@ data FPV2Policy = FPV2Policy
     congestionChargeMultiplier :: Kernel.Prelude.Maybe FPV2CongestionChargeMultiplier,
     perDistanceUnitInsuranceCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cardCharge :: Kernel.Prelude.Maybe FPV2CardCharge,
-    vatChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
     commissionChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
-    cancellationCommissionChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
-    tollTaxChargeConfig :: Kernel.Prelude.Maybe FPV2FareChargeConfig,
+    rideTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    tollTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    parkingTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    commissionTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
     platformFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeCgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeSgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -397,7 +399,9 @@ data FPV2PreviewReq = FPV2PreviewReq
     policy :: Kernel.Prelude.Maybe FPV2Policy,
     serviceTier :: Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType,
     tripCategory :: Kernel.Prelude.Maybe Dashboard.Common.TripCategory,
-    sampleTrips :: [FPV2SampleTrip]
+    sampleTrips :: [FPV2SampleTrip],
+    paymentInstrument :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    discountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -565,7 +569,11 @@ data FPV2TripPreview = FPV2TripPreview
     totalFare :: Kernel.Types.Common.HighPrecMoney,
     minFare :: Kernel.Types.Common.HighPrecMoney,
     maxFare :: Kernel.Types.Common.HighPrecMoney,
-    breakup :: [FPV2FareBreakupItem]
+    breakup :: [FPV2FareBreakupItem],
+    riderTotalFare :: Kernel.Types.Common.HighPrecMoney,
+    riderAdditions :: [FPV2FareBreakupItem],
+    netEarnings :: Kernel.Types.Common.HighPrecMoney,
+    driverDeductions :: [FPV2FareBreakupItem]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

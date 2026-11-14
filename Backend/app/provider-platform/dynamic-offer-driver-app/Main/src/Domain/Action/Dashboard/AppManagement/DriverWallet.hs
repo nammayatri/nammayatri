@@ -120,8 +120,9 @@ getDriverWalletWalletLedgerHistory ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow DriverWallet.WalletLedgerEntriesResponse
-getDriverWalletWalletLedgerHistory merchantShortId opCity driverId mbFromDate mbToDate mbLimit mbOffset = do
+getDriverWalletWalletLedgerHistory merchantShortId opCity driverId mbFromDate mbToDate mbLimit mbOffset mbEntityId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
-  DDriverWallet.getWalletLedgerHistory (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) mbFromDate mbToDate mbLimit mbOffset
+  DDriverWallet.getWalletLedgerHistory (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) mbFromDate mbToDate mbLimit mbOffset mbEntityId

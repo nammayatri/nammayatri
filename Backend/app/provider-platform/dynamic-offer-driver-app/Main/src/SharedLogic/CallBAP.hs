@@ -1806,8 +1806,9 @@ sendChangeServiceTierUpdateToBAP ::
   DST.ServiceTierType ->
   HighPrecMoney ->
   Text ->
+  Fare.FareParameters ->
   m ()
-sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId = do
+sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId fareParams = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1819,7 +1820,8 @@ sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare 
               { bookingId = booking.id,
                 newVehicleServiceTier,
                 newEstimatedFare,
-                bppQuoteId
+                bppQuoteId,
+                fareParams
               }
     retryConfig <- asks (.shortDurationRetryCfg)
     onUpdateMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing changeServiceTierReq

@@ -21,6 +21,7 @@ import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.OfferDiscount as OfferDiscount
 import qualified API.Internal.OneShotAssign as OneShotAssign
+import qualified API.Internal.PaymentChargeDetails as PaymentChargeDetails
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
@@ -55,6 +56,7 @@ type API =
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
+           :<|> PaymentChargeDetails.API
            :<|> TollChargeApproval.API
            :<|> SendSMS.API
            :<|> SendEmailOTP.API
@@ -89,6 +91,7 @@ handler =
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
+    :<|> PaymentChargeDetails.handler
     :<|> TollChargeApproval.handler
     :<|> SendSMS.handler
     :<|> SendEmailOTP.handler

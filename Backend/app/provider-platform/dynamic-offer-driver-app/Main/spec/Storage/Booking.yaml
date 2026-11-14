@@ -26,6 +26,8 @@ imports:
   FareSettlementType: Lib.Types.SpecialLocation
   Language: Tools.Maps
   AddOnData: Domain.Types.AddOnConfig
+  PaymentChargeDetails: BecknV2.OnDemand.Settlement
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -118,7 +120,8 @@ Booking:
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
-    cancellationCommission: Maybe HighPrecMoney
+    cancellationDuesCommission: Maybe HighPrecMoney
+    cancellationDuesCommissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
@@ -132,6 +135,7 @@ Booking:
     businessEmailDomain: Maybe Text
     customerLanguage: Maybe Language
     addOnData: "[AddOnData]"
+    paymentChargeDetails: Maybe PaymentChargeDetails
 
   excludedFields:
     - merchantId
@@ -151,6 +155,8 @@ Booking:
     isDashboardRequest: Maybe Bool
     configInExperimentVersions: Maybe Value
     addOnData: Maybe Value
+    paymentChargeDetails: Maybe Value
+    cancellationDuesCommissionTaxBreakup: Maybe Value
     isSafetyPlus : Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
@@ -202,6 +208,8 @@ Booking:
     receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     addOnData: Just $ toJSON addOnData|E
+    paymentChargeDetails: toJSON <$> paymentChargeDetails|E
+    cancellationDuesCommissionTaxBreakup: toJSON <$> cancellationDuesCommissionTaxBreakup|E
     isSafetyPlus : Just isSafetyPlus|E
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
@@ -234,6 +242,8 @@ Booking:
     receiverDetails: snd <$> senderAndReceiverDetails|E
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     addOnData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData)|E
+    paymentChargeDetails: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeDetails|E
+    cancellationDuesCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup|E
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
@@ -265,6 +275,8 @@ Booking:
     estimateId: character varying(255)
     configInExperimentVersions: "json"
     addOnData: "json"
+    paymentChargeDetails: "json"
+    cancellationDuesCommissionTaxBreakup: "json"
     displayBookingId: character varying(25)
     searchTryId: character varying(36)
     dqDurationToPickup: bigint

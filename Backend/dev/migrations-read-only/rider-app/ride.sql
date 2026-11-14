@@ -487,3 +487,10 @@ ALTER TABLE atlas_app.ride ADD COLUMN return_otp text ;
 
 ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number SET DEFAULT NULL;
 ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number DROP NOT NULL;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_payment_charge_tax_breakup json ;
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_payment_charge double precision ;

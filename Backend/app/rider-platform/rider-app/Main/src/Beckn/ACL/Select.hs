@@ -17,6 +17,7 @@ module Beckn.ACL.Select (buildSelectReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UCommonV2
@@ -153,10 +154,12 @@ mkItemTags res =
             Tags.IS_PET_RIDE Tags.~=? ((T.pack . show) <$> res.isPetRide),
             Tags.BILLING_CATEGORY Tags.~= show res.billingCategory,
             Tags.EMAIL_DOMAIN Tags.~=? res.emailDomain,
-            Tags.CUSTOMER_TIP Tags.~=? ((\charges -> show charges.getMoney) <$> res.customerExtraFee),
+            Tags.CUSTOMER_TIP Tags.~=? (highPrecMoneyToText . (.amount) <$> res.customerExtraFeeWithCurrency),
             Tags.NEGATIVE_FARE_ADJUSTMENT Tags.~=? ((\charges -> show charges.getMoney) <$> res.negativeFareAdjustment),
             Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds))
           ]
+            <> PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails
+            <> [Tags.DISCOUNT_AMOUNT Tags.~=? (show <$> res.offerDiscountAmount)]
       deliveryTags = mkSelectResDetailsTagGroup res
    in fromMaybe [] baseTags <> deliveryTags
 
@@ -188,12 +191,12 @@ tfPrice res =
 --   BUYER_ADDITIONAL_AMOUNT = just the extra amount (tip/premium).
 tfQuote :: DSelect.DSelectRes -> Maybe Spec.Quotation
 tfQuote res =
-  case res.customerExtraFee of
+  case res.customerExtraFeeWithCurrency of
     Nothing -> Nothing
     Just customerFare ->
       let currency = res.estimate.estimatedFare.currency
           baseFare = res.estimate.estimatedFare.amount
-          extraFare = fromIntegral customerFare.getMoney :: HighPrecMoney
+          extraFare = customerFare.amount
           totalProposedFare = baseFare + extraFare
           mkBreakupPrice val =
             Just

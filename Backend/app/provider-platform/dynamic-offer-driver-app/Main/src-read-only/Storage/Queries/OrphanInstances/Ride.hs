@@ -14,6 +14,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified SharedLogic.Type
@@ -23,10 +24,10 @@ import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
@@ -43,8 +44,9 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             bookingId = Kernel.Types.Id.Id bookingId,
             cancellationAdditionalInfo = cancellationAdditionalInfo,
             cancellationChargesOnCancel = cancellationChargesOnCancel,
-            cancellationCommission = cancellationCommission,
             cancellationConsequenceRowIdIfCancelled = cancellationConsequenceRowIdIfCancelled,
+            cancellationDuesCommission = cancellationDuesCommission,
+            cancellationDuesCommissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup,
             cancellationFaultRule = cancellationFaultRule,
             cancellationFaultVerdict = cancellationFaultVerdict,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
@@ -54,7 +56,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
@@ -165,8 +167,9 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.cancellationAdditionalInfo = cancellationAdditionalInfo,
         Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,
-        Beam.cancellationCommission = cancellationCommission,
         Beam.cancellationConsequenceRowIdIfCancelled = cancellationConsequenceRowIdIfCancelled,
+        Beam.cancellationDuesCommission = cancellationDuesCommission,
+        Beam.cancellationDuesCommissionTaxBreakup = toJSON <$> cancellationDuesCommissionTaxBreakup,
         Beam.cancellationFaultRule = cancellationFaultRule,
         Beam.cancellationFaultVerdict = cancellationFaultVerdict,
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
@@ -176,10 +179,10 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
-        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
+        Beam.clientModelName = clientDevice <&> (.deviceModel),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,

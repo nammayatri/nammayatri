@@ -21,6 +21,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
@@ -64,10 +65,11 @@ acknowledgeSurfacedTollChargeApproval booking rideId = do
 
 -- Shared with the already-continuous ride-status polls, so none of them need a second poll just
 -- for this. Ownership of the ride is the caller's concern.
-getPendingTollChargeApproval :: (MonadFlow m, CacheFlow m r) => Id DRide.Ride -> m (Maybe TollChargeApprovalRequestRes)
-getPendingTollChargeApproval rideId = do
+getPendingTollChargeApproval :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DBooking.Booking -> Id DRide.Ride -> m (Maybe TollChargeApprovalRequestRes)
+getPendingTollChargeApproval booking rideId = do
   now <- getCurrentTime
   mbPending :: Maybe Internal.PendingTollChargeApproval <- Redis.safeGet (Internal.pendingTollChargeApprovalKey rideId)
+  mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
   pure $ do
     pending <- mbPending
     let expiresAt = addUTCTime (fromIntegral pending.approvalTimeoutSeconds) pending.requestedAt
@@ -75,7 +77,7 @@ getPendingTollChargeApproval rideId = do
     pure
       TollChargeApprovalRequestRes
         { tollNames = pending.tollNames,
-          amount = pending.amount,
+          amount = roundAmountByCurrency' pending.currency (Settlement.grossTaxExclusive (.toll) mbPaymentCharge booking.riderTaxRates pending.amount),
           currency = pending.currency,
           requestedAt = pending.requestedAt,
           expiresAt = expiresAt
@@ -89,11 +91,12 @@ tollChargeApprovalDecision personId rideId req = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   now <- getCurrentTime
   pending :: Internal.PendingTollChargeApproval <- Redis.safeGet (Internal.pendingTollChargeApprovalKey rideId) >>= fromMaybeM (InvalidRequest "There is no toll charge waiting for your approval")
-  unless (pending.amount == req.amount && addUTCTime (fromIntegral pending.approvalTimeoutSeconds) pending.requestedAt > now) $
+  mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
+  unless (roundAmountByCurrency' pending.currency (Settlement.grossTaxExclusive (.toll) mbPaymentCharge booking.riderTaxRates pending.amount) == req.amount && addUTCTime (fromIntegral pending.approvalTimeoutSeconds) pending.requestedAt > now) $
     throwError $ InvalidRequest "This toll charge request is no longer valid"
   requestId <- fromMaybeM (InvalidRequest "This toll charge request is no longer valid") pending.requestId
   merchant <- SMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  void $ CallBPPInternal.submitTollChargeApprovalDecision merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId requestId req.approved req.amount
+  void $ CallBPPInternal.submitTollChargeApprovalDecision merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId requestId req.approved pending.amount
   Redis.del (Internal.pendingTollChargeApprovalKey rideId)
   pure Success
 

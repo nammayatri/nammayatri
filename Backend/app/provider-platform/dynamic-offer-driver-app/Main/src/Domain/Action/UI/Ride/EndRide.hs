@@ -555,37 +555,20 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                           pure (d, f, p, Nothing)
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed, mbApproxUsed)
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-    rawDiscountAmount <-
-      if isJust booking.discountAmount && finalFare /= booking.estimatedFare
-        then do
-          appBackendBapInternal <- asks (.appBackendBapInternal)
-          let reqBody =
-                CallBAPInternal.OfferDiscountReq
-                  { fareAmount = Just finalFare,
-                    projectFareParamsBreakup = Fare.projectFareParamsBreakup baseFareParams
-                  }
-          result <-
-            withTryCatch "getOfferDiscount:endRideTransaction" $
-              CallBAPInternal.getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
-          case result of
-            Right resp -> pure resp.discountAmount
-            Left err -> do
-              logError $ "Error getting offer discount, falling back to booking discount amount: " <> show err
-              pure booking.discountAmount
-        else pure booking.discountAmount
+    rawDiscountAmount <- CallBAPInternal.refreshOfferDiscount booking booking.discountAmount Nothing booking.fareParams baseFareParams
     let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
-    finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
+    let finalCancellationDuesCommission = Fare.calculateCancellationDuesCommission booking.cancellationDuesCommission baseFareParams
     -- SHADOW MODE: the legacy ladder above did the billing; this evaluates the
     -- unified decision core on the same inputs, persists its reason on the
     -- ride, and logs/counts divergence. See RecomputeDecision module header.
     mbRecomputeDecision <- shadowRecomputeDecision req booking ride mbOdometer pickupDropOutsideOfThreshold distanceCalculationFailed mbShadowApprox chargeableDistance tripEndPoint thresholdConfig mbFarePolicy now
     let appliedCharge = case mbUpdatedFareParams of
-          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeVat
-          Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeVat
-        chargeRes = Fare.finalisePaymentCharge (Just thresholdConfig.driverWalletConfig) finalFare appliedCharge discountAmount baseFareParams
+          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeTax
+          Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeTax
+        chargeRes = Fare.finalisePaymentCharge booking.paymentChargeDetails finalFare appliedCharge discountAmount baseFareParams
         finalFareWithPaymentCharge = chargeRes.adjustedFare
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
@@ -608,7 +591,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission,
-               cancellationCommission = finalCancellationCommission,
+               cancellationDuesCommission = finalCancellationDuesCommission,
+               cancellationDuesCommissionTaxBreakup = Fare.calculateCancellationDuesCommissionTax booking.cancellationDuesCommissionTaxBreakup baseFareParams,
                paymentCharge = mbPaymentCharge,
                paymentChargeBearer = mbPaymentChargeBearer,
                discountAmount = discountAmount,
@@ -954,6 +938,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               computationPhase = Fare.FCRecompute,
               mbCapConfig = farePolicy.fareRecomputeCapConfig,
               mbEstimateFareParams = Just booking.fareParams,
+              paymentChargeDetails = booking.paymentChargeDetails,
+              buyerOfferDiscount = booking.discountAmount,
               actualDistance = Just chargeableDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
@@ -974,6 +960,7 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               estimatedCongestionCharge = endRideCongestionCharge,
               isScheduled = booking.isScheduled,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
+              customerCancellationDuesTaxBreakup = (Fare.fareTaxesOf booking.fareParams).cancellationFee,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
@@ -984,10 +971,9 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
               distanceUnit = booking.distanceUnit,
               shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
               shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
-              merchantOperatingCityId = Just booking.merchantOperatingCityId,
+              merchantOperatingCityId = booking.merchantOperatingCityId,
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages,
-              govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType,
               isParkingFeeExempt = rcParkingFeeExempt

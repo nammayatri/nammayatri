@@ -46,6 +46,8 @@ module Domain.Action.Dashboard.Merchant
     putMerchantConfigGeometryUpdate,
     getMerchantRiderConfigEstimatesOrder,
     postMerchantRiderConfigEstimatesOrderUpdate,
+    getMerchantConfigPaymentMethodList,
+    postMerchantConfigPaymentMethodPaymentChargeUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
@@ -85,6 +87,7 @@ import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.MerchantState as DMerchantState
+import qualified Domain.Types.PaymentChargeBearer as PCB
 import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
@@ -2531,3 +2534,37 @@ verifyCloudSwitchPassword given = do
     asks (.cloudSwitchPassword)
       >>= fromMaybeM (InvalidRequest "Cloud switch is disabled: cloudSwitchPassword is not configured for this app")
   unless (given == expected) $ throwError AccessDenied
+
+getMerchantConfigPaymentMethodList :: ShortId DM.Merchant -> Context.City -> Flow Common.PaymentMethodChargeListRes
+getMerchantConfigPaymentMethodList merchantShortId city = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  paymentMethods <- QMPM.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  pure Common.PaymentMethodChargeListRes {paymentMethods = map toPaymentMethodChargeAPIEntity paymentMethods}
+  where
+    toPaymentMethodChargeAPIEntity paymentMethod =
+      Common.PaymentMethodChargeAPIEntity
+        { id = paymentMethod.id.getId,
+          paymentType = show paymentMethod.paymentType,
+          paymentInstrument = show paymentMethod.paymentInstrument,
+          collectedBy = show paymentMethod.collectedBy,
+          priority = paymentMethod.priority,
+          paymentChargeType = paymentMethod.paymentChargeType,
+          paymentCharge = paymentMethod.paymentCharge,
+          paymentChargeTax = paymentMethod.paymentChargeTax,
+          paymentChargeBearer = paymentMethod.paymentChargeBearer
+        }
+
+postMerchantConfigPaymentMethodPaymentChargeUpdate :: ShortId DM.Merchant -> Context.City -> Text -> Common.UpdatePaymentMethodChargeReq -> Flow APISuccess
+postMerchantConfigPaymentMethodPaymentChargeUpdate merchantShortId city paymentMethodId req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  paymentMethod <- QMPM.findById (Id paymentMethodId) >>= fromMaybeM (InvalidRequest $ "Payment method not found: " <> paymentMethodId)
+  unless (paymentMethod.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError $ InvalidRequest $ "Payment method " <> paymentMethodId <> " does not belong to this city"
+  when (req.paymentChargeType == Just PCB.PERCENTAGE && maybe False (> 100) req.paymentCharge) $
+    throwError $ InvalidRequest "Percentage payment charge cannot exceed 100"
+  QMPM.updatePaymentCharge req.paymentChargeType req.paymentCharge req.paymentChargeTax req.paymentChargeBearer paymentMethod.id
+  CQMPM.clearCache merchantOperatingCity.id
+  CQMPM.clearCacheById paymentMethod.id
+  invalidateConfigInMem LYT.MerchantPaymentMethod
+  logTagInfo "dashboard -> postMerchantConfigPaymentMethodPaymentChargeUpdate : " (paymentMethodId <> " city " <> show merchantOperatingCity.id)
+  pure Success

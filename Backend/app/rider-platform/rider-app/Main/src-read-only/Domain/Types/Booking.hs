@@ -5,6 +5,7 @@
 module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Client
@@ -80,8 +81,10 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     isWhatsappRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -104,6 +107,7 @@ data Booking = Booking
     requiresPaymentBeforeConfirm :: Kernel.Prelude.Bool,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    riderTaxRates :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.RiderTaxRates,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     selectedOfferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

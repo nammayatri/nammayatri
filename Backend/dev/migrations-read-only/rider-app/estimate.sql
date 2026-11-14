@@ -719,3 +719,10 @@ ALTER TABLE atlas_app.estimate ADD COLUMN negative_fare_suggestion double precis
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN selected_offer_discount_amount double precision ;
+ALTER TABLE atlas_app.estimate ADD COLUMN rider_tax_rates json ;

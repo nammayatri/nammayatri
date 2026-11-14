@@ -22,6 +22,10 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
+import BecknV2.OnDemand.FareBreakup.Tax (mkTaxBreakup)
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Settlement as Settlement
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -40,6 +44,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnCancel as Reexport
 import qualified Domain.Types.OnCancel as OC
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import Domain.Types.Ride
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -179,14 +184,28 @@ tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReas
       orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone driverRating,
       orderCancellation = tfCancellation (fromMaybe False becknConfig.sendOndcCancellationCodes) cancellationSource cancellationReasonCode,
       orderBilling = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
+      orderCancellationTerms = Just $ tfCancellationTerms grossCancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
-      orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument) mbPaymentMethodInfo,
+      orderPayments = map (\payment -> payment {Spec.paymentTags = payment.paymentTags <> (mbCancellationDuesDetails' >>= cancellationSettlementTags)}) <$> tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument) mbPaymentMethodInfo,
       orderProvider = BUtils.tfProvider becknConfig,
       orderQuote = tfQuotation booking mbCancellationDuesDetails',
       orderCreatedAt = Just booking.createdAt,
       orderUpdatedAt = Just booking.updatedAt
     }
+  where
+    customerPaymentCharge
+      | cancelStatus == show Enums.CANCELLED = maybe 0 (\cdd -> customerBorneCancellationCharge booking.paymentChargeDetails cdd.paymentCharge cdd.paymentChargeTaxBreakup) mbCancellationDuesDetails'
+      | otherwise = 0
+    grossCancellationFee = cancellationFee <&> \fee -> PriceAPIEntity {amount = fee.amount + customerPaymentCharge, currency = fee.currency}
+    cancellationSettlementTags cdd =
+      Settlement.settlementTagGroups
+        Settlement.SettlementTags
+          { commission = cdd.cancellationCommission,
+            commissionTaxBreakup = cdd.cancellationCommissionTaxBreakup,
+            paymentCharge = (+ Tax.taxTotal cdd.paymentChargeTaxBreakup) <$> cdd.paymentCharge,
+            paymentChargeTaxBreakup = cdd.paymentChargeTaxBreakup,
+            paymentChargeDetails = booking.paymentChargeDetails
+          }
 
 tfFulfillments :: DRB.Booking -> Maybe Text -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe Text -> Maybe Text -> Maybe [Spec.Fulfillment]
 tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone driverRating = do
@@ -232,14 +251,14 @@ mkQuotationBreakup booking mbCancellationDuesDetails' =
   Just $
     case mbCancellationDuesDetails' of
       Just cancellationDuesDetails ->
-        mkProjectFareParamsTagBreakupItemsForCancellation
-          mkPrice
-          mkQuotationBreakupInner
-          (fromMaybe 0 cancellationDuesDetails.cancellationFee)
-          (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax)
-          <> [ mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)),
-               mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_TAX) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax))
-             ]
+        mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)) :
+        map (\(title, amount) -> mkQuotationBreakupInner title (mkPrice amount)) (componentTaxLines ((.cancellationFee) FB.taxTags) (cancellationDuesDetails.cancellationFeeTaxBreakup <|> mkTaxBreakup cancellationDuesDetails.cancellationFeeTax Nothing Nothing Nothing))
+          <> case (booking.paymentChargeDetails, cancellationDuesDetails.paymentCharge) of
+            (Just details, Just charge)
+              | details.bearer == PAYMENT_CUSTOMER ->
+                mkQuotationBreakupInner (show Enums.PAYMENT_CHARGE) (mkPrice charge) :
+                map (\(title, amount) -> mkQuotationBreakupInner title (mkPrice amount)) (componentTaxLines ((.paymentCharge) FB.taxTags) cancellationDuesDetails.paymentChargeTaxBreakup)
+            _ -> []
       Nothing -> []
   where
     mkPrice money =
@@ -271,7 +290,7 @@ tfItems booking merchant mbFarePolicy =
           Spec.itemCategoryIds = Just [BUtils.tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId booking.paymentId,
           Spec.itemPrice = tfItemPrice booking,
-          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing Nothing (not $ null booking.stops)
+          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing (not $ null booking.stops)
         }
     ]
 

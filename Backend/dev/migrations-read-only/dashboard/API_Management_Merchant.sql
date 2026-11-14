@@ -296,3 +296,18 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostMerchantConfigFareBreakupUpdate","migration":"capability","param":"system-config.fare_policy.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_BREAKUP_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantConfigPaymentMethodList","migration":"capability","param":"system-config.fare_policy.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_PAYMENT_METHOD_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigPaymentMethodPaymentChargeUpdate","migration":"capability","param":"system-config.fare_policy.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.fare_policy.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_PAYMENT_METHOD_PAYMENT_CHARGE_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantConfigDriverWalletAccountClassUpdate","migration":"capability","param":"system-config.driver_wallet.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.driver_wallet.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_WALLET_ACCOUNT_CLASS_UPDATE' ) ON CONFLICT DO NOTHING;

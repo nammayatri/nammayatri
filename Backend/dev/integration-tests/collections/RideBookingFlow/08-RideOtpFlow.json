@@ -535,6 +535,13 @@
               "});",
               "pm.test('Quote offered for ' + wantTier, function () {",
               "    pm.expect(szQuote, 'no ' + wantTier + ' quote offered; available: ' + available.join(', ')).to.not.be.null;",
+              "});",
+              "var noAdjustment = function (x) { return !x || Number(x) === 0; };",
+              "(d.quotes || []).forEach(function (q) {",
+              "    var inner = q.onDemandCab || q.onRentalCab || q.onMeterRide;",
+              "    if (!inner) return;",
+              "    pm.test('Quote ' + inner.vehicleVariant + ': total fare equals fare (no tax, charge or discount)', function () { pm.expect(Number(inner.estimatedTotalFare)).to.eql(Number(inner.estimatedFare)); });",
+              "    pm.test('Quote ' + inner.vehicleVariant + ': no discount', function () { pm.expect(noAdjustment(inner.discount)).to.eql(true); });",
               "});"
             ],
             "type": "text/javascript"
@@ -646,7 +653,31 @@
               "}",
               "pm.test('Has special zone OTP', function () {",
               "    pm.expect(pm.environment.get('sz_otp')).to.be.a('string').that.is.not.empty;",
-              "});"
+              "});",
+              "if (d.list && d.list.length > 0) {",
+              "    var bookingFare = d.list[0];",
+              "    pm.test('Booking total fare equals fare (no tax, charge or discount)', function () { pm.expect(Number(bookingFare.estimatedTotalFare)).to.eql(Number(bookingFare.estimatedFare)); });",
+              "    pm.test('Booking has no discount', function () { pm.expect(!bookingFare.discount || Number(bookingFare.discount) === 0).to.eql(true); });",
+              "    pm.environment.set('_bap_booking_fare', bookingFare.estimatedTotalFare);",
+              "}",
+              "// fare breakup checks",
+              "if (d.list && d.list.length > 0) {",
+              "    var fbB = d.list[0];",
+              "    var fbLines = fbB.estimatedFareBreakup || [];",
+              "    var fbAmt = function (l) { return Number(l.amountWithCurrency ? l.amountWithCurrency.amount : l.amount); };",
+              "    var fbIsSplit = function (t) { return /_(CGST|SGST|IGST)$/.test(t); };",
+              "    var fbSum = fbLines.filter(function (l) { return !fbIsSplit(l.description); }).reduce(function (a, l) { return a + fbAmt(l); }, 0);",
+              "    var fbPayable = Number(fbB.estimatedTotalFareWithCurrency ? fbB.estimatedTotalFareWithCurrency.amount : fbB.estimatedTotalFare);",
+              "    console.log('Booking breakup:', fbLines.map(function (l) { return l.description + '=' + fbAmt(l); }).join(', '), '| payable', fbPayable);",
+              "    pm.test('Booking breakup lines (excluding CGST/SGST/IGST splits) sum to the payable fare', function () { pm.expect(Math.round(fbSum)).to.eql(Math.round(fbPayable)); });",
+              "    var fbAt = function (t) { return fbLines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + fbAmt(l); }, 0); };",
+              "    fbLines.filter(function (l) { return /_TAX$/.test(l.description); }).forEach(function (l) {",
+              "        var prefix = l.description.replace(/_TAX$/, '');",
+              "        var splits = fbAt(prefix + '_CGST') + fbAt(prefix + '_SGST') + fbAt(prefix + '_IGST');",
+              "        if (splits > 0) pm.test(l.description + ' equals its CGST + SGST + IGST split', function () { pm.expect(splits).to.be.closeTo(fbAmt(l), 1); });",
+              "    });",
+              "    pm.test('No ride fare tax or payment charge line in a cash booking', function () { pm.expect(['RIDE_FARE_TAX', 'PAYMENT_CHARGE', 'PAYMENT_CHARGE_TAX'].every(function (t) { return fbAt(t) === 0; })).to.eql(true); });",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -700,7 +731,10 @@
               "    pm.environment.set('driver_ride_id', d.id);",
               "    console.log('OTP Ride created and started! Ride ID:', d.id);",
               "}",
-              "console.log('Ride started with special zone OTP!');"
+              "console.log('Ride started with special zone OTP!');",
+              "var bapFare = Number(pm.environment.get('_bap_booking_fare'));",
+              "pm.test('Driver estimated base fare breakup total equals rider booking fare (gross)', function () { pm.expect(Number(((d.estimatedBaseFareV2Breakup || {}).total || {}).amount)).to.be.closeTo(bapFare, ((d.estimatedBaseFareV2Breakup || {}).total || {}).currency === 'INR' ? 0.5 : 0.011); });",
+              "pm.test('Driver ride carries no customer extra fee', function () { pm.expect(!d.customerExtraFee || Number(d.customerExtraFee) === 0).to.eql(true); });"
             ],
             "type": "text/javascript"
           }
@@ -814,7 +848,17 @@
               "pm.test('Ride status is COMPLETED', function () {",
               "    pm.expect(d.rideStatus).to.equal('COMPLETED');",
               "});",
-              "console.log('RideOTP flow completed! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+              "console.log('RideOTP flow completed! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);",
+              "(function () {",
+              "    var rb = (d && d.list) ? d.list[0] : d;",
+              "    var rr = rb && (rb.rideList || [])[0];",
+              "    if (!rr) return;",
+              "    pm.environment.set('_rider_ride_id', rr.id);",
+              "})();",
+              "// rider computed price for driver earnings",
+              "var reB = (d && d.list) ? d.list[0] : d;",
+              "var reRide = reB && (reB.rideList || [])[0];",
+              "if (reRide && reRide.computedPriceWithCurrency) pm.environment.set('_rider_computed_price', Number(reRide.computedPriceWithCurrency.amount));"
             ],
             "type": "text/javascript"
           }
@@ -840,6 +884,127 @@
           ]
         }
       }
+    },
+    {
+      "name": "Get Ride Earnings (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ride earnings: status 200', function () { pm.response.to.have.status(200); });",
+              "var r = pm.response.json();",
+              "var num = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var isCash = JSON.stringify(r.paymentInstrument || '').indexOf('Cash') >= 0;",
+              "var rows = (r.rideEarnings && r.rideEarnings.fareBreakup) || [];",
+              "var row = function (t) { return rows.filter(function (x) { return x.title === t; }).reduce(function (a, x) { return a + num(x.price); }, 0); };",
+              "var cashIn = num(r.amountToCollectInCash), online = num(r.amountToBeSettledOnline);",
+              "var gross = row('FARE_PAID_BY_CUSTOMER') + row('PAYMENT_CHARGE_PAID_BY_CUSTOMER') + row('DISCOUNT') + row('TIPS');",
+              "var deductions = row('COMMISSION') + row('TAX') + row('PAYMENT_CHARGE');",
+              "console.log('Ride earnings rows:', JSON.stringify(rows.map(function (x) { return [x.title, x._type, num(x.price)]; })), '| cash', cashIn, 'online', online, '| gross', gross, 'deductions', deductions, '| computedFare', num(r.computedFareWithCurrency));",
+              "pm.test('Ride earnings breakup is present for the completed ride', function () { pm.expect(rows.length).to.be.above(0); pm.expect(row('FARE_PAID_BY_CUSTOMER')).to.be.above(0); });",
+              "pm.test('Ride earnings rows carry the right earning or deduction type', function () {",
+              "    rows.forEach(function (x) {",
+              "        var expected = ['COMMISSION', 'TAX', 'PAYMENT_CHARGE'].indexOf(x.title) >= 0 ? 'Deduction' : 'Earning';",
+              "        pm.expect(x._type, x.title).to.equal(expected);",
+              "        pm.expect(x.section, x.title).to.equal('FareBreakup');",
+              "    });",
+              "});",
+              "var checkChildren = function (node, path) {",
+              "    var kids = node.subItems || [];",
+              "    if (kids.length === 0) return;",
+              "    var signed = kids.reduce(function (a, k) { return a + (k._type === 'Deduction' && path.indexOf('TAX') !== 0 ? -num(k.price) : num(k.price)); }, 0);",
+              "    if (path === 'FARE_PAID_BY_CUSTOMER') pm.test('Ride earnings sub-items of ' + path + ' do not exceed its amount', function () { pm.expect(signed).to.be.at.most(num(node.price) + 0.011 * kids.length); });",
+              "    else pm.test('Ride earnings sub-items of ' + path + ' add up to its amount', function () { pm.expect(signed).to.be.closeTo(num(node.price), 0.011 * kids.length); });",
+              "    kids.forEach(function (k) { checkChildren(k, path + ' > ' + k.title); });",
+              "};",
+              "rows.forEach(function (x) { checkChildren(x, x.title); });",
+              "pm.test('Ride earnings discount row matches the ride discount', function () { pm.expect(row('DISCOUNT')).to.be.closeTo(num(r.discountAmount) || 0, 0.011); });",
+              "pm.test('Ride earnings commission row matches the ride commission', function () { pm.expect(row('COMMISSION')).to.be.closeTo(num(r.commissionCharges) || 0, 0.011); });",
+              "pm.test('Ride earnings tips row matches the ride tip', function () { pm.expect(row('TIPS')).to.be.closeTo(num(r.tipAmount) || 0, 0.011); });",
+              "pm.test('Ride earnings payment charge row matches the payment charge on the ride', function () { pm.expect(row('PAYMENT_CHARGE')).to.be.closeTo(num(r.paymentCharge) || 0, 0.011); });",
+              "var riderPaid = pm.environment.get('_rider_computed_price');",
+              "if (riderPaid !== undefined && riderPaid !== null && riderPaid !== '') pm.test('Fare paid + discount + tips on the driver side equals the rider computed price', function () { pm.expect(gross).to.be.closeTo(Number(riderPaid), 0.02); });",
+              "if (isCash) {",
+              "    pm.test('Cash ride: amount to collect in cash = fare paid by the customer + tips (offer excluded)', function () { pm.expect(cashIn).to.be.closeTo(gross - row('DISCOUNT'), 0.011); });",
+              "    pm.test('Cash ride: amount settled online is the offer discount only', function () { if (row('DISCOUNT') > 0) pm.expect(online).to.be.closeTo(row('DISCOUNT'), 0.011); else pm.expect(online).to.equal(null); });",
+              "} else {",
+              "    pm.test('Online ride: nothing to collect in cash', function () { pm.expect(cashIn).to.equal(null); });",
+              "    pm.test('Online ride: amount settled online = gross - commission - tax deducted - payment charge', function () { pm.expect(online).to.be.closeTo(gross - row('COMMISSION') - row('TAX') - row('PAYMENT_CHARGE'), 0.011); });",
+              "}",
+              "var takeHome = gross - deductions;",
+              "pm.test('Driver take-home from the breakup = cash collected + settled online - deductions not already netted', function () {",
+              "    var netted = isCash ? row('COMMISSION') + row('TAX') + row('PAYMENT_CHARGE') : 0;",
+              "    pm.expect(takeHome).to.be.closeTo((cashIn || 0) + (online || 0) - netted, 0.02);",
+              "});",
+              "pm.test('Driver computed fare (net) equals the take-home in the earnings breakup', function () { pm.expect(num(r.computedFareWithCurrency)).to.be.closeTo(takeHome, 0.02); });",
+              "(function () {",
+              "var nbNum = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var nbNetIdentity = function (label, b) {",
+              "    pm.test(label + ': net = total - tax - commission - payment charge', function () {",
+              "        pm.expect(nbNum(b.net)).to.be.closeTo(nbNum(b.total) - nbNum(b.deduction.tax) - nbNum(b.deduction.commission) - nbNum(b.deduction.paymentCharge), 0.011);",
+              "    });",
+              "};",
+              "var nbEstimatedChecks = function (rr) {",
+              "    var b = rr.estimatedBaseFareV2Breakup;",
+              "    if (!b) return;",
+              "    console.log('Net breakup (booking estimate):', JSON.stringify(b), '| V2', nbNum(rr.estimatedBaseFareWithCurrencyV2));",
+              "    nbNetIdentity('Net breakup: booking estimated fare', b);",
+              "    pm.test('Net breakup: estimatedBaseFareWithCurrencyV2 equals booking breakup net', function () { pm.expect(nbNum(rr.estimatedBaseFareWithCurrencyV2)).to.be.closeTo(nbNum(b.net), 0.011); });",
+              "};",
+              "var nbR = pm.response.json() || {};",
+              "nbEstimatedChecks(nbR);",
+              "var nbC = nbR.computedFareBreakup;",
+              "if (nbC) {",
+              "    var nbTip = nbNum(nbR.tipAmount) || 0;",
+              "    var nbIsCash = JSON.stringify(nbR.paymentInstrument || '').indexOf('Cash') >= 0;",
+              "    var nbRows = (nbR.rideEarnings && nbR.rideEarnings.fareBreakup) || [];",
+              "    var nbRow = function (t) { return nbRows.filter(function (x) { return x.title === t; }).reduce(function (a, x) { return a + nbNum(x.price); }, 0); };",
+              "    console.log('Net breakup (ride):', JSON.stringify(nbC), '| computedFare', nbNum(nbR.computedFareWithCurrency), '| tip', nbTip, '| online', nbNum(nbR.amountToBeSettledOnline));",
+              "    nbNetIdentity('Net breakup: final ride fare', nbC);",
+              "    pm.test('Net breakup: computedFare equals ride breakup net plus tip', function () { pm.expect(nbNum(nbR.computedFareWithCurrency)).to.be.closeTo(nbNum(nbC.net) + nbTip, 0.011); });",
+              "    if (!nbIsCash && nbR.amountToBeSettledOnline !== null && nbR.amountToBeSettledOnline !== undefined) pm.test('Net breakup: amount settled online equals computedFare', function () { pm.expect(nbNum(nbR.amountToBeSettledOnline)).to.be.closeTo(nbNum(nbR.computedFareWithCurrency), 0.011); });",
+              "    if (nbRows.length > 0) {",
+              "        pm.test('Net breakup: deducted commission matches the earnings COMMISSION row', function () { pm.expect(nbNum(nbC.deduction.commission)).to.be.closeTo(nbRow('COMMISSION'), 0.011); });\n        pm.test('Net breakup: deducted tax matches the earnings TAX row (GST deducts tax, VAT keeps it in net)', function () { pm.expect(nbNum(nbC.deduction.tax)).to.be.closeTo(nbRow('TAX'), 0.011); });",
+              "        pm.test('Net breakup: computedFare matches earnings gross minus deductions', function () {",
+              "            var earnGross = nbRow('FARE_PAID_BY_CUSTOMER') + nbRow('PAYMENT_CHARGE_PAID_BY_CUSTOMER') + nbRow('DISCOUNT') + nbRow('TIPS');",
+              "            pm.expect(nbNum(nbR.computedFareWithCurrency)).to.be.closeTo(earnGross - nbRow('COMMISSION') - nbRow('TAX') - nbRow('PAYMENT_CHARGE'), 0.011);",
+              "        });",
+              "    }",
+              "}",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}?financeData=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}"
+          ],
+          "query": [
+            {
+              "key": "financeData",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
     }
   ]
 }

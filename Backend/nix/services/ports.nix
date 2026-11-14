@@ -71,6 +71,7 @@
   # Dev tools
   caddy-reverse-proxy = 9090;
   test-context-api = 7082;
+  process-compose = 7085;
   config-sync-server = 8090;
   metabase = 3001;
   victoria-metrics = 8428;

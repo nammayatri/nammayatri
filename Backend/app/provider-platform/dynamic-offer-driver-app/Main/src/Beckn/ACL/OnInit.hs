@@ -16,7 +16,6 @@ module Beckn.ACL.OnInit where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
-import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Constructors
@@ -27,7 +26,6 @@ import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
-import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common
 
 mkOnInitMessageV2 :: Utils.IsValueAddNP -> DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
@@ -49,7 +47,7 @@ tfOrder isValueAddNP res becknConfig mbFarePolicy = do
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
-      orderPayments = tfPayments res becknConfig,
+      orderPayments = tfPayments res becknConfig mbFarePolicy,
       orderProvider = Utils.tfProvider becknConfig,
       orderQuote = Utils.tfQuotation isValueAddNP res.booking,
       orderTags = Nothing,
@@ -57,16 +55,6 @@ tfOrder isValueAddNP res becknConfig mbFarePolicy = do
       orderCreatedAt = Just res.booking.createdAt,
       orderUpdatedAt = Just res.booking.updatedAt
     }
-
-mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe Common.HighPrecMoney -> Maybe Text -> Maybe [Spec.TagGroup]
-mkCommissionTagGroup mbCommission mbPaymentCharge mbPaymentChargeBearer =
-  let tags =
-        catMaybes
-          [ (Tags.COMMISSION Tags.~=) . Common.highPrecMoneyToText <$> mbCommission,
-            (Tags.PAYMENT_CHARGE Tags.~=) . Common.highPrecMoneyToText <$> mbPaymentCharge,
-            (Tags.PAYMENT_CHARGE_BEARER Tags.~=) <$> mbPaymentChargeBearer
-          ]
-   in if null tags then Nothing else Tags.buildTagGroups tags
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
@@ -81,18 +69,13 @@ tfFulfillments res =
     ]
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
-tfPayments res bppConfig = do
+tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Payment]
+tfPayments res bppConfig mbFarePolicy = do
   let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   let basePayment = mkPayment (show res.transporter.city) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing (show <$> res.booking.paymentInstrument)
-      commissionTagGroup = mkCommissionTagGroup res.booking.commission res.booking.paymentCharge res.booking.paymentChargeBearer
-      updatedPaymentTags = case (basePayment.paymentTags, commissionTagGroup) of
-        (Just existingTags, Just commissionTags) -> Just (existingTags <> commissionTags)
-        (Just existingTags, Nothing) -> Just existingTags
-        (Nothing, Just commissionTags) -> Just commissionTags
-        (Nothing, Nothing) -> Nothing
-  Just . L.singleton $ basePayment {Spec.paymentTags = updatedPaymentTags}
+      commissionTagGroup = Utils.mkCommissionTagGroup (mbFarePolicy >>= (.commissionTaxConfig)) res.booking.commission res.booking.cancellationDuesCommission res.booking.cancellationDuesCommissionTaxBreakup res.booking.paymentCharge res.booking.paymentChargeDetails
+  Just . L.singleton $ basePayment {Spec.paymentTags = basePayment.paymentTags <> commissionTagGroup}
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do

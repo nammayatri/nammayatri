@@ -120,7 +120,8 @@ data DChangeServiceTierReq = DChangeServiceTierReq
   { bookingId :: Id DRB.Booking,
     newVehicleServiceTier :: DVST.ServiceTierType,
     newEstimatedFare :: HighPrecMoney,
-    bppQuoteId :: Text
+    bppQuoteId :: Text,
+    fareParams :: DFParams.FareParameters
   }
 
 data DAddBaggageReq = DAddBaggageReq

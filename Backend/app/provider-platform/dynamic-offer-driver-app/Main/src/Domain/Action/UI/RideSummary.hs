@@ -58,16 +58,16 @@ mkRideSummaryList =
     ( \x ->
         DriverRideSummaryResp
           { earnings = roundToIntegral x.totalEarnings,
-            earningsWithCurrency = PriceAPIEntity x.totalEarnings x.currency,
+            earningsWithCurrency = PriceAPIEntity (roundAmountByCurrency' x.currency x.totalEarnings) x.currency,
             rideDistance = x.totalDistance,
             rideDistanceWithUnit = convertMetersToDistance x.distanceUnit x.totalDistance,
             rideDate = x.merchantLocalDate,
             noOfRides = x.numRides,
             tipAmount = PriceAPIEntity x.tipAmount x.currency,
-            cancellationCharges = PriceAPIEntity x.cancellationCharges x.currency,
+            cancellationCharges = PriceAPIEntity (roundAmountByCurrency' x.currency x.cancellationCharges) x.currency,
             rideDuration = x.totalRideTime,
             sharedCabTrips = x.sharedCabTrips,
-            sharedCabEarnings = PriceAPIEntity x.sharedCabEarnings x.currency,
+            sharedCabEarnings = PriceAPIEntity (roundAmountByCurrency' x.currency x.sharedCabEarnings) x.currency,
             sharedCabRideTime = x.sharedCabRideTime
           }
     )

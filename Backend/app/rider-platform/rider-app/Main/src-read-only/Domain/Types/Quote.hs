@@ -3,6 +3,7 @@
 
 module Domain.Types.Quote where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Action.UI.DriverOffer
 import qualified Domain.Action.UI.SpecialZoneQuote
@@ -56,6 +57,8 @@ data Quote = Quote
     quoteBreakupList :: [Domain.Types.QuoteBreakup.QuoteBreakup],
     quoteDetails :: Domain.Types.Quote.QuoteDetails,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    riderTaxRates :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.RiderTaxRates,
+    selectedOfferDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     selectedOfferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -4,6 +4,7 @@
 
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
@@ -492,11 +493,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DriverWalletConfig = DriverWalletConfig
-  { clubProjectFareInEarnings :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
-    clubProjectFareInPayouts :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
-    clubProjectFareInRefundsInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
-    clubProjectFareInRideInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
-    connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+  { connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     connectAccountChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ConnectChargeBearer,
     connectAccountChargeDayOfMonth :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     connectAccountChargeDayOfWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -516,10 +513,6 @@ data DriverWalletConfig = DriverWalletConfig
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minWalletAmountForScheduledRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
-    onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
-    paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    paymentChargeVat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
     payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
     requireBapSettlementConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
@@ -546,7 +539,6 @@ data InvoiceConfig = InvoiceConfig
     commissionAggregationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
-    driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
     ecoAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ecoGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ecoName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -561,7 +553,6 @@ data InvoiceConfig = InvoiceConfig
     invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     reverseCharge :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     signatureImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
@@ -585,8 +576,6 @@ data ManualTollChargeConfig = ManualTollChargeConfig
     tripCategories :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
-
-data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutChargeBearer = DRIVER_BEARER | PLATFORM_BEARER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -635,8 +624,6 @@ data PickupStallStage = PickupStallStage
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
-
-data ProjectFareParamsComponent = RIDE_FARE | TOLL_FARE | CANCELLATION_FARE | PARKING_CHARGE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RideEvidenceConfig = RideEvidenceConfig
   { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -701,17 +688,17 @@ data SubscriptionConfig = SubscriptionConfig
 
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
+    airportEntryFeeTaxConfig :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
     businessTds :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
-    commissionVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     defaultTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualNotLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     invalidPanTdsRate :: Domain.Types.Extra.TransporterConfig.TdsConfig,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
-    serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
-    subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
+    subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    taxRegime :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.Regime
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -727,10 +714,6 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConnectChargeBearer)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetLinkedDriverWalletView)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentChargeBearer)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutChargeBearer)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ProjectFareParamsComponent)

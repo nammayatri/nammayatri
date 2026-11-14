@@ -3,6 +3,7 @@
 
 module Domain.Types.Ride where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
@@ -40,6 +41,8 @@ data RideE e = Ride
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeImmediateCapture :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     cancellationFeeStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus,
+    cancellationPaymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationPaymentChargeTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -147,6 +150,8 @@ instance EncryptedItem Ride where
           cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
           cancellationFeeImmediateCapture = cancellationFeeImmediateCapture entity,
           cancellationFeeStatus = cancellationFeeStatus entity,
+          cancellationPaymentCharge = cancellationPaymentCharge entity,
+          cancellationPaymentChargeTaxBreakup = cancellationPaymentChargeTaxBreakup entity,
           chargeableDistance = chargeableDistance entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
@@ -246,6 +251,8 @@ instance EncryptedItem Ride where
             cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
             cancellationFeeImmediateCapture = cancellationFeeImmediateCapture entity,
             cancellationFeeStatus = cancellationFeeStatus entity,
+            cancellationPaymentCharge = cancellationPaymentCharge entity,
+            cancellationPaymentChargeTaxBreakup = cancellationPaymentChargeTaxBreakup entity,
             chargeableDistance = chargeableDistance entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,

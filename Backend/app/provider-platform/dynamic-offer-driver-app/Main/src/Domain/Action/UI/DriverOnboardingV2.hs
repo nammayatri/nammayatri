@@ -394,6 +394,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   computationPhase = FCEstimate,
                   mbCapConfig = Nothing,
                   mbEstimateFareParams = Nothing,
+                  paymentChargeDetails = Nothing,
+                  buyerOfferDiscount = Nothing,
                   actualDistance = mbDistance,
                   rideTime = now,
                   waitingTime = Nothing,
@@ -414,6 +416,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   negativeFareAdjustment = Nothing,
                   nightShiftCharge = Nothing,
                   customerCancellationDues = Nothing,
+                  customerCancellationDuesTaxBreakup = Nothing,
                   nightShiftOverlapChecking = isFixedNightCharge tripCategory,
                   estimatedDistance = mbDistance,
                   estimatedRideDuration = minutesToSeconds <$> mbDuration,
@@ -424,10 +427,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   shouldApplyPersonalDiscount = True,
                   tollCharges = Nothing,
                   isManualTollCharge = False,
-                  merchantOperatingCityId = Just merchantOperatingCityId,
+                  merchantOperatingCityId = merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,
                   numberOfLuggages = Nothing,
-                  govtChargesRate = transporterConfig <&> (.taxConfig.rideGst),
                   pickupGateId = Nothing,
                   fareSettlementType = fullFarePolicy.fareSettlementType,
                   isParkingFeeExempt = False
@@ -447,7 +449,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
               perMinuteRate = getPerMinuteRate fareParams
           -- True: this is a trip-less policy rate card preview for drivers, so show the
           -- full policy including per-stop charge
-          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (transporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))) True (fullFarePolicyToFarePolicy fullFarePolicy)
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing transporterConfig True (fullFarePolicyToFarePolicy fullFarePolicy)
           return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp

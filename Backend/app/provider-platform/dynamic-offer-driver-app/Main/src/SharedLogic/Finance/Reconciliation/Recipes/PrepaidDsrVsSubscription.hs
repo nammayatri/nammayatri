@@ -33,6 +33,7 @@ import Lib.Finance.Reconciliation.Recipe (Recipe (..), defaultClassify)
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.Finance.Prepaid (prepaidRideDebitReferenceType)
 import qualified SharedLogic.Finance.Reconciliation.EntitySync as EntitySync
 import qualified Storage.Queries.Booking as QBooking
@@ -106,7 +107,7 @@ fetchSources scope range = do
           parkingCharge = fromMaybe 0 fareParams.parkingCharge
           govtCharges = fromMaybe 0 fareParams.govtCharges
           tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
-          expected = rideFare - parkingCharge - govtCharges - tollCharges
+          expected = FC.netRideFare fareParams rideFare
           bId = booking.id.getId
        in ReconT.SourceRecord
             { srcId = bId,
@@ -122,7 +123,9 @@ fetchSources scope range = do
                       "rideFare" .= rideFare,
                       "parkingCharge" .= parkingCharge,
                       "govtCharges" .= govtCharges,
-                      "tollCharges" .= tollCharges
+                      "tollCharges" .= tollCharges,
+                      "airportEntryFee" .= fareParams.airportEntryFee,
+                      "airportEntryFeeTax" .= fareParams.airportEntryFeeTax
                     ],
               srcTimestamp = booking.createdAt,
               srcLifecycle = ReconT.Settled -- COMPLETED bookings are terminal.

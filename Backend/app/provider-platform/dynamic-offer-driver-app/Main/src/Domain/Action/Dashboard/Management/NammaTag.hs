@@ -112,6 +112,7 @@ import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfi
 import qualified "shared-services" IssueManagement.Storage.Queries.Issue.IssueConfig as SQICfg
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Prelude as Prelude
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -710,6 +711,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
       invalidateConfigInMem (TC.toCacheConfigType cfgType)
+      IM.refreshInMem (CADLR.experimentRunningInMemInfix (cast merchantOpCityId) rolloutObj.domain)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result

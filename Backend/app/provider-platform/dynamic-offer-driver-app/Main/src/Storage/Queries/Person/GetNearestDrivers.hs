@@ -467,17 +467,10 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
         then pure False
         else pure $ prepaidCreditsValidAtIn purchasesByOwner ownerId ownerType mbVehicleCategory creditsValidAt
 
-    checkAccountGates accountBalances (counterpartyType, ownerId) applyZeroBalanceGate mbRequired =
-      case Map.lookup (counterpartyType, ownerId) accountBalances of
-        Nothing -> False
-        Just (mbBalance, otherOfferHolds) ->
-          case mbBalance of
-            Nothing -> False
-            Just b ->
-              let available = b - otherOfferHolds
-               in (not applyZeroBalanceGate || available > 0) && maybe True (available >=) mbRequired
-
-    checkBalance accountBalances account required = checkAccountGates accountBalances account False (Just required)
+    checkBalance accountBalances account required =
+      case Map.lookup account accountBalances of
+        Nothing -> required < 0
+        Just (mbBalance, otherOfferHolds) -> fromMaybe 0 mbBalance - otherOfferHolds >= required
 
     passesLiabilityGates accountBalances cashReq airportReq applyScheduledGate r = do
       scheduledOk <-
@@ -489,9 +482,9 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
           airportAccount = (counterpartyDriver, r.driverId.getId)
           liabilityOk = case (cashReq, airportReq) of
             (Nothing, Nothing) -> True
-            (Just c, Nothing) -> checkAccountGates accountBalances cashAccount True (Just c)
+            (Just c, Nothing) -> checkBalance accountBalances cashAccount c
             (Nothing, Just a) -> checkBalance accountBalances airportAccount a
             (Just c, Just a)
-              | cashAccount == airportAccount -> checkAccountGates accountBalances cashAccount True (Just (max c a))
-              | otherwise -> checkAccountGates accountBalances cashAccount True (Just c) && checkBalance accountBalances airportAccount a
+              | cashAccount == airportAccount -> checkBalance accountBalances cashAccount (max c a)
+              | otherwise -> checkBalance accountBalances cashAccount c && checkBalance accountBalances airportAccount a
       pure $ scheduledOk && liabilityOk

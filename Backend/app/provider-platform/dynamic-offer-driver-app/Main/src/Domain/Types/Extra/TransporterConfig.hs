@@ -1,7 +1,9 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Extra.TransporterConfig where
 
+import BecknV2.OnDemand.FareBreakup.SubItems as SubItems (FareBreakupNode (..), FareBreakupNodeValue (..))
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.Types
@@ -247,22 +249,7 @@ data RecomputeBand = RecomputeBand
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data FareBreakupNode = FareBreakupNode
-  { key :: Text,
-    node :: FareBreakupNodeValue
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+type FareBreakupNode = SubItems.FareBreakupNode FP.FareChargeComponent
 
-data FareBreakupNodeValue
-  = FareTags [FP.FareChargeComponent]
-  | SubItems [FareBreakupNode]
-  deriving (Generic, Show, Eq)
-
-instance ToJSON FareBreakupNodeValue where
-  toJSON = genericToJSON defaultOptions {sumEncoding = UntaggedValue}
-
-instance FromJSON FareBreakupNodeValue where
-  parseJSON = genericParseJSON defaultOptions {sumEncoding = UntaggedValue}
-
-instance GenericDefaults FareBreakupNode where
-  genDef _ = [FareBreakupNode {key = "defaultText", node = FareTags [FP.RideFare]}]
+instance GenericDefaults (SubItems.FareBreakupNode FP.FareChargeComponent) where
+  genDef _ = [SubItems.FareBreakupNode {key = "defaultText", node = SubItems.FareTags [FP.RideFare]}]

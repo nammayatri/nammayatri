@@ -198,7 +198,7 @@ cancel req merchant booking mbActiveSearchTry = do
       Just consequenceCtx ->
         Orchestrator.applyTerminalConsequences
           consequenceCtx
-          (\base gst mbCreditDebit -> createCancellationLedgerEntries booking consequenceCtx.ride base gst transporterConfig mbCreditDebit)
+          (\base feeTax mbCreditDebit -> createCancellationLedgerEntries booking consequenceCtx.ride base feeTax transporterConfig mbCreditDebit)
       Nothing -> pure Nothing
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
@@ -206,7 +206,7 @@ cancel req merchant booking mbActiveSearchTry = do
       then do
         return (isReallocated, Nothing, Nothing, resolvedReasonCode)
       else do
-        let cancellationTaxAmount = fromMaybe 0 (chargesOutcome >>= (.tax))
+        let cancellationTaxAmount = maybe 0 (.total) (chargesOutcome >>= (.feeTax))
             -- base + tax kept separate; total built only here for the on_cancel
             -- CancellationTerm. A non-positive total (zero, or a matrix CREDIT) is
             -- never surfaced as a cancellation fee on the Beckn side

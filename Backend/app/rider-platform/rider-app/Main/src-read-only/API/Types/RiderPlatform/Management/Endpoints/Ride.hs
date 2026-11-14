@@ -91,6 +91,8 @@ data FareBreakupEntityType
   | BOOKING
   | RIDE
   | INITIAL_BOOKING
+  | ESTIMATE
+  | QUOTE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

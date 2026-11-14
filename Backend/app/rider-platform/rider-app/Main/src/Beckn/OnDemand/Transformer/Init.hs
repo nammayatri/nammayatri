@@ -2,6 +2,7 @@ module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Init
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
@@ -150,7 +151,7 @@ mkItemTags res =
       itemTags'' = mkInsuranceTagGroup res : itemTags'
       itemTags''' = maybe itemTags'' (\displayId -> mkDisplayBookingIdTagGroup displayId : itemTags'') res.booking.displayBookingId
       itemTags'''' = mkOfferInfoTagGroup res : itemTags'''
-   in itemTags''''
+   in itemTags'''' <> fromMaybe [] (Tags.buildTagGroups (PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails))
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =

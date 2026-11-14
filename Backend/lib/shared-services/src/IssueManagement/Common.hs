@@ -263,7 +263,7 @@ data EstimateFareBreakup = EstimateFareBreakup
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
+data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING | ESTIMATE | QUOTE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
 $(mkBeamInstancesForEnumAndList ''VehicleVariant)

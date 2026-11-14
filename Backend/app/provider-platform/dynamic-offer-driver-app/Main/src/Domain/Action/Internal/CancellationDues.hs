@@ -12,6 +12,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.CancellationDues as SCD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -47,6 +48,8 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     Just duesDetails -> do
       when (duesDetails.paymentStatus /= DCDD.PENDING) $
         throwError $ InvalidRequest $ "Cancellation dues for rideId " <> req.rideId <> " are already " <> show duesDetails.paymentStatus <> ". Cannot waive off."
+      unless (SCD.carriedInRiderBalance duesDetails) $
+        throwError $ InvalidRequest $ "Cancellation charge for rideId " <> req.rideId <> " is collected immediately or before the next ride and cannot be waived off as dues"
       -- The consequence-matrix row that produced this charge can forbid waive-off outright.
       whenJust duesDetails.cancellationConsequenceRowId $ \rowId -> do
         mbConsequenceRow <- QCCM.findByPrimaryKey (Id rowId)
@@ -97,7 +100,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   when canWaiveOffResult $ do
     QRD.updateWaivedOffAmount req.waiveOffAmount riderDetails.id.getId
     QRD.updateNoOfTimesWaiveOffUsed riderDetails.id.getId
-    QRD.updateCancellationDues (riderDetails.cancellationDues - req.waiveOffAmount) riderDetails.id
+    SCD.removeRiderCancellationDues riderDetails req.waiveOffAmount (maybeToList mbCancellationDuesDetails)
     QCDD.updatePaymentStatusByRideId DCDD.WAIVED rideId
   when (not canWaiveOffResult) $ throwError $ InvalidRequest $ "Failed to waive off cancellation dues for riderId from jsonLogic - " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount
   return $ Success

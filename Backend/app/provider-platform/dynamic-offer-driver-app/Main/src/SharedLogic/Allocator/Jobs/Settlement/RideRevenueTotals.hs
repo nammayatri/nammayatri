@@ -11,23 +11,28 @@ module SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified Data.HashSet as HS
+import Data.List (partition)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as AccountDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DDirectTaxTransaction
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTaxTransaction
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified SharedLogic.Finance.Prepaid as Prepaid
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Queries.Booking as QBooking
 
 -- ---------------------------------------------------------------------------
 -- Per-transaction row (persisted to journal_entry_transaction after SAP success)
@@ -119,7 +124,7 @@ data RideRevenueTotals = RideRevenueTotals
   }
   deriving (Generic, Show, Eq)
 
-type RideRevenueTotalsFlow m r = (EsqDBFlow m r, MonadFlow m, CacheFlow m r)
+type RideRevenueTotalsFlow m r = (BeamFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r)
 
 fetchRideRevenueTotals ::
   (RideRevenueTotalsFlow m r) =>
@@ -128,21 +133,13 @@ fetchRideRevenueTotals ::
   UTCTime ->
   m RideRevenueTotals
 fetchRideRevenueTotals merchantOpCityId fromTime toTime = do
-  onlineRideRevRec <-
-    fetchRideFareRevRecTotals
-      merchantOpCityId
-      fromTime
-      toTime
-      Wallet.walletReferenceGSTOnline
-      Wallet.walletReferenceVATOnline
+  rideFareRows <- findRideFareITTRowsByLedgerTaxRefs merchantOpCityId fromTime toTime (Wallet.walletReferenceRideTax Tax.GST) (Wallet.walletReferenceRideTax Tax.VAT)
+  bookings <- QBooking.findAllByIds (Id . (\(refId, _, _, _, _, _) -> refId) <$> rideFareRows)
+  onlineBookingIds <- HS.fromList . map (.id.getId) <$> filterM Wallet.resolveIsOnlineFromBooking bookings
+  let (onlineRows, cashRows) = partition (\(refId, _, _, _, _, _) -> refId `HS.member` onlineBookingIds) rideFareRows
+      onlineRideRevRec = rideFareRevRecTotals onlineRows
+      offlineCashRide = rideFareRevRecTotals cashRows
   buyerAppSettlement <- fetchBuyerAppSettlementTotals merchantOpCityId fromTime toTime
-  offlineCashRide <-
-    fetchRideFareRevRecTotals
-      merchantOpCityId
-      fromTime
-      toTime
-      Wallet.walletReferenceGSTCash
-      Wallet.walletReferenceVATCash
   driverEarningAccrual <- fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime
   payout <- fetchPayoutTotals merchantOpCityId fromTime toTime
   tds <- fetchTdsTotals merchantOpCityId fromTime toTime
@@ -154,20 +151,10 @@ fetchRideRevenueTotals merchantOpCityId fromTime toTime = do
 -- Ride fare rev-rec (online / offline-cash)
 -- ---------------------------------------------------------------------------
 
--- | RideFare/Output ITT + SETTLED GST/VAT ledger tax refs → totals + rows.
--- (online: GSTOnline/VATOnline; cash: GSTCash/VATCash).
-fetchRideFareRevRecTotals ::
-  (RideRevenueTotalsFlow m r) =>
-  Id DMOC.MerchantOperatingCity ->
-  UTCTime ->
-  UTCTime ->
-  Text ->
-  Text ->
-  m (RideFareRevRecTotals, [RideRevenueTransactionRow])
-fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
-  rawRows <- findRideFareITTRowsByLedgerTaxRefs merchantOpCityId fromTime toTime taxRefA taxRefB
+rideFareRevRecTotals :: [(Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, LedgerDomain.EntryStatus)] -> (RideFareRevRecTotals, [RideRevenueTransactionRow])
+rideFareRevRecTotals rawRows =
   let (totals, txnRowsRev) = foldl' go (RideFareRevRecTotals 0 0 0 0 0 0, []) rawRows
-  pure (totals, reverse txnRowsRev)
+   in (totals, reverse txnRowsRev)
   where
     go (acc, rs) (refId, netAmt, cgstAmt, sgstAmt, igstAmt, st) =
       let gross = netAmt + cgstAmt + sgstAmt + igstAmt
@@ -183,7 +170,7 @@ fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
 
 -- | List RideFare/Output ITT rows whose booking also has a SETTLED tax ledger
 -- with the given online-or-cash reference types.
--- EXISTS (not inner join): online GST posts two GSTOnline legs (BuyerAsset →
+-- EXISTS (not inner join): online GST posts two ride-tax legs (BuyerAsset →
 -- BuyerExternal pass-through + BuyerExternal → GovtIndirect); a join would
 -- return the same ITT twice and the fold would double totals.
 findRideFareITTRowsByLedgerTaxRefs ::

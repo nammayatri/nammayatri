@@ -25,7 +25,7 @@ import qualified "payment" Lib.Payment.Domain.Types.Refunds
 import Servant
 import Servant.Client
 
-data RefundComponentItem = RefundComponentItem {component :: Domain.Types.FareBreakup.FareComponent, amount :: Kernel.Types.Common.PriceAPIEntity}
+data RefundComponentItem = RefundComponentItem {component :: Domain.Types.FareBreakup.RefundFareComponent, amount :: Kernel.Types.Common.PriceAPIEntity}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

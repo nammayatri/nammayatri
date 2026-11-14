@@ -3,12 +3,14 @@
 
 module API.Types.RiderPlatform.Management.Endpoints.Merchant where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.PaymentChargeBearer
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
 import qualified EulerHS.Types
@@ -17,6 +19,7 @@ import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Lib.Queries.SpecialLocation
@@ -55,6 +58,24 @@ data MerchantUpdateReq = MerchantUpdateReq
     gatewayUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     registryUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PaymentMethodChargeAPIEntity = PaymentMethodChargeAPIEntity
+  { id :: Kernel.Prelude.Text,
+    paymentType :: Kernel.Prelude.Text,
+    paymentInstrument :: Kernel.Prelude.Text,
+    collectedBy :: Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Int,
+    paymentChargeType :: Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeType,
+    paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    paymentChargeTax :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeBearer
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PaymentMethodChargeListRes = PaymentMethodChargeListRes {paymentMethods :: [PaymentMethodChargeAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -105,6 +126,18 @@ data SpecialLocationWithPlatform = SpecialLocationWithPlatform {location :: Lib.
 
 type TollListResp = [Dashboard.Common.Merchant.TollAPIEntity]
 
+data UpdatePaymentMethodChargeReq = UpdatePaymentMethodChargeReq
+  { paymentChargeType :: Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeType,
+    paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    paymentChargeTax :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxConfig,
+    paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.PaymentChargeBearer.PaymentChargeBearer
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdatePaymentMethodChargeReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data UpdateRiderConfigEstimatesOrderReq = UpdateRiderConfigEstimatesOrderReq
   { userServiceTierOrderConfig :: Kernel.Prelude.Maybe [Dashboard.Common.VehicleServiceTierOrderConfig],
     defaultServiceTierOrderConfig :: Kernel.Prelude.Maybe [Dashboard.Common.ServiceTierType],
@@ -143,7 +176,7 @@ data UpsertTicketConfigResp = UpsertTicketConfigResp {unprocessedTicketConfigs :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigFailover :<|> PostMerchantTicketConfigUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantSchedulerRevive :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigAllowedDestinationStates :<|> GetMerchantConfigAllowedDestinationStates :<|> PostMerchantConfigMerchantCreateHelper :<|> GetMerchantRiderConfigEstimatesOrder :<|> PostMerchantRiderConfigEstimatesOrderUpdate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))
+type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigFailover :<|> PostMerchantTicketConfigUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantSchedulerRevive :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigAllowedDestinationStates :<|> GetMerchantConfigAllowedDestinationStates :<|> PostMerchantConfigMerchantCreateHelper :<|> GetMerchantRiderConfigEstimatesOrder :<|> PostMerchantRiderConfigEstimatesOrderUpdate :<|> GetMerchantConfigPaymentMethodList :<|> PostMerchantConfigPaymentMethodPaymentChargeUpdate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))
 
 type PostMerchantUpdate = ("update" :> ReqBody '[JSON] MerchantUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -376,6 +409,16 @@ type PostMerchantRiderConfigEstimatesOrderUpdate =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type GetMerchantConfigPaymentMethodList = ("config" :> "paymentMethod" :> "list" :> Get '[JSON] PaymentMethodChargeListRes)
+
+type PostMerchantConfigPaymentMethodPaymentChargeUpdate =
+  ( "config" :> "paymentMethod" :> Capture "paymentMethodId" Kernel.Prelude.Text :> "paymentCharge" :> "update"
+      :> ReqBody
+           '[JSON]
+           UpdatePaymentMethodChargeReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 type PostMerchantConfigDebugLogUpdate =
   ( "config" :> "debugLog" :> "update" :> ReqBody '[JSON] Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq
       :> Post
@@ -436,6 +479,8 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigMerchantCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     getMerchantRiderConfigEstimatesOrder :: EulerHS.Types.EulerClient RiderConfigEstimatesOrderRes,
     postMerchantRiderConfigEstimatesOrderUpdate :: UpdateRiderConfigEstimatesOrderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigPaymentMethodList :: EulerHS.Types.EulerClient PaymentMethodChargeListRes,
+    postMerchantConfigPaymentMethodPaymentChargeUpdate :: Kernel.Prelude.Text -> UpdatePaymentMethodChargeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigDebugLogUpdate :: Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getMerchantMerchantMessageCatalog :: EulerHS.Types.EulerClient RiderMerchantMessageCatalogResp,
     postMerchantMerchantMessageUpsert :: UpsertRiderMerchantMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -447,7 +492,7 @@ data MerchantAPIs = MerchantAPIs
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
-    postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantConfigSpecialLocationUpsert :<|> getMerchantConfigSpecialLocationList :<|> getMerchantConfigGeometryList :<|> putMerchantConfigGeometryUpdate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigTollUpsert :<|> getMerchantConfigTollList :<|> postMerchantTollUpsert :<|> deleteMerchantTollDelete :<|> postMerchantConfigFailover :<|> postMerchantTicketConfigUpsert :<|> postMerchantSchedulerTrigger :<|> postMerchantSchedulerRevive :<|> postMerchantConfigOperatingCityWhiteList :<|> postMerchantConfigAllowedDestinationStates :<|> getMerchantConfigAllowedDestinationStates :<|> postMerchantConfigMerchantCreate :<|> getMerchantRiderConfigEstimatesOrder :<|> postMerchantRiderConfigEstimatesOrderUpdate :<|> postMerchantConfigDebugLogUpdate :<|> getMerchantMerchantMessageCatalog :<|> postMerchantMerchantMessageUpsert :<|> deleteMerchantMerchantMessage :<|> postMerchantCloudUpdate :<|> postMerchantCloudCityUpdate = merchantClient
+    postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantConfigSpecialLocationUpsert :<|> getMerchantConfigSpecialLocationList :<|> getMerchantConfigGeometryList :<|> putMerchantConfigGeometryUpdate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigTollUpsert :<|> getMerchantConfigTollList :<|> postMerchantTollUpsert :<|> deleteMerchantTollDelete :<|> postMerchantConfigFailover :<|> postMerchantTicketConfigUpsert :<|> postMerchantSchedulerTrigger :<|> postMerchantSchedulerRevive :<|> postMerchantConfigOperatingCityWhiteList :<|> postMerchantConfigAllowedDestinationStates :<|> getMerchantConfigAllowedDestinationStates :<|> postMerchantConfigMerchantCreate :<|> getMerchantRiderConfigEstimatesOrder :<|> postMerchantRiderConfigEstimatesOrderUpdate :<|> getMerchantConfigPaymentMethodList :<|> postMerchantConfigPaymentMethodPaymentChargeUpdate :<|> postMerchantConfigDebugLogUpdate :<|> getMerchantMerchantMessageCatalog :<|> postMerchantMerchantMessageUpsert :<|> deleteMerchantMerchantMessage :<|> postMerchantCloudUpdate :<|> postMerchantCloudCityUpdate = merchantClient
 
 data MerchantUserActionType
   = POST_MERCHANT_UPDATE
@@ -479,6 +524,8 @@ data MerchantUserActionType
   | POST_MERCHANT_CONFIG_MERCHANT_CREATE
   | GET_MERCHANT_RIDER_CONFIG_ESTIMATES_ORDER
   | POST_MERCHANT_RIDER_CONFIG_ESTIMATES_ORDER_UPDATE
+  | GET_MERCHANT_CONFIG_PAYMENT_METHOD_LIST
+  | POST_MERCHANT_CONFIG_PAYMENT_METHOD_PAYMENT_CHARGE_UPDATE
   | POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE
   | GET_MERCHANT_MERCHANT_MESSAGE_CATALOG
   | POST_MERCHANT_MERCHANT_MESSAGE_UPSERT

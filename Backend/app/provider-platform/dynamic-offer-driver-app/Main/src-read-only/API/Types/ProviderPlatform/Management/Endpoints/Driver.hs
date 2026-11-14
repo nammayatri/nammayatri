@@ -315,7 +315,10 @@ data EarningPeriodStats = EarningPeriodStats
     totalDistance :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
     cancellationCharges :: Kernel.Types.Common.Money,
-    tipAmount :: Kernel.Types.Common.Money
+    tipAmount :: Kernel.Types.Common.Money,
+    totalEarningsWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    cancellationChargesWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    tipAmountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

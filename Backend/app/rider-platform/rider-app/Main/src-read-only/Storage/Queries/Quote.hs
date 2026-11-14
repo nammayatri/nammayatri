@@ -73,6 +73,8 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.providerUrl (Kernel.Prelude.showBaseUrl providerUrl),
       Se.Set Beam.quoteBreakupListJson (Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.riderTaxRates (Kernel.Prelude.toJSON <$> riderTaxRates),
+      Se.Set Beam.selectedOfferDiscountAmount selectedOfferDiscountAmount,
       Se.Set Beam.selectedOfferId selectedOfferId,
       Se.Set Beam.serviceTierName serviceTierName,
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,

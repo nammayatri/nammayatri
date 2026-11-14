@@ -24,7 +24,8 @@
           imports = [
             (import ./services/nammayatri.nix { inherit (perSystem) config self' inputs'; inherit inputs; })
           ];
-          apiServer = false;
+          apiServer = true;
+          port = (import ./services/ports.nix).process-compose;
           services.nammayatri.enable = true;
           services.nammayatri.profile = profile;
         };

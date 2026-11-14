@@ -28,6 +28,7 @@ imports:
   BillingCategory: SharedLogic.Type
   Value: Data.Aeson
   FareSettlementType: Lib.Types.SpecialLocation
+  RiderTaxRates: BecknV2.OnDemand.FareBreakup.Tax
 
 Quote:
   dataName: quote
@@ -121,6 +122,8 @@ Quote:
     vehicleIconUrl: Maybe BaseUrl
     isSafetyPlus : Bool
     selectedOfferId: Maybe Text
+    selectedOfferDiscountAmount: Maybe HighPrecMoney
+    riderTaxRates: Maybe RiderTaxRates
   derives: "Generic, Show"
 
   beamFields:
@@ -167,6 +170,7 @@ Quote:
     vehicleIconUrl: Maybe Text
     isSafetyPlus: Maybe Bool
     billingCategory: Maybe BillingCategory
+    riderTaxRates: Maybe Value
 
 
   fromTType:
@@ -188,6 +192,7 @@ Quote:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     isSafetyPlus : Kernel.Prelude.fromMaybe False isSafetyPlus | E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    riderTaxRates: Kernel.Utils.JSON.valueToMaybe =<< riderTaxRates|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -221,6 +226,7 @@ Quote:
     isSafetyPlus: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just|I
     quoteBreakupListJson: Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList|E
+    riderTaxRates: Kernel.Prelude.toJSON <$> riderTaxRates|E
 
   sqlType:
     requestId: character varying(255)
@@ -241,6 +247,7 @@ Quote:
     currency: character varying(255)
     distanceUnit: character varying(255)
     quoteBreakupListJson: "json"
+    riderTaxRates: "json"
 
   default:
     fareProductType: "'ONE_WAY'"

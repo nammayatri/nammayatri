@@ -61,7 +61,6 @@ data LineItemDescription
   | WalletTopup
   | AirportCashRecharge
   | CashbackOffer
-  | VatInput
   | OfferDiscount
   | RideFareRefund
   | RideFareRefundTax
@@ -82,6 +81,14 @@ data LineItemDescription
   | PaymentChargeRefundTax
   | CancellationCommissionRefund
   | CancellationCommissionRefundTax
+  | AirportEntryFeeCharge
+  | AirportEntryFeeChargeTax
+  | AirportEntryFeeChargeRefund
+  | AirportEntryFeeChargeRefundTax
+  | CustomerPlatformFee
+  | CustomerPlatformFeeTax
+  | CustomerPlatformFeeRefund
+  | CustomerPlatformFeeRefundTax
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.

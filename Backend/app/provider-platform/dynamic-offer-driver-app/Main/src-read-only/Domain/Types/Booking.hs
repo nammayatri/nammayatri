@@ -3,6 +3,8 @@
 
 module Domain.Types.Booking where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
+import qualified BecknV2.OnDemand.Settlement
 import Data.Aeson
 import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Common
@@ -40,7 +42,8 @@ data Booking = Booking
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
     coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
@@ -89,6 +92,7 @@ data Booking = Booking
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeDetails :: Kernel.Prelude.Maybe BecknV2.OnDemand.Settlement.PaymentChargeDetails,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),

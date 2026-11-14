@@ -43,12 +43,16 @@ data ClearDuesStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data DueAmountRide = DueAmountRide {amount :: Kernel.Types.Common.HighPrecMoney, rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+data DueAmountRide = DueAmountRide {amount :: Kernel.Types.Common.HighPrecMoney, items :: [DueItem], rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DueItem = DueItem {amount :: Kernel.Types.Common.HighPrecMoney, reference :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FareBreakupComponent = FareBreakupComponent
-  { component :: Domain.Types.FareBreakup.FareComponent,
+  { component :: Domain.Types.FareBreakup.RefundFareComponent,
     exclTax :: Kernel.Types.Common.PriceAPIEntity,
     tax :: Kernel.Types.Common.PriceAPIEntity,
     total :: Kernel.Types.Common.PriceAPIEntity
@@ -81,7 +85,7 @@ data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RefundComponentReq = RefundComponentReq {amount :: Kernel.Types.Common.PriceAPIEntity, component :: Domain.Types.FareBreakup.FareComponent}
+data RefundComponentReq = RefundComponentReq {amount :: Kernel.Types.Common.PriceAPIEntity, component :: Domain.Types.FareBreakup.RefundFareComponent}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

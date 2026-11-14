@@ -54,6 +54,7 @@ module Lib.Finance.FinanceM
     transferAllowZero,
     transferWithoutAttribution,
     getEntryIds,
+    includeEntryIds,
     liftFinance,
     liftFinanceM,
     getCtx,
@@ -282,6 +283,9 @@ getCtx = ask
 -- | Get the entry IDs collected so far in this FinanceM computation.
 getEntryIds :: (Monad m) => FinanceM m [Id LE.LedgerEntry]
 getEntryIds = gets (.collectedEntryIds)
+
+includeEntryIds :: (Monad m) => [Id LE.LedgerEntry] -> FinanceM m ()
+includeEntryIds entryIds = modify' (\st -> st {collectedEntryIds = st.collectedEntryIds <> entryIds})
 
 -- | Lift an @Either FinanceError a@ value into FinanceM.
 liftFinance :: (Monad m) => Either FinanceError a -> FinanceM m a

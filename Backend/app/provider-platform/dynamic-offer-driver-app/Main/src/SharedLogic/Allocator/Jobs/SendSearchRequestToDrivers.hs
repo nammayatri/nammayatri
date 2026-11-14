@@ -318,6 +318,8 @@ processSendSearchRequestJobWithMode dispatchMode jobId jobData = withLogTag ("Jo
                 tripQuoteDetails,
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
+                paymentChargeDetails = searchTry.paymentChargeDetails,
+                buyerOfferDiscount = searchTry.discountAmount,
                 messageId = searchTry.messageId,
                 isRepeatSearch = False,
                 isAllocatorBatch = True,

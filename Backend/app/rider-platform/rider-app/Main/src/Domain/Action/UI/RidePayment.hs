@@ -2,10 +2,10 @@ module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
 import AWS.S3 as S3
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import Data.Time.Format.ISO8601 (iso8601Show)
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking
 import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.FareBreakup
@@ -35,7 +35,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
-import Lib.Finance (FinanceCtx)
+import Lib.Finance (FinanceCtx (issuedToName))
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -50,7 +51,9 @@ import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.JobScheduler
+import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -336,8 +339,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
             email <- mapM decrypt person.email
             -- The gateway charges on the tip capture too, so the tip carries the same
             -- payment charge the fare does, at the rate the ride was priced at.
-            let mbChargeRate = SPayment.paymentChargeRateFromFareBreakups fareBreakups
-                tipLevied = SPayment.levyPaymentChargeOn mbChargeRate ride.paymentChargeBearer tipRequest.amount.amount
+            mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
+            let tipLevied = SPayment.levyPaymentChargeOn mbPaymentCharge tipRequest.amount.amount
             if ride.paymentStatus == Domain.Types.Ride.Completed
               then do
                 -- Tip added after payment is captured (Completed status)
@@ -400,63 +403,18 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 -- ledger core (handled separately via createTipLedger), the
                 -- existing core entries won't be disturbed.
                 tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-                let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-                mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ridePaymentChargeAmount 0 tipLedgerCtx
-                let tipLedgerInfo =
-                      fromMaybe
-                        SPayment.RidePaymentLedgerInfo
-                          { rideFare = totalFare.amount - applicationFeeAmount - rideDiscountAmount,
-                            gstAmount = 0,
-                            tollFare = 0,
-                            tollVatAmount = 0,
-                            parkingCharge = 0,
-                            parkingChargeVat = 0,
-                            platformFee = applicationFeeAmount,
-                            paymentCharge = ridePaymentChargeAmount,
-                            paymentChargeVat = 0,
-                            offerDiscountAmount = rideDiscountAmount,
-                            cashbackPayoutAmount = ridePayoutAmount,
-                            rideVatAbsorbedOnDiscount = 0,
-                            cancellationCharge = 0,
-                            cancellationTax = 0,
-                            financeCtx = tipLedgerCtx
-                          }
-                        mbTipLedgerInfo
+                let tipLedgerCtx = (RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = person.firstName}
+                let tipLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount tipLedgerCtx
                 mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo) False
                 case mbPaymentIntentResp of
                   Nothing -> do
-                    bookingFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING)
-                    let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-                    mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount ridePaymentChargeAmount 0 ledgerCtx
-                    let ledgerInfo =
-                          fromMaybe
-                            SPayment.RidePaymentLedgerInfo
-                              { rideFare = totalFare.amount - applicationFeeAmount - rideDiscountAmount,
-                                gstAmount = 0,
-                                tollFare = 0,
-                                tollVatAmount = 0,
-                                parkingCharge = 0,
-                                parkingChargeVat = 0,
-                                platformFee = applicationFeeAmount,
-                                paymentCharge = ridePaymentChargeAmount,
-                                paymentChargeVat = 0,
-                                offerDiscountAmount = rideDiscountAmount,
-                                cashbackPayoutAmount = ridePayoutAmount,
-                                rideVatAbsorbedOnDiscount = 0,
-                                cancellationCharge = 0,
-                                cancellationTax = 0,
-                                financeCtx = ledgerCtx
-                              }
-                            mbLedgerInfo
-                    logDebug $ "makePaymentIntent (tip-applied): breakups=" <> show bookingFareBreakup <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
+                    logDebug $ "makePaymentIntent (tip-applied): breakups=" <> show tipRideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show tipLedgerInfo
                     -- Create separate PENDING tip ledger entry via dedicated function
                     let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
                     void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
                     when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-                      let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> bookingFareBreakup of
-                            Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                            Nothing -> fareWithTip.amount
-                      SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
+                      let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx totalFare.amount tipRideFareBreakups)
+                      SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount tipLedgerInfo booking
                       RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
                   Just paymentIntentResp -> do
                     -- Create separate PENDING tip ledger entry via dedicated function
@@ -609,44 +567,63 @@ buildRefundRequestRow ctx evidenceS3Path code description requestedAmount refund
       }
 
 -- | Build per-component refund splits from the row's approved components, each split into fare + VAT
---   by the ride's breakup ratio. Also returns the ride-fare and cancellation-fee component totals,
---   the BPP's commission-slice denominators. Throws if the ride has no structured fare breakup, or
---   if approved components are absent (approve always sets them).
+--   by the ride's breakup ratio. Throws if approved components are absent (approve always sets them).
 computeRefundSplits ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   DRefundRequest.RefundRequest ->
   FinanceCtx ->
-  -- (ride-fare component total, cancellation-fee component total, per-component splits)
-  Environment.Flow (Kernel.Types.Common.HighPrecMoney, Kernel.Types.Common.HighPrecMoney, [RidePaymentFinance.RefundComponentSplit])
+  Environment.Flow [RidePaymentFinance.RefundComponentSplit]
 computeRefundSplits rideId refundRequest ctx = do
-  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
-  let discount = maybe 0 (.discountAmount) mbOfferEntity
-  fareBreakups <-
-    SFareBreakupInfo.getFareBreakupsWithFallback
-      rideId.getId
-      Domain.Types.FareBreakup.RIDE
-      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-  mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 0 ctx
-  li <- mbLi & fromMaybeM (InvalidRequest $ "Refund requires a structured fare breakup; ride " <> rideId.getId <> " has none")
+  componentAmounts <- refundableAmounts rideId ctx
   case refundRequest.approvedRefundedComponents of
-    Just comps@(_ : _) -> pure (li.rideFare, li.cancellationCharge + li.cancellationTax, map (splitComponent li) comps)
+    Just comps@(_ : _) -> pure (map (splitComponent componentAmounts) comps)
     _ -> throwError (InternalError $ "Refund splits require approved components; refundRequest for ride " <> rideId.getId <> " has none")
   where
-    splitComponent li comp =
-      let (fareTot, vatTot) = case comp.component of
-            Domain.Types.FareBreakup.RIDE_FARE -> (li.rideFare, li.gstAmount)
-            Domain.Types.FareBreakup.TOLL -> (li.tollFare, li.tollVatAmount)
-            Domain.Types.FareBreakup.PARKING -> (li.parkingCharge, li.parkingChargeVat)
-            Domain.Types.FareBreakup.CANCELLATION_FEE -> (li.cancellationCharge, li.cancellationTax)
-            Domain.Types.FareBreakup.PAYMENT_CHARGE -> (li.paymentCharge, li.paymentChargeVat)
+    splitComponent componentAmounts comp =
+      let (fareTot, vatTot) = componentAmounts comp.component
           tot = fareTot + vatTot
           fareAmt = if tot > 0 then comp.amount * fareTot / tot else comp.amount
-       in RidePaymentFinance.RefundComponentSplit comp.component fareAmt (comp.amount - fareAmt)
+          share = if tot > 0 then comp.amount / tot else 0
+       in RidePaymentFinance.RefundComponentSplit comp.component fareAmt (comp.amount - fareAmt) share
+
+refundableAmounts ::
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  FinanceCtx ->
+  Environment.Flow (Domain.Types.FareBreakup.RefundFareComponent -> (Kernel.Types.Common.HighPrecMoney, Kernel.Types.Common.HighPrecMoney))
+refundableAmounts rideId ctx = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  if ride.status == Domain.Types.RideStatus.CANCELLED
+    then do
+      settledEntries <- filter (\e -> e.status == LE.SETTLED) <$> RidePaymentFinance.findRidePaymentEntries rideId.getId
+      pure $ \case
+        Domain.Types.FareBreakup.CANCELLATION_FEE -> (RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefCancellationFee settledEntries, sum [RidePaymentFinance.sumByRefType (RidePaymentFinance.ridePaymentRefCancellationGST taxRegime) settledEntries | taxRegime <- RidePaymentFinance.taxRegimes])
+        _ -> (0, 0)
+    else do
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+      fareBreakups <-
+        SFareBreakupInfo.getFareBreakupsWithFallback
+          rideId.getId
+          Domain.Types.FareBreakup.RIDE
+          (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
+      let li = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates (maybe booking.estimatedFare.amount (.amount) ride.totalFare) fareBreakups (maybe 0 (.discountAmount) mbOfferEntity) 0 0 ctx
+          (platformFeeBase, platformFeeTax) = (FB.componentLines ((\fb -> FB.BreakupLine fb.description fb.amount.amount) <$> fareBreakups)).platformFee
+          rideFareGross = li.rideFare + li.gstAmount
+          netOfDiscount = if rideFareGross > 0 then (rideFareGross - li.offerDiscountAmount) / rideFareGross else 1
+      when (li.airportEntryFee + li.airportEntryFeeTax > 0) $
+        throwError (InvalidRequest "Refund is not available for this ride as it includes an airport entry fee")
+      when (platformFeeBase + platformFeeTax > 0) $
+        throwError (InvalidRequest "Refund is not available for this ride as it includes a platform fee")
+      pure $ \case
+        Domain.Types.FareBreakup.RIDE_FARE -> (li.rideFare * netOfDiscount, li.gstAmount * netOfDiscount)
+        Domain.Types.FareBreakup.TOLL -> (li.tollFare, li.tollVatAmount)
+        Domain.Types.FareBreakup.PARKING -> (li.parkingCharge, li.parkingChargeVat)
+        Domain.Types.FareBreakup.CANCELLATION_FEE -> (li.cancellationCharge, li.cancellationTax)
 
 -- | Build the per-component refund DTOs the BPP consumes (FareComponent → its Text tag).
 mkRefundLedgerComponents :: [RidePaymentFinance.RefundComponentSplit] -> [CallBPPInternal.RefundLedgerComponent]
 mkRefundLedgerComponents =
-  map (\s -> CallBPPInternal.RefundLedgerComponent {component = s.component, fareAmount = s.fareAmount, vatAmount = s.vatAmount})
+  map (\s -> CallBPPInternal.RefundLedgerComponent {component = s.component, fareAmount = s.fareAmount, taxAmount = s.vatAmount, refundShare = s.refundShare})
 
 createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
@@ -721,14 +698,7 @@ getFareBreakupForRide ::
   Domain.Types.Booking.Booking ->
   Environment.Flow API.Types.UI.RidePayment.FareBreakupRes
 getFareBreakupForRide rideId booking = do
-  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
-  let discount = maybe 0 (.discountAmount) mbOfferEntity
-      currency = booking.estimatedFare.currency
-  fareBreakups <-
-    SFareBreakupInfo.getFareBreakupsWithFallback
-      rideId.getId
-      Domain.Types.FareBreakup.RIDE
-      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
+  let currency = booking.estimatedFare.currency
   let ctx =
         RidePaymentFinance.buildRiderFinanceCtx
           booking.merchantId.getId
@@ -740,28 +710,19 @@ getFareBreakupForRide rideId booking = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 0 ctx
-  let toPrice amt = mkPriceAPIEntity (mkPrice (Just currency) amt)
-      mkComp c excl tax =
-        let tot = excl + tax
-         in if tot > 0
-              then Just $ API.Types.UI.RidePayment.FareBreakupComponent {component = c, exclTax = toPrice excl, tax = toPrice tax, total = toPrice tot}
-              else Nothing
-  case mbLedgerInfo of
-    Nothing -> pure $ API.Types.UI.RidePayment.FareBreakupRes {components = Nothing, totalAmount = toPrice 0}
-    Just li ->
-      pure $
-        API.Types.UI.RidePayment.FareBreakupRes
-          { components =
-              Just $
-                catMaybes
-                  [ mkComp Domain.Types.FareBreakup.RIDE_FARE li.rideFare li.gstAmount,
-                    mkComp Domain.Types.FareBreakup.TOLL li.tollFare li.tollVatAmount,
-                    mkComp Domain.Types.FareBreakup.PARKING li.parkingCharge li.parkingChargeVat,
-                    mkComp Domain.Types.FareBreakup.CANCELLATION_FEE li.cancellationCharge li.cancellationTax
-                  ],
-            totalAmount = toPrice (li.rideFare + li.gstAmount + li.tollFare + li.tollVatAmount + li.parkingCharge + li.parkingChargeVat + li.cancellationCharge + li.cancellationTax)
-          }
+  componentAmounts <- refundableAmounts rideId ctx
+  let toPrice amt = mkRoundedPriceAPIEntity (mkPrice (Just currency) amt)
+      refundable = [(c, componentAmounts c) | c <- [minBound .. maxBound]]
+  pure $
+    API.Types.UI.RidePayment.FareBreakupRes
+      { components =
+          Just
+            [ API.Types.UI.RidePayment.FareBreakupComponent {component = c, exclTax = toPrice excl, tax = toPrice tax, total = toPrice (excl + tax)}
+              | (c, (excl, tax)) <- refundable,
+                excl + tax > 0
+            ],
+        totalAmount = toPrice (sum [excl + tax | (_, (excl, tax)) <- refundable])
+      }
 
 mkRefundRequestResp ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
@@ -771,9 +732,9 @@ mkRefundRequestResp ::
 mkRefundRequestResp rideId DRefundRequest.RefundRequest {..} evidence =
   API.Types.UI.RidePayment.RefundRequestResp
     { rideId = rideId,
-      refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
-      requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
-      transactionAmount = PriceAPIEntity transactionAmount currency,
+      refundsAmount = mkRoundedPriceAPIEntity . mkPrice (Just currency) <$> refundsAmount,
+      requestedAmount = mkRoundedPriceAPIEntity . mkPrice (Just currency) <$> requestedAmount,
+      transactionAmount = mkRoundedPriceAPIEntity (mkPrice (Just currency) transactionAmount),
       ..
     }
 
@@ -899,18 +860,10 @@ validateRefundComponents rideId booking comps = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
-  let discount = maybe 0 (.discountAmount) mbOfferEntity
-  fareBreakups <-
-    SFareBreakupInfo.getFareBreakupsWithFallback
-      rideId.getId
-      Domain.Types.FareBreakup.RIDE
-      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-  mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 0 ctx
-  li <- mbLi & fromMaybeM (InvalidRequest $ "Refund requires a structured fare breakup; ride " <> rideId.getId <> " has none")
+  componentAmounts <- refundableAmounts rideId ctx
   refundEntries <- RidePaymentFinance.getRefundLegEntries rideId.getId
   forM_ comps $ \c -> do
-    let cap = componentTotal li c.component
+    let cap = uncurry (+) (componentAmounts c.component)
         requested = c.amount.amount
         already = RidePaymentFinance.settledRefundByComponent refundEntries c.component
     -- Compare at currency precision: the app only ever sees cent-rounded totals (PriceAPIEntity
@@ -923,13 +876,6 @@ validateRefundComponents rideId booking comps = do
               <> ") exceeds the refundable cap "
               <> show cap
         )
-  where
-    componentTotal li component = case component of
-      Domain.Types.FareBreakup.RIDE_FARE -> li.rideFare + li.gstAmount
-      Domain.Types.FareBreakup.TOLL -> li.tollFare + li.tollVatAmount
-      Domain.Types.FareBreakup.PARKING -> li.parkingCharge + li.parkingChargeVat
-      Domain.Types.FareBreakup.CANCELLATION_FEE -> li.cancellationCharge + li.cancellationTax
-      Domain.Types.FareBreakup.PAYMENT_CHARGE -> li.paymentCharge + li.paymentChargeVat
 
 -- | Side-effects for the OPEN→APPROVED transition. Called from Dashboard /respond
 --   and /initiate after the row's status flip.
@@ -950,8 +896,12 @@ processRefundRaised refundRequest = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  (rideFareTotal, cancellationTotal, splits) <- computeRefundSplits rideId refundRequest ctx
-  RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id splits >>= \case
+  splits <- computeRefundSplits rideId refundRequest ctx
+  discountRecovery <-
+    if refundRequest.deductFromDriver == Just True
+      then RidePaymentFinance.refundDiscountRecovery splits <$> RidePaymentFinance.findRidePaymentEntries rideId.getId
+      else pure 0
+  RidePaymentFinance.createRefundRaisedLedger ctx (RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ctx) refundRequest.id splits discountRecovery >>= \case
     Left err -> throwError $ InternalError $ "Failed to write refund raise ledger for refund request " <> refundRequest.id.getId <> ": " <> show err
     Right _ -> pure ()
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -961,9 +911,7 @@ processRefundRaised refundRequest = do
         refundsAmount = amount,
         deductFromDriver = refundRequest.deductFromDriver,
         refundRequestStatus = CallBPPInternal.APPROVED,
-        refundComponents = Just (mkRefundLedgerComponents splits),
-        rideFareComponentTotal = Just rideFareTotal,
-        cancellationComponentTotal = Just cancellationTotal
+        refundComponents = Just (mkRefundLedgerComponents splits)
       }
 
 -- | Side-effects for the APPROVED→REFUNDED transition. Dispatched by processRefundResult
@@ -994,7 +942,7 @@ processRefundSucceeded refundRequest = do
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
   void $ RidePaymentFinance.createRefundSucceededLedger refundRequest.id
   unless alreadyRecorded $ do
-    (rideFareTotal, cancellationTotal, splits) <- computeRefundSplits rideId refundRequest ctx
+    splits <- computeRefundSplits rideId refundRequest ctx
     refundInvoiceCreated <- RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
     when refundInvoiceCreated $
       SInvoiceEmailSchedule.scheduleInvoiceEmail booking.merchantId booking.merchantOperatingCityId rideId DET.REFUND_INVOICE (Just refundRequest.id.getId)
@@ -1005,9 +953,7 @@ processRefundSucceeded refundRequest = do
           refundsAmount = amount,
           deductFromDriver = refundRequest.deductFromDriver,
           refundRequestStatus = CallBPPInternal.REFUNDED,
-          refundComponents = Just (mkRefundLedgerComponents splits), -- BPP builds its per-component refund + negative Commission invoices from these
-          rideFareComponentTotal = Just rideFareTotal,
-          cancellationComponentTotal = Just cancellationTotal
+          refundComponents = Just (mkRefundLedgerComponents splits) -- BPP builds its per-component refund + negative Commission invoices from these
         }
 
 -- | APPROVED→FAILED: void the pending refund legs on both BAP and BPP (no invoice — none until
@@ -1026,9 +972,7 @@ processRefundFailed refundRequest = do
         refundsAmount = amount,
         deductFromDriver = refundRequest.deductFromDriver,
         refundRequestStatus = CallBPPInternal.FAILED,
-        refundComponents = Nothing,
-        rideFareComponentTotal = Nothing,
-        cancellationComponentTotal = Nothing
+        refundComponents = Nothing
       }
 
 -- | Apply an async Stripe result to an APPROVED refund_request: update status + notify, then
@@ -1099,14 +1043,13 @@ postPaymentClearDues (mbPersonId, _merchantId) req = do
   duesResp <- SPayment.getDuesForPerson person
   when (duesResp.totalDueAmount <= 0 || null duesResp.rides) $
     throwError $ InvalidRequest "No pending dues to clear"
-  currency <- duesResp.currency & fromMaybeM (InvalidRequest "Currency required when dues present")
   paymentMethodId <- case req.paymentMethodId of
     Just pmId ->
       findCustomerCard person pmId >>= \case
         Nothing -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
         Just _ -> return pmId
     Nothing -> SPayment.getDefaultPaymentMethodForDues person
-  SPayment.clearDuesForPerson person duesResp currency paymentMethodId
+  SPayment.clearDuesForPerson person paymentMethodId
 
 -- | Capture PENDING payment for a ride. Settles ledger entries and updates ride status.
 --   Returns error if no pending entries found or caller is not the ride owner.

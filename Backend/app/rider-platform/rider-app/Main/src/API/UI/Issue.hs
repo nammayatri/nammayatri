@@ -426,6 +426,8 @@ castRideInfo merchantId _ rideId = do
       DRR.BOOKING -> Common.BOOKING
       DRR.RIDE -> Common.RIDE
       DRR.INITIAL_BOOKING -> Common.INITIAL_BOOKING
+      DRR.ESTIMATE -> Common.ESTIMATE
+      DRR.QUOTE -> Common.QUOTE
 
     castRideStatus :: DRR.RideStatus -> Common.RideStatus
     castRideStatus = \case

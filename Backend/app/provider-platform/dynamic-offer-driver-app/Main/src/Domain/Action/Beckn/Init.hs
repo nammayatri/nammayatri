@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
 import qualified BecknV2.OnDemand.Types as Spec
 -- import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
@@ -64,9 +65,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
@@ -100,6 +101,7 @@ data InitReq = InitReq
     displayBookingId :: Maybe Text,
     riderGender :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
     -- | A BAP can select more than one add-on on the same item -- empty when
     -- none was echoed, never a single Maybe.
     addOns :: [Spec.AddOn]
@@ -176,12 +178,14 @@ handler merchantId req validatedReq = do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
+        QFP.updatePaymentCharge driverQuote.fareParams booking.fareParams
         QST.updateStatus DST.COMPLETED (searchTry.id)
         QST.markReallocationOutcome searchTry
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW (Just riderDetails.id) req.mbRiderName) searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing quote.addOnData
         QRB.createBooking booking
+        QFP.updatePaymentCharge quote.fareParams booking.fareParams
         cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
         distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
         let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
@@ -249,6 +253,7 @@ handler merchantId req validatedReq = do
           insuredAmount = req.insuredAmount,
           displayBookingId = req.displayBookingId,
           discountAmount = req.discountAmount,
+          paymentChargeDetails = req.paymentChargeDetails,
           initialStatus = initialStatus',
           riderId = riderId',
           riderName = riderName'
@@ -275,6 +280,7 @@ data BuildBookingReq = BuildBookingReq
     insuredAmount :: Maybe Text,
     displayBookingId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
+    paymentChargeDetails :: Maybe PaymentChargeDetails,
     initialStatus :: DRB.BookingStatus,
     riderId :: Maybe (Id DRD.RiderDetails),
     riderName :: Maybe Text
@@ -323,14 +329,13 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
   commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
-  cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
+  let cancellationDuesCommission = FC.calculateCancellationDuesCommission searchRequest.customerCancellationDuesCommission driverQuote.fareParams
   let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams bArgs.discountAmount
       chargeRes =
         FC.finalisePaymentCharge
-          ((.driverWalletConfig) <$> mbTransporterConfig)
+          bArgs.paymentChargeDetails
           driverQuote.estimatedFare
-          (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote.fareParams.paymentProcessingFeeVat)
+          (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote.fareParams.paymentProcessingFeeTax)
           mbClampedDiscount
           driverQuote.fareParams
 
@@ -369,7 +374,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         updatedAt = now,
         isPetRide = isJust driverQuote.fareParams.petCharges,
         preferenceMatchScore = mbPreferenceMatchScore,
-        estimatedFare = driverQuote.estimatedFare,
+        estimatedFare = chargeRes.adjustedFare,
         currency = driverQuote.currency,
         distanceUnit = searchRequest.distanceUnit,
         customerLanguage = searchRequest.customerLanguage,
@@ -377,7 +382,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         billingCategory = billingCategory,
         estimatedDuration = searchRequest.estimatedDuration,
         estimatedStaticDuration = searchRequest.estimatedStaticDuration,
-        fareParams = driverQuote.fareParams,
+        fareParams = chargeRes.adjustedFareParams,
         specialLocationTag = driverQuote.specialLocationTag,
         specialLocationName = searchRequest.specialLocationName,
         specialZoneOtpCode = Nothing,
@@ -407,9 +412,11 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
         bookingDeposit = (.charge) <$> (find (\cc -> cc.chargeCategory == DTCC.BOOKING_DEPOSIT) . (.conditionalCharges) =<< mbFarePolicy),
         commission = commission,
-        cancellationCommission = cancellationCommission,
+        cancellationDuesCommission = cancellationDuesCommission,
+        cancellationDuesCommissionTaxBreakup = FC.calculateCancellationDuesCommissionTax searchRequest.customerCancellationDuesCommissionTaxBreakup driverQuote.fareParams,
         paymentCharge = chargeRes.paymentCharge,
         paymentChargeBearer = chargeRes.paymentChargeBearer,
+        paymentChargeDetails = bArgs.paymentChargeDetails,
         isInsured = fromMaybe False bArgs.isInsured,
         insuredAmount = bArgs.insuredAmount,
         addOnData = addOnData,

@@ -41,7 +41,7 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
-import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
@@ -55,7 +55,6 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
@@ -224,9 +223,8 @@ createRideBookingPaymentOrder booking = do
             booking.id.getId
             DFareBreakup.BOOKING
             (QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
-        let resolvedParkingAmount = case RD.parseProjectFareParamsBreakup ((\b -> (b.description, b.amount.amount)) <$> breakups) of
-              Just b -> b.parkingChargeTaxExclusive + b.parkingChargeTax
-              Nothing -> sumByDescription (show Enums.PARKING_CHARGE) breakups
+        let lineSums = FB.componentLines ((\b -> FB.BreakupLine b.description b.amount.amount) <$> breakups)
+            resolvedParkingAmount = sum [base + tax | (base, tax) <- [lineSums.parking, lineSums.airportEntryFee]]
         when (resolvedParkingAmount == 0) $
           logError $
             "createRideBookingPaymentOrder: resolved parking amount is 0 for bookingId="
@@ -692,11 +690,6 @@ resumeBookingDepositConfirm bookingId = do
   case result of
     Left () -> logInfo $ "Booking fee confirm resume for " <> bookingIdText <> " skipped: another resumer holds the lock"
     Right mbConfirmFor -> whenJust mbConfirmFor $ sendWithheldConfirm bookingId
-
--- | Sum fare breakup line items matching an exact description (fallback path when the breakup
---   isn't in the canonical V2 tax-slot shape parseProjectFareParamsBreakup expects).
-sumByDescription :: Text -> [DFareBreakup.FareBreakup] -> HighPrecMoney
-sumByDescription description_ = sum . map (.amount.amount) . filter ((== description_) . (.description))
 
 isTerminalStatus :: Payment.TransactionStatus -> Bool
 isTerminalStatus = \case
@@ -1327,9 +1320,7 @@ stripeWebhookAction paymentMode merchantOperatingCityId resp respDump = do
                         >>= \case
                           Right () -> logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
                           Left err -> logError $ "Webhook failed to settle ledger entries for ride " <> rideId <> ": " <> show err
-                    KPayment.CANCELLED -> do
-                      RidePaymentFinance.voidRidePaymentLedger entryIds
-                      logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                    KPayment.CANCELLED -> logInfo $ "Payment intent cancelled via webhook for ride: " <> rideId <> ", " <> show (length entryIds) <> " unsettled ledger entries left as is"
                     _ -> pure ()
         pure ackResp
       _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData

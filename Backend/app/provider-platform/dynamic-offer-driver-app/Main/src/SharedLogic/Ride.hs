@@ -203,7 +203,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+  let cancellationDuesCommission = FC.calculateCancellationDuesCommission booking.cancellationDuesCommission booking.fareParams
   let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
       -- A dashboard/fleet assignment always wins regardless of timing; only a genuine
       -- driver self-accept falls back to the broadcast-window timing check. A driver
@@ -214,7 +214,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
         | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
         | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
         | otherwise = Just DRide.AcceptedAsScheduled
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationDuesCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -306,29 +306,15 @@ recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
   newFareParams <- QFP.findById bookingUpdateReq.fareParamsId >>= fromMaybeM (FareParametersNotFound bookingUpdateReq.fareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   newCommission <- FC.calculateCommission newFareParams mbFarePolicy
-  newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
+  let newCancellationDuesCommission = FC.calculateCancellationDuesCommission booking.cancellationDuesCommission newFareParams
   let softStaleAgainstBooking = booking.estimatedFare /= bookingUpdateReq.oldEstimatedFare
       currentDiscount = if softStaleAgainstBooking then ride.discountAmount else bookingUpdateReq.discountAmount <|> ride.discountAmount
   rawDiscountAmount <-
-    if softStaleAgainstBooking && isJust currentDiscount && bookingUpdateReq.estimatedFare /= booking.estimatedFare
-      then do
-        appBackendBapInternal <- asks (.appBackendBapInternal)
-        let reqBody =
-              CallBAPInternal.OfferDiscountReq
-                { fareAmount = Just bookingUpdateReq.estimatedFare,
-                  projectFareParamsBreakup = FC.projectFareParamsBreakup newFareParams
-                }
-        result <-
-          withTryCatch "getOfferDiscount:recomputeRideFinancialsForFareUpdate" $
-            CallBAPInternal.getOfferDiscount appBackendBapInternal.apiKey appBackendBapInternal.url booking.id.getId reqBody
-        case result of
-          Right resp -> pure resp.discountAmount
-          Left err -> do
-            logError $ "Error getting offer discount on fare update, falling back to current discount: " <> show err
-            pure currentDiscount
+    if softStaleAgainstBooking
+      then CallBAPInternal.refreshOfferDiscount booking currentDiscount Nothing booking.fareParams newFareParams
       else pure currentDiscount
   let finalDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
-  QRide.updateCommissionAndDiscount newCommission newCancellationCommission finalDiscount ride.id
+  QRide.updateCommissionAndDiscount newCommission newCancellationDuesCommission (FC.calculateCancellationDuesCommissionTax booking.cancellationDuesCommissionTaxBreakup newFareParams) finalDiscount ride.id
 
 releaseLien ::
   ( Finance.HasActorInfo m r,
@@ -580,7 +566,7 @@ buildRide ::
   Maybe Text ->
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationDuesCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -690,7 +676,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         commission = commission,
-        cancellationCommission = cancellationCommission,
+        cancellationDuesCommission = cancellationDuesCommission,
+        cancellationDuesCommissionTaxBreakup = FC.calculateCancellationDuesCommissionTax booking.cancellationDuesCommissionTaxBreakup booking.fareParams,
         paymentCharge = mbPaymentCharge,
         paymentChargeBearer = mbPaymentChargeBearer,
         discountAmount = booking.discountAmount,

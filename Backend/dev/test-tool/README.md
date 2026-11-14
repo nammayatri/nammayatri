@@ -199,6 +199,13 @@ Backs almost every dashboard action. Endpoints (selected):
   already aligned with the selected upstream env. Per-collection compatibility
   (Helsinki ⇒ `prod_international`, others ⇒ `prod`, `master` everywhere) is
   derived inside `_derive_compatible_envs()` in `server.py`.
+- `GET /api/services` — every process-compose service with `status`, `isReady`,
+  `pid`, `restarts`, `exitCode` and `age`; `GET /api/services/<name>` for one.
+  `POST /api/services/<name>/{start,stop,restart}` drives process-compose over
+  its unix-socket API (`data/process-compose.sock`, override with
+  `PC_SOCKET_PATH`). The stack scripts start process-compose with `-U -u` on
+  that socket; config-sync uses the same API to restart rider/driver/mock-registry
+  and falls back to killing the processes when the socket is absent.
 - `POST /api/terminal/{start,input,resize,kill}` + `GET /api/terminal/stream` —
   PTY sessions used to run Postman prerequest scripts and other helper shells.
 - Service-log tailing (`tail -f` over the Haskell process log files).

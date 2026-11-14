@@ -993,7 +993,8 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       allFailures = failures <> expiryFailures
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput allFailures
   case mbNewRC of
-    Just newRC -> do
+    Just builtRC -> do
+      let newRC = builtRC {verified = Just True, approved = Just True} :: VehicleRegistrationCertificate
       let isInvalid = newRC.verificationStatus == Documents.INVALID
       when (isInvalid && null newRC.failedRules) $
         throwError

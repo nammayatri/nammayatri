@@ -154,7 +154,9 @@ startBetterDriverSearch merchant booking ride = do
             businessEmailDomain = searchTry.businessEmailDomain,
             driverPreference = searchTry.driverPreference,
             addOnData = searchTry.addOnData,
-            betterDriverSearchForBookingId = Just booking.id
+            betterDriverSearchForBookingId = Just booking.id,
+            paymentChargeDetails = searchTry.paymentChargeDetails,
+            buyerOfferDiscount = searchTry.discountAmount
           }
   newSearchTry <- initiateDriverSearchBatch driverSearchBatchInput
   JC.createJobIn @_ @'CheckBetterDriverSearchProximity (Just merchant.id) (Just booking.merchantOperatingCityId) betterDriverSearchProximityInitialDelaySec $

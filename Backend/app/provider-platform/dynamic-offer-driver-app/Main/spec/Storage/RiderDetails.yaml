@@ -8,6 +8,8 @@ imports:
   Currency: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
   Gender: Domain.Types.Person
+  TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
+  Value: Data.Aeson
 
 
 RiderDetails:
@@ -29,6 +31,9 @@ RiderDetails:
     hasTakenValidRide : Bool
     hasTakenValidRideAt : Maybe UTCTime
     cancellationDues : HighPrecMoney
+    cancellationDuesTaxBreakup : Maybe TaxBreakup
+    cancellationDuesCommission : Maybe HighPrecMoney
+    cancellationDuesCommissionTaxBreakup : Maybe TaxBreakup
     cancelledRides : Int
     totalBookings : Int
     completedRides : Int
@@ -67,6 +72,8 @@ RiderDetails:
     noOfTimesWaiveOffUsed: fromMaybe 0 noOfTimesWaiveOffUsed|E
     waivedOffAmount: fromMaybe 0 waivedOffAmount|E
     riderFlaggedForDriverIncentives: fromMaybe False riderFlaggedForDriverIncentives|E
+    cancellationDuesTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesTaxBreakup|E
+    cancellationDuesCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
@@ -80,6 +87,8 @@ RiderDetails:
     noOfTimesWaiveOffUsed: Kernel.Prelude.Just|I
     waivedOffAmount: Kernel.Prelude.Just|I
     riderFlaggedForDriverIncentives: Kernel.Prelude.Just|I
+    cancellationDuesTaxBreakup: toJSON <$> cancellationDuesTaxBreakup|E
+    cancellationDuesCommissionTaxBreakup: toJSON <$> cancellationDuesCommissionTaxBreakup|E
 
   beamType:
     currency: Maybe Currency
@@ -94,6 +103,8 @@ RiderDetails:
     waivedOffAmount : Maybe HighPrecMoney
     riderFlaggedForDriverIncentives : Maybe Bool
     consentToShareMobileNumber : Maybe Bool
+    cancellationDuesTaxBreakup: Maybe Value
+    cancellationDuesCommissionTaxBreakup: Maybe Value
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
@@ -145,7 +156,7 @@ RiderDetails:
 
     updateCancellationDues:
       kvFunction: updateOneWithKV
-      params: [cancellationDues]
+      params: [cancellationDues, cancellationDuesTaxBreakup, cancellationDuesCommission, cancellationDuesCommissionTaxBreakup]
       where: id
 
     updateDisputeChancesUsed:
@@ -192,6 +203,8 @@ RiderDetails:
     bapId: character varying(255)
     customerRating: double precision
     customerGender: character varying(255)
+    cancellationDuesTaxBreakup: "json"
+    cancellationDuesCommissionTaxBreakup: "json"
 
   extraOperations:
     - EXTRA_QUERY_FILE

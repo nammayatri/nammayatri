@@ -47,11 +47,13 @@ data BPPInvoiceInfo = BPPInvoiceInfo
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGstin :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
 
 emptyBPPInvoiceInfo :: BPPInvoiceInfo
-emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
@@ -70,6 +72,7 @@ resolveBPPInvoiceInfo res = do
   let merchantAddress =
         mbMerchantOpCity <&> \city ->
           show city.city <> ", " <> show city.state <> ", " <> show city.country
+      merchantGstin = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin
   mbFleetInfo <- case res.rideInfo of
     Just rideInfo -> do
       mFleetAssoc <- QFDA.findByDriverId rideInfo.driver.id True
@@ -86,20 +89,38 @@ resolveBPPInvoiceInfo res = do
           supplierName = fleetInfo.fleetName,
           supplierAddress = fleetInfo.stripeAddress <&> formatStripeAddress,
           supplierGSTIN = fleetInfo.gstNumberDec,
-          supplierTaxNo = fleetInfo.vatNumber <|> fleetInfo.gstNumberDec,
-          supplierId = Just fleetInfo.fleetOwnerPersonId.getId
+          supplierTaxNo = fleetInfo.vatNumber,
+          supplierId = Just fleetInfo.fleetOwnerPersonId.getId,
+          issuedByGstin = merchantGstin,
+          issuedByTaxNo = merchant.vatNumber
         }
-    Nothing ->
-      BPPInvoiceInfo
-        { issuedById = Just mid,
-          issuedByName = Just mName,
-          issuedByAddress = merchantAddress,
-          supplierName = Just mName,
-          supplierAddress = merchantAddress,
-          supplierGSTIN = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
-          supplierTaxNo = merchant.vatNumber <|> (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
-          supplierId = Just mid
-        }
+    Nothing -> case res.rideInfo of
+      Just rideInfo ->
+        BPPInvoiceInfo
+          { issuedById = Just mid,
+            issuedByName = Just mName,
+            issuedByAddress = merchantAddress,
+            supplierName = Just (rideInfo.driver.firstName <> maybe "" (" " <>) rideInfo.driver.lastName),
+            supplierAddress = Nothing,
+            supplierGSTIN = Nothing,
+            supplierTaxNo = Nothing,
+            supplierId = Just rideInfo.driver.id.getId,
+            issuedByGstin = merchantGstin,
+            issuedByTaxNo = merchant.vatNumber
+          }
+      Nothing ->
+        BPPInvoiceInfo
+          { issuedById = Just mid,
+            issuedByName = Just mName,
+            issuedByAddress = merchantAddress,
+            supplierName = Just mName,
+            supplierAddress = merchantAddress,
+            supplierGSTIN = merchantGstin,
+            supplierTaxNo = merchant.vatNumber <|> merchantGstin,
+            supplierId = Just mid,
+            issuedByGstin = merchantGstin,
+            issuedByTaxNo = merchant.vatNumber
+          }
 
 mkBPPInvoiceInfoTagGroup :: BPPInvoiceInfo -> Maybe [Spec.TagGroup]
 mkBPPInvoiceInfoTagGroup info =
@@ -111,7 +132,9 @@ mkBPPInvoiceInfoTagGroup info =
       (Tags.SUPPLIER_ADDRESS, info.supplierAddress),
       (Tags.SUPPLIER_GSTIN, info.supplierGSTIN),
       (Tags.SUPPLIER_TAX_NO, info.supplierTaxNo),
-      (Tags.SUPPLIER_ID, info.supplierId)
+      (Tags.SUPPLIER_ID, info.supplierId),
+      (Tags.ISSUED_BY_GSTIN, info.issuedByGstin),
+      (Tags.ISSUED_BY_TAX_NO, info.issuedByTaxNo)
     ]
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState

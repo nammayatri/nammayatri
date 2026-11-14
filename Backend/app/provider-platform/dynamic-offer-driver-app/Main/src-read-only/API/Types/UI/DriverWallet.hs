@@ -39,6 +39,7 @@ data PayoutHistoryItem = PayoutHistoryItem
     bankReference :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankReferenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
+    merchantTopUpAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     payoutFee :: Kernel.Types.Common.HighPrecMoney,
     payoutMethod :: Kernel.Prelude.Text,
     payoutType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutRequest.PayoutType,
@@ -141,12 +142,17 @@ data WalletLedgerEntryGroupType
 
 data WalletLedgerEntryItem = WalletLedgerEntryItem
   { date :: Data.Time.UTCTime,
+    entityReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     isCredit :: Kernel.Prelude.Bool,
     isReversal :: Kernel.Prelude.Bool,
     itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,
-    itemValue :: Kernel.Types.Common.HighPrecMoney
+    itemValue :: Kernel.Types.Common.HighPrecMoney,
+    reversalOf :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
+    settlementStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus,
+    status :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

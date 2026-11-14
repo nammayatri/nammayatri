@@ -37,6 +37,7 @@ where
 
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
@@ -46,19 +47,19 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Location as DL
 import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
-import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.BppDetails (BppDetails)
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPMExtra
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.RiderConfig as DRC
@@ -90,11 +91,13 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
+import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -288,8 +291,8 @@ translateServiceTierText mocId language mbText = case mbText of
       <&> Just . maybe text (.message)
   Nothing -> pure Nothing
 
-getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Flow GetQuotesRes
-getQuotes searchRequestId mbAllowMultiple = do
+getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Maybe DMPMExtra.PaymentInstrument -> Flow GetQuotesRes
+getQuotes searchRequestId mbAllowMultiple mbPaymentInstrument = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   unless (mbAllowMultiple == Just True) $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
@@ -300,12 +303,12 @@ getQuotes searchRequestId mbAllowMultiple = do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id
-    res <- buildGetQuotesRes "rideSearchResults" searchRequest estimateList quoteList riderConfig
+    res <- buildGetQuotesRes "rideSearchResults" searchRequest estimateList quoteList riderConfig mbPaymentInstrument
     -- The sync path already has the suggestion in hand and overrides this field; on the
     -- polling path the shadow search has been persisting its estimates in the background
     -- since /rideSearch, so read them here.
-    mbSuggested <- loadSuggestedEstimates riderConfig searchRequest
-    mbAlternates <- loadAlternateSuggestions searchRequest
+    mbSuggested <- loadSuggestedEstimates riderConfig searchRequest mbPaymentInstrument
+    mbAlternates <- loadAlternateSuggestions searchRequest mbPaymentInstrument
     pure res {suggestedEstimates = mbSuggested, alternateSuggestions = mbAlternates}
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
@@ -322,7 +325,7 @@ getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig = do
   withTimeAPI "rideSearch" "quotesActiveBooking" $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
     whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
-  buildGetQuotesRes "rideSearch" searchRequest estimateList quoteList mbRiderConfig
+  buildGetQuotesRes "rideSearch" searchRequest estimateList quoteList mbRiderConfig Nothing
 
 -- | The first argument is the metric's datastore label, which keeps the sync path and polling apart.
 buildGetQuotesRes ::
@@ -331,8 +334,9 @@ buildGetQuotesRes ::
   [DEstimate.Estimate] ->
   [SQuote.Quote] ->
   Maybe DRC.RiderConfig ->
+  Maybe DMPMExtra.PaymentInstrument ->
   Flow GetQuotesRes
-buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig = do
+buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig mbPaymentInstrument = do
   (journeyData, person, providerLookup) <- withTimeAPI timerLabel "quotesLoadContext" $ do
     journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
     person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
@@ -342,9 +346,10 @@ buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig 
       isReferredRide = isJust searchRequest.driverIdentifier
       enableRideHailingOffers = maybe False (.enableRideHailingOffers) mbRiderConfig
       language = fromMaybe Lang.ENGLISH person.language
+  mbPaymentCharge <- Settlement.resolvePaymentChargeDetails searchRequest.merchantOperatingCityId (Just (fromMaybe DMPMExtra.Cash mbPaymentInstrument))
   (offers, estimates') <- withTimeAPI timerLabel "quotesAndEstimates" $ do
-    offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
-    estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
+    offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language mbPaymentCharge
+    estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language mbPaymentCharge
     pure (offers, estimates')
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
@@ -373,8 +378,8 @@ buildGetQuotesRes timerLabel searchRequest estimateList quoteList mbRiderConfig 
 -- | Absent when the operating city loads suggestions asynchronously: there is then no shape
 -- priced inline, and every one of them -- the default included -- is answered by
 -- 'loadAlternateSuggestions' instead.
-loadSuggestedEstimates :: Maybe DRC.RiderConfig -> SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
-loadSuggestedEstimates mbRiderConfig searchRequest
+loadSuggestedEstimates :: Maybe DRC.RiderConfig -> SSR.SearchRequest -> Maybe DMPMExtra.PaymentInstrument -> Flow (Maybe SuggestedEstimates)
+loadSuggestedEstimates mbRiderConfig searchRequest mbPaymentInstrument
   | maybe False (fromMaybe False . (.betterPointLoadSuggestionsAsync)) mbRiderConfig = pure Nothing
   -- The overwhelmingly common case: no suggestion was ever found for this search, and the
   -- flag on the row we already hold says so. A shadow never has a shadow of its own, so it
@@ -393,12 +398,12 @@ loadSuggestedEstimates mbRiderConfig searchRequest
         shadowEstimates <- lift $ QEstimate.findAllBySRId shadow.id
         -- Geometry only: the alternates' fares are still being fetched in the background,
         -- and are collected separately through 'loadAlternateSuggestions'.
-        MaybeT $ mkSuggestedEstimates shadow shadowEstimates (mkSuggestedOption <$> ctx.alternates)
+        MaybeT $ mkSuggestedEstimates shadow shadowEstimates (mkSuggestedOption <$> ctx.alternates) mbPaymentInstrument
 
 -- | Renders a shadow search's estimates for the customer. Takes the shadow search request
 -- itself, since that is what carries the moved pickup/drop and the saving.
-mkSuggestedEstimates :: SSR.SearchRequest -> [DEstimate.Estimate] -> [SuggestedOption] -> Flow (Maybe SuggestedEstimates)
-mkSuggestedEstimates shadow estimateList alternatives = do
+mkSuggestedEstimates :: SSR.SearchRequest -> [DEstimate.Estimate] -> [SuggestedOption] -> Maybe DMPMExtra.PaymentInstrument -> Flow (Maybe SuggestedEstimates)
+mkSuggestedEstimates shadow estimateList alternatives mbPaymentInstrument = do
   -- Nothing to suggest without both a priced estimate and a saving to justify the walk.
   case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
     (Just _, Just rideDistanceSaved) -> do
@@ -408,7 +413,8 @@ mkSuggestedEstimates shadow estimateList alternatives = do
           isReferredRide = isJust shadow.driverIdentifier
           language = fromMaybe Lang.ENGLISH person.language
       providerLookup <- buildProviderLookup estimateList []
-      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      mbPaymentCharge <- Settlement.resolvePaymentChargeDetails shadow.merchantOperatingCityId (Just (fromMaybe DMPMExtra.Cash mbPaymentInstrument))
+      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language mbPaymentCharge
       pure . Just $
         SuggestedEstimates
           { searchId = shadow.id,
@@ -443,13 +449,13 @@ betterPointKind mbWalkToPickup mbWalkFromDrop = case (mbWalkToPickup, mbWalkFrom
 --
 -- 'Nothing' means no shape was ever offered for this search, so nothing is coming and
 -- there is nothing to poll for -- the same thing an absent 'suggestedEstimates' says.
-loadAlternateSuggestions :: SSR.SearchRequest -> Flow (Maybe AlternateSuggestionsRes)
-loadAlternateSuggestions parent
+loadAlternateSuggestions :: SSR.SearchRequest -> Maybe DMPMExtra.PaymentInstrument -> Flow (Maybe AlternateSuggestionsRes)
+loadAlternateSuggestions parent _
   | parent.hasBetterPointSuggestion /= Just True = pure Nothing
   -- A shadow built by /rideSearch/suggestedFare copies the parent row after the flag was
   -- set, so it inherits it; it has no shapes of its own.
   | isJust parent.parentSearchRequestId = pure Nothing
-loadAlternateSuggestions parent = do
+loadAlternateSuggestions parent mbPaymentInstrument = do
   BRPC.getSuggestedSearchCtx parent.id >>= \case
     Nothing -> do
       dispatched <- BRPC.alternatesDispatched parent.id
@@ -459,7 +465,7 @@ loadAlternateSuggestions parent = do
       resolved <- forM ctx.alternates $ \alternate -> runMaybeT $ do
         shadow <- MaybeT $ QSR.findById alternate.searchId
         estimateList <- lift $ QEstimate.findAllBySRId shadow.id
-        MaybeT $ mkAlternateSuggestion shadow alternate.route alternate.isDefault estimateList
+        MaybeT $ mkAlternateSuggestion shadow alternate.route alternate.isDefault estimateList mbPaymentInstrument
       -- Settled either because every shape came back with a fare, or because the background
       -- pass has finished and whatever is missing is not coming.
       dispatched <- BRPC.alternatesDispatched parent.id
@@ -470,8 +476,8 @@ loadAlternateSuggestions parent = do
             allLoaded = dispatched || length loaded == length ctx.alternates
           }
 
-mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> Bool -> [DEstimate.Estimate] -> Flow (Maybe AlternateSuggestion)
-mkAlternateSuggestion shadow route isDefault estimateList =
+mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> Bool -> [DEstimate.Estimate] -> Maybe DMPMExtra.PaymentInstrument -> Flow (Maybe AlternateSuggestion)
+mkAlternateSuggestion shadow route isDefault estimateList mbPaymentInstrument =
   case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
     (Just _, Just rideDistanceSaved) -> do
       person <- QP.findById shadow.riderId >>= fromMaybeM (PersonDoesNotExist shadow.riderId.getId)
@@ -480,7 +486,8 @@ mkAlternateSuggestion shadow route isDefault estimateList =
           isReferredRide = isJust shadow.driverIdentifier
           language = fromMaybe Lang.ENGLISH person.language
       providerLookup <- buildProviderLookup estimateList []
-      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      mbPaymentCharge <- Settlement.resolvePaymentChargeDetails shadow.merchantOperatingCityId (Just (fromMaybe DMPMExtra.Cash mbPaymentInstrument))
+      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language mbPaymentCharge
       pure . Just $
         AlternateSuggestion
           { searchId = shadow.id,
@@ -553,15 +560,15 @@ lookupProvider providerLookup bppId =
     Just v -> pure v
     Nothing -> throwError $ InternalError $ "BPP details not found for providerId:-" <> bppId
 
-getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Lang.Language -> Flow [OfferRes]
-getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 language = do
+getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Lang.Language -> Maybe PaymentCharge.PaymentChargeDetails -> Flow [OfferRes]
+getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 language mbPaymentCharge = do
   logDebug $ "search Request is : " <> show searchRequest
   let quoteList = case searchRequest.toLocation of
         Just _ -> sortByNearestDriverDistance quoteList0
         Nothing -> sortByEstimatedFare quoteList0
   logDebug $ "quotes are :-" <> show quoteList
   (bppDetailList, isValueAddNPList) <- unzip <$> forM quoteList (\q -> lookupProvider providerLookup q.providerId)
-  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
+  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language mbPaymentCharge
   let quotes = case searchRequest.toLocation of
         Just _ ->
           case searchRequest.riderPreferredOption of
@@ -580,16 +587,15 @@ mkQuoteAPIEntitiesWithOffers ::
   [BppDetails] ->
   [Bool] ->
   Lang.Language ->
+  Maybe PaymentCharge.PaymentChargeDetails ->
   Flow [QuoteAPIEntity]
-mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList language = do
+mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList language mbPaymentCharge = do
+  quotesWithBreakups <- forM quoteList $ \q -> (\fareBreakups -> (q, fareBreakups)) <$> SFareBreakupInfo.getFareBreakupsWithFallback q.id.getId DFareBreakup.QUOTE (pure [])
   let quoteEntitiesWithCtx =
         zip
-          (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
-          ( quoteList <&> \q ->
-              let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
-                  offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                    Nothing -> q.estimatedFare.amount
+          (zipWith3 (makeQuoteAPIEntity mbPaymentCharge) quoteList bppDetailList isValueAddNPList)
+          ( quotesWithBreakups <&> \(q, fareBreakups) ->
+              let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx q.estimatedFare.amount fareBreakups
                   offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
                in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
           )
@@ -616,10 +622,11 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
       Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
     serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
-    pure quoteEntity {customerOffers = mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
-
-quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
-quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
+    let grossOffer offer = let gross = Settlement.grossTotalTaxInclusive mbPaymentCharge offer.postOfferAmount in offer {SOffer.postOfferAmount = gross, SOffer.estimatedPostOfferAmount = gross}
+        displayedOffers = case DTrip.tripCategoryToPricingPolicy <$> quoteEntity.tripCategory of
+          Just DTrip.EstimateBased {} -> mbOffer
+          _ -> (\offers -> (offers {SOffer.offerListResp = map grossOffer offers.offerListResp} :: SOffer.CumulativeOfferResp)) <$> mbOffer
+    pure quoteEntity {customerOffers = displayedOffers, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
 
 sortByNearestDriverDistance :: [SQuote.Quote] -> [SQuote.Quote]
 sortByNearestDriverDistance = sortBy (compare `on` getMbDistanceToNearestDriver)
@@ -644,22 +651,16 @@ offerCreationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
 offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
+getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Maybe PaymentCharge.PaymentChargeDetails -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language mbPaymentCharge = do
   let sortedEstimates = sortByEstimatedFare estimateList
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
+  estimatesWithCtx <- forM sortedEstimates $ \e -> do
+    fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback e.id.getId DFareBreakup.ESTIMATE (pure [])
+    let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx e.estimatedFare.amount fareBreakups
+        offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
+    pure (e, mbBreakup, offerBasePrice)
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
-      estimatesWithCtx =
-        map
-          ( \e ->
-              let mbBreakup = RD.parseProjectFareParamsBreakup $ (\eb -> (eb.title, eb.price.value.amount)) <$> e.estimateBreakupList
-                  offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                    Nothing -> e.estimatedFare.amount
-                  offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
-               in (e, mbBreakup, offerBasePrice)
-          )
-          sortedEstimates
       products = map (\(e, _, price) -> (show e.vehicleServiceTierType, price)) estimatesWithCtx
   productOffers <-
     -- Same as the quotes path: an empty basket can only come back empty.
@@ -681,7 +682,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       Nothing -> pure Nothing
       Just resp -> SOffer.mkCumulativeOfferRespWithLogics cumulativeLogics searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
-    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
+    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP estimate
     serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
     pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}

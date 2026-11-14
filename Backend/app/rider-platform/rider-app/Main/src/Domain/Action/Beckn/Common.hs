@@ -21,6 +21,7 @@ module Domain.Action.Beckn.Common
 where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
+import qualified BecknV2.OnDemand.Settlement as PaymentCharge
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
@@ -34,7 +35,6 @@ import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
-import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as BT
@@ -50,6 +50,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -476,6 +477,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
         cancellationChargesOnCancel = Nothing,
+        cancellationPaymentCharge = Nothing,
+        cancellationPaymentChargeTaxBreakup = Nothing,
         pickupEtaLogicVersion = Nothing,
         -- Commission is provider-side data, calculated on BPP. On BAP side, it remains Nothing.
         -- If commission is needed on BAP, it should be calculated here or received from BPP.
@@ -532,7 +535,9 @@ rideAssignedReqHandler req = do
             DRB.supplierAddress = bppInfo.supplierAddress <|> req.booking.supplierAddress,
             DRB.supplierGSTIN = bppInfo.supplierGSTIN <|> req.booking.supplierGSTIN,
             DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
-            DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId
+            DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId,
+            DRB.issuedByGstin = bppInfo.issuedByGstin <|> req.booking.issuedByGstin,
+            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo
           }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
@@ -620,17 +625,6 @@ rideAssignedReqHandler req = do
           -- below, so the two must not be conflated.
           bookingCaptureDiscount = maybe bookingDiscountAmount (\e -> max 0 (e.amountSaved - e.payoutAmount)) mbBookingOfferEntity
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
-      when (bookingDiscountAmount > 0) $ do
-        guid <- generateGUID
-        let offerDiscountFareBreakup =
-              DFareBreakup.FareBreakup
-                { id = guid,
-                  entityId = booking.id.getId,
-                  entityType = DFareBreakup.BOOKING,
-                  amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
-                  description = "OFFER_DISCOUNT"
-                }
-        SFareBreakupInfo.addFareBreakupInfoItems booking.id.getId DFareBreakup.BOOKING [SFareBreakupInfo.fareBreakupToItem offerDiscountFareBreakup] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {driverAccountId = onlineDriverAccountId, ..} -> do
@@ -656,7 +650,7 @@ rideAssignedReqHandler req = do
           -- PDF actually renders ends up with no recipient and no supplier.
           riderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
           assignedRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
-          let assignedRiderName = listToMaybe $ catMaybes [riderPerson.firstName, riderPerson.middleName, riderPerson.lastName]
+          let assignedRiderName = riderPerson.firstName
               assignedInvCfg = assignedRiderConfig.invoiceConfig
               ledgerCtx =
                 -- applyBookingProviderFieldsToCtx only overlays supplier fields the BPP actually
@@ -669,31 +663,7 @@ rideAssignedReqHandler req = do
                       supplierAddress = assignedInvCfg >>= (.supplierAddress),
                       supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
                     }
-          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
-          -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
-          -- the two halves, so reverse the rate the ride was priced at.
-          let (bookingChargeNet, bookingChargeVat) =
-                SPayment.splitGrossPaymentCharge (SPayment.paymentChargeRateFromFareBreakups estimatedBreakups) bookingPaymentChargeAmount
-          let ledgerInfo =
-                fromMaybe
-                  SPayment.RidePaymentLedgerInfo
-                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
-                      gstAmount = 0,
-                      tollFare = 0,
-                      tollVatAmount = 0,
-                      parkingCharge = 0,
-                      parkingChargeVat = 0,
-                      offerDiscountAmount = bookingDiscountAmount,
-                      cashbackPayoutAmount = bookingPayoutAmount,
-                      platformFee = applicationFeeAmount,
-                      paymentCharge = bookingChargeNet,
-                      paymentChargeVat = bookingChargeVat,
-                      rideVatAbsorbedOnDiscount = 0,
-                      cancellationCharge = 0,
-                      cancellationTax = 0,
-                      financeCtx = ledgerCtx
-                    }
-                  mbLedgerInfo
+          let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
           logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
           -- Wrap makePaymentIntent in retry, capture result for orderId
           mbPaymentResp <-
@@ -721,37 +691,23 @@ rideAssignedReqHandler req = do
           pure mbPaymentResp
         Nothing -> do
           let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
           -- Deferred: ~15 serial ledger/invoice DB ops; its failure was already
           -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
           deferPostAssignmentWork "assign:cashRideLedger" $ do
-            estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
-            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
-            -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
-            -- the two halves, so reverse the rate the ride was priced at.
-            let (bookingChargeNet, bookingChargeVat) =
-                  SPayment.splitGrossPaymentCharge (SPayment.paymentChargeRateFromFareBreakups estimatedBreakups) bookingPaymentChargeAmount
-            let ledgerInfo =
-                  fromMaybe
-                    SPayment.RidePaymentLedgerInfo
-                      { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
-                        gstAmount = 0,
-                        tollFare = 0,
-                        tollVatAmount = 0,
-                        parkingCharge = 0,
-                        parkingChargeVat = 0,
-                        offerDiscountAmount = bookingDiscountAmount,
-                        cashbackPayoutAmount = bookingPayoutAmount,
-                        platformFee = applicationFeeAmount,
-                        paymentCharge = bookingChargeNet,
-                        paymentChargeVat = bookingChargeVat,
-                        rideVatAbsorbedOnDiscount = 0,
-                        cancellationCharge = 0,
-                        cancellationTax = 0,
-                        financeCtx = ledgerCtx
+            cashRiderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+            cashRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+            let cashInvCfg = cashRiderConfig.invoiceConfig
+                ledgerCtx =
+                  RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                    (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
+                      { issuedToName = cashRiderPerson.firstName,
+                        supplierName = cashInvCfg >>= (.supplierName),
+                        supplierAddress = cashInvCfg >>= (.supplierAddress),
+                        supplierVatNumber = cashInvCfg >>= (.supplierVatNumber)
                       }
-                    mbLedgerInfo
-            result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
+            estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
+            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.taxRegime ledgerInfo.gstRates ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat (ledgerInfo.airportEntryFee, ledgerInfo.airportEntryFeeTax) ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat) (ledgerInfo.cancellationCharge, ledgerInfo.cancellationTax)
             case result of
               Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
               Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
@@ -1064,10 +1020,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- its VAT (same basis as /getOfferDiscount and the quote-list offer
   -- basket). Fall back to the aggregate totalFare when the BPP didn't emit
   -- the ten-tag summary.
-  let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
-      discountApplicableFareAmountTaxIncl = case fareCtx of
-        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-        Nothing -> totalFare.amount
+  let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx totalFare.amount breakups
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
   -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
   -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
@@ -1148,7 +1101,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   if not onlinePayment
     then do
-      let riderName = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
+      let riderName = person.firstName
           mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
@@ -1158,40 +1111,22 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfg >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
                 }
-      mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount 0 cashLedgerCtx
-      let cashLedgerInfo =
-            fromMaybe
-              SPayment.RidePaymentLedgerInfo
-                { rideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount,
-                  gstAmount = 0,
-                  tollFare = 0,
-                  tollVatAmount = 0,
-                  parkingCharge = 0,
-                  parkingChargeVat = 0,
-                  platformFee = applicationFeeAmount',
-                  paymentCharge = ridePaymentChargeAmount,
-                  paymentChargeVat = 0,
-                  offerDiscountAmount = rideDiscountAmount,
-                  cashbackPayoutAmount = ridePayoutAmount,
-                  rideVatAbsorbedOnDiscount = 0,
-                  cancellationCharge = 0,
-                  cancellationTax = 0,
-                  financeCtx = cashLedgerCtx
-                }
-              mbCashLedgerInfo
+      let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
           cashLedgerCtx
+          cashLedgerInfo.taxRegime
+          cashLedgerInfo.gstRates
           cashLedgerInfo.rideFare
           cashLedgerInfo.gstAmount
           cashLedgerInfo.tollFare
           cashLedgerInfo.tollVatAmount
           cashLedgerInfo.parkingCharge
           cashLedgerInfo.parkingChargeVat
+          (cashLedgerInfo.airportEntryFee, cashLedgerInfo.airportEntryFeeTax)
           cashLedgerInfo.platformFee
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
-          cashLedgerInfo.rideVatAbsorbedOnDiscount
           cashLedgerInfo.cancellationCharge
           cashLedgerInfo.cancellationTax
           (cashLedgerInfo.paymentCharge, cashLedgerInfo.paymentChargeVat)
@@ -1208,7 +1143,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
       -- Online Ride End branch → isOnline=True.
-      let riderNameOnline = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
+      let riderNameOnline = person.firstName
           mbInvCfgOnline = riderConfig.invoiceConfig
           ledgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
@@ -1218,27 +1153,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
                 }
-      mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount 0 ledgerCtx
-      let ledgerInfo =
-            fromMaybe
-              SPayment.RidePaymentLedgerInfo
-                { rideFare = totalFare.amount - applicationFeeAmount' - rideDiscountAmount,
-                  gstAmount = 0,
-                  tollFare = 0,
-                  tollVatAmount = 0,
-                  parkingCharge = 0,
-                  parkingChargeVat = 0,
-                  platformFee = applicationFeeAmount',
-                  paymentCharge = ridePaymentChargeAmount,
-                  paymentChargeVat = 0,
-                  offerDiscountAmount = rideDiscountAmount,
-                  cashbackPayoutAmount = ridePayoutAmount,
-                  rideVatAbsorbedOnDiscount = 0,
-                  cancellationCharge = 0,
-                  cancellationTax = 0,
-                  financeCtx = ledgerCtx
-                }
-              mbLedgerInfo
+      let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
       logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
       let scheduleAfter = riderConfig.executePaymentDelay
           executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount'}
@@ -1338,26 +1253,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 (mbSearchRequest >>= (.toSpecialLocationId))
                 timeBoundReferenceUtc
                 rideDeltas
-  offerDiscountBreakup <-
-    if rideDiscountAmount > 0
-      then do
-        guid <- generateGUID
-        pure
-          [ DFareBreakup.FareBreakup
-              { id = guid,
-                entityId = ride.id.getId,
-                entityType = DFareBreakup.RIDE,
-                amount = mkPrice (Just totalFare.currency) (- rideDiscountAmount),
-                description = "OFFER_DISCOUNT"
-              }
-          ]
-      else pure []
   -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line
   -- whenever ride.tipAmount > 0. We store it as-is, so the fare breakup the rider app shows is exactly
   -- the one the driver sent: single source on the wire, no local reconstruction. (Tips added after the
   -- ride has already completed don't arrive on a fresh quote; those are written directly in
   -- Domain.Action.UI.RidePayment under the same title.)
-  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) breakups
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
@@ -1526,7 +1427,7 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  cancellationTransaction booking mbRide cancellationSource Nothing Nothing False
+  cancellationTransaction booking mbRide cancellationSource Nothing Nothing Nothing False False (PaymentCharge.settlementFromTags Nothing)
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -1553,9 +1454,12 @@ cancellationTransaction ::
   DBCR.CancellationSource ->
   Maybe PriceAPIEntity ->
   Maybe PriceAPIEntity ->
+  Maybe PriceAPIEntity ->
   Bool ->
+  Bool ->
+  PaymentCharge.SettlementTags ->
   m ()
-cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge = do
+cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge bapCollectsFee cancellationSettlement = do
   -- Before the deposit settlement below releases any hold.
   abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking cancellationSource
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
@@ -1591,10 +1495,15 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           void $ withTryCatch "cancellationTransaction:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
           pure (0 :: HighPrecMoney)
       else pure 0
+  let cancellationBearer = (.bearer) <$> cancellationSettlement.paymentChargeDetails
+      cancellationPaymentChargeTax = maybe 0 (.total) cancellationSettlement.paymentChargeTaxBreakup
+      bppPaymentCharge = (fromMaybe 0 cancellationSettlement.paymentCharge - cancellationPaymentChargeTax, cancellationPaymentChargeTax)
+      customerPaymentCharge = if cancellationBearer == Just PAYMENT_CUSTOMER then bppPaymentCharge else (0, 0)
+      cancellationApplicationFee = fromMaybe 0 cancellationSettlement.commission + (if cancellationBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER] then uncurry (+) bppPaymentCharge else 0)
   whenJust mbRide $ \ride -> void $ do
     whenJust cancellationFee $ \fee -> do
-      let netCharges = max 0 (fee.amount + maybe 0 (.amount) cancellationFeeTax - depositApplied)
-      QRide.updateCancellationChargesOnCancel (Just netCharges) ride.id
+      let netCharges = max 0 (maybe (fee.amount + maybe 0 (.amount) cancellationFeeTax + uncurry (+) customerPaymentCharge) (.amount) cancellationFeeTotal - depositApplied)
+      QRide.updateCancellationChargesOnCancel (Just netCharges) (subtract cancellationPaymentChargeTax <$> cancellationSettlement.paymentCharge) cancellationSettlement.paymentChargeTaxBreakup ride.id
       QRide.updateCancellationFeeStatus (Just (if netCharges <= 0 then DRide.CLEARED else DRide.PENDING)) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
@@ -1602,16 +1511,18 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
-      logDebug $ "[CancellationSettlement] cancellationFee present: " <> show fee.amount <> " immediateCharge=" <> show immediateCharge <> " settleCancellationFeeBeforeNextRide=" <> show riderConfig.settleCancellationFeeBeforeNextRide <> " mbRide=" <> show (fmap (.id) mbRide)
+      logDebug $ "[CancellationSettlement] cancellationFee present: " <> show fee.amount <> " immediateCharge=" <> show immediateCharge <> " bapCollectsFee=" <> show bapCollectsFee <> " mbRide=" <> show (fmap (.id) mbRide)
       personD <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       merchantD <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
       merchantOpCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-      case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide) of
-        (Just True, Just ride) -> do
+      case (bapCollectsFee, mbRide) of
+        (True, Just ride) -> do
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
               ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              cancellationTaxRegime = RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx
+              cancellationGstRates = RidePaymentFinance.gstRatesFromConfig (booking.riderTaxRates >>= (.riderPayable.cancellationFee))
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
           mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
           let countryCode = fromMaybe "+91" personD.mobileCountryCode
@@ -1647,17 +1558,17 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
               if immediateCharge
                 then case currentPaymentInstrument of
                   DMPM.Card _ ->
-                    CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger
+                    CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax customerPaymentCharge cancellationApplicationFee fee.currency syncCancellationLedger
                   _ -> do
                     -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
                     void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
                     -- Create pending cancellation entries then mark as DUE for later collection
-                    cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (0, 0)
+                    cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationTaxRegime cancellationGstRates cancellationBase cancellationTax customerPaymentCharge
                     case cashLedgerResp of
                       Right (_mbInvoiceId, pendingEntryIds) ->
                         RidePaymentFinance.markEntriesAsDue pendingEntryIds
                       _ -> return ()
-                    syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
+                    syncCancellationLedger CallBPPInternal.DueCancellationLedger
                 else do
                   -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
                   -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
@@ -1665,12 +1576,12 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                   if ride.onlinePayment
                     then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
                     else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
-                  dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (0, 0)
+                  dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationTaxRegime cancellationGstRates cancellationBase cancellationTax customerPaymentCharge
                   case dueLedgerResp of
                     Right (_mbInvoiceId, pendingEntryIds) ->
                       RidePaymentFinance.markEntriesAsDue pendingEntryIds
                     _ -> return ()
-                  syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
+                  syncCancellationLedger CallBPPInternal.DueCancellationLedger
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
@@ -1841,7 +1752,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {bookingPrePersisted = False, ..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])

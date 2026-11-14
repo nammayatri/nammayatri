@@ -3,6 +3,7 @@ import { StepResult, StepStatus, Step } from '../types';
 import { LocationPreset } from '../api-catalog/types';
 import { getLocationsForCity } from '../mock-data/locations';
 import './RideFlowTree.css';
+import { Base64MediaButtons } from './Base64Media';
 
 // --- Tree node definitions ---
 
@@ -113,7 +114,10 @@ function StepRow({ step, result }: { step: Step; result?: StepResult }) {
         {result && <span className="step-expand">{expanded ? '\u25BC' : '\u25B6'}</span>}
       </div>
       {expanded && result?.response && (
-        <pre className="step-response">{JSON.stringify(result.response, null, 2)}</pre>
+        <>
+          <Base64MediaButtons data={result.response} />
+          <pre className="step-response">{JSON.stringify(result.response, null, 2)}</pre>
+        </>
       )}
     </div>
   );

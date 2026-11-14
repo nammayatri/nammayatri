@@ -293,9 +293,10 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
     let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
     addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge tripQuoteDetail.bufferedFare validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
+    farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory tripQuoteDetail.vehicleServiceTier searchReq.area tripQuoteDetail.estimateOrQuoteId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
     -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
     mbScheduledRideMinWalletBalance <- getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime flagNow (getScheduledRideMinWalletFloorFromSnapshot tripQuoteDetail.estimateOrQuoteId) dPoolRes.driverPoolResult.driverId.getId
-    let entityData = (USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig) mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+    let entityData = (USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges tripQuoteDetail.govtCharges (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     Notify.cachePayloadForIOS sReqFD.clientDevice (USRD.mkSentEntityKey sReqFD.id) entityData entityData.searchRequestValidTill
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
@@ -387,6 +388,8 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           computationPhase = Fare.FCEstimate,
           mbCapConfig = Nothing,
           mbEstimateFareParams = Nothing,
+          paymentChargeDetails = searchTry.paymentChargeDetails,
+          buyerOfferDiscount = searchTry.discountAmount,
           actualDistance = searchReq.estimatedDistance,
           estimatedDistance = searchReq.estimatedDistance,
           rideTime = searchReq.startTime,
@@ -410,6 +413,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           negativeFareAdjustment = Nothing,
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,
+          customerCancellationDuesTaxBreakup = searchReq.customerCancellationDuesTaxBreakup,
           nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
           timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
           tollCharges = Nothing,
@@ -417,10 +421,9 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           vehicleAge = vehicleAge,
           currency = searchReq.currency,
           distanceUnit = searchReq.distanceUnit,
-          merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
+          merchantOperatingCityId = searchReq.merchantOperatingCityId,
           mbAdditonalChargeCategories = Nothing,
           numberOfLuggages = searchReq.numberOfLuggages,
-          govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,
           isParkingFeeExempt = False

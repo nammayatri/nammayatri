@@ -115,6 +115,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.commission ride.commission,
+      Se.Set BeamR.paymentCharge ride.paymentCharge,
+      Se.Set BeamR.paymentChargeBearer ride.paymentChargeBearer,
       Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
       Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
       Se.Set BeamR.traveledDistance (distanceToHighPrecMeters <$> ride.traveledDistance),
@@ -667,7 +669,7 @@ findMostRecentRideForRider (Id personId) = do
             B.orderBy_ (\(_booking', ride') -> B.desc_ (BeamR.createdAt ride')) $
               B.filter_'
                 -- Include all payment instruments (incl. Cash/BoothOnline): cash rides can carry
-                -- overdue cancellation dues that must surface in getDueAmount and block new bookings.
+                -- pending cancellation dues that must surface in getDueAmount and block new bookings.
                 (\(booking', _ride') -> BeamB.riderId booking' B.==?. B.val_ personId)
                 do
                   booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)

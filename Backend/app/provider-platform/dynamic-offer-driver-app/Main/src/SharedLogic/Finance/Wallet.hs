@@ -6,12 +6,12 @@
 
   ┌──────────────────────────────────────────────────────────────────────────────────────┐
   │ BPP — ledger model (VAT regime). Online and cash diverge on ride-earning and         │
-  │ Tips; platform-level flows (subsidy, commission, VATInput, TDS) are identical.       │
+  │ Tips; platform-level flows (subsidy, commission, TDS) are identical.                 │
   ├──────────────────────────────────┬────────────────────────┬──────────────────────────┤
   │ Ref type                         │ Online                 │ Cash                     │
   ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
   │ Ride-earning                     │ 2-leg pass-through:    │ 1-leg tracking:          │
-  │   (BaseRide, VATOnline/VATCash,  │   BuyerAsset →         │   BuyerControl →         │
+  │   (BaseRide, RideVAT,            │   BuyerAsset →         │   BuyerControl →         │
   │    TollCharges, ParkingCharges)  │     BuyerExternal      │     OwnerControl         │
   │                                  │   BuyerExternal →      │ (Dr Asset ↑,             │
   │                                  │     OwnerLiability     │  Cr Liability ↑)         │
@@ -21,8 +21,8 @@
   │                                  │  owes driver)          │                          │
   ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
   │ BAP subsidy                      │ 2-leg pass-through:    │ same as online           │
-  │   (Discounts,                    │   BuyerAsset →         │ (BAP actually remits     │
-  │    VATAbsorbedOnDiscount)        │     BuyerExternal →    │  the subsidy to BPP in   │
+  │   (Discounts)                    │   BuyerAsset →         │ (BAP actually remits     │
+  │                                  │     BuyerExternal →    │  the subsidy to BPP in   │
   │                                  │     OwnerLiability     │  both modes; driver      │
   │                                  │                        │  wallet is credited)     │
   ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
@@ -32,16 +32,8 @@
   │                                  │                        │  for cash when wallet    │
   │                                  │                        │  credits < deductions)   │
   ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
-  │ VATInput                         │ GovtIndirect →         │ same                     │
-  │   (VAT input credit on driver's  │   OwnerLiability       │                          │
-  │    taxable service; base:        │                        │                          │
-  │      online: totalFare - comm    │                        │                          │
-  │      cash + discount:            │                        │                          │
-  │        discount - commission     │                        │                          │
-  │      cash no-discount: gated off)│                        │                          │
-  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
   │ TDS                              │ OwnerLiability →       │ same                     │
-  │   (TDSDeductionOnline/Cash)      │   GovtDirect           │                          │
+  │   (TDSDeduction)                 │   GovtDirect           │                          │
   ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
   │ Tips                             │ BuyerAsset →           │ BuyerControl →           │
   │                                  │   OwnerLiability       │   OwnerControl           │
@@ -76,7 +68,7 @@
   only the tax-component differs. Online GST is routed via BPP (
   'BuyerAsset → BuyerExternal → GovtIndirect'); cash GST flows from the driver's
   wallet ('OwnerLiability → GovtIndirect') since the driver collected it in cash
-  and owes it to govt. VATInput does not apply in GST regime.
+  and owes it to govt.
 
   Invoice: created inside 'createDriverWalletTransaction' (EndRide/Internal.hs) using
   FinanceM's auto-collected entry IDs — analogous to BAP's model.
@@ -85,26 +77,23 @@
 
 module SharedLogic.Finance.Wallet
   ( walletReferenceBaseRide,
-    walletReferenceGSTOnline,
     walletReferenceTollCharges,
     walletReferenceParkingCharges,
-    walletReferenceTDSDeductionOnline,
-    walletReferenceGSTCash,
-    walletReferenceTDSDeductionCash,
+    walletReferenceAirportEntryFeeCharges,
+    walletReferenceTollChargesTax,
+    walletReferenceParkingChargesTax,
+    walletReferenceAirportEntryFeeChargesTax,
+    walletReferenceTDSDeduction,
     walletReferenceTDSDeductionCancellation,
-    walletReferenceOverdueCancellationCharge,
-    walletReferenceOverdueCancellationTax,
-    walletReferenceCancellationOverdueBenefit,
-    walletReferenceCancellationOverdueBenefitTax,
     walletReferenceTopup,
     walletReferencePayout,
     walletReferencePayoutSettlement,
     walletReferencePGPaymentCharges,
     walletReferencePGPayoutCharges,
     walletReferenceConnectAccountCharges,
-    walletReferencePGPaymentChargesVAT,
+    walletReferencePGPaymentChargesTax,
     walletReferencePaymentChargePaidByCustomer,
-    walletReferencePaymentChargeVatPaidByCustomer,
+    walletReferencePaymentChargeTaxPaidByCustomer,
     StripeChargeFunder (..),
     recordStripeChargeLedger,
     buildDriverChargeCtx,
@@ -114,7 +103,7 @@ module SharedLogic.Finance.Wallet
     computeStripePayoutFee,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationCharges,
-    walletReferenceCustomerCancellationGST,
+    walletReferenceCustomerCancellationTax,
     walletReferenceWalletIncentive,
     walletReferenceIncentiveJourneyCash,
     walletCreditRefs,
@@ -135,43 +124,36 @@ module SharedLogic.Finance.Wallet
     financeCtxFromRide,
     buildFinanceCtx,
     resolveIsOnlineFromBooking,
-    walletReferenceCommissionOnline,
-    walletReferenceCommissionCash,
-    walletReferenceCommissionVATOnline,
-    walletReferenceCommissionVATCash,
+    walletReferenceCommission,
+    walletReferenceCommissionTax,
     walletReferenceCancellationCommission,
-    walletReferenceCancellationCommissionVAT,
-    walletReferenceVATOnline,
-    walletReferenceVATCash,
+    walletReferenceCancellationCommissionTax,
+    walletReferenceRideTax,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
     walletReferenceAirportCashWithdrawal,
-    walletReferenceAirportEntryFeeGST,
+    walletReferenceAirportEntryFeeTax,
     walletReferenceAirportEntryFee,
     walletReferenceGateDriverFee,
-    walletReferenceVATInput,
-    walletReferenceCancellationVATInput,
     walletReferenceTips,
-    walletReferenceDiscountsOnline,
-    walletReferenceDiscountsCash,
+    walletReferenceDiscounts,
     walletReferenceDeductedAtPaymentByPlatform,
     walletReferenceRideFareRefund,
-    walletReferenceRideFareRefundVAT,
+    walletReferenceRideFareRefundTax,
     walletReferenceTollRefund,
-    walletReferenceTollRefundVAT,
+    walletReferenceTollRefundTax,
     walletReferenceParkingRefund,
-    walletReferenceParkingRefundVAT,
+    walletReferenceParkingRefundTax,
     walletReferenceRideFareRefundCommission,
-    walletReferenceRideFareRefundCommissionVAT,
+    walletReferenceRideFareRefundCommissionTax,
+    walletReferenceDiscountsRefund,
     walletReferenceCancellationFeeRefund,
-    walletReferenceCancellationFeeRefundVAT,
+    walletReferenceCancellationFeeRefundTax,
     walletReferencePaymentChargeRefund,
     walletReferencePaymentChargeRefundVAT,
     walletReferenceCancellationRefundCommission,
-    walletReferenceCancellationRefundCommissionVAT,
-    walletReferenceCancellationOverdueBenefitRefund,
-    walletReferenceCancellationOverdueBenefitRefundTax,
-    splitGrossByVatPct,
+    walletReferenceCancellationRefundCommissionTax,
+    splitGrossByTaxPct,
     getRedeemableEntryIds,
     walletPayoutLedgerRefs,
     WalletPayoutEligibility (..),
@@ -206,6 +188,7 @@ module SharedLogic.Finance.Wallet
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Text as T
@@ -216,6 +199,7 @@ import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -254,23 +238,32 @@ import Tools.Error (MerchantPaymentMethodError (..), TransporterError (Transport
 walletReferenceBaseRide :: Text
 walletReferenceBaseRide = "BaseRide"
 
-walletReferenceGSTOnline :: Text
-walletReferenceGSTOnline = "GSTOnline"
-
 walletReferenceTollCharges :: Text
 walletReferenceTollCharges = "TollCharges"
 
 walletReferenceParkingCharges :: Text
 walletReferenceParkingCharges = "ParkingCharges"
 
-walletReferenceTDSDeductionOnline :: Text
-walletReferenceTDSDeductionOnline = "TDSDeductionOnline"
+walletReferenceAirportEntryFeeCharges :: Text
+walletReferenceAirportEntryFeeCharges = "AirportEntryFeeCharges"
 
-walletReferenceGSTCash :: Text
-walletReferenceGSTCash = "GSTCash"
+walletReferenceTollChargesTax :: Tax.Regime -> Text
+walletReferenceTollChargesTax taxRegime = case taxRegime of
+  Tax.VAT -> "TollChargesVAT"
+  Tax.GST -> "TollChargesGST"
 
-walletReferenceTDSDeductionCash :: Text
-walletReferenceTDSDeductionCash = "TDSDeductionCash"
+walletReferenceParkingChargesTax :: Tax.Regime -> Text
+walletReferenceParkingChargesTax taxRegime = case taxRegime of
+  Tax.VAT -> "ParkingChargesVAT"
+  Tax.GST -> "ParkingChargesGST"
+
+walletReferenceAirportEntryFeeChargesTax :: Tax.Regime -> Text
+walletReferenceAirportEntryFeeChargesTax taxRegime = case taxRegime of
+  Tax.VAT -> "AirportEntryFeeChargesVAT"
+  Tax.GST -> "AirportEntryFeeChargesGST"
+
+walletReferenceTDSDeduction :: Text
+walletReferenceTDSDeduction = "TDSDeduction"
 
 walletReferenceTopup :: Text
 walletReferenceTopup = "WalletTopup"
@@ -291,14 +284,18 @@ walletReferencePGPayoutCharges = "PGPayoutCharges"
 walletReferenceConnectAccountCharges :: Text
 walletReferenceConnectAccountCharges = "ConnectAccountCharges"
 
-walletReferencePGPaymentChargesVAT :: Text
-walletReferencePGPaymentChargesVAT = "PGPaymentChargesVAT"
+walletReferencePGPaymentChargesTax :: Tax.Regime -> Text
+walletReferencePGPaymentChargesTax taxRegime = case taxRegime of
+  Tax.VAT -> "PGPaymentChargesVAT"
+  Tax.GST -> "PGPaymentChargesGST"
 
 walletReferencePaymentChargePaidByCustomer :: Text
 walletReferencePaymentChargePaidByCustomer = "PaymentChargePaidByCustomer"
 
-walletReferencePaymentChargeVatPaidByCustomer :: Text
-walletReferencePaymentChargeVatPaidByCustomer = "PaymentChargeVatPaidByCustomer"
+walletReferencePaymentChargeTaxPaidByCustomer :: Tax.Regime -> Text
+walletReferencePaymentChargeTaxPaidByCustomer taxRegime = case taxRegime of
+  Tax.VAT -> "PaymentChargeVatPaidByCustomer"
+  Tax.GST -> "PaymentChargeGstPaidByCustomer"
 
 walletReferenceDriverCancellationCharges :: Text
 walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
@@ -306,68 +303,44 @@ walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
 walletReferenceCustomerCancellationCharges :: Text
 walletReferenceCustomerCancellationCharges = "CustomerCancellationCharges"
 
-walletReferenceCustomerCancellationGST :: Text
-walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
+walletReferenceCustomerCancellationTax :: Tax.Regime -> Text
+walletReferenceCustomerCancellationTax taxRegime = case taxRegime of
+  Tax.VAT -> "CustomerCancellationVAT"
+  Tax.GST -> "CustomerCancellationGST"
 
 walletReferenceTDSDeductionCancellation :: Text
 walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 
-walletReferenceOverdueCancellationCharge :: Text
-walletReferenceOverdueCancellationCharge = "OverdueCancellationCharge"
+walletReferenceCommission :: Text
+walletReferenceCommission = "Commission"
 
-walletReferenceOverdueCancellationTax :: Text
-walletReferenceOverdueCancellationTax = "OverdueCancellationTax"
+walletReferenceCommissionTax :: Tax.Regime -> Text
+walletReferenceCommissionTax taxRegime = case taxRegime of
+  Tax.VAT -> "CommissionVAT"
+  Tax.GST -> "CommissionGST"
 
-walletReferenceCancellationOverdueBenefit :: Text
-walletReferenceCancellationOverdueBenefit = "CancellationOverdueBenefit"
-
-walletReferenceCancellationOverdueBenefitTax :: Text
-walletReferenceCancellationOverdueBenefitTax = "CancellationOverdueBenefitTax"
-
-walletReferenceCommissionOnline :: Text
-walletReferenceCommissionOnline = "CommissionOnline"
-
-walletReferenceCommissionCash :: Text
-walletReferenceCommissionCash = "CommissionCash"
-
-walletReferenceCommissionVATOnline :: Text
-walletReferenceCommissionVATOnline = "CommissionVATOnline"
-
-walletReferenceCommissionVATCash :: Text
-walletReferenceCommissionVATCash = "CommissionVATCash"
-
--- Commission on a cancellation fee (no Online/Cash suffix — matches the cancellation ref family).
 walletReferenceCancellationCommission :: Text
 walletReferenceCancellationCommission = "CancellationCommission"
 
-walletReferenceCancellationCommissionVAT :: Text
-walletReferenceCancellationCommissionVAT = "CancellationCommissionVAT"
+walletReferenceCancellationCommissionTax :: Tax.Regime -> Text
+walletReferenceCancellationCommissionTax taxRegime = case taxRegime of
+  Tax.VAT -> "CancellationCommissionVAT"
+  Tax.GST -> "CancellationCommissionGST"
 
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
-walletReferenceVATOnline :: Text
-walletReferenceVATOnline = "VATOnline"
-
-walletReferenceVATCash :: Text
-walletReferenceVATCash = "VATCash"
-
-walletReferenceVATInput :: Text
-walletReferenceVATInput = "VATInput"
-
-walletReferenceCancellationVATInput :: Text
-walletReferenceCancellationVATInput = "CancellationVATInput"
+walletReferenceRideTax :: Tax.Regime -> Text
+walletReferenceRideTax taxRegime = case taxRegime of
+  Tax.VAT -> "RideVAT"
+  Tax.GST -> "RideGST"
 
 walletReferenceTips :: Text
 walletReferenceTips = "Tips"
 
 -- | BAP-absorbed customer-visible discount (subsidy paid to driver by BAP).
---   Split by payment mode so reporting can separate the two flows.
-walletReferenceDiscountsOnline :: Text
-walletReferenceDiscountsOnline = "DiscountsOnline"
-
-walletReferenceDiscountsCash :: Text
-walletReferenceDiscountsCash = "DiscountsCash"
+walletReferenceDiscounts :: Text
+walletReferenceDiscounts = "Discounts"
 
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
@@ -381,8 +354,10 @@ walletReferenceAirportCashWithdrawal :: Text
 walletReferenceAirportCashWithdrawal = "AirportCashWithdrawal"
 
 -- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
-walletReferenceAirportEntryFeeGST :: Text
-walletReferenceAirportEntryFeeGST = "AirportEntryFeeGST"
+walletReferenceAirportEntryFeeTax :: Tax.Regime -> Text
+walletReferenceAirportEntryFeeTax taxRegime = case taxRegime of
+  Tax.VAT -> "AirportEntryFeeVAT"
+  Tax.GST -> "AirportEntryFeeGST"
 
 -- | Reference type for airport entry fee (airport portion) ledger entry at EndRide (third party charges)
 walletReferenceAirportEntryFee :: Text
@@ -404,34 +379,47 @@ walletReferenceIncentiveJourneyCash = "IncentiveJourneyCash"
 walletReferenceRideFareRefund :: Text
 walletReferenceRideFareRefund = "RideFareRefund"
 
-walletReferenceRideFareRefundVAT :: Text
-walletReferenceRideFareRefundVAT = "RideFareRefundVAT"
+walletReferenceRideFareRefundTax :: Tax.Regime -> Text
+walletReferenceRideFareRefundTax taxRegime = case taxRegime of
+  Tax.VAT -> "RideFareRefundVAT"
+  Tax.GST -> "RideFareRefundGST"
 
 walletReferenceTollRefund :: Text
 walletReferenceTollRefund = "TollRefund"
 
-walletReferenceTollRefundVAT :: Text
-walletReferenceTollRefundVAT = "TollRefundVAT"
+walletReferenceTollRefundTax :: Tax.Regime -> Text
+walletReferenceTollRefundTax taxRegime = case taxRegime of
+  Tax.VAT -> "TollRefundVAT"
+  Tax.GST -> "TollRefundGST"
 
 walletReferenceParkingRefund :: Text
 walletReferenceParkingRefund = "ParkingRefund"
 
-walletReferenceParkingRefundVAT :: Text
-walletReferenceParkingRefundVAT = "ParkingRefundVAT"
+walletReferenceParkingRefundTax :: Tax.Regime -> Text
+walletReferenceParkingRefundTax taxRegime = case taxRegime of
+  Tax.VAT -> "ParkingRefundVAT"
+  Tax.GST -> "ParkingRefundGST"
 
 -- BPP-only: the platform's commission slice on a Case-2 ride-fare refund.
 walletReferenceRideFareRefundCommission :: Text
 walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
 
-walletReferenceRideFareRefundCommissionVAT :: Text
-walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
+walletReferenceDiscountsRefund :: Text
+walletReferenceDiscountsRefund = "DiscountsRefund"
+
+walletReferenceRideFareRefundCommissionTax :: Tax.Regime -> Text
+walletReferenceRideFareRefundCommissionTax taxRegime = case taxRegime of
+  Tax.VAT -> "RideFareRefundCommissionVAT"
+  Tax.GST -> "RideFareRefundCommissionGST"
 
 -- Refund of a cancellation fee (driver-side legs).
 walletReferenceCancellationFeeRefund :: Text
 walletReferenceCancellationFeeRefund = "CancellationFeeRefund"
 
-walletReferenceCancellationFeeRefundVAT :: Text
-walletReferenceCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+walletReferenceCancellationFeeRefundTax :: Tax.Regime -> Text
+walletReferenceCancellationFeeRefundTax taxRegime = case taxRegime of
+  Tax.VAT -> "CancellationFeeRefundVAT"
+  Tax.GST -> "CancellationFeeRefundGST"
 
 walletReferencePaymentChargeRefund :: Text
 walletReferencePaymentChargeRefund = "PaymentChargeRefund"
@@ -443,15 +431,10 @@ walletReferencePaymentChargeRefundVAT = "PaymentChargeRefundVAT"
 walletReferenceCancellationRefundCommission :: Text
 walletReferenceCancellationRefundCommission = "CancellationRefundCommission"
 
-walletReferenceCancellationRefundCommissionVAT :: Text
-walletReferenceCancellationRefundCommissionVAT = "CancellationRefundCommissionVAT"
-
--- The platform-kept overdue benefit given back on a driver-deducted cancellation-fee refund.
-walletReferenceCancellationOverdueBenefitRefund :: Text
-walletReferenceCancellationOverdueBenefitRefund = "CancellationOverdueBenefitRefund"
-
-walletReferenceCancellationOverdueBenefitRefundTax :: Text
-walletReferenceCancellationOverdueBenefitRefundTax = "CancellationOverdueBenefitRefundTax"
+walletReferenceCancellationRefundCommissionTax :: Tax.Regime -> Text
+walletReferenceCancellationRefundCommissionTax taxRegime = case taxRegime of
+  Tax.VAT -> "CancellationRefundCommissionVAT"
+  Tax.GST -> "CancellationRefundCommissionGST"
 
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
@@ -460,41 +443,43 @@ walletReferenceCancellationOverdueBenefitRefundTax = "CancellationOverdueBenefit
 walletCreditRefs :: [Text]
 walletCreditRefs =
   [ walletReferenceBaseRide,
-    walletReferenceGSTOnline,
-    walletReferenceGSTCash,
+    walletReferenceRideTax Tax.GST,
+    walletReferenceRideTax Tax.VAT,
     walletReferenceTollCharges,
     walletReferenceParkingCharges,
-    walletReferenceTDSDeductionOnline,
-    walletReferenceTDSDeductionCash,
+    walletReferenceAirportEntryFeeCharges,
+    walletReferenceTollChargesTax Tax.VAT,
+    walletReferenceTollChargesTax Tax.GST,
+    walletReferenceParkingChargesTax Tax.VAT,
+    walletReferenceParkingChargesTax Tax.GST,
+    walletReferenceAirportEntryFeeChargesTax Tax.VAT,
+    walletReferenceAirportEntryFeeChargesTax Tax.GST,
+    walletReferenceTDSDeduction,
     walletReferenceTDSDeductionCancellation,
-    walletReferenceOverdueCancellationCharge,
-    walletReferenceOverdueCancellationTax,
     walletReferenceTopup,
     walletReferenceAirportCashRecharge,
     walletReferenceD2DReferral,
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
-    walletReferenceCustomerCancellationGST,
-    walletReferenceCommissionOnline,
-    walletReferenceCommissionCash,
-    walletReferenceCommissionVATOnline,
-    walletReferenceCommissionVATCash,
+    walletReferenceCustomerCancellationTax Tax.GST,
+    walletReferenceCustomerCancellationTax Tax.VAT,
+    walletReferenceCommission,
+    walletReferenceCommissionTax Tax.VAT,
+    walletReferenceCommissionTax Tax.GST,
     walletReferenceCancellationCommission,
-    walletReferenceCancellationCommissionVAT,
+    walletReferenceCancellationCommissionTax Tax.VAT,
+    walletReferenceCancellationCommissionTax Tax.GST,
     walletReferenceWalletIncentive,
     walletReferenceIncentiveJourneyCash,
-    walletReferenceVATOnline,
-    walletReferenceVATCash,
-    walletReferenceVATInput,
-    walletReferenceCancellationVATInput,
     walletReferenceTips,
-    walletReferenceDiscountsOnline,
-    walletReferenceDiscountsCash,
+    walletReferenceDiscounts,
     walletReferenceDeductedAtPaymentByPlatform,
     walletReferencePGPaymentCharges,
-    walletReferencePGPaymentChargesVAT,
+    walletReferencePGPaymentChargesTax Tax.VAT,
+    walletReferencePGPaymentChargesTax Tax.GST,
     walletReferencePaymentChargePaidByCustomer,
-    walletReferencePaymentChargeVatPaidByCustomer,
+    walletReferencePaymentChargeTaxPaidByCustomer Tax.VAT,
+    walletReferencePaymentChargeTaxPaidByCustomer Tax.GST,
     walletReferencePGPayoutCharges,
     walletReferenceConnectAccountCharges
   ]
@@ -512,17 +497,14 @@ alwaysRedeemableWalletRefs = [tdsReimbursementReferenceType]
 --   Used to compute the correct transferAmount for payout orders.
 walletTransferFromMerchantRefs :: [Text]
 walletTransferFromMerchantRefs =
-  [ walletReferenceVATInput,
-    walletReferenceCancellationVATInput,
-    walletReferenceDiscountsOnline,
-    walletReferenceDiscountsCash
+  [ walletReferenceDiscounts
   ]
 
 -- | Split a VAT-inclusive gross into (base, vat); the rate is inclusive ("25.5" ⇒ vat = gross × 25.5/125.5).
 --   Neither side is rounded: renderers derive the shown VAT % from the stored pair, and rounding
 --   one side skews it (25.5 prints as 25.65). Nothing / non-positive rate ⇒ (gross, 0).
-splitGrossByVatPct :: Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
-splitGrossByVatPct mbPct gross = case mbPct of
+splitGrossByTaxPct :: Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossByTaxPct mbPct gross = case mbPct of
   Just pct
     | pct > 0 ->
       let vat = HighPrecMoney (gross.getHighPrecMoney * (toRational pct / toRational (100 + pct)))
@@ -840,11 +822,11 @@ computeStripePayoutFee cfg amount =
 -- Bearer → funder mappings (kept here so callers never touch the raw
 -- constructors, which collide across the three bearer enums).
 
-paymentBearerToFunder :: DTC.PaymentChargeBearer -> StripeChargeFunder
+paymentBearerToFunder :: PaymentChargeBearer -> StripeChargeFunder
 paymentBearerToFunder bearer = case bearer of
-  DTC.PAYMENT_PLATFORM -> FundByPlatform
-  DTC.PAYMENT_CUSTOMER -> FundByCustomer
-  DTC.PAYMENT_DRIVER -> FundByDriver
+  PAYMENT_PLATFORM -> FundByPlatform
+  PAYMENT_CUSTOMER -> FundByCustomer
+  PAYMENT_DRIVER -> FundByDriver
 
 payoutBearerToFunder :: DTC.PayoutChargeBearer -> StripeChargeFunder
 payoutBearerToFunder bearer = case bearer of
@@ -1004,7 +986,7 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
               booking.fareParams.bufferedFare
               booking.fareParams.govtCharges
               booking.fareParams.tollCharges
-              booking.fareParams.parkingCharge
+              (Just (fromMaybe 0 booking.fareParams.parkingCharge + fromMaybe 0 booking.fareParams.airportEntryFee + fromMaybe 0 booking.fareParams.airportEntryFeeTax))
       -- The check must run before the booking is accepted, so a busy wallet lock fails the reservation
       -- (and the caller's cleanup releases the holds) instead of letting the cash ride through unchecked.
       checkRan <- liftIO (newIORef False)
@@ -1014,9 +996,8 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
         otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
         existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
         let netBalance = availableBalance + existingBookingHold - otherOfferHolds
-        when (netBalance <= 0) $
-          throwError (InvalidRequest "Zero earnings balance; not eligible for cash rides.")
-        when (netBalance < holdAmount) $
+            minBalance = fromMaybe 0 dwc.minWalletAmountForCashRides
+        when (netBalance - holdAmount < minBalance) $
           throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
         when (holdAmount > 0) $ do
           _ <-

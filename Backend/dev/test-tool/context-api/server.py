@@ -48,6 +48,9 @@ import re
 import signal
 import urllib.request
 import urllib.error
+import urllib.parse
+import http.client
+import socket
 
 try:
     import pty as _pty
@@ -557,9 +560,97 @@ def _apply_local_testing_data():
         conn.close()
 
 
+PC_SOCKET_PATH = os.environ.get("PC_SOCKET_PATH") or str(PROJECT_ROOT / "data" / "process-compose.sock")
+PC_ACTIONS = {"start": ("POST", "/process/start/{}"), "stop": ("PATCH", "/process/stop/{}"), "restart": ("POST", "/process/restart/{}")}
+
+
+class _UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path, timeout=10):
+        super().__init__("localhost", timeout=timeout)
+        self._socket_path = socket_path
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+        self.sock.connect(self._socket_path)
+
+
+def _pc_request(method, path, timeout=10):
+    if not os.path.exists(PC_SOCKET_PATH):
+        return 503, {"error": f"process-compose API socket not found at {PC_SOCKET_PATH}; start the stack with the API server enabled"}
+    conn = _UnixHTTPConnection(PC_SOCKET_PATH, timeout=timeout)
+    try:
+        conn.request(method, path, headers={"Accept": "application/json"})
+        resp = conn.getresponse()
+        raw = resp.read().decode("utf-8", "replace")
+        try:
+            body = json.loads(raw) if raw else {}
+        except ValueError:
+            body = {"raw": raw}
+        return resp.status, body
+    except OSError as e:
+        return 503, {"error": f"process-compose API unreachable: {e}"}
+    finally:
+        conn.close()
+
+
+def _pc_service_view(p):
+    return {
+        "name": p.get("name"),
+        "namespace": p.get("namespace"),
+        "status": p.get("status"),
+        "isReady": p.get("is_ready"),
+        "pid": p.get("pid"),
+        "restarts": p.get("restarts"),
+        "exitCode": p.get("exit_code"),
+        "age": p.get("age"),
+        "isRunning": p.get("is_running"),
+    }
+
+
+def pc_list_services():
+    status, body = _pc_request("GET", "/processes")
+    if status != 200:
+        return status, body
+    procs = body.get("data", body) if isinstance(body, dict) else body
+    services = sorted((_pc_service_view(p) for p in (procs or [])), key=lambda s: s["name"] or "")
+    return 200, {"socket": PC_SOCKET_PATH, "count": len(services), "services": services}
+
+
+def pc_get_service(name):
+    status, body = _pc_request("GET", f"/process/{urllib.parse.quote(name)}")
+    if status != 200:
+        return status, body
+    return 200, _pc_service_view(body)
+
+
+def pc_service_action(name, action):
+    if action not in PC_ACTIONS:
+        return 400, {"error": f"unknown action '{action}'", "actions": list(PC_ACTIONS)}
+    method, tmpl = PC_ACTIONS[action]
+    status, body = _pc_request(method, tmpl.format(urllib.parse.quote(name)), timeout=60)
+    if action == "stop" and status in (404, 405):
+        status, body = _pc_request("POST", tmpl.format(urllib.parse.quote(name)), timeout=60)
+    return status, {"service": name, "action": action, "ok": 200 <= status < 300, "response": body}
+
+
 def _restart_haskell_services():
     """Kill rider/driver/mock-registry so process-compose restarts them and they
     re-read boot-time config from the freshly-synced DB."""
+    if os.path.exists(PC_SOCKET_PATH):
+        results = [pc_service_action("mock-registry", "restart")]
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            status, svc = pc_get_service("mock-registry")
+            if status == 200 and svc.get("isReady") == "Ready":
+                break
+            time.sleep(3)
+        results += [pc_service_action(name, "restart") for name in ("rider-app-exe", "dynamic-offer-driver-app-exe")]
+        if all(200 <= status < 300 for status, _ in results):
+            for _, body in results:
+                print(f"  \033[96m[config-sync]\033[0m restarted {body['service']} via process-compose API")
+            time.sleep(3)
+            return
     proj = str(PROJECT_ROOT)
     for exe in ("rider-app-exe", "dynamic-offer-driver-app-exe"):
         try:
@@ -573,7 +664,7 @@ def _restart_haskell_services():
             print(f"  \033[96m[config-sync]\033[0m restart {exe} failed: {e}")
     mock_port = _svc_port("mock-registry", 8020)
     try:
-        r = subprocess.run(["lsof", "-ti", f":{mock_port}"],
+        r = subprocess.run(["lsof", "-ti", f"tcp:{mock_port}", "-sTCP:LISTEN"],
                            capture_output=True, text=True, timeout=5)
         for pid in r.stdout.strip().splitlines()[:1]:
             if pid:
@@ -1852,233 +1943,6 @@ def query(sql, params=()):
         return {"error": str(e)}
 
 
-# ── /api/db/{update,select} helpers ──────────────────────────────────────────
-# Narrow setup/diagnostic surface for integration tests. See allow_list.py for
-# which tables/columns are addressable. Hard rules enforced below:
-#   - /api/db/update WHERE is exactly one column = the table's PK.
-#   - Affected rows must be <= 1.
-#   - After a successful UPDATE the cache key
-#     `{tableCamel}_{pkCol}_{value}{shard-N}` is DEL'd from cluster Redis.
-#   - /api/db/select is read-only; tests must NOT use it for assertions.
-# Bearer-token auth via TEST_CONTEXT_API_TOKEN env (optional; unset = dev-open).
-
-import allow_list as _tca_allow_list
-
-_TCA_AUTH_TOKEN = os.environ.get("TEST_CONTEXT_API_TOKEN")
-_TCA_KV_SHARDS = int(os.environ.get("KV_SHARDS", "128"))
-_TCA_SELECT_CAP = 200
-_TCA_VALID_IDENT = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
-_TCA_CAMEL_BOUNDARY = re.compile(r"(?<!^)(?=[A-Z])")
-
-
-def _tca_camel_to_snake(name):
-    return _TCA_CAMEL_BOUNDARY.sub("_", name).lower()
-
-
-def _tca_valid_ident(name):
-    return isinstance(name, str) and bool(_TCA_VALID_IDENT.match(name))
-
-
-def _tca_kv_keys_for_all_shards(table_camel, pk_col_camel, pk_value):
-    """All possible cache keys for this PK across shards 0..KV_SHARDS-1."""
-    base = f"{table_camel}_{pk_col_camel}_{pk_value}"
-    return [f"{base}{{shard-{n}}}" for n in range(_TCA_KV_SHARDS)]
-
-
-def _tca_del_kv_key_all_shards(table_camel, pk_col_camel, pk_value):
-    """DEL the PK-keyed KV entry across every possible shard suffix.
-
-    The Haskell side computes shard = f(uuid) % KV_SHARDS where f is opaque
-    here; rather than try to mirror that math, issue DEL for every shard
-    variant via a single pipelined redis-cli session. Cluster redirects are
-    followed by -c. Returns total keys deleted.
-    """
-    keys = _tca_kv_keys_for_all_shards(table_camel, pk_col_camel, pk_value)
-    cmds = "".join(f"DEL {k}\n" for k in keys)
-    r = subprocess.run(
-        ["redis-cli", "-c", "-h", "localhost", "-p", "30001"],
-        input=cmds, capture_output=True, text=True, timeout=15,
-    )
-    if r.returncode != 0:
-        raise RuntimeError(f"redis-cli DEL pipeline failed: {r.stderr.strip()}")
-    total = 0
-    for line in r.stdout.splitlines():
-        line = line.strip()
-        if line.startswith("(integer)"):
-            try:
-                total += int(line.split()[-1])
-            except ValueError:
-                pass
-        else:
-            try:
-                total += int(line)
-            except ValueError:
-                pass
-    return total
-
-
-def _tca_auth_ok(handler):
-    if not _TCA_AUTH_TOKEN:
-        return True
-    return handler.headers.get("Authorization", "") == f"Bearer {_TCA_AUTH_TOKEN}"
-
-
-def _tca_db_update(body):
-    from psycopg2 import sql as psql
-
-    table = body.get("table")
-    pk = body.get("primaryKey") or {}
-    set_map = body.get("set") or {}
-
-    if not isinstance(table, str):
-        return {"error": "table is required"}, 400
-    spec = _tca_allow_list.get(table)
-    if spec is None:
-        return {"error": f"table not allow-listed: {table}"}, 400
-
-    pk_col = pk.get("column")
-    pk_val = pk.get("value")
-    if pk_col != spec["pk"]:
-        return {"error": f"primaryKey.column must be {spec['pk']!r} for table {table!r}"}, 400
-    if not isinstance(pk_val, str) or not pk_val:
-        return {"error": "primaryKey.value is required (string)"}, 400
-
-    if not isinstance(set_map, dict) or not set_map:
-        return {"error": "set must be a non-empty object"}, 400
-    for col in set_map.keys():
-        if not _tca_valid_ident(col):
-            return {"error": f"invalid identifier: {col!r}"}, 400
-        if not _tca_allow_list.is_updatable(spec, col):
-            return {"error": f"column not updatable for {table!r}: {col}"}, 400
-
-    pg_table = spec.get("pg_table") or _tca_camel_to_snake(table)
-    set_parts = [
-        psql.SQL("{} = {}").format(psql.Identifier(_tca_camel_to_snake(c)), psql.Placeholder())
-        for c in set_map.keys()
-    ]
-    params = list(set_map.values()) + [pk_val]
-    sql_q = psql.SQL("UPDATE {sch}.{tbl} SET {sets} WHERE {pkc} = {ph}").format(
-        sch=psql.Identifier(spec["schema"]),
-        tbl=psql.Identifier(pg_table),
-        sets=psql.SQL(", ").join(set_parts),
-        pkc=psql.Identifier(_tca_camel_to_snake(pk_col)),
-        ph=psql.Placeholder(),
-    )
-
-    try:
-        conn = get_conn()
-        conn.autocommit = True
-        cur = conn.cursor()
-        cur.execute(sql_q, params)
-        rowcount = cur.rowcount
-        cur.close()
-        conn.close()
-    except Exception as e:
-        return {"error": f"db error: {e}"}, 500
-
-    if rowcount > 1:
-        return {"error": "update affected more than one row; refusing"}, 500
-
-    cache_deleted = None
-    cache_key_prefix = None
-    if rowcount == 1:
-        kv_table = spec.get("kv_table_name") or table
-        cache_key_prefix = f"{kv_table}_{pk_col}_{pk_val}{{shard-*}}"
-        try:
-            cache_deleted = _tca_del_kv_key_all_shards(kv_table, pk_col, pk_val)
-        except Exception as e:
-            return {
-                "updated": rowcount,
-                "cacheKeyPattern": cache_key_prefix,
-                "cacheDeleteError": f"failed to clear cache key: {e}",
-            }, 500
-
-    return {
-        "updated": rowcount,
-        "cacheKeyPattern": cache_key_prefix,
-        "cacheDeleted": cache_deleted,
-    }, 200
-
-
-def _tca_db_select(body):
-    from psycopg2 import sql as psql
-
-    table = body.get("table")
-    spec = _tca_allow_list.get(table) if isinstance(table, str) else None
-    if spec is None:
-        return {"error": f"table not allow-listed: {table}"}, 400
-
-    cols = body.get("columns")
-    if cols is None:
-        cols = ["*"]
-    if not isinstance(cols, list) or not cols:
-        return {"error": "columns must be a non-empty array"}, 400
-    if cols != ["*"]:
-        for c in cols:
-            if not _tca_valid_ident(c):
-                return {"error": f"invalid identifier: {c!r}"}, 400
-            if not _tca_allow_list.is_selectable(spec, c):
-                return {"error": f"column not selectable for {table!r}: {c}"}, 400
-
-    pk_block = body.get("primaryKey")
-    where_block = body.get("where")
-    if (pk_block is None) == (where_block is None):
-        return {"error": "exactly one of primaryKey or where is required"}, 400
-
-    if pk_block is not None:
-        pk_col = pk_block.get("column")
-        pk_val = pk_block.get("value")
-        if pk_col != spec["pk"]:
-            return {"error": f"primaryKey.column must be {spec['pk']!r}"}, 400
-        if not isinstance(pk_val, str) or not pk_val:
-            return {"error": "primaryKey.value is required"}, 400
-        filter_col, filter_val, limit = pk_col, pk_val, 1
-    else:
-        filter_col = where_block.get("column")
-        filter_val = where_block.get("value")
-        if not _tca_valid_ident(filter_col):
-            return {"error": "where.column required (valid identifier)"}, 400
-        if not _tca_allow_list.is_filter_column(spec, filter_col):
-            return {"error": f"column not filterable for {table!r}: {filter_col}"}, 400
-        limit = body.get("limit")
-        if not isinstance(limit, int) or limit <= 0:
-            return {"error": "limit (positive int) required for where-mode"}, 400
-        if limit > _TCA_SELECT_CAP:
-            return {"error": f"limit exceeds cap {_TCA_SELECT_CAP}"}, 400
-
-    pg_table = spec.get("pg_table") or _tca_camel_to_snake(table)
-    if cols == ["*"]:
-        select_sql = psql.SQL("*")
-    else:
-        select_sql = psql.SQL(", ").join(
-            psql.SQL("{} AS {}").format(
-                psql.Identifier(_tca_camel_to_snake(c)), psql.Identifier(c)
-            )
-            for c in cols
-        )
-    sql_q = psql.SQL("SELECT {cols} FROM {sch}.{tbl} WHERE {fc} = {ph} LIMIT {lim}").format(
-        cols=select_sql,
-        sch=psql.Identifier(spec["schema"]),
-        tbl=psql.Identifier(pg_table),
-        fc=psql.Identifier(_tca_camel_to_snake(filter_col)),
-        ph=psql.Placeholder(),
-        lim=psql.Literal(limit),
-    )
-
-    try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute(sql_q, [filter_val])
-        col_names = [d[0] for d in cur.description] if cur.description else []
-        rows = [dict(zip(col_names, r)) for r in cur.fetchall()]
-        cur.close()
-        conn.close()
-    except Exception as e:
-        return {"error": f"db error: {e}"}, 500
-
-    return {"rows": rows, "count": len(rows)}, 200
-
-
 def get_merchants():
     riders = query("""
         SELECT m.id, m.short_id, m.name, m.online_payment,
@@ -2500,26 +2364,23 @@ def get_finance_earnings(schema, counterparty_id=None):
         "TollCharges": "Toll Charges",
         "ParkingCharges": "Parking Charges",
         "Topup": "Wallet Top-up",
-        "GSTOnline": "GST (Online)",
-        "GSTCash": "GST (Cash)",
-        "VATOnline": "VAT (Online)",
-        "VATCash": "VAT (Cash)",
-        "TDSDeductionOnline": "TDS (Online)",
-        "TDSDeductionCash": "TDS (Cash)",
+        "RideGST": "GST",
+        "RideVAT": "VAT",
+        "TDSDeduction": "TDS",
         "TDSDeductionCancellation": "TDS (Cancellation)",
         "Payout": "Withdrawal",
         "AirportCashRecharge": "Airport cash recharge (booth)",
         "AirportEntryFee": "Airport Entry Fee",
         "AirportEntryFeeGST": "Airport Entry Fee GST",
-        "CommissionOnline": "Platform Commission (Online)",
-        "CommissionCash": "Platform Commission (Cash)",
+        "Commission": "Platform Commission",
+        "CommissionGST": "Platform Commission GST",
+        "CommissionVAT": "Platform Commission VAT",
         "DriverCancellationCharges": "Driver Cancellation Charges",
         "CustomerCancellationCharges": "Customer Cancellation Charges",
         "CustomerCancellationGST": "Customer Cancellation GST",
         "WalletIncentive": "Incentive",
         "D2DReferral": "Referral Bonus",
-        "DiscountsOnline": "Discounts (Online)",
-        "DiscountsCash": "Discounts (Cash)",
+        "Discounts": "Discounts",
         "RideVatOnDiscount": "VAT on Discount",
         "VATAbsorbedOnDiscount": "VAT Absorbed on Discount",
         "VATInput": "VAT Input",
@@ -3601,6 +3462,21 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": True})
             return True
 
+        if method == "GET" and path == "/api/services":
+            status, body = pc_list_services()
+            self._send_json(body, status)
+            return True
+
+        m_svc = re.fullmatch(r"/api/services/([^/]+)(?:/(start|stop|restart))?", path)
+        if m_svc and method == "GET" and not m_svc.group(2):
+            status, body = pc_get_service(urllib.parse.unquote(m_svc.group(1)))
+            self._send_json(body, status)
+            return True
+        if m_svc and method == "POST" and m_svc.group(2):
+            status, body = pc_service_action(urllib.parse.unquote(m_svc.group(1)), m_svc.group(2))
+            self._send_json(body, status)
+            return True
+
         if method == "GET" and path == "/api/config-sync/envs":
             self._send_json({
                 "envs": list(CONFIG_SYNC_ENVS),
@@ -4668,21 +4544,9 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"cleared": True})
             return True
 
-        if method == "POST" and path in ("/api/db/update", "/api/db/select"):
-            if not _tca_auth_ok(self):
-                self._send_json({"error": "unauthorized"}, 401)
-                return True
-            body = self._read_json_body() or {}
-            payload, status = (
-                _tca_db_update(body) if path.endswith("/update") else _tca_db_select(body)
-            )
-            self._send_json(payload, status)
-            return True
-
         # GET API endpoints (POST also allowed for metrics/push and webhook)
         _post_allowed = {
             "/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all",
-            "/api/db/update", "/api/db/select",
             "/api/integration-tests/seed-toll-dashboard",
             "/api/local-testing-data/reapply",
         }

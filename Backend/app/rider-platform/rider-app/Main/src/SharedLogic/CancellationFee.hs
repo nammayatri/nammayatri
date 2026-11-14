@@ -19,7 +19,6 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.EmailTemplate as DET
-import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import Kernel.External.Types (SchedulerFlow)
@@ -30,12 +29,10 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
 import SharedLogic.Payment (MakePaymentIntentConstraints)
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -45,8 +42,8 @@ import Tools.Error
 --     2. create the pending cancellation-fee ledger (base + tax)
 --     3. create a NEW payment intent for the cancellation fee and charge it
 --     4. on capture: mark the cancellation invoice paid, mark ride payment Completed,
---        and sync SettleCancellationLedger to the BPP
---        on failure: mark the pending entries DUE and sync OverdueCancellationLedger
+--        and sync the settled ledger to the BPP
+--        on failure: mark the pending entries DUE and sync DueCancellationLedger
 settleCancellationFeeViaStripe ::
   (MakePaymentIntentConstraints m r c, EsqDBReplicaFlow m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
   DRB.Booking ->
@@ -54,28 +51,21 @@ settleCancellationFeeViaStripe ::
   DPerson.Person ->
   HighPrecMoney ->
   HighPrecMoney ->
+  (HighPrecMoney, HighPrecMoney) ->
+  HighPrecMoney ->
   Currency ->
   (CallBPPInternal.CancellationLedgerAction -> m ()) ->
   m ()
-settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax currency syncCancellationLedger = do
+settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax (cancellationPaymentCharge, cancellationPaymentChargeTax) applicationFeeAmount currency syncCancellationLedger = do
   let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
       ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
       cancellationTotal = cancellationBase + cancellationTax
   (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking personD
   driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-  -- The gateway charges on this capture too, so the cancellation fee carries the
-  -- same payment charge the fare does. The rate comes from the booking's breakup;
-  -- a ride cancelled before any fare was priced simply yields no rate and no charge.
-  bookingFareBreakups <-
-    SFareBreakupInfo.getFareBreakupsWithFallback booking.id.getId DFareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
-  let mbChargeRate = SPayment.paymentChargeRateFromFareBreakups bookingFareBreakups
-      levied = SPayment.levyPaymentChargeOn mbChargeRate ride.paymentChargeBearer cancellationTotal
-      cancellationChargeNet = levied.chargeNet
-      cancellationChargeVat = levied.chargeVat
   let createPaymentIntentServiceReq =
         DPayment.CreatePaymentIntentServiceReq
-          { amount = cancellationTotal + levied.riderGrossUp,
-            applicationFeeAmount = levied.applicationFee,
+          { amount = cancellationTotal + cancellationPaymentCharge + cancellationPaymentChargeTax,
+            applicationFeeAmount,
             discountAmount = 0,
             offerId = Nothing,
             currency = currency,
@@ -89,7 +79,8 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
   void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
   -- Step 2: Create pending cancellation ledger AFTER cancel so it isn't voided
   logDebug $ "[CancellationSettlement] Creating pending cancellation ledger for rideId=" <> ride.id.getId
-  ledgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (cancellationChargeNet, cancellationChargeVat)
+  let cancellationGstRates = RidePaymentFinance.gstRatesFromConfig (booking.riderTaxRates >>= (.riderPayable.cancellationFee))
+  ledgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx (RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx) cancellationGstRates cancellationBase cancellationTax (cancellationPaymentCharge, cancellationPaymentChargeTax)
   let mbCancelInvoiceId = case ledgerResp of
         Right (inv, _) -> inv
         _ -> Nothing
@@ -103,14 +94,17 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
             tollVatAmount = 0,
             parkingCharge = 0,
             parkingChargeVat = 0,
+            airportEntryFee = 0,
+            airportEntryFeeTax = 0,
             platformFee = 0,
-            paymentCharge = 0,
-            paymentChargeVat = 0,
+            paymentCharge = cancellationPaymentCharge,
+            paymentChargeVat = cancellationPaymentChargeTax,
             offerDiscountAmount = 0,
             cashbackPayoutAmount = 0,
-            rideVatAbsorbedOnDiscount = 0,
             cancellationCharge = cancellationBase,
             cancellationTax = cancellationTax,
+            taxRegime = RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx,
+            gstRates = cancellationGstRates,
             financeCtx = ledgerCtx
           }
   eitherMbIntent <-
@@ -123,7 +117,7 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
         case ledgerResp of
           Right (_inv, entryIds) -> RidePaymentFinance.markEntriesAsDue entryIds
           _ -> return ()
-        syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
+        syncCancellationLedger CallBPPInternal.DueCancellationLedger
   case eitherMbIntent of
     Left err -> do
       logError $ "[CancellationSettlement] Stripe error creating cancellation intent, marking DUE: " <> show err

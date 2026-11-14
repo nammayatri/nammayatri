@@ -103,6 +103,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as SQIC
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Prelude as Prelude
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -587,6 +588,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOperatingCity.id) rolloutObj.domain
       invalidateConfigInMem (TC.toCacheConfigType cfgType)
+      IM.refreshInMem (CADLR.experimentRunningInMemInfix (cast merchantOperatingCity.id) rolloutObj.domain)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result

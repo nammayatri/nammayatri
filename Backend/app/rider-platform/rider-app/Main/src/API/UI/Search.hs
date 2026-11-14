@@ -443,7 +443,7 @@ priceSuggestedSearch parentRes suggestedRes alternatives = do
     Right onSearchReq ->
       withTryCatch "betterRoutePointSearch:processOnSearch" (withTimeAPI "rideSearch" "betterRoutePointInlineOnSearch" $ JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
         Right (Just onSearchResult) ->
-          DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates alternatives
+          DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates alternatives Nothing
         Right Nothing -> pure Nothing
         Left e -> do
           logError $ "better_route_point: inline on_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
@@ -512,6 +512,7 @@ suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
         (BRPS.withChosenAddresses ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop) offeredShadow)
         shadowEstimates
         offeredAlternatives
+        Nothing
         -- The provider was already asked about this exact shape and gave no fare for it.
         -- Asking again is the duplicate search this endpoint is here to stop making, so the
         -- customer is told the same thing a failed pricing has always told them.

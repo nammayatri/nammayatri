@@ -77,7 +77,9 @@ data BPPInvoiceProviderInfo = BPPInvoiceProviderInfo
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGstin :: Maybe Text,
+    issuedByTaxNo :: Maybe Text
   }
 
 bppInvoiceProviderInfoToFields :: BPPInvoiceProviderInfo -> QRBE.BPPInvoiceProviderFields
@@ -90,7 +92,9 @@ bppInvoiceProviderInfoToFields info =
       supplierAddress = info.supplierAddress,
       supplierGSTIN = info.supplierGSTIN,
       supplierTaxNo = info.supplierTaxNo,
-      supplierId = info.supplierId
+      supplierId = info.supplierId,
+      issuedByGstin = info.issuedByGstin,
+      issuedByTaxNo = info.issuedByTaxNo
     }
 
 data BookingConfirmedInfo = BookingConfirmedInfo

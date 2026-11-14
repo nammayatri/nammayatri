@@ -296,3 +296,10 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN booking_deposit double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_share_consent boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge_details json ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN cancellation_dues_commission_tax_breakup json ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN cancellation_dues_commission double precision ;

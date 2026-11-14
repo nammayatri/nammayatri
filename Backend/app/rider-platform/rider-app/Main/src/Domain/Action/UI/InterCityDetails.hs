@@ -6,17 +6,17 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 
-mkInterCityDetailsAPIEntity :: InterCityDetails -> Maybe PriceAPIEntity -> InterCityDetailsAPIEntity
-mkInterCityDetailsAPIEntity InterCityDetails {..} tollCharges = do
+mkInterCityDetailsAPIEntity :: (Price -> Price) -> InterCityDetails -> Maybe PriceAPIEntity -> InterCityDetailsAPIEntity
+mkInterCityDetailsAPIEntity grossRate InterCityDetails {..} tollCharges = do
   InterCityDetailsAPIEntity
     { quoteId = getId id,
-      baseFare = mkPriceAPIEntity baseFare,
-      perHourCharge = mkPriceAPIEntity perHourCharge,
-      perExtraMinRate = mkPriceAPIEntity perExtraMinRate,
-      perExtraKmRate = mkPriceAPIEntity perExtraKmRate,
-      deadKmFare = mkPriceAPIEntity deadKmFare,
-      plannedPerKmRateOneWay = mkPriceAPIEntity plannedPerKmRateOneWay,
-      plannedPerKmRateRoundTrip = mkPriceAPIEntity plannedPerKmRateRoundTrip,
+      baseFare = mkPriceAPIEntity (grossRate baseFare),
+      perHourCharge = mkPriceAPIEntity (grossRate perHourCharge),
+      perExtraMinRate = mkPriceAPIEntity (grossRate perExtraMinRate),
+      perExtraKmRate = mkPriceAPIEntity (grossRate perExtraKmRate),
+      deadKmFare = mkPriceAPIEntity (grossRate deadKmFare),
+      plannedPerKmRateOneWay = mkPriceAPIEntity (grossRate plannedPerKmRateOneWay),
+      plannedPerKmRateRoundTrip = mkPriceAPIEntity (grossRate plannedPerKmRateRoundTrip),
       nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
       ..
     }

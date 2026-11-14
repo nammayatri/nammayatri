@@ -67,6 +67,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchTry as QST
@@ -111,7 +112,8 @@ oneShotAssign OneShotAssignReq {..} = do
               isInsured = Nothing,
               insuredAmount = Nothing,
               displayBookingId = Nothing,
-              discountAmount = Nothing,
+              discountAmount = searchTry.discountAmount,
+              paymentChargeDetails = searchTry.paymentChargeDetails,
               initialStatus = DRB.TRIP_ASSIGNED,
               riderId = searchReq.riderId,
               riderName = searchReq.riderName
@@ -120,6 +122,7 @@ oneShotAssign OneShotAssignReq {..} = do
     booking <- (\b -> b {DRB.numberShareConsent = mbRiderConsent}) <$> DInit.buildBooking bArgs searchReq driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now Nothing Nothing (Just driverQuote.distanceToPickup) Nothing searchReq.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
     triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = merchant.id}
     QRB.createBooking booking
+    QFP.updatePaymentCharge driverQuote.fareParams booking.fareParams
     -- One-shot bypasses the Beckn confirm handler, whose mkDConfirmResp is the only other
     -- BPP_booking_created_count site, so increment here too or one-shot bookings are uncounted.
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
@@ -218,9 +221,10 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
         bppRideId = ride.id.getId,
         currency = booking.currency,
         estimatedFare = booking.estimatedFare,
-        commission = booking.commission,
+        commission = if isJust booking.commission || isJust booking.cancellationDuesCommission then Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission) else Nothing,
         paymentCharge = booking.paymentCharge,
         paymentChargeBearer = booking.paymentChargeBearer,
+        paymentChargeDetails = booking.paymentChargeDetails,
         fareBreakups = fareBreakups,
         quoteValidTill = driverQuote.validTill,
         otp = fromMaybe ride.otp ride.endOtp,

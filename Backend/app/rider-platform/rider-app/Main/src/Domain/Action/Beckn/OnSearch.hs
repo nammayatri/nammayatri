@@ -43,6 +43,7 @@ where
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
@@ -53,6 +54,8 @@ import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.FareBreakup as DFareBreakup
+import Domain.Types.FareBreakupInfo (FareBreakupInfoItem)
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
@@ -86,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -152,6 +156,7 @@ data EstimateInfo = EstimateInfo
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
+    fareBreakups :: Maybe [FareBreakupInfoItem],
     nightShiftInfo :: Maybe NightShiftInfo,
     businessDiscountInfo :: Maybe BusinessDiscountInfo,
     personalDiscountInfo :: Maybe PersonalDiscountInfo,
@@ -182,7 +187,8 @@ data EstimateInfo = EstimateInfo
     smartTipReason :: Maybe Text,
     negativeFareSuggestion :: Maybe HighPrecMoney,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    riderTaxRates :: Maybe Tax.RiderTaxRates
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -252,6 +258,8 @@ data QuoteInfo = QuoteInfo
     specialLocationSupportNumber :: Maybe Text,
     fareSettlementType :: Maybe SL.FareSettlementType,
     quoteBreakupList :: [QuoteBreakupInfo],
+    fareBreakups :: Maybe [FareBreakupInfoItem],
+    riderTaxRates :: Maybe Tax.RiderTaxRates,
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
@@ -349,8 +357,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure Nothing
     else do
       deploymentVersion <- asks (.version)
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription)
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
+      let preferredEstimatesInfo = filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription
+          preferredQuotesInfo = filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) preferredEstimatesInfo
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) preferredQuotesInfo
       -- A better-route-point shadow search (see SharedLogic.BetterRoutePointSearch) exists
       -- only to price an alternative pickup/drop the customer may or may not accept. Its
       -- estimates are persisted -- that is the point -- but it must not move rider state,
@@ -370,6 +380,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Redis.withWaitAndLockRedis lockKey 5 50000 $ do
         QEstimate.createMany estimates
         QQuote.createMany quotes
+        forM_ (zip estimates preferredEstimatesInfo) $ \(estimate, estimateInfo) ->
+          whenJust estimateInfo.fareBreakups $ \items -> SFareBreakupInfo.upsertFareBreakupInfo estimate.id.getId DFareBreakup.ESTIMATE items (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+        forM_ (zip quotes preferredQuotesInfo) $ \(quote, quoteInfo) ->
+          whenJust quoteInfo.fareBreakups $ \items -> SFareBreakupInfo.upsertFareBreakupInfo quote.id.getId DFareBreakup.QUOTE items (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
         -- Same reason as the guard in Domain.Action.UI.Search: a pending booking fee is the
         -- rider's only route back to the pay-fee screen and nothing re-derives it. on_search
         -- fires for every search, including one made while a fee is owed, so clearing
@@ -607,6 +621,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         vehicleCategory = Just vehicleCategory,
         qar = qar,
         selectedOfferId = Nothing,
+        selectedOfferDiscountAmount = Nothing,
         ..
       }
 
@@ -666,6 +681,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         isSafetyPlus = False,
         billingCategory = SLT.PERSONAL,
         selectedOfferId = Nothing,
+        selectedOfferDiscountAmount = Nothing,
         ..
       }
 

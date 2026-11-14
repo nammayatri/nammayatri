@@ -701,6 +701,15 @@ apis:
         type: APISuccess
       migrate:
         capability: system-config.driver_wallet.write
+  - POST: # DriverWalletAccountClassUpdateAPI
+      endpoint: /config/driverWallet/accountClass/update
+      auth: ApiAuthV2
+      request:
+        type: DriverWalletAccountClassUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.driver_wallet.write
 
   - GET:
       endpoint: /config/fareBreakup
@@ -1502,9 +1511,25 @@ types:
     - forceOnlineLedger: Maybe Bool
     - subscriptionFromWallet: Maybe Bool
     - enforceMinWalletBalance: Maybe Bool
+    - allowNegativeBalance: Maybe Bool
+    - instantTransferOutEnabled: Maybe Bool
+    - minTransferOutAmount: Maybe HighPrecMoney
+    - redeemableCutoffDays: Maybe Int
+    - redeemableCutoffTimeOfDay: Maybe Text
+    - redeemableCutoffTzOffsetSeconds: Maybe Int
     - rideCgstPercentage: Maybe HighPrecMoney
     - rideSgstPercentage: Maybe HighPrecMoney
     - rideIgstPercentage: Maybe HighPrecMoney
+  DriverWalletAccountClassUpdateReq:
+    - allowNegativeBalance: Maybe Bool
+    - transferOutEnabled: Maybe Bool
+    - instantTransferOutEnabled: Maybe Bool
+    - minTransferOutAmount: Maybe HighPrecMoney
+    - redeemableCutoffDays: Maybe Int
+    - redeemableCutoffTimeOfDay: Maybe Text
+    - redeemableCutoffTzOffsetSeconds: Maybe Int
+    - clearRedeemableCutoff: Maybe Bool
+    - derive: "'HideSecrets"
   FareBreakupConfigRes:
     - config: Maybe Value
   FareBreakupConfigUpdateReq:

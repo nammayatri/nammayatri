@@ -420,7 +420,7 @@ logFail label e = logError $ "whatsapp-bot/" <> label <> ": " <> show e
 -- parity, client.ts 400 => []).
 pollQuotes :: Text -> Text -> (DQuote.GetQuotesRes -> [a]) -> Flow (Either BotError [a])
 pollQuotes label searchId extract = do
-  res <- try @_ @SomeException $ DQuote.getQuotes (Id searchId) Nothing
+  res <- try @_ @SomeException $ DQuote.getQuotes (Id searchId) Nothing Nothing
   case res of
     Left e -> logFail label e $> Right []
     Right r -> pure (Right (extract r))

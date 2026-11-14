@@ -1,0 +1,2508 @@
+{
+  "info": {
+    "name": "Ride Booking (Cash Payment)",
+    "description": "End-to-end ride with cash payment: search → assign → start → end. Driver collects cash directly from rider; no payment capture on platform. Stripe rider-side setup steps (customer, payment methods) remain in the flow as harmless no-ops.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
+          "    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
+          "    var rNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
+          "    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
+          "    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle?fleetOwnerId={{fleet_owner_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ],
+          "query": [
+            {
+              "key": "fleetOwnerId",
+              "value": "{{fleet_owner_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Bank Account (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked without bank account', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_BANK_ACCOUNT_NOT_FOUND', function () { pm.expect(d.errorCode).to.equal('DRIVER_BANK_ACCOUNT_NOT_FOUND'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Bank Account (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bank_verify_request_id', d.requestId);",
+              "console.log('Bank verify requestId:', d.requestId);",
+              "pm.test('Verification initiated', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/verify/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "verify",
+            "bankAccount"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"bankAccountNo\": \"1234567890\", \"bankIfscCode\": \"HDFC0001234\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Poll Bank Account Status (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Bank account verified', function () { pm.response.to.have.status(200); });",
+              "pm.test('Account exists', function () { pm.expect(d.accountExists).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/info/{{bank_verify_request_id}}/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "info",
+            "{{bank_verify_request_id}}",
+            "bankAccount"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Charges Enabled (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked - charges not enabled (400)', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_CHARGES_DISABLED', function () { pm.expect(d.errorCode).to.equal('DRIVER_CHARGES_DISABLED'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Link (Stripe Connect)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Account link:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/link?paymentMode=%22LIVE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "link"
+          ],
+          "query": [
+            {
+              "key": "paymentMode",
+              "value": "%22LIVE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Status (Stripe)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Charges enabled', function () { pm.expect(d.chargesEnabled).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/status?forceRefresh=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "status"
+          ],
+          "query": [
+            {
+              "key": "forceRefresh",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Snapshot Cash Wallet Minimum Rollout (BPP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=%7B%22tag%22%3A%22DRIVER_CONFIG%22%2C%22contents%22%3A%22TransporterConfig%22%7D&activeOnly=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('TransporterConfig rollout read', function () { pm.response.to.have.status(200); });",
+              "var isTest = function (x) { return (x.versionDescription || '').indexOf('Integration test cash wallet minimum') === 0; };",
+              "var domain = {tag: 'DRIVER_CONFIG', contents: 'TransporterConfig'};",
+              "var live = (d || []).map(function (r) { return {domain: r.domain, timeBounds: r.timeBounds, rollout: (r.rollout || []).filter(function (x) { return !isTest(x); }).map(function (x) { return {rolloutPercentage: x.rolloutPercentage, version: x.version, versionDescription: x.versionDescription || 'restored'}; })}; });",
+              "if ((d || []).some(function (r) { return (r.rollout || []).some(isTest); })) console.log('TransporterConfig rollout carries a leftover test version; it is dropped from the restore target');",
+              "var restore = live.length > 0 ? live : [{domain: domain, timeBounds: 'Unbounded', rollout: []}];",
+              "pm.environment.set('_wallet_funding', 0);",
+              "pm.environment.set('_cash_min_wallet', -50);",
+              "pm.environment.set('_cash_min_rollout_snapshot', JSON.stringify(restore));",
+              "console.log('TransporterConfig rollout snapshot:', JSON.stringify(restore));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Cash Wallet Minimum Logic (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"DRIVER_CONFIG\", \"contents\": \"TransporterConfig\"}, \"shouldUpdateRule\": true, \"description\": \"Integration test cash wallet minimum {{_cash_min_wallet}}\", \"inputData\": [], \"rules\": [{\"replaceMerge\": [{\"config\": null}, {\"config\": {\"replaceMerge\": [{\"var\": \"config\"}, {\"driverWalletConfig\": null}, {\"driverWalletConfig\": {\"replaceMerge\": [{\"var\": \"config.driverWalletConfig\"}, {\"minWalletAmountForCashRides\": {{_cash_min_wallet}}}]}}]}}, {\"identifier\": null}, {\"identifier\": {\"var\": \"identifier\"}}]}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Cash wallet minimum logic created', function () { pm.response.to.have.status(200); pm.expect(d.version).to.be.a('number'); });",
+              "var min = d.result && d.result.config && d.result.config.driverWalletConfig && d.result.config.driverWalletConfig.minWalletAmountForCashRides;",
+              "pm.test('Patched minWalletAmountForCashRides is ' + pm.environment.get('_cash_min_wallet'), function () { pm.expect(Number(min)).to.eql(Number(pm.environment.get('_cash_min_wallet'))); });",
+              "pm.environment.set('_cash_min_logic_version', d.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rollout Cash Wallet Minimum (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"DRIVER_CONFIG\",\"contents\":\"TransporterConfig\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{_cash_min_logic_version}},\"versionDescription\":\"Integration test cash wallet minimum\"}]}]",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cash wallet minimum rolled out', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Snapshot Driver Wallet Negative Balance (BPP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/driverWallet"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Driver wallet config read', function () { pm.response.to.have.status(200); });",
+              "var allow = d.allowNegativeBalance === undefined || d.allowNegativeBalance === null ? true : d.allowNegativeBalance;",
+              "pm.environment.set('_wallet_allow_negative_snapshot', allow);",
+              "console.log('Driver wallet allowNegativeBalance snapshot:', allow);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Allow Negative Driver Wallet Balance (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/driverWallet/accountClass/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"allowNegativeBalance\": true}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 65000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Negative driver wallet balance allowed', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Stripe Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Customer:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/customer",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "customer"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Payment Methods",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d && d.length > 0) {",
+              "    pm.environment.set('payment_method_id', d[0].paymentMethodId || d[0].id);",
+              "    console.log('Payment method:', d[0].paymentMethodId || d[0].id);",
+              "} else {",
+              "    // Use default test card from Stripe mock",
+              "    pm.environment.set('payment_method_id', 'pm_card_visa');",
+              "    console.log('No methods, using default pm_card_visa');",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make Payment Method Default",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods/{{payment_method_id}}/makeDefault",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods",
+            "{{payment_method_id}}",
+            "makeDefault"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Snapshot Cash Payment Charge (BAP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": "{{bap_dashboard_url}}/{{bap_short_id}}/{{city}}/merchant/config/paymentMethod/list"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var cash = (d.paymentMethods || []).filter(function (x) { return x.paymentInstrument.indexOf('Cash') === 0; })[0];",
+              "var card = (d.paymentMethods || []).filter(function (x) { return x.paymentInstrument.indexOf('Card') === 0; })[0];",
+              "pm.test('Cash and card payment methods found', function () { pm.expect(cash, 'no cash payment method').to.be.an('object'); pm.expect(card, 'no card payment method').to.be.an('object'); });",
+              "pm.environment.set('_pm_cash_id', cash.id);",
+              "pm.environment.set('_test_pc_pct', 2);",
+              "pm.environment.set('_test_pc_tax', 25.5);",
+              "pm.environment.set('_pm_cash_config_body', JSON.stringify({paymentChargeType: 'PERCENTAGE', paymentCharge: Number(pm.environment.get('_test_pc_pct')), paymentChargeTax: {tax: Number(pm.environment.get('_test_pc_tax'))}, paymentChargeBearer: 'PAYMENT_CUSTOMER'}));",
+              "console.log('Cash payment charge snapshot:', pm.environment.get('_pm_cash_restore_body'), '| applying card config:', pm.environment.get('_pm_cash_config_body'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Configure Cash Payment Charge (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": "{{bap_dashboard_url}}/{{bap_short_id}}/{{city}}/merchant/config/paymentMethod/{{_pm_cash_id}}/paymentCharge/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_pm_cash_config_body}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Cash payment charge configured like card', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Snapshot Comfort OneWay Fare Policies (BPP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/list?serviceTier=%22COMFY%22"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('_test_ride_tax', 14);",
+              "pm.environment.set('_test_commission_pct', 10);",
+              "pm.environment.set('_test_commission_tax', 25.5);",
+              "var d = pm.response.json();",
+              "pm.test('Fare products listed', function () { pm.response.to.have.status(200); });",
+              "var ids = (d.fareProducts || []).filter(function (p) { return p.tripCategory && p.tripCategory.tag === 'OneWay' && p.tripCategory.contents === 'OneWayOnDemandDynamicOffer'; }).map(function (p) { return p.farePolicyId; });",
+              "pm.test('Comfort OneWay dynamic policies found', function () { pm.expect(ids.length).to.be.above(0); });",
+              "var base = pm.variables.replaceIn('{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}');",
+              "var token = pm.environment.get('dashboard_token');",
+              "var snaps = [];",
+              "var isTest = function (p) { return p.rideTaxConfig && Number(p.rideTaxConfig.tax) === Number(pm.environment.get('_test_ride_tax')) && p.commissionChargeConfig && p.commissionChargeConfig.value === pm.environment.get('_test_commission_pct') + '%'; };",
+              "var finish = function () {",
+              "    var baseline = JSON.parse(pm.environment.get('_baseline_fare_policies') || '{\"replacements\":[]}');",
+              "    var restore = snaps.map(function (s) {",
+              "        if (!isTest(s.policy)) return s;",
+              "        var b = baseline.replacements.filter(function (r) { return r.farePolicyId === s.farePolicyId; })[0];",
+              "        console.log('Fare policy ' + s.farePolicyId + ' is a leftover test config; restoring from baseline');",
+              "        return b || s;",
+              "    });",
+              "    var testBody = {replacements: snaps.map(function (s) {",
+              "        var p = JSON.parse(JSON.stringify(s.policy));",
+              "        p.rideTaxConfig = {cgst: null, igst: null, sgst: null, tax: Number(pm.environment.get('_test_ride_tax'))};",
+              "        var withAll = function (xs, extra) { return xs.concat(extra.filter(function (c) { return xs.indexOf(c) < 0; })); };",
+              "        p.commissionChargeConfig = {appliesOn: withAll((p.commissionChargeConfig && p.commissionChargeConfig.appliesOn) || ['RideFare'], ['PaymentChargePaidByCustomerComponent', 'PaymentChargePaidByCustomerTaxComponent']), value: pm.environment.get('_test_commission_pct') + '%'};",
+              "        p.commissionTaxConfig = {cgst: null, igst: null, sgst: null, tax: Number(pm.environment.get('_test_commission_tax'))};",
+              "        return {farePolicyId: s.farePolicyId, policy: p};",
+              "    })};",
+              "    pm.environment.set('_fp_restore_body', JSON.stringify({replacements: restore}));",
+              "    pm.environment.set('_fp_test_body', JSON.stringify(testBody));",
+              "    console.log('Snapshotted fare policies:', restore.map(function (s) { return s.farePolicyId + ' tax=' + (s.policy.rideTaxConfig && s.policy.rideTaxConfig.tax) + ' comm=' + (s.policy.commissionChargeConfig && s.policy.commissionChargeConfig.value); }).join(', '));",
+              "};",
+              "var pending = ids.length;",
+              "ids.forEach(function (id) {",
+              "    pm.sendRequest({url: base + '/farePolicyV2/policy/' + id, method: 'GET', header: {token: token}}, function (err, res) {",
+              "        pm.test('Fare policy ' + id + ' fetched', function () { pm.expect(err).to.eql(null); pm.expect(res.code).to.eql(200); });",
+              "        snaps.push({farePolicyId: id, policy: res.json().policy});",
+              "        pending -= 1;",
+              "        if (pending === 0) finish();",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Apply Test Ride Tax and Commission (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/bulkReplace",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_fp_test_body}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Test tax and commission applied', function () { pm.response.to.have.status(200); });",
+              "console.log('bulkReplace:', JSON.stringify(d).slice(0, 400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ride Search",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"quotesUnifiedFlow\": true, \"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"00100\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"01530\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Search Results",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+              "// extra fare checks",
+              "pm.environment.set('_extra_is_card', true);",
+              "var exEst = (d.estimates || []).filter(function (e) { return e.id === pm.environment.get('estimateId'); })[0];",
+              "if (exEst) {",
+              "    var exTips = (exEst.tipOptions || []).filter(function (x) { return Number(x) > 0; });",
+              "    pm.environment.set('_cust_extra_gross', exTips.length > 0 ? Number(exTips[0]) : 2);",
+              "    pm.environment.set('_est_total_gross', Number(exEst.estimatedTotalFareWithCurrency.amount));",
+              "    console.log('Customer selected gross extra fare:', pm.environment.get('_cust_extra_gross'), 'tipOptions (gross):', JSON.stringify(exEst.tipOptions));",
+              "}",
+              "(function () {",
+              "var dfEst = ((pm.response.json() || {}).estimates || []).filter(function (e) { return e.id === pm.environment.get('estimateId'); })[0];",
+              "if (dfEst) {",
+              "    var dfPet = (dfEst.estimateFareBreakup || []).filter(function (b) { return b.title === 'PET_CHARGES'; })[0];",
+              "    pm.environment.set('_df_est_min_gross', Number(dfEst.totalFareRange.minFareWithCurrency.amount));",
+              "    pm.environment.set('_df_est_max_gross', Number(dfEst.totalFareRange.maxFareWithCurrency.amount));",
+              "    pm.environment.set('_df_pet_gross', dfEst.optionalCharges && dfEst.optionalCharges.petCharges !== null && dfEst.optionalCharges.petCharges !== undefined ? Number(dfEst.optionalCharges.petCharges) : 0);",
+              "    console.log('Drift inputs: min', pm.environment.get('_df_est_min_gross'), '| max', pm.environment.get('_df_est_max_gross'), '| pet', pm.environment.get('_df_pet_gross'), '| customer-selected', pm.environment.get('_cust_extra_gross'));",
+              "    pm.test('Drift: estimate exposes the pet charge', function () { pm.expect(dfPet, 'PET_CHARGES line in estimateFareBreakup').to.not.be.undefined; });",
+              "}",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results?paymentInstrument=Cash",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ],
+          "query": [
+            {
+              "key": "paymentInstrument",
+              "value": "Cash"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Select Estimate (Cash Payment)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"isPetRide\": true, \"autoAssignEnabledV2\": true, \"paymentInstrument\": {\"instrumentType\": \"Cash\", \"instrumentName\": \"Cash\"}, \"customerExtraFeeWithCurrency\": {\"amount\": {{_cust_extra_gross}}, \"currency\": \"{{currency}}\"}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait briefly before checking nearby requests",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver) { d.searchRequestsForDriver.sort(function (a, b) { return new Date(b.startTime) - new Date(a.startTime); }); }",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
+              "    pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "    pm.test('Has search requests', () => pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty);",
+              "    pm.collectionVariables.set('_nearby_attempt', '0');",
+              "} else {",
+              "    // Empty pool: driver-pool batch sizes are small (4); freshly-created test driver may not make first batch.",
+              "    // Pool fires successive batches every single_batch_process_time (~22s). Retry up to 8 times with 5s gaps",
+              "    // (~40s total) to catch a later batch that includes us.",
+              "    var attempt = parseInt(pm.collectionVariables.get('_nearby_attempt') || '0');",
+              "    if (attempt < 8) {",
+              "        console.log('Pool empty (attempt', attempt + 1, ') — retrying after busy-wait...');",
+              "        var t0 = Date.now(); while (Date.now() - t0 < 5000) {}",
+              "        pm.collectionVariables.set('_nearby_attempt', String(attempt + 1));",
+              "        pm.execution.setNextRequest(pm.info.requestName);",
+              "    } else {",
+              "        pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "        pm.test('Has search requests', () => pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty);",
+              "        pm.collectionVariables.set('_nearby_attempt', '0');",
+              "    }",
+              "}",
+              "// extra fare checks",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var exReq = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('_extra_commission_info', JSON.stringify(exReq.commissionInfo || null));",
+              "",
+              "var exRate = function (testKey, cityKey) { var t = pm.environment.get(testKey); return Number(t !== undefined && t !== null && t !== '' ? t : pm.environment.get(cityKey)) / 100; };",
+              "var exRideTax = exRate('_test_ride_tax', '_city_ride_tax_pct');",
+              "var exPcFactor = String(pm.environment.get('_extra_is_card')) === 'true' ? exRate('_test_pc_pct', '_city_pc_pct') * (1 + exRate('_test_pc_tax', '_city_pc_tax_pct')) : 0;",
+              "var exGrossOf = function (exclusive) { return exclusive * (1 + exRideTax) * (1 + exPcFactor); };",
+              "var exCommission = JSON.parse(pm.environment.get('_extra_commission_info') || 'null');",
+              "var exNetOf = function (exclusive, component) { var pct = exCommission && exCommission.commissionType === 'PERCENTAGE' && (exCommission.appliesOn || []).indexOf(component) >= 0 ? Number(exCommission.configuredCommission) / 100 : 0; return exclusive * (1 + exRideTax) - exclusive * pct; };",
+              "",
+              "    var exCustNet = exReq.customerExtraFeeWithCurrency ? Number(exReq.customerExtraFeeWithCurrency.amount) : 0;",
+              "    var exCustExclusive = Number(pm.environment.get('_cust_extra_gross')) / ((1 + exRideTax) * (1 + exPcFactor));",
+              "    pm.environment.set('_drv_cust_extra_net', exCustNet);",
+              "    pm.test('Driver sees the customer-selected fare net of rider tax and payment charge (gross ' + pm.environment.get('_cust_extra_gross') + ')', function () { pm.expect(exCustNet).to.be.closeTo(exNetOf(exCustExclusive, 'CustomerExtraFeeComponent'), 0.02); });",
+              "    var exStep = [exReq.driverStepFeeWithCurrency, exReq.driverDefaultStepFeeWithCurrencyV2, exReq.driverDefaultStepFeeWithCurrency, exReq.driverMinExtraFeeWithCurrency].map(function (p) { return p ? Number(p.amount) : 0; }).filter(function (x) { return x > 0; })[0];",
+              "    var exMaxNet = exReq.driverMaxExtraFeeWithCurrency ? Number(exReq.driverMaxExtraFeeWithCurrency.amount) : 0; if (exStep && exMaxNet >= 2 * exStep) exStep = Math.round(2 * exStep * 100) / 100; pm.environment.set('_drv_offer_net', exStep || '');",
+              "    pm.environment.set('_drv_offer_json', exStep ? JSON.stringify({amount: exStep, currency: exReq.baseFareWithCurrency.currency}) : 'null');",
+              "    console.log('Driver net customer extra:', exCustNet, '| driver net offer:', exStep || 'none');",
+              "}",
+              "(function () {",
+              "var nbNum = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var nbNetIdentity = function (label, b) {",
+              "    pm.test(label + ': net = total - tax - commission - payment charge', function () {",
+              "        pm.expect(nbNum(b.net)).to.be.closeTo(nbNum(b.total) - nbNum(b.deduction.tax) - nbNum(b.deduction.commission) - nbNum(b.deduction.paymentCharge), 0.011);",
+              "    });",
+              "};",
+              "var nbReq = ((pm.response.json() || {}).searchRequestsForDriver || []).slice().sort(function (a, b) { return new Date(b.startTime) - new Date(a.startTime); })[0];",
+              "if (nbReq && nbReq.baseFareBreakup) {",
+              "    var nbB = nbReq.baseFareBreakup;",
+              "    console.log('Net breakup (popup):', JSON.stringify(nbB), '| baseFare', nbNum(nbReq.baseFareWithCurrency));",
+              "    nbNetIdentity('Net breakup: popup base fare', nbB);",
+              "    pm.test('Net breakup: popup baseFare equals breakup net', function () { pm.expect(nbNum(nbReq.baseFareWithCurrency)).to.be.closeTo(nbNum(nbB.net), 0.011); });",
+              "    if (nbReq.commissionInfo) pm.test('Net breakup: popup commissionInfo total equals deducted commission', function () { pm.expect(nbNum(nbReq.commissionInfo.totalCommission)).to.be.closeTo(nbNum(nbB.deduction.commission), 0.011); });",
+              "    if (nbReq.paymentChargeInfo) pm.test('Net breakup: popup paymentChargeInfo total equals deducted payment charge', function () { pm.expect(nbNum(nbReq.paymentChargeInfo.totalPaymentCharge)).to.be.closeTo(nbNum(nbB.deduction.paymentCharge), 0.011); });",
+              "}",
+              "})();",
+              "(function () {",
+              "var dfNum = function (x) { return x === null || x === undefined ? 0 : Number(typeof x === 'object' ? x.amount : x); };",
+              "var dfEnv = function (k) { return Number(pm.environment.get(k) || 0); };",
+              "var dfReq = ((pm.response.json() || {}).searchRequestsForDriver || []).slice().sort(function (a, b) { return new Date(b.startTime) - new Date(a.startTime); })[0];",
+              "if (dfReq) {",
+              "    var dfGross = dfEnv('_df_est_min_gross') + dfEnv('_cust_extra_gross') + dfEnv('_df_pet_gross');",
+              "    console.log('Drift popup: expected gross', dfGross, '| breakup total', dfNum((dfReq.baseFareBreakup || {}).total), '| baseFare', dfNum(dfReq.baseFareWithCurrency), '| petCharges', dfReq.petCharges);",
+              "    pm.test('Drift: popup shows the pet charge', function () { pm.expect(dfReq.petCharges, 'popup petCharges').to.not.be.null; pm.expect(dfReq.petCharges).to.not.be.undefined; });",
+              "    pm.test('Drift: popup gross fare = estimate min fare + customer-selected fare + pet charge', function () { pm.expect(dfNum((dfReq.baseFareBreakup || {}).total)).to.be.closeTo(dfGross, 0.011); });",
+              "    var dfB = dfReq.baseFareBreakup;",
+              "    pm.test('Drift: popup has a net breakup', function () { pm.expect(dfB, 'baseFareBreakup').to.be.an('object'); });",
+              "    if (dfB) {",
+              "        pm.test('Drift: popup net base fare = (min fare + customer-selected fare + pet charge) - tax - commission - payment charge', function () {",
+              "            pm.expect(dfNum(dfReq.baseFareWithCurrency)).to.be.closeTo(dfGross - dfNum(dfB.deduction.tax) - dfNum(dfB.deduction.commission) - dfNum(dfB.deduction.paymentCharge), 0.011);",
+              "        });",
+              "    }",
+              "    pm.environment.set('_df_popup_net', dfNum(dfReq.baseFareWithCurrency));",
+              "}",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"offeredFareWithCurrency\": {{_drv_offer_json}}, \"response\": \"Accept\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var tries = Number(pm.environment.get('_booking_tries') || 0);",
+              "var found = d.list && d.list.length > 0 && d.list[0].rideList && d.list[0].rideList.length > 0;",
+              "if (!found && tries < 15) {",
+              "    pm.environment.set('_booking_tries', tries + 1);",
+              "    postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "    pm.environment.unset('_booking_tries');",
+              "    pm.test('Active booking with ride found', function () { pm.expect(found).to.eql(true); });",
+              "}",
+              "if (found) {",
+              "    var b = d.list[0];",
+              "    pm.environment.set('customer_bookingId', b.id);",
+              "    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+              "    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// fare breakup checks",
+              "var fbNum = function (x) { return Number(x && x.amountWithCurrency ? x.amountWithCurrency.amount : (x && typeof x === 'object' ? x.amount : x)); };",
+              "var fbRate = function (testKey, cityKey) { var t = pm.environment.get(testKey); return Number(t !== undefined && t !== null && t !== '' ? t : pm.environment.get(cityKey)); };",
+              "var fbIsTax = function (t) { return /(_TAX|_VAT|_CGST|_SGST|_IGST)$/.test(t) || ['TAX', 'CGST', 'SGST', 'FIXED_GOVERNMENT_RATE'].indexOf(t) >= 0; };",
+              "var fbCharges = ['TOLL_CHARGES', 'PARKING_CHARGE', 'PARKING_CHARGES', 'AIRPORT_ENTRY_FEE', 'CANCELLATION_CHARGES', 'RIDE_CANCELLATION_CHARGES', 'PLATFORM_FEE', 'PAYMENT_CHARGE'];",
+              "var fbCheck = function (label, lines, payable, offerSaved) {",
+              "    var amt = function (t) { return lines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + fbNum(l); }, 0); };",
+              "    var has = function (t) { return lines.some(function (l) { return l.description === t; }); };",
+              "    var sum = lines.filter(function (l) { return !/_(CGST|SGST|IGST)$/.test(l.description); }).reduce(function (a, l) { return a + fbNum(l); }, 0);",
+              "    var rideFare = lines.filter(function (l) { return !fbIsTax(l.description) && fbCharges.indexOf(l.description) < 0 && l.description !== 'BUYER_ADDITIONAL_AMOUNT'; }).reduce(function (a, l) { return a + fbNum(l); }, 0);",
+              "    console.log(label + ' breakup:', lines.map(function (l) { return l.description + '=' + fbNum(l); }).join(', '), '| payable', payable);",
+              "    pm.test(label + ': breakup lines sum to the payable fare', function () { pm.expect(sum).to.be.closeTo(payable, 0.011); });",
+              "    var rideTaxPct = fbRate('_test_ride_tax', '_city_ride_tax_pct');",
+              "    if (has('RIDE_FARE_TAX')) pm.test(label + ': RIDE_FARE_TAX is ' + rideTaxPct + '% of the ride fare components', function () { pm.expect(amt('RIDE_FARE_TAX')).to.be.closeTo(rideFare * rideTaxPct / 100, 0.011); });",
+              "    var tollTaxPct = Number(pm.environment.get('_city_toll_tax_pct'));",
+              "    if (has('TOLL_TAX') && amt('TOLL_CHARGES') > 0) pm.test(label + ': TOLL_TAX is ' + tollTaxPct + '% of the toll', function () { pm.expect(amt('TOLL_TAX')).to.be.closeTo(amt('TOLL_CHARGES') * tollTaxPct / 100, 0.011); });",
+              "    if (has('PAYMENT_CHARGE') && amt('PAYMENT_CHARGE') > 0) {",
+              "        var pcPct = fbRate('_test_pc_pct', '_city_pc_pct'), pcTaxPct = fbRate('_test_pc_tax', '_city_pc_tax_pct');",
+              "        var pcBase = sum - amt('PAYMENT_CHARGE') - amt('PAYMENT_CHARGE_TAX') - amt('BUYER_ADDITIONAL_AMOUNT') - (offerSaved || 0);",
+              "        pm.test(label + ': PAYMENT_CHARGE is ' + pcPct + '% of fare + tax', function () { pm.expect(amt('PAYMENT_CHARGE')).to.be.closeTo(pcBase * pcPct / 100, 0.011); });",
+              "        pm.test(label + ': PAYMENT_CHARGE_TAX is ' + pcTaxPct + '% of the payment charge', function () { pm.expect(amt('PAYMENT_CHARGE_TAX')).to.be.closeTo(amt('PAYMENT_CHARGE') * pcTaxPct / 100, 0.011); });",
+              "    }",
+              "};",
+              "var fbBooking = d.list && d.list[0];",
+              "var fbRide = fbBooking && fbBooking.rideList && fbBooking.rideList[0];",
+              "var fbOffers = fbRide && fbRide.selectedOffers;",
+              "var fbSaved = fbOffers ? fbNum(fbOffers.totalAmountSaved || fbOffers.estimatedTotalAmountSaved || 0) : 0;",
+              "if (fbBooking && (fbBooking.estimatedFareBreakup || []).length > 0 && fbBooking.estimatedTotalFareWithCurrency) fbCheck('Estimated', fbBooking.estimatedFareBreakup, fbNum(fbBooking.estimatedTotalFareWithCurrency), fbSaved);",
+              "if (fbRide && fbRide.computedPriceWithCurrency && (fbBooking.fareBreakup || []).length > 0) fbCheck('Final', fbBooking.fareBreakup, fbNum(fbRide.computedPriceWithCurrency), fbSaved);",
+              "// extra fare checks",
+              "if (d.list && d.list.length > 0 && d.list[0].rideList && d.list[0].rideList.length > 0) {",
+              "",
+              "var exRate = function (testKey, cityKey) { var t = pm.environment.get(testKey); return Number(t !== undefined && t !== null && t !== '' ? t : pm.environment.get(cityKey)) / 100; };",
+              "var exRideTax = exRate('_test_ride_tax', '_city_ride_tax_pct');",
+              "var exPcFactor = String(pm.environment.get('_extra_is_card')) === 'true' ? exRate('_test_pc_pct', '_city_pc_pct') * (1 + exRate('_test_pc_tax', '_city_pc_tax_pct')) : 0;",
+              "var exGrossOf = function (exclusive) { return exclusive * (1 + exRideTax) * (1 + exPcFactor); };",
+              "var exCommission = JSON.parse(pm.environment.get('_extra_commission_info') || 'null');",
+              "var exNetOf = function (exclusive, component) { var pct = exCommission && exCommission.commissionType === 'PERCENTAGE' && (exCommission.appliesOn || []).indexOf(component) >= 0 ? Number(exCommission.configuredCommission) / 100 : 0; return exclusive * (1 + exRideTax) - exclusive * pct; };",
+              "",
+              "    var exB = d.list[0];",
+              "    var exLine = function (t) { return (exB.estimatedFareBreakup || []).filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + Number(l.amountWithCurrency.amount); }, 0); };",
+              "    var exCustLine = exLine('CUSTOMER_SELECTED_FARE'), exDrvLine = exLine('DRIVER_SELECTED_FARE');",
+              "    var exCustGross = Number(pm.environment.get('_cust_extra_gross'));",
+              "    var exOffer = Number(pm.environment.get('_drv_offer_net') || 0);",
+              "    console.log('Rider lines: CUSTOMER_SELECTED_FARE', exCustLine, 'DRIVER_SELECTED_FARE', exDrvLine, '| estimate gross', pm.environment.get('_est_total_gross'), '-> booking gross', exB.estimatedTotalFareWithCurrency.amount);",
+              "    pm.test('Customer-selected fare grossed up equals the gross amount the rider chose', function () { pm.expect(exGrossOf(exCustLine)).to.be.closeTo(exCustGross, 0.02); });",
+              "    if (exOffer > 0) pm.test('Driver-selected fare on the rider side nets back to what the driver offered', function () { pm.expect(exNetOf(exDrvLine, 'DriverSelectedFareComponent')).to.be.closeTo(exOffer, 0.02); });",
+              "    pm.test('Booking gross = estimate gross + rider-chosen gross + gross of driver addition', function () { pm.expect(Number(exB.estimatedTotalFareWithCurrency.amount)).to.be.closeTo(Number(pm.environment.get('_est_total_gross')) + exCustGross + exGrossOf(exDrvLine), 0.05); });",
+              "}",
+              "(function () {",
+              "    var rb = (d && d.list) ? d.list[0] : d;",
+              "    var rr = rb && (rb.rideList || [])[0];",
+              "    if (!rr) return;",
+              "    pm.environment.set('_rider_ride_id', rr.id);",
+              "})();",
+              "(function () {",
+              "var dfBk = ((pm.response.json() || {}).list || [])[0];",
+              "if (dfBk && dfBk.rideList && dfBk.rideList.length > 0) {",
+              "    var dfEnvB = function (k) { return Number(pm.environment.get(k) || 0); };",
+              "    var dfLines = dfBk.estimatedFareBreakup || [];",
+              "    var dfLineAmt = function (l) { return Number(l.amountWithCurrency ? l.amountWithCurrency.amount : l.amount); };",
+              "    var dfAmt = function (t) { return dfLines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + dfLineAmt(l); }, 0); };",
+              "    var dfCharge = dfLines.filter(function (l) { return /^PAYMENT_CHARGE/.test(l.description) && !/_(CGST|SGST|IGST)$/.test(l.description); }).reduce(function (a, l) { return a + dfLineAmt(l); }, 0);",
+              "    var dfDriverSelected = dfAmt('DRIVER_SELECTED_FARE');",
+              "    var dfFare = Number(dfBk.estimatedFareWithCurrency.amount);",
+              "    var dfExpected = dfEnvB('_df_est_max_gross') + dfEnvB('_cust_extra_gross') + dfEnvB('_df_pet_gross') + dfDriverSelected;",
+              "    console.log('Drift booking: estimatedFare', dfFare, '| payment charge lines', dfCharge, '| driver-selected', dfDriverSelected, '| customer-selected', dfAmt('CUSTOMER_SELECTED_FARE'), '| pet', dfAmt('PET_CHARGES'), '| expected', dfExpected);",
+              "    if (dfEnvB('_drv_offer_net') > 0) pm.test('Drift: booking shows the driver-selected fare', function () { pm.expect(dfDriverSelected).to.be.above(0); });",
+              "    pm.test('Drift: booking customer-selected fare equals the fare selected at select', function () { pm.expect(dfAmt('CUSTOMER_SELECTED_FARE')).to.be.closeTo(dfEnvB('_cust_extra_gross'), 0.011); });",
+              "    pm.test('Drift: booking pet charge equals the estimate pet charge', function () { pm.expect(dfAmt('PET_CHARGES')).to.be.closeTo(dfEnvB('_df_pet_gross'), 0.011); });",
+              "    pm.test('Drift: booking estimated fare = estimate max fare + customer-selected fare + pet charge + driver-selected fare (+ customer payment charge)', function () { pm.expect(dfFare - dfCharge).to.be.closeTo(dfExpected, 0.011); });",
+              "    pm.environment.set('_df_booking_fare', dfFare);",
+              "}",
+              "})();",
+              "(function () {",
+              "var shBk = ((pm.response.json() || {}).list || [])[0];",
+              "if (shBk && shBk.rideList && shBk.rideList.length > 0) {",
+              "    var shEnv = function (k) { return Number(pm.environment.get(k) || 0); };",
+              "    var shRate = function (testKey, cityKey) { var t = pm.environment.get(testKey); return Number(t !== undefined && t !== null && t !== '' ? t : pm.environment.get(cityKey)) / 100; };",
+              "    var shPcFactor = String(pm.environment.get('_extra_is_card')) === 'true' ? shRate('_test_pc_pct', '_city_pc_pct') * (1 + shRate('_test_pc_tax', '_city_pc_tax_pct')) : 0;",
+              "    var shLines = shBk.estimatedFareBreakup || [];",
+              "    var shAmt = function (t) { return shLines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + Number(l.amountWithCurrency ? l.amountWithCurrency.amount : l.amount); }, 0); };",
+              "    var shDriverAddition = shAmt('DRIVER_SELECTED_FARE');",
+              "    var shExpected = shEnv('_est_total_gross') + shEnv('_cust_extra_gross') + (shEnv('_df_pet_gross') + shDriverAddition) * (1 + shPcFactor);",
+              "    var shTotal = Number(shBk.estimatedTotalFareWithCurrency.amount);",
+              "    var shFare = Number(shBk.estimatedFareWithCurrency.amount);",
+              "    console.log('Shown booking: estimate shown', shEnv('_est_total_gross'), '| tip shown', shEnv('_cust_extra_gross'), '| pet shown', shEnv('_df_pet_gross'), '| driver addition', shDriverAddition, '| payment charge factor', shPcFactor, '| expected', shExpected, '| booking total', shTotal, '| booking fare', shFare);",
+              "    pm.test('Shown: booking total = shown estimate fare + shown tip + (shown pet charge + driver addition) with payment charge', function () { pm.expect(shTotal).to.be.closeTo(shExpected, 0.03); });",
+              "    pm.test('Shown: booking fare equals booking total when no offer is applied', function () { pm.expect(shFare).to.be.closeTo(shTotal, 0.011); });",
+              "}",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// extra fare checks",
+              "var exRide = (d.list || [])[0];",
+              "if (exRide) {",
+              "    var exOffer = Number(pm.environment.get('_drv_offer_net') || 0);",
+              "    if (exOffer > 0) pm.test('Driver ride shows the driver-selected fare as the net amount offered', function () { pm.expect(Number(exRide.driverSelectedFareWithCurrency.amount)).to.be.closeTo(exOffer, 0.021); });",
+              "    pm.test('Driver ride shows the customer-selected fare net, as on the request', function () { pm.expect(exRide.customerExtraFeeWithCurrency ? Number(exRide.customerExtraFeeWithCurrency.amount) : 0).to.be.closeTo(Number(pm.environment.get('_drv_cust_extra_net') || 0), 0.011); });",
+              "}",
+              "(function () {",
+              "var nbNum = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var nbNetIdentity = function (label, b) {",
+              "    pm.test(label + ': net = total - tax - commission - payment charge', function () {",
+              "        pm.expect(nbNum(b.net)).to.be.closeTo(nbNum(b.total) - nbNum(b.deduction.tax) - nbNum(b.deduction.commission) - nbNum(b.deduction.paymentCharge), 0.011);",
+              "    });",
+              "};",
+              "var nbEstimatedChecks = function (rr) {",
+              "    var b = rr.estimatedBaseFareV2Breakup;",
+              "    if (!b) return;",
+              "    console.log('Net breakup (booking estimate):', JSON.stringify(b), '| V2', nbNum(rr.estimatedBaseFareWithCurrencyV2));",
+              "    nbNetIdentity('Net breakup: booking estimated fare', b);",
+              "    pm.test('Net breakup: estimatedBaseFareWithCurrencyV2 equals booking breakup net', function () { pm.expect(nbNum(rr.estimatedBaseFareWithCurrencyV2)).to.be.closeTo(nbNum(b.net), 0.011); });",
+              "};",
+              "var nbRide = ((pm.response.json() || {}).list || [])[0];",
+              "if (nbRide) nbEstimatedChecks(nbRide);",
+              "})();",
+              "(function () {",
+              "var dfRide = ((pm.response.json() || {}).list || [])[0];",
+              "if (dfRide) {",
+              "    var dfEnvR = function (k) { return Number(pm.environment.get(k) || 0); };",
+              "    var dfP = function (x) { return x === null || x === undefined ? 0 : Number(typeof x === 'object' ? x.amount : x); };",
+              "    console.log('Drift driver ride: V2 gross', dfP((dfRide.estimatedBaseFareV2Breakup || {}).total), '| V2 net', dfP(dfRide.estimatedBaseFareWithCurrencyV2), '| popup net', dfEnvR('_df_popup_net'), '| offer net', dfEnvR('_drv_offer_net'));",
+              "    pm.test('Drift: driver booking estimated fare equals the rider booking estimated fare', function () { pm.expect(dfP((dfRide.estimatedBaseFareV2Breakup || {}).total)).to.be.closeTo(dfEnvR('_df_booking_fare'), 0.011); });",
+              "    pm.test('Drift: driver booking net = popup net + driver-selected fare net', function () { pm.expect(dfP(dfRide.estimatedBaseFareWithCurrencyV2)).to.be.closeTo(dfEnvR('_df_popup_net') + dfEnvR('_drv_offer_net'), 0.03); });",
+              "    pm.test('Drift: driver ride is a pet ride', function () { pm.expect(dfRide.isPetRide).to.eql(true); });",
+              "}",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Driver Ride Invoices",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for invoice generation after ride end",
+              "const start = Date.now();",
+              "while (Date.now() - start < 2000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
+              "if (d.invoices && d.invoices.length > 0) {",
+              "    d.invoices.forEach(function(inv, i) {",
+              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+              "    });",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
+              "// invoice numbers for pdf checks",
+              "pm.environment.set('_driver_invoice_numbers', JSON.stringify(((pm.response.json() || {}).invoices || []).map(function (i) { return i.invoiceNumber; })));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "subscription",
+            "invoices"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride Invoice (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 3000) { /* wait for invoice generation */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Rider invoices:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
+              "if (d.invoices && d.invoices.length > 0) {",
+              "    d.invoices.forEach(function(inv, i) {",
+              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' status=' + inv.invoiceStatus + ' total=' + inv.totalAmount);",
+              "    });",
+              "}",
+              "// invoice numbers for pdf checks",
+              "pm.environment.set('_rider_invoice_numbers', JSON.stringify(((pm.response.json() || {}).invoices || []).map(function (i) { return i.invoiceNumber; })));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/invoice/list?invoiceType=%22Ride%22&limit=10&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Booking Completed",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var b = d.list && d.list[0];",
+              "var ride = b && b.rideList && b.rideList[0];",
+              "if (b) { console.log('Final booking:', b.id, 'Status:', b.status); }",
+              "if (ride) { console.log('Ride offers:', JSON.stringify(ride.selectedOffers)); }",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Ride completed', function () { pm.expect(b.status).to.equal('COMPLETED'); });",
+              "if (ride && ride.selectedOffers) {",
+              "    pm.test('Selected offers has offers array', function () { pm.expect(ride.selectedOffers).to.have.property('offers'); });",
+              "    pm.test('Selected offers has totalAmountSaved', function () { pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved'); });",
+              "    pm.test('Selected offers has totalPostOfferAmount', function () { pm.expect(ride.selectedOffers).to.have.property('totalPostOfferAmount'); });",
+              "    if (ride.selectedOffers.offers && ride.selectedOffers.offers.length > 0) {",
+              "        var offer = ride.selectedOffers.offers[0];",
+              "        pm.test('First offer has offerId', function () { pm.expect(offer).to.have.property('offerId'); });",
+              "        pm.test('First offer has amountSaved', function () { pm.expect(offer).to.have.property('amountSaved'); });",
+              "        pm.test('First offer has postOfferAmount', function () { pm.expect(offer).to.have.property('postOfferAmount'); });",
+              "    }",
+              "}",
+              "// fare breakup checks",
+              "var fbNum = function (x) { return Number(x && x.amountWithCurrency ? x.amountWithCurrency.amount : (x && typeof x === 'object' ? x.amount : x)); };",
+              "var fbRate = function (testKey, cityKey) { var t = pm.environment.get(testKey); return Number(t !== undefined && t !== null && t !== '' ? t : pm.environment.get(cityKey)); };",
+              "var fbIsTax = function (t) { return /(_TAX|_VAT|_CGST|_SGST|_IGST)$/.test(t) || ['TAX', 'CGST', 'SGST', 'FIXED_GOVERNMENT_RATE'].indexOf(t) >= 0; };",
+              "var fbCharges = ['TOLL_CHARGES', 'PARKING_CHARGE', 'PARKING_CHARGES', 'AIRPORT_ENTRY_FEE', 'CANCELLATION_CHARGES', 'RIDE_CANCELLATION_CHARGES', 'PLATFORM_FEE', 'PAYMENT_CHARGE'];",
+              "var fbCheck = function (label, lines, payable, offerSaved) {",
+              "    var amt = function (t) { return lines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + fbNum(l); }, 0); };",
+              "    var has = function (t) { return lines.some(function (l) { return l.description === t; }); };",
+              "    var sum = lines.filter(function (l) { return !/_(CGST|SGST|IGST)$/.test(l.description); }).reduce(function (a, l) { return a + fbNum(l); }, 0);",
+              "    var rideFare = lines.filter(function (l) { return !fbIsTax(l.description) && fbCharges.indexOf(l.description) < 0 && l.description !== 'BUYER_ADDITIONAL_AMOUNT'; }).reduce(function (a, l) { return a + fbNum(l); }, 0);",
+              "    console.log(label + ' breakup:', lines.map(function (l) { return l.description + '=' + fbNum(l); }).join(', '), '| payable', payable);",
+              "    pm.test(label + ': breakup lines sum to the payable fare', function () { pm.expect(sum).to.be.closeTo(payable, 0.011); });",
+              "    var rideTaxPct = fbRate('_test_ride_tax', '_city_ride_tax_pct');",
+              "    if (has('RIDE_FARE_TAX')) pm.test(label + ': RIDE_FARE_TAX is ' + rideTaxPct + '% of the ride fare components', function () { pm.expect(amt('RIDE_FARE_TAX')).to.be.closeTo(rideFare * rideTaxPct / 100, 0.011); });",
+              "    var tollTaxPct = Number(pm.environment.get('_city_toll_tax_pct'));",
+              "    if (has('TOLL_TAX') && amt('TOLL_CHARGES') > 0) pm.test(label + ': TOLL_TAX is ' + tollTaxPct + '% of the toll', function () { pm.expect(amt('TOLL_TAX')).to.be.closeTo(amt('TOLL_CHARGES') * tollTaxPct / 100, 0.011); });",
+              "    if (has('PAYMENT_CHARGE') && amt('PAYMENT_CHARGE') > 0) {",
+              "        var pcPct = fbRate('_test_pc_pct', '_city_pc_pct'), pcTaxPct = fbRate('_test_pc_tax', '_city_pc_tax_pct');",
+              "        var pcBase = sum - amt('PAYMENT_CHARGE') - amt('PAYMENT_CHARGE_TAX') - amt('BUYER_ADDITIONAL_AMOUNT') - (offerSaved || 0);",
+              "        pm.test(label + ': PAYMENT_CHARGE is ' + pcPct + '% of fare + tax', function () { pm.expect(amt('PAYMENT_CHARGE')).to.be.closeTo(pcBase * pcPct / 100, 0.011); });",
+              "        pm.test(label + ': PAYMENT_CHARGE_TAX is ' + pcTaxPct + '% of the payment charge', function () { pm.expect(amt('PAYMENT_CHARGE_TAX')).to.be.closeTo(amt('PAYMENT_CHARGE') * pcTaxPct / 100, 0.011); });",
+              "    }",
+              "};",
+              "var fbBooking = d.list && d.list[0];",
+              "var fbRide = fbBooking && fbBooking.rideList && fbBooking.rideList[0];",
+              "var fbOffers = fbRide && fbRide.selectedOffers;",
+              "var fbSaved = fbOffers ? fbNum(fbOffers.totalAmountSaved || fbOffers.estimatedTotalAmountSaved || 0) : 0;",
+              "if (fbBooking && (fbBooking.estimatedFareBreakup || []).length > 0 && fbBooking.estimatedTotalFareWithCurrency) fbCheck('Estimated', fbBooking.estimatedFareBreakup, fbNum(fbBooking.estimatedTotalFareWithCurrency), fbSaved);",
+              "if (fbRide && fbRide.computedPriceWithCurrency && (fbBooking.fareBreakup || []).length > 0) fbCheck('Final', fbBooking.fareBreakup, fbNum(fbRide.computedPriceWithCurrency), fbSaved);",
+              "(function () {",
+              "    var rb = (d && d.list) ? d.list[0] : d;",
+              "    var rr = rb && (rb.rideList || [])[0];",
+              "    if (!rr) return;",
+              "    pm.environment.set('_rider_ride_id', rr.id);",
+              "})();",
+              "// rider computed price for driver earnings",
+              "var reB = (d && d.list) ? d.list[0] : d;",
+              "var reRide = reB && (reB.rideList || [])[0];",
+              "if (reRide && reRide.computedPriceWithCurrency) pm.environment.set('_rider_computed_price', Number(reRide.computedPriceWithCurrency.amount));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride Earnings (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ride earnings: status 200', function () { pm.response.to.have.status(200); });",
+              "var r = pm.response.json();",
+              "var num = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var isCash = JSON.stringify(r.paymentInstrument || '').indexOf('Cash') >= 0;",
+              "var rows = (r.rideEarnings && r.rideEarnings.fareBreakup) || [];",
+              "var row = function (t) { return rows.filter(function (x) { return x.title === t; }).reduce(function (a, x) { return a + num(x.price); }, 0); };",
+              "var cashIn = num(r.amountToCollectInCash), online = num(r.amountToBeSettledOnline);",
+              "var gross = row('FARE_PAID_BY_CUSTOMER') + row('PAYMENT_CHARGE_PAID_BY_CUSTOMER') + row('DISCOUNT') + row('TIPS');",
+              "var deductions = row('COMMISSION') + row('TAX') + row('PAYMENT_CHARGE');",
+              "console.log('Ride earnings rows:', JSON.stringify(rows.map(function (x) { return [x.title, x._type, num(x.price)]; })), '| cash', cashIn, 'online', online, '| gross', gross, 'deductions', deductions, '| computedFare', num(r.computedFareWithCurrency));",
+              "pm.test('Ride earnings breakup is present for the completed ride', function () { pm.expect(rows.length).to.be.above(0); pm.expect(row('FARE_PAID_BY_CUSTOMER')).to.be.above(0); });",
+              "pm.test('Ride earnings rows carry the right earning or deduction type', function () {",
+              "    rows.forEach(function (x) {",
+              "        var expected = ['COMMISSION', 'TAX', 'PAYMENT_CHARGE'].indexOf(x.title) >= 0 ? 'Deduction' : 'Earning';",
+              "        pm.expect(x._type, x.title).to.equal(expected);",
+              "        pm.expect(x.section, x.title).to.equal('FareBreakup');",
+              "    });",
+              "});",
+              "var checkChildren = function (node, path) {",
+              "    var kids = node.subItems || [];",
+              "    if (kids.length === 0) return;",
+              "    var signed = kids.reduce(function (a, k) { return a + (k._type === 'Deduction' && path.indexOf('TAX') !== 0 ? -num(k.price) : num(k.price)); }, 0);",
+              "    if (path === 'FARE_PAID_BY_CUSTOMER') pm.test('Ride earnings sub-items of ' + path + ' do not exceed its amount', function () { pm.expect(signed).to.be.at.most(num(node.price) + 0.011 * kids.length); });",
+              "    else pm.test('Ride earnings sub-items of ' + path + ' add up to its amount', function () { pm.expect(signed).to.be.closeTo(num(node.price), 0.011 * kids.length); });",
+              "    kids.forEach(function (k) { checkChildren(k, path + ' > ' + k.title); });",
+              "};",
+              "rows.forEach(function (x) { checkChildren(x, x.title); });",
+              "pm.test('Ride earnings discount row matches the ride discount', function () { pm.expect(row('DISCOUNT')).to.be.closeTo(num(r.discountAmount) || 0, 0.011); });",
+              "pm.test('Ride earnings commission row matches the ride commission', function () { pm.expect(row('COMMISSION')).to.be.closeTo(num(r.commissionCharges) || 0, 0.011); });",
+              "pm.test('Ride earnings tips row matches the ride tip', function () { pm.expect(row('TIPS')).to.be.closeTo(num(r.tipAmount) || 0, 0.011); });",
+              "pm.test('Ride earnings payment charge row matches the payment charge on the ride', function () { pm.expect(row('PAYMENT_CHARGE')).to.be.closeTo(num(r.paymentCharge) || 0, 0.011); });",
+              "var riderPaid = pm.environment.get('_rider_computed_price');",
+              "if (riderPaid !== undefined && riderPaid !== null && riderPaid !== '') pm.test('Fare paid + discount + tips on the driver side equals the rider computed price', function () { pm.expect(gross).to.be.closeTo(Number(riderPaid), 0.02); });",
+              "if (isCash) {",
+              "    pm.test('Cash ride: amount to collect in cash = fare paid by the customer + tips (offer excluded)', function () { pm.expect(cashIn).to.be.closeTo(gross - row('DISCOUNT'), 0.011); });",
+              "    pm.test('Cash ride: amount settled online is the offer discount only', function () { if (row('DISCOUNT') > 0) pm.expect(online).to.be.closeTo(row('DISCOUNT'), 0.011); else pm.expect(online).to.equal(null); });",
+              "} else {",
+              "    pm.test('Online ride: nothing to collect in cash', function () { pm.expect(cashIn).to.equal(null); });",
+              "    pm.test('Online ride: amount settled online = gross - commission - tax deducted - payment charge', function () { pm.expect(online).to.be.closeTo(gross - row('COMMISSION') - row('TAX') - row('PAYMENT_CHARGE'), 0.011); });",
+              "}",
+              "var takeHome = gross - deductions;",
+              "pm.test('Driver take-home from the breakup = cash collected + settled online - deductions not already netted', function () {",
+              "    var netted = isCash ? row('COMMISSION') + row('TAX') + row('PAYMENT_CHARGE') : 0;",
+              "    pm.expect(takeHome).to.be.closeTo((cashIn || 0) + (online || 0) - netted, 0.02);",
+              "});",
+              "pm.test('Driver computed fare (net) equals the take-home in the earnings breakup', function () { pm.expect(num(r.computedFareWithCurrency)).to.be.closeTo(takeHome, 0.02); });",
+              "(function () {",
+              "var nbNum = function (x) { return x === null || x === undefined ? null : Number(typeof x === 'object' ? x.amount : x); };",
+              "var nbNetIdentity = function (label, b) {",
+              "    pm.test(label + ': net = total - tax - commission - payment charge', function () {",
+              "        pm.expect(nbNum(b.net)).to.be.closeTo(nbNum(b.total) - nbNum(b.deduction.tax) - nbNum(b.deduction.commission) - nbNum(b.deduction.paymentCharge), 0.011);",
+              "    });",
+              "};",
+              "var nbEstimatedChecks = function (rr) {",
+              "    var b = rr.estimatedBaseFareV2Breakup;",
+              "    if (!b) return;",
+              "    console.log('Net breakup (booking estimate):', JSON.stringify(b), '| V2', nbNum(rr.estimatedBaseFareWithCurrencyV2));",
+              "    nbNetIdentity('Net breakup: booking estimated fare', b);",
+              "    pm.test('Net breakup: estimatedBaseFareWithCurrencyV2 equals booking breakup net', function () { pm.expect(nbNum(rr.estimatedBaseFareWithCurrencyV2)).to.be.closeTo(nbNum(b.net), 0.011); });",
+              "};",
+              "var nbR = pm.response.json() || {};",
+              "nbEstimatedChecks(nbR);",
+              "var nbC = nbR.computedFareBreakup;",
+              "if (nbC) {",
+              "    var nbTip = nbNum(nbR.tipAmount) || 0;",
+              "    var nbIsCash = JSON.stringify(nbR.paymentInstrument || '').indexOf('Cash') >= 0;",
+              "    var nbRows = (nbR.rideEarnings && nbR.rideEarnings.fareBreakup) || [];",
+              "    var nbRow = function (t) { return nbRows.filter(function (x) { return x.title === t; }).reduce(function (a, x) { return a + nbNum(x.price); }, 0); };",
+              "    console.log('Net breakup (ride):', JSON.stringify(nbC), '| computedFare', nbNum(nbR.computedFareWithCurrency), '| tip', nbTip, '| online', nbNum(nbR.amountToBeSettledOnline));",
+              "    nbNetIdentity('Net breakup: final ride fare', nbC);",
+              "    pm.test('Net breakup: computedFare equals ride breakup net plus tip', function () { pm.expect(nbNum(nbR.computedFareWithCurrency)).to.be.closeTo(nbNum(nbC.net) + nbTip, 0.011); });",
+              "    if (!nbIsCash && nbR.amountToBeSettledOnline !== null && nbR.amountToBeSettledOnline !== undefined) pm.test('Net breakup: amount settled online equals computedFare', function () { pm.expect(nbNum(nbR.amountToBeSettledOnline)).to.be.closeTo(nbNum(nbR.computedFareWithCurrency), 0.011); });",
+              "    if (nbRows.length > 0) {",
+              "        pm.test('Net breakup: deducted commission matches the earnings COMMISSION row', function () { pm.expect(nbNum(nbC.deduction.commission)).to.be.closeTo(nbRow('COMMISSION'), 0.011); });\n        pm.test('Net breakup: deducted tax matches the earnings TAX row (GST deducts tax, VAT keeps it in net)', function () { pm.expect(nbNum(nbC.deduction.tax)).to.be.closeTo(nbRow('TAX'), 0.011); });",
+              "        pm.test('Net breakup: computedFare matches earnings gross minus deductions', function () {",
+              "            var earnGross = nbRow('FARE_PAID_BY_CUSTOMER') + nbRow('PAYMENT_CHARGE_PAID_BY_CUSTOMER') + nbRow('DISCOUNT') + nbRow('TIPS');",
+              "            pm.expect(nbNum(nbR.computedFareWithCurrency)).to.be.closeTo(earnGross - nbRow('COMMISSION') - nbRow('TAX') - nbRow('PAYMENT_CHARGE'), 0.011);",
+              "        });",
+              "    }",
+              "}",
+              "})();"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}?financeData=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}"
+          ],
+          "query": [
+            {
+              "key": "financeData",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride Invoice PDF (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Rider invoice PDF: status 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var b64 = d.pdfBase64 || '';",
+              "var head = b64 ? CryptoJS.enc.Base64.parse(b64.slice(0, 64)).toString(CryptoJS.enc.Latin1) : '';",
+              "var listed = JSON.parse(pm.environment.get('_rider_invoice_numbers') || '[]');",
+              "console.log('Rider invoice PDF:', d.invoiceNumber, '| base64 length', b64.length, '| header', JSON.stringify(head.slice(0, 8)), '| listed', JSON.stringify(listed));",
+              "pm.test('Rider invoice PDF has an invoice number', function () { pm.expect(d.invoiceNumber).to.be.a('string').and.not.empty; });",
+              "pm.test('Rider invoice PDF is base64 of a PDF document', function () { pm.expect(b64.length).to.be.above(100); pm.expect(head.indexOf('%PDF')).to.equal(0); });",
+              "if (listed.length > 0) pm.test('Rider invoice PDF is one of the listed ride invoices', function () { pm.expect(listed).to.include(d.invoiceNumber); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/finance/invoice/pdf?invoiceType=%22Ride%22&referenceId={{_rider_ride_id}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "referenceId",
+              "value": "{{_rider_ride_id}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride Invoice PDF (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver invoice PDF: status 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var b64 = d.pdfBase64 || '';",
+              "var head = b64 ? CryptoJS.enc.Base64.parse(b64.slice(0, 64)).toString(CryptoJS.enc.Latin1) : '';",
+              "var listed = JSON.parse(pm.environment.get('_driver_invoice_numbers') || '[]');",
+              "console.log('Driver invoice PDF:', d.invoiceNumber, '| base64 length', b64.length, '| header', JSON.stringify(head.slice(0, 8)), '| listed', JSON.stringify(listed));",
+              "pm.test('Driver invoice PDF has an invoice number', function () { pm.expect(d.invoiceNumber).to.be.a('string').and.not.empty; });",
+              "pm.test('Driver invoice PDF is base64 of a PDF document', function () { pm.expect(b64.length).to.be.above(100); pm.expect(head.indexOf('%PDF')).to.equal(0); });",
+              "if (listed.length > 0) pm.test('Driver invoice PDF is one of the listed ride invoices', function () { pm.expect(listed).to.include(d.invoiceNumber); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/finance/invoice/pdf?invoiceType=%22Ride%22&referenceId={{driver_ride_id}}",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "referenceId",
+              "value": "{{driver_ride_id}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Driver Wallet Transactions",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Give the ledger time to post wallet entries after ride end",
+              "const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Driver wallet balance:', d.currentBalance);",
+              "console.log('Period additions total:', d.additions && d.additions.totalAmount);",
+              "console.log('Period deductions total:', d.deductions && d.deductions.totalAmount);",
+              "if (d.additions && d.additions.items) {",
+              "    d.additions.items.forEach(function(it) { console.log('  + ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+              "}",
+              "if (d.deductions && d.deductions.items) {",
+              "    d.deductions.items.forEach(function(it) { console.log('  - ' + it.itemName + ' [' + it.itemReference + ']: ' + it.itemValue); });",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has additions group', function () { pm.expect(d.additions).to.be.an('object'); });",
+              "pm.test('Response has deductions group', function () { pm.expect(d.deductions).to.be.an('object'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/wallet/transactions",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "wallet",
+            "transactions"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": []
+}

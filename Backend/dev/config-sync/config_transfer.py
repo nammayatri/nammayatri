@@ -1695,6 +1695,11 @@ def _cmd_patch_inner(args, from_env, to_env, direction):
             print(f"  {w}")
         print()
 
+    prod_hosts = _find_production_hosts(dst_base, config_tables, schemas)
+    if prod_hosts:
+        _report_production_hosts(prod_hosts)
+        sys.exit(1)
+
     print(f"Patched data written to {dst_base}/")
 
     if getattr(args, "s3", False):
@@ -1758,6 +1763,37 @@ _RE_HTTP_NON_LOCAL = re.compile(
     r'http://(?!localhost)(?!0\.0\.0\.0)(?!127\.0\.0\.1)([^\s"\\,}{)\]]+)')
 _RE_SVC_CLUSTER = re.compile(r'[a-z0-9-]+\.[a-z]+\.svc\.cluster\.local')
 _RE_IP_PORT = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)')
+
+
+_RE_PROD_HOST = re.compile(r'(?<![A-Za-z0-9.-])((?:[A-Za-z0-9-]+\.)+(?:moving\.tech|beckn\.juspay\.in))(?![A-Za-z0-9-])')
+
+
+def _find_production_hosts(base, config_tables, schemas):
+    from collections import defaultdict
+
+    found = defaultdict(set)
+    for schema in schemas:
+        if schema not in config_tables:
+            continue
+        for table in list_table_files(base, "", schema):
+            for _, batch in iter_table_rows(base, "", schema, table):
+                for row in batch:
+                    for val in row.values():
+                        if not isinstance(val, str):
+                            continue
+                        for host in _RE_PROD_HOST.findall(val):
+                            if host.lower() not in _AUDIT_SAFE_DOMAINS:
+                                found[host.lower()].add(f"{schema}/{table}")
+    return found
+
+
+def _report_production_hosts(found):
+    print(f"\n{'=' * 60}")
+    print(f"PRODUCTION HOSTS LEFT AFTER PATCHING ({len(found)})")
+    print(f"{'=' * 60}")
+    for host, tables in sorted(found.items()):
+        print(f"  {host}  ({', '.join(sorted(tables))})")
+    print("Add global_replacements for these hosts in patches.json and re-run patch.\n")
 
 
 def _audit_patched_output(patched_base, source_base, config_tables, schemas):
@@ -1927,6 +1963,12 @@ def cmd_import(args):
     # Resolve ${VAR:default} port-templates carried in the patched data
     # against this user's nix-shell env. Idempotent — safe to re-run.
     _expand_patched_data_inplace(patched_base)
+
+    prod_hosts = _find_production_hosts(Path(args.local_dir) if args.local_dir else patched_base, config_tables, schemas)
+    if prod_hosts:
+        _report_production_hosts(prod_hosts)
+        if not getattr(args, "allow_production_hosts", False):
+            sys.exit("Refusing to import data that still points at production hosts (pass --allow-production-hosts to override).")
 
     mock_server_port = _resolved_mock_server_port() if to_env == "local" else None
     if mock_server_port:
@@ -2426,6 +2468,8 @@ Examples:
                              + ", ".join(f"{d}={DEFAULT_S3_PUBLIC_BUCKET.rstrip('/')}/{d}/{v}" for d, v in DEFAULT_FETCH_VERSIONS.items())))
     p_imp.add_argument("--skip-feature-migrations", action="store_true",
                        help="Skip running dev/feature-migrations/*.sql at the end of import (caller will run them separately)")
+    p_imp.add_argument("--allow-production-hosts", action="store_true",
+                       help="Import even if the patched data still references production hosts")
     p_imp.add_argument("--only-feature-migrations", action="store_true",
                        help="Run ONLY dev/feature-migrations/*.sql (skip the prod data import). Use after a separate import + seed step.")
 

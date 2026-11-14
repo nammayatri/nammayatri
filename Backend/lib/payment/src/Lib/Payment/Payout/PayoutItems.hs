@@ -35,7 +35,8 @@ data PayoutItem = PayoutItem
     transactionId :: Maybe Text,
     bankReference :: Maybe Text,
     bankReferenceType :: Maybe Text,
-    statusUpdatedAt :: UTCTime
+    statusUpdatedAt :: UTCTime,
+    merchantTopUpAmount :: Maybe Common.HighPrecMoney
   }
   deriving (Generic, Show)
 
@@ -88,7 +89,8 @@ toPayoutItem pr mbOrder =
       bankReference = mbReference,
       bankReferenceType = mbReferenceType,
       -- The request's last update; for a final payout, when it finished.
-      statusUpdatedAt = pr.updatedAt
+      statusUpdatedAt = pr.updatedAt,
+      merchantTopUpAmount = mbOrder >>= (.merchantTopUpAmount)
     }
   where
     -- Short id, else the order id.

@@ -75,6 +75,7 @@ library
       API.Internal.NotificationWebhook
       API.Internal.OfferDiscount
       API.Internal.OneShotAssign
+      API.Internal.PaymentChargeDetails
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.SendEmailOTP
@@ -711,6 +712,7 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.Settlement
       SharedLogic.SharedCab
       SharedLogic.SharedCab.Allocation
       SharedLogic.SharedCab.Allocation.Claim

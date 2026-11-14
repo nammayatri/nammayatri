@@ -214,8 +214,10 @@ buildSelectedQuote estimate providerInfo now req@QSRLite.SearchRequestLite {..} 
             isSafetyPlus = quoteDetails.isSafetyPlus,
             billingCategory = billingCategory,
             selectedOfferId = estimate.selectedOfferId,
+            selectedOfferDiscountAmount = estimate.selectedOfferDiscountAmount,
             area = estimate.area,
             navigationInstruction = estimate.navigationInstruction,
+            riderTaxRates = estimate.riderTaxRates,
             ..
           }
   pure quote
