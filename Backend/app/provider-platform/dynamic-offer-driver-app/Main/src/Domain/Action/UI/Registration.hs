@@ -125,7 +125,6 @@ import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Event as TE
 import qualified Tools.EventTracking as ET
-import Tools.MarketingEvents as TM
 import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
@@ -853,10 +852,11 @@ verify tokenId req mbXForwardedFor = do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   when (isNothing person.deviceToken) $ do
-    TM.notifyMarketingEvents person.id deviceToken TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId (Id merchantOperatingCityId)) [TM.FIREBASE]
     fork "track driver signed up event" $ do
       mbCity <- CQMOC.findById (Id merchantOperatingCityId)
-      ET.trackEvent (Id merchantOperatingCityId) $ ET.DriverSignedUp person.id.getId (maybe "unknown" (show . (.city)) mbCity)
+      let city = maybe "unknown" (show . (.city)) mbCity
+          merchantShortIdInitials = maybe "unknown" (T.take 2 . (.merchantShortId.getShortId)) mbCity
+      ET.trackEvent (Id merchantOperatingCityId) $ ET.DriverSignedUp person.id.getId merchantShortIdInitials city
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified True tokenId

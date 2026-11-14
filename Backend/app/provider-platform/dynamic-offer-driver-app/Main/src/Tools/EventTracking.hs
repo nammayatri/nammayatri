@@ -6,6 +6,7 @@ where
 
 import Data.Aeson (object, (.=))
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Kernel.External.EventTracking as EventTracking
@@ -21,7 +22,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 -- Add a constructor here and a case in 'eventToAction'; routing, credentials
 -- and delivery are shared by every event.
 data TrackingEvent
-  = DriverSignedUp Text Text -- driverId, city
+  = DriverSignedUp Text Text Text -- driverId, merchantShortIdInitials, city
   | DriverFirstRideCompleted Text (Maybe Text) -- driverId, vehicleCategory
   | DriverRideCompleted Text Text (Maybe Text) -- driverId, rideId, vehicleCategory
   | DriverRideCancelled Text Text Text -- driverId, rideId, cancelledBy
@@ -96,8 +97,8 @@ sendToProvider merchantOpCityId provider actionName req = do
 
 eventToAction :: TrackingEvent -> (Text, Text, Value)
 eventToAction = \case
-  DriverSignedUp driverId city ->
-    (driverId, "ny_driver_signed_up", object ["city" .= city, "identifiers" .= driverIdentifiers driverId])
+  DriverSignedUp driverId merchantShortIdInitials city ->
+    (driverId, T.toLower merchantShortIdInitials <> "_driver_signed_up", object ["city" .= city, "identifiers" .= driverIdentifiers driverId])
   DriverFirstRideCompleted driverId vehicleCategory ->
     (driverId, "ny_driver_first_ride_completed", object (["identifiers" .= driverIdentifiers driverId] <> maybe [] (\cat -> ["vehicle_category" .= cat]) vehicleCategory))
   DriverRideCompleted driverId rideId vehicleCategory ->
