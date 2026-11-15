@@ -312,11 +312,11 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       -- A booking with passenger or luggage counts gets the text that carries its group line.
       let mbGroup = luggageGroup booking
           pushKey = maybe DriverPush_Ride_ScheduledAssigned (const DriverPush_Ride_ScheduledAssignedWithGroup) mbGroup
-      (title, body) <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language pushKey (templateParams transporterConfig.timeDiffFromUtc booking <> [("group", fromMaybe "" mbGroup)]) (notificationTitle, messageForScheduled transporterConfig.timeDiffFromUtc booking)
-      Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION title body driver driver.deviceToken
+      content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language pushKey (templateParams transporterConfig.timeDiffFromUtc booking <> [("group", fromMaybe "" mbGroup)]) (notificationTitle, messageForScheduled transporterConfig.timeDiffFromUtc booking)
+      Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION content driver driver.deviceToken
     else do
-      (title, body) <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned (templateParams transporterConfig.timeDiffFromUtc booking) (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
-      Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType title body driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+      content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned (templateParams transporterConfig.timeDiffFromUtc booking) (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
+      Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType content driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}

@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.CachedQueries.Translations where
+module Storage.CachedQueries.Translations (findTextByKey, findTextByKeyWithFallback, findTextByKeyOrOpsText, findByOpsKey, findByOpsKeyInTable, clearCache) where
 
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
@@ -21,8 +21,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Translations as Beam
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.Queries.OrphanInstances.Translations
 import qualified Storage.Queries.Translations as Queries
 
@@ -74,17 +76,46 @@ findTextByKey cityId language key =
     |<|>| (if language == Lang.ENGLISH then pure Nothing else findTextByKeyInLanguage cityId Lang.ENGLISH key)
 
 -- | The text of a code-owned key in one language only: the key's own name, then its legacy name,
--- each as the city's row, then the shared one.
+-- each through config pilot as the city's row, then the shared one (see
+-- "Storage.ConfigPilot.Config.Translation").
 findTextByKeyInLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> m (Maybe Text)
 findTextByKeyInLanguage cityId language key = go (lookupNames key)
   where
     go [] = pure Nothing
     go (name : rest) = do
-      mbRow <- findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId name language
+      mbRow <- findByOpsKey cityId language name
       case mbRow of
         Just row | row.language == language -> pure (Just row.message)
         _ -> go rest
 
+-- | A text ops may have translated under the English text itself (tier names): the
+-- keyed row in the reader's language, then the row stored under the text, then the keyed English
+-- row, else the text.
+findTextByKeyOrOpsText :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> Text -> m Text
+findTextByKeyOrOpsText cityId language key text =
+  findTextByKeyInLanguage cityId language key >>= \case
+    Just keyed -> pure keyed
+    Nothing ->
+      findByOpsKey cityId language text >>= \case
+        Just row -> pure row.message
+        Nothing
+          | language == Lang.ENGLISH -> pure text
+          | otherwise -> fromMaybe text <$> findTextByKeyInLanguage cityId Lang.ENGLISH key
+
 -- | 'findTextByKey' in the reader's language (English when unset), else the code's own English text.
 findTextByKeyWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Text -> m Text
 findTextByKeyWithFallback cityId mbLanguage key fallback = fromMaybe fallback <$> findTextByKey cityId (fromMaybe Lang.ENGLISH mbLanguage) key
+
+-- | The row of a key that ops typed into a config row (cancellation reasons, pass texts, tier
+-- names stored as text): config pilot first, else the table. Text the code owns has a
+-- 'RiderTranslationKey' instead.
+findByOpsKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> Text -> m (Maybe Domain.Types.Translations.Translations)
+findByOpsKey cityId language key =
+  getConfig
+    (TranslationDimensions {merchantOperatingCityId = Just cityId.getId, messageKey = key, language = Just language})
+    (Just (findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId key language))
+
+-- | 'findByOpsKey' without config pilot: the table only, for rows seeded by SQL that config pilot
+-- never sees (the WhatsApp bot, see "Storage.Queries.TranslationsExtra").
+findByOpsKeyInTable :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> Text -> m (Maybe Domain.Types.Translations.Translations)
+findByOpsKeyInTable cityId language key = findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId key language

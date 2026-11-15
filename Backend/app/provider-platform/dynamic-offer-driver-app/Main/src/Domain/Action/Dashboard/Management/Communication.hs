@@ -55,6 +55,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (isFleetRole)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
@@ -778,7 +779,7 @@ dispatchFromPayload p = do
   case p.channel of
     DComm.CH_PUSH -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
-      Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE p.title p.body person person.deviceToken
+      Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE (Notify.prebuiltPushContent p.title p.body) person person.deviceToken
     DComm.CH_SMS -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for SMS")
@@ -789,13 +790,12 @@ dispatchFromPayload p = do
       case mbMerchantMsg of
         Just merchantMsg -> do
           -- Substitute {#var1#} with the body text to match the DLT template
-          let smsBody = T.replace "{#var1#}" p.body merchantMsg.message
-              sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
-          Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender merchantMsg.templateId merchantMsg.messageType) >>= Sms.checkSmsResult
+          smsReq <- MessageBuilder.buildSendSmsReq merchantMsg [("var1", p.body)]
+          Sms.sendSMS merchantId merchantOpCityId (smsReq phoneNumber) >>= Sms.checkSmsResult
         Nothing -> do
           -- Fallback: send as-is if no template found
           logWarning $ "No merchant_message template found for FLEET SMS, sending body as-is for delivery " <> p.deliveryId
-          Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq p.body phoneNumber smsCfg.sender (fromMaybe "" p.templateId) Nothing) >>= Sms.checkSmsResult
+          Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq (Sms.prebuiltSmsBody p.body) phoneNumber smsCfg.sender (fromMaybe "" p.templateId) Nothing) >>= Sms.checkSmsResult
     DComm.CH_WHATSAPP -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for WhatsApp")

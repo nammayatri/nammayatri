@@ -65,7 +65,7 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         }
   mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId DriverPush_Driver_Unblocked Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
-    let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
+    let entityData = mkNotifReq driver.id.getId (pushContentOfRow merchantPN [])
     notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
   return Complete
 

@@ -174,8 +174,8 @@ setOfflineIfBelowFloor transporterConfig person driverInfo floor' balance =
     DDriverMode.updateDriverModeAndFlowStatus person.id transporterConfig False (Just DCommon.OFFLINE) DDFS.OFFLINE driverInfo Nothing (Just now)
     logInfo $ "Wallet floor: driver " <> person.id.getId <> " set offline, balance " <> show balance <> " below " <> show floor'.requiredBalance
     fork "wallet floor offline notification" $ do
-      (title, message) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Wallet_OfflineBelowFloor [("requiredBalance", show floor'.requiredBalance)] ("You're offline", "Your wallet balance is below Rs." <> show floor'.requiredBalance <> ". Recharge your wallet to go online.")
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message person person.deviceToken
+      content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Wallet_OfflineBelowFloor [("requiredBalance", show floor'.requiredBalance)] ("You're offline", "Your wallet balance is below Rs." <> show floor'.requiredBalance <> ". Recharge your wallet to go online.")
+      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content person person.deviceToken
 
 -- | Follow-up to a debit that may have crossed a threshold (nightly fee, dues migration, penalty):
 --   when the driver's wallet is at or below the trigger level ('autopayTriggerBalance'), schedule an
@@ -217,8 +217,8 @@ afterWalletDebit transporterConfig driver = do
                 | otherwise -> (withMinimum DriverPush_Wallet_LowBalance DriverPush_Wallet_LowBalanceMinimum, "Your wallet balance is Rs." <> show balance <> ". Recharge your wallet." <> enforcedLine)
             templateParams = [("balance", show balance), ("rechargeAmount", maybe "" (show . (.platformFee.fee)) mbRecharge), ("minBalance", maybe "" show mbMinimum)]
         fork "wallet low balance nudge" $ do
-          (title, body) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language key templateParams ("Low wallet balance", message)
-          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title body driver driver.deviceToken
+          content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language key templateParams ("Low wallet balance", message)
+          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content driver driver.deviceToken
   where
     dwc = transporterConfig.driverWalletConfig
     lowBalanceNudgeKey driverId now = "WalletLowBalanceNudge:" <> driverId.getId <> ":" <> show (utctDay now)

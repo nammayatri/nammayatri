@@ -122,7 +122,7 @@ sendSms' :: Webhook.Contact -> Webhook.SmsMsg -> Flow ()
 sendSms' contact msg = do
   smsCfg <- asks (.smsCfg)
   let sender = fromMaybe smsCfg.sender msg.sender
-  Sms.sendSMS (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Sms.SendSMSReq msg.body msg.phoneNumber sender msg.templateId Nothing) >>= Sms.checkSmsResult
+  Sms.sendSMS (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Sms.SendSMSReq (Sms.prebuiltSmsBody msg.body) msg.phoneNumber sender msg.templateId Nothing) >>= Sms.checkSmsResult
 
 sendWhatsapp' :: Webhook.Contact -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq -> Flow ()
 sendWhatsapp' contact req = do

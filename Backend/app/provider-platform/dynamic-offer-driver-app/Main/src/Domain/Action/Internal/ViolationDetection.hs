@@ -66,7 +66,7 @@ violationDetection ViolationDetectionReq {..} = do
     notifyDriver driver pnKey = do
       mbMerchantPN <- CPN.findMatchingMerchantPNByKey driver.merchantOperatingCityId pnKey Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
-        let entityData = TN.NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
+        let entityData = TN.mkNotifReq driver.id.getId (TN.pushContentOfRow merchantPN [])
         TN.notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
 
     getAlertRequestData :: Text -> Maybe Text -> DTD.DetectionData -> Flow (Text, Text, AlertRequestData)

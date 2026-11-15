@@ -103,7 +103,7 @@ import Kernel.Types.Id
 import Kernel.Types.Price
 import qualified Kernel.Types.Time as Fields
 import Kernel.Utils.Common (fromMaybeM, throwError, withTryCatch)
-import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfoExtra as DGI
@@ -123,7 +123,6 @@ import SharedLogic.Settlement (driverTaxRates, netTaxExclusive, netTaxInclusive,
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Translations as CQTranslations
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -133,7 +132,6 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.StopInformation as QSI
-import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error (GenericError (InvalidRequest), LocationMappingError (..))
 import qualified Tools.Fields as Fields
@@ -518,8 +516,8 @@ buildFootnotes lang booking ride estimatedFareParams finalFareParams mbFreeWaiti
                   Just (UiTrByKey k _) -> [k]
                   Nothing -> [raw.title]
                   _ -> []
-          preferredRows <- catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))) allKeys
-          fallbackRows <- if lang == KET.ENGLISH then pure [] else catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just KET.ENGLISH}) (Just (QTranslations.findByErrorAndLanguage key KET.ENGLISH))) allKeys
+          preferredRows <- catMaybes <$> mapM (CQTranslations.findByOpsKey (Just ride.merchantOperatingCityId) lang) allKeys
+          fallbackRows <- if lang == KET.ENGLISH then pure [] else catMaybes <$> mapM (CQTranslations.findByOpsKey (Just ride.merchantOperatingCityId) KET.ENGLISH) allKeys
           let rows = preferredRows <> fallbackRows
               (preferred, fallbacks) = partition (\t -> t.language == lang) rows
               txMap =
@@ -580,7 +578,7 @@ resolveConfiguredLabel ::
   KET.Language ->
   Text ->
   m (Maybe Text)
-resolveConfiguredLabel lang key = fmap (fmap (.message)) $ getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))
+resolveConfiguredLabel lang key = fmap (.message) <$> CQTranslations.findByOpsKey Nothing lang key
 
 data EarningsLabels = EarningsLabels
   { lblAmountPaid :: Maybe Text,

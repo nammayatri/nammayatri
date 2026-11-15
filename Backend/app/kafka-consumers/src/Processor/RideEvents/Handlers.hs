@@ -134,7 +134,7 @@ import qualified Tools.DynamicLogic as DL
 import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
 import qualified "dynamic-offer-driver-app" Tools.Event as Event
-import "dynamic-offer-driver-app" Tools.Notifications (buildMerchantPNContentWithFallback, notifyDriver)
+import "dynamic-offer-driver-app" Tools.Notifications (PushContent, buildMerchantPNContentWithFallback, notifyDriver)
 import qualified "dynamic-offer-driver-app" Tools.SMS as Sms
 
 ------------------------------------------------------------
@@ -473,12 +473,11 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
         targetOpCity <- CQMOC.findById targetOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist targetOpCityId.getId)
         let cityName = show targetOpCity.city
             driverLanguage = driverPerson.language
-        (cityUpdatedTitle, cityUpdatedBody) <- buildMerchantPNContentWithFallback targetOpCityId driverLanguage DriverPush_City_Updated [("cityName", cityName)] ("Operating City Updated", "Your operating city has been updated to " <> cityName <> ".")
+        cityUpdatedContent <- buildMerchantPNContentWithFallback targetOpCityId driverLanguage DriverPush_City_Updated [("cityName", cityName)] ("Operating City Updated", "Your operating city has been updated to " <> cityName <> ".")
         notifyDriver
           targetOpCityId
           FCM.NEW_MESSAGE
-          cityUpdatedTitle
-          cityUpdatedBody
+          cityUpdatedContent
           driverPerson
           driverPerson.deviceToken
 
@@ -549,7 +548,7 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
       ) =>
       DP.Person ->
       Id DMOC.MerchantOperatingCity ->
-      [(LYT.TagNameValue, (Text, Text))] ->
+      [(LYT.TagNameValue, PushContent)] ->
       m ()
     applyNewTags person targetOpCityId candidateTags = do
       now <- getCurrentTime
@@ -569,9 +568,9 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
       Id DMOC.MerchantOperatingCity ->
       UTCTime ->
       [LYT.TagNameValueExpiry] ->
-      (LYT.TagNameValue, (Text, Text)) ->
+      (LYT.TagNameValue, PushContent) ->
       m [LYT.TagNameValueExpiry]
-    addTagIfAbsent person targetOpCityId now acc (tag, (title, body)) =
+    addTagIfAbsent person targetOpCityId now acc (tag, content) =
       if YTUtils.elemTagNameValue tag acc
         then pure acc
         else do
@@ -579,8 +578,7 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
           notifyDriver
             targetOpCityId
             FCM.NEW_MESSAGE
-            title
-            body
+            content
             person
             person.deviceToken
           pure $ YTUtils.replaceTagNameValue (Just acc) tagWithExpiry

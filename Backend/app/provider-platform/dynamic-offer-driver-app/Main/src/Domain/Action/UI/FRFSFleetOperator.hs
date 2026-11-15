@@ -68,7 +68,7 @@ import qualified Storage.Queries.MessageReport as MRQuery
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InternalError, InvalidRequest), MerchantError (MerchantServiceConfigNotFound))
 import qualified Tools.Fields as Fields
-import Tools.Notifications (NotifReq (..), buildMerchantPNContentWithFallback, notifyDriverOnEvents)
+import Tools.Notifications (buildMerchantPNContentWithFallback, mkNotifReq, notifyDriverOnEvents)
 
 getV2FrfsRoute ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -502,12 +502,12 @@ notifyDriverOfTripChange merchantId req gimsOps =
       case mbDriver of
         Nothing -> logWarning "FRFSFleetOperator: dashboard trip-action notify skipped - no matching driver/conductor for token"
         Just driver -> do
-          (title, message) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_FrfsTrip_Updated [] ("Trip updated", "Your trip was updated. Tap to refresh.")
+          content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_FrfsTrip_Updated [] ("Trip updated", "Your trip was updated. Tap to refresh.")
           notifyDriverOnEvents
             driver.merchantOperatingCityId
             driver.id
             driver.deviceToken
-            NotifReq {entityId = driver.id.getId, title, message}
+            (mkNotifReq driver.id.getId content)
             FCM.TRIP_UPDATED
 
 -- | Get current operation details

@@ -246,8 +246,8 @@ creditWalletForPaidDriverFees transporterConfig driver paymentOrderId feesBefore
     firstNotification <- Redis.setNxExpire ("WalletAutopayRechargeNotified:" <> fee.id.getId) (7 * 24 * 3600) True
     when firstNotification $
       fork "wallet autopay recharge notification" $ do
-        (title, message) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_AutopayRecharged [("amount", show (feeAmount fee))] ("Wallet recharged", "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay.")
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message driver driver.deviceToken
+        content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_AutopayRecharged [("amount", show (feeAmount fee))] ("Wallet recharged", "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay.")
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content driver driver.deviceToken
   forM_ latePaidWalletFees $ \fee -> do
     owner <- resolveWalletOwner (cast fee.driverId)
     void $ creditWallet owner walletReferenceLatePaymentCredit (paymentOrderId <> ":" <> fee.id.getId) fee

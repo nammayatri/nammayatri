@@ -882,8 +882,8 @@ notifyDriverOnScheduledRideAssigned ::
   m ()
 notifyDriverOnScheduledRideAssigned booking ride driver = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  (title, body) <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned [("startTime", Notify.showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)] (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
-  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType title body driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+  content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned [("startTime", Notify.showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)] (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType content driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"

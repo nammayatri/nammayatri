@@ -375,8 +375,8 @@ defaultSettlementHooks =
               if isPayoutOrderSuccess updPayoutStatus
                 then (DriverPush_Payout_Completed, "Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
                 else (DriverPush_Payout_Failed, "Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
-        (notificationTitle, notificationMessage) <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount)] (defaultTitle, defaultMessage)
-        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+        content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount)] (defaultTitle, defaultMessage)
+        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType content person person.deviceToken
     }
 
 payoutSettlementActionWith ::

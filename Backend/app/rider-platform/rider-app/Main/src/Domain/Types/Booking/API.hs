@@ -53,6 +53,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import qualified Domain.Types.Trip as Trip
 import Domain.Types.VehicleVariant (VehicleVariant (..))
 import Environment (Flow)
@@ -62,6 +63,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.FleetEngine.Config as Fields
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -95,6 +97,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -443,6 +446,9 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   rides <- mapM (buildRideAPIEntity (requesterId, booking, isOnlinePayment)) allRides
   person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
   riderMobile <- mapM decrypt person.mobileNumber
+  let language = fromMaybe Lang.ENGLISH person.language
+  serviceTierName <- traverse (CQTranslations.findTextByKeyOrOpsText booking.merchantOperatingCityId language (ServiceTier_Name booking.vehicleServiceTierType)) booking.serviceTierName
+  serviceTierShortDesc <- traverse (CQTranslations.findTextByKeyOrOpsText booking.merchantOperatingCityId language (ServiceTier_ShortDescription booking.vehicleServiceTierType)) booking.serviceTierShortDesc
   let riderName =
         let names = catMaybes [person.firstName, person.middleName, person.lastName]
          in if null names then Nothing else Just $ T.intercalate " " names
@@ -510,8 +516,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
         isAirConditioned = booking.isAirConditioned,
         driverCancellationNotAllowed = booking.driverCancellationNotAllowed,
-        serviceTierName = booking.serviceTierName,
-        serviceTierShortDesc = booking.serviceTierShortDesc,
+        serviceTierName,
+        serviceTierShortDesc,
         driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
         driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
         isScheduled = booking.isScheduled,

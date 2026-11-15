@@ -3,7 +3,6 @@ module Domain.Action.Internal.StopDetection where
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Booking as Fields
-import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as DRide
@@ -84,7 +83,7 @@ stopDetection StopDetectionReq {..} = do
   where
     sendNotificationCondition threshold suppressCount currStopCount = (currStopCount >= threshold) && (((currStopCount - threshold) `mod` suppressCount) == 0)
     sendStopDetectionAlert merchantOperatingCityId merchantPN driver = do
-      Notify.driverStopDetectionAlert merchantOperatingCityId Notification.DRIVER_STOP_DETECTED merchantPN.title merchantPN.body driver driver.deviceToken
+      Notify.driverStopDetectionAlert merchantOperatingCityId Notification.DRIVER_STOP_DETECTED (Notify.pushContentOfRow merchantPN []) driver driver.deviceToken
       logDebug $ "Successfully sent notification of Stopdetected to driverId" <> driverId.getId
 
 mkStopCountRedisKey :: Text -> Text

@@ -12,10 +12,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (CacheFlow, throwError)
-import Lib.ConfigPilot.Interface.Types (getConfig)
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.CallFeedbackOptions as CallFeedbackOptions
-import qualified Storage.Queries.Translations as Translations
 
 data Options = Options
   { messageKey :: Text,
@@ -35,7 +33,7 @@ makeCallFeedbackEntity callId category merchantOperatingCityId language = do
   optionsText <-
     mapM
       ( \option -> do
-          mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = option.messageKey, language = Just language}) (Just (Translations.findByErrorAndLanguage (option.messageKey) language))
+          mbTranslation <- CQTranslations.findByOpsKey (Just merchantOperatingCityId) language option.messageKey
           case mbTranslation of
             Just translation -> return $ Options {messageKey = option.messageKey, message = translation.message}
             Nothing -> throwError $ InternalError ("Translation not found for message key: " <> option.messageKey)

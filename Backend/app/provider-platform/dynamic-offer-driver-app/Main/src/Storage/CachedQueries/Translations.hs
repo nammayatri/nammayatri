@@ -12,11 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.CachedQueries.Translations (findTextByKey) where
+module Storage.CachedQueries.Translations (findTextByKey, findAllRowsByKeys, findByOpsKey) where
 
 import Control.Applicative ((<|>))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.TranslationKey (lookupNames)
+import Domain.Types.TranslationKey (keyName, lookupNames)
 import Domain.Types.TranslationKeys (TranslationKey)
 import qualified Domain.Types.Translations as DTranslations
 import Kernel.External.Types (Language)
@@ -41,7 +41,17 @@ findTextByKey mbCityId language key = go (lookupNames key) Nothing
       case mbRow of
         Just row | row.language == language -> pure (Just row.message)
         _ -> go rest (english <|> ((.message) <$> mbRow))
-    byName name =
-      getConfig
-        (TranslationDimensions {merchantOperatingCityId = getId <$> mbCityId, messageKey = name, language = Just language})
-        (Just (QTE.findByErrorAndLanguage name language))
+    byName = findByOpsKey mbCityId language
+
+-- | Every row stored under the keys' names, whatever its city or language; the caller picks.
+findAllRowsByKeys :: (CacheFlow m r, EsqDBFlow m r) => [TranslationKey] -> m [DTranslations.Translations]
+findAllRowsByKeys = QTE.findAllByMessageKeys . map keyName
+
+-- | The row of a key that ops typed into a config row (cancellation reasons, call-feedback options,
+-- fare sub-items, coin events): the city's row through config pilot, else the shared row in the
+-- language, else the shared English row. Text the code owns has a 'TranslationKey' instead.
+findByOpsKey :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DMOC.MerchantOperatingCity) -> Language -> Text -> m (Maybe DTranslations.Translations)
+findByOpsKey mbCityId language key =
+  getConfig
+    (TranslationDimensions {merchantOperatingCityId = getId <$> mbCityId, messageKey = key, language = Just language})
+    (Just (QTE.findByErrorAndLanguage key language))

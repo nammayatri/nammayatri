@@ -379,5 +379,5 @@ notifyBulkPayoutOutcome person order kind mbFailureDetail =
               "Your payout of Rs." <> show amount <> " has failed" <> maybe "" (": " <>) mbFailureDetail <> ". Please retry or contact support.",
               FCM.PAYOUT_FAILED
             )
-    (notificationTitle, notificationMessage) <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount), ("failureDetail", fromMaybe "" mbFailureDetail)] (defaultTitle, defaultMessage)
-    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+    content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount), ("failureDetail", fromMaybe "" mbFailureDetail)] (defaultTitle, defaultMessage)
+    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType content person person.deviceToken

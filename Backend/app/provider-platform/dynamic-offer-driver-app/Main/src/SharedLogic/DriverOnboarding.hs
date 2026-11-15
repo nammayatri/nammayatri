@@ -118,7 +118,6 @@ import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.ImageExtra as ImageQueryExtra
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.TranslationsExtra as QTE
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
@@ -883,7 +882,7 @@ cachedTexts :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperati
 cachedTexts _ _ _ [] = pure (const Nothing)
 cachedTexts owner merchantOpCityId language keys = do
   let keysDigest = show $ Hash.hashWith Hash.SHA256 (TE.encodeUtf8 (T.intercalate "," (DL.sort (map keyName keys))))
-  rows <- IM.withInMemCache ["ConfigPilot", show LYT.TranslationDriver, merchantOpCityId.getId, owner, keysDigest] 3600 $ QTE.findAllByMessageKeys (map keyName keys)
+  rows <- IM.withInMemCache ["ConfigPilot", show LYT.TranslationDriver, merchantOpCityId.getId, owner, keysDigest] 3600 $ CQTranslations.findAllRowsByKeys keys
   let wanted r = r.language `elem` [language, ENGLISH] && (isNothing r.merchantOperatingCityId || r.merchantOperatingCityId == Just merchantOpCityId)
       rank r = (if r.language == language then 0 else 1 :: Int, if isJust r.merchantOperatingCityId then 0 else 1 :: Int)
       best = Map.fromListWith (\a b -> if rank a <= rank b then a else b) [(r.messageKey, r) | r <- rows, wanted r]

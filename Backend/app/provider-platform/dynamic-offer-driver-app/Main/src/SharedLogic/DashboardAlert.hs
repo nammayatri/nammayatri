@@ -174,9 +174,9 @@ notifyOnboardingChange audiences entityType entityId action dynamicParams reques
   forM_ audiences $ \audience -> do
     mbLanguage <- audienceLanguage audience
     mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (DriverPush_OnboardingAlert action (audienceAccessType audience)) dynamicParams
-    whenJust mbContent $ \(title, body) ->
+    whenJust mbContent $ \content ->
       DAT.triggerRealtime driverAlertHandle [audience] $
-        buildOnboardingContent entityType entityId action title body requestorId merchantId merchantOpCityId
+        buildOnboardingContent entityType entityId action (TN.pushTitle content) (TN.pushBody content) requestorId merchantId merchantOpCityId
 
 notifyAdminsRealtime ::
   DashboardAlertFlow m r =>
@@ -261,7 +261,7 @@ notifyDashboardConfigChange audiences entityId mkRequestData dynamicParams reque
   forM_ audiences $ \audience -> do
     mbLanguage <- audienceLanguage audience
     mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (DriverPush_ConfigAlert requestType (audienceAccessType audience)) dynamicParams
-    whenJust mbContent $ \(title, body) ->
+    whenJust mbContent $ \content ->
       void $
         DAT.triggerPersist driverAlertHandle [audience] $
-          buildConfigContent entityId mkRequestData title body requestorId merchantId merchantOpCityId
+          buildConfigContent entityId mkRequestData (TN.pushTitle content) (TN.pushBody content) requestorId merchantId merchantOpCityId

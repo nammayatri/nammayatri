@@ -651,7 +651,7 @@ sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompl
         Just coinsMessage ->
           case T.splitOn " | " coinsMessage of
             [title, description] ->
-              Notify.sendCoinsNotificationV3 merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData metroRideType
+              Notify.sendCoinsNotificationV3 merchantOpCityId (Notify.prebuiltPushContent title (replaceCoinsValue description)) driver (driver.deviceToken) entityData metroRideType
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#pointsValue#}" (T.pack $ show coinsValue)
@@ -669,7 +669,7 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
           case T.splitOn " | " coinsMessage of
             [title, description] -> do
               let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driver (driver.deviceToken)
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS (Notify.prebuiltPushContent title descriptionReplaced) driver (driver.deviceToken)
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
@@ -689,7 +689,7 @@ sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
         Just coinsMessage ->
           case T.splitOn " | " coinsMessage of
             [title, description] ->
-              Notify.sendCoinsNotification merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData
+              Notify.sendCoinsNotification merchantOpCityId (Notify.prebuiltPushContent title (replaceCoinsValue description)) driver (driver.deviceToken) entityData
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)

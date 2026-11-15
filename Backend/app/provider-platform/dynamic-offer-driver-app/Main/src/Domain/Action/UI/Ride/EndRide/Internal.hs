@@ -474,8 +474,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 mbVC
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-            (balanceUpdatedTitle, balanceUpdateMessage) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_BalanceUpdated [("balance", show newBalance)] ("Subscription balance updated!", "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance)
-            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+            content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_BalanceUpdated [("balance", show newBalance)] ("Subscription balance updated!", "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance)
+            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE content driver driver.deviceToken
             (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER mbVC
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
@@ -495,8 +495,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
               logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-              (unsubscribedTitle, unsubscribedMessage) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_LowBalance [] ("Low Balance Alert!", "Your subscription balance is low. Please recharge to get rides")
-              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+              lowBalanceContent <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_LowBalance [] ("Low Balance Alert!", "Your subscription balance is low. Please recharge to get rides")
+              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED lowBalanceContent driver driver.deviceToken
             finalizeDeferredExpiry expiredPurchases ride.driverId.getId DSP.DRIVER mbVC
 
     mkRideDebitAllocationMetadata counterpartyType ownerId ownerType fare mbVC = do
