@@ -1,8 +1,9 @@
 'use strict';
 // What a signed-in driver may do, decided on the way through (phase 5 split,
 // 2026-10-06 -- moved out of server.js unchanged): the wallet gate (no top-up,
-// no work), the rating he gives a passenger reported to the console, and the
-// bound on a reply to the office. tests/auth-guard-routes.test.js and
+// no work), the rating he gives a passenger reported to the console, the
+// bound on a reply to the office, and (day 6, 2026-11-15) the ride's start
+// code, put into « start » here since the apps no longer ask for it. tests/auth-guard-routes.test.js and
 // auth-guard-wallet-gate.test.js hold the answers it must keep.
 
 const strip = (u) => String(u).replace(/\/$/, '');
@@ -116,4 +117,57 @@ async function walletAllows(token) {
   }
 }
 
-module.exports = { WALLET_URL, noteDriverRating, outOfBounds, isWork, walletAllows };
+/**
+ * ── The ride's start code, filled in here, 2026-11-15 (day 6, point 4) ──────
+ * The boss's decision: no four-digit code between passenger and driver any
+ * more. The driver server we run still compares the code « start » carries
+ * with the ride's (StartRide.hs, `IncorrectOTP`), and has no setting to stop
+ * (enableOtpLessRide came after our ref). So on
+ *
+ *     POST /ui/driver/ride/{rideId}/start   {rideOtp, point}
+ *
+ * the guard asks maps-shim for the ride's code -- with the driver's OWN token,
+ * so only for a ride that is his and not started (maps-shim/ride-start.js) --
+ * and puts it in `rideOtp` before forwarding. An older app that still sends
+ * four digits gets them replaced: any four digits start his ride.
+ *
+ * Fails CLOSED, unlike the wallet: when maps-shim cannot answer, or says the
+ * ride is not his, the request goes on exactly as it came, the driver server
+ * refuses it, and the app says « Réessayez ». The guard never guesses a code.
+ * The code itself is never logged, and never sent back to the phone: it goes
+ * from maps-shim to the driver server, through here, and nowhere else.
+ */
+const SHIM_URL = WALLET_URL; // the same maps-shim
+const START_RIDE = /^\/ui\/driver\/ride\/([^/]+)\/start\/?$/;
+
+/** The body to forward: `body` with the ride's real code in it, or `body` unchanged. */
+async function fillStartCode(pathname, method, body, token) {
+  const m = method === 'POST' ? START_RIDE.exec(pathname) : null;
+  if (!m) return body;
+  let parsed;
+  try {
+    parsed = JSON.parse(body.toString('utf8'));
+  } catch {
+    return body;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return body;
+  let code = null;
+  try {
+    const r = await fetch(`${SHIM_URL}/internal/ride-start-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: String(token || ''), rideId: decodeURIComponent(m[1]) }),
+      signal: AbortSignal.timeout(4000),
+    });
+    const j = r.ok ? await r.json() : null;
+    code = j && typeof j.code === 'string' && /^\d{4}$/.test(j.code) ? j.code : null;
+    if (!code) console.log(`[guard] driver: ride start, no code from maps-shim (${r.status}): forwarded as sent`);
+  } catch (err) {
+    console.warn(`[guard] driver: ride start, maps-shim unreachable (${err.message}): forwarded as sent`);
+  }
+  if (!code) return body;
+  console.log('[guard] driver: ride start, code filled in');
+  return Buffer.from(JSON.stringify({ ...parsed, rideOtp: code }), 'utf8');
+}
+
+module.exports = { WALLET_URL, noteDriverRating, outOfBounds, isWork, walletAllows, fillStartCode };

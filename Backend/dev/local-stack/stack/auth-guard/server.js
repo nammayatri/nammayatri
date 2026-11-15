@@ -92,7 +92,7 @@ const http = require('http');
 const whatsapp = require('./whatsapp');
 const smsInbox = require('./sms-inbox');
 const trusted = require('./trusted-phones');
-const { noteDriverRating, outOfBounds, isWork, walletAllows } = require('./driver-rules');
+const { noteDriverRating, outOfBounds, isWork, walletAllows, fillStartCode } = require('./driver-rules');
 const {
   MAX_STARTS, START_WINDOW_MS, MAX_STARTS_PER_IP, MAX_SMS_PER_HOUR, MAX_SMS_PER_DAY,
   smsSpend, smsBudgetLeft, starts, ipStarts, tooManyStarts, tooManyStartsFromIp, callerIp,
@@ -1045,6 +1045,9 @@ async function handle(req, res) {
       return send(res, 403, refusal('WALLET_EMPTY'));
     }
   }
+
+  /* ── the ride's start code, filled in: see `fillStartCode` ──────────────── */
+  if (route.name === 'driver') body = await fillStartCode(pathname, req.method, body, req.headers.token);
 
   /* ── everything else: forwarded unchanged ───────────────────────────────── */
   let up;

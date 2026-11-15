@@ -883,6 +883,108 @@
   ]
  },
  {
+  "label": "start his ride: the real code replaces 0000",
+  "request": "POST /ui/driver/ride/r-mine/start",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "POST",
+    "url": "/internal/ride-start-code",
+    "body": {
+     "token": "tok-rich",
+     "rideId": "r-mine"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/ride/r-mine/start",
+    "body": {
+     "rideOtp": "4821",
+     "point": {
+      "lat": 18.0858,
+      "lon": -15.9582
+     }
+    },
+    "token": "tok-rich"
+   }
+  ]
+ },
+ {
+  "label": "start a ride not his: forwarded as sent",
+  "request": "POST /ui/driver/ride/r-other/start",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "POST",
+    "url": "/internal/ride-start-code",
+    "body": {
+     "token": "tok-rich",
+     "rideId": "r-other"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/ride/r-other/start",
+    "body": {
+     "rideOtp": "0000",
+     "point": {
+      "lat": 18.0858,
+      "lon": -15.9582
+     }
+    },
+    "token": "tok-rich"
+   }
+  ]
+ },
+ {
+  "label": "start, maps-shim failing: forwarded as sent",
+  "request": "POST /ui/driver/ride/r-down/start",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "POST",
+    "url": "/internal/ride-start-code",
+    "body": {
+     "token": "tok-rich",
+     "rideId": "r-down"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/ride/r-down/start",
+    "body": {
+     "rideOtp": "0000",
+     "point": {
+      "lat": 18.0858,
+      "lon": -15.9582
+     }
+    },
+    "token": "tok-rich"
+   }
+  ]
+ },
+ {
   "label": "reply too long",
   "request": "PUT /ui/message/m1/response",
   "status": 400,

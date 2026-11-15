@@ -10,7 +10,7 @@
 // One scripted day through the real server.js: sign-ins in both countries,
 // wrong codes and the lock, a resend, an SMS the passenger sends, a trusted
 // phone, a number change, a driver's sign-in, the wallet gate, a rating, the
-// bounds, the limits, and /healthz before and after (its counters see every
+// ride's start code filled in (day 6), the bounds, the limits, and /healthz before and after (its counters see every
 // session, start and text). For each request the golden file holds the status,
 // whether retry-after was set, the body, and everything the guard said to the
 // backend, Moorsyl, maps-shim and admin-api. Random values -- codes, trust
@@ -58,8 +58,13 @@ const listen = (name, answer) => new Promise((r) => {
     if (req.url.endsWith('/send')) { vN += 1; return [200, { verificationId: `ver-${vN}` }]; }
     return [200, { status: body && body.code === '123456' ? 'approved' : 'pending' }];
   });
-  const shim = await listen('maps-shim', (req) => {
+  const shim = await listen('maps-shim', (req, body) => {
     if (req.url.startsWith('/wallet/status')) return [200, { canWork: req.headers.token === 'tok-rich' }];
+    if (req.url === '/internal/ride-start-code') {
+      if (body && body.rideId === 'r-down') return [502, { error: 'failed' }];
+      if (body && body.rideId === 'r-mine' && body.token === 'tok-rich') return [200, { code: '4821' }];
+      return [404, { error: 'no_such_ride' }];
+    }
     return [200, { ok: true }];
   });
   const admin = await listen('admin-api', () => [204, {}]);
@@ -189,6 +194,11 @@ const listen = (name, answer) => new Promise((r) => {
   await step('offline, no credit', 'POST', '/ui/driver/setActivity?active=false', {}, { token: 'tok-poor' });
   await step('accept, no credit', 'POST', '/ui/driver/searchRequest/quote/respond', { searchRequestId: 's', response: 'Accept' }, { token: 'tok-poor' });
   await step('rate the passenger', 'POST', '/ui/driver/ride/r1/rateCustomer', { ratingValue: 4 }, { token: 'tok-rich' });
+  // Day 6 (2026-11-15): the ride's start code, filled in by the guard.
+  const point = { lat: 18.0858, lon: -15.9582 };
+  await step('start his ride: the real code replaces 0000', 'POST', '/ui/driver/ride/r-mine/start', { rideOtp: '0000', point }, { token: 'tok-rich' });
+  await step('start a ride not his: forwarded as sent', 'POST', '/ui/driver/ride/r-other/start', { rideOtp: '0000', point }, { token: 'tok-rich' });
+  await step('start, maps-shim failing: forwarded as sent', 'POST', '/ui/driver/ride/r-down/start', { rideOtp: '0000', point }, { token: 'tok-rich' });
   await step('reply too long', 'PUT', '/ui/message/m1/response', { reply: 'x'.repeat(1001) }, { token: 'tok-rich' });
   await step('reply fine', 'PUT', '/ui/message/m1/response', { reply: 'merci' }, { token: 'tok-rich' });
   await step('anything else, forwarded', 'POST', '/v2/rideSearch', { contents: {} }, { token: 'tok-person' });

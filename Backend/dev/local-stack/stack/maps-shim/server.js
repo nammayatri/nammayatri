@@ -25,6 +25,7 @@ const deletion = require('./deletion');
 const pushRelay = require('./push-relay');
 const driverPush = require('./driver-push');
 const numberChange = require('./number-change');
+const rideStart = require('./ride-start');
 const { directions, OSRM_URL } = require('./directions');
 const { send } = require('./reply');
 const places = require('./places');
@@ -159,6 +160,36 @@ http.createServer((req, res) => {
       } catch (e) {
         console.error(`[number-change] ${e.message}`);
         send(res, 502, { ok: false, error: 'failed' });
+      }
+    });
+    return undefined;
+  }
+
+  // The ride's start code, for the auth guard to put into « start » (day 6,
+  // 2026-11-15: the code went from the apps). Loopback only, like
+  // number-change: the guard is the one caller, on the host network, and the
+  // edge routes nothing under /internal/. See ride-start.js.
+  if (url.pathname === '/internal/ride-start-code') {
+    const from = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    if (from !== '127.0.0.1' && from !== '::1') return send(res, 403, { error: 'local callers only' });
+    if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > 4096) return void req.destroy();
+      chunks.push(c);
+    });
+    req.on('end', async () => {
+      let body = {};
+      try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { /* refused below */ }
+      try {
+        const b = body && typeof body === 'object' ? body : {};
+        const r = await rideStart.startCode(pool, DRIVER_URL, b.token, b.rideId);
+        send(res, r.status, r.body);
+      } catch (e) {
+        console.error(`[ride-start] ${e.message}`);
+        send(res, 502, { error: 'failed' });
       }
     });
     return undefined;
