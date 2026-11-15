@@ -13,7 +13,11 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( buildSendSmsReq,
+  ( SmsBody,
+    smsBodyText,
+    prebuiltSmsBody,
+    SendSMSReq (..),
+    buildSendSmsReq,
     BuildSendOTPMessageReq (..),
     BuildSOSAlertMessageReq (..),
     buildSendOTPMessage,
@@ -76,11 +80,32 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
-import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+-- | The text an SMS carries: a @merchant_message@ row's text with its placeholders filled (the @build*Message@
+-- functions here), or 'prebuiltSmsBody' for text that is final before it gets here. Only this module builds one.
+newtype SmsBody = SmsBody Text
+
+smsBodyText :: SmsBody -> Text
+smsBodyText (SmsBody text) = text
+
+-- | For text that is already final: handed over by another service (internal SMS API, notification webhooks) or
+-- transformed by hand after the row lookup (scheduled ride notifications). Never a string literal: a message a user
+-- reads belongs in a @merchant_message@ row.
+prebuiltSmsBody :: Text -> SmsBody
+prebuiltSmsBody = SmsBody
+
+-- | 'Kernel.External.SMS.SendSMSReq' with the body typed; 'Tools.SMS.sendSMS' converts it back.
+data SendSMSReq = SendSMSReq
+  { smsBody :: SmsBody,
+    phoneNumber :: Text,
+    sender :: Text,
+    templateId :: Text,
+    messageType :: Maybe Text
+  }
 
 -- | Substitute {#key#} placeholders in a template with the given key/value pairs.
 substituteVariables :: Text -> [(Text, Text)] -> Text
@@ -105,16 +130,16 @@ type BuildMessageFlow m r =
     CacheFlow m r
   )
 
-type SmsReqBuilder = Text -> Sms.SendSMSReq
+type SmsReqBuilder = Text -> SendSMSReq
 
 buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
 buildSendSmsReq merchantMessage vars = do
   smsCfg <- asks (.smsCfg)
-  let smsBody = substituteVariables merchantMessage.message vars
+  let smsBody = SmsBody (substituteVariables merchantMessage.message vars)
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
       messageType = merchantMessage.messageType
-  return $ \phoneNumber -> Sms.SendSMSReq {..}
+  return $ \phoneNumber -> SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   { otp :: Text,

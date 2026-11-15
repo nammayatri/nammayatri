@@ -171,8 +171,8 @@ endedPushKey = \case
 notifyEnded :: AvailableForRidesEndFlow m r => DP.Person -> AvailableForRidesEndReason -> m ()
 notifyEnded person reason = do
   let merchantOpCityId = person.merchantOperatingCityId
-  (title, body) <- Notify.buildMerchantPNContentWithFallback merchantOpCityId (Just $ fromMaybe ENGLISH person.language) (endedPushKey reason) [] (defaultEndedContent reason)
-  Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY title body person person.deviceToken Nothing $
+  content <- Notify.buildMerchantPNContentWithFallback merchantOpCityId (Just $ fromMaybe ENGLISH person.language) (endedPushKey reason) [] (defaultEndedContent reason)
+  Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY content person person.deviceToken Nothing $
     AvailableForRidesEndedData {event = availableForRidesEndedEvent, reason}
 
 enabledConfig :: TransporterConfig -> Maybe (Minutes, Int, Int)

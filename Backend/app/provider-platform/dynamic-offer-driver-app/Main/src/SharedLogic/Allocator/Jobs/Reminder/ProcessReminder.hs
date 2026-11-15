@@ -18,7 +18,6 @@ module SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
 where
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Text as Text
 import qualified Data.Time as Time
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -100,7 +99,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCExtra
 import Tools.Error (DriverOnboardingError (ImageNotValid, RCNotFound), GenericError (InternalError))
 import qualified Tools.Fields as Fields
-import Tools.Notifications (NotifReq (..), buildMerchantPNContentWithFallback, notifyDriverOnEvents, notifyWithGRPCProvider)
+import Tools.Notifications (buildMerchantPNContentWithFallback, mkNotifReq, notifyDriverOnEvents, notifyWithGRPCProvider, pushContentOfRow)
 import qualified Tools.SMS as Sms
 
 -- Document types that have expiry dates and are processed by processDocumentExpiryReminder
@@ -601,21 +600,18 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
     Nothing -> pure Nothing
   case mbMerchantPN of
     Just merchantPN -> do
-      (title, body) <- case notificationType of
+      templateParams <- case notificationType of
         FCM.DOCUMENT_EXPIRY_REMINDER -> do
           documentTypeName <- translatedDocumentType
-          pure
-            ( Text.replace "{#documentType#}" documentTypeName merchantPN.title,
-              Text.replace "{#documentType#}" documentTypeName merchantPN.body
-            )
-        _ -> pure (merchantPN.title, merchantPN.body)
-      let entityData = NotifReq {entityId = reminder.entityId, title, message = body}
+          pure [("documentType", documentTypeName)]
+        _ -> pure []
+      let entityData = mkNotifReq reminder.entityId (pushContentOfRow merchantPN templateParams)
       notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
     Nothing -> logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
 
   -- Send SMS to driver
   -- For DOCUMENT_EXPIRY_REMINDER_SMS, use MessageBuilder to replace template variables
-  mbSmsInfo <-
+  mbSmsReq <-
     if messageKey == DMM.DOCUMENT_EXPIRY_REMINDER_SMS
       then do
         documentTypeName <- translatedDocumentType
@@ -626,21 +622,18 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
             (MessageBuilder.BuildDocumentExpiryReminderMessageReq {documentType = documentTypeName})
         smsCfg <- asks (.smsCfg)
         let sender = fromMaybe smsCfg.sender mbSender
-        pure $ Just (msg, sender, templateId, messageType)
+        pure $ Just $ \phoneNumber -> Sms.SendSMSReq msg phoneNumber sender templateId messageType
       else do
         CMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey driver.language Nothing Nothing >>= \case
-          Just merchantMsg -> do
-            smsCfg <- asks (.smsCfg)
-            let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
-            pure $ Just (merchantMsg.message, sender, merchantMsg.templateId, merchantMsg.messageType)
+          Just merchantMsg -> Just <$> MessageBuilder.buildSendSmsReq merchantMsg []
           Nothing -> do
             logInfo $ "MerchantMessage not found for " <> show messageKey <> ", skipping SMS"
             pure Nothing
-  whenJust mbSmsInfo $ \(smsMessage, smsSender, smsTemplateId, messageType) -> do
+  whenJust mbSmsReq $ \smsReq -> do
     mbPhoneNumber <- mapM decrypt driver.mobileNumber
     case mbPhoneNumber of
       Just phoneNumber -> do
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
+        Sms.sendSMS driver.merchantId merchantOpCityId (smsReq phoneNumber) >>= Sms.checkSmsResult
       Nothing -> logInfo "Driver mobile number not available, skipping SMS"
   where
     translatedDocumentType = SDO.translateDocumentType merchantOpCityId (fromMaybe ENGLISH driver.language) reminder.documentType
@@ -720,8 +713,8 @@ notifyInLanguage ::
   m ()
 notifyInLanguage merchantOpCityId recipientId language pushKey templateParams fallbackContent entityData = do
   params <- templateParams (fromMaybe ENGLISH language)
-  (title, body) <- buildMerchantPNContentWithFallback merchantOpCityId language pushKey params fallbackContent
-  notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title body recipientId Nothing entityData
+  content <- buildMerchantPNContentWithFallback merchantOpCityId language pushKey params fallbackContent
+  notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY content recipientId Nothing entityData
 
 -- Helper function to send document expiry notifications
 sendDocumentExpiryNotification ::

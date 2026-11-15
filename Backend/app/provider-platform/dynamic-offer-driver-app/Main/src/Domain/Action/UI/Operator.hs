@@ -1,7 +1,6 @@
 module Domain.Action.UI.Operator (postOperatorConsent) where
 
 import Data.Maybe
-import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Types.DriverInformation as DI
@@ -72,7 +71,5 @@ postOperatorConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOperatingCityId DriverPush_Driver_OperatorConsent Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
-    let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title
-    let body = T.replace "{#operatorName#}" operator.firstName merchantPN.body
-    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
+    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType (TN.pushContentOfRow merchantPN [("operatorName", operator.firstName)]) driver driver.deviceToken
   pure Success

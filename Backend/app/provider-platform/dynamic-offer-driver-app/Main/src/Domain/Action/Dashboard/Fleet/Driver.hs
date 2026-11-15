@@ -602,8 +602,8 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
       DTA.REJECTED -> do
-        (title, body) <- Notification.buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Driver_ApprovalRequestRejected [("requestType", requestType driverRequest)] ("Request Rejected!", message driverRequest)
-        Notification.requestRejectionNotification merchantOpCityId title body driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
+        content <- Notification.buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Driver_ApprovalRequestRejected [("requestType", requestType driverRequest)] ("Request Rejected!", message driverRequest)
+        Notification.requestRejectionNotification merchantOpCityId content driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
       DTA.ACCEPTED -> do
         case driverRequest.requestData of
           DTA.EndRide DTA.EndRideData {..} -> do
@@ -4573,12 +4573,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
 
   mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId pnType Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
-    let notification =
-          Notification.NotifReq
-            { title = merchantPN.title,
-              message = messageBuilder merchantPN,
-              entityId = driverId.getId
-            }
+    let notification = Notification.mkNotifReq driverId.getId (Notification.prebuiltPushContent merchantPN.title (messageBuilder merchantPN))
     Notification.notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken notification merchantPN.fcmNotificationType
   pure Success
 

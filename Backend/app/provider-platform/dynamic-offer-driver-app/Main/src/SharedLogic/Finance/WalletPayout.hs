@@ -356,8 +356,8 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             dailyStatsId = Nothing
           }
       initiatedPush = do
-        (title, body) <- Notify.buildMerchantPNContentWithFallback ctx.person.merchantOperatingCityId ctx.person.language (if fee > 0 then DriverPush_Payout_InitiatedWithFee else DriverPush_Payout_Initiated) [("amount", show netAmount), ("fee", show fee)] ("Payout Initiated", "Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "")
-        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED title body ctx.person ctx.person.deviceToken
+        content <- Notify.buildMerchantPNContentWithFallback ctx.person.merchantOperatingCityId ctx.person.language (if fee > 0 then DriverPush_Payout_InitiatedWithFee else DriverPush_Payout_Initiated) [("amount", show netAmount), ("fee", show fee)] ("Payout Initiated", "Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "")
+        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED content ctx.person ctx.person.deviceToken
 
   if netAmount <= 0.0
     then pure Nothing

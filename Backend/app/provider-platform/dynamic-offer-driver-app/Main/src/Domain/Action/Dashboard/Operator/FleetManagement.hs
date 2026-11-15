@@ -184,7 +184,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
         { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         }
   let sender = fromMaybe smsCfg.sender mbSender
-  SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
+  SMSHelper.sendSMS merchant.id merchantOpCityId (SMSHelper.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
   pure Kernel.Types.APISuccess.Success
 
@@ -270,7 +270,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
                 otp = otpCode
               }
         let sender = fromMaybe smsCfg.sender mbSenderHeader
-        SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
+        SMSHelper.sendSMS merchant.id merchantOpCityId (SMSHelper.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
       Redis.setExp key otpCode 3600
   pure $
     Common.FleetOwnerSendOtpRes
@@ -331,7 +331,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
             { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
             }
       let sender = fromMaybe smsCfg.sender mbSender
-      SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
+      SMSHelper.sendSMS merchant.id merchantOpCityId (SMSHelper.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
     case res of
       Left err -> logError $ "Failed to send sms about fleet link. Please check templates: " <> show err
       Right () -> pure ()

@@ -27,9 +27,7 @@ import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Translations as CQTranslations
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -57,7 +55,7 @@ getCancellationReasonsForBooking booking mbLang = do
       language = fromMaybe Lang.ENGLISH mbLang
   configs <- CancelLogic.computeCancellationReasons (cast merchantOperatingCityId) hasRideAssigned isAC
   forM configs $ \CancelLogic.CancellationReasonConfig {code, iconUrl} -> do
-    mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (getId merchantOperatingCityId), messageKey = code, language = Just language}) (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache (cast merchantOperatingCityId) code language))
+    mbTranslation <- CQTranslations.findByOpsKey (cast merchantOperatingCityId) language code
     let resolvedText = maybe (mkDefaultText code) (.message) mbTranslation
     pure $ API.CancellationReasonEntity {code = code, iconUrl = iconUrl, text = resolvedText}
   where

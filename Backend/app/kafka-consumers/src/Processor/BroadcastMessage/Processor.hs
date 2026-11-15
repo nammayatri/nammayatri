@@ -29,14 +29,14 @@ import Kernel.Types.Time
 import Kernel.Utils.Common (withTryCatch)
 import "dynamic-offer-driver-app" Storage.Queries.MessageReport as MRQuery
 import "dynamic-offer-driver-app" Storage.Queries.Person as Person
-import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
+import "dynamic-offer-driver-app" Tools.Notifications (prebuiltPushContent, sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do
   mDriver <- Person.findById (Id driverId)
   whenJust mDriver $ \driver -> do
     let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
-    exep <- withTryCatch "sendMessageToDriver" (sendMessageToDriver driver.merchantOperatingCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver message.id)
+    exep <- withTryCatch "sendMessageToDriver" (sendMessageToDriver driver.merchantOperatingCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE (prebuiltPushContent message.title message.shortDescription) driver message.id)
     let dStatus = case exep of
           Left _ -> Types.Failed
           Right _ -> Types.Success

@@ -2933,7 +2933,7 @@ sendDocumentSms merchantOpCityId smsBody driver = do
           phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
           templateId = "" -- no dedicated template; send plain text
-      Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender templateId Nothing) >>= Sms.checkSmsResult
+      Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq (Sms.prebuiltSmsBody smsBody) phoneNumber sender templateId Nothing) >>= Sms.checkSmsResult
 
 isDashboardSmsEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
 isDashboardSmsEnabled merchantOpCityId =
@@ -2954,7 +2954,7 @@ sendDocumentDecisionNotification merchantOpCityId docType decision driver = do
       smsBody = buildSmsMessage translatedDocType reason smsTemplates
   if T.null body
     then logInfo $ "Skipping " <> show messageKey <> " push for " <> driver.id.getId <> ": no template configured"
-    else Notify.notifyDriver merchantOpCityId fcmType title body driver driver.deviceToken
+    else Notify.notifyDriver merchantOpCityId fcmType (Notify.prebuiltPushContent title body) driver driver.deviceToken
   smsEnabled <- isDashboardSmsEnabled merchantOpCityId
   when smsEnabled $
     if T.null smsBody

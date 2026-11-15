@@ -167,7 +167,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
       merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId messageKey person.language (Just configInExperimentVersions) >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       (_, smsReqBody) <- messageTransformer person ("", merchantMessage.message)
-      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) -- TODO: append SMS heading
+      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq (Sms.prebuiltSmsBody smsReqBody) phoneNumber sender merchantMessage.templateId merchantMessage.messageType) -- TODO: append SMS heading
         >>= Sms.checkSmsResult
     _ -> pure ()
   where

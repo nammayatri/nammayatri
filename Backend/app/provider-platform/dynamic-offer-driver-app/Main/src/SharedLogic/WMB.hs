@@ -683,15 +683,15 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
       now <- getCurrentTime
       let audience = DAA.FleetOwnerAudience (cast (Id requesteeId))
       mbLanguage <- audienceLanguage audience
-      (pushTitle, pushBody) <- TN.buildMerchantPNContentWithFallback tripTransaction.merchantOperatingCityId mbLanguage (DriverPush_FleetAlert alertRequestType) (alertParams requestData) (title, body)
+      content <- TN.buildMerchantPNContentWithFallback tripTransaction.merchantOperatingCityId mbLanguage (DriverPush_FleetAlert alertRequestType) (alertParams requestData) (title, body)
       alertRequestIds <-
         DAT.triggerPersist
           driverAlertHandle
           [audience]
           DAT.AlertContent
             { category = DAlertCategory.WMB_ALERT,
-              title = pushTitle,
-              body = pushBody,
+              title = content.pushTitle,
+              body = content.pushBody,
               entityId = tripTransaction.id.getId,
               entityType = DAlertEntity.TripTransactionEntity,
               entityData = toJSON requestData,
@@ -728,7 +728,7 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
             alertStatus = Just $ AWAITING_APPROVAL
           }
-      TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM pushTitle pushBody driverId Nothing requestData
+      TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM content driverId Nothing requestData
       pure alertRequestId
     else do
       tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)

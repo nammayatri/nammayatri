@@ -95,16 +95,14 @@ handler merchantId req ride = do
               when (not correlationRes.favourite) $ do
                 mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlowByKey ride.merchantOperatingCityId DriverPush_Driver_MarkedFavourite Nothing Nothing driver.language booking.configInExperimentVersions
                 whenJust mbMerchantPN_ $ \merchantPN_ -> do
-                  let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
-                      entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
+                  let entityData = mkNotifReq driverId.getId (pushContentOfRow merchantPN_ [("riderName", fromMaybe "" req.riderName)])
                   notifyDriverOnEvents ride.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
                 RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
                 SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
               mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlowByKey ride.merchantOperatingCityId DriverPush_Driver_MarkedFavourite Nothing Nothing driver.language booking.configInExperimentVersions
               whenJust mbMerchantPN_ $ \merchantPN_ -> do
-                let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
-                    entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
+                let entityData = mkNotifReq driverId.getId (pushContentOfRow merchantPN_ [("riderName", fromMaybe "" req.riderName)])
                 notifyDriverOnEvents ride.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
               now <- getCurrentTime
               encPhoneNumber <- encrypt riderPhoneNum

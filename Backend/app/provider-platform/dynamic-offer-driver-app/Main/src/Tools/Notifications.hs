@@ -12,7 +12,100 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Notifications where
+module Tools.Notifications
+  ( EditPickupLocationReq (..),
+    CancellationRateBaseNudgeData (..),
+    DrunkAndDriveViolationWarningData (..),
+    UpdateLocationNotificationReq (..),
+    FCMReq (..),
+    IssueBreachEntityData (..),
+    FeedbackBadgeEntityData (..),
+    RideAssignedNotificationData (..),
+    SharedCabAllocationEntityData (..),
+    EditDestinationPayload (..),
+    UnhygienicVehicleWarningData (..),
+    VehicleUnsafeWarningData (..),
+    StopReq (..),
+    WMBTripAssignedData (..),
+    NotifReq,
+    OnboardingChangeEntityData (..),
+    FleetUnlinkEntityData (..),
+    CoinsNotificationData (..),
+    PickupInstructionEntityData (..),
+    SystemChatMessageEntityData (..),
+    PickupZoneRequestEntityData (..),
+    PushContent,
+    pushTitle,
+    pushBody,
+    pushContentOfRow,
+    prebuiltPushContent,
+    mkNotifReq,
+    clearDeviceToken,
+    templateText,
+    buildTemplate,
+    showLocalTime,
+    findFCMConfigWithFallback,
+    notifyOnNewSearchRequestAvailable,
+    notifySoftBlocked,
+    sendFeedbackBadgeNotification,
+    cancellationSourceToSubCategory,
+    notifyOnCancel,
+    notifyOnRegistration,
+    notifyDriver,
+    notifyDriverWithProviders,
+    notifyOnIssueChatMessage,
+    driverScheduledRideAcceptanceAlert,
+    notifyDevice,
+    sendNotificationToDriver,
+    sendMessageToDriver,
+    notifyDriverNewAllocation,
+    notifySharedCabAllocation,
+    notifySharedCabCheckIn,
+    notifyDriverClearedFare,
+    notifyOnCancelSearchRequest,
+    notifyPaymentFailed,
+    notifyPaymentPending,
+    notifyPaymentSuccess,
+    notifyPaymentModeManualOnCancel,
+    notifyPaymentModeManualOnPause,
+    notifyPaymentModeManualOnSuspend,
+    sendOverlay,
+    sendUpdateLocOverlay,
+    sendPickupLocationChangedOverlay,
+    editDestinationPayloadKey,
+    cachePayloadForIOS,
+    sendCancellationRateNudgeOverlay,
+    drunkAndDriveViolationWarningOverlay,
+    unhygienicVehicleWarningNotify,
+    vehicleUnsafeWarningNotify,
+    driverStopDetectionAlert,
+    mkOverlayReq,
+    buildSendSearchRequestNotificationData,
+    sendSearchRequestToDriverNotification,
+    notifyStopModification,
+    notifyOnRideStarted,
+    notifyWmbOnRide,
+    getNewMerchantOpCityId,
+    cityFallback,
+    notifyDriverOnEvents,
+    buildMerchantPNContent,
+    buildMerchantPNContentWithFallback,
+    notifyDriverOnMerchantPN,
+    notifyFleetOwnerOnMerchantPN,
+    notifyFleetWithGRPCProvider,
+    notifyWithGRPCProvider,
+    runWithServiceConfigForProviders,
+    sendCoinsNotification,
+    requestRejectionNotification,
+    sendCoinsNotificationV3,
+    sendDriverEKDLiveFCM,
+    notifyEditDestination,
+    sendPickupInstructionNotification,
+    sendSystemChatMessage,
+    notifyPickupZoneRequest,
+    notifyPickupNoShow,
+  )
+where
 
 import Control.Applicative ((<|>))
 import DashboardAlert.Domain.Types.DashboardAlert as DAR
@@ -34,7 +127,7 @@ import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantClientConfig as DMCC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPushNotification as Fields
+import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Message as Message
 import qualified Domain.Types.Overlay as DTMO
@@ -94,6 +187,24 @@ buildTemplate paramVars template =
     )
     template
     paramVars
+
+-- | The title and body a push carries: a @merchant_push_notification@ row's texts with their placeholders filled
+-- ('pushContentOfRow', 'buildMerchantPNContentWithFallback'), or 'prebuiltPushContent' for text that is final
+-- before it gets here.
+data PushContent = PushContent
+  { pushTitle :: Text,
+    pushBody :: Text
+  }
+
+-- | The row's title and body with their @{#name#}@ placeholders filled in.
+pushContentOfRow :: DMPN.MerchantPushNotification -> [(Text, Text)] -> PushContent
+pushContentOfRow merchantPN dynamicParams = PushContent (buildTemplate dynamicParams merchantPN.title) (buildTemplate dynamicParams merchantPN.body)
+
+-- | For text that is already final: typed by ops (broadcast messages, behaviour rules, config), translated by
+-- another table, or a payload the app never shows. Never a string literal: English a user can read belongs in
+-- a 'DriverPushKey' row with the code's text as fallback.
+prebuiltPushContent :: Text -> Text -> PushContent
+prebuiltPushContent = PushContent
 
 data EditPickupLocationReq = EditPickupLocationReq
   { rideId :: Id DRide.Ride,
@@ -301,9 +412,7 @@ sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
   when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - FEEDBACK_BADGE_PN"
   whenJust mbMerchantPN $ \merchantPN -> do
     let dynamicParams = [("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount)]
-        title = buildTemplate dynamicParams merchantPN.title
-        body = buildTemplate dynamicParams merchantPN.body
-    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken Nothing entityData
+    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN (pushContentOfRow merchantPN dynamicParams) driver driver.deviceToken Nothing entityData
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"
@@ -456,8 +565,7 @@ notifyDriver ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
@@ -504,14 +612,13 @@ notifyDriverWithProviders ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   Maybe (Id DRide.Ride) ->
   a ->
   m ()
-notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken mbRideId dataSend =
+notifyDriverWithProviders merchantOpCityId category content driver mbDeviceToken mbRideId dataSend =
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
@@ -522,8 +629,8 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           messagePriority = Just Notification.HIGH,
           entity = mkNotificationEntity merchantOpCityId category mbRideId dataSend,
           dynamicParams = EmptyDynamicParam,
-          body = body,
-          title = title,
+          body = content.pushBody,
+          title = content.pushTitle,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
           sound = Nothing,
@@ -583,12 +690,11 @@ driverScheduledRideAcceptanceAlert ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver mbDeviceToken =
+driverScheduledRideAcceptanceAlert merchantOpCityId category content driver mbDeviceToken =
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
@@ -599,8 +705,8 @@ driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver m
           messagePriority = Just Notification.HIGH,
           entity = Notification.Entity Notification.Merchant merchantOpCityId.getId EmptyDynamicParam,
           dynamicParams = EmptyDynamicParam,
-          body = body,
-          title = title,
+          body = content.pushBody,
+          title = content.pushTitle,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
           sound = Nothing,
@@ -616,12 +722,13 @@ notifyDevice ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
-  Text ->
-  Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDevice merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.DO_NOT_SHOW (Just FCM.HIGH)
+notifyDevice merchantOpCityId notificationType = sendNotificationToDriver merchantOpCityId FCM.DO_NOT_SHOW (Just FCM.HIGH) notificationType devicePing
+  where
+    -- DO_NOT_SHOW: the app only wakes on the payload, nobody reads this text.
+    devicePing = PushContent "You were inactive" "Please check the app"
 
 sendNotificationToDriver ::
   ( CacheFlow m r,
@@ -632,12 +739,11 @@ sendNotificationToDriver ::
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
   FCM.FCMNotificationType ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-sendNotificationToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver mbToken = do
+sendNotificationToDriver merchantOpCityId displayOption priority notificationType content driver mbToken = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   FCM.notifyPersonWithPriority fcmConfig priority (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
@@ -653,9 +759,9 @@ sendNotificationToDriver merchantOpCityId displayOption priority notificationTyp
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
-    title = FCM.FCMNotificationTitle notificationTitle
+    title = FCM.FCMNotificationTitle content.pushTitle
     body =
-      FCMNotificationBody message
+      FCMNotificationBody content.pushBody
 
 sendMessageToDriver ::
   ( CacheFlow m r,
@@ -667,12 +773,11 @@ sendMessageToDriver ::
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
   FCM.FCMNotificationType ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Id Message.Message ->
   m ()
-sendMessageToDriver merchantOpCityId displayOption priority notificationType notificationTitle message driver messageId = do
+sendMessageToDriver merchantOpCityId displayOption priority notificationType content driver messageId = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   FCM.notifyPersonWithPriority fcmConfig priority (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
@@ -688,9 +793,9 @@ sendMessageToDriver merchantOpCityId displayOption priority notificationType not
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
-    title = FCM.FCMNotificationTitle notificationTitle
+    title = FCM.FCMNotificationTitle content.pushTitle
     body =
-      FCMNotificationBody message
+      FCMNotificationBody content.pushBody
 
 notifyDriverNewAllocation ::
   ( CacheFlow m r,
@@ -1431,12 +1536,11 @@ driverStopDetectionAlert ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceToken =
+driverStopDetectionAlert merchantOpCityId category content driver mbDeviceToken =
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
@@ -1447,8 +1551,8 @@ driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceTok
           messagePriority = Just Notification.HIGH,
           entity = Notification.Entity Notification.Person driver.id.getId EmptyDynamicParam,
           dynamicParams = EmptyDynamicParam,
-          title = title,
-          body = body,
+          title = content.pushTitle,
+          body = content.pushBody,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
           sound = Nothing,
@@ -1565,9 +1669,9 @@ notifyStopModification rideStatus person entityData tripCategory = do
             if entityData.isEdit
               then (FCM.EDIT_STOP, DriverPush_Ride_StopEditedBeforeStart, ("Stop Edited", "Customer has edited the stop."))
               else (FCM.ADD_STOP, DriverPush_Ride_StopAddedBeforeStart, ("Stop Added", "Customer has added a new stop."))
-      (titleText, bodyText) <- buildMerchantPNContentWithFallback newCityId person.language notificationKey [] fallbackContent
-      let title = FCM.FCMNotificationTitle titleText
-          body = FCM.FCMNotificationBody bodyText
+      content <- buildMerchantPNContentWithFallback newCityId person.language notificationKey [] fallbackContent
+      let title = FCM.FCMNotificationTitle content.pushTitle
+          body = FCM.FCMNotificationBody content.pushBody
       let notificationData =
             FCM.FCMData
               { fcmNotificationType = notificationType,
@@ -1622,9 +1726,7 @@ notifyOnRideStarted ride booking = do
   let notificationKey = if isAirConditioned then DriverPush_Ride_StartedAc else DriverPush_Ride_Started
   mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId notificationKey (Just ride.tripCategory) Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (InternalError "MerchantPushNotification not found for notifyOnRideStarted")
   let dynamicParams = [("offerAdjective", offerAdjective)]
-  let title = buildTemplate dynamicParams mbMerchantPN.title
-      body = buildTemplate dynamicParams mbMerchantPN.body
-  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken (Just ride.id) EmptyDynamicParam
+  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED (pushContentOfRow mbMerchantPN dynamicParams) person person.deviceToken (Just ride.id) EmptyDynamicParam
 
 data WMBTripAssignedData = WMBTripAssignedData
   { tripTransactionId :: Id DTT.TripTransaction,
@@ -1653,8 +1755,8 @@ notifyWmbOnRide ::
 notifyWmbOnRide driverId merchantOperatingCityId status entityData = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let notify key category fallback = do
-        (title, body) <- buildMerchantPNContentWithFallback merchantOperatingCityId person.language key [] fallback
-        notifyDriverWithProviders merchantOperatingCityId category title body person person.deviceToken Nothing entityData
+        content <- buildMerchantPNContentWithFallback merchantOperatingCityId person.language key [] fallback
+        notifyDriverWithProviders merchantOperatingCityId category content person person.deviceToken Nothing entityData
   case status of
     DTT.TRIP_ASSIGNED -> notify DriverPush_BusTrip_Assigned Notification.WMB_TRIP_ASSIGNED ("Ride Assigned", "Ride assigned")
     DTT.COMPLETED -> notify DriverPush_BusTrip_Ended Notification.WMB_TRIP_FINISHED ("Ride Ended", "Your ride has ended")
@@ -1684,6 +1786,9 @@ data NotifReq = NotifReq
     message :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+mkNotifReq :: Text -> PushContent -> NotifReq
+mkNotifReq entityId content = NotifReq {entityId, title = content.pushTitle, message = content.pushBody}
 
 notifyDriverOnEvents ::
   ( CacheFlow m r,
@@ -1745,14 +1850,14 @@ buildMerchantPNContent ::
   Maybe Language ->
   DriverPushKey ->
   [(Text, Text)] ->
-  m (Maybe (Text, Text))
+  m (Maybe PushContent)
 buildMerchantPNContent merchantOpCityId mbLanguage key dynamicParams = do
   mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId key Nothing Nothing (Just $ fromMaybe ENGLISH mbLanguage) Nothing
   case mbMerchantPN of
     Nothing -> do
       logWarning $ "MISSED_FCM - no merchant_push_notification row for key: " <> legacyOrKeyName key
       pure Nothing
-    Just merchantPN -> pure $ Just (buildTemplate dynamicParams merchantPN.title, buildTemplate dynamicParams merchantPN.body)
+    Just merchantPN -> pure $ Just (pushContentOfRow merchantPN dynamicParams)
 
 -- | Like 'buildMerchantPNContent', but a key with no row falls back to the code's own English text,
 -- so the push is always sent.
@@ -1765,9 +1870,9 @@ buildMerchantPNContentWithFallback ::
   DriverPushKey ->
   [(Text, Text)] ->
   (Text, Text) ->
-  m (Text, Text)
+  m PushContent
 buildMerchantPNContentWithFallback merchantOpCityId mbLanguage key dynamicParams fallback =
-  maybe fallback (\merchantPN -> (buildTemplate dynamicParams merchantPN.title, buildTemplate dynamicParams merchantPN.body))
+  maybe (uncurry PushContent fallback) (`pushContentOfRow` dynamicParams)
     <$> CPN.findMatchingMerchantPNByKey merchantOpCityId key Nothing Nothing mbLanguage Nothing
 
 notifyDriverOnMerchantPN ::
@@ -1788,8 +1893,8 @@ notifyDriverOnMerchantPN ::
   m ()
 notifyDriverOnMerchantPN merchantOpCityId driver key category dynamicParams entityData = do
   mbContent <- buildMerchantPNContent merchantOpCityId driver.language key dynamicParams
-  whenJust mbContent $ \(title, body) ->
-    notifyDriverWithProviders merchantOpCityId category title body driver driver.deviceToken Nothing entityData
+  whenJust mbContent $ \content ->
+    notifyDriverWithProviders merchantOpCityId category content driver driver.deviceToken Nothing entityData
 
 notifyFleetOwnerOnMerchantPN ::
   ( ServiceFlow m r,
@@ -1807,8 +1912,8 @@ notifyFleetOwnerOnMerchantPN ::
   m ()
 notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner key category dynamicParams entityData = do
   mbContent <- buildMerchantPNContent merchantOpCityId fleetOwner.language key dynamicParams
-  whenJust mbContent $ \(title, body) ->
-    notifyWithGRPCProvider merchantOpCityId category title body fleetOwner.id Nothing entityData
+  whenJust mbContent $ \content ->
+    notifyWithGRPCProvider merchantOpCityId category content fleetOwner.id Nothing entityData
 
 notifyFleetWithGRPCProvider ::
   ( ServiceFlow m r,
@@ -1819,19 +1924,18 @@ notifyFleetWithGRPCProvider ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
-  Text ->
-  Text ->
+  PushContent ->
   Id Person ->
   Maybe UTCTime ->
   a ->
   m ()
-notifyFleetWithGRPCProvider merchantOpCityId category title body driverId mbTtl entityData = do
+notifyFleetWithGRPCProvider merchantOpCityId category content driverId mbTtl entityData = do
   clientId <-
     QFDA.findByDriverId driverId True
       >>= \case
         Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
         Nothing -> pure driverId
-  notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData
+  notifyWithGRPCProvider merchantOpCityId category content clientId mbTtl entityData
 
 {- Run this to trigger realtime GRPC notifications.
    `mbTtl` controls the GRPC NotificationReq.ttl (Maybe UTCTime); pass Nothing to
@@ -1847,13 +1951,12 @@ notifyWithGRPCProvider ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
-  Text ->
-  Text ->
+  PushContent ->
   Id Person ->
   Maybe UTCTime ->
   a ->
   m ()
-notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData = do
+notifyWithGRPCProvider merchantOpCityId category content clientId mbTtl entityData = do
   merchantNotificationServiceConfig <-
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService Notification.GRPC)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
@@ -1871,8 +1974,8 @@ notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entit
           messagePriority = Just Notification.HIGH,
           entity = Notification.Entity Notification.Merchant merchantOpCityId.getId entityData,
           dynamicParams = EmptyDynamicParam,
-          body = body,
-          title = title,
+          body = content.pushBody,
+          title = content.pushTitle,
           auth = Notification.Auth clientId.getId Nothing Nothing,
           ttl = mbTtl,
           sound = Nothing,
@@ -1953,13 +2056,12 @@ sendCoinsNotification ::
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   CoinsNotificationData ->
   m ()
-sendCoinsNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
+sendCoinsNotification merchantOpCityId content driver mbToken entityData = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id
   FCM.notifyPersonWithPriority fcmConfig Nothing (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
@@ -1975,9 +2077,9 @@ sendCoinsNotification merchantOpCityId notificationTitle message driver mbToken 
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
-    title = FCM.FCMNotificationTitle notificationTitle
+    title = FCM.FCMNotificationTitle content.pushTitle
     body =
-      FCMNotificationBody message
+      FCMNotificationBody content.pushBody
 
 requestRejectionNotification ::
   ( CacheFlow m r,
@@ -1986,13 +2088,12 @@ requestRejectionNotification ::
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   DAR.DashboardAlert ->
   m ()
-requestRejectionNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
+requestRejectionNotification merchantOpCityId content driver mbToken entityData = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id
   FCM.notifyPersonWithPriority fcmConfig Nothing (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
@@ -2008,9 +2109,9 @@ requestRejectionNotification merchantOpCityId notificationTitle message driver m
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
-    title = FCM.FCMNotificationTitle notificationTitle
+    title = FCM.FCMNotificationTitle content.pushTitle
     body =
-      FCMNotificationBody message
+      FCMNotificationBody content.pushBody
 
 -- This function is to be removed after next apk deployment
 sendCoinsNotificationV3 ::
@@ -2020,14 +2121,13 @@ sendCoinsNotificationV3 ::
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Text ->
-  Text ->
+  PushContent ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
   CoinsNotificationData ->
   MetroRideType ->
   m ()
-sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToken entityData metroRideType = do
+sendCoinsNotificationV3 merchantOpCityId content driver mbToken entityData metroRideType = do
   logDebug $ "We are in metro notification"
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id
@@ -2048,9 +2148,9 @@ sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToke
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
-    title = FCM.FCMNotificationTitle notificationTitle
+    title = FCM.FCMNotificationTitle content.pushTitle
     body =
-      FCMNotificationBody message
+      FCMNotificationBody content.pushBody
 
 sendDriverEKDLiveFCM ::
   ( CacheFlow m r,
@@ -2088,7 +2188,7 @@ notifyEditDestination ::
 notifyEditDestination merchantOpCityId driver = do
   logDebug $ "We are in edit destination when driver accepted edited location"
   fcmConfig <- findFCMConfigWithFallback merchantOpCityId driver.id
-  (title, body) <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Ride_EditDestinationAccepted [] ("Edit Destination", "Driver accepted edited destination.")
+  content <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Ride_EditDestinationAccepted [] ("Edit Destination", "Driver accepted edited destination.")
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.DRIVER_ACCEPTED_EDITED_LOCATION,
@@ -2096,7 +2196,7 @@ notifyEditDestination merchantOpCityId driver = do
             fcmEntityType = FCM.Person,
             fcmEntityIds = getId driver.id,
             fcmEntityData = (),
-            fcmNotificationJSON = FCM.createAndroidNotification (FCM.FCMNotificationTitle title) (FCMNotificationBody body) FCM.DRIVER_ACCEPTED_EDITED_LOCATION Nothing,
+            fcmNotificationJSON = FCM.createAndroidNotification (FCM.FCMNotificationTitle content.pushTitle) (FCMNotificationBody content.pushBody) FCM.DRIVER_ACCEPTED_EDITED_LOCATION Nothing,
             fcmOverlayNotificationJSON = Nothing,
             fcmNotificationId = Nothing
           }
@@ -2122,7 +2222,7 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   fcmConfig <- findFCMConfigWithFallback newCityId driver.id
   -- The customer's own instruction is the body when there is one; the row only words the title and the default body.
-  (titleText, defaultBody) <- buildMerchantPNContentWithFallback newCityId driver.language DriverPush_Ride_PickupInstructions [] ("Pickup Instructions", "You have received pickup instructions")
+  content <- buildMerchantPNContentWithFallback newCityId driver.language DriverPush_Ride_PickupInstructions [] ("Pickup Instructions", "You have received pickup instructions")
   -- Build notification data
   let notificationData =
         FCM.FCMData
@@ -2135,8 +2235,8 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
             fcmOverlayNotificationJSON = Nothing,
             fcmNotificationId = Nothing
           }
-      title = FCM.FCMNotificationTitle titleText
-      body = FCMNotificationBody $ fromMaybe defaultBody entityData.instruction
+      title = FCM.FCMNotificationTitle content.pushTitle
+      body = FCMNotificationBody $ fromMaybe content.pushBody entityData.instruction
   logInfo $ "PickupInstructionNotification: Notification data: " <> show notificationData
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
@@ -2250,12 +2350,11 @@ notifyPickupZoneRequest merchantOpCityId driverId entityData = do
   -- Isolated via try so a missing/misconfigured GRPC service config never drops the FCM.
   grpcResult <-
     try @_ @SomeException $ do
-      (title, body) <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_PickupZone_RequestToast templateParams ("PICKUP_ZONE_REQUEST", "Move to " <> entityData.gateName <> " at " <> entityData.specialLocationName)
+      content <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_PickupZone_RequestToast templateParams ("PICKUP_ZONE_REQUEST", "Move to " <> entityData.gateName <> " at " <> entityData.specialLocationName)
       notifyWithGRPCProvider
         merchantOpCityId
         Notification.PICKUP_ZONE_REQUEST
-        title
-        body
+        content
         driverId
         (Just entityData.notificationValidTill)
         entityData
@@ -2291,12 +2390,11 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
   -- Same convention as notifyPickupZoneRequest — bound the no-show toast lifetime.
   grpcResult <-
     try @_ @SomeException $ do
-      (title, body) <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_PickupZone_NoShowToast templateParams ("PICKUP_ZONE_NO_SHOW", "No show to" <> entityData.gateName <> " at " <> entityData.specialLocationName)
+      content <- buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_PickupZone_NoShowToast templateParams ("PICKUP_ZONE_NO_SHOW", "No show to" <> entityData.gateName <> " at " <> entityData.specialLocationName)
       notifyWithGRPCProvider
         merchantOpCityId
         Notification.PICKUP_ZONE_NO_SHOW
-        title
-        body
+        content
         driverId
         (Just entityData.notificationValidTill)
         entityData

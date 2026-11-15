@@ -559,9 +559,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOperatingCityId DriverPush_Driver_FleetConsent Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
-    let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
-    let body = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.body
-    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
+    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType (TN.pushContentOfRow merchantPN [("fleetOwnerName", fleetOwner.firstName)]) driver driver.deviceToken
   pure Success
 
 driverRequestLockKey :: Text -> Text

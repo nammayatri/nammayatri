@@ -185,13 +185,12 @@ notifyExcludedBeneficiary person amount reason =
     firstToday <- Redis.setNxExpire ("BulkPayoutExclusionNotified:" <> person.id.getId <> ":" <> reason) (24 * 3600) True
     when firstToday $
       fork ("BulkPayoutExclusionNotify:" <> person.id.getId) $ do
-        (title, body) <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Payout_BankDetailsMissing [("amount", show amount), ("reason", reason)] ("Add your bank details to get paid", "Rs." <> show amount <> " is ready for payout but could not be sent: " <> reason <> ". Please add or update your bank details.")
+        content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Payout_BankDetailsMissing [("amount", show amount), ("reason", reason)] ("Add your bank details to get paid", "Rs." <> show amount <> " is ready for payout but could not be sent: " <> reason <> ". Please add or update your bank details.")
         Notify.sendNotificationToDriver
           person.merchantOperatingCityId
           FCM.SHOW
           Nothing
           FCM.PAYOUT_VPA_REMINDER
-          title
-          body
+          content
           person
           person.deviceToken

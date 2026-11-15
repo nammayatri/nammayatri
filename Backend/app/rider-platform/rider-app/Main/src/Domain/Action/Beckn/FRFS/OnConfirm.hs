@@ -475,7 +475,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
               (logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId)
               ( \buildSmsReq -> do
                   let smsReq = buildSmsReq phoneNumber
-                  logDebug $ "SMS Message:" +|| smsReq.smsBody ||+ ""
+                  logDebug $ "SMS Message:" +|| Sms.smsBodyText smsReq.smsBody ||+ ""
                   Sms.sendSMS booking'.merchantId mocId smsReq >>= Sms.checkSmsResult
               )
               mbBuildSmsReq
