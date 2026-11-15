@@ -23,18 +23,20 @@ import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.DriverProfileQuestions as Fields
 import qualified Domain.Types.DriverStats as Fields
-import qualified Domain.Types.Feedback as Fields
+import qualified Domain.Types.Feedback as DFeedback
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.LmsModule as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -43,6 +45,7 @@ import Lib.Yudhishthira.Tools.Utils (accessTagKey, convertTags)
 import Lib.Yudhishthira.Types (TagName (..))
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -96,17 +99,17 @@ data DriverProfileRes = DriverProfileRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
-knowYourDriver rideId withImages apiKey = do
+knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Language -> Maybe Text -> Flow DriverProfileRes
+knowYourDriver rideId withImages language apiKey = do
   QRLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
     >>= \ride ->
       getDriver ride.driverId apiKey
-        >>= getDriverProfile withImages
+        >>= getDriverProfile withImages language
 
-knowYourFavDriver :: Id DP.Person -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
-knowYourFavDriver driverId withImages apiKey =
+knowYourFavDriver :: Id DP.Person -> Maybe Bool -> Maybe Language -> Maybe Text -> Flow DriverProfileRes
+knowYourFavDriver driverId withImages language apiKey =
   getDriver driverId apiKey
-    >>= getDriverProfile withImages
+    >>= getDriverProfile withImages language
 
 getDriver :: Id DP.Person -> Maybe Text -> Flow DP.Person
 getDriver driverId apiKey = do
@@ -117,8 +120,8 @@ getDriver driverId apiKey = do
         then pure person
         else throwError (AuthBlocked "Invalid BPP internal api key")
 
-getDriverProfile :: Maybe Bool -> DP.Person -> Flow DriverProfileRes
-getDriverProfile withImages person = do
+getDriverProfile :: Maybe Bool -> Maybe Language -> DP.Person -> Flow DriverProfileRes
+getDriverProfile withImages language person = do
   driverProfile <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   vehicle <- QVeh.findById person.id
@@ -184,9 +187,17 @@ getDriverProfile withImages person = do
     getTopFeedBackForDriver driverId = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
       ratingsWithDriverNames <- getBookingsAndRides ratings
-      partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratingsWithDriverNames
+      feedbacks <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= mapM badgeInReaderLanguage
+      partialRatings <- constructPartialRatings ratingsWithDriverNames feedbacks
       remRatings <- constructRemRatings ratingsWithDriverNames driverId
       pure $ nub $ partialRatings <> remRatings
+
+    -- The badge's name in the reader's language, else the English text the rider platform sent.
+    badgeInReaderLanguage feedback = case feedback.badgeKey of
+      Just badgeKey -> do
+        badge <- fromMaybe feedback.badge <$> CQTranslations.findTextByKey (Just person.merchantOperatingCityId) (fromMaybe ENGLISH language) (FeedbackBadge_Name badgeKey)
+        pure feedback {DFeedback.badge = badge}
+      Nothing -> pure feedback
 
     constructPartialRatings ratings feedbacks =
       pure $ foldl (goFeedbacks feedbacks) [] ratings
@@ -213,7 +224,7 @@ getDriverProfile withImages person = do
       lang -> lang
 
     constructRemRatings prevRatings driverId = do
-      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 10)
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 10) >>= mapM badgeInReaderLanguage
       ratings <- (QRating.findRatingForRideIfPositive (nub ((.rideId) <$> feedbacks)))
       ratingsWithDriverNames <- getBookingsAndRides ratings
       pure $ take 5 $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames

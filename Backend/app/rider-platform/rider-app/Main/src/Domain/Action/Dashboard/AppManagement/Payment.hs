@@ -284,7 +284,7 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId mbAutoApprove _mb
                   refundsAmount = if autoApprove then Just total else Nothing
                   refundsTries = if autoApprove then 1 else 0
                   code = DRefundRequest.RefundRequestCode (if autoApprove then "ADMIN_INITIATED" else "AGENT_INITIATED")
-                  description = fromMaybe (if autoApprove then "Admin-initiated refund" else "Agent-initiated refund") req.description
+                  description = fromMaybe (snd (DRidePayment.defaultRefundDescription autoApprove)) req.description
                   comps = Just (map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component}) req.refundComponents)
               DRidePayment.buildRefundRequestRow
                 ctx

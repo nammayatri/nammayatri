@@ -290,18 +290,24 @@ safeToLower [] = []
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
--- | The tier's keyed row first; else the row stored under the English text itself, as before.
+-- | The tier's keyed row in the reader's language, then the row stored under the English text
+-- itself, then the keyed English row.
 translateServiceTierText :: Id DMOC.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> Maybe Text -> Flow (Maybe Text)
 translateServiceTierText mocId language key mbText = case mbText of
   Just text -> do
-    mbKeyed <- CQTranslations.findTextByKey mocId language key
+    mbKeyed <- CQTranslations.findTextByKeyInLanguage mocId language key
     case mbKeyed of
       Just keyed -> pure (Just keyed)
-      Nothing ->
-        getConfig
-          (TranslationDimensions {merchantOperatingCityId = Just mocId.getId, messageKey = text, language = Just language})
-          (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language))
-          <&> Just . maybe text (.message)
+      Nothing -> do
+        mbLegacy <-
+          getConfig
+            (TranslationDimensions {merchantOperatingCityId = Just mocId.getId, messageKey = text, language = Just language})
+            (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language))
+        case mbLegacy of
+          Just row -> pure (Just row.message)
+          Nothing
+            | language == Lang.ENGLISH -> pure (Just text)
+            | otherwise -> Just . fromMaybe text <$> CQTranslations.findTextByKeyInLanguage mocId Lang.ENGLISH key
   Nothing -> pure Nothing
 
 getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Maybe DMPMExtra.PaymentInstrument -> Flow GetQuotesRes

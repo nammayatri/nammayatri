@@ -95,7 +95,7 @@ processRating (personId, merchantId) request = do
         }
 
 knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId withImages
+knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourDriver personId rideId withImages
 
 knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourFavDriver (personId, merchantId) driverId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId withImages
+knowYourFavDriver (personId, merchantId) driverId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver personId driverId merchantId withImages

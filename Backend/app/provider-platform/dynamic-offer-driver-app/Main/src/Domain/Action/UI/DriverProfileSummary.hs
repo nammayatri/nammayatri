@@ -22,12 +22,14 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
@@ -35,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.BehaviourManagement.CancellationRate as CR
 import qualified SharedLogic.DriverOnboarding as SD
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -143,6 +146,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
         return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
   cancellationRateData <- CR.getCancellationRateData mocId driverId
+  driverBadges <- generateFeedbackBadge person.language feedbackBadgeList
   return $
     DriverProfleSummaryRes
       { id = person.id,
@@ -158,7 +162,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         language = person.language,
         alternateNumber = decaltMobNum,
         gender = Just person.gender,
-        feedbackBadges = generateFeedbackBadge feedbackBadgeList,
+        feedbackBadges = driverBadges,
         languagesSpoken = person.languagesSpoken,
         hometown = person.hometown,
         cancellationRateInWindow = (.cancellationRate) <$> cancellationRateData,
@@ -173,11 +177,13 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
       | a <= 0 = 1
       | otherwise = a
 
-    generateFeedbackBadge :: [FeedbackBadge] -> DriverInfo.DriverBadges
-    generateFeedbackBadge list =
-      DriverInfo.DriverBadges
-        { driverBadges = makeBadgeList <$> list
-        }
+    generateFeedbackBadge :: (CacheFlow m r, EsqDBFlow m r) => Maybe Language -> [FeedbackBadge] -> m DriverInfo.DriverBadges
+    generateFeedbackBadge language list = DriverInfo.DriverBadges <$> mapM (makeBadge language) list
 
-    makeBadgeList :: FeedbackBadge -> DriverInfo.Badges
-    makeBadgeList fBadge = DriverInfo.Badges {badgeName = fBadge.badge, badgeCount = fBadge.badgeCount}
+    -- The badge's name in the driver's language, else the English text the rider platform sent.
+    makeBadge :: (CacheFlow m r, EsqDBFlow m r) => Maybe Language -> FeedbackBadge -> m DriverInfo.Badges
+    makeBadge language fBadge = do
+      name <- case fBadge.badgeKey of
+        Just badgeKey -> fromMaybe fBadge.badge <$> CQTranslations.findTextByKey (Just mocId) (fromMaybe ENGLISH language) (FeedbackBadge_Name badgeKey)
+        Nothing -> pure fBadge.badge
+      pure DriverInfo.Badges {badgeName = name, badgeCount = fBadge.badgeCount}

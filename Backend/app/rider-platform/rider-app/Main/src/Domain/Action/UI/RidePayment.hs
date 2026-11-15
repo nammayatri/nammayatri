@@ -20,6 +20,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import Domain.Types.VehicleCategory as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -57,6 +58,7 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -676,10 +678,23 @@ getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
       forM_ rows $ \rr ->
         unless (rr.personId == personId) $
           throwError $ InvalidRequest "Person is not the owner of the ride"
+      let defaultDescription rr = find ((== rr.description) . snd) (map defaultRefundDescription [True, False])
+      mbPerson <- if any (isJust . defaultDescription) rows then QPerson.findById personId else pure Nothing
       items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
         evidence <- fetchEvidenceFromS3 rr
-        pure $ mkRefundRequestResp rideId rr evidence
+        description <- case (,) <$> mbPerson <*> defaultDescription rr of
+          Just (person, (key, english)) -> CQTranslations.findTextByKeyWithFallback person.merchantOperatingCityId person.language key english
+          Nothing -> pure rr.description
+        pure $ (mkRefundRequestResp rideId rr evidence :: API.Types.UI.RidePayment.RefundRequestResp) {API.Types.UI.RidePayment.description = description}
       pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
+
+-- | The description an admin- or agent-initiated refund is saved with when none is typed, and the key
+-- the rider's refund list reads it by.
+defaultRefundDescription :: Bool -> (RiderTranslationKey, Text)
+defaultRefundDescription autoApprove =
+  if autoApprove
+    then (Refund_Description_AdminInitiated, "Admin-initiated refund")
+    else (Refund_Description_AgentInitiated, "Agent-initiated refund")
 
 -- | Per-component fare+tax breakdown for a ride — the refundable options feeding
 --   refundRequest/create. Reuses 'buildLedgerInfoFromBreakups' with appFee=0, so RideFare is the

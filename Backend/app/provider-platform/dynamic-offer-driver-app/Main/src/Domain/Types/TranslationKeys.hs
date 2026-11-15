@@ -73,6 +73,8 @@ data TranslationKey
   | -- A sample image's title and text, named by its English title ('textKeyName')
     DocumentField_ImageTitle DVC.DocumentType Text Text
   | DocumentField_ImageText DVC.DocumentType Text Text
+  | -- A rider-feedback badge, by the key the rider platform sends with it
+    FeedbackBadge_Name Text
   deriving stock (Eq)
 
 instance Show TranslationKey where
@@ -104,6 +106,7 @@ instance Show TranslationKey where
     DocumentField_Description d f -> dotted ["DocumentField", "Description", keyName d, f]
     DocumentField_ImageTitle d f n -> dotted ["DocumentField", "ImageTitle", keyName d, f, n]
     DocumentField_ImageText d f n -> dotted ["DocumentField", "ImageText", keyName d, f, n]
+    FeedbackBadge_Name badgeKey -> dotted ["FeedbackBadge", "Name", badgeKey]
 
 -- | A key named by free text is left out of 'allKeys', which lists only what the code can enumerate;
 -- the dashboard lists such keys from where their names live (wallet items from 'allWalletReferences').
@@ -166,6 +169,7 @@ instance IsTranslationKey TranslationKey where
     DocumentField_Description _ _ -> Nothing
     DocumentField_ImageTitle {} -> Nothing
     DocumentField_ImageText {} -> Nothing
+    FeedbackBadge_Name _ -> Nothing
 
 allDocumentOnboardingStages :: [DocumentOnboardingStage]
 allDocumentOnboardingStages =

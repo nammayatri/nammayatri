@@ -7,7 +7,7 @@ module Storage.CachedQueries.Translations where
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
-import Domain.Types.TranslationKey (keyName)
+import Domain.Types.TranslationKey (lookupNames)
 import Domain.Types.TranslationKeys (RiderTranslationKey)
 import qualified Domain.Types.Translations
 import Kernel.Beam.Functions
@@ -66,16 +66,24 @@ findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid messageKey language 
   IM.withInMemCache ["Translations", moid.getId, messageKey, show language] 3600 $ do
     findByMerchantOpCityIdMessageKeyLanguage moid messageKey language
 
--- | The text of a code-owned key in the reader's language: the city's row, then the shared one.
--- When neither exists the English row is read the same way, so a city's English wins over the shared English.
+-- | The text of a code-owned key in the reader's language; when no name has a row in that language,
+-- its English text read the same way, so a city's English wins over the shared English.
 findTextByKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> m (Maybe Text)
-findTextByKey cityId language key = do
-  mbRow <- byLanguage language
-  if language == Lang.ENGLISH || maybe False ((== language) . (.language)) mbRow
-    then pure ((.message) <$> mbRow)
-    else fmap (.message) <$> byLanguage Lang.ENGLISH
+findTextByKey cityId language key =
+  findTextByKeyInLanguage cityId language key
+    |<|>| (if language == Lang.ENGLISH then pure Nothing else findTextByKeyInLanguage cityId Lang.ENGLISH key)
+
+-- | The text of a code-owned key in one language only: the key's own name, then its legacy name,
+-- each as the city's row, then the shared one.
+findTextByKeyInLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> m (Maybe Text)
+findTextByKeyInLanguage cityId language key = go (lookupNames key)
   where
-    byLanguage = findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId (keyName key)
+    go [] = pure Nothing
+    go (name : rest) = do
+      mbRow <- findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId name language
+      case mbRow of
+        Just row | row.language == language -> pure (Just row.message)
+        _ -> go rest
 
 -- | 'findTextByKey' in the reader's language (English when unset), else the code's own English text.
 findTextByKeyWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Text -> m Text
