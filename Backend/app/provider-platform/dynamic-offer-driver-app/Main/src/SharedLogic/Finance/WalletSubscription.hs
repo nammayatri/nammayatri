@@ -39,6 +39,7 @@ where
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -53,7 +54,7 @@ import SharedLogic.Finance.Wallet (buildDriverChargeCtx)
 import SharedLogic.Finance.WalletAccount (resolveWalletOwner)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
-import Tools.Notifications (sendNotificationToDriver)
+import Tools.Notifications (buildMerchantPNContentWithFallback, sendNotificationToDriver)
 
 data WalletDebitKind = DailySubscription | MigratedDues
   deriving (Show, Eq)
@@ -243,10 +244,9 @@ creditWalletForPaidDriverFees transporterConfig driver paymentOrderId feesBefore
     -- The credit exists now (posted by this delivery or an earlier one). The push goes out once per recharge,
     -- marked separately from the credit: a delivery that stopped after crediting still notifies on the retry.
     firstNotification <- Redis.setNxExpire ("WalletAutopayRechargeNotified:" <> fee.id.getId) (7 * 24 * 3600) True
-    when firstNotification $ do
-      let title = "Wallet recharged"
-          message = "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay."
-      fork "wallet autopay recharge notification" $
+    when firstNotification $
+      fork "wallet autopay recharge notification" $ do
+        (title, message) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_AutopayRecharged [("amount", show (feeAmount fee))] ("Wallet recharged", "Rs." <> show (feeAmount fee) <> " has been added to your wallet by Autopay.")
         sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message driver driver.deviceToken
   forM_ latePaidWalletFees $ \fee -> do
     owner <- resolveWalletOwner (cast fee.driverId)

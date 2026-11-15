@@ -601,7 +601,9 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       DTA.AWAITING_APPROVAL -> WMB.updateAlertRequestStatus req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
+      DTA.REJECTED -> do
+        (title, body) <- Notification.buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Driver_ApprovalRequestRejected [("requestType", requestType driverRequest)] ("Request Rejected!", message driverRequest)
+        Notification.requestRejectionNotification merchantOpCityId title body driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
       DTA.ACCEPTED -> do
         case driverRequest.requestData of
           DTA.EndRide DTA.EndRideData {..} -> do
@@ -612,12 +614,12 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       _ -> pure ()
   pure Success
   where
-    notificationTitle = "Request Rejected!"
+    requestType req_ = show $ DTA.castAlertRequestDataToRequestType req_.requestData
     message req_ =
       cs $
         unwords
           [ "Sorry, your request for",
-            (show $ DTA.castAlertRequestDataToRequestType req_.requestData) <> " has been rejected",
+            requestType req_ <> " has been rejected",
             "Check the app for more details."
           ]
 

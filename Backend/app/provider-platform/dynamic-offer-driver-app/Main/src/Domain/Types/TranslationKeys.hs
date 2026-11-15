@@ -18,6 +18,7 @@ module Domain.Types.TranslationKeys
   ( TranslationKey (..),
     EarningsLabel (..),
     AcUsageMessage (..),
+    PushWord (..),
     RcRuleFailure (..),
     DriverPushKey (..),
     pushNotificationType,
@@ -32,6 +33,7 @@ import qualified Domain.Types.Alert.AlertRequestType as DAlertType
 import qualified Domain.Types.Alert.OnboardingAlertAction as DOAA
 import Domain.Types.DocumentOnboardingStage (DocumentOnboardingStage (..), LegalStructure (..))
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.ServiceTierType as DST
 import Domain.Types.TranslationKey
@@ -60,6 +62,9 @@ data TranslationKey
   | ServiceTier_Name DST.ServiceTierType
   | ServiceTier_ShortDescription DST.ServiceTierType
   | ServiceTier_LongDescription DST.ServiceTierType
+  | OnboardingAs_Name DI.OnboardingAs
+  | -- A word placed into a push sentence
+    PushValue_Word PushWord
   | Wallet_Item Text
   | DocumentField_Label DVC.DocumentType Text
   | DocumentField_Hint DVC.DocumentType Text
@@ -90,6 +95,8 @@ instance Show TranslationKey where
     ServiceTier_Name t -> dotted ["ServiceTier", "Name", keyName t]
     ServiceTier_ShortDescription t -> dotted ["ServiceTier", "ShortDescription", keyName t]
     ServiceTier_LongDescription t -> dotted ["ServiceTier", "LongDescription", keyName t]
+    OnboardingAs_Name a -> dotted ["OnboardingAs", "Name", keyName a]
+    PushValue_Word w -> dotted ["PushValue", "Word", keyName w]
     Wallet_Item ref -> dotted ["Wallet", "Item", ref]
     DocumentField_Label d f -> dotted ["DocumentField", "Label", keyName d, f]
     DocumentField_Hint d f -> dotted ["DocumentField", "Hint", keyName d, f]
@@ -120,7 +127,9 @@ instance IsTranslationKey TranslationKey where
         map Coins_Message [minBound .. maxBound],
         map ServiceTier_Name serviceTiers,
         map ServiceTier_ShortDescription serviceTiers,
-        map ServiceTier_LongDescription serviceTiers
+        map ServiceTier_LongDescription serviceTiers,
+        map OnboardingAs_Name [DI.FLEET_DRIVER, DI.INDIVIDUAL],
+        map PushValue_Word [minBound .. maxBound]
       ]
     where
       documentTypes = [minBound .. maxBound]
@@ -148,6 +157,8 @@ instance IsTranslationKey TranslationKey where
     ServiceTier_Name _ -> Nothing
     ServiceTier_ShortDescription _ -> Nothing
     ServiceTier_LongDescription _ -> Nothing
+    OnboardingAs_Name _ -> Nothing
+    PushValue_Word _ -> Nothing
     Wallet_Item _ -> Nothing
     DocumentField_Label _ _ -> Nothing
     DocumentField_Hint _ _ -> Nothing
@@ -237,6 +248,10 @@ earningsLabelText = \case
 data AcUsageMessage = Restricted | Working
   deriving stock (Show, Eq, Ord, Bounded, Enum)
 
+-- | The praise word in the ride-started push.
+data PushWord = OfferAdjective
+  deriving stock (Show, Eq, Ord, Bounded, Enum)
+
 -- | The reason shown when a vehicle registration fails a rule.
 data RcRuleFailure
   = InvalidFuelType
@@ -270,6 +285,7 @@ data DriverPushKey
   | DriverPush_FleetOwner_DriverDeclinedInvite
   | DriverPush_Driver_FleetRequestApproved
   | DriverPush_Driver_FleetRequestRejected
+  | DriverPush_Driver_ApprovalRequestRejected
   | DriverPush_Operator_DriverUnlinked
   | DriverPush_Operator_FleetUnlinked
   | DriverPush_Driver_Unblocked
@@ -277,14 +293,22 @@ data DriverPushKey
   | DriverPush_Payout_Completed
   | DriverPush_Payout_Failed
   | DriverPush_Payout_FailedWithDetail
+  | DriverPush_Payout_Initiated
+  | DriverPush_Payout_InitiatedWithFee
   | DriverPush_Payout_VpaAlert
   | DriverPush_Payout_ReferralReward
+  | DriverPush_Payout_BankDetailsMissing
   | DriverPush_IssueStatus IC.IssueStatus
   | DriverPush_IssueChat_Title
   | DriverPush_IssueChat_ImageFallback
   | DriverPush_IssueChat_MessageFallback
   | -- Ride
     DriverPush_Ride_Cancelled
+  | DriverPush_Ride_Assigned
+  | DriverPush_Ride_ScheduledAssigned
+  | DriverPush_Ride_ScheduledAssignedWithGroup
+  | DriverPush_Ride_EditDestinationAccepted
+  | DriverPush_Ride_PickupInstructions
   | DriverPush_Ride_NewAvailable
   | DriverPush_Ride_Started
   | DriverPush_Ride_StartedAc
@@ -293,6 +317,8 @@ data DriverPushKey
   | DriverPush_Ride_SearchCancelled
   | DriverPush_Ride_StopAdded
   | DriverPush_Ride_StopEdited
+  | DriverPush_Ride_StopAddedBeforeStart
+  | DriverPush_Ride_StopEditedBeforeStart
   | DriverPush_Ride_StopDetected
   | DriverPush_Ride_RouteDeviation
   | DriverPush_Ride_Stoppage
@@ -301,6 +327,12 @@ data DriverPushKey
   | DriverPush_Ride_EkdLiveCallFeedback
   | DriverPush_SharedCab_Allocation
   | DriverPush_SharedCab_CheckIn
+  | -- Bus trips
+    DriverPush_BusTrip_Assigned
+  | DriverPush_BusTrip_Started
+  | DriverPush_BusTrip_Ended
+  | DriverPush_BusTrip_Cancelled
+  | DriverPush_FrfsTrip_Updated
   | DriverPush_AvailableForRidesEnded_RequestLimitReached
   | DriverPush_AvailableForRidesEnded_ConsecutiveRejections
   | DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation
@@ -309,19 +341,32 @@ data DriverPushKey
   | DriverPush_Driver_FeedbackBadge
   | DriverPush_Driver_MarkedFavourite
   | DriverPush_Driver_Referral
+  | DriverPush_Referral_CustomerFirstRide
+  | DriverPush_Referral_DriverFirstRide
   | DriverPush_Driver_FleetConsent
   | DriverPush_Driver_OperatorConsent
   | DriverPush_IssueBreach_ExtraFareMitigation
+  | DriverPush_City_Updated
+  | DriverPush_City_PlanRequired
+  | DriverPush_City_DocumentRequired
   | -- Vehicle
     DriverPush_Vehicle_UnhygienicWarning
   | DriverPush_Vehicle_UnsafeWarning
   | DriverPush_PickupZone_Request
   | DriverPush_PickupZone_NoShow
+  | DriverPush_PickupZone_RequestToast
+  | DriverPush_PickupZone_NoShowToast
   | -- Reminders
     DriverPush_Reminder_VehicleInspection
   | DriverPush_Reminder_DriverInspection
   | DriverPush_Reminder_TrainingVideo
   | DriverPush_Reminder_DocumentExpiry
+  | DriverPush_FleetOwner_DriverDocumentExpired
+  | DriverPush_FleetOwner_DriverDocumentExpiring
+  | DriverPush_FleetOwner_VehicleDocumentExpired
+  | DriverPush_FleetOwner_VehicleDocumentExpiring
+  | DriverPush_FleetOwner_DriverRequirementOverdue
+  | DriverPush_FleetOwner_DriverRequirementDue
   | -- Subscription payments
     DriverPush_Payment_Failed
   | DriverPush_Payment_Pending
@@ -329,11 +374,27 @@ data DriverPushKey
   | DriverPush_Payment_ManualModeOnCancel
   | DriverPush_Payment_ManualModeOnPause
   | DriverPush_Payment_ManualModeOnSuspend
+  | -- Wallet balance floor
+    DriverPush_Wallet_OfflineBelowFloor
+  | DriverPush_Wallet_LowBalance
+  | DriverPush_Wallet_LowBalanceMinimum
+  | DriverPush_Wallet_LowBalanceSetupAutopay
+  | DriverPush_Wallet_LowBalanceSetupAutopayMinimum
+  | DriverPush_Wallet_LowBalanceAutopay
+  | DriverPush_Wallet_LowBalanceAutopayMinimum
+  | DriverPush_Wallet_TopupSuccess
+  | DriverPush_Wallet_AutopayRecharged
+  | -- Prepaid subscription balance
+    DriverPush_Prepaid_RechargeSuccess
+  | DriverPush_Prepaid_BalanceUpdated
+  | DriverPush_Prepaid_LowBalance
   | -- Safety (sent to the driver's emergency contacts)
     DriverPush_Safety_SosResolvedSafe
   | DriverPush_Safety_LiveTrackingStopped
   | -- Dashboard config alerts
     DriverPush_ConfigAlert DAlertType.AlertRequestType DAA.DashboardAccessType
+  | -- Alerts a bus trip raises to its fleet owner (the bell row and the push), by alert type
+    DriverPush_FleetAlert DAlertType.AlertRequestType
   deriving stock (Eq, Generic)
 
 instance Show DriverPushKey where
@@ -342,6 +403,7 @@ instance Show DriverPushKey where
     DriverPush_OnboardingAlert action audience -> dotted ["DriverPush", "OnboardingAlert", keyName action, keyName audience]
     DriverPush_IssueStatus status -> dotted ["DriverPush", "IssueStatus", keyName status]
     DriverPush_ConfigAlert requestType audience -> dotted ["DriverPush", "ConfigAlert", keyName requestType, keyName audience]
+    DriverPush_FleetAlert requestType -> dotted ["DriverPush", "FleetAlert", keyName requestType]
     k -> dottedConstructorName k
 
 instance IsTranslationKey DriverPushKey where
@@ -364,6 +426,7 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_FleetOwner_DriverDeclinedInvite,
            DriverPush_Driver_FleetRequestApproved,
            DriverPush_Driver_FleetRequestRejected,
+           DriverPush_Driver_ApprovalRequestRejected,
            DriverPush_Operator_DriverUnlinked,
            DriverPush_Operator_FleetUnlinked,
            DriverPush_Driver_Unblocked
@@ -372,14 +435,22 @@ instance IsTranslationKey DriverPushKey where
       <> [ DriverPush_Payout_Completed,
            DriverPush_Payout_Failed,
            DriverPush_Payout_FailedWithDetail,
+           DriverPush_Payout_Initiated,
+           DriverPush_Payout_InitiatedWithFee,
            DriverPush_Payout_VpaAlert,
-           DriverPush_Payout_ReferralReward
+           DriverPush_Payout_ReferralReward,
+           DriverPush_Payout_BankDetailsMissing
          ]
       <> map DriverPush_IssueStatus [minBound .. maxBound]
       <> [ DriverPush_IssueChat_Title,
            DriverPush_IssueChat_ImageFallback,
            DriverPush_IssueChat_MessageFallback,
            DriverPush_Ride_Cancelled,
+           DriverPush_Ride_Assigned,
+           DriverPush_Ride_ScheduledAssigned,
+           DriverPush_Ride_ScheduledAssignedWithGroup,
+           DriverPush_Ride_EditDestinationAccepted,
+           DriverPush_Ride_PickupInstructions,
            DriverPush_Ride_NewAvailable,
            DriverPush_Ride_Started,
            DriverPush_Ride_StartedAc,
@@ -388,6 +459,8 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_Ride_SearchCancelled,
            DriverPush_Ride_StopAdded,
            DriverPush_Ride_StopEdited,
+           DriverPush_Ride_StopAddedBeforeStart,
+           DriverPush_Ride_StopEditedBeforeStart,
            DriverPush_Ride_StopDetected,
            DriverPush_Ride_RouteDeviation,
            DriverPush_Ride_Stoppage,
@@ -396,6 +469,11 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_Ride_EkdLiveCallFeedback,
            DriverPush_SharedCab_Allocation,
            DriverPush_SharedCab_CheckIn,
+           DriverPush_BusTrip_Assigned,
+           DriverPush_BusTrip_Started,
+           DriverPush_BusTrip_Ended,
+           DriverPush_BusTrip_Cancelled,
+           DriverPush_FrfsTrip_Updated,
            DriverPush_AvailableForRidesEnded_RequestLimitReached,
            DriverPush_AvailableForRidesEnded_ConsecutiveRejections,
            DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation,
@@ -403,23 +481,48 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_Driver_FeedbackBadge,
            DriverPush_Driver_MarkedFavourite,
            DriverPush_Driver_Referral,
+           DriverPush_Referral_CustomerFirstRide,
+           DriverPush_Referral_DriverFirstRide,
            DriverPush_Driver_FleetConsent,
            DriverPush_Driver_OperatorConsent,
            DriverPush_IssueBreach_ExtraFareMitigation,
+           DriverPush_City_Updated,
+           DriverPush_City_PlanRequired,
+           DriverPush_City_DocumentRequired,
            DriverPush_Vehicle_UnhygienicWarning,
            DriverPush_Vehicle_UnsafeWarning,
            DriverPush_PickupZone_Request,
            DriverPush_PickupZone_NoShow,
+           DriverPush_PickupZone_RequestToast,
+           DriverPush_PickupZone_NoShowToast,
            DriverPush_Reminder_VehicleInspection,
            DriverPush_Reminder_DriverInspection,
            DriverPush_Reminder_TrainingVideo,
            DriverPush_Reminder_DocumentExpiry,
+           DriverPush_FleetOwner_DriverDocumentExpired,
+           DriverPush_FleetOwner_DriverDocumentExpiring,
+           DriverPush_FleetOwner_VehicleDocumentExpired,
+           DriverPush_FleetOwner_VehicleDocumentExpiring,
+           DriverPush_FleetOwner_DriverRequirementOverdue,
+           DriverPush_FleetOwner_DriverRequirementDue,
            DriverPush_Payment_Failed,
            DriverPush_Payment_Pending,
            DriverPush_Payment_Success,
            DriverPush_Payment_ManualModeOnCancel,
            DriverPush_Payment_ManualModeOnPause,
            DriverPush_Payment_ManualModeOnSuspend,
+           DriverPush_Wallet_OfflineBelowFloor,
+           DriverPush_Wallet_LowBalance,
+           DriverPush_Wallet_LowBalanceMinimum,
+           DriverPush_Wallet_LowBalanceSetupAutopay,
+           DriverPush_Wallet_LowBalanceSetupAutopayMinimum,
+           DriverPush_Wallet_LowBalanceAutopay,
+           DriverPush_Wallet_LowBalanceAutopayMinimum,
+           DriverPush_Wallet_TopupSuccess,
+           DriverPush_Wallet_AutopayRecharged,
+           DriverPush_Prepaid_RechargeSuccess,
+           DriverPush_Prepaid_BalanceUpdated,
+           DriverPush_Prepaid_LowBalance,
            DriverPush_Safety_SosResolvedSafe,
            DriverPush_Safety_LiveTrackingStopped
          ]
@@ -427,6 +530,7 @@ instance IsTranslationKey DriverPushKey where
            | requestType <- [minBound .. maxBound],
              audience <- [DAA.DASHBOARD_ADMIN, DAA.DASHBOARD_USER]
          ]
+      <> map DriverPush_FleetAlert fleetAlertTypes
 
   legacyKeyName = \case
     DriverPush_DocumentDecision decision -> Just (keyName decision)
@@ -447,6 +551,7 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_FleetOwner_DriverDeclinedInvite -> Just "FLEET_OWNER_DRIVER_DECLINED_INVITE"
     DriverPush_Driver_FleetRequestApproved -> Just "FLEET_REQUEST_APPROVED"
     DriverPush_Driver_FleetRequestRejected -> Just "FLEET_REQUEST_REJECTED"
+    DriverPush_Driver_ApprovalRequestRejected -> Nothing
     DriverPush_Operator_DriverUnlinked -> Just "DRIVER_UNLINK_FROM_OPERATOR"
     DriverPush_Operator_FleetUnlinked -> Just "FLEET_UNLINK_FROM_OPERATOR"
     DriverPush_Driver_Unblocked -> Just "UNBLOCK_DRIVER_KEY"
@@ -454,13 +559,21 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Payout_Completed -> Nothing
     DriverPush_Payout_Failed -> Nothing
     DriverPush_Payout_FailedWithDetail -> Nothing
+    DriverPush_Payout_Initiated -> Nothing
+    DriverPush_Payout_InitiatedWithFee -> Nothing
     DriverPush_Payout_VpaAlert -> Just "PAYOUT_VPA_ALERT"
     DriverPush_Payout_ReferralReward -> Just "PAYOUT_REFERRAL_REWARD"
+    DriverPush_Payout_BankDetailsMissing -> Nothing
     DriverPush_IssueStatus _ -> Nothing
     DriverPush_IssueChat_Title -> Nothing
     DriverPush_IssueChat_ImageFallback -> Nothing
     DriverPush_IssueChat_MessageFallback -> Nothing
     DriverPush_Ride_Cancelled -> Just "NOTIFY_DRIVER_ON_CANCEL"
+    DriverPush_Ride_Assigned -> Nothing
+    DriverPush_Ride_ScheduledAssigned -> Nothing
+    DriverPush_Ride_ScheduledAssignedWithGroup -> Nothing
+    DriverPush_Ride_EditDestinationAccepted -> Nothing
+    DriverPush_Ride_PickupInstructions -> Nothing
     DriverPush_Ride_NewAvailable -> Just "NEW_RIDE_AVAILABLE"
     DriverPush_Ride_Started -> Just "RIDE_STARTED"
     DriverPush_Ride_StartedAc -> Just "AC_RIDE_STARTED"
@@ -469,6 +582,8 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Ride_SearchCancelled -> Just "CANCELLED_SEARCH_REQUEST"
     DriverPush_Ride_StopAdded -> Just "ADD_STOP"
     DriverPush_Ride_StopEdited -> Just "EDIT_STOP"
+    DriverPush_Ride_StopAddedBeforeStart -> Nothing
+    DriverPush_Ride_StopEditedBeforeStart -> Nothing
     DriverPush_Ride_StopDetected -> Just "STOP_DETECTION_KEY"
     DriverPush_Ride_RouteDeviation -> Just "DRIVER_ROUTE_DEVIATION"
     DriverPush_Ride_Stoppage -> Just "DRIVER_RIDE_STOPPAGE"
@@ -477,6 +592,11 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Ride_EkdLiveCallFeedback -> Just "EKD_LIVE_CALL_FEEDBACK"
     DriverPush_SharedCab_Allocation -> Just "SHARED_CAB_ALLOCATION"
     DriverPush_SharedCab_CheckIn -> Just "SHARED_CAB_CHECK_IN"
+    DriverPush_BusTrip_Assigned -> Nothing
+    DriverPush_BusTrip_Started -> Nothing
+    DriverPush_BusTrip_Ended -> Nothing
+    DriverPush_BusTrip_Cancelled -> Nothing
+    DriverPush_FrfsTrip_Updated -> Nothing
     DriverPush_AvailableForRidesEnded_RequestLimitReached -> Just "AVAILABLE_FOR_RIDES_ENDED_REQUEST_LIMIT_REACHED"
     DriverPush_AvailableForRidesEnded_ConsecutiveRejections -> Just "AVAILABLE_FOR_RIDES_ENDED_CONSECUTIVE_REJECTIONS"
     DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation -> Just "AVAILABLE_FOR_RIDES_ENDED_DRIVER_AT_FAULT_CANCELLATION"
@@ -484,26 +604,52 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Driver_FeedbackBadge -> Just "FEEDBACK_BADGE_PN"
     DriverPush_Driver_MarkedFavourite -> Just "FAVOURITE_DRIVER_ALERT"
     DriverPush_Driver_Referral -> Just "REFERRAL_FLOW"
+    DriverPush_Referral_CustomerFirstRide -> Nothing
+    DriverPush_Referral_DriverFirstRide -> Nothing
     DriverPush_Driver_FleetConsent -> Just "FLEET_CONSENT"
     DriverPush_Driver_OperatorConsent -> Just "OPERATOR_CONSENT"
     DriverPush_IssueBreach_ExtraFareMitigation -> Just "ISSUE_BREACH_EXTRA_FARE_MITIGATION"
+    DriverPush_City_Updated -> Nothing
+    DriverPush_City_PlanRequired -> Nothing
+    DriverPush_City_DocumentRequired -> Nothing
     DriverPush_Vehicle_UnhygienicWarning -> Just "UNHYGIENIC_VEHICLE_WARNING"
     DriverPush_Vehicle_UnsafeWarning -> Just "VEHICLE_UNSAFE_WARNING"
     DriverPush_PickupZone_Request -> Just "PICKUP_ZONE_REQUEST"
     DriverPush_PickupZone_NoShow -> Just "PICKUP_ZONE_NO_SHOW"
+    DriverPush_PickupZone_RequestToast -> Nothing
+    DriverPush_PickupZone_NoShowToast -> Nothing
     DriverPush_Reminder_VehicleInspection -> Just "VEHICLE_INSPECTION"
     DriverPush_Reminder_DriverInspection -> Just "DRIVER_INSPECTION"
     DriverPush_Reminder_TrainingVideo -> Just "TRAINING_VIDEO"
     DriverPush_Reminder_DocumentExpiry -> Just "DOCUMENT_EXPIRY_REMINDER"
+    DriverPush_FleetOwner_DriverDocumentExpired -> Nothing
+    DriverPush_FleetOwner_DriverDocumentExpiring -> Nothing
+    DriverPush_FleetOwner_VehicleDocumentExpired -> Nothing
+    DriverPush_FleetOwner_VehicleDocumentExpiring -> Nothing
+    DriverPush_FleetOwner_DriverRequirementOverdue -> Nothing
+    DriverPush_FleetOwner_DriverRequirementDue -> Nothing
     DriverPush_Payment_Failed -> Just "PAYMENT_FAILED"
     DriverPush_Payment_Pending -> Just "PAYMENT_PENDING"
     DriverPush_Payment_Success -> Just "PAYMENT_SUCCESS"
     DriverPush_Payment_ManualModeOnCancel -> Just "PAYMENT_MODE_MANUAL_ON_CANCEL"
     DriverPush_Payment_ManualModeOnPause -> Just "PAYMENT_MODE_MANUAL_ON_PAUSE"
     DriverPush_Payment_ManualModeOnSuspend -> Just "PAYMENT_MODE_MANUAL_ON_SUSPEND"
+    DriverPush_Wallet_OfflineBelowFloor -> Nothing
+    DriverPush_Wallet_LowBalance -> Nothing
+    DriverPush_Wallet_LowBalanceMinimum -> Nothing
+    DriverPush_Wallet_LowBalanceSetupAutopay -> Nothing
+    DriverPush_Wallet_LowBalanceSetupAutopayMinimum -> Nothing
+    DriverPush_Wallet_LowBalanceAutopay -> Nothing
+    DriverPush_Wallet_LowBalanceAutopayMinimum -> Nothing
+    DriverPush_Wallet_TopupSuccess -> Nothing
+    DriverPush_Wallet_AutopayRecharged -> Nothing
+    DriverPush_Prepaid_RechargeSuccess -> Nothing
+    DriverPush_Prepaid_BalanceUpdated -> Nothing
+    DriverPush_Prepaid_LowBalance -> Nothing
     DriverPush_Safety_SosResolvedSafe -> Just "SOS_RESOLVED_SAFE"
     DriverPush_Safety_LiveTrackingStopped -> Just "LIVE_TRACKING_STOPPED"
     DriverPush_ConfigAlert requestType audience -> Just ("CONFIG_ALERT_" <> configAlertRequestText requestType <> "_" <> keyName audience)
+    DriverPush_FleetAlert _ -> Nothing
 
 -- | The notification type a key's first row gets when the dashboard creates it: the one the
 -- sender passes in code, so the row only carries the texts. Nothing for keys whose sender takes
@@ -528,31 +674,90 @@ pushNotificationType = \case
   DriverPush_Driver_DeclinedFleetInvite -> Just FCM.DRIVER_NOTIFY
   DriverPush_FleetOwner_VehicleUnlinked -> Just FCM.DRIVER_NOTIFY
   DriverPush_Driver_VehicleUnlinked -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Driver_ApprovalRequestRejected -> Just FCM.DRIVER_REQUEST_REJECTED
   DriverPush_Operator_DriverUnlinked -> Just FCM.DRIVER_UNLINK_FROM_OPERATOR
   DriverPush_Operator_FleetUnlinked -> Just FCM.FLEET_UNLINK_FROM_OPERATOR
   DriverPush_Payout_Completed -> Just FCM.PAYOUT_COMPLETED
   DriverPush_Payout_Failed -> Just FCM.PAYOUT_FAILED
   DriverPush_Payout_FailedWithDetail -> Just FCM.PAYOUT_FAILED
+  DriverPush_Payout_Initiated -> Just FCM.PAYOUT_INITIATED
+  DriverPush_Payout_InitiatedWithFee -> Just FCM.PAYOUT_INITIATED
+  DriverPush_Payout_BankDetailsMissing -> Just FCM.PAYOUT_VPA_REMINDER
   DriverPush_IssueStatus _ -> Just FCM.CHAT_MESSAGE
   DriverPush_IssueChat_Title -> Just FCM.CHAT_MESSAGE
   DriverPush_IssueChat_ImageFallback -> Just FCM.CHAT_MESSAGE
   DriverPush_IssueChat_MessageFallback -> Just FCM.CHAT_MESSAGE
   DriverPush_Ride_Cancelled -> Just FCM.CANCELLED_PRODUCT
   DriverPush_Ride_NewAvailable -> Just FCM.NEW_RIDE_AVAILABLE
+  DriverPush_Ride_Assigned -> Just FCM.DRIVER_ASSIGNMENT
+  DriverPush_Ride_ScheduledAssigned -> Just FCM.SCHEDULED_RIDE_NOTIFICATION
+  DriverPush_Ride_ScheduledAssignedWithGroup -> Just FCM.SCHEDULED_RIDE_NOTIFICATION
+  DriverPush_Ride_EditDestinationAccepted -> Just FCM.DRIVER_ACCEPTED_EDITED_LOCATION
+  DriverPush_Ride_PickupInstructions -> Just FCM.PICKUP_INSTRUCTIONS
   DriverPush_Ride_Started -> Just FCM.TRIP_STARTED
   DriverPush_Ride_StartedAc -> Just FCM.TRIP_STARTED
   DriverPush_Ride_ClearedFare -> Just FCM.CLEARED_FARE
   DriverPush_Ride_SearchCancelled -> Just FCM.CANCELLED_SEARCH_REQUEST
+  DriverPush_Ride_StopAddedBeforeStart -> Just FCM.ADD_STOP
+  DriverPush_Ride_StopEditedBeforeStart -> Just FCM.EDIT_STOP
   DriverPush_Ride_StopDetected -> Just FCM.DRIVER_STOP_DETECTED
+  DriverPush_BusTrip_Assigned -> Just FCM.WMB_TRIP_ASSIGNED
+  DriverPush_BusTrip_Started -> Just FCM.WMB_TRIP_STARTED
+  DriverPush_BusTrip_Ended -> Just FCM.WMB_TRIP_FINISHED
+  DriverPush_BusTrip_Cancelled -> Just FCM.WMB_TRIP_FINISHED
+  DriverPush_FrfsTrip_Updated -> Just FCM.TRIP_UPDATED
   DriverPush_AvailableForRidesEnded_RequestLimitReached -> Just FCM.DRIVER_NOTIFY
   DriverPush_AvailableForRidesEnded_ConsecutiveRejections -> Just FCM.DRIVER_NOTIFY
   DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation -> Just FCM.DRIVER_NOTIFY
   DriverPush_Driver_FeedbackBadge -> Just FCM.FEEDBACK_BADGE_PN
   DriverPush_Vehicle_UnhygienicWarning -> Just FCM.UNHYGIENIC_VEHICLE_WARNING
   DriverPush_Vehicle_UnsafeWarning -> Just FCM.VEHICLE_UNSAFE_WARNING
+  DriverPush_PickupZone_RequestToast -> Just FCM.PICKUP_ZONE_REQUEST
+  DriverPush_PickupZone_NoShowToast -> Just FCM.PICKUP_ZONE_NO_SHOW
+  DriverPush_FleetOwner_DriverDocumentExpired -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverDocumentExpiring -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_VehicleDocumentExpired -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_VehicleDocumentExpiring -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverRequirementOverdue -> Just FCM.DRIVER_NOTIFY
+  DriverPush_FleetOwner_DriverRequirementDue -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_OfflineBelowFloor -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalance -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalanceMinimum -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalanceSetupAutopay -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalanceSetupAutopayMinimum -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalanceAutopay -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_LowBalanceAutopayMinimum -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_TopupSuccess -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Wallet_AutopayRecharged -> Just FCM.DRIVER_NOTIFY
+  DriverPush_Prepaid_RechargeSuccess -> Just FCM.PREPAID_RECHARGE_SUCCESS
+  DriverPush_Prepaid_BalanceUpdated -> Just FCM.PREPAID_BALANCE_UPDATE
+  DriverPush_Prepaid_LowBalance -> Just FCM.DRIVER_UNSUBSCRIBED
   DriverPush_Safety_SosResolvedSafe -> Just FCM.SOS_RESOLVED
   DriverPush_Safety_LiveTrackingStopped -> Just FCM.SOS_RESOLVED
+  DriverPush_City_Updated -> Just FCM.NEW_MESSAGE
+  DriverPush_City_PlanRequired -> Just FCM.NEW_MESSAGE
+  DriverPush_City_DocumentRequired -> Just FCM.NEW_MESSAGE
+  DriverPush_Referral_CustomerFirstRide -> Just FCM.REFERRAL_ACTIVATED
+  DriverPush_Referral_DriverFirstRide -> Just FCM.REFERRAL_ACTIVATED
+  DriverPush_FleetAlert _ -> Just FCM.TRIGGER_FCM
   _ -> Nothing
+
+-- | The alert types a bus trip raises through 'SharedLogic.WMB.triggerAlertRequest'; the other
+-- values of the enum are dashboard config and onboarding alerts.
+fleetAlertTypes :: [DAlertType.AlertRequestType]
+fleetAlertTypes =
+  [ DAlertType.EndRideApproval,
+    DAlertType.OverSpeedingAlert,
+    DAlertType.StoppedAlert,
+    DAlertType.SkippedWaitingStopAlert,
+    DAlertType.MissedStopAlert,
+    DAlertType.WrongStartStopAlert,
+    DAlertType.RouteDeviationAlert,
+    DAlertType.OppositeDirectionAlert,
+    DAlertType.TripNotStartedAlert,
+    DAlertType.SafetyCheckAlert,
+    DAlertType.RideStopReachedAlert
+  ]
 
 -- | The bell-alert pairs the onboarding code can produce. The flag-change actions (approve,
 -- reject, enable, disable, block, unblock, approval pending) have a sender, @notifyFlagChanges@,

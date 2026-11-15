@@ -76,3 +76,7 @@ findTextByKey cityId language key = do
     else fmap (.message) <$> byLanguage Lang.ENGLISH
   where
     byLanguage = findByMerchantOpCityIdMessageKeyLanguageWithInMemcache cityId (keyName key)
+
+-- | 'findTextByKey' in the reader's language (English when unset), else the code's own English text.
+findTextByKeyWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Text -> m Text
+findTextByKeyWithFallback cityId mbLanguage key fallback = fromMaybe fallback <$> findTextByKey cityId (fromMaybe Lang.ENGLISH mbLanguage) key

@@ -67,6 +67,7 @@ import qualified Domain.Types.PersonDisability as PersonDisability
 import qualified Domain.Types.PersonPTStats as Fields
 import qualified Domain.Types.PersonStats as Fields
 import qualified Domain.Types.RiderConfig as DRC
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
 import Environment
@@ -688,7 +689,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
         }
   let filterNewContacts personDEN = return $ not $ personDEN.mobileNumber `elem` oldList
   newlyAddedContacts <- filterM filterNewContacts newList
-  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts Nothing
+  SPDEN.notifyEmergencyContacts person RiderPush_Safety_EmergencyContactAdded [("userName", SLP.getName person)] ("Emergency Contact Added", notificationMessage person) Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts Nothing
   where
     notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 

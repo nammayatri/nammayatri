@@ -26,10 +26,11 @@ where
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import Domain.Types.TranslationKeys (DriverPushKey (..))
+import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.Interface.Types as Notification
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.Forkable (Forkable, fork)
 import Kernel.Types.Id
@@ -37,6 +38,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
@@ -134,7 +136,10 @@ notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs
 notifyOnOnboardingAsChange driver onboardingAs = do
   let merchantOpCityId = driver.merchantOperatingCityId
       driverName = mkDriverName driver
-      dynamicParams = [("driverName", driverName), ("onboardingAs", show onboardingAs)]
+      -- The onboarding mode is named in each reader's language.
+      dynamicParams recipient = do
+        onboardingAsName <- fromMaybe (show onboardingAs) <$> CQTranslations.findTextByKey (Just merchantOpCityId) (fromMaybe ENGLISH recipient.language) (OnboardingAs_Name onboardingAs)
+        pure [("driverName", driverName), ("onboardingAs", onboardingAsName)]
       entityData =
         TN.OnboardingChangeEntityData
           { driverId = driver.id.getId,
@@ -145,9 +150,11 @@ notifyOnOnboardingAsChange driver onboardingAs = do
   mbDriverInfo <- QDIExtra.findById (cast driver.id)
   mbFleetOwner <- findActiveFleetOwner driver.id
   when (maybe False (.enabled) mbDriverInfo || isJust mbFleetOwner) $ do
-    TN.notifyDriverOnMerchantPN merchantOpCityId driver driverOnboardingAsChangedKey Notification.DRIVER_NOTIFY dynamicParams entityData
-    whenJust mbFleetOwner $ \fleetOwner ->
-      TN.notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner fleetOwnerDriverOnboardingAsChangedKey Notification.DRIVER_NOTIFY dynamicParams entityData
+    driverParams <- dynamicParams driver
+    TN.notifyDriverOnMerchantPN merchantOpCityId driver driverOnboardingAsChangedKey Notification.DRIVER_NOTIFY driverParams entityData
+    whenJust mbFleetOwner $ \fleetOwner -> do
+      fleetOwnerParams <- dynamicParams fleetOwner
+      TN.notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner fleetOwnerDriverOnboardingAsChangedKey Notification.DRIVER_NOTIFY fleetOwnerParams entityData
 
 notifyOnFleetOwnerChange :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> DP.Person -> DP.Person -> Maybe DP.Person -> m ()
 notifyOnFleetOwnerChange merchantOpCityId driver newFleetOwner mbOldFleetOwner = do

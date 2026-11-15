@@ -2895,11 +2895,6 @@ data DocumentDecision = DocumentApproved | DocumentRejected Text
 replacePlaceholders :: Text -> Text -> Text -> Text
 replacePlaceholders translatedDocType reason template = T.replace "{#docType#}" "" $ T.replace "{#documentType#}" translatedDocType $ T.replace "{#reason#}" reason template
 
--- | The document's display name in the driver's language, else English, else the raw type.
-translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> DVC.DocumentType -> m Text
-translateDocumentType merchantOpCityId language documentType =
-  fromMaybe (show documentType) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name documentType)
-
 fetchDocumentSmsTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> DMM.MessageKey -> m (Text, Text)
 fetchDocumentSmsTemplates merchantOpCityId language messageKey = do
   mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey (Just language) Nothing Nothing
@@ -2953,7 +2948,7 @@ sendDocumentDecisionNotification merchantOpCityId docType decision driver = do
         DocumentRejected r -> (DMM.DOCUMENT_INVALID, FCM.DOCUMENT_INVALID, r)
         DocumentApproved -> (DMM.DOCUMENT_VALID, FCM.DRIVER_NOTIFY, "")
       language = fromMaybe Lang.ENGLISH driver.language
-  translatedDocType <- translateDocumentType merchantOpCityId language docType
+  translatedDocType <- SDO.translateDocumentType merchantOpCityId language docType
   pushTemplates <- fetchDocumentPushTemplates merchantOpCityId language driver.language messageKey
   smsTemplates <- fetchDocumentSmsTemplates merchantOpCityId language messageKey
   let (title, body) = buildPushMessages translatedDocType reason pushTemplates

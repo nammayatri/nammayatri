@@ -30,6 +30,7 @@ import Domain.Types.Person as DPerson
 import Domain.Types.Ride as DRide
 import Domain.Types.RideRelatedNotificationConfig
 import Domain.Types.RiderConfig
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow)
@@ -45,6 +46,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -92,17 +94,18 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         }
   return Complete
   where
-    formatMessageTransformer timeDiffFromUtc booking ride (title, body) = do
-      let isRentalOrIntercity = case booking.bookingDetails of
-            DB.RentalDetails _ -> "Rental"
-            DB.InterCityDetails _ -> "InterCity"
-            _ -> ""
+    -- The trip kind is named in the rider's language where its key has a row.
+    formatMessageTransformer timeDiffFromUtc booking ride person (title, body) = do
+      isRentalOrIntercity <- case booking.bookingDetails of
+        DB.RentalDetails _ -> CQTranslations.findTextByKeyWithFallback booking.merchantOperatingCityId person.language TripCategory_Name_Rental "Rental"
+        DB.InterCityDetails _ -> CQTranslations.findTextByKeyWithFallback booking.merchantOperatingCityId person.language TripCategory_Name_InterCity "InterCity"
+        _ -> pure ""
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           rideStartOtp = if fromMaybe False ride.enableOtpLessRide then "" else ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
           rideStartTime = showLocalTime timeDiffFromUtc booking.startTime
           formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" rideStartTime body
-      (formattedTitle, formattedBody)
+      pure (formattedTitle, formattedBody)
 
 sendTagActionNotification ::
   ScheduleNotificationFlow m r =>
@@ -115,15 +118,16 @@ sendTagActionNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       notificationType = jobData.notificationType
       notificationKey = jobData.notificationKey
       merchantId = jobData.merchantId
-  sendCommunicationToCustomer $ SendCommunicationToCustomerReq {maybeAppId = Nothing, rideId = Nothing, messageTransformer = identity, configInExperimentVersions = [], ..}
+  sendCommunicationToCustomer $ SendCommunicationToCustomerReq {maybeAppId = Nothing, rideId = Nothing, messageTransformer = const pure, configInExperimentVersions = [], ..}
   return Complete
 
-data SendCommunicationToCustomerReq = SendCommunicationToCustomerReq
+data SendCommunicationToCustomerReq m = SendCommunicationToCustomerReq
   { notificationType :: NotificationType,
     notificationKey :: Text,
     maybeAppId :: Maybe Text,
     rideId :: Maybe (Id DRide.Ride),
-    messageTransformer :: (Text, Text) -> (Text, Text),
+    -- | Fills the text's placeholders for the rider it goes to.
+    messageTransformer :: DPerson.Person -> (Text, Text) -> m (Text, Text),
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     configInExperimentVersions :: [LYT.ConfigVersionMap],
@@ -132,7 +136,7 @@ data SendCommunicationToCustomerReq = SendCommunicationToCustomerReq
 
 sendCommunicationToCustomer ::
   (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
-  SendCommunicationToCustomerReq ->
+  SendCommunicationToCustomerReq m ->
   m ()
 sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -155,25 +159,18 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
       QCallStatus.create callStatus
     PN -> do
       merchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId notificationKey Nothing Nothing person.language configInExperimentVersions >>= fromMaybeM (MerchantPNNotFound merchantOperatingCityId.getId notificationKey)
-      let entityData = generateReq merchantPN.title merchantPN.body
-      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
+      (title, message) <- messageTransformer person (merchantPN.title, merchantPN.body)
+      notifyPersonOnEvents person NotifReq {title, message} merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
     SMS -> do
       smsCfg <- asks (.smsCfg)
       messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
       merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId messageKey person.language (Just configInExperimentVersions) >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
-      let (_, smsReqBody) = messageTransformer ("", merchantMessage.message)
+      (_, smsReqBody) <- messageTransformer person ("", merchantMessage.message)
       Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) -- TODO: append SMS heading
         >>= Sms.checkSmsResult
     _ -> pure ()
   where
-    generateReq notifTitle notifBody = do
-      let (title, message) = messageTransformer (notifTitle, notifBody)
-      NotifReq
-        { title = title,
-          message = message
-        }
-
     buildCallStatus callStatusId exotelResponse = do
       now <- getCurrentTime
       return $

@@ -89,7 +89,7 @@ bodyField = "body"
 
 -- The order the dashboard lists them in.
 domains :: [Domain]
-domains = [translationsDomain "ServiceTier", pushDomain, smsDomain]
+domains = [translationsDomain "ServiceTier", translationsDomain "TripCategory", translationsDomain "LiveActivity", translationsDomain "Frfs", pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain
 findDomain name = find ((== name) . (.domainName)) domains & fromMaybeM (InvalidRequest $ "Unknown translation domain: " <> name)

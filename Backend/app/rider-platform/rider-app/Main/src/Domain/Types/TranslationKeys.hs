@@ -22,6 +22,7 @@ module Domain.Types.TranslationKeys
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.ServiceTierType as DST
 import Domain.Types.TranslationKey
@@ -35,18 +36,41 @@ import qualified Text.Show
 data RiderTranslationKey
   = ServiceTier_Name DST.ServiceTierType
   | ServiceTier_ShortDescription DST.ServiceTierType
+  | -- The trip kind named in the scheduled-ride reminders
+    TripCategory_Name_Rental
+  | TripCategory_Name_InterCity
+  | -- The line the iOS Live Activity shows when a ride ends without a trip
+    LiveActivity_Message_SearchExpired
+  | LiveActivity_Message_NoDriversFound
+  | LiveActivity_Message_DriverCancelled
+  | LiveActivity_Message_UserCancelled
+  | -- The part of a bus trip's details that changed, named in the trip-updated push
+    Frfs_UpdatedField_DriverAndBus
+  | Frfs_UpdatedField_BusNumber
+  | Frfs_UpdatedField_Driver
   deriving stock (Eq, Generic)
 
 instance Show RiderTranslationKey where
   show = \case
     ServiceTier_Name t -> dotted ["ServiceTier", "Name", keyName t]
     ServiceTier_ShortDescription t -> dotted ["ServiceTier", "ShortDescription", keyName t]
+    k -> dottedConstructorName k
 
 instance IsTranslationKey RiderTranslationKey where
   allKeys =
     concat
       [ map ServiceTier_Name serviceTiers,
-        map ServiceTier_ShortDescription serviceTiers
+        map ServiceTier_ShortDescription serviceTiers,
+        [ TripCategory_Name_Rental,
+          TripCategory_Name_InterCity,
+          LiveActivity_Message_SearchExpired,
+          LiveActivity_Message_NoDriversFound,
+          LiveActivity_Message_DriverCancelled,
+          LiveActivity_Message_UserCancelled,
+          Frfs_UpdatedField_DriverAndBus,
+          Frfs_UpdatedField_BusNumber,
+          Frfs_UpdatedField_Driver
+        ]
       ]
     where
       serviceTiers = [minBound .. maxBound]
@@ -73,6 +97,8 @@ data RiderPushKey
   | RiderPush_Quote_DriverIncoming
   | -- Driver and trip progress
     RiderPush_Driver_Assigned
+  | RiderPush_Driver_AssignedScheduled
+  | RiderPush_ScheduledRide_Reminder
   | RiderPush_Driver_BetterAssigned
   | RiderPush_Driver_OnTheWay
   | RiderPush_Driver_Reaching
@@ -88,6 +114,8 @@ data RiderPushKey
   | RiderPush_Ride_TollCrossed
   | RiderPush_Ride_TollChargeApprovalRequired
   | RiderPush_Ride_MissedCall
+  | RiderPush_RideChat_Title
+  | RiderPush_Ride_EditDestError Enums.EditDestinationError
   | RiderPush_Ride_EndOffer
   | RiderPush_Ride_FirstRide
   | RiderPush_Ride_EkdLiveCallFeedback
@@ -107,6 +135,11 @@ data RiderPushKey
   | RiderPush_Safety_SosResolvedSafe
   | RiderPush_Safety_LiveTrackingStarted
   | RiderPush_Safety_LiveTrackingStopped
+  | RiderPush_Safety_ShareRideInvite
+  | RiderPush_Safety_MockDrillStarting
+  | RiderPush_Safety_MockDrill
+  | RiderPush_Safety_PostRideCheck
+  | RiderPush_Safety_EmergencyContactAdded
   | -- Rewards and referrals
     RiderPush_Reward_Unlock
   | RiderPush_OfferCashback_Initiated
@@ -143,6 +176,7 @@ data RiderPushKey
 instance Show RiderPushKey where
   show = \case
     RiderPush_IssueStatus status -> dotted ["RiderPush", "IssueStatus", keyName status]
+    RiderPush_Ride_EditDestError code -> dotted ["RiderPush", "Ride", "EditDestError", keyName code]
     RiderPush_Payment serviceType category -> dotted ["RiderPush", "Payment", keyName serviceType, keyName category]
     k -> dottedConstructorName k
 
@@ -167,6 +201,8 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_Quote_Received,
            RiderPush_Quote_DriverIncoming,
            RiderPush_Driver_Assigned,
+           RiderPush_Driver_AssignedScheduled,
+           RiderPush_ScheduledRide_Reminder,
            RiderPush_Driver_BetterAssigned,
            RiderPush_Driver_OnTheWay,
            RiderPush_Driver_Reaching,
@@ -182,6 +218,7 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_Ride_TollCrossed,
            RiderPush_Ride_TollChargeApprovalRequired,
            RiderPush_Ride_MissedCall,
+           RiderPush_RideChat_Title,
            RiderPush_Ride_EndOffer,
            RiderPush_Ride_FirstRide,
            RiderPush_Ride_EkdLiveCallFeedback,
@@ -199,6 +236,11 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_Safety_SosResolvedSafe,
            RiderPush_Safety_LiveTrackingStarted,
            RiderPush_Safety_LiveTrackingStopped,
+           RiderPush_Safety_ShareRideInvite,
+           RiderPush_Safety_MockDrillStarting,
+           RiderPush_Safety_MockDrill,
+           RiderPush_Safety_PostRideCheck,
+           RiderPush_Safety_EmergencyContactAdded,
            RiderPush_Reward_Unlock,
            RiderPush_OfferCashback_Initiated,
            RiderPush_OfferCashback_Completed,
@@ -226,6 +268,7 @@ instance IsTranslationKey RiderPushKey where
            RiderPush_SharedCab_OnTheWay,
            RiderPush_SharedCab_ArrivingSoon
          ]
+      <> map RiderPush_Ride_EditDestError [minBound .. maxBound]
       <> [ RiderPush_Payment serviceType category
            | serviceType <- [minBound .. maxBound],
              category <- paymentCategories
@@ -258,6 +301,8 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Quote_Received -> Just "QUOTE_RECEIVED"
     RiderPush_Quote_DriverIncoming -> Just "DRIVER_QUOTE_INCOMING"
     RiderPush_Driver_Assigned -> Just "DRIVER_ASSIGNMENT"
+    RiderPush_Driver_AssignedScheduled -> Nothing
+    RiderPush_ScheduledRide_Reminder -> Nothing
     RiderPush_Driver_BetterAssigned -> Just "BETTER_DRIVER_ASSIGNED"
     RiderPush_Driver_OnTheWay -> Just "DRIVER_ON_THE_WAY"
     RiderPush_Driver_Reaching -> Just "DRIVER_REACHING"
@@ -273,6 +318,8 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Ride_TollCrossed -> Just "TOLL_CROSSED"
     RiderPush_Ride_TollChargeApprovalRequired -> Just "TOLL_CHARGE_APPROVAL_REQUIRED"
     RiderPush_Ride_MissedCall -> Just "FCM_CHAT_MESSAGE"
+    RiderPush_RideChat_Title -> Nothing
+    RiderPush_Ride_EditDestError _ -> Nothing
     RiderPush_Ride_EndOffer -> Just "RIDE_END_OFFER"
     RiderPush_Ride_FirstRide -> Just "FIRST_RIDE_EVENT"
     RiderPush_Ride_EkdLiveCallFeedback -> Just "EKD_LIVE_CALL_FEEDBACK"
@@ -290,6 +337,11 @@ instance IsTranslationKey RiderPushKey where
     RiderPush_Safety_SosResolvedSafe -> Just "SOS_RESOLVED_SAFE"
     RiderPush_Safety_LiveTrackingStarted -> Just "LIVE_TRACKING_STARTED"
     RiderPush_Safety_LiveTrackingStopped -> Just "LIVE_TRACKING_STOPPED"
+    RiderPush_Safety_ShareRideInvite -> Nothing
+    RiderPush_Safety_MockDrillStarting -> Nothing
+    RiderPush_Safety_MockDrill -> Nothing
+    RiderPush_Safety_PostRideCheck -> Nothing
+    RiderPush_Safety_EmergencyContactAdded -> Nothing
     RiderPush_Reward_Unlock -> Just "REWARD_UNLOCK"
     RiderPush_OfferCashback_Initiated -> Just "OFFER_CASHBACK_INITIATED"
     RiderPush_OfferCashback_Completed -> Just "OFFER_CASHBACK_COMPLETED"
@@ -327,11 +379,20 @@ pushNotificationType = \case
   RiderPush_IssueChat_Title -> Just Notification.CHAT_MESSAGE
   RiderPush_IssueChat_ImageFallback -> Just Notification.CHAT_MESSAGE
   RiderPush_IssueChat_MessageFallback -> Just Notification.CHAT_MESSAGE
+  RiderPush_Driver_AssignedScheduled -> Just Notification.DRIVER_ASSIGNMENT
+  RiderPush_ScheduledRide_Reminder -> Just Notification.SCHEDULED_RIDE_REMINDER
   RiderPush_Trip_Updated -> Just Notification.TRIP_UPDATED
+  RiderPush_RideChat_Title -> Just Notification.CHAT_MESSAGE
+  RiderPush_Ride_EditDestError _ -> Just Notification.TRIP_UPDATED
   RiderPush_Safety_SosResolved -> Just Notification.SOS_RESOLVED
   RiderPush_Safety_SosResolvedSafe -> Just Notification.SOS_RESOLVED
   RiderPush_Safety_LiveTrackingStarted -> Just Notification.SHARE_RIDE
   RiderPush_Safety_LiveTrackingStopped -> Just Notification.SOS_RESOLVED
+  RiderPush_Safety_ShareRideInvite -> Just Notification.SHARE_RIDE
+  RiderPush_Safety_MockDrillStarting -> Just Notification.SOS_MOCK_DRILL_NOTIFY
+  RiderPush_Safety_MockDrill -> Just Notification.SOS_MOCK_DRILL
+  RiderPush_Safety_PostRideCheck -> Just Notification.POST_RIDE_SAFETY_CHECK
+  RiderPush_Safety_EmergencyContactAdded -> Just Notification.EMERGENCY_CONTACT_ADDED
   RiderPush_Payment _ category -> Just category
   _ -> Nothing
 

@@ -64,7 +64,6 @@ where
 import qualified Data.Aeson as A
 import Data.OpenApi (ToSchema)
 import qualified Data.Time as DT
-import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig (TransporterConfig (..))
@@ -77,7 +76,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
 
@@ -173,8 +171,7 @@ endedPushKey = \case
 notifyEnded :: AvailableForRidesEndFlow m r => DP.Person -> AvailableForRidesEndReason -> m ()
 notifyEnded person reason = do
   let merchantOpCityId = person.merchantOperatingCityId
-  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId (endedPushKey reason) Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
-  let (title, body) = maybe (defaultEndedContent reason) (\merchantPN -> (merchantPN.title, merchantPN.body)) mbMerchantPN
+  (title, body) <- Notify.buildMerchantPNContentWithFallback merchantOpCityId (Just $ fromMaybe ENGLISH person.language) (endedPushKey reason) [] (defaultEndedContent reason)
   Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY title body person person.deviceToken Nothing $
     AvailableForRidesEndedData {event = availableForRidesEndedEvent, reason}
 

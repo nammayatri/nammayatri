@@ -17,6 +17,7 @@ module SharedLogic.DashboardAlert
     audiencesFor,
     withoutAdminAudience,
     DashboardAlertFlow,
+    audienceLanguage,
     driverAlertHandle,
     notifyOnboardingChange,
     notifyAdminsRealtime,

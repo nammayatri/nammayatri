@@ -8,6 +8,7 @@ import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Environment
 import EulerHS.Prelude hiding (elem, id, unpack, unwords)
 import Kernel.Beam.Functions
@@ -29,6 +30,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.Notifications (buildMerchantPNContentWithFallback)
 
 getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
 getFollowRide (mbPersonId, _) = do
@@ -79,13 +81,11 @@ postShareRide (mbPersonId, merchantId) req = do
               updateFollowDetails emergencyContactEntity emergencyContact
               dbHash <- getDbHash emergencyContact.mobileNumber
               QPDEN.updateShareRide dbHash (cast personId) True
-              SLPEN.sendNotificationToEmergencyContact personId emergencyContactEntity (body person) title Notification.SHARE_RIDE Nothing Nothing
+              (title, body) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId emergencyContactEntity.language RiderPush_Safety_ShareRideInvite [("userName", SLP.getName person)] ("Ride Share", SLP.getName person <> " has invited you to follow their ride!\nFollow along to ensure their safety.")
+              SLPEN.sendNotificationToEmergencyContact personId emergencyContactEntity body title Notification.SHARE_RIDE Nothing Nothing
     )
     emergencyContacts.defaultEmergencyNumbers
   return APISuccess.Success
-  where
-    title = "Ride Share"
-    body person = SLP.getName person <> " has invited you to follow their ride!\nFollow along to ensure their safety."
 
 updateFollowDetails :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
 updateFollowDetails contactPersonEntity DPDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do

@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -354,7 +355,9 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             d2dReferralEarnings = Nothing,
             dailyStatsId = Nothing
           }
-      initiatedPush = Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
+      initiatedPush = do
+        (title, body) <- Notify.buildMerchantPNContentWithFallback ctx.person.merchantOperatingCityId ctx.person.language (if fee > 0 then DriverPush_Payout_InitiatedWithFee else DriverPush_Payout_Initiated) [("amount", show netAmount), ("fee", show fee)] ("Payout Initiated", "Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "")
+        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED title body ctx.person ctx.person.deviceToken
 
   if netAmount <= 0.0
     then pure Nothing
