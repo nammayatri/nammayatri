@@ -48,12 +48,19 @@ data RiderTranslationKey
     Frfs_UpdatedField_DriverAndBus
   | Frfs_UpdatedField_BusNumber
   | Frfs_UpdatedField_Driver
+  | -- An offer row's texts, by the row's id; the dashboard lists them from the city's offers
+    Offer_Title Text
+  | Offer_Description Text
+  | Offer_Tnc Text
   deriving stock (Eq, Generic)
 
 instance Show RiderTranslationKey where
   show = \case
     ServiceTier_Name t -> dotted ["ServiceTier", "Name", keyName t]
     ServiceTier_ShortDescription t -> dotted ["ServiceTier", "ShortDescription", keyName t]
+    Offer_Title offerId -> dotted ["Offer", "Title", offerId]
+    Offer_Description offerId -> dotted ["Offer", "Description", offerId]
+    Offer_Tnc offerId -> dotted ["Offer", "Tnc", offerId]
     k -> dottedConstructorName k
 
 instance IsTranslationKey RiderTranslationKey where
@@ -74,6 +81,23 @@ instance IsTranslationKey RiderTranslationKey where
       ]
     where
       serviceTiers = [minBound .. maxBound]
+
+  legacyKeyName = \case
+    ServiceTier_Name _ -> Nothing
+    ServiceTier_ShortDescription _ -> Nothing
+    TripCategory_Name_Rental -> Nothing
+    TripCategory_Name_InterCity -> Nothing
+    LiveActivity_Message_SearchExpired -> Nothing
+    LiveActivity_Message_NoDriversFound -> Nothing
+    LiveActivity_Message_DriverCancelled -> Nothing
+    LiveActivity_Message_UserCancelled -> Nothing
+    Frfs_UpdatedField_DriverAndBus -> Nothing
+    Frfs_UpdatedField_BusNumber -> Nothing
+    Frfs_UpdatedField_Driver -> Nothing
+    -- The offer rows are stored under the name the offer lookup builds from the offer id
+    Offer_Title offerId -> Just ("OFFER_" <> offerId <> "_title")
+    Offer_Description offerId -> Just ("OFFER_" <> offerId <> "_description")
+    Offer_Tnc offerId -> Just ("OFFER_" <> offerId <> "_tnc")
 
 -- | Text stored in the rider @merchant_push_notification@ table.
 data RiderPushKey

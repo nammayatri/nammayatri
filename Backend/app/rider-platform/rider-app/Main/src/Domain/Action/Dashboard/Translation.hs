@@ -44,7 +44,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import qualified Lib.Payment.Domain.Types.Offer as Fields
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
@@ -76,7 +79,7 @@ data Domain = Domain
     domainFields :: [Text],
     -- | The columns that can narrow one key's text to a variant, with every value the column takes.
     domainDimensions :: [Common.TranslationDimension],
-    domainKeys :: Id DMOC.MerchantOperatingCity -> Flow [KeyRef],
+    domainKeys :: DMOC.MerchantOperatingCity -> Flow [KeyRef],
     readRows :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row],
     -- | Saves the cells of one key, variant and language: one row where the domain stores them together.
     writeEntry :: DMOC.MerchantOperatingCity -> [Common.TranslationUpsertEntry] -> Flow ()
@@ -89,7 +92,7 @@ bodyField = "body"
 
 -- The order the dashboard lists them in.
 domains :: [Domain]
-domains = [translationsDomain "ServiceTier", translationsDomain "TripCategory", translationsDomain "LiveActivity", translationsDomain "Frfs", pushDomain, smsDomain]
+domains = [translationsDomain "ServiceTier", translationsDomain "TripCategory", translationsDomain "LiveActivity", translationsDomain "Frfs", offerDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain
 findDomain name = find ((== name) . (.domainName)) domains & fromMaybeM (InvalidRequest $ "Unknown translation domain: " <> name)
@@ -128,7 +131,7 @@ getTranslationDomains :: ShortId DM.Merchant -> Context.City -> Flow Common.Tran
 getTranslationDomains merchantShortId opCity = do
   merchantOpCity <- findCity merchantShortId opCity
   summaries <- forM domains $ \domain -> do
-    keyRefs <- domain.domainKeys merchantOpCity.id
+    keyRefs <- domain.domainKeys merchantOpCity
     rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
     -- A text is one field of one key and variant with a row in some language; the sender reads
     -- only the variant that matches, so a variant that exists in one language only is a gap in
@@ -150,7 +153,7 @@ getTranslationKeys :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common
 getTranslationKeys merchantShortId opCity domainName = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  keyRefs <- domain.domainKeys merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity
   rows <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let entry ref =
         Common.TranslationKeyEntry
@@ -174,7 +177,7 @@ postTranslationUpsert :: ShortId DM.Merchant -> Context.City -> Text -> Common.T
 postTranslationUpsert merchantShortId opCity domainName req = do
   merchantOpCity <- findCity merchantShortId opCity
   domain <- findDomain domainName
-  keyRefs <- domain.domainKeys merchantOpCity.id
+  keyRefs <- domain.domainKeys merchantOpCity
   stored <- bestRows <$> domain.readRows keyRefs merchantOpCity.id
   let check entry = do
         unless (any ((== entry.key) . (.refKey)) keyRefs) $
@@ -285,6 +288,21 @@ writeTranslation merchantOpCity entry = do
           }
   invalidateConfigInMem LYT.TranslationRider
   CQTranslations.clearCache merchantOpCity.id entry.key entry.language
+
+-- | One key per text of each of the city's active offers. The texts are @translations@ rows
+-- like the fixed keys'; only the key list comes from the offer rows.
+offerDomain :: Domain
+offerDomain =
+  Domain
+    { domainName = "Offer",
+      domainFields = [messageField],
+      domainDimensions = [],
+      domainKeys = \city -> do
+        offers <- QOffer.findAllActiveByMerchant city.merchantId.getId city.id.getId True
+        pure [keyRef (key offer.id.getId) | offer <- offers, key <- [Offer_Title, Offer_Description, Offer_Tnc]],
+      readRows = readTranslations,
+      writeEntry = mapM_ . writeTranslation
+    }
 
 -- ---------------------------------------------------------------------------
 -- merchant_push_notification: a row per (key, language, trip category, sub-category)
