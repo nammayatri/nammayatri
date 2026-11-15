@@ -126,6 +126,7 @@ Comments in the code and in `CLAUDE.md` cite README sections by name ("README �
 | iPhones — the push relay, `maps-shim/push-relay.js`, since 2026-09-16 | [docs/push.md](docs/push.md#iphones--the-push-relay-maps-shimpush-relayjs-since-2026-09-16) |
 | The SMS inbox and sign-in by an SMS he sends (2026-09-29) | [docs/sign-in.md](docs/sign-in.md#the-sms-inbox-and-sign-in-by-an-sms-he-sends-2026-09-29) |
 | Switching off a driver who has not paid | [docs/riders.md](docs/riders.md#switching-off-a-driver-who-has-not-paid) |
+| The ride's start code, filled in by the guard since 2026-11-15 — `maps-shim/ride-start.js` | [docs/driver-api.md](docs/driver-api.md#the-trap-start-needs-a-code-that-openapi-does-not-mention) |
 
 ---
 
@@ -194,7 +195,8 @@ local-stack/
 │   ├── docker-compose.yml   the stack (the website's admin-api is its overlay)
 │   ├── Dockerfile.rider     the backend image: librdkafka + the binaries in bin/
 │   ├── Dockerfile.maps-shim
-│   ├── auth-guard/          sign-in, SMS/WhatsApp, attempt limits, wallet gate --
+│   ├── auth-guard/          sign-in, SMS/WhatsApp, attempt limits, wallet gate,
+│   │                        the ride's start code (2026-11-15) --
 │   │                        server.js is the sign-in flow and the router; one
 │   │                        module per subject beside it: limits, gateway,
 │   │                        personal-codes, number-change, driver-rules,

@@ -691,12 +691,42 @@ with « Copier » and Google Maps, and account deletion erasing every photo
 (website `0a865ab`, released 13:23 UTC). The app's part reaches phones with the
 next store build: `expo-image-manipulator` is a native module.
 
+**Day 5 (2026-11-14) is done**, in the app and the website, with no change
+here: search by type on the passenger's screen 7 (twelve buttons, the
+`/places/nearby` answer above -- 5 km, then 15 km, said); the driver's
+« Ajouter un lieu » and « Mes lieux proposés » from his Profile, with his
+token (`author_side = 'driver'`), and his own pin screen, which asks this
+server for nothing but tiles; the app's deletion screen saying what the
+website says; Maestro flows 11 and 12 in three languages, on the console's
+Tests page (website `6022319`, released). Two app bugs the flows found were
+fixed on 2026-11-15 (the pin screen's camera, the search list under the
+keyboard): the app's `docs/driver.md` and `docs/passenger.md`.
+
+**Day 6 (2026-11-15) is done** for this server:
+
+- **The security review, live and signed in**:
+  `investigations/probe-places-live.py` (`0817d35949`), run by the owner on
+  the server: 26 ok, 0 BAD -- 401 without a token, the shape refusals, 422
+  outside both countries, another person's place and photos (404, as if they
+  did not exist), two photos and 512 KB, five a day. Every line was already
+  proven in `tests/suggested-places-routes.test.js`; this proved the live
+  server says the same. Its five places were erased with
+  `investigations/erase-test-places.sql` (by typed name, « Test jour 4/6… »;
+  a dry run unless `-v go=yes`). The console's decisions without a session were the one gap: 4 tests
+  in the website's `places.test.ts` (branch `feat/places-day6`). Agents may
+  decide, as on Validation (the owner, 2026-11-15).
+- **The ride code** (the boss's two other requests that day): the auth
+  guard now fills it in, so the apps show and ask none
+  (`docs/driver-api.md`, *The trap*; released `aa7f2f7cd1`, 22:34 UTC). And
+  a driver's name typed twice is shown once, in the app.
+
 Left:
 
-- **Day 5:** the driver's side -- the same screens from his menu, with his
-  token; and the app's own deletion screen (« Ce qui est supprimé / Ce qui
-  reste ») gets the proposed places and their photos, to say what the website
-  already says.
+- **The end-of-day test on phones**, in each country, with the APK of
+  2026-11-15: a driver proposes a place with a photo, the office approves it,
+  a passenger finds it by name and by its type; a ride from acceptance to the
+  end with no code shown or typed. Then the same erase file for its « Test
+  jour 6 » places.
 - **Before the app goes to the stores:** the privacy policy page, Google
   Play's « Sécurité des données » and App Store Connect's « Confidentialité de
   l'app » must name the proposed places — a place name, a pin and up to two

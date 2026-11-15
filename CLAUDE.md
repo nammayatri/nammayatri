@@ -432,12 +432,17 @@ rclone sees only what it uploaded since then; older backups are in Drive's
   tokens to APNs with the app's own words. The notification text for iOS is a
   copy of the app's `notifications.ts` — change both. `local-stack/docs/push.md`
   → *iPhones — the push relay*.
-- **The auth guard does more than sign-in now, and two of its jobs are
+- **The auth guard does more than sign-in now, and three of its jobs are
   invisible.** Since 2026-09-27 it reports every accepted driver → passenger
   rating to admin-api (`noteDriverRating`) — the backend keeps no row, so
   dropping that call silently empties the console's Notes — and it answers
-  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). `local-stack/docs/`
-  `riders.md` → *Ratings*, and `sign-in.md` → *WhatsApp*.
+  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). Since 2026-11-15 it
+  also **fills in the ride's start code** (`fillStartCode`, asking maps-shim
+  `/internal/ride-start-code`): the apps no longer ask for it, and the
+  deployed driver server still refuses a start without the right one, so
+  dropping that rule makes every ride from a current app unstartable.
+  `local-stack/docs/` `riders.md` → *Ratings*, `sign-in.md` → *WhatsApp*,
+  `driver-api.md` → *The trap: `/start` needs a code*.
 - **Release the stack with `ops/deploy.sh`, never by copying files.** Since
   2026-10-06 git and the server are identical (phase 1: 94/94 files), the
   website's `admin-api` is its own overlay (`ops/deploy/compose.admin.yml` in
