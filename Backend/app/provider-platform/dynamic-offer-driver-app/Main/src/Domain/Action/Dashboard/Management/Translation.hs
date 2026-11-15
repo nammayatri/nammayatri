@@ -95,7 +95,7 @@ bodyField = "body"
 -- The order the dashboard lists them in.
 domains :: [Domain]
 domains =
-  map translationsDomain ["Document", "FleetOwnerDocument", "OnboardingStage", "Verification", "ServiceTier", "DocumentDecision", "RcRule", "AcUsage", "Coins", "Earnings"]
+  map translationsDomain ["Document", "FleetOwnerDocument", "OnboardingStage", "Verification", "ServiceTier", "OnboardingAs", "DocumentDecision", "RcRule", "AcUsage", "Coins", "Earnings"]
     <> [walletDomain, documentFieldDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain

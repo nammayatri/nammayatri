@@ -90,7 +90,7 @@ import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRD
 import qualified "dynamic-offer-driver-app" Storage.Queries.Vehicle as QV
 import "dynamic-offer-driver-app" Tools.Error
-import "dynamic-offer-driver-app" Tools.Notifications (NotifReq (..), notifyDriverOnEvents, sendNotificationToDriver)
+import "dynamic-offer-driver-app" Tools.Notifications (NotifReq (..), buildMerchantPNContentWithFallback, notifyDriverOnEvents, sendNotificationToDriver)
 
 ------------------------------------------------------------
 -- Default reference time
@@ -130,8 +130,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
         Just referredDriverId -> do
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
-            let referralMessage = "Congratulations!"
-                referralTitle = "Your referred customer has completed their first ride"
+            (referralTitle, referralMessage) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Referral_CustomerFirstRide [] ("Your referred customer has completed their first ride", "Congratulations!")
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
               DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) Nothing
@@ -288,8 +287,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
           QRide.updateReferralFlagReason mbFlagReason ride.id
           pure isValid
     when passedFraudCheck $ do
-      let referralMessage = "Congratulations!"
-          referralTitle = "Your referred driver has completed their first ride"
+      (referralTitle, referralMessage) <- buildMerchantPNContentWithFallback referringDriver.merchantOperatingCityId referringDriver.language DriverPush_Referral_DriverFirstRide [] ("Your referred driver has completed their first ride", "Congratulations!")
       sendNotificationToDriver referringDriver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage referringDriver referringDriver.deviceToken
       mbVehicle <- QV.findById referringDriverId
       let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)

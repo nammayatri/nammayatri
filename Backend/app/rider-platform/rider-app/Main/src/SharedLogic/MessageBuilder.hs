@@ -212,10 +212,11 @@ buildSendBookingOTPIntercityMessage merchantOperatingCityId mbLanguage req = do
 buildBookingOtpSmsForCategory ::
   BuildMessageFlow m r =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Lang.Language ->
   DRB.Booking ->
   Text ->
   m SmsReqBuilder
-buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
+buildBookingOtpSmsForCategory merchantOperatingCityId mbLanguage booking otp = do
   let otpTxt = otp
       amountTxt = show booking.estimatedTotalFare.amountInt
   case booking.tripCategory of
@@ -232,7 +233,7 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
               ( fromMaybe "" mbCity,
                 show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
               )
-      buildSendBookingOTPIntercityMessage merchantOperatingCityId Nothing $
+      buildSendBookingOTPIntercityMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPIntercityMessageReq
           { otp = otpTxt,
             amount = amountTxt,
@@ -242,7 +243,7 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
             serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
           }
     _ ->
-      buildSendBookingOTPMessage merchantOperatingCityId Nothing $
+      buildSendBookingOTPMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPMessageReq
           { otp = otpTxt,
             amount = amountTxt,
@@ -253,7 +254,7 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
       appUrl <- getAppUrl merchantOperatingCityId
       let durationHours = show (fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration) `div` 3600)
           distanceKms = show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
-      buildSendBookingOTPRentalMessage merchantOperatingCityId Nothing $
+      buildSendBookingOTPRentalMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPRentalMessageReq
           { otp = otp,
             amount = show booking.estimatedTotalFare.amountInt,

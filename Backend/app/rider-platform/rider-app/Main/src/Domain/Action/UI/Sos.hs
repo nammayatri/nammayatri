@@ -496,7 +496,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   case startDrill of
     Just True -> do
-      SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContacts person RiderPush_Safety_MockDrillStarting (templateVariables person) (notificationTitle, notificationBody person True) Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       when (fromMaybe False onRide) $ do
         void $ QPDEN.updateShareRideForAll (cast personId) True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
@@ -505,9 +505,10 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
       when (fromMaybe False onRide) $ do
         let mockEntity = SafetyDSos.SosMockDrill {personId = cast personId, status = SafetyDSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
-      SPDEN.notifyEmergencyContacts person (notificationBody person False) notificationTitle Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContacts person RiderPush_Safety_MockDrill (templateVariables person) (notificationTitle, notificationBody person False) Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
   pure APISuccess.Success
   where
+    templateVariables person_ = [("userName", SLP.getName person_)]
     notificationBody person_ isStartDrill =
       SLP.getName person_
         <> if isStartDrill

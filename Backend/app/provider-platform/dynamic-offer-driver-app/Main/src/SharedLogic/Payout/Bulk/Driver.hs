@@ -31,7 +31,6 @@ import qualified Domain.Action.UI.Payout as UIPayout
 import Domain.Types.Extra.Plan (ServiceNames (PREPAID_SUBSCRIPTION))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
@@ -70,7 +69,6 @@ import qualified SharedLogic.Finance.WalletPayout as Fields
 import SharedLogic.Payout.Bulk.Claim (beneficiaryBankOf, claimBeneficiary)
 import SharedLogic.Payout.Bulk.Eligibility (BulkCandidate, usableBankDetails)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -381,8 +379,5 @@ notifyBulkPayoutOutcome person order kind mbFailureDetail =
               "Your payout of Rs." <> show amount <> " has failed" <> maybe "" (": " <>) mbFailureDetail <> ". Please retry or contact support.",
               FCM.PAYOUT_FAILED
             )
-    -- A configured row (per language) wins over the built-in English text.
-    mbMerchantPN <- CPN.findMatchingMerchantPNByKey person.merchantOperatingCityId pushKey Nothing Nothing person.language Nothing
-    let params = [("amount", show amount), ("failureDetail", fromMaybe "" mbFailureDetail)]
-        (notificationTitle, notificationMessage) = maybe (defaultTitle, defaultMessage) (\pn -> (Notify.buildTemplate params pn.title, Notify.buildTemplate params pn.body)) mbMerchantPN
+    (notificationTitle, notificationMessage) <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount), ("failureDetail", fromMaybe "" mbFailureDetail)] (defaultTitle, defaultMessage)
     Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken

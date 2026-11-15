@@ -54,6 +54,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
@@ -632,8 +633,7 @@ processWalletTopupWebhook driver order transactionStatus = do
             pure (not alreadyPosted)
           else pure False
     when creditedNow $ do
-      let notificationTitle = "Wallet Top-up Successful"
-          notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+      (notificationTitle, notificationMessage) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_TopupSuccess [("amount", show order.amount)] ("Wallet Top-up Successful", "Your wallet has been topped up with Rs." <> show order.amount)
       sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
 
 mkTopupInvoiceConfig :: DOrder.PaymentOrder -> InvoiceConfig
@@ -887,11 +887,8 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
               { subscriptionPurchaseId = latestPurchase.id
               }
         unless isFleetOwner $ do
-          let prepaidRechargeMessage =
-                "Your recharge worth Rs."
-                  <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
-                  <> " is successful"
-              prepaidRechargeTitle = "Recharge Successful!"
+          let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces creditAmount)
+          (prepaidRechargeTitle, prepaidRechargeMessage) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
           sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
@@ -966,11 +963,8 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           mbVehicleCategory
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
-      let prepaidRechargeMessage =
-            "Your recharge worth Rs."
-              <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
-              <> " is successful"
-          prepaidRechargeTitle = "Recharge Successful!"
+      let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
+      (prepaidRechargeTitle, prepaidRechargeMessage) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
       sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
       pure (fst newBalance, Nothing)
 

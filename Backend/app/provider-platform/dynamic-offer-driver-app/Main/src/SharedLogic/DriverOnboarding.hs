@@ -888,6 +888,11 @@ cachedTexts owner merchantOpCityId language keys = do
       best = Map.fromListWith (\a b -> if rank a <= rank b then a else b) [(r.messageKey, r) | r <- rows, wanted r]
   pure $ \key -> (.message) <$> Map.lookup (keyName key) best
 
+-- | The document's display name in the reader's language, else English, else the raw type.
+translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Language -> DVC.DocumentType -> m Text
+translateDocumentType merchantOpCityId language documentType =
+  fromMaybe (show documentType) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name documentType)
+
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
   translatedFields <- traverse (translateDocumentFields merchantOperatingCityId language documentType) documentFields

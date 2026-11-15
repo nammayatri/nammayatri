@@ -708,7 +708,10 @@ onUpdate = \case
     whenJust mbRide $ \ride -> QRide.updateTalkedWithDriver (Just True) ride.id
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
     if bookingUpdateReqDetails.status == DBUR.SOFT
-      then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
+      then do
+        mbPerson <- runInReplica $ QPerson.findById booking.riderId
+        (title, body) <- maybe (pure (errorCode, errorMessage)) (\person -> Notify.editDestErrorContent person errorCode errorMessage) mbPerson
+        QBUR.updateErrorObjById (Just DBUR.ErrorObj {errorCode = title, errorMessage = body}) bookingUpdateReqId
       else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
@@ -759,8 +762,7 @@ onUpdate = \case
     unless (null fareBreakups) $ do
       newBreakups <- traverse (Common.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareBreakups
       SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) newBreakups
-    let newServiceTierName = fromMaybe (show newVehicleServiceTier) mbServiceTierName
-    Notify.notifyOnServiceTierChange booking newServiceTierName
+    Notify.notifyOnServiceTierChange booking newVehicleServiceTier mbServiceTierName
   OUValidatedAddBaggageReq ValidatedAddBaggageReq {..} -> do
     logInfo $ "Add baggage confirmed for booking: " <> booking.id.getId <> " to count: " <> show numberOfLuggages <> ", newFare: " <> show newEstimatedFare
     whenJust newEstimatedFare $ \fare ->

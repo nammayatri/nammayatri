@@ -38,7 +38,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.ReminderConfig as DRC
-import Domain.Types.TranslationKeys (DriverPushKey (..))
+import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.Beam.Functions as BF
@@ -46,7 +46,7 @@ import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -76,6 +76,7 @@ import qualified SharedLogic.Reminder.Helper as ReminderHelper
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BusinessLicense as QBL
@@ -99,7 +100,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCExtra
 import Tools.Error (DriverOnboardingError (ImageNotValid, RCNotFound), GenericError (InternalError))
 import qualified Tools.Fields as Fields
-import Tools.Notifications (NotifReq (..), notifyDriverOnEvents, notifyFleetWithGRPCProvider, notifyWithGRPCProvider)
+import Tools.Notifications (NotifReq (..), buildMerchantPNContentWithFallback, notifyDriverOnEvents, notifyWithGRPCProvider)
 import qualified Tools.SMS as Sms
 
 -- Document types that have expiry dates and are processed by processDocumentExpiryReminder
@@ -595,18 +596,19 @@ sendDriverNotifications ::
 sendDriverNotifications reminder driver merchantOpCityId notificationType messageKey = do
   -- Send FCM notification to driver
   let notificationKey = show notificationType
-      documentTypeName = show reminder.documentType
   mbMerchantPN <- case reminderPushKey notificationType of
     Just pnKey -> CPN.findMatchingMerchantPNByKey merchantOpCityId pnKey Nothing Nothing driver.language Nothing
     Nothing -> pure Nothing
   case mbMerchantPN of
     Just merchantPN -> do
-      let (title, body) = case notificationType of
-            FCM.DOCUMENT_EXPIRY_REMINDER ->
-              ( Text.replace "{#documentType#}" documentTypeName merchantPN.title,
-                Text.replace "{#documentType#}" documentTypeName merchantPN.body
-              )
-            _ -> (merchantPN.title, merchantPN.body)
+      (title, body) <- case notificationType of
+        FCM.DOCUMENT_EXPIRY_REMINDER -> do
+          documentTypeName <- translatedDocumentType
+          pure
+            ( Text.replace "{#documentType#}" documentTypeName merchantPN.title,
+              Text.replace "{#documentType#}" documentTypeName merchantPN.body
+            )
+        _ -> pure (merchantPN.title, merchantPN.body)
       let entityData = NotifReq {entityId = reminder.entityId, title, message = body}
       notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
     Nothing -> logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
@@ -616,6 +618,7 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
   mbSmsInfo <-
     if messageKey == DMM.DOCUMENT_EXPIRY_REMINDER_SMS
       then do
+        documentTypeName <- translatedDocumentType
         (mbSender, msg, templateId, messageType) <-
           MessageBuilder.buildDocumentExpiryReminderMessage
             merchantOpCityId
@@ -640,6 +643,7 @@ sendDriverNotifications reminder driver merchantOpCityId notificationType messag
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
       Nothing -> logInfo "Driver mobile number not available, skipping SMS"
   where
+    translatedDocumentType = SDO.translateDocumentType merchantOpCityId (fromMaybe ENGLISH driver.language) reminder.documentType
     reminderPushKey :: FCM.FCMNotificationType -> Maybe DriverPushKey
     reminderPushKey = \case
       FCM.VEHICLE_INSPECTION -> Just DriverPush_Reminder_VehicleInspection
@@ -658,23 +662,66 @@ sendFleetAndOperatorNotifications ::
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->
-  Text ->
-  Text ->
+  DriverPushKey ->
+  (Language -> m [(Text, Text)]) ->
+  (Text, Text) ->
   Aeson.Value ->
   m ()
-sendFleetAndOperatorNotifications driver merchantOpCityId title message entityData = do
+sendFleetAndOperatorNotifications driver merchantOpCityId pushKey templateParams fallbackContent entityData = do
   -- Send notification to fleet owner (if exists) via GRPC
   mbFleetAssociation <- QFDA.findByDriverId driver.id True
-  Kernel.Prelude.whenJust mbFleetAssociation $ \fleetAssoc -> do
-    logInfo $ "Fleet owner found for driver " <> driver.id.getId <> ": " <> fleetAssoc.fleetOwnerId
-    notifyFleetWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message driver.id Nothing entityData
+  fleetOwners <- case mbFleetAssociation of
+    Nothing -> pure []
+    Just fleetAssoc -> do
+      logInfo $ "Fleet owner found for driver " <> driver.id.getId <> ": " <> fleetAssoc.fleetOwnerId
+      pure [Id fleetAssoc.fleetOwnerId]
 
   -- Send notification to operator(s) via GRPC (direct association or through fleet)
-  operatorIdTexts <- AnalyticsExtra.findOperatorIdForDriver driver.id
-  forM_ operatorIdTexts $ \operatorIdText -> do
-    let operatorId = Id operatorIdText
+  operatorIds <- AnalyticsExtra.findOperatorIdForDriver driver.id
+  forM_ operatorIds $ \operatorIdText ->
     logInfo $ "Operator found for driver " <> driver.id.getId <> ": " <> operatorIdText
-    notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message operatorId Nothing entityData
+  notifyFleetAndOperators merchantOpCityId (fleetOwners <> map Id operatorIds) pushKey templateParams fallbackContent entityData
+
+-- | One GRPC notice per recipient, worded by the key's row in the recipient's language; a recipient
+-- with no Person row gets the English text, sent by id.
+notifyFleetAndOperators ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ServiceFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  [Id DP.Person] ->
+  DriverPushKey ->
+  (Language -> m [(Text, Text)]) ->
+  (Text, Text) ->
+  Aeson.Value ->
+  m ()
+notifyFleetAndOperators merchantOpCityId recipientIds pushKey templateParams fallbackContent entityData =
+  forM_ recipientIds $ \recipientId -> do
+    language <- (>>= (.language)) <$> QPerson.findById recipientId
+    notifyInLanguage merchantOpCityId recipientId language pushKey templateParams fallbackContent entityData
+
+-- | One GRPC notice to a recipient whose language is known, worded by the key's row in it, else the
+-- English text.
+notifyInLanguage ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ServiceFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  Maybe Language ->
+  DriverPushKey ->
+  (Language -> m [(Text, Text)]) ->
+  (Text, Text) ->
+  Aeson.Value ->
+  m ()
+notifyInLanguage merchantOpCityId recipientId language pushKey templateParams fallbackContent entityData = do
+  params <- templateParams (fromMaybe ENGLISH language)
+  (title, body) <- buildMerchantPNContentWithFallback merchantOpCityId language pushKey params fallbackContent
+  notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title body recipientId Nothing entityData
 
 -- Helper function to send document expiry notifications
 sendDocumentExpiryNotification ::
@@ -693,18 +740,21 @@ sendDocumentExpiryNotification ::
   m ()
 sendDocumentExpiryNotification reminder driver merchantOpCityId isExpiredParam mbDaysBefore = do
   let documentTypeName = show reminder.documentType
-      fleetOperatorTitle = if isExpiredParam then "Driver Document Expired" else "Driver Document Expiring Soon"
-      fleetOperatorMessage =
+      days = show (fromMaybe 0 mbDaysBefore)
+      (pushKey, fleetOperatorTitle, fleetOperatorMessage) =
         if isExpiredParam
-          then "Driver " <> driver.firstName <> "'s " <> documentTypeName <> " has expired. Please ensure they upload an updated document."
-          else "Driver " <> driver.firstName <> "'s " <> documentTypeName <> " will expire in " <> show (fromMaybe 0 mbDaysBefore) <> " days."
+          then (DriverPush_FleetOwner_DriverDocumentExpired, "Driver Document Expired", "Driver " <> driver.firstName <> "'s " <> documentTypeName <> " has expired. Please ensure they upload an updated document.")
+          else (DriverPush_FleetOwner_DriverDocumentExpiring, "Driver Document Expiring Soon", "Driver " <> driver.firstName <> "'s " <> documentTypeName <> " will expire in " <> days <> " days.")
+      templateParams language = do
+        translatedDocType <- SDO.translateDocumentType merchantOpCityId language reminder.documentType
+        pure [("driverName", driver.firstName), ("documentType", translatedDocType), ("days", days)]
       entityData = Aeson.object ["driverId" Aeson..= driver.id.getId, "documentType" Aeson..= documentTypeName, "isExpired" Aeson..= isExpiredParam]
 
   -- Send FCM and SMS to driver
   sendDriverNotifications reminder driver merchantOpCityId FCM.DOCUMENT_EXPIRY_REMINDER DMM.DOCUMENT_EXPIRY_REMINDER_SMS
 
   -- Send GRPC notifications to fleet and operators
-  sendFleetAndOperatorNotifications driver merchantOpCityId fleetOperatorTitle fleetOperatorMessage entityData
+  sendFleetAndOperatorNotifications driver merchantOpCityId pushKey templateParams (fleetOperatorTitle, fleetOperatorMessage) entityData
 
 -- | For vehicle-related reminders: notify current RC-associated drivers, or if none then RC fleet owner + operators, or fallback to reminder driver.
 sendVehicleDocumentExpiryNotification ::
@@ -736,14 +786,17 @@ sendVehicleDocumentExpiryNotification reminder fallbackDriver merchantOpCityId i
           sendDocumentExpiryNotification reminder fleetOwner merchantOpCityId isExpiredParam mbDaysBefore
           operators <- QFOA.findAllByFleetOwnerId (Id @DP.Person fleetOwnerIdText) True
           let documentTypeName = show reminder.documentType
-              title = if isExpiredParam then "Vehicle Document Expired" else "Vehicle Document Expiring Soon"
-              message =
+              days = show (fromMaybe 0 mbDaysBefore)
+              (pushKey, title, message) =
                 if isExpiredParam
-                  then "A vehicle's " <> documentTypeName <> " in your fleet has expired. Please ensure an updated document is uploaded."
-                  else "A vehicle's " <> documentTypeName <> " in your fleet will expire in " <> show (fromMaybe 0 mbDaysBefore) <> " days."
+                  then (DriverPush_FleetOwner_VehicleDocumentExpired, "Vehicle Document Expired", "A vehicle's " <> documentTypeName <> " in your fleet has expired. Please ensure an updated document is uploaded.")
+                  else (DriverPush_FleetOwner_VehicleDocumentExpiring, "Vehicle Document Expiring Soon", "A vehicle's " <> documentTypeName <> " in your fleet will expire in " <> days <> " days.")
+              templateParams language = do
+                translatedDocType <- SDO.translateDocumentType merchantOpCityId language reminder.documentType
+                pure [("documentType", translatedDocType), ("days", days)]
               entityData = Aeson.object ["driverId" Aeson..= fleetOwner.id.getId, "documentType" Aeson..= documentTypeName, "isExpired" Aeson..= isExpiredParam]
-          notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message fleetOwner.id Nothing entityData
-          forM_ operators $ \op -> notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message (Id op.operatorId) Nothing entityData
+          notifyInLanguage merchantOpCityId fleetOwner.id fleetOwner.language pushKey templateParams (title, message) entityData
+          notifyFleetAndOperators merchantOpCityId (map (Id . (.operatorId)) operators) pushKey templateParams (title, message) entityData
     else forM_ currentDrivers $ \d -> sendDocumentExpiryNotification reminder d merchantOpCityId isExpiredParam mbDaysBefore
 
 -- Helper function to send inspection/training notifications
@@ -778,15 +831,19 @@ sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificati
       return ()
     Just currentIntervalMinutes -> do
       let daysBeforeDue = currentIntervalMinutes `div` (24 * 60)
-          fleetOperatorTitle = if isOverdue then "Driver " <> displayName <> " Overdue" else "Driver " <> displayName <> " Required"
-          fleetOperatorMessage =
+          days = show daysBeforeDue
+          (pushKey, fleetOperatorTitle, fleetOperatorMessage) =
             if isOverdue
-              then "Driver " <> driver.firstName <> "'s " <> displayName <> " is overdue. Please ensure they complete this requirement."
-              else "Driver " <> driver.firstName <> "'s " <> displayName <> " is due in " <> show daysBeforeDue <> " days. Please ensure they complete this requirement."
+              then (DriverPush_FleetOwner_DriverRequirementOverdue, "Driver " <> displayName <> " Overdue", "Driver " <> driver.firstName <> "'s " <> displayName <> " is overdue. Please ensure they complete this requirement.")
+              else (DriverPush_FleetOwner_DriverRequirementDue, "Driver " <> displayName <> " Required", "Driver " <> driver.firstName <> "'s " <> displayName <> " is due in " <> days <> " days. Please ensure they complete this requirement.")
+          -- The requirement is a document type too, so its name row is reused; the English name stays the display name.
+          templateParams language = do
+            requirementName <- fromMaybe displayName <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name reminder.documentType)
+            pure [("driverName", driver.firstName), ("documentType", requirementName), ("days", days)]
           entityData = Aeson.object ["driverId" Aeson..= driver.id.getId, "documentType" Aeson..= show @Text notificationType, "isOverdue" Aeson..= isOverdue, "daysBeforeDue" Aeson..= daysBeforeDue]
 
       -- Send FCM and SMS to driver
       sendDriverNotifications reminder driver merchantOpCityId notificationType messageKey
 
       -- Send GRPC notifications to fleet and operators
-      sendFleetAndOperatorNotifications driver merchantOpCityId fleetOperatorTitle fleetOperatorMessage entityData
+      sendFleetAndOperatorNotifications driver merchantOpCityId pushKey templateParams (fleetOperatorTitle, fleetOperatorMessage) entityData

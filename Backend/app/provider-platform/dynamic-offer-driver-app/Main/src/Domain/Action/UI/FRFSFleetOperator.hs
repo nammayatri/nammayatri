@@ -33,6 +33,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Message as DMessage
 import qualified Domain.Types.MessageReport as DMessageReport
 import qualified Domain.Types.Person
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Environment (Flow)
 import qualified Environment as Fields
 import EulerHS.Prelude hiding (id, unpack)
@@ -67,7 +68,7 @@ import qualified Storage.Queries.MessageReport as MRQuery
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InternalError, InvalidRequest), MerchantError (MerchantServiceConfigNotFound))
 import qualified Tools.Fields as Fields
-import Tools.Notifications (NotifReq (..), notifyDriverOnEvents)
+import Tools.Notifications (NotifReq (..), buildMerchantPNContentWithFallback, notifyDriverOnEvents)
 
 getV2FrfsRoute ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -500,12 +501,13 @@ notifyDriverOfTripChange merchantId req gimsOps =
       mbDriver <- QPerson.findByOperatorBadgeTokenAndMerchantId mbToken merchantId
       case mbDriver of
         Nothing -> logWarning "FRFSFleetOperator: dashboard trip-action notify skipped - no matching driver/conductor for token"
-        Just driver ->
+        Just driver -> do
+          (title, message) <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_FrfsTrip_Updated [] ("Trip updated", "Your trip was updated. Tap to refresh.")
           notifyDriverOnEvents
             driver.merchantOperatingCityId
             driver.id
             driver.deviceToken
-            NotifReq {entityId = driver.id.getId, title = "Trip updated", message = "Your trip was updated. Tap to refresh."}
+            NotifReq {entityId = driver.id.getId, title, message}
             FCM.TRIP_UPDATED
 
 -- | Get current operation details

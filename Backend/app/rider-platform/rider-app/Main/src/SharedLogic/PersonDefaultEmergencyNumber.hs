@@ -67,9 +67,11 @@ notifyEmergencyContactsInternal person notificationType mbNotificationKey mbBuil
       Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
       Nothing -> pure ()
 
-notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id SafetyDSos.Sos) -> Flow ()
-notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
-  notifyEmergencyContactsInternal person notificationType Nothing mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \_ -> return $ Just (body, title)
+-- | Each contact is told in their own language where the key has a row; else the given English title and body.
+notifyEmergencyContacts :: Person.Person -> RiderPushKey -> [(Text, Text)] -> (Text, Text) -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id SafetyDSos.Sos) -> Flow ()
+notifyEmergencyContacts person notificationKey templateVariables fallbackContent notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
+  notifyEmergencyContactsInternal person notificationType Nothing mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \contactPersonEntity ->
+    Just <$> buildMerchantPNContentWithFallback person.merchantOperatingCityId contactPersonEntity.language notificationKey templateVariables fallbackContent
 
 sendNotificationToEmergencyContact :: Id Person.Person -> Person.Person -> Text -> Text -> Notification.Category -> Maybe Text -> Maybe (Id SafetyDSos.Sos) -> Flow ()
 sendNotificationToEmergencyContact senderPersonId recipientPerson body title notificationType mbNotificationKey mbSosId = do
