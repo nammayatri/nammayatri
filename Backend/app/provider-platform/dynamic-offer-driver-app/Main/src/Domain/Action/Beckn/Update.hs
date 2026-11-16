@@ -583,7 +583,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                               oldEstimatedDistance,
                               oldEstimatedDistanceWithUnit = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit oldEstimatedDistance,
                               oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
-                              validTill = bookingUpdateReq.validTill
+                              validTill = bookingUpdateReq.validTill,
+                              notifiedAt = Just now
                             }
                     overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
                     let isRideInProgress = ride.status == DRide.INPROGRESS
