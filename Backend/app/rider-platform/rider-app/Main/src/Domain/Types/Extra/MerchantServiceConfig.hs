@@ -29,6 +29,7 @@ import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
+import Lib.BmsBackend.Types (BmsBackendConfig)
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
 import Utils.Common.JWT.Config as GW
@@ -36,6 +37,10 @@ import Utils.Common.JWT.Config as GW
 -- Extra code goes here --
 
 data FleetEngineProvider = GoogleFleetEngine
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data BmsProvider = Tms
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -73,6 +78,7 @@ data ServiceName
   | EventTrackingService EventTracking.EventTrackingService
   | FleetEngineService FleetEngineProvider
   | PartnerSdkService PartnerSdkProvider
+  | BmsService BmsProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -108,6 +114,7 @@ instance Show ServiceName where
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show (BmsService s) = "Bms_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -226,6 +233,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "FleetEngine_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (BmsService v1, r2)
+                 | r1 <- stripPrefix "Bms_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (PartnerSdkService v1, r2)
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -265,6 +276,7 @@ data ServiceConfigD (s :: UsageSafety)
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | BmsServiceConfig !BmsBackendConfig
   deriving (Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -307,6 +319,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (BmsServiceConfig cfg) = "BmsServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
@@ -338,3 +351,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (BmsServiceConfig cfg) = "BmsServiceConfig " <> show cfg

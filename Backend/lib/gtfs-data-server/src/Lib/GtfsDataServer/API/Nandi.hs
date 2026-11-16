@@ -1,6 +1,6 @@
 module Lib.GtfsDataServer.API.Nandi where
 
-import Data.Aeson
+import Data.Aeson (Value)
 import Data.Time (Day)
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -17,25 +17,10 @@ type ExampleTripAPI = "example-trip" :> Capture "gtfs_id" Text :> Capture "route
 
 type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
 
-type OperatorCurrentOperationAPI =
-  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
-    :> ReqBody '[JSON] GimsOperationAnchor
-    :> Post '[JSON] GimsCurrentOperationResp
-
-type OperatorTripActionAPI =
-  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "tripAction"
-    :> ReqBody '[JSON] GimsTripActionReq
-    :> Post '[JSON] Value
-
 type OperatorCurrentTripDetailsAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentTripDetails"
     :> ReqBody '[JSON] GimsCurrentTripDetailsReq
     :> Post '[JSON] GimsCurrentTripDetailsResp
-
-type OperatorActiveTripAPI =
-  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "activeTrip"
-    :> ReqBody '[JSON] GimsOperationAnchor
-    :> Post '[JSON] GimsActiveTripResp
 
 type OperatorEmployeeLoginAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "employee" :> "login"
@@ -120,17 +105,8 @@ nandiExampleTripAPI = Proxy
 nandiBusTripScheduleAPI :: Proxy BusTripScheduleAPI
 nandiBusTripScheduleAPI = Proxy
 
-operatorCurrentOperationAPI :: Proxy OperatorCurrentOperationAPI
-operatorCurrentOperationAPI = Proxy
-
-operatorTripActionAPI :: Proxy OperatorTripActionAPI
-operatorTripActionAPI = Proxy
-
 operatorCurrentTripDetailsAPI :: Proxy OperatorCurrentTripDetailsAPI
 operatorCurrentTripDetailsAPI = Proxy
-
-operatorActiveTripAPI :: Proxy OperatorActiveTripAPI
-operatorActiveTripAPI = Proxy
 
 operatorEmployeeLoginAPI :: Proxy OperatorEmployeeLoginAPI
 operatorEmployeeLoginAPI = Proxy
@@ -186,17 +162,8 @@ getNandiExampleTrip = ET.client nandiExampleTripAPI
 getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails
 getNandiBusTripSchedule = ET.client nandiBusTripScheduleAPI
 
-postOperatorCurrentOperation :: Text -> GimsOperationAnchor -> ET.EulerClient GimsCurrentOperationResp
-postOperatorCurrentOperation = ET.client operatorCurrentOperationAPI
-
-postOperatorTripAction :: Text -> GimsTripActionReq -> ET.EulerClient Value
-postOperatorTripAction = ET.client operatorTripActionAPI
-
 postOperatorCurrentTripDetails :: Text -> GimsCurrentTripDetailsReq -> ET.EulerClient GimsCurrentTripDetailsResp
 postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
-
-postOperatorActiveTrip :: Text -> GimsOperationAnchor -> ET.EulerClient GimsActiveTripResp
-postOperatorActiveTrip = ET.client operatorActiveTripAPI
 
 postOperatorEmployeeLogin :: Text -> GimsEmployeeLoginReq -> ET.EulerClient GimsEmployeeLoginResp
 postOperatorEmployeeLogin = ET.client operatorEmployeeLoginAPI

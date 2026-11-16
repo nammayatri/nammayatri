@@ -17,6 +17,11 @@ import qualified API.Types.Dashboard.AppManagement.StopRouteDetails
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.TransitOperator
+import qualified API.Types.Dashboard.AppManagement.TransitOperatorV2Live
+import qualified API.Types.Dashboard.AppManagement.TransitOperatorV2Masters
+import qualified API.Types.Dashboard.AppManagement.TransitOperatorV2Schedules
+import qualified API.Types.Dashboard.AppManagement.TransitOperatorV2Stickers
+import qualified API.Types.Dashboard.AppManagement.TransitOperatorV2V1
 import qualified API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
 import qualified Data.List
 import Data.OpenApi (ToSchema)
@@ -40,6 +45,11 @@ data AppManagementUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   | TRANSIT_OPERATOR API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUserActionType
+  | TRANSIT_OPERATOR_V2_LIVE API.Types.Dashboard.AppManagement.TransitOperatorV2Live.TransitOperatorV2LiveUserActionType
+  | TRANSIT_OPERATOR_V2_MASTERS API.Types.Dashboard.AppManagement.TransitOperatorV2Masters.TransitOperatorV2MastersUserActionType
+  | TRANSIT_OPERATOR_V2_SCHEDULES API.Types.Dashboard.AppManagement.TransitOperatorV2Schedules.TransitOperatorV2SchedulesUserActionType
+  | TRANSIT_OPERATOR_V2_STICKERS API.Types.Dashboard.AppManagement.TransitOperatorV2Stickers.TransitOperatorV2StickersUserActionType
+  | TRANSIT_OPERATOR_V2_V1 API.Types.Dashboard.AppManagement.TransitOperatorV2V1.TransitOperatorV2V1UserActionType
   | VEHICLE_SEAT_LAYOUT_MAPPING API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -60,6 +70,11 @@ instance Text.Show.Show AppManagementUserActionType where
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
     TRANSIT_OPERATOR e -> "TRANSIT_OPERATOR/" <> show e
+    TRANSIT_OPERATOR_V2_LIVE e -> "TRANSIT_OPERATOR_V2_LIVE/" <> show e
+    TRANSIT_OPERATOR_V2_MASTERS e -> "TRANSIT_OPERATOR_V2_MASTERS/" <> show e
+    TRANSIT_OPERATOR_V2_SCHEDULES e -> "TRANSIT_OPERATOR_V2_SCHEDULES/" <> show e
+    TRANSIT_OPERATOR_V2_STICKERS e -> "TRANSIT_OPERATOR_V2_STICKERS/" <> show e
+    TRANSIT_OPERATOR_V2_V1 e -> "TRANSIT_OPERATOR_V2_V1/" <> show e
     VEHICLE_SEAT_LAYOUT_MAPPING e -> "VEHICLE_SEAT_LAYOUT_MAPPING/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
@@ -182,6 +197,51 @@ instance Text.Read.Read AppManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( TRANSIT_OPERATOR_V2_LIVE v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR_V2_LIVE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSIT_OPERATOR_V2_MASTERS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR_V2_MASTERS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSIT_OPERATOR_V2_SCHEDULES v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR_V2_SCHEDULES/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSIT_OPERATOR_V2_STICKERS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR_V2_STICKERS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSIT_OPERATOR_V2_V1 v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR_V2_V1/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( VEHICLE_SEAT_LAYOUT_MAPPING v1,
                    r2
                  )
@@ -196,4 +256,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])

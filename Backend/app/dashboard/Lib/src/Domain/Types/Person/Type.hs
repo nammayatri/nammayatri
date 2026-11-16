@@ -62,7 +62,8 @@ data PersonE e = Person
     -- even when is2faMandatory=True.
     twoFaExempt :: Bool,
     tokenNo :: Maybe (EncryptedHashedField e Text),
-    vpa :: Maybe (EncryptedHashedField e Text)
+    vpa :: Maybe (EncryptedHashedField e Text),
+    organizationId :: Maybe Text
   }
   deriving (Generic)
 

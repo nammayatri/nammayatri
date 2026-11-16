@@ -601,6 +601,76 @@ clearPerson2Fa personId = do
     ]
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
+findAllForTransitOrganization ::
+  BeamFlow m r =>
+  Id Merchant.Merchant ->
+  City.City ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe Text ->
+  Integer ->
+  Integer ->
+  m ([Person], Int)
+findAllForTransitOrganization merchantId city mbSearchString mbSearchStrDBHash mbOrganizationId limitVal offsetVal = do
+  dbConf <- getReplicaBeamConfig
+  pageRes <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\person -> (B.asc_ person.firstName, B.asc_ person.id)) $
+                B.filter_'
+                  ( \person ->
+                      ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
+                          B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                          B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
+                      )
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\organizationId -> BeamP.organizationId person B.==?. B.val_ (Just organizationId)) mbOrganizationId
+                        B.&&?. B.sqlBool_
+                          ( B.exists_ $ do
+                              access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+                              B.guard_' (BeamMA.personId access B.==?. BeamP.id person B.&&?. BeamMA.merchantId access B.==?. B.val_ (getId merchantId) B.&&?. BeamMA.operatingCity access B.==?. B.val_ city)
+                              pure access
+                          )
+                  )
+                  (B.all_ (SBC.person SBC.atlasDB))
+  countRes <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \person ->
+                  ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
+                      B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                      B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
+                  )
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\organizationId -> BeamP.organizationId person B.==?. B.val_ (Just organizationId)) mbOrganizationId
+                    B.&&?. B.sqlBool_
+                      ( B.exists_ $ do
+                          access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+                          B.guard_' (BeamMA.personId access B.==?. BeamP.id person B.&&?. BeamMA.merchantId access B.==?. B.val_ (getId merchantId) B.&&?. BeamMA.operatingCity access B.==?. B.val_ city)
+                          pure access
+                      )
+              )
+              (B.all_ (SBC.person SBC.atlasDB))
+  case (pageRes, countRes) of
+    (Right rows, Right counts) -> do
+      persons <- catMaybes <$> mapM fromTType' rows
+      pure (persons, fromMaybe 0 (listToMaybe counts))
+    (Left err, _) -> throwError (InternalError $ "findAllForTransitOrganization failed: " <> T.pack (show err))
+    (_, Left err) -> throwError (InternalError $ "findAllForTransitOrganization count failed: " <> T.pack (show err))
+
+updatePersonOrganizationId :: BeamFlow m r => Id Person -> Maybe Text -> m ()
+updatePersonOrganizationId personId organizationId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.organizationId organizationId,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
 updatePersonTwoFaExempt :: BeamFlow m r => Id Person -> Bool -> m ()
 updatePersonTwoFaExempt personId exempt = do
   now <- getCurrentTime

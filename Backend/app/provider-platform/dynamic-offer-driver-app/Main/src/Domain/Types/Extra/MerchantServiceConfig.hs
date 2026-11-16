@@ -88,7 +88,7 @@ data FleetEngineProvider = GoogleFleetEngine
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-data BmsProvider = DtcBms
+data BmsProvider = DtcBms | Tms
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 

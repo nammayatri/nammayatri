@@ -796,6 +796,7 @@ library
       SharedLogic.FleetDriverSettings
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
+      SharedLogic.FleetOperatorV2
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch
       SharedLogic.GeohashAreaUpsert

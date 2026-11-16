@@ -381,6 +381,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
   Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> eitherValue configJSON
   Domain.BmsService Domain.DtcBms -> Domain.BmsServiceConfig <$> eitherValue configJSON
+  Domain.BmsService Domain.Tms -> Domain.BmsServiceConfig <$> eitherValue configJSON
   Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> eitherValue configJSON
   Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> eitherValue configJSON
   Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> eitherValue configJSON
