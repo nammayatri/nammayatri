@@ -874,7 +874,9 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     seatLayoutId :: Maybe Text,
     is_historic :: Maybe Bool,
     schedule_based_active_trip :: Maybe Bool,
-    waybill_status :: Maybe WaybillStatus
+    waybill_status :: Maybe WaybillStatus,
+    vehicleDepotId :: Maybe Text,
+    vehicleOrganisationId :: Maybe Text
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -907,6 +909,8 @@ instance FromJSON VehicleServiceTypeResponse where
     is_historic <- v .:? "is_historic"
     schedule_based_active_trip <- v .:? "schedule_based_active_trip"
     waybill_status <- v .:? "waybill_status"
+    vehicleDepotId <- v .:? "vehicleDepotId"
+    vehicleOrganisationId <- v .:? "vehicleOrganisationId"
     return VehicleServiceTypeResponse {..}
 
 data VehicleMetadataResponse = VehicleMetadataResponse
@@ -915,19 +919,23 @@ data VehicleMetadataResponse = VehicleMetadataResponse
     busTagNumber :: Maybe Text,
     vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
     vehicleTags :: Maybe [Text],
-    isActuallyValid :: Maybe Bool
+    isActuallyValid :: Maybe Bool,
+    vehicleDepotId :: Maybe Text,
+    vehicleOrganisationId :: Maybe Text
   }
   deriving (Generic, ToSchema, Show)
 
 instance ToJSON VehicleMetadataResponse where
-  toJSON (VehicleMetadataResponse serviceType serviceSubTypes busTagNumber vehicleVariant vehicleTags isActuallyValid) =
+  toJSON (VehicleMetadataResponse serviceType serviceSubTypes busTagNumber vehicleVariant vehicleTags isActuallyValid vehicleDepotId vehicleOrganisationId) =
     object
       [ "serviceType" .= serviceType,
         "serviceSubTypes" .= serviceSubTypes,
         "busTagNumber" .= busTagNumber,
         "busVehicleVariant" .= vehicleVariant,
         "busVehicleTags" .= vehicleTags,
-        "is_actually_valid" .= isActuallyValid
+        "is_actually_valid" .= isActuallyValid,
+        "vehicleDepotId" .= vehicleDepotId,
+        "vehicleOrganisationId" .= vehicleOrganisationId
       ]
 
 instance FromJSON VehicleMetadataResponse where
@@ -940,6 +948,8 @@ instance FromJSON VehicleMetadataResponse where
     let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
     vehicleTags <- v .:? "busVehicleTags"
     isActuallyValid <- v .:? "is_actually_valid"
+    vehicleDepotId <- v .:? "vehicleDepotId"
+    vehicleOrganisationId <- v .:? "vehicleOrganisationId"
     pure VehicleMetadataResponse {..}
 
 data BusScheduleTrip = BusScheduleTrip

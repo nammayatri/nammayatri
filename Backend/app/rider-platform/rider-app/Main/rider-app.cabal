@@ -241,6 +241,11 @@ library
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.AppManagement.TransitOperator
+      Domain.Action.Dashboard.AppManagement.TransitOperatorV2Live
+      Domain.Action.Dashboard.AppManagement.TransitOperatorV2Masters
+      Domain.Action.Dashboard.AppManagement.TransitOperatorV2Schedules
+      Domain.Action.Dashboard.AppManagement.TransitOperatorV2Stickers
+      Domain.Action.Dashboard.AppManagement.TransitOperatorV2V1
       Domain.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
@@ -768,6 +773,8 @@ library
       SharedLogic.TicketUtils
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
+      SharedLogic.TransitLive
+      SharedLogic.TransitOperatorV2
       SharedLogic.Type
       SharedLogic.Utils
       Storage.Beam.BecknRequest
@@ -1064,6 +1071,11 @@ library
       API.Action.DashboardAuth.AppManagement.TicketDashboard
       API.Action.DashboardAuth.AppManagement.Tickets
       API.Action.DashboardAuth.AppManagement.TransitOperator
+      API.Action.DashboardAuth.AppManagement.TransitOperatorV2Live
+      API.Action.DashboardAuth.AppManagement.TransitOperatorV2Masters
+      API.Action.DashboardAuth.AppManagement.TransitOperatorV2Schedules
+      API.Action.DashboardAuth.AppManagement.TransitOperatorV2Stickers
+      API.Action.DashboardAuth.AppManagement.TransitOperatorV2V1
       API.Action.DashboardAuth.AppManagement.VehicleSeatLayoutMapping
       API.Action.DashboardAuth.IncentiveJourney
       API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney
@@ -1194,6 +1206,11 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.Endpoints.TransitOperator
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperatorV2Live
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperatorV2Masters
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperatorV2Schedules
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperatorV2Stickers
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperatorV2V1
       API.Types.Dashboard.AppManagement.Endpoints.VehicleSeatLayoutMapping
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.FRFSTicketService
@@ -1208,6 +1225,11 @@ library
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
       API.Types.Dashboard.AppManagement.TransitOperator
+      API.Types.Dashboard.AppManagement.TransitOperatorV2Live
+      API.Types.Dashboard.AppManagement.TransitOperatorV2Masters
+      API.Types.Dashboard.AppManagement.TransitOperatorV2Schedules
+      API.Types.Dashboard.AppManagement.TransitOperatorV2Stickers
+      API.Types.Dashboard.AppManagement.TransitOperatorV2V1
       API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.AddBaggage
@@ -2028,6 +2050,7 @@ library
     , beam-postgres
     , beckn-services
     , beckn-spec
+    , bms-backend
     , bytestring
     , casing
     , cassava

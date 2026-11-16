@@ -1,0 +1,841 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+  APISuccess: Kernel.Types.APISuccess
+  BulkResult: Lib.BmsBackend.Transit.Common
+  Organization: Lib.BmsBackend.Transit.Masters.Types
+  OrganizationList: Lib.BmsBackend.Transit.Masters.Types
+  CreateOrganizationReq: Lib.BmsBackend.Transit.Masters.Types
+  UpdateOrganizationReq: Lib.BmsBackend.Transit.Masters.Types
+  Depot: Lib.BmsBackend.Transit.Masters.Types
+  DepotList: Lib.BmsBackend.Transit.Masters.Types
+  CreateDepotReq: Lib.BmsBackend.Transit.Masters.Types
+  UpdateDepotReq: Lib.BmsBackend.Transit.Masters.Types
+  Vehicle: Lib.BmsBackend.Transit.Masters.Types
+  VehicleList: Lib.BmsBackend.Transit.Masters.Types
+  CreateVehicleReq: Lib.BmsBackend.Transit.Masters.Types
+  UpdateVehicleReq: Lib.BmsBackend.Transit.Masters.Types
+  BulkVehiclesReq: Lib.BmsBackend.Transit.Masters.Types
+  DeviceType: Lib.BmsBackend.Transit.Masters.Types
+  Device: Lib.BmsBackend.Transit.Masters.Types
+  DeviceList: Lib.BmsBackend.Transit.Masters.Types
+  BulkDevicesReq: Lib.BmsBackend.Transit.Masters.Types
+  Employee: Lib.BmsBackend.Transit.Masters.Types
+  EmployeeList: Lib.BmsBackend.Transit.Masters.Types
+  CreateEmployeeReq: Lib.BmsBackend.Transit.Masters.Types
+  UpdateEmployeeReq: Lib.BmsBackend.Transit.Masters.Types
+  BulkEmployeesReq: Lib.BmsBackend.Transit.Masters.Types
+  EmployeeLoginReq: Lib.BmsBackend.Transit.Masters.Types
+  EmployeeLoginResp: Lib.BmsBackend.Transit.Masters.Types
+  EmployeeVerifyReq: Lib.BmsBackend.Transit.Masters.Types
+  EmployeeVerifyResp: Lib.BmsBackend.Transit.Masters.Types
+  Designation: Lib.BmsBackend.Transit.Masters.Types
+  CrewMember: Lib.BmsBackend.Transit.Masters.Types
+  CrewMemberList: Lib.BmsBackend.Transit.Masters.Types
+  Lookups: Lib.BmsBackend.Transit.Masters.Types
+  ServiceType: Lib.BmsBackend.Transit.Masters.Types
+  ServiceTypeList: Lib.BmsBackend.Transit.Masters.Types
+  CreateServiceTypeReq: Lib.BmsBackend.Transit.Masters.Types
+  UpdateServiceTypeReq: Lib.BmsBackend.Transit.Masters.Types
+  StationEta: Lib.BmsBackend.Transit.Masters.Types
+  StationEtaList: Lib.BmsBackend.Transit.Masters.Types
+  PutStationEtasReq: Lib.BmsBackend.Transit.Masters.Types
+  StationEtaUpsertResult: Lib.BmsBackend.Transit.Masters.Types
+  AssignPersonOrganizationReq: Lib.BmsBackend.Transit.Masters.Types
+
+importPackageOverrides:
+  BecknV2.OnDemand.Enums: "beckn-spec"
+  Lib.BmsBackend.Transit.Common: "bms-backend"
+  Lib.BmsBackend.Transit.Masters.Types: "bms-backend"
+
+module: TransitOperatorV2Masters
+apiPrefix: transitOperatorV2
+
+types:
+  GtfsRoute:
+    id: Text
+    number: Maybe Text
+    name: Maybe Text
+    mode: Maybe Text
+    tripCount: Maybe Int
+    stopCount: Maybe Int
+  GtfsRouteStop:
+    sequenceNum: Int
+    stopCode: Text
+    name: Maybe Text
+    lat: Double
+    lon: Double
+    stageNumber: Maybe Int
+    isStageStop: Bool
+  GtfsStop:
+    code: Text
+    name: Maybe Text
+    lat: Double
+    lon: Double
+    routeCodes: "[Text]"
+  TransitPerson:
+    id: Text
+    firstName: Text
+    lastName: Text
+    email: Maybe Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    organizationId: Maybe Text
+  TransitPersonList:
+    items: "[TransitPerson]"
+    total: Int
+
+apis:
+  - GET:
+      endpoint: /organizations
+      name: TransitOperatorV2ListOrganizations
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: OrganizationList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /organizations/{organizationId}
+      name: TransitOperatorV2GetOrganization
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        organizationId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: Organization
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /organizations
+      name: TransitOperatorV2CreateOrganization
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: CreateOrganizationReq
+      response:
+        type: Organization
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /organizations/{organizationId}
+      name: TransitOperatorV2UpdateOrganization
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      params:
+        organizationId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: UpdateOrganizationReq
+      response:
+        type: Organization
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /organizations/{organizationId}
+      name: TransitOperatorV2DeleteOrganization
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      params:
+        organizationId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /depots
+      name: TransitOperatorV2ListDepots
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - search: Text
+        - organizationId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: DepotList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /depots/{depotId}
+      name: TransitOperatorV2GetDepot
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        depotId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: Depot
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /depots
+      name: TransitOperatorV2CreateDepot
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: CreateDepotReq
+      response:
+        type: Depot
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /depots/{depotId}
+      name: TransitOperatorV2UpdateDepot
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        depotId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: UpdateDepotReq
+      response:
+        type: Depot
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /depots/{depotId}
+      name: TransitOperatorV2DeleteDepot
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        depotId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /vehicles
+      name: TransitOperatorV2ListVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - search: Text
+        - depotId: Text
+        - serviceTypeId: Text
+        - vehicleNo: Text
+        - fleetNo: Text
+        - tagNumber: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: VehicleList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /vehicles/{vehicleId}
+      name: TransitOperatorV2GetVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        vehicleId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: Vehicle
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /vehicles
+      name: TransitOperatorV2CreateVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: CreateVehicleReq
+      response:
+        type: Vehicle
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /vehicles/{vehicleId}
+      name: TransitOperatorV2UpdateVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        vehicleId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: UpdateVehicleReq
+      response:
+        type: Vehicle
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /vehicles/{vehicleId}
+      name: TransitOperatorV2DeleteVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        vehicleId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /vehicles/bulk
+      name: TransitOperatorV2BulkVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: BulkVehiclesReq
+      response:
+        type: BulkResult
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /devices
+      name: TransitOperatorV2ListDevices
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.device.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - deviceType: DeviceType
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: DeviceList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /devices/bulk
+      name: TransitOperatorV2BulkDevices
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.device.write
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: BulkDevicesReq
+      response:
+        type: BulkResult
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /devices/{deviceId}
+      name: TransitOperatorV2DeleteDevice
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.device.write
+      params:
+        deviceId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+        - deviceType: DeviceType
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /employees
+      name: TransitOperatorV2ListEmployees
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - role: Text
+        - depotId: Text
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: EmployeeList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /employees/{employeeId}
+      name: TransitOperatorV2GetEmployee
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        employeeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: Employee
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /employees
+      name: TransitOperatorV2CreateEmployee
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: CreateEmployeeReq
+      response:
+        type: Employee
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /employees/{employeeId}
+      name: TransitOperatorV2UpdateEmployee
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      auditRequestBody: false
+      params:
+        employeeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: UpdateEmployeeReq
+      response:
+        type: Employee
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /employees/{employeeId}
+      name: TransitOperatorV2DeleteEmployee
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        employeeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /employees/bulk
+      name: TransitOperatorV2BulkEmployees
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: BulkEmployeesReq
+      response:
+        type: BulkResult
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /employees/login
+      name: TransitOperatorV2EmployeeLogin
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.trip.execute
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: EmployeeLoginReq
+      response:
+        type: EmployeeLoginResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /employees/verify
+      name: TransitOperatorV2EmployeeVerify
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.trip.execute
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: EmployeeVerifyReq
+      response:
+        type: EmployeeVerifyResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /designations
+      name: TransitOperatorV2ListDesignations
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: "[Designation]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /crew
+      name: TransitOperatorV2ListCrew
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - role: Text
+        - search: Text
+        - depotId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: CrewMemberList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /lookups
+      name: TransitOperatorV2GetLookups
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: Lookups
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /serviceTypes
+      name: TransitOperatorV2ListServiceTypes
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: ServiceTypeList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /serviceTypes/{serviceTypeId}
+      name: TransitOperatorV2GetServiceType
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        serviceTypeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: ServiceType
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /serviceTypes
+      name: TransitOperatorV2CreateServiceType
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: CreateServiceTypeReq
+      response:
+        type: ServiceType
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /serviceTypes/{serviceTypeId}
+      name: TransitOperatorV2UpdateServiceType
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      params:
+        serviceTypeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: UpdateServiceTypeReq
+      response:
+        type: ServiceType
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /serviceTypes/{serviceTypeId}
+      name: TransitOperatorV2DeleteServiceType
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      params:
+        serviceTypeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stationEtas
+      name: TransitOperatorV2ListStationEtas
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - sourceStationCode: Text
+        - destinationStationCode: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: StationEtaList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /stationEtas
+      name: TransitOperatorV2PutStationEtas
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      auditRequestBody: false
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: PutStationEtasReq
+      response:
+        type: StationEtaUpsertResult
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /gtfs/routes
+      name: TransitOperatorV2ListGtfsRoutes
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: "[GtfsRoute]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /gtfs/routes/{routeId}/stops
+      name: TransitOperatorV2ListGtfsRouteStops
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        routeId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: "[GtfsRouteStop]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /gtfs/stops/search
+      name: TransitOperatorV2SearchGtfsStops
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+        - q: Text
+      response:
+        type: "[GtfsStop]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /persons
+      name: TransitOperatorV2ListPersons
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      query:
+        - search: Text
+        - organizationId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: TransitPersonList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /persons/{personId}/organization
+      name: TransitOperatorV2AssignPersonOrganization
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.org.admin
+      params:
+        personId: Text
+      request:
+        type: AssignPersonOrganizationReq
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId

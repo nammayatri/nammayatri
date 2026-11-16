@@ -1,0 +1,112 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+
+importPackageOverrides:
+  BecknV2.OnDemand.Enums: "beckn-spec"
+
+module: TransitOperatorV2Live
+apiPrefix: transitOperatorV2
+
+types:
+  LiveVehicle:
+    vehicleNo: Text
+    deviceId: Maybe Text
+    lat: Double
+    lon: Double
+    speedKmph: Maybe Double
+    bearing: Maybe Double
+    lastPingAt: UTCTime
+    ageSeconds: Int
+    routeId: Maybe Text
+    routeNumber: Maybe Text
+    tripId: Maybe Text
+    routeState: Maybe Text
+    isUpcoming: Bool
+    depotId: Maybe Text
+    depotName: Maybe Text
+    serviceType: Maybe Text
+  LiveVehicleList:
+    items: "[LiveVehicle]"
+    asOf: UTCTime
+  LiveTrip:
+    tripId: Maybe Text
+    tripNumber: Int
+    routeId: Text
+    routeNumber: Maybe Text
+    scheduledStart: Maybe UTCTime
+    scheduledEnd: Maybe UTCTime
+    actualStart: Maybe UTCTime
+    actualEnd: Maybe UTCTime
+    status: Text
+  LiveStopEta:
+    stopId: Text
+    stopName: Maybe Text
+    stopSeq: Int
+    lat: Maybe Double
+    lon: Maybe Double
+    predictedArrival: UTCTime
+    scheduledArrival: Maybe UTCTime
+    delaySeconds: Maybe Int
+  LiveTripStop:
+    stopId: Text
+    stopCode: Maybe Text
+    stopName: Maybe Text
+    stopSeq: Int
+    lat: Maybe Double
+    lon: Maybe Double
+    scheduledArrival: Maybe UTCTime
+    predictedArrival: Maybe UTCTime
+    delaySeconds: Maybe Int
+    passed: Bool
+  LiveVehicleDetail:
+    vehicle: Maybe LiveVehicle
+    waybillNo: Maybe Text
+    scheduleNo: Maybe Text
+    source: Maybe Text
+    driverToken: Maybe Text
+    conductorToken: Maybe Text
+    currentTrip: Maybe LiveTrip
+    upcomingTrips: "[LiveTrip]"
+    completedTrips: "[LiveTrip]"
+    nextStops: "[LiveStopEta]"
+    tripStops: "[LiveTripStop]"
+    routePolyline: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /live/vehicles
+      name: TransitOperatorV2ListLiveVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - depotId: Text
+        - routeId: Text
+        - lat: Double
+        - lon: Double
+        - radiusMeters: Double
+      response:
+        type: LiveVehicleList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /live/vehicles/{vehicleNo}
+      name: TransitOperatorV2GetLiveVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        vehicleNo: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: LiveVehicleDetail
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
