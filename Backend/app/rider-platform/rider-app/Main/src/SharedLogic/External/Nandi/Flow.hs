@@ -403,6 +403,6 @@ operatorDeleteVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasReques
 operatorDeleteVehicle baseUrl gtfsId vehicleId =
   callAPI baseUrl (NandiAPI.deleteOperatorVehicle gtfsId vehicleId) "operatorDeleteVehicle" NandiAPI.operatorDeleteVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DELETE_VEHICLE_API") baseUrl)
 
-operatorQueryVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> m [Fleet]
-operatorQueryVehicle baseUrl gtfsId vehicleNo tagNumber fleetNo =
-  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorQueryVehicle gtfsId vehicleNo tagNumber fleetNo) "operatorQueryVehicle" NandiAPI.operatorQueryVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_VEHICLE_API") baseUrl)
+operatorQueryVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m [Fleet]
+operatorQueryVehicle baseUrl gtfsId vehicleNo tagNumber fleetNo vehicleTag =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorQueryVehicle gtfsId vehicleNo tagNumber fleetNo vehicleTag) "operatorQueryVehicle" NandiAPI.operatorQueryVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_VEHICLE_API") baseUrl)

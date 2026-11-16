@@ -367,6 +367,7 @@ types:
     serviceSubTypes: "Maybe [ServiceSubType]"
     availableSeats: Maybe Int
     seatSelectionType: Maybe SeatSelectionType
+    vehicleTags: "[Text]" # The bus's SHOW_ vehicle tags without the prefix, upper case, e.g. ["WOMEN_SPECIAL"]; the app maps them to labels
 
   LiveVehicleInfo:
     number: Text

@@ -23,6 +23,7 @@ import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -221,7 +222,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleTagNumber = mbVehicleTagNumber,
                             vehicleVariant = mbVehicleVariant,
                             availableSeats = availableSeatsCount,
-                            seatSelectionType = seatSelType
+                            seatSelectionType = seatSelType,
+                            vehicleTags = riderVehicleTagsOf (snd <$> mbVehicleMetadata)
                           }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -300,3 +302,6 @@ enrichBusStopETA integratedBPPConfig' eta =
           integratedBPPConfig'
       let fetchedName = fmap (.name) mbStation
       pure $ eta {CQMMB.stopName = fetchedName <|> eta.stopName}
+
+riderVehicleTagsOf :: Maybe NandiTypes.VehicleMetadataResponse -> [Text]
+riderVehicleTagsOf mbVehicleMetadata = FRFSUtils.riderVehicleTags (fromMaybe [] (mbVehicleMetadata >>= (.vehicleTags)))
