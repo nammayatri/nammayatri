@@ -36,6 +36,16 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> "sharedCabMoveWarningFCM"
+      :> Header
+           "token"
+           Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.SharedCabInternal.SharedCabMoveWarningReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> "sharedCab"
       :> "driver"
       :> Capture
@@ -84,13 +94,16 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postSharedCabAllocationFCM :<|> postSharedCabCheckInFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire
+handler = postSharedCabAllocationFCM :<|> postSharedCabCheckInFCM :<|> postSharedCabMoveWarningFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire
 
 postSharedCabAllocationFCM :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Tools.Notifications.SharedCabAllocationEntityData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSharedCabAllocationFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabAllocationFCM a2 a1
 
 postSharedCabCheckInFCM :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabCheckInReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSharedCabCheckInFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabCheckInFCM a2 a1
+
+postSharedCabMoveWarningFCM :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.SharedCabInternal.SharedCabMoveWarningReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSharedCabMoveWarningFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabMoveWarningFCM a2 a1
 
 getSharedCabDriverCallNumber :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabDriverCallNumberResp)
 getSharedCabDriverCallNumber a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabDriverCallNumber a2 a1
