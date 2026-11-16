@@ -82,18 +82,10 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
   case mbAccount of
     Nothing -> pure (emptyResponse currentBalance)
     Just acc -> do
+      accountEntries <- filter entryMovedMoney <$> getEntriesByAccount acc.id
       let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType, expiryCreditTransferReferenceType]
-      entries <-
-        findByAccountWithFilters
-          acc.id
-          (Just fromDate)
-          (Just toDate)
-          mbMinAmount
-          mbMaxAmount
-          mbStatus
-          (Just referenceTypes)
-      let downSorted = sortOn (Down . (.timestamp)) entries
-          upSorted = sortOn (.timestamp) entries
+          entries = filter (matchesFilters referenceTypes fromDate toDate) accountEntries
+          downSorted = sortOn (Down . effectiveAt) entries
           rideEntries = filter (\e -> e.referenceType == prepaidRideDebitReferenceType) entries
           planEntries = filter (\e -> e.referenceType == subscriptionCreditReferenceType) entries
           expiryEntries = filter (\e -> e.referenceType == expiryCreditTransferReferenceType) entries
@@ -101,8 +93,9 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
           rideEarning = sum $ map (.amount) rideEntries
           planPurchased = sum $ map (.amount) planEntries
           expiryDeduction = sum $ map (.amount) expiryEntries
-          startingBalance = computeStartingBalance acc.id upSorted
-          finalBalance = computeFinalBalance acc.id upSorted
+          balanceMoves = sortOn fst $ mapMaybe (\e -> (effectiveAt e,) <$> balancesOf acc.id e) accountEntries
+          startingBalance = computeStartingBalance fromDate balanceMoves
+          finalBalance = computeFinalBalance toDate startingBalance balanceMoves
       -- Enrich ride entries with booking locations
       let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidRideDebitReferenceType then Just (Id e.referenceId) else Nothing) paged
       bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds
@@ -129,7 +122,7 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
               status = entry.status,
               fromLocation,
               toLocation,
-              createdAt = entry.timestamp,
+              createdAt = effectiveAt entry,
               updatedAt = entry.updatedAt
             }
       pure
@@ -143,7 +136,7 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
             entities
           }
   where
-    maxLimit = 10
+    maxLimit = 500
     emptyResponse currentBalance =
       SubscriptionTransactionResponse
         { startingBalance = 0,
@@ -154,17 +147,34 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
           expiryDeduction = 0,
           entities = []
         }
-    computeStartingBalance accountId entries =
-      case entries of
-        [] -> 0
-        (firstEntry : _) ->
-          if firstEntry.fromAccountId == accountId
-            then fromMaybe 0 firstEntry.fromStartingBalance
-            else fromMaybe 0 firstEntry.toStartingBalance
-    computeFinalBalance accountId entries =
-      case reverse entries of
-        [] -> 0
-        (lastEntry : _) ->
-          if lastEntry.fromAccountId == accountId
-            then fromMaybe 0 lastEntry.fromEndingBalance
-            else fromMaybe 0 lastEntry.toEndingBalance
+    effectiveAt :: LedgerEntry -> UTCTime
+    effectiveAt entry = fromMaybe entry.timestamp entry.settledAt
+
+    matchesFilters :: [Text] -> UTCTime -> UTCTime -> LedgerEntry -> Bool
+    matchesFilters referenceTypes rangeStart rangeEnd entry =
+      and
+        [ entry.referenceType `elem` referenceTypes,
+          effectiveAt entry >= rangeStart,
+          effectiveAt entry <= rangeEnd,
+          maybe True (\minAmt -> entry.amount >= minAmt) mbMinAmount,
+          maybe True (\maxAmt -> entry.amount <= maxAmt) mbMaxAmount,
+          maybe True (\st -> entry.status == st) mbStatus
+        ]
+
+    balancesOf :: Id Account -> LedgerEntry -> Maybe (HighPrecMoney, HighPrecMoney)
+    balancesOf accountId entry
+      | entry.fromAccountId == accountId = (,) <$> entry.fromStartingBalance <*> entry.fromEndingBalance
+      | otherwise = (,) <$> entry.toStartingBalance <*> entry.toEndingBalance
+
+    computeStartingBalance :: UTCTime -> [(UTCTime, (HighPrecMoney, HighPrecMoney))] -> HighPrecMoney
+    computeStartingBalance rangeStart moves =
+      case (reverse (filter ((< rangeStart) . fst) moves), filter ((>= rangeStart) . fst) moves) of
+        ((_, (_, closing)) : _, _) -> closing
+        ([], (_, (opening, _)) : _) -> opening
+        _ -> 0
+
+    computeFinalBalance :: UTCTime -> HighPrecMoney -> [(UTCTime, (HighPrecMoney, HighPrecMoney))] -> HighPrecMoney
+    computeFinalBalance rangeEnd openingBalance moves =
+      case reverse (filter ((<= rangeEnd) . fst) moves) of
+        (_, (_, closing)) : _ -> closing
+        [] -> openingBalance
