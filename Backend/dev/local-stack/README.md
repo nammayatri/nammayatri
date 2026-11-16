@@ -127,6 +127,7 @@ Comments in the code and in `CLAUDE.md` cite README sections by name ("README �
 | The SMS inbox and sign-in by an SMS he sends (2026-09-29) | [docs/sign-in.md](docs/sign-in.md#the-sms-inbox-and-sign-in-by-an-sms-he-sends-2026-09-29) |
 | Switching off a driver who has not paid | [docs/riders.md](docs/riders.md#switching-off-a-driver-who-has-not-paid) |
 | The ride's start code, filled in by the guard since 2026-11-15 — `maps-shim/ride-start.js` | [docs/driver-api.md](docs/driver-api.md#the-trap-start-needs-a-code-that-openapi-does-not-mention) |
+| The virtual passenger — `maps-shim/virtual-rider.js`, since 2026-11-16 | [docs/testing.md](docs/testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16) |
 
 ---
 
@@ -203,7 +204,8 @@ local-stack/
 │   │                        whatsapp, sms-inbox, trusted-phones (phase 5)
 │   ├── maps-shim/           routing, places, wallet, payments, push, avatars --
 │   │                        server.js is the router and start-up; directions,
-│   │                        places, wallet, restricted, ... one module each
+│   │                        places, wallet, restricted, ... one module each;
+│   │                        virtual-rider.js is a command, not a route
 │   ├── edge/                nginx: names, TLS, rate limits
 │   ├── demo-map/            the service-area map
 │   ├── geocoder/            the place index's SQL and lists

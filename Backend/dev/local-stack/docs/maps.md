@@ -720,6 +720,24 @@ keyboard): the app's `docs/driver.md` and `docs/passenger.md`.
   (`docs/driver-api.md`, *The trap*; released `aa7f2f7cd1`, 22:34 UTC). And
   a driver's name typed twice is shown once, in the app.
 
+**Day 7 (2026-11-16)** — the stores, then the virtual passenger:
+
+- **Privacy names the proposed places**, before the stores do: the website's
+  `/confidentialite` (a « Lieux proposés » row in the deletion page's own
+  words; the camera sentence; « the pin is the place's position, not yours »;
+  website `6b8260e`, live) and the app's own policy screen, which ships in the
+  build (app `86977b1`). Play's Data safety needs one line more (« Other
+  user-generated content »), the boss's to add; Apple's labels already cover it.
+- **The store build**: app `71dbc3f` (versionCode 5), AAB and APK checked by
+  `verify-apk`; iOS build 30 to TestFlight only — build 27 stays in Apple's
+  review and is swapped once approved. The tap-through ran green in English,
+  Arabic (run #64) and French (run #62, from the console).
+- **The virtual passenger** (the boss's request, 2026-11-16):
+  `maps-shim/virtual-rider.js`, released `0443281c95`, its first live fix
+  `bfb4f7a854` ([testing.md](testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)).
+  A live ride with a simulated car as the driver proved the **start with no
+  code** on the real server.
+
 Left:
 
 - **The end-of-day test on phones**, in each country, with the APK of
@@ -727,10 +745,13 @@ Left:
   a passenger finds it by name and by its type; a ride from acceptance to the
   end with no code shown or typed. Then the same erase file for its « Test
   jour 6 » places.
-- **Before the app goes to the stores:** the privacy policy page, Google
-  Play's « Sécurité des données » and App Store Connect's « Confidentialité de
-  l'app » must name the proposed places — a place name, a pin and up to two
-  photos, linked to the account (the app's `docs/store-readiness.md`, 6b). Written in the plan, day 7.
+- **Google Play's « Sécurité des données »**: add « Other user-generated
+  content » (the place's name and pin) before the AAB of 2026-11-16 is
+  uploaded — the boss's account. The privacy page and the app's policy are
+  done (day 7).
+- **The virtual passenger on a real phone**: scenarios 1 to 7 with a person
+  driving, in each country (Mauritania needs someone there). The console
+  button and the `launch-gate.sh` check are day 8.
 - **Worth doing:** keep the localities' Arabic names in the shim's memory
   (they change only with a map rebuild) — the one query left that scans the
   index, usually ~100 ms, 879 ms once.

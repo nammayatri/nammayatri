@@ -317,6 +317,12 @@ the registry or the map.
   service `movin-fleet`), plus the ride test's two passengers (`+222 22778899`,
   `+213 0555000199`, `probe-two-country-rides.py`). They answer real
   requests: uninstall and erase all fourteen before the first real passenger.
+  **And since 2026-11-16 the virtual passenger** (`maps-shim/virtual-rider.js`,
+  the boss's request): those two passengers book real rides for a real driver
+  to test the driver side, only while `VIRTUAL_RIDER=on` in the server's
+  `.env`. Switch it off before the clean-up (`docs/runbooks/launch.md`, 3b).
+  It never calls the driver API and never takes another real driver's offer;
+  `docs/testing.md` → *The virtual passenger*.
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
   only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
   rides. Without credit for a day and no day paid for, he may not work, and

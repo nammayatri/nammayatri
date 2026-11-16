@@ -48,6 +48,8 @@ This restores last night's off-site backup into throwaway containers (about 70 s
 
 ### 3b. Remove the 12 simulated cars and the 2 test passengers
 
+> **First, switch off the virtual passenger** (since 2026-11-16, [testing.md](../testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)): it books with the two test passengers this step erases. Remove `VIRTUAL_RIDER=on` from `/opt/ny/local-stack/.env`, then `docker compose up -d maps-shim` from `/opt/ny/local-stack`, and check `docker exec ny-maps-shim node virtual-rider.js "+213 0555000000" 1` answers « éteint ». From day 8 of the « Lieux proposés » plan, `launch-gate.sh` says no-go while it is on.
+
 > Since 2026-10-25 the list also names the two **review accounts** made for the stores' reviewers: `+222 22000701` (passenger) and `+222 22000702` (driver), so up to 14 drivers and 4 passengers. Their bypass (`SMS_BYPASS` in `/opt/ny/secrets/test-accounts.env`) must already be gone: remove it the day the review ends.
 
     sudo ./launch-cleanup.sh              # who would go, and what stays. Writes nothing.
