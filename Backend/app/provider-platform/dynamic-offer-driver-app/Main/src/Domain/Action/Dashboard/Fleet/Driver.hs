@@ -4436,7 +4436,7 @@ postDriverDashboardFleetEstimateRoute merchantShortId opCity _fleetOwnerId req =
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let getRoutesReq = Maps.GetRoutesReq {waypoints = NE.fromList [req.start, req.end], mode = Just Maps.CAR, calcPoints = True}
-  Maps.getRoutes merchant.id merchantOpCityId Nothing getRoutesReq
+  Maps.getDashboardRoutes merchant.id merchantOpCityId Nothing getRoutesReq
 
 postDriverFleetTripTransactionsV2 ::
   ShortId DM.Merchant ->

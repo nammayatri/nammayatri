@@ -138,3 +138,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_providers text[] ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN event_tracking_overrides jsonb ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_dashboard_routes text  default 'OSRM';

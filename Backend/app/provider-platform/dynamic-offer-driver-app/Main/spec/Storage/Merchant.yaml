@@ -661,6 +661,7 @@ MerchantServiceUsageConfig:
     getRoutes: MapsService
     getPickupRoutes: MapsService
     getTripRoutes: MapsService
+    getDashboardRoutes: Maybe MapsService
     snapToRoad: MapsService
     getPlaceName: MapsService
     getPlaceDetails: MapsService
@@ -782,6 +783,7 @@ MerchantServiceUsageConfig:
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
+    getDashboardRoutes: "'OSRM'"
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
     snapToRoadProvidersList: '''{"OSRM", "Google"}'''
