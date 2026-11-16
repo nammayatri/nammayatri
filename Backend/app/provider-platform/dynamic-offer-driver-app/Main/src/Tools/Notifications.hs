@@ -123,7 +123,8 @@ data UpdateLocationNotificationReq = UpdateLocationNotificationReq
     oldEstimatedDistance :: HighPrecMeters,
     oldEstimatedDistanceWithUnit :: Distance,
     oldEstimatedFare :: HighPrecMoney,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    notifiedAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1275,7 +1276,7 @@ trimEditDestinationForIOS :: FCMData Value -> FCMData Value
 trimEditDestinationForIOS fcmData =
   fcmData
     { fcmEntityData = case fcmData.fcmEntityData of
-        Object o -> Object (AKM.filterWithKey (\k _ -> AK.toText k `elem` ["rideId", "bookingUpdateRequestId", "validTill"]) o)
+        Object o -> Object (AKM.filterWithKey (\k _ -> AK.toText k `elem` ["rideId", "bookingUpdateRequestId", "validTill", "notifiedAt"]) o)
         other -> other,
       fcmOverlayNotificationJSON = Nothing
     }
