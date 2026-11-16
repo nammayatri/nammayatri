@@ -44,6 +44,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     faceMatchService :: Kernel.External.Verification.Types.VerificationService,
     faceVerificationService :: Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: Kernel.External.Payment.Types.PaymentService,
+    getDashboardRoutes :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
     getDistances :: Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,

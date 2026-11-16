@@ -26,6 +26,7 @@ module Tools.Maps
     snapToRoadOSRMOnly,
     getPickupRoutes,
     getTripRoutes,
+    getDashboardRoutes,
     getDistanceForCancelRide,
     getServiceConfigForRectifyingSnapToRoadDistantPointsFailure,
     getDistanceForScheduledRides,
@@ -185,6 +186,11 @@ getTripRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity ->
 getTripRoutes merchantId merchantOpCityId entityId req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId entityId req
+
+getDashboardRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getDashboardRoutes merchantId merchantOpCityId entityId req = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  runWithServiceConfig (callGetRoutesWrapper transporterConfig.isAvoidToll) (\cfg -> fromMaybe cfg.getTripRoutes cfg.getDashboardRoutes) merchantId merchantOpCityId entityId req
 
 snapToRoad ::
   ( ServiceFlow m r
