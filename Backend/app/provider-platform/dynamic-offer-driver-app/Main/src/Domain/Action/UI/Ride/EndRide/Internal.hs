@@ -731,8 +731,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   mkPair "g-cancel" Tax False "Customer Cancellation Fee Tax" (if isVat then CancellationFeeVat else GstOnCancellationFee) carriedDuesTaxAmount
                 ]
               commonLines =
-                [ if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge (fromMaybe 0 fareParams.paymentProcessingFee) else Nothing,
-                  if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax (fromMaybe 0 fareParams.paymentProcessingFeeTax) else Nothing,
+                [ if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge (fromMaybe 0 fareParams.paymentProcessingFee) else Nothing,
+                  if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax (fromMaybe 0 fareParams.paymentProcessingFeeTax) else Nothing,
                   if issuedToType == CUSTOMER then mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount) else Nothing,
                   mkAdjustment "Tip" Tip tipAmount,
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
