@@ -656,6 +656,17 @@ def pc_service_action(name, action):
     return status, {"service": name, "action": action, "ok": 200 <= status < 300, "response": body}
 
 
+def _pc_wait_ready(name, timeout):
+    """Poll process-compose until `name` reports Ready. True if it did."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        status, svc = pc_get_service(name)
+        if status == 200 and svc.get("isReady") == "Ready":
+            return True
+        time.sleep(3)
+    return False
+
+
 def _restart_haskell_services():
     """Kill rider/driver/mock-registry so process-compose restarts them and they
     re-read boot-time config from the freshly-synced DB (e.g. rider-app builds
@@ -670,18 +681,26 @@ def _restart_haskell_services():
     listens on dynamic-offer-driver-app-internal; dynamic-offer-driver-app is
     the driver-proxy (Caddy) in front of it, which must stay up."""
     if os.path.exists(PC_SOCKET_PATH):
-        results = [pc_service_action("mock-registry", "restart")]
-        deadline = time.time() + 180
-        while time.time() < deadline:
-            status, svc = pc_get_service("mock-registry")
-            if status == 200 and svc.get("isReady") == "Ready":
+        # One at a time, waiting for each to be Ready before the next.
+        # driver-app depends on rider-app being healthy (nammayatri.nix
+        # cabalExecutables chain), so restarting both back to back left
+        # driver-app stopped and never started again.
+        results = []
+        for name, timeout in (("mock-registry", 180),
+                              ("rider-app-exe", 300),
+                              ("dynamic-offer-driver-app-exe", 300)):
+            status, body = pc_service_action(name, "restart")
+            results.append((status, body))
+            if not (200 <= status < 300):
                 break
-            time.sleep(3)
-        results += [pc_service_action(name, "restart") for name in ("rider-app-exe", "dynamic-offer-driver-app-exe")]
+            if not _pc_wait_ready(name, timeout):
+                # Safety net: stopped but not started -> start it once.
+                print(f"  \033[96m[config-sync]\033[0m {name} not Ready after {timeout}s, starting it")
+                pc_service_action(name, "start")
+                _pc_wait_ready(name, 120)
         if all(200 <= status < 300 for status, _ in results):
             for _, body in results:
                 print(f"  \033[96m[config-sync]\033[0m restarted {body['service']} via process-compose API")
-            time.sleep(3)
             return
     for name, default in (("rider-app", 8013),
                           ("dynamic-offer-driver-app-internal", 8116),
