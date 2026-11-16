@@ -90,7 +90,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
         orderId = dInfo.payoutRegistrationOrderId,
         orderStatus = (.status) <$> mbRegistrationOrder,
         referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide,
-        payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst],
+        payoutRegistrationAmount = payoutRegistrationAmountOf payoutConfig,
         referralRewardAmountPerRideForD2DPayout = payoutConfig.referralRewardAmountPerRideForD2DPayout,
         d2dReferralEarnings = Just d2dDailyEarnings,
         d2cReferralEarnings = Just d2cDailyEarnings,
@@ -238,6 +238,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       (Kernel.Types.Id.cast merchantId)
       (Just $ Kernel.Types.Id.cast merchantOpCityId)
       (Kernel.Types.Id.cast personId)
+      (payoutRegistrationAmountOf payoutConfig)
       createOrderCall
       driverPhone
       driverEmail
@@ -321,3 +322,8 @@ getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
     DAP.castPayoutOrderStatus
     shouldUpdate
     onUpdate
+
+-- | The UPI registration amount: what the app shows and what the registration order charges, so the
+--   two can't differ.
+payoutRegistrationAmountOf :: DPC.PayoutConfig -> HighPrecMoney
+payoutRegistrationAmountOf payoutConfig = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst]

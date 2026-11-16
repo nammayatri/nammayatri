@@ -47,6 +47,7 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Payout.Registration as Registration
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Yudhishthira.Types.ConfigPilot as CP
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (computeNextRunTime)
 import qualified SharedLogic.IncentiveJourney as SLIJ
@@ -144,8 +145,9 @@ refundRegistrationAmount merchantShortId opCity req = do
 
   case mbResult of
     Just _ -> do
-      -- Mark refund on DriverInformation (domain concern)
-      QDI.updatePayoutRegAmountRefunded (Just Registration.registrationAmount) driverId
+      -- Mark refund on DriverInformation (domain concern): the refund is the registration order's amount
+      registrationOrder <- QPaymentOrder.findById registrationOrderId >>= fromMaybeM (InvalidRequest $ "Registration order not found: " <> registrationOrderId.getId)
+      QDI.updatePayoutRegAmountRefunded (Just registrationOrder.amount) driverId
     Nothing ->
       logDebug $ "Registration refund already exists for driver: " <> driverId.getId
 

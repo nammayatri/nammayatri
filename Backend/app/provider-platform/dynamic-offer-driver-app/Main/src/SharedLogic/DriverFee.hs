@@ -178,12 +178,16 @@ calcNumRides driverFee transporterConfig =
     then driverFee.numRides
     else driverFee.numRides - driverFee.specialZoneRideCount
 
+-- | Split a GST-inclusive amount into (platform fee, cgst, sgst). The GST parts are rounded to paise and
+--   the fee is the rest, so the parts are what the fee row stores (numeric(30,2)) and still add up to the
+--   amount exactly (rounding each part on its own made a ₹9 fee 7.63 + 0.69 + 0.69 = 9.01).
 calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 calculatePlatformFeeAttr totalFee plan = do
   let platformFee = totalFee / HighPrecMoney (toRational $ 1 + plan.cgstPercentage + plan.sgstPercentage) -- this should be changed to HighPrecMoney
-      cgst = HighPrecMoney (toRational plan.cgstPercentage) * platformFee
-      sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
-  (platformFee, cgst, sgst)
+      paise = roundHighPrecMoney @HighPrecMoney 2
+      cgst = paise $ HighPrecMoney (toRational plan.cgstPercentage) * platformFee
+      sgst = paise $ HighPrecMoney (toRational plan.sgstPercentage) * platformFee
+  (totalFee - cgst - sgst, cgst, sgst)
 
 -- | Compute the IGST portion of a GST-inclusive fee, using the IGST percentage
 --   from the supplied 'GstBreakup'. Mirrors 'calculatePlatformFeeAttr' for the
