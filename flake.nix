@@ -3,8 +3,8 @@
     # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
     max-call-depth = "1000000";
     # Nix cache
-    extra-substituters = "https://cache.nixos.asia/oss";
-    extra-trusted-public-keys = "oss:KO872wNJkCDgmGN3xy9dT89WAhvv13EiKncTtHDItVU=";
+    # extra-substituters = "https://cache.nixos.asia/oss";
+    # extra-trusted-public-keys = "oss:KO872wNJkCDgmGN3xy9dT89WAhvv13EiKncTtHDItVU=";
   };
 
   inputs = {
