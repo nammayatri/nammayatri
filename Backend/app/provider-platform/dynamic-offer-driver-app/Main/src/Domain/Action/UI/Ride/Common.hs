@@ -214,6 +214,7 @@ data DriverRideRes = DriverRideRes
     tollConfidence :: Maybe Confidence,
     mustCallEndRideRequirements :: Bool,
     rideEvidenceEnabled :: Maybe Bool,
+    rideEvidenceMaxFiles :: Maybe Int,
     customerCancellationDuesWithCurrency :: PriceAPIEntity,
     estimatedTollChargesWithCurrency :: Maybe PriceAPIEntity,
     parkingChargeWithCurrency :: Maybe PriceAPIEntity,
@@ -752,6 +753,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         -- refuses to validate pending tolls, so the requirements check could only answer "no panel".
         mustCallEndRideRequirements = maybe False (\config -> isManualTollChargeEnabled config booking.tripCategory && not (DTC.isTollExemptVehicleTier booking.vehicleServiceTier) && (not (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) || maybe False (> 0) ride.estimatedTollCharges || maybe False (not . null) ride.estimatedTollIds)) mbTransporterConfig,
         rideEvidenceEnabled = (\config -> RideEvidence.isRideEvidenceEnabled config && ride.status /= DRide.UPCOMING) <$> mbTransporterConfig,
+        rideEvidenceMaxFiles = RideEvidence.maxFilesPerRide <$> mbTransporterConfig,
         customerCancellationDuesWithCurrency = PriceAPIEntity (roundAmountByCurrency' ride.currency cancellationDuesNet) ride.currency,
         estimatedTollChargesWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency (tollNet amt)) ride.currency) <$> estimatedFareParams.tollCharges,
         parkingChargeWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency (parkingNet amt)) ride.currency) <$> displayParkingCharge,
