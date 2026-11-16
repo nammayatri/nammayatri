@@ -68,6 +68,7 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Notifications as Notify
 
 data BetterDriverSwapReq = BetterDriverSwapReq
   { merchant :: DM.Merchant,
@@ -200,6 +201,8 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
         withTryCatch "betterDriverSwapOldDriverCleanup" $ do
           oldDriver <- QPerson.findById oldRide.driverId >>= fromMaybeM (PersonNotFound oldRide.driverId.getId)
           cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.Allocator transporterConfig oldDriver
+          fork "better-driver-swap notify old driver" $
+            Notify.notifyOnCancel oldBooking.merchantOperatingCityId oldRide.id oldBooking oldDriver SBCR.ByUser
       case cleanupResult of
         Right _ -> pure ()
         Left err -> logError $ "Better-driver swap: freeing old driver for ride " <> oldRide.id.getId <> " failed: " <> show err
