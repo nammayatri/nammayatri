@@ -39,6 +39,7 @@ import qualified Storage.Queries.Person as QPerson
 
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
+    closedRoute :: Maybe Text,
     result :: CloseResult
   }
 
@@ -83,7 +84,7 @@ closeLocked cfg bookingId expectedPlate outcome =
         then do
           cancelForNoShows b
           clearBookingState bookingId
-          pure Closed {closedCity = b.merchantOperatingCityId, result = AutoCancelled}
+          pure Closed {closedCity = b.merchantOperatingCityId, closedRoute = b.routeCode, result = AutoCancelled}
         else reallocate b
     reallocate b = do
       clearAlloc bookingId
@@ -98,7 +99,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated}
+      pure Closed {closedCity = b.merchantOperatingCityId, closedRoute = b.routeCode, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated}
 
 -- | The rider's last allowed no-show: cancelled by the system, fare kept (marking it refund-pending would make the payment
 -- service refund). SMS and Google Wallet flips are skipped: they need the API Flow the scheduler env lacks. The row flips

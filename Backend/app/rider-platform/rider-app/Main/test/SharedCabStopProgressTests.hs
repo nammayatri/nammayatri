@@ -9,6 +9,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), ApproachPush (..), ApproachStage (..), Timer (..), blockingTimerDeadline)
 import SharedLogic.SharedCab.Config (SharedCabTunables (..), defaultTunables)
+import SharedLogic.SharedCab.StopProgress (tickRoutes)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -41,7 +42,9 @@ tests :: TestTree
 tests =
   testGroup
     "SharedCab stop progress"
-    [ testCase "the tick groups its live bookings by cab once, each cab's in order, the cab-less left out" $
+    [ testCase "the tick runs every route with a live booking or a live cab once; a booking with no route adds none" $
+        tickRoutes [Just "R1", Nothing, Just "R2", Just "R1"] ["R2", "R3"] @?= ["R1", "R2", "R3"],
+      testCase "the tick groups its live bookings by cab once, each cab's in order, the cab-less left out" $
         groupByKey snd [(1 :: Int, Just "A"), (2, Nothing), (3, Just "B"), (4, Just "A" :: Maybe String)]
           @?= Map.fromList [("A", [(1, Just "A"), (4, Just "A")]), ("B", [(3, Just "B")])],
       testCase "the driver route list splits one city-wide FINDING read by route; a route nobody waits on gets none" $

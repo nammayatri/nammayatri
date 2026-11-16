@@ -13,12 +13,12 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow)
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled, tickChainContinues)
 import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
 import SharedLogic.SharedCab.Schedule (claimTickRun, claimedTick, ensureExpiryJob, ownAllocationChain, scheduleNextTick, withCityTickLease)
 import SharedLogic.SharedCab.SessionState (SessionFlow)
-import SharedLogic.SharedCab.StopProgress (runStopProgress)
+import SharedLogic.SharedCab.StopProgress (runCityTick)
 import Storage.Beam.SchedulerJob ()
 
 -- Seeded per city by Schedule.ensureAllocationTick on session open; keeps itself alive below.
@@ -62,13 +62,12 @@ sharedCabAllocationTick Job {jobInfo} = do
       (claimTickRun merchantOperatingCityId leaseMisses)
       ( do
           enabled <- sharedCabEnabled merchantOperatingCityId
-          -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress shares it
+          -- one scheduled tick per city at a time; inside it every route runs on its own lease, which triggers take too
           gotLease <-
             withCityTickLease merchantOperatingCityId $
-              allocationPass merchantOperatingCityId >>= \(live, positions) -> do
+              runCityTick merchantOperatingCityId >>= \live -> do
                 liftIO (writeIORef liveRef live)
                 liftIO (writeIORef keepGoingRef (tickChainContinues enabled (length live)))
-                runStopProgress merchantOperatingCityId live positions
           liftIO (writeIORef gotLeaseRef gotLease)
           -- before the refunds' payment calls, so a slow gateway never delays the city's next tick
           scheduleNext

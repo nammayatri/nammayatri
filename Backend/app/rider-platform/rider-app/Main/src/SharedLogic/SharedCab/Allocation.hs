@@ -10,7 +10,10 @@ module SharedLogic.SharedCab.Allocation
     releaseUnboarded,
     closeUnboarded,
     afterUnboarded,
-    allocationPass,
+    allocationRoutePass,
+    readCity,
+    closeExpired,
+    RoutePositions,
     cityLiveBookings,
     mergeLive,
     eachIsolated,
@@ -30,7 +33,7 @@ import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, 
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateBookings, withBookingLock)
+import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince, partyOf, partySizes, plateBookings, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
@@ -39,7 +42,7 @@ import SharedLogic.SharedCab.Lts (RouteRead (..), readRoutePositions, stopPointO
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), recordRiderAction)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
-import SharedLogic.SharedCab.Schedule (withCityTickLease)
+import SharedLogic.SharedCab.Schedule (withCityTickLease, withRouteTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import SharedLogic.SharedCab.SessionState (Session, SessionStatus (ACTIVE))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -76,7 +79,7 @@ releaseSharedCabAllocation ::
   m Bool
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   closed <- closeAllocation cfg bookingId expectedPlate outcome (pure ())
-  whenJust closed (triggerSharedCabAllocation . (.closedCity))
+  whenJust closed triggerClosed
   pure (isJust closed)
 
 -- | Rider skip: the plate joins the skipped set, and the rider's own skip is counted against the search, in the same booking-lock hold, so no claim can re-offer it first.
@@ -90,7 +93,7 @@ skipSharedCabAllocation cfg bookingId searchId plate reason = do
       now <- getCurrentTime
       addRiderSkipped cfg.riderSkipTtlSec now bookingId plate
       recordRiderAction cfg.skipCancelCountTtlSec RiderSkip searchId
-  whenJust closed (triggerSharedCabAllocation . (.closedCity))
+  whenJust closed triggerClosed
   pure (isJust closed)
 
 -- | Releases a leaving cab's unboarded allocations without penalty. Call after the session write, outside the plate lock.
@@ -111,20 +114,28 @@ closeUnboarded plate outcome = do
 afterUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> [ClosedUnboarded] -> m ()
 afterUnboarded plate outcome closed = do
   forM_ closed $ \(cfg, bookingId, c) -> afterClose cfg bookingId plate outcome (Just c)
-  mapM_ triggerSharedCabAllocation (nub [c.closedCity | (_, _, c) <- closed])
+  mapM_ (uncurry triggerSharedCabAllocation) (nub [(c.closedCity, c.closedRoute) | (_, _, c) <- closed])
 
+triggerClosed :: AllocFlow m r => Closed -> m ()
+triggerClosed c = triggerSharedCabAllocation c.closedCity c.closedRoute
+
+-- | A claim pass now, off the caller's path, for the route the change was on; the city only when the booking has no route.
 triggerSharedCabAllocation ::
   AllocFlow m r =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
   m ()
-triggerSharedCabAllocation cityId =
-  void $ fork "shared-cab-allocation-trigger" $ runSharedCabAllocationTick cityId
+triggerSharedCabAllocation cityId mbRouteCode =
+  void $ fork "shared-cab-allocation-trigger" $ runSharedCabAllocationTick cityId mbRouteCode
 
 runSharedCabAllocationTick ::
   AllocFlow m r =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
   m ()
-runSharedCabAllocationTick cityId = void . withCityTickLease cityId $ claimPass cityId
+runSharedCabAllocationTick cityId = \case
+  Just routeCode -> void . withRouteTickLease cityId routeCode $ claimRoute cityId routeCode
+  Nothing -> void . withCityTickLease cityId $ claimPass cityId
 
 -- | A trigger's pass (a confirm, a close, a skip): claims only. Timers, stop progress and timeouts are the scheduled tick's, which
 -- retries shortly when this pass holds the lease.
@@ -137,22 +148,27 @@ claimPass cityId = do
     (live, positionsByRoute) <- readCity cityId
     claimFindings cityId cfg now live positionsByRoute
 
+-- | The same for one route, reading only that route's waiting bookings and cab positions.
+claimRoute :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> Text -> m ()
+claimRoute cityId routeCode = do
+  enabled <- sharedCabEnabled cityId
+  when enabled $ do
+    finding <- findingOnRoute cityId routeCode >>= liveBookingsOf
+    whenJust (listToMaybe finding) $ \lb -> do
+      cfg <- Config.getTunables cityId
+      now <- getCurrentTime
+      let integratedBppConfigId = lb.booking.integratedBppConfigId
+      routeRead <- RouteRead <$> readRoutePositions integratedBppConfigId routeCode <*> Seats.routeStopRows integratedBppConfigId routeCode
+      claimFindings cityId cfg now finding [(routeCode, routeRead)]
+
 type RoutePositions = [(Text, RouteRead)]
 
--- | One pass of the tick: read the city, close what has run out, then (if the city is on) claim cabs for the bookings still finding one.
+-- | One route's share of the tick: close what has run out, then (if the city is on) claim cabs for the bookings still finding one.
 -- A suspended city drains (timers, and the job's timeouts and refunds) but allocates nothing new.
-allocationPass ::
-  AllocFlow m r =>
-  Id DMOC.MerchantOperatingCity ->
-  m ([LiveBooking], RoutePositions)
-allocationPass cityId = do
-  cfg <- Config.getTunables cityId
-  enabled <- sharedCabEnabled cityId
-  now <- getCurrentTime
-  (live, positionsByRoute) <- readCity cityId
+allocationRoutePass :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> Config.SharedCabTunables -> Bool -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
+allocationRoutePass cityId cfg enabled now live positionsByRoute = do
   closeExpired cfg now live positionsByRoute
   when enabled $ claimFindings cityId cfg now live positionsByRoute
-  pure (live, positionsByRoute)
 
 -- | The city's live bookings, and the cab positions and stops of every route that has one waiting for, or holding, a cab.
 readCity :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> m ([LiveBooking], RoutePositions)

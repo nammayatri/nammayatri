@@ -29,6 +29,7 @@ module SharedLogic.SharedCab.Keys
     searchSkipsKey,
     searchCancelsKey,
     allocLeaseKey,
+    allocRouteLeaseKey,
     refundRetryCityKey,
     demandKey,
     allocJobGuardKey,
@@ -148,6 +149,9 @@ searchCancelsKey searchId = "sharedcab:rate:cancels:" <> searchId
 
 allocLeaseKey :: CityId -> Text
 allocLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId.getId
+
+allocRouteLeaseKey :: CityId -> Text -> Text
+allocRouteLeaseKey cityId routeCode = allocLeaseKey cityId <> ":" <> routeCode
 
 refundRetryCityKey :: CityId -> Text
 refundRetryCityKey cityId = "sharedcab:refundretry:city:" <> cityId.getId
