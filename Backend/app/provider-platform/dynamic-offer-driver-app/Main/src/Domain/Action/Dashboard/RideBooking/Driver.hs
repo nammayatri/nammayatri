@@ -990,6 +990,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust mbRC $ \rc -> do
+    when (rc.isBlocked == Just True) $ throwError RCBlocked
     when (DCommon.checkFleetOwnerRole requestor.role) $
       RCQuery.updateFleetOwnerId mbFleetOwnerId rc.id
     createRCAssociationIfNotExists personId requestor.role rc transporterConfig now

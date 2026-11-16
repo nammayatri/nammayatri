@@ -27,6 +27,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     linkRCStatus,
     RCActivationSource (..),
     removeVehicle,
+    deactivateRC,
     endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
     getAllLinkedRCs,
@@ -247,6 +248,8 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
 
   (blocked, _) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
+  VRCExtra.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber >>= \mbBlockedRC ->
+    when ((mbBlockedRC >>= (.isBlocked)) == Just True) $ throwError RCBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   when (person.role == Person.DRIVER) $ do
@@ -268,12 +271,16 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
   let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
+  let isDriverAppRequest = not isDashboard && not bulkUpload && isNothing mbMerchant && isNothing mbFleetOwnerId
+      forceImageCheck = documentVerificationConfig.forceImageVerification == Just True && isDriverAppRequest
+  when (isDriverAppRequest && not isTtenCertificate) $
+    forM_ (req.imageId : maybeToList req.imageId2) ensureOwnRcImage
   unless isTtenCertificate $
     when
-      ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
+      ( isNothing req.vehicleDetails && (forceImageCheck || isNothing req.dateOfRegistration) && documentVerificationConfig.checkExtraction
           && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
           && (not bulkUpload)
-          && (isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
+          && (forceImageCheck || isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
       )
       $ do
         image <- getImage req.imageId
@@ -358,6 +365,15 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withWaitAndLockRedis (imageS3Lock (imageMetadata.s3Path)) 5 50000 $
         readDocument imageMetadata
+
+    ensureOwnRcImage :: Id Image.Image -> Flow ()
+    ensureOwnRcImage imageId_ = do
+      imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
+      unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
+        throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
+      fileContent <- readDocument imageMetadata
+      when (T.null fileContent) $ throwError (ImageNotFound imageId_.getId)
 
     -- When enabled via transporterConfig, update any existing VehicleRegistrationCertificate
     -- row for this registration number with the new fleetOwnerId.
@@ -511,7 +527,7 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
           mbImageExtractionValidation' = mbImageExtractionValidation <|> (mbVerificationReq <&> (.imageExtractionValidation))
           mbEncryptedRC' = mbEncryptedRC <|> (mbVerificationReq <&> (.documentNumber))
           mbImageId2' = (mbVerificationReq >>= (.documentImageId2)) <|> mbImageId2
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) mbImageId2' Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus False
+      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe imageId (.documentImageId1) mbVerificationReq) mbImageId2' Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus False
       return Ack
 
 onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Bool -> m ()
@@ -658,7 +674,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             verified = Nothing,
             pendingChallan = Nothing,
             initiatedBy = Nothing,
-            rcVehicleType = input.rcVehicleType
+            rcVehicleType = input.rcVehicleType,
+            isBlocked = Nothing
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
@@ -858,6 +875,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) source req@RCStatusReq {..
   let isTaxiBoothRequest = source == TaxiBooth
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
+  when (req.isActivate && rc.isBlocked == Just True) $ throwError RCBlocked
   -- Activation gets its specific code; deactivation keeps the neutral error so clients never show activation copy for it.
   unless (rc.verificationStatus == Documents.VALID) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Vehicle is not ready to be linked"

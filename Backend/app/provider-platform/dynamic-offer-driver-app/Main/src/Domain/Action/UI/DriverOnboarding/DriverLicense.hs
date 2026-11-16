@@ -145,6 +145,7 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
   now <- getCurrentTime
   documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR req.vehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless isDashboard $ assertDlFailedAttemptsWithinLimit documentVerificationConfig personId
   let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
       hasRegexRules = not (null regexRules)
   if hasRegexRules
@@ -155,6 +156,8 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
   when driverInfo.blocked $ throwError $ DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  let forceImageCheck = documentVerificationConfig.forceImageVerification == Just True && not isDashboard
+  unless isDashboard $ forM_ (imageId1 : maybeToList imageId2) ensureOwnDlImage
   let normalizedDLNumber = normalizeDocumentIdentifier transporterConfig driverLicenseNumber
   checkDLFormat <- isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLNumber
   unless checkDLFormat $
@@ -163,9 +166,9 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)
       else
-        if isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
+        if (forceImageCheck || isNothing dateOfIssue) && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
           then
-            if req.isDLImageValidated == Just True
+            if req.isDLImageValidated == Just True && not forceImageCheck
               then do
                 let nameOnTheCard = req.nameOnCard
                 let dateOfBirth = Just $ convertUTCTimetoDate req.driverDateOfBirth
@@ -292,6 +295,14 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
   whenJust mbRegisteredDL saveDLVersionMetadata
   return Success
   where
+    ensureOwnDlImage imageId = do
+      imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
+      unless (imageMetadata.imageType == DTO.DriverLicense) $
+        throwError (ImageInvalidType (show DTO.DriverLicense) "")
+      fileContent <- readDocument imageMetadata
+      when (T.null fileContent) $ throwError (ImageNotFound imageId.getId)
+
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
@@ -331,6 +342,21 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
     makeVerifyDLHitsCountKey :: Text -> Text
     makeVerifyDLHitsCountKey dlNumber = "VerifyDL:dlNumberHits:" <> dlNumber <> ":hitsCount"
 
+makeFailedDlAttemptsKey :: Id Person.Person -> Text
+makeFailedDlAttemptsKey personId = "VerifyDL:failedAttempts:" <> personId.getId
+
+assertDlFailedAttemptsWithinLimit :: OnboardingFlow m r => DocumentVerificationConfig -> Id Person.Person -> m ()
+assertDlFailedAttemptsWithinLimit config personId =
+  whenJust ((,) <$> config.failedAttemptLimit <*> config.failedAttemptWindowSeconds) $ \(limit, windowSeconds) -> do
+    attempts <- fromMaybe 0 <$> Redis.get @Int (makeFailedDlAttemptsKey personId)
+    when (attempts >= limit) $ throwError (HitsLimitError windowSeconds)
+
+recordDlFailedAttempt :: OnboardingFlow m r => DocumentVerificationConfig -> Id Person.Person -> m ()
+recordDlFailedAttempt config personId =
+  whenJust ((,) <$> config.failedAttemptLimit <*> config.failedAttemptWindowSeconds) $ \(_, windowSeconds) -> do
+    attempts <- fromMaybe 0 <$> Redis.get @Int (makeFailedDlAttemptsKey personId)
+    Redis.setExp (makeFailedDlAttemptsKey personId) (attempts + 1) windowSeconds
+
 verifyDLFlow :: OnboardingFlow m r => Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> m ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
@@ -356,6 +382,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
             morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
             MorthQuery.create morthEntity
+            when (isNothing resp.response.status) $ recordDlFailedAttempt documentVerificationConfig person.id
           onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory
 
 mkIdfyVerificationEntity :: OnboardingFlow m r => Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m Domain.IdfyVerification

@@ -32,6 +32,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     id :: B.C f Kernel.Prelude.Text,
     initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy),
     insuranceValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    isBlocked :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
