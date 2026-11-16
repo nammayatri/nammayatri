@@ -70,6 +70,8 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverVehicleRemoveSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
+    postDriverBlockRC,
+    getDriverLinkedRcDrivers,
     getDriverAirportPreference,
     postDriverAirportPreference,
     getDriverSearchRequestStats,
@@ -572,18 +574,18 @@ postDriverAcRestrictionUpdate merchantShortId opCity reqDriverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-postDriverBlockWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> Flow APISuccess
-postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName req = do
+postDriverBlockWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Maybe Bool -> Common.BlockDriverWithReasonReq -> Flow APISuccess
+postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName mbBlockRC req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName req
+  blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName (mbBlockRC == Just True) req
   pure Success
 
 maxBulkBlockDriverIds :: Int
 maxBulkBlockDriverIds = 500
 
-postDriverBulkBlock :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.BulkBlockReq -> Flow Common.BulkBlockRes
-postDriverBulkBlock merchantShortId opCity _requestorId dashboardUserName req = do
+postDriverBulkBlock :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Text -> Text -> Common.BulkBlockReq -> Flow Common.BulkBlockRes
+postDriverBulkBlock merchantShortId opCity mbBlockRC _requestorId dashboardUserName req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   when (null req.driverIds) $ throwError (InvalidRequest "driverIds cannot be empty")
@@ -595,7 +597,7 @@ postDriverBulkBlock merchantShortId opCity _requestorId dashboardUserName req = 
             blockTimeInHours = req.blockTimeInHours
           }
   results <- forM req.driverIds $ \reqDriverId -> do
-    res <- withTryCatch "bulkBlockDriver" (blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName blockReq)
+    res <- withTryCatch "bulkBlockDriver" (blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName (mbBlockRC == Just True) blockReq)
     case res of
       Left err -> do
         logInfo $ "bulkBlock: failed for driver " <> reqDriverId.getId <> ": " <> T.pack (show err)
@@ -609,8 +611,8 @@ postDriverBulkBlock merchantShortId opCity _requestorId dashboardUserName req = 
         failedItems = failedItems
       }
 
-blockDriverWithReason :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> Flow ()
-blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName req = do
+blockDriverWithReason :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Common.Driver -> Text -> Bool -> Common.BlockDriverWithReasonReq -> Flow ()
+blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName shouldBlockRC req = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -652,6 +654,7 @@ blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName re
             { driverId = driverId
             }
       Nothing -> return ()
+  when (shouldBlockRC && not isFleetOwner) $ setDriverRCsBlockedStatus tcForBlock personId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
 
 ---------------------------------------------------------------------
@@ -706,8 +709,8 @@ convertToCommon res =
     }
 
 ---------------------------------------------------------------------
-postDriverUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Maybe UTCTime -> Maybe UTCTime -> Flow APISuccess
-postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWeeklyCancellationRateBlockingTill preventDailyCancellationRateBlockingTill = do
+postDriverUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow APISuccess
+postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWeeklyCancellationRateBlockingTill preventDailyCancellationRateBlockingTill mbUnblockRC = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -750,6 +753,7 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
             _ -> pure ()
         when (isJust driverInf.softBlockStiers) $ do
           QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
+      when (mbUnblockRC == Just True) $ setDriverRCsBlockedStatus tcForUnblock personId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -1144,6 +1148,45 @@ postDriverUpdateRCInvalidStatusByRCNumber _merchantShortId _opCity req = do
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
   RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   pure Success
+
+---------------------------------------------------------------------
+postDriverBlockRC :: ShortId DM.Merchant -> Context.City -> Common.BlockRCReq -> Flow APISuccess
+postDriverBlockRC merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  vehicleRC <- RCQuery.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (VehicleNotFound req.rcNumber)
+  logInfo $ "postDriverBlockRC: rcId=" <> vehicleRC.id.getId <> ", isBlocked=" <> show req.isBlocked <> ", reason=" <> show req.reason
+  setRCBlockedStatus transporterConfig vehicleRC req.isBlocked
+  pure Success
+
+setRCBlockedStatus :: DTC.TransporterConfig -> VehicleRegistrationCertificate -> Bool -> Flow ()
+setRCBlockedStatus transporterConfig vehicleRC isBlocked = do
+  RCQuery.updateIsBlocked (Just isBlocked) vehicleRC.id
+  when isBlocked $ do
+    mbActiveAssociation <- QDriverRCAssociation.findActiveAssociationByRC vehicleRC.id True
+    notDeactivated <- case mbActiveAssociation of
+      Nothing -> pure []
+      Just activeAssociation -> do
+        res <- withTryCatch "setRCBlockedStatus:deactivateRC" (DomainRC.deactivateRC False transporterConfig vehicleRC activeAssociation.driverId)
+        case res of
+          Left err -> do
+            logError $ "setRCBlockedStatus: could not deactivate RC for driver " <> activeAssociation.driverId.getId <> ", left linked: " <> show err
+            pure [activeAssociation.driverId]
+          Right _ -> pure []
+    linkedAssociations <- QDRCA.findAllActiveAssociationByRCId vehicleRC.id
+    forM_ (filter (\association -> association.driverId `notElem` notDeactivated) linkedAssociations) $ \association ->
+      QDRCA.endAssociationForRC association.driverId vehicleRC.id
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
+
+setDriverRCsBlockedStatus :: DTC.TransporterConfig -> Id DP.Person -> Bool -> Flow ()
+setDriverRCsBlockedStatus transporterConfig personId isBlocked = do
+  linkedRCs <- map snd <$> QDRCA.findAllByDriverId personId
+  forM_ (HM.elems $ HM.fromList [(linkedRC.id.getId, linkedRC) | linkedRC <- linkedRCs]) $ \linkedRC -> do
+    res <- withTryCatch "setDriverRCsBlockedStatus" (setRCBlockedStatus transporterConfig linkedRC isBlocked)
+    case res of
+      Left err -> logError $ "setDriverRCsBlockedStatus: could not update RC " <> linkedRC.id.getId <> " of driver " <> personId.getId <> ": " <> show err
+      Right _ -> pure ()
 
 ---------------------------------------------------------------------
 postDriverUpdateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateVehicleVariantReq -> Flow APISuccess
@@ -2223,3 +2266,54 @@ postDriverMembershipFeeCreate merchantShortId opCity req = do
   let Common.MembershipFeeCreateReq {..} = req
       applicationReq = MembershipAPI.MembershipApplicationReq {..}
   DMembership.submitMembershipApplication (Id driverId) merchant.id merchantOpCityId applicationReq (Just amount)
+
+maxLinkedDriversPerRc :: Int
+maxLinkedDriversPerRc = 50
+
+getDriverLinkedRcDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.LinkedRcDriversRes
+getDriverLinkedRcDrivers merchantShortId opCity mbRcNumber mbDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  certificates <- case (mbRcNumber, mbDriverId) of
+    (Just rcNumber, _) -> do
+      certificate <- RCQuery.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (VehicleNotFound rcNumber)
+      pure [certificate]
+    (Nothing, Just driverIdText) -> do
+      let personId = Id driverIdText :: Id DP.Person
+      driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist driverIdText)
+      unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driverIdText)
+      driverCertificates <- map snd <$> QDRCA.findAllByDriverId personId
+      pure $ HM.elems $ HM.fromList [(certificate.id.getId, certificate) | certificate <- driverCertificates]
+    (Nothing, Nothing) -> throwError $ InvalidRequest "rcNumber or driverId is required"
+  items <- mapM (buildLinkedRcItem merchant.id) certificates
+  pure Common.LinkedRcDriversRes {rcs = items}
+
+buildLinkedRcItem :: Id DM.Merchant -> VehicleRegistrationCertificate -> Flow Common.LinkedRcItem
+buildLinkedRcItem merchantId certificate = do
+  now <- getCurrentTime
+  certificateNumber <- decrypt certificate.certificateNumber
+  associations <- QDRCA.findAllByRCIdWithLimit certificate.id (maxLinkedDriversPerRc + 1)
+  let linkedDriverIds = take maxLinkedDriversPerRc $ nub (map (.driverId) associations)
+  linkedPersons <- QPerson.findAllByPersonIdsAndMerchantId merchantId (map (.getId) linkedDriverIds)
+  linkedDriverInfos <- QDriverInfo.findAllByDriverIds (map (.getId) linkedDriverIds)
+  let personById = HM.fromList [(person.id.getId, person) | person <- linkedPersons]
+      blockedById = HM.fromList [(info.driverId.getId, info.blocked) | info <- linkedDriverInfos]
+      buildLinkedDriver linkedDriverId = do
+        association <- listToMaybe (filter (\candidate -> candidate.driverId == linkedDriverId) associations)
+        person <- HM.lookup linkedDriverId.getId personById
+        pure
+          Common.LinkedRcDriver
+            { driverId = cast linkedDriverId,
+              name = Just $ T.strip (person.firstName <> maybe "" (" " <>) person.lastName),
+              isRcActive = association.isRcActive && maybe True (> now) association.associatedTill,
+              associatedOn = association.associatedOn,
+              associatedTill = association.associatedTill,
+              isDriverBlocked = fromMaybe False (HM.lookup linkedDriverId.getId blockedById)
+            }
+  pure
+    Common.LinkedRcItem
+      { rcNumber = certificateNumber,
+        isBlocked = certificate.isBlocked == Just True,
+        hasMoreDrivers = length associations > maxLinkedDriversPerRc,
+        drivers = mapMaybe buildLinkedDriver linkedDriverIds
+      }

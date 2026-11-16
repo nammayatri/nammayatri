@@ -1508,7 +1508,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.docsVerificationStatusUpdatedAt = Just now,
                       DRC.pendingChallan = Nothing,
                       DRC.initiatedBy = Nothing,
-                      DRC.rcVehicleType = Nothing
+                      DRC.rcVehicleType = Nothing,
+                      DRC.isBlocked = Nothing
                     }
             QRC.create newRC
             SDocVersion.saveRCVersionMetadata newRC

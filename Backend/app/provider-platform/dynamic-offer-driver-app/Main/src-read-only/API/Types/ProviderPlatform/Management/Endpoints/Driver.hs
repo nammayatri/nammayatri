@@ -100,6 +100,13 @@ data BlockDriverWithReasonReq = BlockDriverWithReasonReq {reasonCode :: Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BlockRCReq = BlockRCReq {rcNumber :: Kernel.Prelude.Text, isBlocked :: Kernel.Prelude.Bool, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets BlockRCReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data BlockReason = BlockReason {reasonCode :: Kernel.Types.Id.Id BlockReason, blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, blockTimeInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -350,6 +357,25 @@ instance Kernel.Types.HideSecrets.HideSecrets GetOperatingCityResp where
   hideSecrets = Kernel.Prelude.identity
 
 data LicDetails = LicDetails {licExpiry :: Kernel.Prelude.UTCTime, vehicleClass :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LinkedRcDriver = LinkedRcDriver
+  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isRcActive :: Kernel.Prelude.Bool,
+    associatedOn :: Kernel.Prelude.UTCTime,
+    associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    isDriverBlocked :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LinkedRcDriversRes = LinkedRcDriversRes {rcs :: [LinkedRcItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LinkedRcItem = LinkedRcItem {rcNumber :: Kernel.Prelude.Text, isBlocked :: Kernel.Prelude.Bool, hasMoreDrivers :: Kernel.Prelude.Bool, drivers :: [LinkedRcDriver]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -630,465 +656,665 @@ data UpdateVehicleVariantReq = UpdateVehicleVariantReq {rcId :: Kernel.Prelude.T
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVehicleVariantReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverUpdateTagBulk :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverLoginOtp :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> PostDriverBulkBlockHelper :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateRCInvalidStatusByRCNumber :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverUpdateSpecialLocWarrior :<|> PostDriverClearFeeHelper :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverVehicleAppendSelectedServiceTiers :<|> PostDriverVehicleRemoveSelectedServiceTiers :<|> PostDriverVehicleUpsertSelectedServiceTiers :<|> PostDriverRefundByPayoutHelper :<|> GetDriverSecurityDepositStatus :<|> GetDriverPanAadharSelfieDetailsList :<|> PostDriverBulkSubscriptionServiceUpdate :<|> GetDriverPlanDrivers :<|> PostDriverPlanMigrate :<|> GetDriverStatsHelper :<|> GetDriverEarningsHelper :<|> GetDriverFyEarningsHelper :<|> PostDriverTdsRateUpdate :<|> PostDriverUpdateMerchant :<|> GetDriverAirportPreference :<|> PostDriverAirportPreference :<|> PostDriverBulkAirportBlockHelper :<|> GetDriverSearchRequestStats :<|> GetDriverIdentityInfoHelper :<|> PostDriverIdentityInfoUpdateHelper :<|> PostDriverAssociationChangeHelper :<|> PostDriverMembershipFeeCreate))
+type API = "driver" :> (GetDriverDocumentsInfo :<|> (PostDriverPersonNumbers :<|> (PostDriverUpdateTagBulk :<|> (PostDriverDriverDataDecryption :<|> (PostDriverPersonId :<|> (GetDriverAadhaarInfo :<|> (GetDriverAadhaarInfobyMobileNumber :<|> (GetDriverLoginOtp :<|> (GetDriverList :<|> (GetDriverActivity :<|> (PostDriverDisable :<|> (PostDriverAcRestrictionUpdate :<|> (PostDriverBlockWithReasonHelper :<|> (PostDriverBlock :<|> (PostDriverBulkBlockHelper :<|> (GetDriverBlockReasonList :<|> (PostDriverUnblockHelper :<|> (GetDriverLocation :<|> (DeleteDriverPermanentlyDelete :<|> (PostDriverUnlinkDL :<|> (PostDriverUnlinkAadhaar :<|> (PostDriverUpdatePhoneNumber :<|> (PostDriverUpdateByPhoneNumber :<|> (PostDriverUpdateName :<|> (PostDriverDeleteRC :<|> (GetDriverClearStuckOnRide :<|> (PostDriverSendDummyNotification :<|> (PostDriverChangeOperatingCity :<|> (GetDriverGetOperatingCity :<|> (PostDriverPauseOrResumeServiceCharges :<|> (PostDriverUpdateRCInvalidStatus :<|> (PostDriverUpdateRCInvalidStatusByRCNumber :<|> (PostDriverBlockRC :<|> (GetDriverLinkedRcDrivers :<|> (PostDriverUpdateVehicleVariant :<|> (PostDriverBulkReviewRCVariant :<|> (PostDriverUpdateDriverTag :<|> (PostDriverUpdateSpecialLocWarrior :<|> (PostDriverClearFeeHelper :<|> (GetDriverPanAadharSelfieDetails :<|> (PostDriverSyncDocAadharPan :<|> (PostDriverUpdateVehicleManufacturing :<|> (PostDriverVehicleAppendSelectedServiceTiers :<|> (PostDriverVehicleRemoveSelectedServiceTiers :<|> (PostDriverVehicleUpsertSelectedServiceTiers :<|> (PostDriverRefundByPayoutHelper :<|> (GetDriverSecurityDepositStatus :<|> (GetDriverPanAadharSelfieDetailsList :<|> (PostDriverBulkSubscriptionServiceUpdate :<|> (GetDriverPlanDrivers :<|> (PostDriverPlanMigrate :<|> (GetDriverStatsHelper :<|> (GetDriverEarningsHelper :<|> (GetDriverFyEarningsHelper :<|> (PostDriverTdsRateUpdate :<|> (PostDriverUpdateMerchant :<|> (GetDriverAirportPreference :<|> (PostDriverAirportPreference :<|> (PostDriverBulkAirportBlockHelper :<|> (GetDriverSearchRequestStats :<|> (GetDriverIdentityInfoHelper :<|> (PostDriverIdentityInfoUpdateHelper :<|> (PostDriverAssociationChangeHelper :<|> PostDriverMembershipFeeCreate)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
-type GetDriverDocumentsInfo = ("documents" :> "info" :> Get '[JSON] Dashboard.Common.Driver.DriverDocumentsInfoRes)
+type GetDriverDocumentsInfo = "documents" :> ("info" :> Get '[JSON] Dashboard.Common.Driver.DriverDocumentsInfoRes)
 
-type PostDriverPersonNumbers = ("personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonIdsReq :> Post '[JSON] [Dashboard.Common.PersonRes])
+type PostDriverPersonNumbers = "personNumbers" :> (Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonIdsReq :> Post '[JSON] [Dashboard.Common.PersonRes])
 
 type PostDriverUpdateTagBulk =
-  ( "updateTagBulk" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.UpdateTagBulkReq
-      :> Post
-           '[JSON]
-           [Dashboard.Common.UpdateTagBulkRes]
-  )
+  "updateTagBulk"
+    :> ( Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.UpdateTagBulkReq
+           :> Post
+                '[JSON]
+                [Dashboard.Common.UpdateTagBulkRes]
+       )
 
-type PostDriverDriverDataDecryption = ("driverDataDecryption" :> ReqBody '[JSON] [DriverEncDataReq] :> Post '[JSON] [DriverDecDataResp])
+type PostDriverDriverDataDecryption = "driverDataDecryption" :> (ReqBody '[JSON] [DriverEncDataReq] :> Post '[JSON] [DriverDecDataResp])
 
-type PostDriverPersonId = ("personId" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonMobileNoReq :> Post '[JSON] [Dashboard.Common.PersonRes])
+type PostDriverPersonId = "personId" :> (Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonMobileNoReq :> Post '[JSON] [Dashboard.Common.PersonRes])
 
-type GetDriverAadhaarInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "aadhaarInfo" :> Get '[JSON] DriverAadhaarInfoRes)
+type GetDriverAadhaarInfo = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("aadhaarInfo" :> Get '[JSON] DriverAadhaarInfoRes)
 
-type GetDriverAadhaarInfobyMobileNumber = (Capture "mobileNo" Kernel.Prelude.Text :> "aadhaarInfobyMobileNumber" :> Get '[JSON] DriverAadhaarInfoByPhoneReq)
+type GetDriverAadhaarInfobyMobileNumber = Capture "mobileNo" Kernel.Prelude.Text :> ("aadhaarInfobyMobileNumber" :> Get '[JSON] DriverAadhaarInfoByPhoneReq)
 
 type GetDriverLoginOtp =
-  ( "loginOtp" :> QueryParam "mobileNumber" Kernel.Prelude.Text :> QueryParam "mobileCountryCode" Kernel.Prelude.Text
-      :> QueryParam
-           "driverId"
-           Kernel.Prelude.Text
-      :> Get '[JSON] DriverLoginOtpRes
-  )
+  "loginOtp"
+    :> ( QueryParam "mobileNumber" Kernel.Prelude.Text
+           :> ( QueryParam "mobileCountryCode" Kernel.Prelude.Text
+                  :> ( QueryParam
+                         "driverId"
+                         Kernel.Prelude.Text
+                         :> Get '[JSON] DriverLoginOtpRes
+                     )
+              )
+       )
 
 type GetDriverList =
-  ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "verified" Kernel.Prelude.Bool
-      :> QueryParam
-           "enabled"
-           Kernel.Prelude.Bool
-      :> QueryParam "blocked" Kernel.Prelude.Bool
-      :> QueryParam
-           "subscribed"
-           Kernel.Prelude.Bool
-      :> QueryParam
-           "phone"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "vehicleNumberSearchString"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "mbNameSearchString"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "approvalStatus"
-           Dashboard.Common.Driver.ApprovalStatusFilter
-      :> QueryParam
-           "onboardingAs"
-           Dashboard.Common.Driver.OnboardingAs
-      :> QueryParam
-           "fleetOwnerId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "from"
-           Kernel.Prelude.UTCTime
-      :> QueryParam
-           "to"
-           Kernel.Prelude.UTCTime
-      :> QueryParam
-           "fleetSeeker"
-           Kernel.Prelude.Bool
-      :> Get
-           '[JSON]
-           DriverListRes
-  )
+  "list"
+    :> ( QueryParam "limit" Kernel.Prelude.Int
+           :> ( QueryParam "offset" Kernel.Prelude.Int
+                  :> ( QueryParam "verified" Kernel.Prelude.Bool
+                         :> ( QueryParam
+                                "enabled"
+                                Kernel.Prelude.Bool
+                                :> ( QueryParam "blocked" Kernel.Prelude.Bool
+                                       :> ( QueryParam
+                                              "subscribed"
+                                              Kernel.Prelude.Bool
+                                              :> ( QueryParam
+                                                     "phone"
+                                                     Kernel.Prelude.Text
+                                                     :> ( QueryParam
+                                                            "vehicleNumberSearchString"
+                                                            Kernel.Prelude.Text
+                                                            :> ( QueryParam
+                                                                   "mbNameSearchString"
+                                                                   Kernel.Prelude.Text
+                                                                   :> ( QueryParam
+                                                                          "approvalStatus"
+                                                                          Dashboard.Common.Driver.ApprovalStatusFilter
+                                                                          :> ( QueryParam
+                                                                                 "onboardingAs"
+                                                                                 Dashboard.Common.Driver.OnboardingAs
+                                                                                 :> ( QueryParam
+                                                                                        "fleetOwnerId"
+                                                                                        Kernel.Prelude.Text
+                                                                                        :> ( QueryParam
+                                                                                               "from"
+                                                                                               Kernel.Prelude.UTCTime
+                                                                                               :> ( QueryParam
+                                                                                                      "to"
+                                                                                                      Kernel.Prelude.UTCTime
+                                                                                                      :> ( QueryParam
+                                                                                                             "fleetSeeker"
+                                                                                                             Kernel.Prelude.Bool
+                                                                                                             :> Get
+                                                                                                                  '[JSON]
+                                                                                                                  DriverListRes
+                                                                                                         )
+                                                                                                  )
+                                                                                           )
+                                                                                    )
+                                                                             )
+                                                                      )
+                                                               )
+                                                        )
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
-type GetDriverActivity = ("activity" :> Get '[JSON] Dashboard.Common.Driver.DriverActivityRes)
+type GetDriverActivity = "activity" :> Get '[JSON] Dashboard.Common.Driver.DriverActivityRes
 
-type PostDriverDisable = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "disable" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverDisable = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("disable" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverAcRestrictionUpdate =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "acRestriction" :> "update" :> ReqBody '[JSON] UpdateACUsageRestrictionReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "acRestriction"
+           :> ( "update"
+                  :> ( ReqBody
+                         '[JSON]
+                         UpdateACUsageRestrictionReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverBlockWithReason =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "blockWithReason" :> ReqBody '[JSON] BlockDriverWithReasonReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "blockWithReason"
+           :> ( QueryParam "blockRC" Kernel.Prelude.Bool
+                  :> ( ReqBody
+                         '[JSON]
+                         BlockDriverWithReasonReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverBlockWithReasonHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "blockWithReason" :> Capture "dashboardUserName" Kernel.Prelude.Text
-      :> ReqBody
-           '[JSON]
-           BlockDriverWithReasonReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "blockWithReason"
+           :> ( Capture
+                  "dashboardUserName"
+                  Kernel.Prelude.Text
+                  :> ( QueryParam "blockRC" Kernel.Prelude.Bool
+                         :> ( ReqBody '[JSON] BlockDriverWithReasonReq
+                                :> Post
+                                     '[JSON]
+                                     Kernel.Types.APISuccess.APISuccess
+                            )
+                     )
+              )
+       )
 
-type PostDriverBlock = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "block" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverBlock = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("block" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverBulkBlock = ("bulkBlock" :> ReqBody '[JSON] BulkBlockReq :> Post '[JSON] BulkBlockRes)
+type PostDriverBulkBlock = "bulkBlock" :> (QueryParam "blockRC" Kernel.Prelude.Bool :> (ReqBody '[JSON] BulkBlockReq :> Post '[JSON] BulkBlockRes))
 
 type PostDriverBulkBlockHelper =
-  ( "bulkBlock" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> MandatoryQueryParam "requestorName" Kernel.Prelude.Text
-      :> ReqBody
-           '[JSON]
-           BulkBlockReq
-      :> Post '[JSON] BulkBlockRes
-  )
+  "bulkBlock"
+    :> ( QueryParam "blockRC" Kernel.Prelude.Bool
+           :> ( MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+                  :> ( MandatoryQueryParam
+                         "requestorName"
+                         Kernel.Prelude.Text
+                         :> (ReqBody '[JSON] BulkBlockReq :> Post '[JSON] BulkBlockRes)
+                     )
+              )
+       )
 
-type GetDriverBlockReasonList = ("blockReasonList" :> Get '[JSON] [BlockReason])
+type GetDriverBlockReasonList = "blockReasonList" :> Get '[JSON] [BlockReason]
 
 type PostDriverUnblock =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock"
-      :> QueryParam
-           "preventWeeklyCancellationRateBlockingTill"
-           Kernel.Prelude.UTCTime
-      :> QueryParam "preventDailyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "unblock"
+           :> ( QueryParam
+                  "preventWeeklyCancellationRateBlockingTill"
+                  Kernel.Prelude.UTCTime
+                  :> ( QueryParam "preventDailyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
+                         :> ( QueryParam "unblockRC" Kernel.Prelude.Bool
+                                :> Post
+                                     '[JSON]
+                                     Kernel.Types.APISuccess.APISuccess
+                            )
+                     )
+              )
+       )
 
 type PostDriverUnblockHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock"
-      :> Capture
-           "dashboardUserName"
-           Kernel.Prelude.Text
-      :> QueryParam "preventWeeklyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
-      :> QueryParam
-           "preventDailyCancellationRateBlockingTill"
-           Kernel.Prelude.UTCTime
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "unblock"
+           :> ( Capture
+                  "dashboardUserName"
+                  Kernel.Prelude.Text
+                  :> ( QueryParam "preventWeeklyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
+                         :> ( QueryParam
+                                "preventDailyCancellationRateBlockingTill"
+                                Kernel.Prelude.UTCTime
+                                :> ( QueryParam
+                                       "unblockRC"
+                                       Kernel.Prelude.Bool
+                                       :> Post
+                                            '[JSON]
+                                            Kernel.Types.APISuccess.APISuccess
+                                   )
+                            )
+                     )
+              )
+       )
 
 type GetDriverLocation =
-  ( "location" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> ReqBody '[JSON] Dashboard.Common.Driver.DriverIds
-      :> Get
-           '[JSON]
-           DriverLocationRes
-  )
+  "location"
+    :> ( QueryParam "limit" Kernel.Prelude.Int
+           :> ( QueryParam "offset" Kernel.Prelude.Int
+                  :> ( ReqBody '[JSON] Dashboard.Common.Driver.DriverIds
+                         :> Get
+                              '[JSON]
+                              DriverLocationRes
+                     )
+              )
+       )
 
-type DeleteDriverPermanentlyDelete = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "permanentlyDelete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type DeleteDriverPermanentlyDelete = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("permanentlyDelete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverUnlinkDL = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unlinkDL" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverUnlinkDL = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("unlinkDL" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverUnlinkAadhaar = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unlinkAadhaar" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverUnlinkAadhaar = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("unlinkAadhaar" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverUpdatePhoneNumber =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updatePhoneNumber" :> ReqBody '[JSON] UpdatePhoneNumberReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "updatePhoneNumber"
+           :> ( ReqBody '[JSON] UpdatePhoneNumberReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostDriverUpdateByPhoneNumber = (Capture "mobileNo" Kernel.Prelude.Text :> "updateByPhoneNumber" :> ReqBody '[JSON] UpdateDriverDataReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverUpdateByPhoneNumber = Capture "mobileNo" Kernel.Prelude.Text :> ("updateByPhoneNumber" :> (ReqBody '[JSON] UpdateDriverDataReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type PostDriverUpdateName =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateName" :> ReqBody '[JSON] UpdateDriverNameReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "updateName"
+           :> ( ReqBody '[JSON] UpdateDriverNameReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostDriverDeleteRC = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deleteRC" :> ReqBody '[JSON] DeleteRCReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverDeleteRC = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("deleteRC" :> (ReqBody '[JSON] DeleteRCReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type GetDriverClearStuckOnRide = ("clearStuck" :> "onRide" :> QueryParam "dbSyncTime" Kernel.Prelude.Int :> Get '[JSON] ClearOnRideStuckDriversRes)
+type GetDriverClearStuckOnRide = "clearStuck" :> ("onRide" :> (QueryParam "dbSyncTime" Kernel.Prelude.Int :> Get '[JSON] ClearOnRideStuckDriversRes))
 
-type PostDriverSendDummyNotification = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "sendDummyNotification" :> Post '[JSON] DummyRideRequestRes)
+type PostDriverSendDummyNotification = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("sendDummyNotification" :> Post '[JSON] DummyRideRequestRes)
 
 type PostDriverChangeOperatingCity =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "changeOperatingCity" :> ReqBody '[JSON] ChangeOperatingCityReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "changeOperatingCity"
+           :> ( ReqBody '[JSON] ChangeOperatingCityReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type GetDriverGetOperatingCity =
-  ( "getOperatingCity" :> QueryParam "mobileCountryCode" Kernel.Prelude.Text :> QueryParam "mobileNumber" Kernel.Prelude.Text
-      :> QueryParam
-           "rideId"
-           (Kernel.Types.Id.Id Dashboard.Common.Ride)
-      :> Get '[JSON] GetOperatingCityResp
-  )
+  "getOperatingCity"
+    :> ( QueryParam "mobileCountryCode" Kernel.Prelude.Text
+           :> ( QueryParam "mobileNumber" Kernel.Prelude.Text
+                  :> ( QueryParam
+                         "rideId"
+                         (Kernel.Types.Id.Id Dashboard.Common.Ride)
+                         :> Get '[JSON] GetOperatingCityResp
+                     )
+              )
+       )
 
 type PostDriverPauseOrResumeServiceCharges =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "pauseOrResumeServiceCharges"
-      :> ReqBody
-           '[JSON]
-           PauseOrResumeServiceChargesReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "pauseOrResumeServiceCharges"
+           :> ( ReqBody
+                  '[JSON]
+                  PauseOrResumeServiceChargesReq
+                  :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverUpdateRCInvalidStatus =
-  ( "updateRCInvalidStatus" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ReqBody '[JSON] UpdateRCInvalidStatusReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "updateRCInvalidStatus"
+    :> ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( ReqBody '[JSON] UpdateRCInvalidStatusReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostDriverUpdateRCInvalidStatusByRCNumber = ("updateRCInvalidStatusByRCNumber" :> ReqBody '[JSON] UpdateRCInvalidStatusByRCNumberReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverUpdateRCInvalidStatusByRCNumber = "updateRCInvalidStatusByRCNumber" :> (ReqBody '[JSON] UpdateRCInvalidStatusByRCNumberReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverBlockRC = "blockRC" :> (ReqBody '[JSON] BlockRCReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type GetDriverLinkedRcDrivers = "linkedRcDrivers" :> (QueryParam "rcNumber" Kernel.Prelude.Text :> (QueryParam "driverId" Kernel.Prelude.Text :> Get '[JSON] LinkedRcDriversRes))
 
 type PostDriverUpdateVehicleVariant =
-  ( "updateVehicleVariant" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ReqBody '[JSON] UpdateVehicleVariantReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "updateVehicleVariant"
+    :> ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( ReqBody '[JSON] UpdateVehicleVariantReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostDriverBulkReviewRCVariant = ("bulkReviewRCVariant" :> ReqBody '[JSON] [ReviewRCVariantReq] :> Post '[JSON] [ReviewRCVariantRes])
+type PostDriverBulkReviewRCVariant = "bulkReviewRCVariant" :> (ReqBody '[JSON] [ReviewRCVariantReq] :> Post '[JSON] [ReviewRCVariantRes])
 
 type PostDriverUpdateDriverTag =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateDriverTag" :> ReqBody '[JSON] UpdateDriverTagReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "updateDriverTag"
+           :> ( ReqBody '[JSON] UpdateDriverTagReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverUpdateSpecialLocWarrior =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateSpecialLocWarrior"
-      :> ReqBody
-           '[JSON]
-           UpdateDriverSpecialLocWarriorReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "updateSpecialLocWarrior"
+           :> ( ReqBody
+                  '[JSON]
+                  UpdateDriverSpecialLocWarriorReq
+                  :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverClearFee =
-  ( "clearFee" :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ReqBody '[JSON] ClearDriverFeeReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "clearFee"
+    :> ( MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( ReqBody '[JSON] ClearDriverFeeReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverClearFeeHelper =
-  ( "clearFee" :> QueryParam "requestorId" Kernel.Prelude.Text :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> ReqBody
-           '[JSON]
-           ClearDriverFeeReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "clearFee"
+    :> ( QueryParam "requestorId" Kernel.Prelude.Text
+           :> ( MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                  :> ( ReqBody
+                         '[JSON]
+                         ClearDriverFeeReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type GetDriverPanAadharSelfieDetails =
-  ( "panAadharSelfieDetails" :> MandatoryQueryParam "countryCode" Kernel.Prelude.Text :> MandatoryQueryParam "phoneNo" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           PanAadharSelfieDetailsResp
-  )
+  "panAadharSelfieDetails"
+    :> ( MandatoryQueryParam "countryCode" Kernel.Prelude.Text
+           :> ( MandatoryQueryParam "phoneNo" Kernel.Prelude.Text
+                  :> Get
+                       '[JSON]
+                       PanAadharSelfieDetailsResp
+              )
+       )
 
-type PostDriverSyncDocAadharPan = ("syncDocAadharPan" :> ReqBody '[JSON] AadharPanSyncReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverSyncDocAadharPan = "syncDocAadharPan" :> (ReqBody '[JSON] AadharPanSyncReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverUpdateVehicleManufacturing =
-  ( "updateVehicleManufacturing" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> ReqBody
-           '[JSON]
-           UpdateVehicleManufacturingReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "updateVehicleManufacturing"
+    :> ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( ReqBody
+                  '[JSON]
+                  UpdateVehicleManufacturingReq
+                  :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverVehicleAppendSelectedServiceTiers =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "vehicle" :> "appendSelectedServiceTiers"
-      :> ReqBody
-           '[JSON]
-           AppendSelectedServiceTiersReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "vehicle"
+           :> ( "appendSelectedServiceTiers"
+                  :> ( ReqBody
+                         '[JSON]
+                         AppendSelectedServiceTiersReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverVehicleRemoveSelectedServiceTiers =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "vehicle" :> "removeSelectedServiceTiers"
-      :> ReqBody
-           '[JSON]
-           RemoveSelectedServiceTiersReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "vehicle"
+           :> ( "removeSelectedServiceTiers"
+                  :> ( ReqBody
+                         '[JSON]
+                         RemoveSelectedServiceTiersReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverVehicleUpsertSelectedServiceTiers =
-  ( "vehicle" :> "upsertSelectedServiceTiers"
-      :> QueryParam
-           "remove"
-           Kernel.Prelude.Bool
-      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "vehicle"
+    :> ( "upsertSelectedServiceTiers"
+           :> ( QueryParam
+                  "remove"
+                  Kernel.Prelude.Bool
+                  :> ( Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverRefundByPayout =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "refundByPayout" :> ReqBody '[JSON] RefundByPayoutReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "refundByPayout"
+           :> ( ReqBody '[JSON] RefundByPayoutReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostDriverRefundByPayoutHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "refundByPayout" :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> ReqBody
-           '[JSON]
-           RefundByPayoutReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "refundByPayout"
+           :> ( QueryParam "requestorId" Kernel.Prelude.Text
+                  :> ( ReqBody
+                         '[JSON]
+                         RefundByPayoutReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type GetDriverSecurityDepositStatus =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "securityDepositStatus"
-      :> QueryParam
-           "serviceName"
-           Dashboard.Common.Driver.ServiceNames
-      :> Get '[JSON] [SecurityDepositDfStatusRes]
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "securityDepositStatus"
+           :> ( QueryParam
+                  "serviceName"
+                  Dashboard.Common.Driver.ServiceNames
+                  :> Get '[JSON] [SecurityDepositDfStatusRes]
+              )
+       )
 
 type GetDriverPanAadharSelfieDetailsList =
-  ( "panAadharSelfieDetailsList" :> MandatoryQueryParam "docType" Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "driverId"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> Get '[JSON] [PanAadharSelfieDetailsListResp]
-  )
+  "panAadharSelfieDetailsList"
+    :> ( MandatoryQueryParam "docType" Kernel.Prelude.Text
+           :> ( MandatoryQueryParam
+                  "driverId"
+                  (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                  :> Get '[JSON] [PanAadharSelfieDetailsListResp]
+              )
+       )
 
-type PostDriverBulkSubscriptionServiceUpdate = ("bulk" :> "subscriptionServiceUpdate" :> ReqBody '[JSON] BulkServiceUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverBulkSubscriptionServiceUpdate = "bulk" :> ("subscriptionServiceUpdate" :> (ReqBody '[JSON] BulkServiceUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type GetDriverPlanDrivers = ("plan" :> "drivers" :> MandatoryQueryParam "planId" (Kernel.Types.Id.Id Dashboard.Common.Plan) :> Get '[JSON] GetDriversOnPlanRes)
+type GetDriverPlanDrivers = "plan" :> ("drivers" :> (MandatoryQueryParam "planId" (Kernel.Types.Id.Id Dashboard.Common.Plan) :> Get '[JSON] GetDriversOnPlanRes))
 
-type PostDriverPlanMigrate = ("plan" :> "migrate" :> ReqBody '[JSON] MigratePlanReq :> Post '[JSON] MigratePlanRes)
+type PostDriverPlanMigrate = "plan" :> ("migrate" :> (ReqBody '[JSON] MigratePlanReq :> Post '[JSON] MigratePlanRes))
 
 type GetDriverStats =
-  ( "stats" :> QueryParam "entityId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> QueryParam "fromDate" Data.Time.Day :> QueryParam "toDate" Data.Time.Day
-      :> Get
-           '[JSON]
-           DriverStatsRes
-  )
+  "stats"
+    :> ( QueryParam "entityId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( QueryParam "fromDate" Data.Time.Day
+                  :> ( QueryParam "toDate" Data.Time.Day
+                         :> Get
+                              '[JSON]
+                              DriverStatsRes
+                     )
+              )
+       )
 
 type GetDriverStatsHelper =
-  ( "stats" :> QueryParam "entityId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> QueryParam "fromDate" Data.Time.Day
-      :> QueryParam
-           "toDate"
-           Data.Time.Day
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get '[JSON] DriverStatsRes
-  )
+  "stats"
+    :> ( QueryParam "entityId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+           :> ( QueryParam "fromDate" Data.Time.Day
+                  :> ( QueryParam
+                         "toDate"
+                         Data.Time.Day
+                         :> (MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> Get '[JSON] DriverStatsRes)
+                     )
+              )
+       )
 
 type GetDriverEarnings =
-  ( "earnings" :> MandatoryQueryParam "from" Data.Time.Day :> MandatoryQueryParam "to" Data.Time.Day
-      :> MandatoryQueryParam
-           "earningType"
-           Dashboard.Common.Driver.EarningType
-      :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> Get '[JSON] EarningPeriodStatsRes
-  )
+  "earnings"
+    :> ( MandatoryQueryParam "from" Data.Time.Day
+           :> ( MandatoryQueryParam "to" Data.Time.Day
+                  :> ( MandatoryQueryParam
+                         "earningType"
+                         Dashboard.Common.Driver.EarningType
+                         :> ( MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                                :> Get
+                                     '[JSON]
+                                     EarningPeriodStatsRes
+                            )
+                     )
+              )
+       )
 
 type GetDriverEarningsHelper =
-  ( "earnings" :> MandatoryQueryParam "from" Data.Time.Day :> MandatoryQueryParam "to" Data.Time.Day
-      :> MandatoryQueryParam
-           "earningType"
-           Dashboard.Common.Driver.EarningType
-      :> MandatoryQueryParam
-           "driverId"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> MandatoryQueryParam
-           "requestorId"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           EarningPeriodStatsRes
-  )
+  "earnings"
+    :> ( MandatoryQueryParam "from" Data.Time.Day
+           :> ( MandatoryQueryParam "to" Data.Time.Day
+                  :> ( MandatoryQueryParam
+                         "earningType"
+                         Dashboard.Common.Driver.EarningType
+                         :> ( MandatoryQueryParam
+                                "driverId"
+                                (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                                :> ( MandatoryQueryParam
+                                       "requestorId"
+                                       Kernel.Prelude.Text
+                                       :> Get
+                                            '[JSON]
+                                            EarningPeriodStatsRes
+                                   )
+                            )
+                     )
+              )
+       )
 
 type GetDriverFyEarnings =
-  ( "fyEarnings" :> QueryParam "quarter" Kernel.Prelude.Int :> MandatoryQueryParam "financialYear" Kernel.Prelude.Int
-      :> MandatoryQueryParam
-           "entityId"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> Get '[JSON] FyEarningsRes
-  )
+  "fyEarnings"
+    :> ( QueryParam "quarter" Kernel.Prelude.Int
+           :> ( MandatoryQueryParam "financialYear" Kernel.Prelude.Int
+                  :> ( MandatoryQueryParam
+                         "entityId"
+                         (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                         :> Get '[JSON] FyEarningsRes
+                     )
+              )
+       )
 
 type GetDriverFyEarningsHelper =
-  ( "fyEarnings" :> QueryParam "quarter" Kernel.Prelude.Int :> MandatoryQueryParam "financialYear" Kernel.Prelude.Int
-      :> MandatoryQueryParam
-           "entityId"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           FyEarningsRes
-  )
+  "fyEarnings"
+    :> ( QueryParam "quarter" Kernel.Prelude.Int
+           :> ( MandatoryQueryParam "financialYear" Kernel.Prelude.Int
+                  :> ( MandatoryQueryParam
+                         "entityId"
+                         (Kernel.Types.Id.Id Dashboard.Common.Driver)
+                         :> ( MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+                                :> Get
+                                     '[JSON]
+                                     FyEarningsRes
+                            )
+                     )
+              )
+       )
 
-type PostDriverTdsRateUpdate = ("tdsRate" :> "update" :> ReqBody '[JSON] UpdateTdsRateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverTdsRateUpdate = "tdsRate" :> ("update" :> (ReqBody '[JSON] UpdateTdsRateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type PostDriverUpdateMerchant =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateMerchant" :> ReqBody '[JSON] UpdateDriverMerchantReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "updateMerchant"
+           :> ( ReqBody '[JSON] UpdateDriverMerchantReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type GetDriverAirportPreference =
-  ( "airportPreference" :> QueryParam "phoneNumber" Kernel.Prelude.Text :> QueryParam "vehicleNumber" Kernel.Prelude.Text
-      :> QueryParam
-           "specialZoneId"
-           Kernel.Prelude.Text
-      :> Get '[JSON] AirportPreferenceRes
-  )
+  "airportPreference"
+    :> ( QueryParam "phoneNumber" Kernel.Prelude.Text
+           :> ( QueryParam "vehicleNumber" Kernel.Prelude.Text
+                  :> ( QueryParam
+                         "specialZoneId"
+                         Kernel.Prelude.Text
+                         :> Get '[JSON] AirportPreferenceRes
+                     )
+              )
+       )
 
 type PostDriverAirportPreference =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "airportPreference" :> ReqBody '[JSON] AirportPreferenceReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "airportPreference"
+           :> ( ReqBody '[JSON] AirportPreferenceReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostDriverBulkAirportBlock = ("bulkAirportBlock" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp BulkAirportBlockReq :> Post '[JSON] BulkBlockRes)
+type PostDriverBulkAirportBlock = "bulkAirportBlock" :> (Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp BulkAirportBlockReq :> Post '[JSON] BulkBlockRes)
 
 type PostDriverBulkAirportBlockHelper =
-  ( "bulkAirportBlock" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "requestorName"
-           Kernel.Prelude.Text
-      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp BulkAirportBlockReq
-      :> Post '[JSON] BulkBlockRes
-  )
+  "bulkAirportBlock"
+    :> ( MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+           :> ( MandatoryQueryParam
+                  "requestorName"
+                  Kernel.Prelude.Text
+                  :> (Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp BulkAirportBlockReq :> Post '[JSON] BulkBlockRes)
+              )
+       )
 
 type GetDriverSearchRequestStats =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "searchRequestStats" :> QueryParam "fromDate" Data.Time.Day
-      :> QueryParam
-           "toDate"
-           Data.Time.Day
-      :> Get '[JSON] DriverSearchRequestStatsRes
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "searchRequestStats"
+           :> ( QueryParam "fromDate" Data.Time.Day
+                  :> ( QueryParam
+                         "toDate"
+                         Data.Time.Day
+                         :> Get '[JSON] DriverSearchRequestStatsRes
+                     )
+              )
+       )
 
-type GetDriverIdentityInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> Get '[JSON] DriverIdentityInfoRes)
+type GetDriverIdentityInfo = Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("identityInfo" :> Get '[JSON] DriverIdentityInfoRes)
 
 type GetDriverIdentityInfoHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> Capture "requestorId" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           DriverIdentityInfoRes
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "identityInfo"
+           :> ( Capture "requestorId" Kernel.Prelude.Text
+                  :> Get
+                       '[JSON]
+                       DriverIdentityInfoRes
+              )
+       )
 
 type PostDriverIdentityInfoUpdate =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> "update" :> ReqBody '[JSON] UpdateDriverIdentityInfoReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "identityInfo"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] UpdateDriverIdentityInfoReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverIdentityInfoUpdateHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> "update"
-      :> Capture
-           "requestorId"
-           Kernel.Prelude.Text
-      :> ReqBody '[JSON] UpdateDriverIdentityInfoReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+    :> ( "identityInfo"
+           :> ( "update"
+                  :> ( Capture
+                         "requestorId"
+                         Kernel.Prelude.Text
+                         :> (ReqBody '[JSON] UpdateDriverIdentityInfoReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+                     )
+              )
+       )
 
-type PostDriverAssociationChange = (Capture "subjectId" Kernel.Prelude.Text :> "association" :> "change" :> ReqBody '[JSON] ChangeAssociationReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverAssociationChange =
+  Capture "subjectId" Kernel.Prelude.Text
+    :> ( "association"
+           :> ( "change"
+                  :> ( ReqBody '[JSON] ChangeAssociationReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostDriverAssociationChangeHelper =
-  ( Capture "requestorId" Kernel.Prelude.Text :> Capture "subjectId" Kernel.Prelude.Text :> "association" :> "change"
-      :> ReqBody
-           '[JSON]
-           ChangeAssociationReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "requestorId" Kernel.Prelude.Text
+    :> ( Capture "subjectId" Kernel.Prelude.Text
+           :> ( "association"
+                  :> ( "change"
+                         :> ( ReqBody
+                                '[JSON]
+                                ChangeAssociationReq
+                                :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                            )
+                     )
+              )
+       )
 
-type PostDriverMembershipFeeCreate = ("membershipFee" :> "create" :> ReqBody '[JSON] MembershipFeeCreateReq :> Post '[JSON] Kernel.External.Payment.Interface.Types.CreateOrderResp)
+type PostDriverMembershipFeeCreate = "membershipFee" :> ("create" :> (ReqBody '[JSON] MembershipFeeCreateReq :> Post '[JSON] Kernel.External.Payment.Interface.Types.CreateOrderResp))
 
 data DriverAPIs = DriverAPIs
   { getDriverDocumentsInfo :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes,
@@ -1098,72 +1324,75 @@ data DriverAPIs = DriverAPIs
     postDriverPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     getDriverAadhaarInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverAadhaarInfoRes,
     getDriverAadhaarInfobyMobileNumber :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverAadhaarInfoByPhoneReq,
-    getDriverLoginOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverLoginOtpRes,
-    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DriverListRes,
+    getDriverLoginOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverLoginOtpRes)),
+    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> (Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DriverListRes)))))))))))))),
     getDriverActivity :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverActivityRes,
     postDriverDisable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverAcRestrictionUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateACUsageRestrictionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverBlockWithReason :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> BlockDriverWithReasonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverAcRestrictionUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateACUsageRestrictionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverBlockWithReason :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (BlockDriverWithReasonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess))),
     postDriverBlock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverBulkBlock :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> BulkBlockReq -> EulerHS.Types.EulerClient BulkBlockRes,
+    postDriverBulkBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (BulkBlockReq -> EulerHS.Types.EulerClient BulkBlockRes))),
     getDriverBlockReasonList :: EulerHS.Types.EulerClient [BlockReason],
-    postDriverUnblock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Dashboard.Common.Driver.DriverIds -> EulerHS.Types.EulerClient DriverLocationRes,
+    postDriverUnblock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)))),
+    getDriverLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Dashboard.Common.Driver.DriverIds -> EulerHS.Types.EulerClient DriverLocationRes)),
     deleteDriverPermanentlyDelete :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUnlinkDL :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUnlinkAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdatePhoneNumber :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdatePhoneNumberReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateByPhoneNumber :: Kernel.Prelude.Text -> UpdateDriverDataReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateName :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverNameReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverDeleteRC :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DeleteRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverUpdatePhoneNumber :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdatePhoneNumberReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverUpdateByPhoneNumber :: Kernel.Prelude.Text -> (UpdateDriverDataReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverUpdateName :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateDriverNameReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverDeleteRC :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (DeleteRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getDriverClearStuckOnRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient ClearOnRideStuckDriversRes,
     postDriverSendDummyNotification :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DummyRideRequestRes,
-    postDriverChangeOperatingCity :: Kernel.Types.Id.Id Dashboard.Common.Driver -> ChangeOperatingCityReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverGetOperatingCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> EulerHS.Types.EulerClient GetOperatingCityResp,
-    postDriverPauseOrResumeServiceCharges :: Kernel.Types.Id.Id Dashboard.Common.Driver -> PauseOrResumeServiceChargesReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateRCInvalidStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateRCInvalidStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverChangeOperatingCity :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (ChangeOperatingCityReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverGetOperatingCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> EulerHS.Types.EulerClient GetOperatingCityResp)),
+    postDriverPauseOrResumeServiceCharges :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (PauseOrResumeServiceChargesReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverUpdateRCInvalidStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateRCInvalidStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postDriverUpdateRCInvalidStatusByRCNumber :: UpdateRCInvalidStatusByRCNumberReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateVehicleVariant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateVehicleVariantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverBlockRC :: BlockRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverLinkedRcDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient LinkedRcDriversRes),
+    postDriverUpdateVehicleVariant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateVehicleVariantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postDriverBulkReviewRCVariant :: [ReviewRCVariantReq] -> EulerHS.Types.EulerClient [ReviewRCVariantRes],
-    postDriverUpdateDriverTag :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverTagReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateSpecialLocWarrior :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverSpecialLocWarriorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverClearFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> ClearDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverPanAadharSelfieDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient PanAadharSelfieDetailsResp,
+    postDriverUpdateDriverTag :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateDriverTagReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverUpdateSpecialLocWarrior :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateDriverSpecialLocWarriorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverClearFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Dashboard.Common.Driver -> (ClearDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)),
+    getDriverPanAadharSelfieDetails :: Kernel.Prelude.Text -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient PanAadharSelfieDetailsResp),
     postDriverSyncDocAadharPan :: AadharPanSyncReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateVehicleManufacturing :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateVehicleManufacturingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverVehicleAppendSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AppendSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverVehicleRemoveSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RemoveSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverUpdateVehicleManufacturing :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateVehicleManufacturingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverVehicleAppendSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (AppendSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverVehicleRemoveSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (RemoveSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postDriverVehicleUpsertSelectedServiceTiers ::
       Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-      ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [SecurityDepositDfStatusRes],
-    getDriverPanAadharSelfieDetailsList :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [PanAadharSelfieDetailsListResp],
+      ( ( Data.ByteString.Lazy.ByteString,
+          Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+      ),
+    postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)),
+    getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [SecurityDepositDfStatusRes]),
+    getDriverPanAadharSelfieDetailsList :: Kernel.Prelude.Text -> (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [PanAadharSelfieDetailsListResp]),
     postDriverBulkSubscriptionServiceUpdate :: BulkServiceUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverPlanDrivers :: Kernel.Types.Id.Id Dashboard.Common.Plan -> EulerHS.Types.EulerClient GetDriversOnPlanRes,
     postDriverPlanMigrate :: MigratePlanReq -> EulerHS.Types.EulerClient MigratePlanRes,
-    getDriverStats :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverStatsRes,
-    getDriverEarnings :: Data.Time.Day -> Data.Time.Day -> Dashboard.Common.Driver.EarningType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EarningPeriodStatsRes,
-    getDriverFyEarnings :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FyEarningsRes,
+    getDriverStats :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> (Kernel.Prelude.Maybe Data.Time.Day -> (Kernel.Prelude.Maybe Data.Time.Day -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverStatsRes))),
+    getDriverEarnings :: Data.Time.Day -> (Data.Time.Day -> (Dashboard.Common.Driver.EarningType -> (Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient EarningPeriodStatsRes)))),
+    getDriverFyEarnings :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Int -> (Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient FyEarningsRes))),
     postDriverTdsRateUpdate :: UpdateTdsRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
-    postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverBulkAirportBlock :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> (Data.ByteString.Lazy.ByteString, BulkAirportBlockReq) -> EulerHS.Types.EulerClient BulkBlockRes,
-    getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes,
-    getDriverIdentityInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverIdentityInfoRes,
-    postDriverIdentityInfoUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> UpdateDriverIdentityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverAssociationChange :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> ChangeAssociationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes)),
+    postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverBulkAirportBlock :: Kernel.Prelude.Text -> (Kernel.Prelude.Text -> ((Data.ByteString.Lazy.ByteString, BulkAirportBlockReq) -> EulerHS.Types.EulerClient BulkBlockRes)),
+    getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Maybe Data.Time.Day -> (Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes)),
+    getDriverIdentityInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverIdentityInfoRes),
+    postDriverIdentityInfoUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Text -> (UpdateDriverIdentityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)),
+    postDriverAssociationChange :: Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (ChangeAssociationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)),
     postDriverMembershipFeeCreate :: MembershipFeeCreateReq -> EulerHS.Types.EulerClient Kernel.External.Payment.Interface.Types.CreateOrderResp
   }
 
-mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
+mkDriverAPIs :: Client EulerHS.Types.EulerClient API -> DriverAPIs
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverUpdateTagBulk :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverLoginOtp :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> postDriverBulkBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateRCInvalidStatusByRCNumber :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverUpdateSpecialLocWarrior :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverVehicleAppendSelectedServiceTiers :<|> postDriverVehicleRemoveSelectedServiceTiers :<|> postDriverVehicleUpsertSelectedServiceTiers :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList :<|> postDriverBulkSubscriptionServiceUpdate :<|> getDriverPlanDrivers :<|> postDriverPlanMigrate :<|> getDriverStats :<|> getDriverEarnings :<|> getDriverFyEarnings :<|> postDriverTdsRateUpdate :<|> postDriverUpdateMerchant :<|> getDriverAirportPreference :<|> postDriverAirportPreference :<|> postDriverBulkAirportBlock :<|> getDriverSearchRequestStats :<|> getDriverIdentityInfo :<|> postDriverIdentityInfoUpdate :<|> postDriverAssociationChange :<|> postDriverMembershipFeeCreate = driverClient
+    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverUpdateTagBulk :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverLoginOtp :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> postDriverBulkBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateRCInvalidStatusByRCNumber :<|> postDriverBlockRC :<|> getDriverLinkedRcDrivers :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverUpdateSpecialLocWarrior :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverVehicleAppendSelectedServiceTiers :<|> postDriverVehicleRemoveSelectedServiceTiers :<|> postDriverVehicleUpsertSelectedServiceTiers :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList :<|> postDriverBulkSubscriptionServiceUpdate :<|> getDriverPlanDrivers :<|> postDriverPlanMigrate :<|> getDriverStats :<|> getDriverEarnings :<|> getDriverFyEarnings :<|> postDriverTdsRateUpdate :<|> postDriverUpdateMerchant :<|> getDriverAirportPreference :<|> postDriverAirportPreference :<|> postDriverBulkAirportBlock :<|> getDriverSearchRequestStats :<|> getDriverIdentityInfo :<|> postDriverIdentityInfoUpdate :<|> postDriverAssociationChange :<|> postDriverMembershipFeeCreate = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_DOCUMENTS_INFO
@@ -1198,6 +1427,8 @@ data DriverUserActionType
   | POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES
   | POST_DRIVER_UPDATE_RC_INVALID_STATUS
   | POST_DRIVER_UPDATE_RC_INVALID_STATUS_BY_RC_NUMBER
+  | POST_DRIVER_BLOCK_RC
+  | GET_DRIVER_LINKED_RC_DRIVERS
   | POST_DRIVER_UPDATE_VEHICLE_VARIANT
   | POST_DRIVER_BULK_REVIEW_RC_VARIANT
   | POST_DRIVER_UPDATE_DRIVER_TAG

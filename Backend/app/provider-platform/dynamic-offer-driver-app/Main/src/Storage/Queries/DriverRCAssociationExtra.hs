@@ -408,3 +408,7 @@ endRCAssociationsForDrivers driverIds = do
   updateWithKV
     [Se.Set BeamDRCA.associatedTill $ Just now, Se.Set BeamDRCA.isRcActive False]
     [Se.And [Se.Is BeamDRCA.driverId (Se.In (getId <$> driverIds)), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
+
+findAllByRCIdWithLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Int -> m [DriverRCAssociation]
+findAllByRCIdWithLimit (Id rcId) limit =
+  findAllWithOptionsKV [Se.Is BeamDRCA.rcId $ Se.Eq rcId] (Se.Desc BeamDRCA.associatedOn) (Just limit) Nothing

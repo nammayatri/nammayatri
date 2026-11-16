@@ -168,3 +168,13 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN d
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN is_blocked boolean ;
+
+
+------- SQL updates -------
+
