@@ -166,6 +166,26 @@ tests =
       testCase "an expired stand timer releases as StandTimeout, a moving one as MovingTimeout" $
         (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timer = MovingTimer (addUTCTime 180 t0)}))
           @?= (Just StandTimeout, Just MovingTimeout),
+      testCase "an unanswered board prompt checks the rider in unless a fresh fix puts them away from the cab" $
+        let fix at age = Just (RiderFix at (addUTCTime (negate age) t0))
+            gone = leftBehind 100 60 t0
+         in (gone (Just stop) (fix farAway 5), gone (Just stop) (fix nearStop 5), gone (Just stop) (fix farAway 61), gone (Just stop) Nothing, gone Nothing (fix farAway 5))
+              @?= (True, False, False, False, False),
+      testCase "a board countdown that ran out asks the rider instead of releasing where the city has the prompt on: the seat is held, shows no countdown, and unanswered cancels; off releases as before" $
+        let at181 = addUTCTime 181 t0
+            prompted = startBoardPrompt 60 at181 standing
+            deadline = addUTCTime 60 at181
+         in ( (.timer) <$> prompted,
+              startBoardPrompt 60 (addUTCTime 179 t0) standing,
+              startBoardPrompt 60 at181 standing {timer = AwayTimer (addUTCTime 180 t0)},
+              startBoardPrompt 0 at181 standing,
+              prompted >>= allocationDeadline,
+              boardPromptOpen prompted,
+              timerExpiry deadline prompted,
+              timerExpiry (addUTCTime 1 deadline) prompted,
+              (blameFor BoardUnanswered, skipsPlateOnClose BoardUnanswered)
+            )
+              @?= (Just (BoardPromptTimer deadline), Nothing, Nothing, Nothing, Nothing, True, Nothing, Just BoardUnanswered, (BlameRider, True)),
       testCase "a cab claimed while moving has no timer to lapse" $
         timerExpiry (addUTCTime 3600 t0) (Just standing {timer = NoTimer}) @?= Nothing,
       testCase "timer mode follows the cab: moving above 1 m/s, no speed reads as stationary" $
