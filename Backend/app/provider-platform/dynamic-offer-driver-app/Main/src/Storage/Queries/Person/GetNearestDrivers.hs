@@ -1,6 +1,7 @@
 module Storage.Queries.Person.GetNearestDrivers
   ( getNearestDrivers,
     fetchSortedLTSCandidates,
+    fetchSortedCandidatesByDriverIds,
     processCandidatesChunk,
     buildDriverResult,
     isTierEligibleForDriver,
@@ -26,6 +27,7 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
@@ -45,6 +47,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.WalletAccount
@@ -179,6 +182,31 @@ fetchSortedLTSCandidates NearestDriversReq {..} = do
       <> ", prevAtTail="
       <> show (length sortedPrev)
       <> ")"
+  pure sorted
+
+-- | Candidates for the given drivers wherever they are, ignoring the search radius, in the same order as
+-- 'fetchSortedLTSCandidates'. The location service returns a driver's last known location however old it is,
+-- so a location older than the given age is dropped: that driver's app has stopped sending locations.
+fetchSortedCandidatesByDriverIds ::
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
+  NearestDriversReq ->
+  Id DMOC.MerchantOperatingCity ->
+  NominalDiffTime ->
+  [Id Person.Driver] ->
+  m [SortedLTSCandidate]
+fetchSortedCandidatesByDriverIds NearestDriversReq {..} merchantOpCityId maxLocationAge driverIds = do
+  driverLocsRaw <- DL.nubBy (\x y -> x.driverId == y.driverId) <$> LF.driversLocation driverIds
+  let isUsable dl =
+        dl.driverId `elem` driverIds
+          && dl.driverId `notElem` excludeDriverIds
+          && dl.merchantId == merchantId
+          && maybe True (== merchantOpCityId) dl.merchantOperatingCityId
+          && diffUTCTime now dl.coordinatesCalculatedAt <= maxLocationAge
+      mkCandidate dl =
+        let dist = (realToFrac $ distanceBetweenInMeters fromLocLatLong (LatLong dl.lat dl.lon)) :: Double
+         in SortedLTSCandidate dl dist (dl.driverId `elem` prevAttemptedDriverIds)
+      sorted = DL.sortOn (\c -> (isPrevAttempted c, straightLineDistanceMeters c)) (mkCandidate <$> filter isUsable driverLocsRaw)
+  logDebug $ "DriverPool[1-ByDriverIds] " <> show (length sorted) <> " of " <> show (length driverIds) <> " drivers usable"
   pure sorted
 
 -- | Process one chunk of sorted candidates: parallel-cap filter, pool-data fetch,

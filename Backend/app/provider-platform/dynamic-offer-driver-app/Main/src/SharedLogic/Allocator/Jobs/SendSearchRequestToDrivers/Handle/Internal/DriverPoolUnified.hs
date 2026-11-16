@@ -288,6 +288,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     excludeDriverIds = excludeDriverIds,
                     prevAttemptedDriverIds = prevAttemptedDriverIds,
                     mbSearchTryId = Just searchTry.id.getId,
+                    dedicatedDrivers = getDedicatedDrivers searchReq.customerNammaTags,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum dispatchMode
@@ -449,6 +450,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         excludeDriverIds = [],
                         prevAttemptedDriverIds = [],
                         mbSearchTryId = Just searchTry.id.getId,
+                        -- The on-ride drivers passed in already come from the dedicated or normal pool.
+                        dedicatedDrivers = noDedicatedDrivers,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq onRideDrivers poolType currentSearchInfo
