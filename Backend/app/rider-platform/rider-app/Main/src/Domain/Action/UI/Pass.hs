@@ -1692,6 +1692,12 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
 
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
+      passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
+      let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
+            Just pc -> pc.maxSwitchCount
+            Nothing -> 1
+      unless (purchasedPass.deviceSwitchCount < maxSwitchCount) $
+        throwError (InvalidRequest "Device switch limit has been reached for this pass")
       -- Check if there are other passes with the same passTypeId that already have this deviceId.
       duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
       let otherDevicePasses = filter (\p -> p.id /= purchasedPass.id && p.deviceId == deviceId) duplicatePasses

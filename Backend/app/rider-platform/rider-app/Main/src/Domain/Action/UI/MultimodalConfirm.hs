@@ -120,6 +120,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.TH
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
@@ -2109,6 +2110,12 @@ data ResolvedLeg = ResolvedLeg
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+checkRouteServiceabilityRateLimit :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow ()
+checkRouteServiceabilityRateLimit mbPersonId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  rateLimitOptions <- asks (.routeServiceabilityRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("RouteServiceability:PersonId:" <> personId.getId) rateLimitOptions
+
 postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -2118,9 +2125,10 @@ postMultimodalRouteServiceability ::
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
 postMultimodalRouteServiceability (mbPersonId, _) _ req
-  | SharedCab.isSharedCabTier req.serviceTier = SharedCab.routeServiceability mbPersonId req
+  | SharedCab.isSharedCabTier req.serviceTier = checkRouteServiceabilityRateLimit mbPersonId >> SharedCab.routeServiceability mbPersonId req
 postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
   BAPMetrics.withTimeFRFSMerchant "routeServiceability" "total" merchantId.getId $ do
+    checkRouteServiceabilityRateLimit mbPersonId
     person <- authenticate mbPersonId
     -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA
     -- poll, ~5s) rather than running a second independent polling loop just to keep the
