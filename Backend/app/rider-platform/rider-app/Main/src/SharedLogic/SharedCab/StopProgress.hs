@@ -28,7 +28,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), ApproachStage (ApproachArrived), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), ApproachStage (ApproachArrived), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, boardPromptOpen, passedStopBlame, seatIsRiders)
 import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, plateBookings, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, rewriteAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
@@ -113,8 +113,8 @@ stepCab cfg now bookings routeRead s = do
       freshCab = mfilter (const $ isJust freshTrack) mbCab
       awaiting = [lb.booking | lb <- bookings, DFRFSTicket.ACTIVE `elem` lb.ticketStatuses, DFRFSTicket.INPROGRESS `notElem` lb.ticketStatuses]
       onBoard = [lb.booking | lb <- bookings, DFRFSTicket.INPROGRESS `elem` lb.ticketStatuses]
-  -- an offered booking is not the rider's yet: the cab passing its stop is nobody's miss
-  unoffered <- filterM (fmap seatIsRiders . readAlloc . (.id)) awaiting
+  -- an offered booking is not the rider's yet: the cab passing its stop is nobody's miss; nor does it release a rider in the board prompt
+  unoffered <- filterM (fmap (\st -> seatIsRiders st && not (boardPromptOpen st)) . readAlloc . (.id)) awaiting
   forM_ unoffered $ \b ->
     if any (boardStopPassed b.fromStationCode) mbCab
       then do
