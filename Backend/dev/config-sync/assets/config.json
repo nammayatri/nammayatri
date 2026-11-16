@@ -120,7 +120,9 @@
       "dim": []
     },
     "bpp_details": {
-      "dim": []
+      "dim": [],
+      "unique": ["subscriber_id", "domain"],
+      "_comment": "patches.json maps several master BPP hosts (e.g. api.sandbox.beckn.juspay.in/dev/dobpp, api.sandbox.moving.tech/dev/dobpp) to the same localhost URL; import keeps the newest row per key so rider-app findOneWithKV finds exactly one"
     },
     "cancellation_reason": {
       "dim": []
