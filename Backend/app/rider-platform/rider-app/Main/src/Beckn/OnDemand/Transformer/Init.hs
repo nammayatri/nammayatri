@@ -19,7 +19,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Utils.Text
+import qualified Kernel.Types.Price
 import qualified SharedLogic.Confirm
 
 buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
@@ -100,8 +100,8 @@ tfPrice uiConfirm = do
   let priceCurrency_ = Nothing
   let priceMaximumValue_ = Nothing
   let priceMinimumValue_ = Nothing
-  let priceOfferedValue_ = Kernel.Utils.Text.encodeToText uiConfirm.booking.estimatedTotalFare.amount & Just
-  let priceValue_ = Kernel.Utils.Text.encodeToText uiConfirm.booking.estimatedTotalFare.amount & Just
+  let priceOfferedValue_ = Kernel.Types.Price.highPrecMoneyToText uiConfirm.booking.estimatedTotalFare.amount & Just
+  let priceValue_ = Kernel.Types.Price.highPrecMoneyToText uiConfirm.booking.estimatedTotalFare.amount & Just
   BecknV2.OnDemand.Types.Price {priceComputedValue = priceComputedValue_, priceCurrency = priceCurrency_, priceMaximumValue = priceMaximumValue_, priceMinimumValue = priceMinimumValue_, priceOfferedValue = priceOfferedValue_, priceValue = priceValue_}
 
 tfProvider :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Provider
@@ -179,7 +179,7 @@ mkOfferInfoTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkOfferInfoTagGroup res =
   Tags.getFullTagGroup
     Tags.OFFER_INFO
-    [ Tags.mkTag Tags.DISCOUNT_AMOUNT (show . (.discountAmount) <$> res.bookingOfferEntity)
+    [ Tags.mkTag Tags.DISCOUNT_AMOUNT (Kernel.Types.Price.highPrecMoneyToText . (.discountAmount) <$> res.bookingOfferEntity)
     ]
 
 mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]

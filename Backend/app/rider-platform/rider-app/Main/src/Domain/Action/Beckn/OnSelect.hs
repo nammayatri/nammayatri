@@ -24,6 +24,8 @@ import Domain.Types
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.FareBreakup as DFareBreakup
+import Domain.Types.FareBreakupInfo (FareBreakupInfoItem)
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.ServiceTierType as DVST
@@ -41,6 +43,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -81,7 +84,8 @@ data QuoteInfo = QuoteInfo
     quoteValidTill :: UTCTime,
     billingCategory :: BillingCategory,
     tripCategory :: TripCategory,
-    quoteBreakupList :: [DOnSearch.QuoteBreakupInfo]
+    quoteBreakupList :: [DOnSearch.QuoteBreakupInfo],
+    fareBreakups :: [FareBreakupInfoItem]
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
@@ -116,6 +120,8 @@ onSelect OnSelectValidatedReq {..} = do
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   QQuote.createMany quotes
+  forM_ (zip quotes quotesInfo) $ \(quote, quoteInfo) ->
+    unless (null quoteInfo.fareBreakups) $ SFareBreakupInfo.upsertFareBreakupInfo quote.id.getId DFareBreakup.QUOTE quoteInfo.fareBreakups (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
   void $ QEstimate.updateStatusAndProviderUrl DEstimate.GOT_DRIVER_QUOTE providerInfo.url estimate.id
   if searchRequest.autoAssignEnabledV2 == Just True
     then do

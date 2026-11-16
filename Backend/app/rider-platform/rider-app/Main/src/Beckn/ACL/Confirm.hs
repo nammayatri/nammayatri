@@ -80,8 +80,8 @@ tfOrder res bapConfig = do
 tfOrderTags :: DOnInit.OnInitRes -> Maybe [Spec.TagGroup]
 tfOrderTags res =
   Tags.buildTagGroups
-    [ Tags.DISCOUNT_AMOUNT Tags.~=? (encodeToText <$> mbDiscountAmount),
-      Tags.BOOKING_DEPOSIT_HELD Tags.~=? (show <$> res.bookingDepositAmount)
+    [ Tags.DISCOUNT_AMOUNT Tags.~=? (highPrecMoneyToText <$> mbDiscountAmount),
+      Tags.BOOKING_DEPOSIT_HELD Tags.~=? (highPrecMoneyToText <$> res.bookingDepositAmount)
     ]
   where
     mbDiscountAmount = case res.discount of
@@ -128,8 +128,8 @@ tfQuotationPrice res =
   Just $
     emptyPrice
       { Spec.priceCurrency = Just $ show res.estimatedTotalFare.currency,
-        Spec.priceOfferedValue = Just $ encodeToText res.estimatedTotalFare.amount,
-        Spec.priceValue = Just $ encodeToText res.estimatedFare.amount
+        Spec.priceOfferedValue = Just $ highPrecMoneyToText res.estimatedTotalFare.amount,
+        Spec.priceValue = Just $ highPrecMoneyToText res.estimatedFare.amount
       }
 
 tfCustomer :: DOnInit.OnInitRes -> Maybe Spec.Customer

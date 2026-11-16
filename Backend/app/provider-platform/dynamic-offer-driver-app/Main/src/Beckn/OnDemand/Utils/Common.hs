@@ -885,7 +885,7 @@ tfCancellationFee (Just price) = do
       Just
         emptyPrice
           { Spec.priceCurrency = Just $ show price.currency,
-            Spec.priceValue = Just $ encodeToText price.amount
+            Spec.priceValue = Just $ highPrecMoneyToText price.amount
           }
 
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
@@ -912,8 +912,8 @@ tfQuotationPrice estimatedFare currency =
   Just
     emptyPrice
       { Spec.priceCurrency = Just $ show currency,
-        Spec.priceOfferedValue = Just $ encodeToText estimatedFare,
-        Spec.priceValue = Just $ encodeToText estimatedFare
+        Spec.priceOfferedValue = Just $ highPrecMoneyToText estimatedFare,
+        Spec.priceValue = Just $ highPrecMoneyToText estimatedFare
       }
 
 mkQuotationBreakup :: IsValueAddNP -> DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
@@ -925,8 +925,8 @@ mkQuotationBreakup isValueAddNP fareParams =
       Just
         emptyPrice
           { Spec.priceCurrency = Just $ show fareParams.currency,
-            Spec.priceOfferedValue = Just $ encodeToText money,
-            Spec.priceValue = Just $ encodeToText money
+            Spec.priceOfferedValue = Just $ highPrecMoneyToText money,
+            Spec.priceValue = Just $ highPrecMoneyToText money
           }
 
     mkQuotationBreakupInner title price =
@@ -1094,17 +1094,17 @@ mkGeneralInfoTagGroup pricing isValueAddNP mbRiderTaxRates =
           Tags.FARE_SETTLEMENT_TYPE Tags.~=? (show <$> pricing.fareSettlementType),
           Tags.PICKUP_AREA Tags.~=? pricing.area,
           Tags.PICKUP_NAVIGATION_INSTRUCTION Tags.~=? pricing.navigationInstruction,
-          Tags.BUSINESS_DISCOUNT Tags.~=? guardVNP (show <$> pricing.businessDiscount),
-          Tags.PERSONAL_DISCOUNT Tags.~=? guardVNP (show <$> pricing.personalDiscount),
+          Tags.BUSINESS_DISCOUNT Tags.~=? guardVNP (highPrecMoneyToText <$> pricing.businessDiscount),
+          Tags.PERSONAL_DISCOUNT Tags.~=? guardVNP (highPrecMoneyToText <$> pricing.personalDiscount),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
           Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute),
           Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isBlockedRoute),
           Tags.TOLL_NAMES Tags.~=? guardVNP (show <$> pricing.tollNames),
           Tags.TIP_OPTIONS Tags.~=? guardVNP (show <$> pricing.tipOptions),
           Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
-          Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
+          Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (highPrecMoneyToText <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
-          Tags.NEGATIVE_FARE_SUGGESTION Tags.~=? guardVNP (show <$> pricing.negativeFareSuggestion),
+          Tags.NEGATIVE_FARE_SUGGESTION Tags.~=? guardVNP (highPrecMoneyToText <$> pricing.negativeFareSuggestion),
           Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar),
           Tags.RIDE_TAX_RATES Tags.~=? (encodeToText <$> guardVNP mbRiderTaxRates)
         ]
@@ -1140,7 +1140,7 @@ mkCommissionTagGroup mbCommissionTax mbCommission mbCancellationCommission mbCan
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe (IsValueAddNP, Params.FareParameters) -> Maybe RateCardBreakupItem -> Maybe DTC.TransporterConfig -> Bool -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy mbFareParams mbTripDurationItem mbTransporterConfig hasStops = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbTransporterConfig hasStops) farePolicy
-      displayFareParamsBreakups = maybe [] (\(isValueAddNP, fareParams) -> mkFareParamsBreakups isValueAddNP (\price -> show price) mkRateCardFareParamsBreakupItem fareParams) mbFareParams
+      displayFareParamsBreakups = maybe [] (\(isValueAddNP, fareParams) -> mkFareParamsBreakups isValueAddNP highPrecMoneyToText mkRateCardFareParamsBreakupItem fareParams) mbFareParams
       filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
       plannedTripBreakups = maybe [] (mkPlannedTripBreakups estimatedDistance mbTripDurationItem . snd) mbFareParams
       combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> plannedTripBreakups
@@ -1193,8 +1193,12 @@ buildRateCardTags RateCardBreakupItem {..} =
               descriptorName = Just title,
               descriptorShortDesc = Nothing
             },
-      tagValue = Just value
+      tagValue = Just (plainDecimalText value)
     }
+  where
+    plainDecimalText v
+      | T.any (`Prelude.elem` ['e', 'E']) v = maybe v (highPrecMoneyToText . toHighPrecMoney) (readMaybe @Double (T.unpack v))
+      | otherwise = v
 
 tfCancellationTerms :: Maybe Common.PriceAPIEntity -> Maybe Enums.FulfillmentState -> [Spec.CancellationTerm]
 tfCancellationTerms cancellationFee state =

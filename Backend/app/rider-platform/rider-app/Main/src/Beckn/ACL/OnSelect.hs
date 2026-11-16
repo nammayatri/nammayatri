@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnSelect where
 
+import qualified Beckn.ACL.Common as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -27,6 +28,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Types.FareBreakupInfo as DFBI
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -116,6 +118,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
             isBlockedRoute = Nothing,
             billingCategory = billingCategory,
             quoteBreakupList = quoteBreakupList,
+            fareBreakups = maybe [] (mapMaybe (fmap (\b -> DFBI.FareBreakupInfoItem {DFBI.description = b.description, DFBI.amount = b.amount.amount, DFBI.currency = b.amount.currency}) . ACL.mkDFareBreakup)) quote.quotationBreakup,
             ..
           }
   where

@@ -242,8 +242,8 @@ tfQuotationPrice booking =
   Just
     emptyPrice
       { Spec.priceCurrency = Just $ show booking.currency,
-        Spec.priceOfferedValue = Just $ encodeToText booking.estimatedFare,
-        Spec.priceValue = Just $ encodeToText booking.estimatedFare
+        Spec.priceOfferedValue = Just $ highPrecMoneyToText booking.estimatedFare,
+        Spec.priceValue = Just $ highPrecMoneyToText booking.estimatedFare
       }
 
 mkQuotationBreakup :: DRB.Booking -> Maybe DCDD.CancellationDuesDetails -> Maybe [Spec.QuotationBreakupInner]
@@ -265,7 +265,7 @@ mkQuotationBreakup booking mbCancellationDuesDetails' =
       Just
         emptyPrice
           { Spec.priceCurrency = Just $ show booking.currency,
-            Spec.priceValue = Just $ encodeToText money
+            Spec.priceValue = Just $ highPrecMoneyToText money
           }
 
     mkQuotationBreakupInner title price =
@@ -304,7 +304,7 @@ tfItemPrice booking =
   Just
     emptyPrice
       { Spec.priceCurrency = Just $ show booking.currency,
-        Spec.priceValue = Just $ encodeToText booking.estimatedFare
+        Spec.priceValue = Just $ highPrecMoneyToText booking.estimatedFare
       }
 
 tfVehicle :: Maybe DVeh.Vehicle -> Maybe Spec.Vehicle

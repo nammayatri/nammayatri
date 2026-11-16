@@ -1382,6 +1382,7 @@ buildComponentMap FareParameters {..} =
             (NegotiatedFareDeltaComponent, maybeZero negotiatedFareDelta),
             (NegativeFareAdjustmentComponent, maybeZero negativeFareAdjustment),
             (GovtChargesComponent, maybeZero govtCharges),
+            (PaymentChargePaidByCustomerComponent, maybeZero paymentProcessingFee + maybeZero paymentProcessingFeeTax),
             (PersonalDiscountComponent, if shouldApplyPersonalDiscount then negate (maybeZero personalDiscount) else 0),
             (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0)
           ]
