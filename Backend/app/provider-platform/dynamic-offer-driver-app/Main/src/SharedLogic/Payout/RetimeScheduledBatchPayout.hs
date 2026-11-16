@@ -21,6 +21,7 @@ module SharedLogic.Payout.RetimeScheduledBatchPayout
     RetimeDecision (..),
     resumeSweepJob,
     previewResume,
+    nextQueuedSweepRunAt,
   )
 where
 
@@ -239,6 +240,14 @@ previewResume config = withLogTag "ScheduledBatchPayout:resume:preview" . Redis.
     (job : _) -> pure (MoveJobTo (scheduledAtOf job) newTime)
 
 -- | Every pending sweep job of this (city, category) from the last day onwards, soonest first.
+-- | When the city's sweep job will next run: the earliest pending job for this config's category
+--   that is still in the future. Nothing when no such job is queued.
+nextQueuedSweepRunAt :: DSPC.ScheduledPayoutConfig -> Environment.Flow (Maybe UTCTime)
+nextQueuedSweepRunAt config = Redis.runInMasterCloudRedisCell $ do
+  now <- getCurrentTime
+  pendingJobs <- findAllPendingSweepJobs config now
+  pure $ listToMaybe [scheduledAtOf job | job <- pendingJobs, scheduledAtOf job > now]
+
 findAllPendingSweepJobs :: DSPC.ScheduledPayoutConfig -> UTCTime -> Environment.Flow [AnyJob AllocatorJobType]
 findAllPendingSweepJobs config now = do
   jobs <-

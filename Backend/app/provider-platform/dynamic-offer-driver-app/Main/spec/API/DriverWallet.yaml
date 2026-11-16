@@ -79,6 +79,7 @@ types:
     lastPayout: Maybe PayoutHistoryItem
     totalPending: HighPrecMoney
     items: "[PayoutHistoryItem]"
+    nextScheduledPayoutAt: Maybe UTCTime  # next run of the city's enabled wallet sweep rule; unset when the city has no automatic payouts
 
   WalletStage:
     enum: "COMING_SOON,LIVE"
