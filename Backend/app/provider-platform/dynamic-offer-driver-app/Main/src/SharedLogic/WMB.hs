@@ -561,7 +561,8 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
       let rcStatusReq =
             DomainRC.RCStatusReq
               { rcNo = vehicleNumber,
-                isActivate = True
+                isActivate = True,
+                supportsTakeoverPhoto = Nothing
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) DomainRC.WMB rcStatusReq
       wmbLinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -590,7 +591,8 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = vehicleNumber,
-            isActivate = False
+            isActivate = False,
+            supportsTakeoverPhoto = Nothing
           }
   void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) DomainRC.WMB rcStatusReq
   RCQuery.findLastVehicleRCWrapper vehicleNumber
