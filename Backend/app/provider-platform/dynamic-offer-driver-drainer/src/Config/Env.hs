@@ -24,6 +24,10 @@ getRetryDelay = fromMaybe 1000000 . (>>= readMaybe) <$> SE.lookupEnv dbFailureRe
 getDrainerRetryDelay :: IO Int
 getDrainerRetryDelay = fromMaybe 5000000 . (>>= readMaybe) <$> SE.lookupEnv drainerFailureRetryDelayEnvKey
 
+-- microseconds to wait when every stream lock is taken (default 100ms)
+getDrainerLockMissDelay :: IO Int
+getDrainerLockMissDelay = fromMaybe 100000 . (>>= readMaybe) <$> SE.lookupEnv drainerLockMissDelayEnvKey
+
 getMaxRetries :: IO Int
 getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetries
 
