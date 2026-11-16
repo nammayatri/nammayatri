@@ -9,7 +9,6 @@ module SharedLogic.SharedCab.Notify
     notifyApproach,
     notifyReassigned,
     reassignReasonFor,
-    notifyBoardAny,
     notifyBookingCancelled,
     notifyFindingTimeout,
     notifyRouteChange,
@@ -32,7 +31,6 @@ data SharedCabNotificationType
   = SHARED_CAB_ASSIGNED
   | SHARED_CAB_ARRIVING
   | SHARED_CAB_REASSIGNED
-  | SHARED_CAB_BOARD_ANY
   | SHARED_CAB_ROUTE_CHANGE
   | SHARED_CAB_BOOKING_CANCELLED
   | SHARED_CAB_FINDING_TIMEOUT
@@ -134,9 +132,6 @@ reassignReasonFor = \case
   DriverDeclined -> Nothing
   OfferTimeout -> Nothing
   RiderSkipped _ -> Nothing
-
-notifyBoardAny :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => DFTB.FRFSTicketBooking -> m ()
-notifyBoardAny = send SHARED_CAB_BOARD_ANY Nothing Nothing Nothing []
 
 notifyBookingCancelled :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Int -> DFTB.FRFSTicketBooking -> m ()
 notifyBookingCancelled missedCabs = send SHARED_CAB_BOOKING_CANCELLED Nothing Nothing Nothing [("missedCabs", show missedCabs)]

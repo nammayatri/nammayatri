@@ -211,8 +211,6 @@ tests =
           claimable BS.CONFIRMED Nothing [] False
         ]
           @?= [True, False, False, False, False, False, False],
-      testCase "the fallback push fires on the close that crosses maxAttempts, not before or after" $
-        map (uncurry (crossedMaxAttempts 2)) [(0, 1), (1, 2), (2, 3), (0, 0)] @?= [False, True, False, False],
       testCase "only the two timer outcomes push the missed-cab copy" $
         map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False],

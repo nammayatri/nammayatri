@@ -72,11 +72,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   let shown = visiblePlate mbAllocState booking.vehicleNumber
       visibleBooking = booking {DFRFSTicketBooking.vehicleNumber = shown}
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession shown
-  -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  let findingSince = fromMaybe booking.createdAt bookingState.findingStintSince
-      attempts = bookingState.attemptCount
-      preference = (T.takeEnd 4 <$> bookingState.preferredPlate, bookingState.preferenceLost)
+  let preference = (T.takeEnd 4 <$> bookingState.preferredPlate, bookingState.preferenceLost)
   -- the cab's position, driver and contact only while the plate runs the trip the rider boarded on
   let tripSession = sessionOnTrip booking.vehicleTripId mbSession
   cabTrack <- readCabTrack now cfg booking tripSession
@@ -84,15 +81,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= allocationDeadline
-      mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' shown hasLiveSession (Just fallbackGate)
+      mbState = SharedCabLeg.deriveSharedCabState bookingStatus' shown hasLiveSession
       boardDeadlineSec = guard (mbState == Just SharedCabLeg.ALLOCATED) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
-      fallbackGate =
-        SharedCabLeg.FallbackGate
-          { attempts,
-            maxAttempts = cfg.maxAttempts,
-            findingSince,
-            fallbackAfterSec = cfg.fallbackAfterSec
-          }
   -- how many cabs run the route matters only while the rider waits for one
   cabsComing <- case mbRouteCode of
     Just routeCode | mbState == Just SharedCabLeg.FINDING -> length <$> RouteSnapshot.routeSnapshot booking.merchantOperatingCityId routeCode

@@ -34,7 +34,6 @@ module SharedLogic.SharedCab.Allocation.Select
     preferenceVerdict,
     onlyPreferred,
     cabForId,
-    crossedMaxAttempts,
     groupAllOn,
     groupByKey,
     isRescheduledChild,
@@ -275,9 +274,6 @@ onlyPreferred plate = filter ((== plate) . (.rcSession.vehicleNumber))
 -- | A rescheduled booking is a child of the one it replaced; the parent already counted the rider's tickets.
 isRescheduledChild :: Maybe parent -> Bool
 isRescheduledChild = isJust
-
-crossedMaxAttempts :: Int -> Int -> Int -> Bool
-crossedMaxAttempts maxAttempts before now = before < maxAttempts && now >= maxAttempts
 
 -- | Items by key, in their order; an item without a key is left out.
 groupByKey :: Ord k => (a -> Maybe k) -> [a] -> Map.Map k [a]

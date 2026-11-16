@@ -111,8 +111,8 @@ tests =
         ],
       testGroup
         "state from the booking's plate"
-        [ testCase "no plate" $ cancelState t0 Nothing @?= FINDING,
-          testCase "plate" $ cancelState t0 (Just "ML05A9999") @?= ALLOCATED
+        [ testCase "no plate" $ cancelState Nothing @?= FINDING,
+          testCase "plate" $ cancelState (Just "ML05A9999") @?= ALLOCATED
         ],
       testGroup
         "no payment row (pay on board): a cancel never produces refund money, charges or a refund marker"
