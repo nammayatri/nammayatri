@@ -267,6 +267,19 @@ async function run(deps, numberRaw, scenarioRaw) {
   const book = (b) => call('POST', `/v2/rideBooking/${b}`, undefined, token);
   const cancelBooking = (b) => call('POST', `/v2/rideBooking/${b}/cancel`,
     { reasonCode: 'CHANGE_OF_PLANS', reasonStage: 'OnAssign', additionalInfo: COMMENT }, token);
+  /** The passenger cancels, and the server's answer is READ: null when done, else why not. */
+  const passengerCancels = async (b) => {
+    const res = await cancelBooking(b);
+    if (res.status >= 200 && res.status < 300) return null;
+    const code = (res.json && (res.json.errorCode || res.json.errorMessage)) || String(res.text || '').slice(0, 80);
+    return `le serveur a refusé l’annulation du passager (${res.status} ${code})`;
+  };
+  /** Where the ride is now, as the passenger's server says. */
+  const where = async (b) => {
+    const res = await book(b);
+    const ride = (res.json && res.json.rideList && res.json.rideList[0]) || {};
+    return { arrived: Boolean(ride.driverArrivalTime), started: ride.status === 'INPROGRESS' || ride.status === 'COMPLETED', status: ride.status };
+  };
   const rideStatus = async (bppRideId) =>
     ((await pool.query(`SELECT status FROM atlas_driver_offer_bpp.ride WHERE id = $1`, [bppRideId])).rows[0] || {}).status;
   const driverOf = async (quoteId) =>
@@ -413,8 +426,26 @@ async function run(deps, numberRaw, scenarioRaw) {
     say(`Offre de ${name} acceptée, course attribuée. → Il doit voir la course : aller chercher le passager.`);
 
     if (scenario === 2 || scenario === 6) {
-      await sleep(W.beforeCancel * 1000);
-      await cancelBooking(c.bookingId);
+      // He is on his way; the passenger cancels before he arrives. If he
+      // arrives (or starts) first, this scenario was not played: say so.
+      let early = null;
+      for (let i = 0; i < polls(W.beforeCancel) && !early; i += 1) {
+        await sleep(W.poll * 1000);
+        const now = await where(c.bookingId);
+        if (now.started) early = 'started';
+        else if (now.arrived) early = 'arrived';
+      }
+      if (early === 'started') {
+        state.bookingId = null;
+        return fail(`${label}${name} a démarré la course avant que le passager annule (il était trop près : ${metresBetween(at, pickup)} m) -- scénario pas joué ; la course doit être terminée par lui`);
+      }
+      if (early === 'arrived') {
+        const refused = await passengerCancels(c.bookingId);
+        state.bookingId = null;
+        return fail(`${label}${name} est arrivé avant que le passager annule (il était trop près) -- scénario pas joué${refused ? ` ; ${refused}` : ' ; réservation annulée'}`);
+      }
+      const refused = await passengerCancels(c.bookingId);
+      if (refused) { state.bookingId = null; return fail(`${label}${refused}`); }
       say(`${label}Le passager annule avant l’arrivée. → Le chauffeur doit voir que la course est annulée par le passager.`);
       await sleep(W.poll * 1000);
       const st = await rideStatus(bpp);
@@ -435,7 +466,12 @@ async function run(deps, numberRaw, scenarioRaw) {
 
     if (scenario === 3) {
       await sleep(W.afterArrival * 1000);
-      await cancelBooking(c.bookingId);
+      if ((await where(c.bookingId)).started) {
+        state.bookingId = null;
+        return fail(`${name} a démarré la course avant que le passager annule -- scénario pas joué ; la course doit être terminée par lui`);
+      }
+      const refused = await passengerCancels(c.bookingId);
+      if (refused) { state.bookingId = null; return fail(refused); }
       say('Le passager annule après l’arrivée. → Le chauffeur doit voir que la course est annulée par le passager.');
       await sleep(W.poll * 1000);
       const st = await rideStatus(bpp);
@@ -555,6 +591,11 @@ async function main(argv) {
     const { Pool } = require('pg');
     pool = new Pool({ connectionString: process.env.PG_URL, max: 2 });
   }
+  // The terminal can go away (an ssh closed, a laptop asleep): writing to it
+  // then fails with EPIPE, which would kill the run mid-ride and skip the
+  // clean-up. It carries on, silently, and closes what it opened.
+  process.stdout.on('error', () => {});
+  process.stderr.on('error', () => {});
   const state = {};
   const t0 = Date.now();
   const say = (s) => console.log(`[${String(Math.round((Date.now() - t0) / 1000)).padStart(4)} s] ${s}`);
