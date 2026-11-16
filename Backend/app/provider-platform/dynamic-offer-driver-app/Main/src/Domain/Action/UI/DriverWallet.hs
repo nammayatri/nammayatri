@@ -1128,26 +1128,28 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
           Left _ -> throwError WalletTopupLockFailed
 
     -- TRANSITIONAL (see above): mirror of the pre-kernel intent bookkeeping.
+    --   The kernel re-serves the open order of the same amount, whose row a status poll may already
+    --   have moved past INITIATED: a second row for one order makes the webhook's update fail and
+    --   the credit never post, so an order that has a row (in any status) gets no new one.
     mirrorWalletTransaction driverId mId mocId0 amount orderId = do
-      mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
-      case mbExisting of
-        Just existing | existing.paymentOrderId == orderId -> pure ()
-        _ -> do
-          whenJust mbExisting $ \existing -> QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
-          walletTxnId <- generateGUID
-          now <- getCurrentTime
-          QWalletTransaction.create $
-            DWT.WalletTransaction
-              { id = Id walletTxnId,
-                driverId = driverId,
-                paymentOrderId = orderId,
-                amount = amount,
-                status = DWT.INITIATED,
-                merchantId = Just mId,
-                merchantOperatingCityId = Just mocId0,
-                createdAt = now,
-                updatedAt = now
-              }
+      rowsForOrder <- QWalletTransaction.findAllByPaymentOrderIds [orderId]
+      when (null rowsForOrder) $ do
+        mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
+        whenJust mbExisting $ \existing -> QWalletTransaction.updateStatusByPaymentOrderId DWT.EXPIRED existing.paymentOrderId
+        walletTxnId <- generateGUID
+        now <- getCurrentTime
+        QWalletTransaction.create $
+          DWT.WalletTransaction
+            { id = Id walletTxnId,
+              driverId = driverId,
+              paymentOrderId = orderId,
+              amount = amount,
+              status = DWT.INITIATED,
+              merchantId = Just mId,
+              merchantOperatingCityId = Just mocId0,
+              createdAt = now,
+              updatedAt = now
+            }
 
     makeWalletTopupLockKey :: Text -> Text
     makeWalletTopupLockKey dId = "wallet-topup-lock:" <> dId

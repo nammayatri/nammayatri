@@ -1,6 +1,6 @@
 module Storage.Queries.DriverFeeExtra where
 
-import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
+import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, addUTCTime, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
@@ -397,6 +397,32 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
           Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP], -- WALLET_TOPUP: Autopay wallet recharge
           Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+    (Just limit)
+    Nothing
+
+-- | Autopay fees of a window whose pre-debit notice is still in flight (its result not recorded yet).
+findDriverFeeInRangeWithNotificationInFlightByServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  UTCTime ->
+  UTCTime ->
+  ServiceNames ->
+  m [DriverFee]
+findDriverFeeInRangeWithNotificationInFlightByServiceName merchantId merchantOperatingCityId limit startTime endTime serviceName = do
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, WALLET_TOPUP],
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+          Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_ATTEMPTING),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
@@ -859,6 +885,8 @@ updateDriverFeeToManual driverFeeIds = do
         ]
     ]
 
+-- | A wallet recharge (WALLET_TOPUP) is left as it is: it never went to a manual link, and only that
+--   type is credited to the wallet when its order is paid (see creditWalletForPaidDriverFees).
 updateManualToAutoPay :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
 updateManualToAutoPay driverFeeId = do
   now <- getCurrentTime
@@ -867,7 +895,11 @@ updateManualToAutoPay driverFeeId = do
       Se.Set BeamDF.status PAYMENT_PENDING,
       Se.Set BeamDF.updatedAt now
     ]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.Eq driverFeeId.getId),
+          Se.Is BeamDF.feeType $ Se.Not $ Se.Eq WALLET_TOPUP
+        ]
+    ]
 
 findDriverFeeInRangeEligibleForAutopayRetry ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -1260,6 +1292,13 @@ findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOpera
 walletMigrationInFlightStages :: [AutopayPaymentStage]
 walletMigrationInFlightStages = [NOTIFICATION_ATTEMPTING, EXECUTION_SCHEDULED, EXECUTION_ATTEMPTING, EXECUTION_SUCCESS]
 
+-- | How long a due counts as in flight. A charge left in one of those stages longer than this (no
+--   webhook or status check ever settled it) is treated as dead, so the migration moves the due and
+--   can finish; if that charge does go through later, the paid order credits the wallet back
+--   (WalletLatePaymentCredit, see creditWalletForPaidDriverFees), so nothing is collected twice.
+walletMigrationInFlightTimeout :: NominalDiffTime
+walletMigrationInFlightTimeout = 3 * 24 * 3600
+
 -- | Unpaid subscription dues of a city that can move into the wallet now (charge not in flight).
 findPendingDuesForWalletMigration ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -1267,7 +1306,8 @@ findPendingDuesForWalletMigration ::
   ServiceNames ->
   Int ->
   m [DriverFee]
-findPendingDuesForWalletMigration merchantOperatingCityId serviceName limit =
+findPendingDuesForWalletMigration merchantOperatingCityId serviceName limit = do
+  inFlightSince <- addUTCTime (negate walletMigrationInFlightTimeout) <$> getCurrentTime
   findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
@@ -1276,7 +1316,9 @@ findPendingDuesForWalletMigration merchantOperatingCityId serviceName limit =
           Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, CANCELLATION_PENALTY],
           Se.Or
             [ Se.Is BeamDF.autopayPaymentStage $ Se.Eq Nothing,
-              Se.Is BeamDF.autopayPaymentStage $ Se.Not $ Se.In (Just <$> walletMigrationInFlightStages)
+              Se.Is BeamDF.autopayPaymentStage $ Se.Not $ Se.In (Just <$> walletMigrationInFlightStages),
+              Se.Is BeamDF.stageUpdatedAt $ Se.Eq Nothing,
+              Se.Is BeamDF.stageUpdatedAt $ Se.LessThan (Just inFlightSince)
             ]
         ]
     ]
@@ -1290,14 +1332,16 @@ findInFlightDuesForWalletMigration ::
   ServiceNames ->
   Int ->
   m [DriverFee]
-findInFlightDuesForWalletMigration merchantOperatingCityId serviceName limit =
+findInFlightDuesForWalletMigration merchantOperatingCityId serviceName limit = do
+  inFlightSince <- addUTCTime (negate walletMigrationInFlightTimeout) <$> getCurrentTime
   findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
           Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, CANCELLATION_PENALTY],
-          Se.Is BeamDF.autopayPaymentStage $ Se.In (Just <$> walletMigrationInFlightStages)
+          Se.Is BeamDF.autopayPaymentStage $ Se.In (Just <$> walletMigrationInFlightStages),
+          Se.Is BeamDF.stageUpdatedAt $ Se.GreaterThanOrEq (Just inFlightSince)
         ]
     ]
     (Just limit)

@@ -3,7 +3,6 @@
 module Lib.Payment.Payout.Registration
   ( RegistrationResult (..),
     RegistrationStatusResult (..),
-    registrationAmount,
     initiateRegistration,
     processRegistrationPayment,
     refundRegistrationAmount,
@@ -26,10 +25,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-
--- | Fixed registration amount — ₹2, no GST
-registrationAmount :: HighPrecMoney
-registrationAmount = 2.0
 
 -- | Result of initiating registration payment
 data RegistrationResult = RegistrationResult
@@ -63,15 +58,16 @@ initiateRegistration ::
   Id DCommon.Merchant ->
   Maybe (Id DCommon.MerchantOperatingCity) ->
   Id DCommon.Person ->
+  HighPrecMoney -> -- registration amount, from the caller's payout config (the amount the app shows)
   (PInterface.CreateOrderReq -> m PInterface.CreateOrderResp) -> -- Juspay create order call
   Text -> -- customerPhone
   Text -> -- customerEmail
   Maybe Text -> -- customerFirstName
   Maybe Text -> -- customerLastName
   Bool -> -- Should be True if SplitEnabled in Juspay Merchant
-  Bool -> -- isAutoRefundEnabled (PayoutConfig flag — when True, Juspay auto-refunds the ₹2 after success)
+  Bool -> -- isAutoRefundEnabled (PayoutConfig flag — when True, Juspay auto-refunds the amount after success)
   m RegistrationResult
-initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled isAutoRefundEnabled = do
+initiateRegistration merchantId mbMerchantOpCityId personId registrationAmount createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled isAutoRefundEnabled = do
   orderId <- generateGUID
   orderShortId <- generateShortId
 

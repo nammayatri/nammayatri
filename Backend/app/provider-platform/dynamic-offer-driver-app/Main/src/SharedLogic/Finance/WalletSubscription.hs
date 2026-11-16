@@ -91,13 +91,21 @@ resolveWalletOwner :: (Applicative m) => Id DP.Person -> m (CounterpartyType, Te
 resolveWalletOwner driverId = pure (DRIVER, driverId.getId)
 
 -- | The three amounts a fee is debited as: its platform fee, the GST on it (cgst + sgst + govt charges)
---   and any cancellation penalty folded onto it.
+--   and any cancellation penalty folded onto it, in paise. The nightly run debits the fee before it is
+--   read back, so its split of a GST-inclusive total is unrounded (38.1355.. + 6.8644..). The total is
+--   what the driver owes, so it is rounded once and kept; the GST parts are rounded (as the fee row
+--   stores them) and the fee is the rest. Rounding the fee on its own could add a paisa (a ₹20 plan:
+--   16.95 + 1.53 + 1.53 = 20.01).
 feeDebitAmounts :: DDF.DriverFee -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 feeDebitAmounts fee =
-  ( fee.platformFee.fee,
-    fee.platformFee.cgst + fee.platformFee.sgst + fee.govtCharges,
-    fromMaybe 0 fee.cancellationPenaltyAmount
+  ( total - gst,
+    gst,
+    paise (fromMaybe 0 fee.cancellationPenaltyAmount)
   )
+  where
+    paise = roundHighPrecMoney @HighPrecMoney 2
+    gst = paise fee.platformFee.cgst + paise fee.platformFee.sgst + paise fee.govtCharges
+    total = paise (fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fee.govtCharges)
 
 -- | Which of a fee's three debit components have no ledger entry yet, under either debit kind (a fee
 --   debited as a nightly fee must never be debited again as migrated dues, or the reverse). The three

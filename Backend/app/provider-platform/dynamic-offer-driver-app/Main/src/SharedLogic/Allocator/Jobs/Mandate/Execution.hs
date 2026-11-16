@@ -60,7 +60,7 @@ startMandateExecutionForDriver ::
   ) =>
   Job 'MandateExecution ->
   m ExecutionResult
-startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+startMandateExecutionForDriver Job {id, jobInfo, createdAt} = withLogTag ("JobId-" <> id.getId) do
   ----- added measure duration for debugging -------
   (response, timetaken) <- measureDuration $ do
     let jobData = jobInfo.jobData
@@ -83,7 +83,23 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         driverIds <- ADL.getNextDriverBatch ("Execution:" <> merchantId.getId <> ":" <> merchantOpCityId.getId <> ":" <> show serviceName) shardNum startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) limit
         QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds merchantId merchantOpCityId limit startTime endTime serviceName (Id <$> driverIds)
     if null driverFees
-      then return Complete
+      then do
+        -- A notice whose success is recorded after this run (late webhook, or the status-check fallback)
+        -- moves its fee to EXECUTION_SCHEDULED with no run left to charge it: keep coming back while the
+        -- window still has notices in flight. A reschedule keeps the job's data and createdAt, so both
+        -- limits are fixed and the wait always ends: 36 h after the window, and 36 h after the job was made.
+        now <- getCurrentTime
+        localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+        let withinWait = localNow < addUTCTime lateNotificationWait endTime && now < addUTCTime lateNotificationWait createdAt
+        notificationsInFlight <-
+          if withinWait
+            then QDF.findDriverFeeInRangeWithNotificationInFlightByServiceName merchantId merchantOpCityId 1 startTime endTime serviceName
+            else pure []
+        if null notificationsInFlight
+          then return Complete
+          else do
+            logInfo $ "Notices still in flight for window " <> show startTime <> " - " <> show endTime <> ", checking again in an hour"
+            pure $ ReSchedule (addUTCTime 3600 now)
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
         driverIdsAndDriverPlanToNotify <- driverIdAndDriverPlanTuple <$> QDP.findAllByDriverIdsPaymentModeAndServiceName driverIdsWithPendingFee AUTOPAY serviceName (Just DI.ACTIVE)
@@ -173,6 +189,11 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
 
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateExecutionRescheduleInterval <$> getCurrentTime
+
+-- | How long after its window a run waits for notices still in flight: the debit date is the notice
+--   plus 24 h, and the order/notification status-check fallback runs up to 12 h after the window.
+lateNotificationWait :: NominalDiffTime
+lateNotificationWait = 36 * 3600
 
 data ExecutionData = ExecutionData
   { executionRequest :: PaymentInterface.MandateExecutionReq,

@@ -99,7 +99,6 @@ import qualified Lib.Finance.Transfer.Inbound as Inbound
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType
@@ -239,6 +238,14 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           mbServiceName
   if order.status == Juspay.CHARGED -- Consider CHARGED status as terminal status
     then do
+      -- The status is saved before the wallet credit runs, so a credit that failed after it would
+      -- never run again from here: settle a paid top-up whose transfer is not SUCCEEDED yet (the
+      -- credit posts once, so this is a no-op when it already did).
+      when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $ do
+        mbTransfer <- QTransfer.findByReference walletReferenceTopup order.id.getId
+        when (any ((/= DTransfer.SUCCEEDED) . (.status)) mbTransfer) $ do
+          driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+          processWalletTopupWebhook driver order Payment.CHARGED
       return $
         DPayment.PaymentStatus
           { orderId = order.id,
@@ -310,7 +317,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             when (isJust payerVpa) $
               fork ("processing backlog payout for driver " <> order.personId.getId) $
                 PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
-            updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
+            updatePayoutRegAmountRefundedByRole driver.role order.personId order.amount
             -- Polling carries no event_name, so derive driver-fee status from the refund object
             let mbRefundStatus = listToMaybe refunds <&> (.status)
             case mbRefundStatus of
@@ -457,7 +464,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                       PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
                   mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [PAYMENT_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
                   whenJust mbDriverFee $ \df -> QDF.updateStatus REFUND_PENDING df.id now
-                  updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
+                  updatePayoutRegAmountRefundedByRole driver.role order.personId order.amount
                 Just Juspay.AUTO_REFUND_SUCCEEDED -> do
                   mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [REFUND_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
                   whenJust mbDriverFee $ \df -> QDF.updateStatus REFUNDED df.id now
@@ -580,7 +587,7 @@ processWalletTopupWebhook driver order transactionStatus = do
   -- credit the pre-kernel code already posted).
   -- TRANSITIONAL dual-write for the staggered release: old pods / the driver UI still
   -- read wallet_transaction. Dropped with the table after migration 0017 backfills.
-  QWalletTransaction.updateStatus (transitionalWalletStatus transactionStatus) order.id
+  QWalletTransaction.updateStatusByPaymentOrderId (transitionalWalletStatus transactionStatus) order.id
   mbTransfer <- QTransfer.findByReference walletReferenceTopup order.id.getId
   let lockKey = "wallet:topup:lock:" <> order.id.getId
   Redis.withWaitAndLockRedis lockKey 60 50000 $ do
