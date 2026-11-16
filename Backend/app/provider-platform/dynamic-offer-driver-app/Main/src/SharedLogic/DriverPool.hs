@@ -16,6 +16,9 @@
 module SharedLogic.DriverPool
   ( calculateDriverPool,
     isScheduledOpenToAll,
+    DedicatedDrivers (..),
+    noDedicatedDrivers,
+    getDedicatedDrivers,
     calculateDriverPoolWithActualDist,
     calculateDriverCurrentlyOnRideWithActualDist,
     filterOnRideDriversFromPool,
@@ -84,7 +87,7 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as A
 import Data.Fixed
 import qualified Data.Geohash as DG
-import Data.List (length, partition)
+import Data.List (length, nub, partition)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -132,6 +135,7 @@ import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -1016,12 +1020,52 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     currentRideTripCategoryValidForForwardBatching :: [Text],
     excludeDriverIds :: [Id DP.Driver],
     prevAttemptedDriverIds :: [Id DP.Driver],
-    mbSearchTryId :: Maybe Text
+    mbSearchTryId :: Maybe Text,
+    dedicatedDrivers :: DedicatedDrivers
   }
 
 isScheduledOpenToAll :: Maybe Minutes -> UTCTime -> UTCTime -> Bool
 isScheduledOpenToAll mbThresholdMinutes pickupTime now =
   maybe False (\n -> let remaining = diffUTCTime pickupTime now in remaining >= 0 && remaining <= fromIntegral (n.getMinutes * 60)) mbThresholdMinutes
+
+-- | Drivers that ops tied a rider to with customer tags, as @<tag>#<driverId>&<driverId>&...@. While any listed
+-- driver is free, the rider's requests go only to listed drivers; when none is, the search goes to everyone.
+data DedicatedDrivers = DedicatedDrivers
+  { -- | From the DedicatedDriversInRadius tag: asked only while inside the normal search radius.
+    inRadius :: [Id DP.Driver],
+    -- | From the DedicatedDriversAnyDistance tag: asked wherever they are.
+    anyDistance :: [Id DP.Driver]
+  }
+  deriving (Show)
+
+noDedicatedDrivers :: DedicatedDrivers
+noDedicatedDrivers = DedicatedDrivers [] []
+
+hasDedicatedDrivers :: DedicatedDrivers -> Bool
+hasDedicatedDrivers dd = not (null dd.inRadius && null dd.anyDistance)
+
+-- | Reads both tags from the customer tags the BAP sends, which arrive as @name#value@.
+getDedicatedDrivers :: Maybe [LYT.TagNameValue] -> DedicatedDrivers
+getDedicatedDrivers mbTags =
+  DedicatedDrivers
+    { inRadius = driverIdsIn "DedicatedDriversInRadius",
+      anyDistance = driverIdsIn "DedicatedDriversAnyDistance"
+    }
+  where
+    driverIdsIn tagName =
+      nub
+        [ Id driverId
+          | LYT.TagNameValue rawTag <- fromMaybe [] mbTags,
+            (name : value : _) <- [T.splitOn "#" rawTag],
+            T.strip name == tagName,
+            driverId <- T.strip <$> T.splitOn "&" value,
+            not (T.null driverId)
+        ]
+
+-- | How old a listed driver's last location may be before they count as unavailable. Drivers found through
+-- the radius search need no such check, since the location service only returns recent locations there.
+dedicatedDriverMaxLocationAge :: NominalDiffTime
+dedicatedDriverMaxLocationAge = 600
 
 calculateDriverPool ::
   ( BeamFlow m r,
@@ -1181,7 +1225,10 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates
-  (offRideFinal, onRideFinal) <- chunkLoop ltsReq fetchPoolData sortedCandidates [] []
+  (offRideFinal, onRideFinal) <-
+    if hasDedicatedDrivers dedicatedDrivers
+      then dedicatedOrNormalPool ltsReq fetchPoolData sortedCandidates
+      else chunkLoop ltsReq fetchPoolData sortedCandidates [] []
   fork "Driver Pool Search Try Batch - Analytics" $ do
     pushToKafka
       ( SearchTryBatchData
@@ -1227,6 +1274,37 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
         then DPD.checkRequestCount searchTryId isBookAnyRequest r.driverId r.serviceTier r.serviceTierDowngradeLevel driverPoolCfg
         else pure True
 
+    -- A previous batch went to a driver outside the list only after falling back, so once the search has fallen
+    -- back it stays on the normal pool instead of returning to the list when a listed driver frees up.
+    dedicatedOrNormalPool ltsReq fetchPoolData sortedCandidates = do
+      let listedDriverIds = dedicatedDrivers.inRadius <> dedicatedDrivers.anyDistance
+          alreadyFellBack = any (`notElem` listedDriverIds) prevAttemptedDriverIds
+      (dedicatedOffRide, dedicatedOnRide) <-
+        if alreadyFellBack
+          then pure ([], [])
+          else do
+            let inRadiusCandidates = filter (\c -> (QPG.driverLoc c).driverId `elem` listedDriverIds) sortedCandidates
+                foundIds = (.driverId) . QPG.driverLoc <$> inRadiusCandidates
+                farIds = filter (`notElem` foundIds) dedicatedDrivers.anyDistance
+            farCandidates <-
+              if null farIds
+                then pure []
+                else
+                  withTryCatch "dedicatedDrivers:fetchSortedCandidatesByDriverIds" (QPG.fetchSortedCandidatesByDriverIds ltsReq merchantOperatingCityId dedicatedDriverMaxLocationAge farIds) >>= \case
+                    Right candidates -> pure candidates
+                    Left err -> do
+                      logError $ "Dedicated drivers: location fetch failed, treating them as unavailable: " <> show err
+                      pure []
+            let candidates = sortOn (\c -> (QPG.isPrevAttempted c, QPG.straightLineDistanceMeters c)) (inRadiusCandidates <> farCandidates)
+            chunkLoop ltsReq fetchPoolData candidates [] []
+      if null dedicatedOffRide
+        then do
+          logInfo $ "Dedicated drivers: none free (alreadyFellBack=" <> show alreadyFellBack <> "), using the normal pool. " <> show dedicatedDrivers
+          chunkLoop ltsReq fetchPoolData sortedCandidates [] []
+        else do
+          logInfo $ "Dedicated drivers: sending to " <> show ((.driverPoolResult.driverId) <$> dedicatedOffRide) <> " of " <> show dedicatedDrivers
+          pure (dedicatedOffRide, dedicatedOnRide)
+
     chunkLoop ltsReq fetchPoolData remaining offRideAcc onRideAcc = do
       if length offRideAcc >= minSurvivors || null remaining
         then pure (offRideAcc, onRideAcc)
@@ -1262,7 +1340,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
               pure $
                 case driverPoolCfg.actualDistanceThreshold of
                   Nothing -> NE.toList drvPoolWithDist
-                  Just threshold -> filter (\dis -> getMeters dis.actualDistanceToPickup <= fromIntegral threshold) (NE.toList drvPoolWithDist)
+                  Just threshold -> filter (\dis -> getMeters dis.actualDistanceToPickup <= fromIntegral threshold || dis.driverPoolResult.driverId `elem` dedicatedDrivers.anyDistance) (NE.toList drvPoolWithDist)
           withTimeAPI "driverPooling" "filterM scheduledRideFilter" $
             applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig (skippedWithStraightLine <> mapsThresholded)
 
