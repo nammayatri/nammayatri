@@ -102,7 +102,13 @@ function world(db) {
   };
   // The tester's possible steps.
   w.arrive = async (b) => { b.ride.driverArrivalTime = new Date().toISOString(); };
-  w.start = async (b) => { await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'INPROGRESS' WHERE id = $1`, [b.ride.bppRideId]); };
+  w.start = async (b) => {
+    await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'INPROGRESS' WHERE id = $1`, [b.ride.bppRideId]);
+    b.ride.status = 'INPROGRESS';
+  };
+  // What the simulated cars do (measured 2026-11-16): arrive 282 m away in 26 s
+  // and start the same second.
+  w.arriveAndStart = async (b) => { await w.arrive(b); await w.start(b); };
   w.end = async (b) => {
     await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'COMPLETED' WHERE id = $1`, [b.ride.bppRideId]);
     b.status = 'COMPLETED'; b.ride.status = 'COMPLETED'; b.ride.computedPrice = 812;
@@ -162,6 +168,9 @@ async function riderApi(db, w) {
       }
       if ((m = p.match(/^\/v2\/rideBooking\/(b\d+|left\d+)\/cancel$/))) {
         const b = w.bookings.get(m[1]);
+        // The real server refuses once the ride has started (2026-11-16, live).
+        if (b && ['INPROGRESS', 'COMPLETED'].includes(b.ride.status)) return json(400, { errorCode: 'BOOKING_INVALID_STATUS' });
+        if (b && w.refuseCancel) return json(400, { errorCode: 'SOMETHING_ELSE' });
         if (b) {
           b.status = 'CANCELLED'; b.ride.status = 'CANCELLED';
           await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'CANCELLED' WHERE id = $1`, [b.ride.bppRideId]);
@@ -305,6 +314,20 @@ async function osrm() {
   t.ok(r.verdict.ok && r.rides[0].status === 'CANCELLED' && r.confirmedDrivers.join() === TESTER, '2 · cancelled before arrival: RÉUSSI, CANCELLED on his side', r.verdict.reason);
   t.ok(!r.lines.some((l) => /est arrivé/.test(l)), '   and it did not wait for him to arrive');
 
+  t.section('a cancel is never claimed blindly (live, 2026-11-16: the car started before the cancel)');
+  r = await scenario(2, (w) => { w.offers = [[TESTER]]; w.script = [w.arriveAndStart]; });
+  t.ok(!r.verdict.ok && /a démarré la course avant que le passager annule/.test(r.verdict.reason) && /pas joué/.test(r.verdict.reason),
+    '2 · he arrives and starts during the wait: PAS RÉUSSI, « scénario pas joué »', r.verdict.reason);
+  t.ok(!r.lines.some((l) => /Le passager annule avant/.test(l)), '   and it never says the passenger cancelled');
+  r = await scenario(2, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive]; });
+  t.ok(!r.verdict.ok && /est arrivé avant que le passager annule/.test(r.verdict.reason) && openBookings(r.w).length === 0,
+    '2 · he arrives during the wait: PAS RÉUSSI, and the booking is still closed', r.verdict.reason);
+  r = await scenario(2, (w) => { w.offers = [[TESTER]]; w.refuseCancel = true; });
+  t.ok(!r.verdict.ok && /refusé l’annulation/.test(r.verdict.reason) && /SOMETHING_ELSE/.test(r.verdict.reason),
+    '2 · the server refuses the cancel: PAS RÉUSSI, with its answer', r.verdict.reason);
+  r = await scenario(3, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start]; });
+  t.ok(!r.verdict.ok && /a démarré la course avant/.test(r.verdict.reason), '3 · he starts during the 20 s: PAS RÉUSSI, « pas joué »', r.verdict.reason);
+
   r = await scenario(3, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive]; });
   t.ok(r.verdict.ok && r.rides[0].status === 'CANCELLED' && r.lines.some((l) => /est arrivé/.test(l)), '3 · cancelled after arrival: RÉUSSI', r.verdict.reason);
 
@@ -345,6 +368,7 @@ async function osrm() {
 
   t.section('the file itself');
   const src = fs.readFileSync(VR, 'utf8');
+  t.ok(/process\.stdout\.on\('error'/.test(src), 'a closed terminal (EPIPE) does not kill a run before it cleans up');
   t.ok(!/\/ui\//.test(src.replace(/^\s*(\/\/|\*).*$/gm, '')) && !/DRIVER_URL/.test(src), 'no driver route and no driver API address anywhere in its code');
   const cli = (args, env) => spawnSync(process.execPath, [VR, ...args], {
     env: { PATH: process.env.PATH, VIRTUAL_RIDER_PID_DIR: fs.mkdtempSync('/tmp/vr-'), ...env }, encoding: 'utf8', timeout: 20000 });
