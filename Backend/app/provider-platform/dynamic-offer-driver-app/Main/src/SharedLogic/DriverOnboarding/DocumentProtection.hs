@@ -14,6 +14,7 @@ import Data.ByteString (ByteString)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
+import Data.Time (utctDay)
 import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as Fields
@@ -26,11 +27,12 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import EulerHS.Types (base64Decode, base64Encode)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Documents (VerificationStatus (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.DocumentVault (DocumentVault, DocumentVaultError (..), isSealedObject)
+import Storage.DocumentVault (DocumentVault, DocumentVaultError (..), SealedDocument, isSealedObject)
 import qualified Storage.DocumentVault as Fields
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGstin
@@ -52,7 +54,7 @@ isVerifiedAtSource :: DVC.DocumentType -> Maybe Text -> Bool
 isVerifiedAtSource imageType workflowTransactionId =
   isJust workflowTransactionId && imageType `elem` [DVC.PanCard, DVC.AadhaarCard]
 
-storeDocument :: (DocumentProtectionFlow m r, Metrics.CoreMetrics m) => Id DImage.Image -> DVC.DocumentType -> Maybe Text -> Text -> Text -> m (Maybe Text)
+storeDocument :: (DocumentProtectionFlow m r, CacheFlow m r) => Id DImage.Image -> DVC.DocumentType -> Maybe Text -> Text -> Text -> m (Maybe Text)
 storeDocument imageId imageType workflowTransactionId path image = do
   mbVault <- asks (.documentVault)
   case mbVault of
@@ -60,18 +62,11 @@ storeDocument imageId imageType workflowTransactionId path image = do
       document <- base64Decode image & fromMaybeM (InvalidRequest "Failed to decode base64 image")
       if isVerifiedAtSource imageType workflowTransactionId
         then do
-          result <- liftIO . try $ vault.sealForArchive imageId.getId document
-          object <- either vaultFailed pure result
+          object <- tryVault (vault.sealForArchive imageId.getId document) >>= either vaultFailed pure
           putSealedObject object
           pure Nothing
         else do
-          result <- liftIO . try $ vault.sealForProcessing imageId.getId document
-          sealed <- case result of
-            Right sealed -> pure sealed
-            Left (ProcessingKeyUnavailable reason) -> do
-              Metrics.incrementGenericMetrics "document_vault_key_unavailable"
-              throwError . InternalError $ "No document processing key is available: " <> reason
-            Left err -> vaultFailed err
+          sealed <- sealWithTodaysKey vault imageId.getId document
           putSealedObject sealed.object
           pure . Just $ base64Encode sealed.encryptedDataKey
     _ -> do
@@ -79,9 +74,51 @@ storeDocument imageId imageType workflowTransactionId path image = do
       pure Nothing
   where
     putSealedObject object = S3.putRaw (T.unpack path) object "application/octet-stream"
-    vaultFailed (err :: DocumentVaultError) = do
-      Metrics.incrementGenericMetrics "document_vault_failure"
-      throwError . InternalError $ show err
+
+sealWithTodaysKey :: (MonadFlow m, CacheFlow m r) => DocumentVault -> Text -> ByteString -> m SealedDocument
+sealWithTodaysKey vault documentId document =
+  tryVault (vault.sealForProcessing documentId document) >>= \case
+    Left ProcessingKeyMissing -> do
+      day <- show . utctDay <$> getCurrentTime
+      Redis.withWaitAndLockRedis (processingKeyLockKey day) 30 200000 $
+        tryVault (vault.sealForProcessing documentId document) >>= \case
+          Left ProcessingKeyMissing -> do
+            keyRef <- tryVault vault.createProcessingKey >>= either vaultFailed pure
+            sealed <- tryVault (vault.sealWithProcessingKey keyRef documentId document) >>= either vaultFailed pure
+            waitForProcessingKey vault processingKeyReadyAttempts
+            pure sealed
+          result -> either vaultFailed pure result
+    result -> either vaultFailed pure result
+
+waitForProcessingKey :: MonadFlow m => DocumentVault -> Int -> m ()
+waitForProcessingKey vault attemptsLeft =
+  when (attemptsLeft > 0) $
+    tryVault vault.processingKeyReady >>= \case
+      Right True -> pure ()
+      _ -> do
+        threadDelay 500000
+        waitForProcessingKey vault (attemptsLeft - 1)
+
+processingKeyReadyAttempts :: Int
+processingKeyReadyAttempts = 20
+
+processingKeyLockKey :: Text -> Text
+processingKeyLockKey day = "DocumentVault:processingKeyCreation:" <> day
+
+tryVault :: MonadIO m => IO a -> m (Either DocumentVaultError a)
+tryVault = liftIO . try
+
+vaultFailed :: (MonadFlow m, Metrics.CoreMetrics m) => DocumentVaultError -> m a
+vaultFailed = \case
+  ProcessingKeyUnavailable reason -> do
+    Metrics.incrementGenericMetrics "document_vault_key_unavailable"
+    throwError . InternalError $ "No document processing key is available: " <> reason
+  ProcessingKeyMissing -> do
+    Metrics.incrementGenericMetrics "document_vault_key_unavailable"
+    throwError $ InternalError "Document processing key is missing after creation"
+  err -> do
+    Metrics.incrementGenericMetrics "document_vault_failure"
+    throwError . InternalError $ show err
 
 readDocument :: DocumentProtectionFlow m r => DImage.Image -> m Text
 readDocument image = readDocumentIfAvailable image >>= fromMaybeM (DocumentArchived image.id.getId)
