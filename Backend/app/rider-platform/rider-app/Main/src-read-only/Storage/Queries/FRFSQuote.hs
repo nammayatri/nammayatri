@@ -43,6 +43,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
+      Se.Set Beam.fareClassId (Kernel.Types.Id.getId <$> fareClassId),
       Se.Set Beam.appSession (fareDetails <&> (.appSession)),
       Se.Set Beam.distance (fareDetails <&> (.distance)),
       Se.Set Beam.providerRouteId (fareDetails <&> (.providerRouteId)),

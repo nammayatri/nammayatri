@@ -148,6 +148,7 @@ getFare integrationBPPConfig config _riderId fareReq = do
                     ],
                   fareDetails = Nothing,
                   farePolicyId = Nothing,
+                  fareClassId = Nothing,
                   vehicleServiceTier =
                     FRFSUtils.FRFSVehicleServiceTier
                       { serviceTierType = Spec.ORDINARY,

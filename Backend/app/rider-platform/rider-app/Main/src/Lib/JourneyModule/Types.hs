@@ -1458,7 +1458,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let fallbackFare = journeyLeg.estimatedMinFare
   let distance = journeyLeg.distance
   let duration = journeyLeg.duration
-  let startTime = journeyLeg.fromDepartureTime
+  let legStartTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
   mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
@@ -1575,7 +1575,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         searchId = id.getId,
         pricingId = journeyLeg.legPricingId,
         travelMode = journeyLeg.mode,
-        startTime = fromMaybe now startTime,
+        startTime = fromMaybe now legStartTime,
         order = journeyLeg.sequenceNumber,
         estimatedDuration = duration,
         estimatedMinFare = mbEstimatedFare,

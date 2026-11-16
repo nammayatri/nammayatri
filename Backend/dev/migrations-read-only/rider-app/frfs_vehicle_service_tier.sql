@@ -57,3 +57,8 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN use_live_for_cancella
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN pay_on_board boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN enable_fare_class boolean ;

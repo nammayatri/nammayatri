@@ -742,6 +742,13 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             withTryCatch "postFrfsSearchHandler:checkHasPass" (FRFSPassOverride.localTripDay person (maybe now (max now) tripTime) >>= FRFSPassOverride.checkHasPass person) >>= \case
               Right hasPass -> pure (Just hasPass)
               Left _ -> pure Nothing
+  -- The fare class is priced at this time and confirm re-checks it at the same time: a picked trip's boarding time at this
+  -- stop (its first stop when the schedule lacks this one, as confirm does), else the requested time (never in the past),
+  -- else now. Only fare-class providers need the schedule lookup.
+  mbScheduledTrip <- case (tripId, routeCode) of
+    (Just pickedTripId, Just routeCode') | FRFSUtils.fareClassesApply integratedBPPConfig -> Just <$> FRFSUtils.getScheduledTrip pickedTripId routeCode' fromStationCode toStationCode integratedBPPConfig
+    _ -> pure Nothing
+  let searchStartTime = (mbScheduledTrip >>= (.windowStartTime)) <|> (max now <$> tripTime) <|> Just now
   let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       searchReq =
         DFRFSSearch.FRFSSearch
@@ -776,6 +783,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             isSingleMode = Just isSingleMode,
             hasApplicablePass = hasApplicablePass,
             enforceFRFSPass = mbEnforceFRFSPass,
+            startTime = searchStartTime,
             ..
           }
   upsertJourneyLegAction searchReqId.getId
@@ -1399,12 +1407,13 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
       -- A different route between the same stops still needs a genuine quote for that route (the copy path
       -- would clone the OLD route's stations); so the fresh search runs when the STOPS or the ROUTE changed.
       let routeChanged = oldBooking.routeCode /= Just newRouteCode
-          needsFreshSearch = stopsChanged || routeChanged
       serviceTierType <-
         FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
           & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
+      mbVehicleServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType oldBooking.merchantOperatingCityId integratedBppConfig.id
+      let needsFreshSearch = stopsChanged || routeChanged || (FRFSUtils.fareClassesApply integratedBppConfig && (mbVehicleServiceTier >>= (.enableFareClass)) == Just True)
       mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision oldBooking
-      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision
+      newTripStart <- FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId, merchantId = oldBooking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback oldBooking.merchantOperatingCityId oldBooking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
       FRFSReschedule.withRescheduleLock oldBooking.id $ do
         freshOldBooking <- QFRFSTicketBooking.findById oldBooking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -1417,12 +1426,16 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
         -- Same stops AND same route (trip-only reschedule): copy the old quote. Different stops (same cluster)
         -- or a different route: run the real Direct search so the new stops/route get a genuine quote, then
         -- enforce same base fare.
+        -- The rebooked tickets keep the old booking's mix per category (e.g. 2 adults + 1 child); a fresh search is sent only
+        -- the total and fills every ticket in as an adult, so its quantities are taken from here.
+        oldCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+        let oldQuantityOf category = sum [c.selectedQuantity | c <- oldCategories, c.category == category]
         (freshSearchId, stagingQuote, freshCategories) <-
           if needsFreshSearch
             then do
               merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
               merchantOperatingCity <- CQMOC.findById oldBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound oldBooking.merchantOperatingCityId.getId)
-              freshSearch <- FRFSReschedule.mkFreshSearchForNewStops oldBooking quote req.tripId newFromCode newToCode newRouteCode integratedBppConfig bapConfig.searchTTLSec
+              freshSearch <- FRFSReschedule.mkFreshSearchForNewStops oldBooking quote req.tripId newTripStart newFromCode newToCode newRouteCode integratedBppConfig bapConfig.searchTTLSec
               -- Keep the old booking's service tier; blacklist nothing else that would drop it. The real
               -- Direct search (Flow.search + onSearch) persists the quote+categories synchronously.
               let (blSt, blFqt) = JMU.getBlacklistedFilters (Just False) (Just [serviceTierType])
@@ -1433,15 +1446,17 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
                 find (\q -> FRFSUtils.getServiceTierTypeFromRouteStationsJson q.routeStationsJson == Just serviceTierType) newQuotes
                   & fromMaybeM (InvalidRequest "No serviceable quote found for the new stops/route at the same service tier")
               newCategories <- QFRFSQuoteCategory.findAllByQuoteId newQuote.id
+              let missingCategories = [c.category | c <- oldCategories, c.selectedQuantity > 0, c.category `notElem` map (.category) newCategories]
+              unless (null missingCategories) $
+                throwError $ InvalidRequest ("Reschedule needs the same ticket types; the new trip does not sell " <> Data.Text.intercalate ", " (map show (nub missingCategories)))
               -- Same-fare only: the reused payment fixes the charged amount, so a fare change is not supported.
               -- Compare BASE prices (confirm passes enableOffer=False, so offers are frozen and irrelevant here).
-              oldCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-              let newBaseFare = sum (map (\c -> c.price.amount * fromIntegral c.selectedQuantity) newCategories)
+              let newBaseFare = sum (map (\c -> c.price.amount * fromIntegral (oldQuantityOf c.category)) newCategories)
                   oldBaseFare = sum (map (\c -> c.price.amount * fromIntegral c.selectedQuantity) oldCategories)
               unless (newBaseFare == oldBaseFare) $
-                throwError $ InvalidRequest "Reschedule to a different stop or route is only allowed when the fare is unchanged"
+                throwError $ InvalidRequest "Reschedule is only allowed when the fare is unchanged"
               pure (freshSearch.id, newQuote, newCategories)
-            else FRFSReschedule.mkFreshSearchAndFreshQuote oldBooking quote req.tripId integratedBppConfig bapConfig.searchTTLSec
+            else FRFSReschedule.mkFreshSearchAndFreshQuote oldBooking quote req.tripId newTripStart integratedBppConfig bapConfig.searchTTLSec
         -- Reject a malformed seat selection: duplicate categories, or categories absent from the fresh quote.
         let offeredCategories = maybe [] (map (.category)) req.offered
             validCategories = map (.category) freshCategories
@@ -1454,7 +1469,7 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
                 ( \c ->
                     FRFSTicketService.FRFSCategorySelectionReq
                       { quoteCategoryId = c.id,
-                        quantity = c.selectedQuantity,
+                        quantity = oldQuantityOf c.category,
                         seatIds = (.seatIds) <$> find (\s -> s.category == c.category) (fromMaybe [] req.offered)
                       }
                 )
@@ -2030,7 +2045,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 (fromMaybe False req.allowUpcomingTrips) Nothing Nothing)
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 (fromMaybe False req.allowUpcomingTrips) Nothing Nothing FRFSUtils.emptyFareClassLookup)
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of
@@ -2611,7 +2626,8 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
                 busLocationData = Nothing,
                 vehicleNumber = req.vehicleNumber,
                 tripTime = Nothing,
-                imeiNumber = Nothing
+                imeiNumber = Nothing,
+                tripId = req.tripId
               }
       searchRes <- postFrfsSearch (Just personId, merchantId) (Just city) (Just True) (Just True) (Just integratedBPPConfig.id) (pure <$> mbServiceTier) vehicleType searchReq
       setInProgress (Just searchRes.searchId) attemptStartedAt

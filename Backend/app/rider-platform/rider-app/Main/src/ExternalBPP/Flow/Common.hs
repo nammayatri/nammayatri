@@ -238,7 +238,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
       stationsPerSegment <- CallAPI.buildStationsPerSegment segments integratedBPPConfig
       let stations = concat stationsPerSegment
-      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
+      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId (Just FareContext {vehicleNumber = searchReq.vehicleNumber, startTime = searchReq.startTime, topFareClassPerTier = Nothing}) blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
       return $
         map
           ( \FRFSFare {..} ->

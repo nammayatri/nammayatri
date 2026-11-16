@@ -40,6 +40,7 @@ data FRFSSearchT f = FRFSSearchT
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchAsParentStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationId :: B.C f Kernel.Prelude.Text,
     toStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

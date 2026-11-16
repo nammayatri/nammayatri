@@ -368,6 +368,7 @@ types:
     availableSeats: Maybe Int
     seatSelectionType: Maybe SeatSelectionType
     vehicleTags: "[Text]" # The bus's SHOW_ vehicle tags without the prefix, upper case, e.g. ["WOMEN_SPECIAL"]; the app maps them to labels
+    fareClassTags: "[Text]" # Codes from the fare class pricing this bus at its boarding time, e.g. ["FESTIVE_FARE"]; the app maps them to labels
 
   LiveVehicleInfo:
     number: Text
@@ -435,6 +436,7 @@ types:
     latLong: Maybe LatLong
     timestamp: Maybe UTCTime
     serviceTier: Maybe ServiceTierType
+    includeFareClass: Maybe Bool
     derive: "Show"
 
   AvailableRoute:

@@ -18,6 +18,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     cancellationDelayThresholdSeconds :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     cancellationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Text,
+    enableFareClass :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

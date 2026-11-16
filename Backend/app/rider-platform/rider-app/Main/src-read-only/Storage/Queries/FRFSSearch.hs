@@ -70,6 +70,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId routeCode,
       Se.Set Beam.searchAsParentStops searchAsParentStops,
+      Se.Set Beam.startTime startTime,
       Se.Set Beam.toStationAddress toStationAddress,
       Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.toStationName toStationName,
