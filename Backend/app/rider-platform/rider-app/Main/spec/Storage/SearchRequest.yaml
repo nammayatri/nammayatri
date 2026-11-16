@@ -334,3 +334,7 @@ SearchRequestPartiesLink:
     findAllBySearchRequestId:
       kvFunction: findAllWithKVAndConditionalDB
       where: searchRequestId
+    deleteBySearchRequestIdAndPartyType:
+      kvFunction: deleteWithKV
+      where:
+        and: [searchRequestId, partyType]

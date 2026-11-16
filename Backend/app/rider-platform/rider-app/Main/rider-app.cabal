@@ -323,6 +323,7 @@ library
       Domain.Action.UI.BBPS
       Domain.Action.UI.BetterDriverSearch
       Domain.Action.UI.BlackListDriver
+      Domain.Action.UI.BookForOthers
       Domain.Action.UI.Booking
       Domain.Action.UI.BookingDeposit
       Domain.Action.UI.Cac
@@ -473,6 +474,7 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
+      Domain.Types.PassengerDetails
       Domain.Types.PassOverrideConfig
       Domain.Types.RentalsIntercityCache
       Domain.Types.RewardContext
@@ -575,6 +577,7 @@ library
       SharedLogic.BetterRoutePoint
       SharedLogic.BetterRoutePointCache
       SharedLogic.BetterRoutePointSearch
+      SharedLogic.BookForOthers
       SharedLogic.Booking
       SharedLogic.BookingDeposit
       SharedLogic.BookingDepositLedger

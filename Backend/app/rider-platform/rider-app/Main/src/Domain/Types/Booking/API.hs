@@ -78,6 +78,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
+import qualified SharedLogic.BookForOthers as SBFO
 import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.FareBreakdown as SFareBreakdown
 import qualified SharedLogic.Offer as SOffer
@@ -113,6 +114,9 @@ data BookingAPIEntity = BookingAPIEntity
     agencyNumber :: Maybe Text,
     riderMobileNumber :: Maybe Text,
     riderName :: Maybe Text,
+    -- | Set when the ride was booked for someone else; tells the viewer whether they are
+    -- the booker or the passenger.
+    bookForOthers :: Maybe SBFO.BookForOthersInfo,
     estimatedFare :: Money,
     isBookingUpdated :: Bool,
     eligibleForBetterDriverSearch :: Maybe Bool,
@@ -425,6 +429,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   fleetEngineEnabled <- lookupFleetEngineEnabled booking.merchantId booking.merchantOperatingCityId
+  bookForOthers <- SBFO.mkBookForOthersInfo requesterId booking
   return $
     BookingAPIEntity
       { id = booking.id,
@@ -433,6 +438,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         agencyNumber = Just providerNum,
         riderMobileNumber = riderMobile,
         riderName = riderName,
+        bookForOthers,
         estimatedFare = booking.estimatedFare.amountInt,
         discount = booking.discount <&> (.amountInt),
         estimatedTotalFare = booking.estimatedTotalFare.amountInt,

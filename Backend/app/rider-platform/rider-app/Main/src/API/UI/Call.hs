@@ -150,7 +150,7 @@ frontendBasedCallHandler =
 
 -- | Try to initiate a call customer -> driver
 initiateCallToDriver :: Id SRide.Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes
-initiateCallToDriver rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
+initiateCallToDriver rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.initiateCallToDriver personId rideId
 
 -- | Try to initiate a call customer -> CX support agent
 initiateCallToSupport :: Id BT.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes

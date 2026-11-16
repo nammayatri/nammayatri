@@ -30,6 +30,7 @@ import qualified Kernel.External.FleetEngine.Config as FEConfig
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.BookForOthers as SBFO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
@@ -50,7 +51,9 @@ getFleetEngineConsumerToken ::
 getFleetEngineConsumerToken (personId, _merchantId) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  unless (booking.riderId == personId) $ throwError AccessDenied
+  -- Book for others: the passenger tracks the ride in their own app too.
+  isPassenger <- maybe False ((== personId) . (.partyId)) <$> SBFO.findActivePassengerLink booking.id
+  unless (booking.riderId == personId || isPassenger) $ throwError AccessDenied
   cfg <- getFleetEngineCfg booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "Fleet Engine not configured")
   saText <- decrypt cfg.consumerServiceAccountJson
   sa <- case FEAuth.parseServiceAccount saText of

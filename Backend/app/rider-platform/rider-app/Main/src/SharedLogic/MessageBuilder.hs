@@ -52,6 +52,8 @@ module SharedLogic.MessageBuilder
     buildMessageWithKey,
     BuildPassSuccessMessage (..),
     buildPassSuccessMessage,
+    BuildBookedForOtherMessageReq (..),
+    buildBookedForOtherMessage,
   )
 where
 
@@ -338,6 +340,33 @@ buildFollowRideStartedMessage merchantOperatingCityId req = do
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FOLLOW_RIDE))
   buildSendSmsReq merchantMessage [("userName", req.userName), ("rideLink", req.rideLink)]
+
+-- | SMS to the passenger of a ride booked on their behalf ("book for others"),
+-- sent once a driver is assigned.
+data BuildBookedForOtherMessageReq = BuildBookedForOtherMessageReq
+  { bookedByName :: Text,
+    passengerName :: Text,
+    driverName :: Text,
+    vehicleNumber :: Text,
+    otp :: Text,
+    rideLink :: Text
+  }
+  deriving (Generic)
+
+buildBookedForOtherMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildBookedForOtherMessageReq -> m SmsReqBuilder
+buildBookedForOtherMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.BOOKED_FOR_OTHER_RIDE_DETAILS Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.BOOKED_FOR_OTHER_RIDE_DETAILS))
+  buildSendSmsReq
+    merchantMessage
+    [ ("bookedByName", req.bookedByName),
+      ("passengerName", req.passengerName),
+      ("driverName", req.driverName),
+      ("vehicleNumber", req.vehicleNumber),
+      ("otp", req.otp),
+      ("rideLink", req.rideLink)
+    ]
 
 data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessageReq
   { userName :: Text,

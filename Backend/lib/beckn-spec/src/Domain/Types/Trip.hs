@@ -64,6 +64,7 @@ data PartyRole
   = Initiator
   | DeliveryRoleSender
   | DeliveryRoleReceiver
+  | RideRolePassenger
   deriving (Eq, Ord, Show, FromJSON, Generic, ToSchema)
 
 instance ToJSON PartyRole where
@@ -71,6 +72,7 @@ instance ToJSON PartyRole where
 
 data TripParty
   = DeliveryParty DeliveryParties
+  | RideParty RideParties
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
@@ -80,12 +82,18 @@ instance ToJSON TripParty where
       [ "tag" .= ("DeliveryParty" :: Text),
         "contents" .= party
       ]
+  toJSON (RideParty party) =
+    object
+      [ "tag" .= ("RideParty" :: Text),
+        "contents" .= party
+      ]
 
 instance FromJSON TripParty where
   parseJSON = withObject "TripParty" $ \v -> do
     tag <- v .: "tag"
     case tag of
       "DeliveryParty" -> DeliveryParty <$> v .: "contents"
+      "RideParty" -> RideParty <$> v .: "contents"
       _ -> fail $ "Unknown tag: " ++ tag
 
 data DeliveryParties
@@ -96,8 +104,17 @@ data DeliveryParties
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable DeliveryParties
 
+-- | Parties on a regular ride booked on someone else's behalf ("book for others").
+-- The booker stays the booking's riderId; the passenger is linked via BookingPartiesLink.
+data RideParties
+  = Passenger
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable RideParties
+
 instance Show TripParty where
   show (DeliveryParty party) = "DeliveryParty_" <> show party
+  show (RideParty party) = "RideParty_" <> show party
 
 instance Read TripParty where
   readsPrec d' =
@@ -108,6 +125,10 @@ instance Read TripParty where
             | r1 <- stripPrefix "DeliveryParty_" r,
               (v1, r2) <- readsPrec (app_prec + 1) r1
           ]
+            ++ [ (RideParty v1, r2)
+                 | r1 <- stripPrefix "RideParty_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10

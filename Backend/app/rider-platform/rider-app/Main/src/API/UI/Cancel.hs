@@ -40,6 +40,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.BookForOthers as SBFO
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.SilentReallocation as SilentRealloc
@@ -125,6 +126,11 @@ cancel ::
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    -- Book for others: the booker manages the ride; the passenger can track it but not cancel it.
+    when (personId /= booking.riderId) $
+      SBFO.findActivePassengerLink booking.id >>= \case
+        Just link | link.partyId == personId -> Kernel.Utils.Common.throwError (InvalidRequest "ONLY_BOOKER_CAN_CANCEL")
+        _ -> pure ()
     mbSilentCtx <- SilentRealloc.getSilentReallocation personId
     case mbSilentCtx of
       Just silentCtx | silentCtx.bookingId == booking.id && booking.status == SRB.REALLOCATED -> do

@@ -15,6 +15,7 @@ import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.NyRegularSubscription as DNyRegularSubscription
+import qualified Domain.Types.PassengerDetails as DPD
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.RiderPreferredOption as DRPO
@@ -120,9 +121,19 @@ data OneWaySearchReq = OneWaySearchReq
     verifyBeforeCancellingOldBooking :: Maybe Bool,
     numberOfLuggages :: Maybe Int,
     doMultimodalSearch :: Maybe Bool,
-    shouldCacheRoute :: Maybe Bool
+    shouldCacheRoute :: Maybe Bool,
+    -- | Set when booking for someone else ("book for others").
+    passengerDetails :: Maybe DPD.PassengerDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- | Passenger for a ride booked on someone else's behalf. Only regular cab searches support it.
+getPassengerDetails :: SearchReq -> Maybe DPD.PassengerDetails
+getPassengerDetails = \case
+  OneWaySearch req -> req.passengerDetails
+  RentalSearch req -> req.passengerDetails
+  InterCitySearch req -> req.passengerDetails
+  _ -> Nothing
 
 data PublicTransportSearchReq = PublicTransportSearchReq
   { origin :: SearchReqLocation,
@@ -160,7 +171,8 @@ data RentalSearchReq = RentalSearchReq
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    passengerDetails :: Maybe DPD.PassengerDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -197,7 +209,8 @@ data InterCitySearchReq = InterCitySearchReq
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    passengerDetails :: Maybe DPD.PassengerDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

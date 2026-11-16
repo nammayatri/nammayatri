@@ -109,6 +109,7 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
+import qualified SharedLogic.BookForOthers as SBFO
 import SharedLogic.Booking
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
@@ -833,6 +834,12 @@ rideAssignedReqHandler req = do
         when (riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
           fork "Sending Dashboard Ride Flow Booking Details" $ do
             sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
+
+      -- Book for others: SMS the passenger the driver details, OTP and the live tracking link
+      -- (the same public share-ride page emergency contacts get). Re-sent on reallocation.
+      unless (maybe False Trip.isDeliveryTrip booking.tripCategory) $
+        fork "Sending booked-for-other ride details SMS to passenger" $
+          sendBookedForOtherSms booking ride
 
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
@@ -2303,3 +2310,43 @@ getRideAndBooking bppBookingId transactionId = do
   -- findOneByBookingId (createdAt DESC, limit 1) not findByRBId (unordered): a BPP single-booking reallocation reuses one booking across multiple rides, and the unordered pick was nondeterministic between the cancelled old ride and the live new one.
   ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId: " <> bppBookingId.getId)
   return (ride, booking)
+
+-- | Book for others: tells the passenger who booked, the driver, the OTP and the public
+-- share-ride tracking link. No-op for a ride booked for oneself.
+sendBookedForOtherSms ::
+  ( ServiceFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+  ) =>
+  DRB.Booking ->
+  DRide.Ride ->
+  m ()
+sendBookedForOtherSms booking ride =
+  SBFO.findPassengerPerson booking.id >>= \case
+    Nothing -> pure ()
+    Just (passengerLink, passenger) ->
+      SBFO.getPassengerMobileNumber passenger >>= \case
+        Nothing -> logError $ "Book for others: passenger has no mobile number, bookingId: " <> booking.id.getId
+        Just passengerPhone -> do
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+          booker <- QP.findById booking.riderId
+          let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+          -- A shortener outage must not cost the passenger their ride details; send the full link instead.
+          shortTrackLink <-
+            withTryCatch "shortenTrackingUrl:bookedForOtherSms" (MessageBuilder.shortenTrackingUrl (Just UrlShortner.RIDE_TRACKING) trackLink) >>= \case
+              Right shortUrl -> pure shortUrl
+              Left err -> do
+                logError $ "Book for others: URL shortening failed, sending full tracking link. bookingId: " <> booking.id.getId <> ", error: " <> show err
+                pure trackLink
+          buildSmsReq <-
+            MessageBuilder.buildBookedForOtherMessage booking.merchantOperatingCityId $
+              MessageBuilder.BuildBookedForOtherMessageReq
+                { bookedByName = fromMaybe "Your contact" (booker >>= (.firstName)),
+                  passengerName = passengerLink.partyName,
+                  driverName = ride.driverName,
+                  vehicleNumber = ride.vehicleNumber,
+                  otp = ride.otp,
+                  rideLink = shortTrackLink
+                }
+          Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq passengerPhone) >>= Sms.checkSmsResult

@@ -6,6 +6,7 @@ module Storage.Queries.SearchRequestPartiesLink where
 
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestPartiesLink
+import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +21,15 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink] -> m ())
 createMany = traverse_ create
+
+deleteBySearchRequestIdAndPartyType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Trip.TripParty -> m ())
+deleteBySearchRequestIdAndPartyType searchRequestId partyType = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId),
+          Se.Is Beam.partyType $ Se.Eq partyType
+        ]
+    ]
 
 findAllBySearchRequestId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

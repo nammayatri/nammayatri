@@ -16,6 +16,7 @@ import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
+import qualified Domain.Types.Trip as Trip
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
@@ -90,8 +91,22 @@ activeBookingCacheTtl bookingIds = do
       then defaultActiveBookingCacheTtl
       else max defaultActiveBookingCacheTtl (ceiling (T.diffUTCTime (maximum scheduledExpiries) now))
 
+-- | Book for others: the passenger's app finds the ride through the same ACBL cache as the
+-- booker's, so every add/remove for the booker is mirrored onto the linked passenger.
+-- Only 'Trip.RideParty Trip.Passenger' links count; delivery parties keep their own lookups.
+forBookedForPassenger :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> (Id Person -> m ()) -> m ()
+forBookedForPassenger personId rbId action =
+  QBPL.findOneActiveByBookingIdAndTripParty rbId (Trip.RideParty Trip.Passenger) >>= \case
+    Just link | link.partyId /= personId -> action link.partyId
+    _ -> pure ()
+
 addActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
 addActiveBookingAvailableInCache personId rbId = do
+  addToActiveBookingCache personId rbId
+  forBookedForPassenger personId rbId (`addToActiveBookingCache` rbId)
+
+addToActiveBookingCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
+addToActiveBookingCache personId rbId = do
   let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
   getActiveRideAvailableFromCacheKey personId >>= \case
     Just existingBookingIds ->
@@ -105,6 +120,11 @@ addActiveBookingAvailableInCache personId rbId = do
 
 removeActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
 removeActiveBookingAvailableInCache personId rbId = do
+  removeFromActiveBookingCache personId rbId
+  forBookedForPassenger personId rbId (`removeFromActiveBookingCache` rbId)
+
+removeFromActiveBookingCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
+removeFromActiveBookingCache personId rbId = do
   let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
   getActiveRideAvailableFromCacheKey personId >>= \case
     Just existingBookingIds -> do

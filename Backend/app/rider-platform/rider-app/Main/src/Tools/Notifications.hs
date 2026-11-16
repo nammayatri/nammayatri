@@ -1957,13 +1957,13 @@ notifyCancellationConsequence personId bookingId pnKey = do
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
-  case booking.tripCategory of
-    Just (Trip.Delivery _) -> do
-      allBookingParties <- QBPL.findAllActiveByBookingId booking.id
-      let allBookingPartyIds = filter (booking.riderId /=) $ map (.partyId) allBookingParties
-      allParty <- catMaybes <$> mapM Person.findById allBookingPartyIds
-      pure $ filter (isJust . (.deviceToken)) allParty
-    _ -> pure []
+  -- Delivery: sender/receiver. Any other ride: the passenger of a ride booked for someone else.
+  allBookingParties <- case booking.tripCategory of
+    Just (Trip.Delivery _) -> QBPL.findAllActiveByBookingId booking.id
+    _ -> maybeToList <$> QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.RideParty Trip.Passenger)
+  let allBookingPartyIds = filter (booking.riderId /=) $ map (.partyId) allBookingParties
+  allParty <- catMaybes <$> mapM Person.findById allBookingPartyIds
+  pure $ filter (isJust . (.deviceToken)) allParty
 
 mkSafetyNotificationKey :: T.Text -> Text
 mkSafetyNotificationKey code =

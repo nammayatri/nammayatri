@@ -87,6 +87,7 @@ triggerSubscriptionSearch subscription = do
             numberOfLuggages = Nothing,
             doMultimodalSearch = Just False,
             shouldCacheRoute = Nothing,
+            passengerDetails = Nothing,
             city = Nothing
           }
   merchantId <- subscription.merchantId & fromMaybeM (InternalError $ "no merchant id for subscription id :" <> subscription.id.getId)

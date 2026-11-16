@@ -77,6 +77,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
+import qualified SharedLogic.BookForOthers as SBFO
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.DriverNumber as SDN
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
@@ -144,12 +145,22 @@ initiateCallToDriver ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasKafkaProducer r
   ) =>
+  Id Person ->
   Id SRide.Ride ->
   m CallRes
-initiateCallToDriver rideId = do
+initiateCallToDriver requesterId rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  (customerPhone, providerPhone) <- getCustomerAndDriverPhones ride booking
+  -- Book for others: when the passenger calls from their own app, bridge their number, not the booker's.
+  caller <-
+    if requesterId == booking.riderId
+      then getPerson booking
+      else
+        SBFO.findPassengerPerson booking.id >>= \case
+          Just (_, passenger) | passenger.id == requesterId -> pure passenger
+          _ -> getPerson booking
+  customerPhone <- getPersonPhone caller
+  providerPhone <- SDN.getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
   callStatusId <- generateGUID
   let callReq =
         Call.InitiateCallReq
@@ -351,7 +362,9 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             isValueAddNP <- CQVAN.isValueAddNP booking.providerId
             when isValueAddNP $
               throwCallError id (PersonWithPhoneNotFound callFrom) (Just exophone.merchantId.getId) (Just exophone.callService)
-            rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+            -- Book for others: the driver is connected to the passenger, not the booker.
+            mbPassenger <- SBFO.findPassengerPerson booking.id
+            rider <- maybe (runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)) (pure . snd) mbPassenger
             decRider <- decrypt rider
             riderMobileNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
             return (riderMobileNumber, ride, "DRIVER", Nothing)
@@ -452,14 +465,6 @@ getPersonPhone Person {..} = do
   decMobNum <- mapM decrypt mobileNumber
   let phonenum = (<>) <$> mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
-
--- | Returns phones pair
-getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SRide.Ride -> BT.Booking -> m (Text, Text)
-getCustomerAndDriverPhones ride booking = do
-  person <- getPerson booking
-  customerPhone <- getPersonPhone person
-  driverPhone <- SDN.getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
-  return (customerPhone, driverPhone)
 
 throwCallError ::
   ( HasCallStack,

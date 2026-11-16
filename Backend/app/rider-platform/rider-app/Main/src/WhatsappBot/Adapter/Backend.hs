@@ -295,7 +295,8 @@ mkBackendHandle merchantId mocId _ctx =
           verifyBeforeCancellingOldBooking = Nothing,
           numberOfLuggages = Nothing,
           doMultimodalSearch = Nothing,
-          shouldCacheRoute = Nothing
+          shouldCacheRoute = Nothing,
+          passengerDetails = Nothing
         }
 
     -- Flexi's search request since the EasyBooking swap (see searchFlexi
@@ -331,6 +332,8 @@ mkBackendHandle merchantId mocId _ctx =
           otherSelectedEstimates = Just [],
           isAdvancedBookingEnabled = Nothing,
           deliveryDetails = Nothing,
+          passengerDetails = Nothing,
+          removePassenger = Nothing,
           disabilityDisable = Just True,
           billingCategory = Nothing,
           preferSafetyPlus = Nothing,

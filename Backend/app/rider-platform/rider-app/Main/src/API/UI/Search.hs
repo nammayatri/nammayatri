@@ -48,6 +48,7 @@ import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import qualified Domain.Action.UI.BookForOthers as DBookForOthers
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
 import qualified Domain.Action.UI.Quote as DQuote
@@ -311,7 +312,12 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
             _ -> pure ()
     -- TODO : remove this code after multiple search req issue get fixed from frontend
     --END
+    -- Book for others: validate the passenger before searching so a bad number fails fast.
+    mbPassenger <- forM (DSearch.getPassengerDetails req) $ \passengerDetails -> do
+      booker <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      DBookForOthers.resolvePassenger booker passengerDetails
     dSearchRes <- withTimeAPI "rideSearch" "domainSearch" $ DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch mbIsWhatsappRequest
+    whenJust mbPassenger $ DBookForOthers.setSearchPassenger dSearchRes.searchRequest.id
     dispatchRes <- withTimeAPI "rideSearch" "dispatchSearchToBpp" $ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
     fork "Multimodal Search" $ do
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)

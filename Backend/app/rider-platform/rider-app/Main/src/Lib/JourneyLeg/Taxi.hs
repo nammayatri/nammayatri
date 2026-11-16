@@ -108,6 +108,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 numberOfLuggages = Nothing,
                 doMultimodalSearch = Just True,
                 shouldCacheRoute = Nothing,
+                passengerDetails = Nothing,
                 city = Nothing,
                 ..
               }
@@ -141,6 +142,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     otherSelectedEstimates = Nothing,
                     isAdvancedBookingEnabled = Nothing,
                     deliveryDetails = Nothing,
+                    passengerDetails = Nothing,
+                    removePassenger = Nothing,
                     disabilityDisable = Nothing,
                     billingCategory = Nothing,
                     preferSafetyPlus = Nothing,

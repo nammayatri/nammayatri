@@ -168,6 +168,7 @@ transformToSearchReq req subscriptionId =
             numberOfLuggages = Nothing, -- Not applicable for NY Regular as of now
             doMultimodalSearch = Just False,
             shouldCacheRoute = Nothing,
+            passengerDetails = Nothing,
             city = Nothing
           }
 

@@ -34,6 +34,7 @@ import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HMS
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.BookForOthers as DBookForOthers
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
@@ -52,6 +53,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.PassengerDetails as DPD
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RiderConfig as DRC
@@ -157,7 +159,11 @@ data DSelectReq = DSelectReq
     -- selecting. Ignored for an ordinary estimate, whose locations the customer named
     -- themselves when they searched. See 'updateSuggestedLocationAddresses'.
     suggestedPickupAddress :: Maybe LocationAddress,
-    suggestedDropAddress :: Maybe LocationAddress
+    suggestedDropAddress :: Maybe LocationAddress,
+    -- | Book for others: changes the passenger chosen at search time.
+    passengerDetails :: Maybe DPD.PassengerDetails,
+    -- | Book for others: switch back to booking for oneself.
+    removePassenger :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -342,6 +348,10 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
     QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
     QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
     QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
+  if removePassenger == Just True
+    then DBookForOthers.clearSearchPassenger searchRequestId
+    else whenJust passengerDetails $ \passenger ->
+      DBookForOthers.resolvePassenger person passenger >>= DBookForOthers.setSearchPassenger searchRequestId
   QP.updateLastUsedVehicleServiceTiersAndCategories lastUsedVehicleServiceTiers lastUsedVehicleCategories personId
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory, searchRequestId = Just searchRequest.id}

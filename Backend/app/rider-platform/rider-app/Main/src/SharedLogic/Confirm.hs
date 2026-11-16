@@ -39,6 +39,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
@@ -58,6 +59,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.BookForOthers as SBFO
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
@@ -301,16 +303,21 @@ confirm DConfirmReq {..} = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let isDashboardRequest = searchRequest.isDashboardRequest == Just True
       dashboardPlaceholderPhone = "1111111111"
+  -- Book for others: the driver gets the passenger's name (and number, for value-add NPs).
+  mbPassenger <- case find (\party -> party.partyType == SBFO.passengerPartyType) bookingParties of
+    Just link -> fmap (link,) <$> QPerson.findById link.partyId
+    Nothing -> pure Nothing
+  let riderPerson = maybe person snd mbPassenger
   riderPhone <-
     if isValueAddNP
       then do
-        mbDecrypted <- mapM decrypt person.mobileNumber
+        mbDecrypted <- mapM decrypt riderPerson.mobileNumber
         pure $ case mbDecrypted of
           Just _ -> mbDecrypted
           Nothing | isDashboardRequest -> Just dashboardPlaceholderPhone
           Nothing -> Nothing
       else pure . Just $ prependZero booking.primaryExophone
-  let riderName = person.firstName
+  let riderName = maybe person.firstName (Just . (.partyName) . fst) mbPassenger
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   whenJust mbBookingOfferEntity $ \bookingOfferEntity -> do
     QOfferEntity.create bookingOfferEntity
@@ -417,7 +424,9 @@ confirm DConfirmReq {..} = do
       toLocation <- case booking.bookingDetails of
         DRB.DeliveryDetails details -> return details.toLocation
         _ -> throwError (InternalError $ "DeliveryBookingDetails not found for booking" <> booking.id.getId)
-      (Trip.DeliveryParty initiatedBy) <- booking.initiatedBy & fromMaybeM (InternalError $ "BookingInitiatedBy not found for booking" <> booking.id.getId)
+      initiatedBy <- case booking.initiatedBy of
+        Just (Trip.DeliveryParty party) -> pure party
+        _ -> throwError (InternalError $ "Delivery BookingInitiatedBy not found for booking" <> booking.id.getId)
       let (parcelType, parcelQuantity) = case booking.bookingDetails of
             DRB.DeliveryDetails details -> (Just details.parcelType, details.parcelQuantity)
             _ -> (Nothing, Nothing)
@@ -605,7 +614,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   where
     buildPartiesLinks bookingId = case quote.quoteDetails of
       DQuote.DeliveryDetails _ -> makeDeliveryParties bookingId
-      _ -> pure []
+      _ -> makePassengerParties bookingId
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails Nothing
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
@@ -650,10 +659,20 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
       pure DRB.DeliveryBookingDetails {..}
     buildMeterRideDetails = pure DRB.MeterRideBookingDetails {toLocation = Nothing, distanceCovered = Nothing}
 
+    -- Book for others: the passenger chosen at search/select travels from the search to the booking.
+    makePassengerParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
+    makePassengerParties bookingId = do
+      allSearchReqParties <- QSRPL.findAllBySearchRequestId searchRequest.id
+      toBookingParties bookingId $ filter (\party -> party.partyType == SBFO.passengerPartyType) allSearchReqParties
+
     makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
     makeDeliveryParties bookingId = do
       allSearchReqParties <- QSRPL.findAllBySearchRequestId searchRequest.id
       when (length allSearchReqParties < 2) $ throwError $ InternalError "No parties found for search request delivery"
+      toBookingParties bookingId allSearchReqParties
+
+    toBookingParties :: MonadFlow m => Text -> [DSRPL.SearchRequestPartiesLink] -> m [DBPL.BookingPartiesLink]
+    toBookingParties bookingId =
       mapM
         ( \party -> do
             bookingPartyId <- generateGUID
@@ -669,7 +688,6 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
                   updatedAt = now
                 }
         )
-        allSearchReqParties
 
     isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m (Bool, Maybe Text, Maybe Text)
     isBookingInsured = do
