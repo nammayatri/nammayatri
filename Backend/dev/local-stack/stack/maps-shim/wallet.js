@@ -235,6 +235,25 @@ async function chargilyStatus(checkoutId) {
 }
 
 /**
+ * Whether a driver may work right now, and the numbers that decide it.
+ *
+ * `canWork` is the same expression dispatch uses (restricted.js), computed in
+ * ONE place: the wallet screen below and the virtual passenger
+ * (virtual-rider.js, which will not book a ride for a driver dispatch would
+ * skip) both read it here, so neither can tell a different story.
+ */
+async function workState(pool, driverId) {
+  const cfg = await countryOf(pool, driverId);
+  const w = await walletOf(pool, driverId);
+  const dayUntil = w.day_until ? new Date(w.day_until) : null;
+  const dayActive = !!dayUntil && dayUntil.getTime() > Date.now();
+  /* Deliberately not `balance >= price` alone: an active day is worth as
+     much as the credit to buy one, and a driver mid-day with an empty
+     wallet is still working. */
+  return { cfg, w, dayUntil, dayActive, canWork: dayActive || w.balance >= cfg.price };
+}
+
+/**
  * What the driver sees.
  *
  * `canWork` is the same expression dispatch uses, computed in one place so the
@@ -247,10 +266,7 @@ async function status(pool, token, res) {
   if (!driver) return send(res, 401, { error: 'unauthorized' });
 
   try {
-    const cfg = await countryOf(pool, driver.id);
-    const w = await walletOf(pool, driver.id);
-    const dayUntil = w.day_until ? new Date(w.day_until) : null;
-    const dayActive = !!dayUntil && dayUntil.getTime() > Date.now();
+    const { cfg, w, dayUntil, dayActive, canWork } = await workState(pool, driver.id);
 
     send(res, 200, {
       balance: w.balance,
@@ -263,10 +279,7 @@ async function status(pool, token, res) {
       gateway: cfg.gateway,
       dayUntil: dayActive ? dayUntil.toISOString() : null,
       dayActive,
-      /* Deliberately not `balance >= price` alone: an active day is worth as
-         much as the credit to buy one, and a driver mid-day with an empty
-         wallet is still working. */
-      canWork: dayActive || w.balance >= cfg.price,
+      canWork,
       configured: configuredFor(cfg),
     });
   } catch (e) {
@@ -767,6 +780,6 @@ const configured = () => Boolean(SECRET && PUBLIC_URL);
 const gateways = () => ({ MR: configuredFor(COUNTRIES.MR), DZ: configuredFor(COUNTRIES.DZ) });
 
 module.exports = {
-  status, topup, topupState, webhook, history, done,
+  status, workState, topup, topupState, webhook, history, done,
   chargeStartedRides, configured, gateways, PRICE, MIN_TOPUP, CURRENCY, DAY_HOURS, COUNTRIES,
 };

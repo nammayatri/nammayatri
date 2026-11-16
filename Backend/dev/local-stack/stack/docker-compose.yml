@@ -413,6 +413,11 @@ services:
       WALLET_MIN_TOPUP: "${WALLET_MIN_TOPUP:-60}"
       WALLET_MIN_TOPUP_DZ: "${WALLET_MIN_TOPUP_DZ:-200}"
       WALLET_DAY_HOURS: "${WALLET_DAY_HOURS:-24}"
+      # The virtual passenger (maps-shim/virtual-rider.js, 2026-11-16): a test
+      # tool that books real rides for a real driver. OFF unless the server's
+      # .env says VIRTUAL_RIDER=on; launch-gate.sh refuses the launch while it
+      # is on. Nothing else reads it.
+      VIRTUAL_RIDER: "${VIRTUAL_RIDER:-off}"
     # The payment key, and only that. `required: false` so a checkout without
     # the secret still starts -- it reports itself unconfigured, which is the
     # honest failure; a missing file would otherwise stop the whole stack.
