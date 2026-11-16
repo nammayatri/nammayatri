@@ -2312,7 +2312,8 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                     vehicleTagNumber = mbVehicleTagNumber,
                     vehicleVariant = mbVehicleVariant,
                     availableSeats = Nothing,
-                    seatSelectionType = seatSelType
+                    seatSelectionType = seatSelType,
+                    vehicleTags = JMRouteServiceability.riderVehicleTagsOf (snd <$> mbVehicleMetadata)
                   }
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists

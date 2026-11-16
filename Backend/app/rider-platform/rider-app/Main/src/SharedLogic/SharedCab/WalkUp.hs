@@ -354,7 +354,8 @@ cabVehicle now cfg namedByPlate mbBoardStop (freeSeats, ridersOnBoard) s = \case
           position = (.position) <$> mbTrack,
           serviceSubTypes = Nothing,
           availableSeats = Just freeSeats,
-          seatSelectionType = Nothing
+          seatSelectionType = Nothing,
+          vehicleTags = []
         }
   where
     shownPlate = if namedByPlate then s.vehicleNumber else T.takeEnd 4 s.vehicleNumber

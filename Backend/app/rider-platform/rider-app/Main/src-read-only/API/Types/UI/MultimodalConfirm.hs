@@ -430,6 +430,7 @@ data ScheduledVehicleInfo = ScheduledVehicleInfo
     tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleTags :: [Kernel.Prelude.Text],
     vehicleVariant :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.BusVehicleVariant
   }
   deriving stock (Generic)

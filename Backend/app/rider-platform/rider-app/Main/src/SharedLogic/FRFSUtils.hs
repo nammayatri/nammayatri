@@ -548,6 +548,10 @@ selectStageFaresForRoute mbRouteTag stageFares =
     pickForTier (_vehicleServiceTierId, tierStageFares) =
       find matchesRouteTag tierStageFares <|> find (isNothing . normalizedRouteTagOf . (.routeTag)) tierStageFares
 
+-- SHOW_* vehicle tags are shown to riders (SHOW_EXPRESS is sent as EXPRESS); other tags are not.
+riderVehicleTags :: [Text] -> [Text]
+riderVehicleTags = mapMaybe (mfilter (not . T.null) . T.stripPrefix "SHOW_" . T.toUpper . T.strip)
+
 stageFareFallbackLogTtlSec :: Int
 stageFareFallbackLogTtlSec = 600
 

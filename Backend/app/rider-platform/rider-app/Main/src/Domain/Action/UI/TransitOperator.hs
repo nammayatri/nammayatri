@@ -393,12 +393,13 @@ transitOperatorDeleteVehicleUtil merchantShortId city vehicleCategory vehicleId 
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDeleteVehicle baseUrl gtfsId vehicleId'
 
-transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
-transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo = do
+transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
+transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo vehicleTag = do
   let vehicleNo' = nonBlankText vehicleNo
       tagNumber' = nonBlankText tagNumber
       fleetNo' = nonBlankText fleetNo
-  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo') $
-    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
+      vehicleTag' = nonBlankText vehicleTag
+  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo' && isNothing vehicleTag') $
+    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo, vehicleTag is required"
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'
+  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo' vehicleTag'
