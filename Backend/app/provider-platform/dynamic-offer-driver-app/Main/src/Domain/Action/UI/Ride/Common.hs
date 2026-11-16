@@ -25,8 +25,9 @@ module Domain.Action.UI.Ride.Common
   )
 where
 
-import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponent (..), FareUIComponentType (..), FareUISection (..), FareUISubItem (..))
+import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponent (..), FareUIComponentType (..), FareUISection (..), FareUISubItem (..), computeFareBreakupLines)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import Control.Applicative ((<|>))
 import Control.Monad (mfilter)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
@@ -36,7 +37,8 @@ import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (catMaybes, fromMaybe, isJust, listToMaybe, mapMaybe)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
@@ -50,13 +52,14 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.TransporterConfig (FareBreakupNode)
 import qualified Domain.Types.FareParameters as DFareParams
-import Domain.Types.FarePolicy (FareChargeComponent (PaymentChargePaidByCustomerComponent))
+import Domain.Types.FarePolicy (FareChargeComponent (CustomerCancellationChargeComponent, PaymentChargePaidByCustomerComponent))
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
@@ -88,6 +91,8 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Numeric
+import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.FareBreakup as SFB
 import SharedLogic.FareCalculator (fareSum)
 import qualified SharedLogic.FarePolicy as SFP
@@ -294,7 +299,8 @@ data FareUIComponentRaw = FareUIComponentRaw
   { title :: Text,
     price :: PriceAPIEntity,
     uiTranslation :: Maybe UiTranslationRaw,
-    section :: FareUISection
+    section :: FareUISection,
+    _type :: Maybe FareUIComponentType
   }
   deriving stock (Show, Generic)
   deriving anyclass (FromJSON)
@@ -314,17 +320,19 @@ buildRideEarnings ::
   DRide.Ride ->
   DFareParams.FareParameters ->
   Maybe DFareParams.FareParameters ->
+  Maybe DCDD.CancellationDuesDetails ->
   Bool ->
   Bool ->
   Maybe [FareBreakupNode] ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam customerBearsCharge driverBearsCharge mbFarePaidSubItemsConfig = do
-  let fare = fromMaybe booking.estimatedFare ride.fare
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbCancellationDues customerBearsCharge driverBearsCharge mbFarePaidSubItemsConfig = do
+  let paymentChargeGross = maybe (fromMaybe 0 ride.paymentCharge) (\dues -> fromMaybe 0 dues.paymentCharge + Tax.taxTotal dues.paymentChargeTaxBreakup) mbCancellationDues
+      customerPaymentCharge = if customerBearsCharge then paymentChargeGross else 0
+      fare = maybe (fromMaybe booking.estimatedFare ride.fare) (\dues -> dues.cancellationAmount + customerPaymentCharge) mbCancellationDues
       discount = fromMaybe 0 ride.discountAmount
-      commission = fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission
+      commission = maybe (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission) (fromMaybe 0 . (.cancellationCommission)) mbCancellationDues
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
-      paymentChargeGross = fromMaybe 0 ride.paymentCharge
       amountPaidByCustomer = case mbFarePaidSubItemsConfig of
         Just _ -> fare - discount
         -- NOTE: This Nothing case can be removed once all cities have the fare breakup config, post UI release.
@@ -343,7 +351,10 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam cus
       tollAmount =
         fromMaybe 0 (fromMaybe estimatedFareParam finalFareParam).tollCharges
       chargedFareParams = fromMaybe estimatedFareParam finalFareParam
-      taxDeduction = if fromMaybe False chargedFareParams.isVatTaxType then 0 else sum (map (fromMaybe 0) [chargedFareParams.govtCharges, chargedFareParams.tollFareTax, chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax])
+      taxDeduction
+        | fromMaybe False chargedFareParams.isVatTaxType = 0
+        | Just dues <- mbCancellationDues = fromMaybe 0 dues.cancellationFeeTax
+        | otherwise = sum (map (fromMaybe 0) [chargedFareParams.govtCharges, chargedFareParams.tollFareTax, chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax])
   let mkComp key componentType mbLabel value rowSubItems =
         if value > 0
           then
@@ -362,12 +373,21 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam cus
         kids <- mapM mkConfiguredSubItem line.subItems
         let lineType = if line.amount < 0 then Deduction else Earning
         pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
-      customerPaymentCharge = if customerBearsCharge then paymentChargeGross else 0
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
   taxLabel <- resolveLabel lang "TAX"
-  farePaidSubItems <-
+  farePaidComponentSubItems <-
     mapM mkConfiguredSubItem $
-      SFB.computeFareBreakup cur (fromMaybe [] mbFarePaidSubItemsConfig) (fromMaybe estimatedFareParam finalFareParam) [(PaymentChargePaidByCustomerComponent, customerPaymentCharge)]
+      case mbCancellationDues of
+        Just dues -> computeFareBreakupLines cur (fromMaybe [] mbFarePaidSubItemsConfig) (Map.fromList [(CustomerCancellationChargeComponent, dues.cancellationAmount), (PaymentChargePaidByCustomerComponent, customerPaymentCharge)])
+        Nothing -> SFB.computeFareBreakup cur (fromMaybe [] mbFarePaidSubItemsConfig) (fromMaybe estimatedFareParam finalFareParam)
+  buyerDiscountLabel <- resolveLabel lang "BUYER_DISCOUNT"
+  let farePaidSubItems =
+        farePaidComponentSubItems
+          <> [ FareUISubItem {title = "BUYER_DISCOUNT", price = PriceAPIEntity (roundAmountByCurrency' cur discount) cur, uiTranslation = buyerDiscountLabel <|> lblDiscount, _type = Deduction, subItems = []}
+               | isJust mbFarePaidSubItemsConfig,
+                 isNothing mbCancellationDues,
+                 discount > 0
+             ]
   let fareBreakupItems =
         catMaybes $
           [ mkComp "FARE_PAID_BY_CUSTOMER" Earning lblAmountPaid amountPaidByCustomer farePaidSubItems,
@@ -453,7 +473,7 @@ resolveRawComponent txMap raw =
                 price = raw.price,
                 uiTranslation = ui,
                 section = raw.section,
-                _type = Earning,
+                _type = fromMaybe Info raw._type,
                 subItems = []
               }
 
@@ -473,7 +493,7 @@ valueToText = \case
   A.String s -> s
   A.Number n -> case Sci.floatingOrInteger n of
     Right (i :: Integer) -> T.pack (show i)
-    Left (d :: Double) -> T.pack (show d)
+    Left (d :: Double) -> T.pack (Numeric.showFFloat (Just 2) d "")
   A.Bool b -> if b then "true" else "false"
   A.Null -> ""
   other -> TE.decodeUtf8 . LBS.toStrict $ A.encode other
@@ -584,6 +604,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then QCDD.findByRideId ride.id else pure Nothing
   let cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
       penalityChargeNet = netTaxInclusive Nothing taxRegime ride.cancellationFeeTaxIfCancelled Nothing <$> ride.cancellationFeeIfCancelled
+      isCancelled = ride.status == DRide.CANCELLED
+      cancelledRideAmount = max 0 (fromMaybe 0 cancellationCompensationNet)
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -637,28 +659,32 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   let offer = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
       mbAmountToCollectInCash =
-        case (booking.fareSettlementType, ride.fare) of
-          (Just SL.FullPayment, _) -> Nothing
-          (Just SL.ParkingOnly, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
-          (Just SL.ParkingOnly, Nothing) -> Nothing
-          (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
-          (Just _, Nothing) -> Nothing
-          (Nothing, _) ->
-            case (booking.paymentInstrument, ride.fare) of
-              (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
-              _ -> Nothing
+        if isCancelled
+          then Just 0
+          else case (booking.fareSettlementType, ride.fare) of
+            (Just SL.FullPayment, _) -> Nothing
+            (Just SL.ParkingOnly, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+            (Just SL.ParkingOnly, Nothing) -> Nothing
+            (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+            (Just _, Nothing) -> Nothing
+            (Nothing, _) ->
+              case (booking.paymentInstrument, ride.fare) of
+                (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+                _ -> Nothing
       mbAmountToBeSettledOnline =
-        case booking.fareSettlementType of
-          Just SL.FullPayment -> computedFareNet
-          Just _ -> Nothing
-          Nothing ->
-            case booking.paymentInstrument of
-              Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
-              _ -> computedFareNet
+        if isCancelled
+          then Just cancelledRideAmount
+          else case booking.fareSettlementType of
+            Just SL.FullPayment -> computedFareNet
+            Just _ -> Nothing
+            Nothing ->
+              case booking.paymentInstrument of
+                Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
+                _ -> computedFareNet
 
   mbRideEarningsVal <- case mbEarningsLabels of
     Just earningsLabels -> do
-      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig))
+      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig))
     Nothing -> pure Nothing
 
   return $

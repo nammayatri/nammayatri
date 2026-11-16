@@ -297,12 +297,17 @@ walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndiv
           -- Bucketing cutoff comes from the kernel's breakdown, never recomputed here;
           -- no cutoff policy -> 'now' (everything counts as redeemable).
           cutoff = fromMaybe now eligibility.cutoffAt
-          (additions, deductions, netEarningsBalance) =
+          (rawAdditions, rawDeductions, _) =
             aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
           redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
-          agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
           rounded = roundAmountByCurrency' transporterConfig.currency
+          roundedItems = map (\item -> item {DriverWallet.itemValue = rounded item.itemValue, DriverWallet.redeemableBalance = rounded item.itemValue - rounded item.nonRedeemableBalance, DriverWallet.nonRedeemableBalance = rounded item.nonRedeemableBalance} :: DriverWallet.WalletItem)
+          additions = rawAdditions {DriverWallet.items = roundedItems rawAdditions.items, DriverWallet.totalAmount = sum (map (rounded . (.itemValue)) rawAdditions.items)} :: DriverWallet.WalletItemGroup
+          deductions = rawDeductions {DriverWallet.items = roundedItems rawDeductions.items, DriverWallet.totalAmount = sum (map (rounded . (.itemValue)) rawDeductions.items)} :: DriverWallet.WalletItemGroup
+          netEarningsBalance = additions.totalAmount - deductions.totalAmount
+          agg = map (\bucket -> bucket {DriverWallet.earnings = rounded bucket.earnings, DriverWallet.deductions = rounded bucket.deductions, DriverWallet.netEarnings = rounded bucket.earnings - rounded bucket.deductions} :: DriverWallet.WalletAggregateBucket) (bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows)
+          payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig redeemableBalance
       pure $
         DriverWallet.WalletSummaryResponse
           { currentBalance = rounded currentBalance,
@@ -310,8 +315,8 @@ walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndiv
             nonRedeemableBalance = rounded eligibility.nonRedeemableBalance,
             processingPayoutBalance = rounded eligibility.processingPayoutBalance,
             holdBalance = Just (rounded holdBalance),
-            netEarningsBalance = rounded netEarningsBalance,
-            payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig redeemableBalance,
+            netEarningsBalance,
+            payoutConfig = payoutConfig {DriverWallet.minimumPayoutAmount = rounded payoutConfig.minimumPayoutAmount, DriverWallet.payoutFee = rounded payoutConfig.payoutFee},
             additions,
             deductions,
             agg

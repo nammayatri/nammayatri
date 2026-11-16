@@ -57,7 +57,7 @@ data FareUISection
   deriving stock (Show, Eq, Ord, Generic, Enum, Bounded)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-data FareUIComponentType = Earning | Deduction
+data FareUIComponentType = Earning | Deduction | Info
   deriving stock (Show, Eq, Ord, Generic, Enum, Bounded)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

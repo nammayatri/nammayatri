@@ -159,7 +159,7 @@ mkItemTags res =
             Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds))
           ]
             <> PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails
-            <> [Tags.DISCOUNT_AMOUNT Tags.~=? (show <$> res.offerDiscountAmount)]
+            <> [Tags.DISCOUNT_AMOUNT Tags.~=? (highPrecMoneyToText <$> res.offerDiscountAmount)]
       deliveryTags = mkSelectResDetailsTagGroup res
    in fromMaybe [] baseTags <> deliveryTags
 

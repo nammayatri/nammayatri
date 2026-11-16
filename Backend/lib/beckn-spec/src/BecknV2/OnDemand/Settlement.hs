@@ -6,8 +6,6 @@ module BecknV2.OnDemand.Settlement
     riderGross,
     GrossMultiplier (..),
     grossMultipliers,
-    PlatformDeductions (..),
-    platformDeductionsAtPayment,
     SettlementTags (..),
     settlementTagGroups,
     settlementFromTags,
@@ -68,19 +66,6 @@ grossMultipliers mbConfig rates =
     paymentChargeRate = case mbConfig of
       Just config | config.bearer == PAYMENT_CUSTOMER && config.chargeType == PERCENTAGE -> config.chargeValue / 100 * (1 + Tax.taxRateOf config.chargeTax)
       _ -> 0
-
-data PlatformDeductions = PlatformDeductions
-  { commissionDeductedAtPayment :: Bool,
-    paymentChargeDeductedAtPayment :: Bool
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-platformDeductionsAtPayment :: Bool -> Maybe PaymentChargeDetails -> PlatformDeductions
-platformDeductionsAtPayment isOnline mbDetails =
-  PlatformDeductions
-    { commissionDeductedAtPayment = isOnline,
-      paymentChargeDeductedAtPayment = isOnline && maybe False ((/= PAYMENT_PLATFORM) . (.bearer)) mbDetails
-    }
 
 data SettlementTags = SettlementTags
   { commission :: Maybe HighPrecMoney,

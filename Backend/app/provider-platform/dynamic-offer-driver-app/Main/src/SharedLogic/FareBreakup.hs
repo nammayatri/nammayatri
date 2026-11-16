@@ -14,9 +14,9 @@ import Kernel.Types.Common (Currency, HighPrecMoney)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator (buildComponentMap)
 
-computeFareBreakup :: Currency -> [FareBreakupNode] -> FareParameters -> [(FareChargeComponent, HighPrecMoney)] -> [FareBreakupLine]
-computeFareBreakup currency configuredSubItems fareParams extraTagAmounts =
-  computeFareBreakupLines currency configuredSubItems (Map.union (Map.fromList extraTagAmounts) (breakupComponentAmounts fareParams))
+computeFareBreakup :: Currency -> [FareBreakupNode] -> FareParameters -> [FareBreakupLine]
+computeFareBreakup currency configuredSubItems fareParams =
+  computeFareBreakupLines currency configuredSubItems (breakupComponentAmounts fareParams)
 
 breakupComponentAmounts :: FareParameters -> Map.Map FareChargeComponent HighPrecMoney
 breakupComponentAmounts fareParams =

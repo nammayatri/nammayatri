@@ -25,6 +25,8 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types
+import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FareBreakupInfo as DFBI
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
@@ -36,6 +38,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.Type (BillingCategory)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
@@ -205,6 +208,7 @@ processAssignment req = do
         -- let quote = quote' {DQuote.selectedOfferId = Nothing}
         triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
         QQuote.createMany [quote]
+        unless (null quoteFareBreakupItems) $ SFareBreakupInfo.upsertFareBreakupInfo quote.id.getId DFareBreakup.QUOTE quoteFareBreakupItems (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
         dConfirmRes <-
           SConfirm.confirm
             SConfirm.DConfirmReq
@@ -283,8 +287,10 @@ processAssignment req = do
           quoteValidTill = req.quoteValidTill,
           billingCategory = req.billingCategory,
           tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) estimate.tripCategory,
-          quoteBreakupList = mkQuoteBreakupInfo <$> req.fareBreakups
+          quoteBreakupList = mkQuoteBreakupInfo <$> req.fareBreakups,
+          fareBreakups = quoteFareBreakupItems
         }
+    quoteFareBreakupItems = (\item -> DFBI.FareBreakupInfoItem {DFBI.description = item.title, DFBI.amount = item.amount, DFBI.currency = req.currency}) <$> req.fareBreakups
     mkQuoteBreakupInfo item =
       DOnSearch.QuoteBreakupInfo
         { title = item.title,

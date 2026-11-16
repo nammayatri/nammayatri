@@ -140,7 +140,7 @@ mkQuoteBreakupFromQuote isValueAddNP quote = do
       Just
         emptyPrice
           { Spec.priceCurrency = Just $ show quote.currency,
-            Spec.priceValue = Just $ encodeToText money
+            Spec.priceValue = Just $ highPrecMoneyToText money
           }
     mkQuotationBreakupInner title price =
       Spec.QuotationBreakupInner

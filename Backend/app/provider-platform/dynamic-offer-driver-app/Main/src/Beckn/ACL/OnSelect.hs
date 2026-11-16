@@ -180,7 +180,7 @@ mkQuoteBreakupInner isValueAddNP quote = do
       Just
         emptyPrice
           { Spec.priceCurrency = Just $ show quote.currency,
-            Spec.priceValue = Just $ encodeToText money
+            Spec.priceValue = Just $ highPrecMoneyToText money
           }
     mkQuotationBreakupInner title price =
       Spec.QuotationBreakupInner
@@ -193,8 +193,8 @@ mkQuotationPrice quote =
   Just
     emptyPrice
       { Spec.priceCurrency = Just $ show quote.currency,
-        Spec.priceOfferedValue = Just $ encodeToText quote.estimatedFare,
-        Spec.priceValue = Just $ encodeToText quote.estimatedFare
+        Spec.priceOfferedValue = Just $ highPrecMoneyToText quote.estimatedFare,
+        Spec.priceValue = Just $ highPrecMoneyToText quote.estimatedFare
       }
 
 mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider

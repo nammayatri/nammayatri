@@ -39,7 +39,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
 where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
-import qualified BecknV2.OnDemand.Settlement as Settlement
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
@@ -910,7 +909,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
       let commissionRef = walletReferenceCommission
           commissionVatRef = walletReferenceCommissionTax taxRegime
-          shouldReverseCommissionWalletDebit = (Settlement.platformDeductionsAtPayment isOnline booking.paymentChargeDetails).commissionDeductedAtPayment || commissionAlreadyCollectedAtBooth
           commissionInvoiceConfig =
             InvoiceConfig
               { invoiceType = BeckInvoice.Commission,
@@ -947,9 +945,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef Nothing
         void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission Nothing
         void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat (walletReferenceCancellationCommissionTax taxRegime) Nothing
-        -- One reversal of everything the commission legs posted (ride and cancellation commission, with VAT):
-        -- one leg, so the wallet shows one row and the ledger never holds the same leg twice.
-        when shouldReverseCommissionWalletDebit $
+        when commissionAlreadyCollectedAtBooth $
           void $ transfer SellerRevenue OwnerLiability (commissionBaseAmount + commissionVatAmount + cancellationCommissionBase + cancellationCommissionVat) walletReferenceDeductedAtPaymentByPlatform Nothing
         if isJust existingCommissionInvoice then pure Nothing else invoice commissionInvoiceConfig
       case commissionResult of
@@ -980,8 +976,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 postChargePaidByCustomer paymentChargeVatAmt (walletReferencePaymentChargeTaxPaidByCustomer taxRegime)
             void $ transfer OwnerLiability SellerLiability paymentChargeAmt walletReferencePGPaymentCharges Nothing
             void $ transfer OwnerLiability SellerLiability paymentChargeVatAmt paymentChargeTaxRef Nothing
-            when (Settlement.platformDeductionsAtPayment isOnline booking.paymentChargeDetails).paymentChargeDeductedAtPayment $
-              void $ transfer SellerLiability OwnerLiability (paymentChargeAmt + paymentChargeVatAmt) walletReferenceDeductedAtPaymentByPlatform Nothing
           case paymentChargeResult of
             Left err -> fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e)) (Left err)
             Right _ -> pure ()
