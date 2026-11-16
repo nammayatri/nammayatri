@@ -383,9 +383,9 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
           ("commissionTaxRate", rateOf commissionTax)
         ]
       fillTaxRates label = foldr (\(name, mbRate) acc -> maybe acc (\rate -> T.replace ("{#" <> name <> "#}") rate acc) mbRate) label placeholderRates
-      vatInclusiveLabel key fallback mbCfg =
-        if isJust (rateOf (mfilter ((== Tax.VAT) . Tax.chargeRegime) mbCfg))
-          then (<|> fallback) <$> resolveLabel lang (key <> "_INCL_VAT")
+      taxInclusiveLabel key fallback mbCfg =
+        if isJust (rateOf mbCfg)
+          then (<|> fallback) <$> resolveLabel lang (key <> "_INCL_TAX")
           else pure fallback
       mkConfiguredSubItem line = do
         label <- fmap fillTaxRates <$> resolveLabel lang line.key
@@ -394,8 +394,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
         pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
   taxLabel <- resolveLabel lang "TAX"
-  commissionLabel <- vatInclusiveLabel "COMMISSION" lblCommission commissionTax
-  paymentChargeLabel <- vatInclusiveLabel "PAYMENT_CHARGE" lblPaymentCharge paymentChargeTax
+  commissionLabel <- taxInclusiveLabel "COMMISSION" lblCommission commissionTax
+  paymentChargeLabel <- taxInclusiveLabel "PAYMENT_CHARGE" lblPaymentCharge paymentChargeTax
   farePaidComponentSubItems <-
     mapM mkConfiguredSubItem $
       case mbCancellationDues of
@@ -630,7 +630,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
   mbFullFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-  let mbDriverTaxRates = (\tc -> driverTaxRates tc (mbFullFarePolicy >>= (.rideTaxConfig)) (mbFullFarePolicy >>= (.tollTaxConfig)) (mbFullFarePolicy >>= (.parkingTaxConfig)) (mbFullFarePolicy >>= (.commissionTaxConfig)) booking.paymentChargeDetails) <$> mbTransporterConfig
+  let mbDriverTaxRates = booking.taxRates <|> ((\tc -> driverTaxRates tc (mbFullFarePolicy >>= (.rideTaxConfig)) (mbFullFarePolicy >>= (.tollTaxConfig)) (mbFullFarePolicy >>= (.parkingTaxConfig)) (mbFullFarePolicy >>= (.commissionTaxConfig)) booking.paymentChargeDetails) <$> mbTransporterConfig)
   let mbWaitingChargeInfo = mbFullFarePolicy >>= getWaitingChargeInfo booking.estimatedDistance rideDetails.vehicleAge
       taxRegime = fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))
       netOf component mbTaxConfig = netTaxExclusive (mbFullFarePolicy >>= (.commissionChargeConfig)) booking.paymentChargeDetails taxRegime (Just component) mbTaxConfig

@@ -28,6 +28,7 @@ imports:
   AddOnData: Domain.Types.AddOnConfig
   PaymentChargeDetails: BecknV2.OnDemand.Settlement
   TaxBreakup: BecknV2.OnDemand.FareBreakup.Tax
+  DriverTaxRates: BecknV2.OnDemand.FareBreakup.Tax
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -136,6 +137,7 @@ Booking:
     customerLanguage: Maybe Language
     addOnData: "[AddOnData]"
     paymentChargeDetails: Maybe PaymentChargeDetails
+    taxRates: Maybe DriverTaxRates
 
   excludedFields:
     - merchantId
@@ -157,6 +159,7 @@ Booking:
     addOnData: Maybe Value
     paymentChargeDetails: Maybe Value
     cancellationDuesCommissionTaxBreakup: Maybe Value
+    taxRates: Maybe Value
     isSafetyPlus : Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
@@ -210,6 +213,7 @@ Booking:
     addOnData: Just $ toJSON addOnData|E
     paymentChargeDetails: toJSON <$> paymentChargeDetails|E
     cancellationDuesCommissionTaxBreakup: toJSON <$> cancellationDuesCommissionTaxBreakup|E
+    taxRates: toJSON <$> taxRates|E
     isSafetyPlus : Just isSafetyPlus|E
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
@@ -244,6 +248,7 @@ Booking:
     addOnData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData)|E
     paymentChargeDetails: Kernel.Utils.JSON.valueToMaybe =<< paymentChargeDetails|E
     cancellationDuesCommissionTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup|E
+    taxRates: Kernel.Utils.JSON.valueToMaybe =<< taxRates|E
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
@@ -277,6 +282,7 @@ Booking:
     addOnData: "json"
     paymentChargeDetails: "json"
     cancellationDuesCommissionTaxBreakup: "json"
+    taxRates: "json"
     displayBookingId: character varying(25)
     searchTryId: character varying(36)
     dqDurationToPickup: bigint

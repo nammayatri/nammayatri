@@ -57,6 +57,7 @@ import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.RiderDetails as SRD
+import SharedLogic.Settlement (driverTaxRates)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -65,6 +66,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QFP
@@ -328,6 +330,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
   exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
   let cancellationDuesCommission = FC.calculateCancellationDuesCommission searchRequest.customerCancellationDuesCommission driverQuote.fareParams
   let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams bArgs.discountAmount
@@ -417,6 +420,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         paymentCharge = chargeRes.paymentCharge,
         paymentChargeBearer = chargeRes.paymentChargeBearer,
         paymentChargeDetails = bArgs.paymentChargeDetails,
+        taxRates = (\tc -> driverTaxRates tc (mbFarePolicy >>= (.rideTaxConfig)) (mbFarePolicy >>= (.tollTaxConfig)) (mbFarePolicy >>= (.parkingTaxConfig)) (mbFarePolicy >>= (.commissionTaxConfig)) bArgs.paymentChargeDetails) <$> mbTransporterConfig,
         isInsured = fromMaybe False bArgs.isInsured,
         insuredAmount = bArgs.insuredAmount,
         addOnData = addOnData,

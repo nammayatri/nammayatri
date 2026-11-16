@@ -118,6 +118,7 @@ data Booking = Booking
     status :: Domain.Types.Booking.BookingStatus,
     stopLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Location.Location),
     stops :: [Domain.Types.Location.Location],
+    taxRates :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.DriverTaxRates,
     toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

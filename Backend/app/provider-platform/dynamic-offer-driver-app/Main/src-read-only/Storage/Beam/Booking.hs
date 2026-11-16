@@ -111,6 +111,7 @@ data BookingT f = BookingT
     startTime :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.Booking.BookingStatus,
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    taxRates :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
