@@ -154,6 +154,14 @@ def get_dim_columns(schema_config, table_name):
     return schema_config.get(table_name, {}).get("dim", [])
 
 
+def get_unique_columns(schema_config, table_name):
+    """Columns that must be unique after patching (config.json "unique").
+    patches.json can rewrite different master values to the same local value
+    (e.g. two BPP hosts -> one localhost URL); import then keeps only the newest
+    row per key so lookups that expect one row don't break."""
+    return schema_config.get(table_name, {}).get("unique", [])
+
+
 def load_environments():
     return load_json_file(ASSETS_DIR / "environments.json")
 
@@ -2044,15 +2052,33 @@ def cmd_import(args):
             # ── First pass: collect dim values ──
             source_dims = set()
             total_rows = 0
+            unique_cols = get_unique_columns(schema_config, table)
+            newest = {}  # unique key -> (created_at, id) of the newest row
             for _, batch_rows in iter_table_rows(base, "", schema, table):
                 total_rows += len(batch_rows)
                 for row in batch_rows:
                     if dim_cols:
                         source_dims.add(tuple(row.get(c) for c in dim_cols))
+                    if unique_cols:
+                        k = tuple(row.get(c) for c in unique_cols)
+                        cand = (row.get("created_at") or "", row.get("id") or "")
+                        if k not in newest or cand > newest[k]:
+                            newest[k] = cand
 
             if total_rows == 0:
                 print(f"    [skip] {table}: 0 rows")
                 continue
+
+            # ── Dedupe rows that became identical after patching ──
+            keep_ids, dropped = None, 0
+            if unique_cols:
+                keep_ids = {v[1] for v in newest.values()}
+                dropped = total_rows - len(newest)
+                if dropped:
+                    msg = (f"{target_db_schema}.{table}: {dropped} duplicate "
+                           f"({', '.join(unique_cols)}) rows after patching, kept newest")
+                    print(f"    [dedupe] {msg}", flush=True)
+                    all_warnings.append(msg)
 
             # ── Coverage warnings ──
             if target_cursor and dim_cols:
@@ -2076,6 +2102,10 @@ def cmd_import(args):
             # ── Second pass: write INSERT SQL files batch by batch (data already patched) ──
             batch_idx = 0
             for _, batch_rows in iter_table_rows(base, "", schema, table):
+                if dropped:
+                    batch_rows = [r for r in batch_rows if r.get("id") in keep_ids]
+                    if not batch_rows:
+                        continue
                 if mock_server_port:
                     batch_rows = _rewrite_mock_server_port(batch_rows, mock_server_port)
                 insert_sql = generate_insert_sql(
@@ -2089,7 +2119,7 @@ def cmd_import(args):
                 batch_idx += 1
 
             files_msg = f", {batch_idx + 1} sql files" if batch_idx > 1 else ""
-            print(f"    [ok] {table}: {total_rows} rows{files_msg}")
+            print(f"    [ok] {table}: {total_rows - dropped} rows{files_msg}")
 
         if target_cursor:
             target_cursor.close()
