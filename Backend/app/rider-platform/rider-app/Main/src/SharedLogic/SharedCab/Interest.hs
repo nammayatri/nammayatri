@@ -19,7 +19,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (shared)
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (interestKey)
+import SharedLogic.SharedCab.Keys (interestKey, interestRoutesKey)
 
 -- | Entries scored before this have aged out.
 windowStart :: UTCTime -> Int -> Double
@@ -29,10 +29,14 @@ windowStart now windowSec = realToFrac (utcTimeToPOSIXSeconds now) - fromIntegra
 interestKeyTtlSec :: Config.SharedCabTunables -> Int
 interestKeyTtlSec cfg = max (15 * 60) cfg.interestWindowSec
 
--- | The rider is interested in these routes now; opening again moves their entry, it does not add one.
+-- | The rider is interested in these routes now; opening again moves their entry, it does not add one, and the routes of the stand
+-- opened before that this one does not serve lose them.
 recordInterest :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> [Text] -> Text -> m ()
 recordInterest cfg routeCodes personId = do
   now <- getCurrentTime
+  prevRoutes <- fromMaybe [] <$> shared (Redis.get (interestRoutesKey personId))
+  forM_ (filter (`notElem` routeCodes) prevRoutes) $ \routeCode -> shared . void $ Redis.zRem (interestKey routeCode) [personId]
+  shared $ Redis.setExp (interestRoutesKey personId) routeCodes (interestKeyTtlSec cfg)
   forM_ routeCodes $ \routeCode -> shared $ do
     Redis.zAddExp (interestKey routeCode) personId (floor (utcTimeToPOSIXSeconds now)) (interestKeyTtlSec cfg)
     void $ Redis.zRemRangeByScore (interestKey routeCode) 0 (windowStart now cfg.interestWindowSec - 0.001)

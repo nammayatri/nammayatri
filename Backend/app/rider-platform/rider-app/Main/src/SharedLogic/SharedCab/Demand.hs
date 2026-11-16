@@ -32,7 +32,7 @@ import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Interest (interestedOnRoutes)
-import SharedLogic.SharedCab.Keys (demandKey)
+import SharedLogic.SharedCab.Keys (demandKey, demandStopKey)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 bucketSec, bucketCount, bucketTtlSec :: Int
@@ -47,10 +47,15 @@ bucketOf :: UTCTime -> Int
 bucketOf now = floor (utcTimeToPOSIXSeconds now) `div` bucketSec
 
 -- | A rider was shown a shared cab boarding at `stopCode`. Sets of rider ids, not events: the read subtracts the riders already waiting.
+-- A rider searches at one stop at a time: a search at another stop takes them off the one before.
 recordSearch :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> Text -> m ()
-recordSearch cityId riderId stopCode = do
+recordSearch cityId riderId stopCode = Redis.withMasterRedis $ do
   now <- getCurrentTime
-  Redis.withMasterRedis $ Redis.sAddExp (demandKey cityId stopCode (bucketOf now)) [riderId] bucketTtlSec
+  mbPrev <- Redis.get (demandStopKey cityId riderId)
+  whenJust (mfilter (/= stopCode) mbPrev) $ \prev ->
+    forM_ [0 .. bucketCount - 1] $ \i -> void $ Redis.srem (demandKey cityId prev (bucketOf now - i)) [riderId]
+  Redis.sAddExp (demandKey cityId stopCode (bucketOf now)) [riderId] bucketTtlSec
+  Redis.setExp (demandStopKey cityId riderId) stopCode bucketTtlSec
 
 data StopDemand = StopDemand {waiting :: Int, searching :: Int}
   deriving (Show, Eq, Generic, ToJSON)
