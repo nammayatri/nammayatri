@@ -90,10 +90,13 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.TransferExtra as QTransferExtra
 import qualified Lib.Finance.Transfer.Inbound as Inbound
+import qualified Lib.Finance.Transfer.Scheduled as KernelSweep
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
+import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRule)
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner, tdsReimbursementReferenceType)
 import qualified SharedLogic.Finance.Rails as Rails
@@ -103,10 +106,12 @@ import qualified SharedLogic.Finance.WalletAutopay as WalletAutopay
 import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext)
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
 import SharedLogic.Payout.Bulk.Driver (runInstantPayout)
+import SharedLogic.Payout.RetimeScheduledBatchPayout (nextQueuedSweepRunAt)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverFee as QDF
@@ -977,7 +982,7 @@ getWalletPayoutHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow DriverWallet.PayoutHistoryResponse
   )
-getWalletPayoutHistory (mbPersonId, _merchantId, mocId) mbFrom mbTo mbStatuses mbLimit mbOffset = do
+getWalletPayoutHistory (mbPersonId, merchantId, mocId) mbFrom mbTo mbStatuses mbLimit mbOffset = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let rounded = roundAmountByCurrency' transporterConfig.currency
@@ -994,12 +999,15 @@ getWalletPayoutHistory (mbPersonId, _merchantId, mocId) mbFrom mbTo mbStatuses m
       totalPending = rounded $ sum [fromMaybe 0 i.amount | i <- items, isPending i.status]
       lastPayout = Kernel.Prelude.listToMaybe [toHistoryItem rounded i | i <- items, isPaidOut i.status]
 
+  nextScheduledPayoutAt <- nextWalletSweepAt merchantId mocId
+
   pure $
     DriverWallet.PayoutHistoryResponse
       { totalPaidOut,
         lastPayout,
         totalPending,
-        items = apiItems
+        items = apiItems,
+        nextScheduledPayoutAt
       }
   where
     refreshNonTerminalWalletPayouts driverId = do
@@ -1032,6 +1040,35 @@ getWalletPayoutHistory (mbPersonId, _merchantId, mocId) mbFrom mbTo mbStatuses m
           statusUpdatedAt = Just i.statusUpdatedAt,
           merchantTopUpAmount = rounded <$> i.merchantTopUpAmount
         }
+
+-- | When the city's automatic wallet payout will next run, for the payout history screen. Nothing
+--   unless all three gates the sweep job checks are on: the (Liability, DRIVER) class config's
+--   transferOutEnabled, the DRIVER_WALLET_TRANSACTION ScheduledPayoutConfig's isEnabled, and an enabled
+--   kernel sweep rule. Uses the queued sweep job's own run time, so interval schedules (HOURLY,
+--   EVERY_N_DAYS) match the job; falls back to the rule's next run when no job is queued.
+nextWalletSweepAt ::
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Environment.Flow (Maybe UTCTime)
+nextWalletSweepAt merchantId mocId = do
+  driverClassCfg <-
+    FinanceAccountConfig.getAccountConfig
+      FinanceAccountConfig.AccountClass
+        { merchantId = merchantId.getId,
+          merchantOperatingCityId = mocId.getId,
+          accountType = FAccount.Liability,
+          counterpartyType = Just FAccount.DRIVER,
+          subLedger = Nothing
+        }
+  mbSweepConfig <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = mocId.getId, isEnabled = Nothing, payoutCategory = Just DPayment.DRIVER_WALLET_TRANSACTION}) Nothing
+  mbSweepRule <- findKernelSweepRule merchantId mocId
+  case (driverClassCfg.transferOutEnabled, mfilter (.isEnabled) mbSweepConfig, mbSweepRule) of
+    (True, Just sweepConfig, Just sweepRule) -> do
+      mbQueuedAt <- nextQueuedSweepRunAt sweepConfig
+      case mbQueuedAt of
+        Just queuedAt -> pure (Just queuedAt)
+        Nothing -> Just . KernelSweep.computeNextRunTime sweepRule <$> getCurrentTime
+    _ -> pure Nothing
 
 --------------------------------------------------------------------------------
 -- postWalletPayout

@@ -28,7 +28,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "wallet" :> "balance" :> Get '[JSON] API.Types.UI.DriverWallet.WalletBalanceResponse :<|> TokenAuth :> "wallet" :> "transactions"
+  ( TokenAuth :> "wallet" :> "balance" :> Get ('[JSON]) API.Types.UI.DriverWallet.WalletBalanceResponse :<|> TokenAuth :> "wallet" :> "transactions"
       :> QueryParam
            "fromDate"
            Data.Time.UTCTime
@@ -37,22 +37,22 @@ type API =
            "aggBy"
            API.Types.UI.DriverWallet.AggregationLevel
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.WalletSummaryResponse
       :<|> TokenAuth
       :> "wallet"
       :> "payout"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "wallet"
       :> "topup"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.TopUpRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Plan.PlanSubscribeRes
       :<|> TokenAuth
       :> "wallet"
@@ -73,7 +73,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.PayoutHistoryResponse
       :<|> TokenAuth
       :> "wallet"
@@ -91,7 +91,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.WalletTransactionHistoryResponse
       :<|> TokenAuth
       :> "wallet"
@@ -112,7 +112,7 @@ type API =
            "entityId"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
   )
 
@@ -133,9 +133,9 @@ getWalletTransactions ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (API.Types.UI.DriverWallet.AggregationLevel) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse
   )
 getWalletTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -164,11 +164,11 @@ getWalletPayoutHistory ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus] ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus]) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse
   )
 getWalletPayoutHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.DriverWallet.getWalletPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
@@ -178,10 +178,10 @@ getWalletTransactionHistory ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletTransactionHistoryResponse
   )
 getWalletTransactionHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverWallet.getWalletTransactionHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
@@ -191,11 +191,11 @@ getWalletLedgerHistory ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletLedgerEntriesResponse
   )
 getWalletLedgerHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.DriverWallet.getWalletLedgerHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1

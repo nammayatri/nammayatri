@@ -55,6 +55,7 @@ data PayoutHistoryItem = PayoutHistoryItem
 data PayoutHistoryResponse = PayoutHistoryResponse
   { items :: [PayoutHistoryItem],
     lastPayout :: Kernel.Prelude.Maybe PayoutHistoryItem,
+    nextScheduledPayoutAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
     totalPaidOut :: Kernel.Types.Common.HighPrecMoney,
     totalPending :: Kernel.Types.Common.HighPrecMoney
   }
@@ -255,4 +256,4 @@ data WalletTransactionHistoryResponse = WalletTransactionHistoryResponse {items 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''AggregationLevel)
+$(mkHttpInstancesForEnum (''AggregationLevel))
