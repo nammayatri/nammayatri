@@ -14,6 +14,9 @@ data RideFootnotesLogicInput = RideFootnotesLogicInput
     rideFareParams :: Maybe DFareParams.FareParameters,
     bookingFareParams :: DFareParams.FareParameters,
     waitingTimeSeconds :: Maybe Int,
+    waitingTimeWithUnits :: Maybe Text,
+    freeWaitingTimeMinutes :: Maybe Int,
+    extraDistanceWithUnits :: Maybe Text,
     language :: Text
   }
   deriving (Generic, Show, ToJSON)

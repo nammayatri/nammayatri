@@ -2,10 +2,7 @@ module SharedLogic.Settlement
   ( resolvePaymentChargeDetails,
     bookingPaymentChargeDetails,
     grossTaxExclusive,
-    grossTaxInclusive,
     grossTotalTaxInclusive,
-    ungrossTaxExclusive,
-    ungrossTaxInclusive,
   )
 where
 
@@ -46,14 +43,5 @@ multiplierOf component mbPaymentCharge mbRates =
 grossTaxExclusive :: (FB.RideTaxRates GrossMultiplier -> GrossMultiplier) -> Maybe PaymentChargeDetails -> Maybe Tax.RiderTaxRates -> HighPrecMoney -> HighPrecMoney
 grossTaxExclusive component mbPaymentCharge mbRates amount = amount * (multiplierOf component mbPaymentCharge mbRates).taxExclusive
 
-grossTaxInclusive :: Maybe PaymentChargeDetails -> HighPrecMoney -> HighPrecMoney
-grossTaxInclusive mbPaymentCharge amount = amount * (multiplierOf (.rideFare) mbPaymentCharge Nothing).taxInclusive
-
 grossTotalTaxInclusive :: Maybe PaymentChargeDetails -> HighPrecMoney -> HighPrecMoney
 grossTotalTaxInclusive = riderGross
-
-ungrossTaxExclusive :: (FB.RideTaxRates GrossMultiplier -> GrossMultiplier) -> Maybe PaymentChargeDetails -> Maybe Tax.RiderTaxRates -> HighPrecMoney -> HighPrecMoney
-ungrossTaxExclusive component mbPaymentCharge mbRates amount = amount / (multiplierOf component mbPaymentCharge mbRates).taxExclusive
-
-ungrossTaxInclusive :: Maybe PaymentChargeDetails -> HighPrecMoney -> HighPrecMoney
-ungrossTaxInclusive mbPaymentCharge amount = amount / (multiplierOf (.rideFare) mbPaymentCharge Nothing).taxInclusive

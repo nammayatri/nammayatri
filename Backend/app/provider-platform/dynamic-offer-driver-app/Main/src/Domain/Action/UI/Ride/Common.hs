@@ -325,12 +325,14 @@ buildRideEarnings ::
   Bool ->
   Bool ->
   Maybe [FareBreakupNode] ->
+  Maybe Tax.DriverTaxRates ->
+  Maybe Minutes ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbCancellationDues customerBearsCharge driverBearsCharge mbFarePaidSubItemsConfig = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbCancellationDues customerBearsCharge driverBearsCharge mbFarePaidSubItemsConfig mbTaxRates mbFreeWaitingTime = do
   let paymentChargeGross = maybe (fromMaybe 0 ride.paymentCharge) (\dues -> fromMaybe 0 dues.paymentCharge + Tax.taxTotal dues.paymentChargeTaxBreakup) mbCancellationDues
       customerPaymentCharge = if customerBearsCharge then paymentChargeGross else 0
       fare = maybe (fromMaybe booking.estimatedFare ride.fare) (\dues -> dues.cancellationAmount + customerPaymentCharge) mbCancellationDues
-      discount = fromMaybe 0 ride.discountAmount
+      discount = if ride.status == DRide.CANCELLED then 0 else fromMaybe 0 ride.discountAmount
       commission = maybe (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission) (fromMaybe 0 . (.cancellationCommission)) mbCancellationDues
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
@@ -363,19 +365,37 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
               FareUIComponent
                 { title = key,
                   price = PriceAPIEntity (roundAmountByCurrency' cur value) cur,
-                  uiTranslation = mbLabel,
+                  uiTranslation = fillTaxRates <$> mbLabel,
                   section = FareBreakup,
                   _type = componentType,
                   subItems = rowSubItems
                 }
           else Nothing
+      rateOf mbCfg = (\cfg -> let (whole, tenth) = (round (cfg.tax * 10) :: Int) `divMod` 10 in pack (show whole) <> (if tenth == 0 then "" else "." <> pack (show tenth))) <$> mfilter (\cfg -> cfg.tax > 0) (mbCfg :: Maybe Tax.TaxConfig)
+      paymentChargeTax = mbTaxRates >>= \r -> r.riderPayable.paymentCharge <|> r.driverDeductible.paymentCharge
+      commissionTax = mbTaxRates >>= \r -> r.driverDeductible.commission
+      placeholderRates =
+        [ ("rideFareTaxRate", rateOf (mbTaxRates >>= \r -> r.riderPayable.rideFare)),
+          ("tollTaxRate", rateOf (mbTaxRates >>= \r -> r.riderPayable.toll)),
+          ("parkingTaxRate", rateOf (mbTaxRates >>= \r -> r.riderPayable.parking)),
+          ("cancellationTaxRate", rateOf (mbTaxRates >>= \r -> r.riderPayable.cancellationFee)),
+          ("paymentChargeTaxRate", rateOf paymentChargeTax),
+          ("commissionTaxRate", rateOf commissionTax)
+        ]
+      fillTaxRates label = foldr (\(name, mbRate) acc -> maybe acc (\rate -> T.replace ("{#" <> name <> "#}") rate acc) mbRate) label placeholderRates
+      vatInclusiveLabel key fallback mbCfg =
+        if isJust (rateOf (mfilter ((== Tax.VAT) . Tax.chargeRegime) mbCfg))
+          then (<|> fallback) <$> resolveLabel lang (key <> "_INCL_VAT")
+          else pure fallback
       mkConfiguredSubItem line = do
-        label <- resolveLabel lang line.key
+        label <- fmap fillTaxRates <$> resolveLabel lang line.key
         kids <- mapM mkConfiguredSubItem line.subItems
         let lineType = if line.amount < 0 then Deduction else Earning
         pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
   taxLabel <- resolveLabel lang "TAX"
+  commissionLabel <- vatInclusiveLabel "COMMISSION" lblCommission commissionTax
+  paymentChargeLabel <- vatInclusiveLabel "PAYMENT_CHARGE" lblPaymentCharge paymentChargeTax
   farePaidComponentSubItems <-
     mapM mkConfiguredSubItem $
       case mbCancellationDues of
@@ -394,9 +414,9 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
           [ mkComp "FARE_PAID_BY_CUSTOMER" Earning lblAmountPaid amountPaidByCustomer farePaidSubItems,
             mkComp "DISCOUNT" Earning lblDiscount discount [],
             mkComp "TIPS" Earning lblTips tips [],
-            mkComp "COMMISSION" Deduction lblCommission commission [],
+            mkComp "COMMISSION" Deduction commissionLabel commission [],
             mkComp "TAX" Deduction taxLabel taxDeduction [],
-            mkComp "PAYMENT_CHARGE" Deduction lblPaymentCharge (if chargeBorneByDriver then paymentChargeGross else 0) []
+            mkComp "PAYMENT_CHARGE" Deduction paymentChargeLabel (if chargeBorneByDriver then paymentChargeGross else 0) []
           ]
             -- NOTE: Backward compatibility for cities without customerPayableFareBreakupSubItemsConfig: these
             -- charges stay top-level Additions, as before. Remove them, and the Nothing case of
@@ -410,7 +430,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
                   mkComp "SERVICE_CHARGE" Earning lblServiceCharge serviceCharge [],
                   mkComp "TOLL_CHARGES" Earning (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount []
                 ]
-  footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
+  footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam mbFreeWaitingTime
 
   pure RideEarnings {fareBreakup = fareBreakupItems, footnotes = footnoteItems}
 
@@ -421,8 +441,9 @@ buildFootnotes ::
   DRide.Ride ->
   DFareParams.FareParameters ->
   Maybe DFareParams.FareParameters ->
+  Maybe Minutes ->
   m [FareUIComponent]
-buildFootnotes lang booking ride estimatedFareParams finalFareParams = do
+buildFootnotes lang booking ride estimatedFareParams finalFareParams mbFreeWaitingTime = do
   (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.RIDE_FOOTNOTES_DISPLAY ride.createdAt Nothing Nothing
   if null logics
     then pure []
@@ -437,6 +458,26 @@ buildFootnotes lang booking ride estimatedFareParams finalFareParams = do
                 rideFareParams = finalFareParams,
                 bookingFareParams = estimatedFareParams,
                 waitingTimeSeconds = waitingTimeSeconds,
+                waitingTimeWithUnits =
+                  ( \secs ->
+                      let tenthsOfHour = round (fromIntegral secs / 360 :: Double) :: Int
+                       in if secs < 60
+                            then pack (show secs) <> " sec"
+                            else
+                              if secs < 3600
+                                then pack (show (round (fromIntegral secs / 60 :: Double) :: Int)) <> " min"
+                                else pack (show (tenthsOfHour `div` 10)) <> (if tenthsOfHour `mod` 10 == 0 then "" else "." <> pack (show (tenthsOfHour `mod` 10))) <> " hr"
+                  )
+                    <$> waitingTimeSeconds,
+                freeWaitingTimeMinutes = (.getMinutes) <$> mbFreeWaitingTime,
+                extraDistanceWithUnits =
+                  ( \extra ->
+                      let tenthsOfKm = round (fromIntegral extra / 100 :: Double) :: Int
+                       in if extra < 1000
+                            then pack (show extra) <> " m"
+                            else pack (show (tenthsOfKm `div` 10)) <> (if tenthsOfKm `mod` 10 == 0 then "" else "." <> pack (show (tenthsOfKm `mod` 10))) <> " km"
+                  )
+                    <$> mfilter (> 0) ((\chargeable estimated -> chargeable.getMeters - estimated.getMeters) <$> ride.chargeableDistance <*> booking.estimatedDistance),
                 language = pack (show lang)
               }
       resp <- LYTU.runLogics logics logicInput
@@ -589,6 +630,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
   mbFullFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+  let mbDriverTaxRates = (\tc -> driverTaxRates tc (mbFullFarePolicy >>= (.rideTaxConfig)) (mbFullFarePolicy >>= (.tollTaxConfig)) (mbFullFarePolicy >>= (.parkingTaxConfig)) (mbFullFarePolicy >>= (.commissionTaxConfig)) booking.paymentChargeDetails) <$> mbTransporterConfig
   let mbWaitingChargeInfo = mbFullFarePolicy >>= getWaitingChargeInfo booking.estimatedDistance rideDetails.vehicleAge
       taxRegime = fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))
       netOf component mbTaxConfig = netTaxExclusive (mbFullFarePolicy >>= (.commissionChargeConfig)) booking.paymentChargeDetails taxRegime (Just component) mbTaxConfig
@@ -685,7 +727,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
 
   mbRideEarningsVal <- case mbEarningsLabels of
     Just earningsLabels -> do
-      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig))
+      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig)) mbDriverTaxRates ((.freeWaitingTime) <$> mbWaitingChargeInfo)
     Nothing -> pure Nothing
 
   return $
@@ -798,7 +840,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         commissionCharges = ride.commission,
         paymentCharge = if chargeInAppFee && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
         customerPaymentCharge = if customerBearsCharge && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
-        taxRates = (\tc -> driverTaxRates tc (mbFullFarePolicy >>= (.rideTaxConfig)) (mbFullFarePolicy >>= (.tollTaxConfig)) (mbFullFarePolicy >>= (.parkingTaxConfig)) (mbFullFarePolicy >>= (.commissionTaxConfig)) booking.paymentChargeDetails) <$> mbTransporterConfig,
+        taxRates = mbDriverTaxRates,
         discountAmount = ride.discountAmount,
         pickupZoneGateId = booking.pickupGateId,
         pickupZoneGateName = mbGateInfo <&> (.name),

@@ -297,7 +297,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   paymentChargeDetails <- Settlement.resolvePaymentChargeDetails merchantOperatingCityId paymentInstrument
-  let mbCustomerExtraFee = (\extraFee -> mkPrice (Just extraFee.currency) (Settlement.ungrossTaxInclusive paymentChargeDetails extraFee.amount)) <$> ((mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee))
+  let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   let mbNegativeFareAdjustment = (mkPriceFromAPIEntity <$> req.negativeFareAdjustmentWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.negativeFareAdjustment)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $

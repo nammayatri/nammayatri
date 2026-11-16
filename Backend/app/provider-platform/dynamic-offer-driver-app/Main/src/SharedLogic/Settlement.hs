@@ -2,7 +2,6 @@ module SharedLogic.Settlement
   ( netTaxExclusive,
     netTaxInclusive,
     netTotalTaxInclusive,
-    unnetTaxExclusive,
     riderTaxRates,
     driverTaxRates,
   )
@@ -48,12 +47,6 @@ netTotalTaxInclusive taxRegime mbCommission mbPaymentCharge mbBearer componentTa
   max 0 (total - fromMaybe 0 mbCommission - driverCharge - (if taxRegime == Tax.GST then componentTax else 0) - airportEntryFeeWithTax)
   where
     driverCharge = if mbBearer == Just PAYMENT_DRIVER then fromMaybe 0 mbPaymentCharge else 0
-
-unnetTaxExclusive :: Maybe FareChargeConfig -> Maybe PaymentChargeDetails -> Tax.Regime -> Maybe FareChargeComponent -> Maybe Tax.TaxConfig -> HighPrecMoney -> HighPrecMoney
-unnetTaxExclusive mbCommissionConfig mbPaymentChargeDetails taxRegime mbComponent mbTaxConfig amount =
-  if netOfOne > 0 then amount / netOfOne else amount
-  where
-    netOfOne = netTaxExclusive mbCommissionConfig mbPaymentChargeDetails taxRegime mbComponent mbTaxConfig 1
 
 driverTaxRates :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> Maybe Tax.TaxConfig -> Maybe Tax.TaxConfig -> Maybe Tax.TaxConfig -> Maybe PaymentChargeDetails -> Tax.DriverTaxRates
 driverTaxRates transporterConfig mbRideTax mbTollTax mbParkingTax mbCommissionTax mbPaymentChargeDetails =

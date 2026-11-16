@@ -116,7 +116,6 @@ mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP
       mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
       gross fare = mkPrice (Just fare.currency) (roundAmountByCurrency' fare.currency (Settlement.grossTotalTaxInclusive mbPaymentCharge fare.amount))
       grossComponent component charge = mkPrice (Just charge.currency) (roundAmountByCurrency' charge.currency (Settlement.grossTaxExclusive component mbPaymentCharge riderTaxRates charge.amount))
-      grossTip = roundAmountByCurrency' estimatedFare.currency . Settlement.grossTaxInclusive mbPaymentCharge
       grossOffer o = let g = Settlement.grossTotalTaxInclusive mbPaymentCharge o.postOfferAmount in o {SOffer.postOfferAmount = g, SOffer.estimatedPostOfferAmount = g}
       offer = (\offers -> (offers {SOffer.offerListResp = map grossOffer offers.offerListResp} :: SOffer.CumulativeOfferResp)) <$> mbOffer
   return
@@ -144,9 +143,6 @@ mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP
         personalDiscountInfo = mkPersonalDiscountInfoAPIEntity <$> personalDiscountInfo,
         tollChargesInfo = (\info -> mkTollChargesInfoAPIEntity TollChargesInfo {tollCharges = grossComponent (.toll) info.tollCharges, tollNames = info.tollNames}) <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin = grossComponent (.rideFare) <$> waitingCharges.waitingChargePerMin},
-        tipOptions = map (roundToIntegral . grossTip . fromIntegral) <$> tipOptions,
-        smartTipSuggestion = grossTip <$> smartTipSuggestion,
-        negativeFareSuggestion = grossTip <$> negativeFareSuggestion,
         totalFareRange = mkFareRangeAPIEntity FareRange {minFare = gross totalFareRange.minFare, maxFare = gross totalFareRange.maxFare},
         vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
         serviceTierType = vehicleServiceTierType,

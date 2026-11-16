@@ -148,7 +148,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       taxRegime = fromMaybe Tax.GST mbTaxRegime
       netFare mbTaxConfig mbComponent = Settlement.netTaxExclusive (mbFarePolicy >>= (.commissionChargeConfig)) searchTry.paymentChargeDetails taxRegime mbComponent mbTaxConfig
       rideNet component = netFare (mbFarePolicy >>= (.rideTaxConfig)) (Just component)
-      driverFeeNet = rideNet DFP.DriverSelectedFareComponent
       tollTaxConfig = mbFarePolicy >>= (.tollTaxConfig)
       parkingTaxConfig = mbFarePolicy >>= (.parkingTaxConfig)
       cCharges = roundToIntegral . rideNet DFP.CongestionChargeComponent <$> congestionCharges
@@ -159,10 +158,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 searchTry.discountAmount))
       netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax 0 rawBaseFare
       customerExtraFee = rideNet DFP.CustomerExtraFeeComponent <$> searchTry.customerExtraFee
-      driverMinExtraFee' = driverFeeNet <$> nearbyReq.driverMinExtraFee
-      driverMaxExtraFee' = driverFeeNet <$> nearbyReq.driverMaxExtraFee
       driverPickUpCharges' = rideNet DFP.DeadKmFareComponent <$> driverPickUpCharges
-      specialZoneExtraTip' = driverFeeNet <$> specialZoneExtraTip
       tollCharges' = netFare tollTaxConfig (Just DFP.TollChargesComponent) <$> tollCharges
       shownDistanceToPickup = fromMaybe nearbyReq.actualDistanceToPickup nearbyReq.displayDistanceToPickup
       shownDurationToPickup = fromMaybe nearbyReq.durationToPickup nearbyReq.displayDurationToPickup
@@ -194,13 +190,13 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
               { lat = fromMaybe 0.0 nearbyReq.lat,
                 lon = fromMaybe 0.0 nearbyReq.lon
               },
-          driverMinExtraFee = Just $ maybe 0 roundToIntegral driverMinExtraFee',
-          driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverMinExtraFee',
-          driverMaxExtraFee = Just $ maybe 0 roundToIntegral driverMaxExtraFee',
-          driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverMaxExtraFee',
-          driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency . driverFeeNet <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
-          driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency . driverFeeNet <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
-          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency . driverFeeNet <$> driverStepFee,
+          driverMinExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMinExtraFee,
+          driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
+          driverMaxExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMaxExtraFee,
+          driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
+          driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
+          driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
+          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverStepFee,
           rideRequestPopupDelayDuration = delayDuration,
           specialLocationTag = searchRequest.specialLocationTag,
           disabilityTag = searchRequest.disabilityTag,
@@ -219,8 +215,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           pickupZone = nearbyReq.pickupZone,
           driverPickUpCharges = roundToIntegral <$> driverPickUpCharges',
           driverPickUpChargesWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverPickUpCharges',
-          specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip', -- TODO :: Deprecate this after UI stops consuming
-          specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip', -- TODO :: Deprecate this after UI stops consuming
+          specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
+          specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
