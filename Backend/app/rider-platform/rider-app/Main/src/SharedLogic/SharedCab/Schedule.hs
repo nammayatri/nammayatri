@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.Schedule
     nextTickAfter,
     claimedTick,
     withCityTickLease,
+    withRouteTickLease,
     ensureExpiryJob,
     WatchPlan (..),
     SeedSource (..),
@@ -188,6 +189,13 @@ withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m
 withCityTickLease cityId action = do
   tickSec <- tickSecOf cityId
   isJust <$> tryWithOwnedLock (allocLeaseKey cityId) (leaseTickMultiple * tickSec) action
+
+-- | One pass per route at a time: the tick's unit for a route and a trigger for the same route never overlap, and neither waits on
+-- any other route.
+withRouteTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m () -> m Bool
+withRouteTickLease cityId routeCode action = do
+  tickSec <- tickSecOf cityId
+  isJust <$> tryWithOwnedLock (allocRouteLeaseKey cityId routeCode) (leaseTickMultiple * tickSec) action
 
 expiryTickSec :: Int
 expiryTickSec = 60

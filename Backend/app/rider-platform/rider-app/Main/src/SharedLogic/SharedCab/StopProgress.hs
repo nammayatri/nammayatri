@@ -1,7 +1,8 @@
--- | Stop-progress actions for every live cab of a city, run by the allocation tick under its city lease: board stop passed,
--- drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
+-- | The scheduled tick (one read of the city, then each route on its own lease) and the stop-progress actions for a route's live
+-- cabs: board stop passed, drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
 module SharedLogic.SharedCab.StopProgress
-  ( runStopProgress,
+  ( runCityTick,
+    tickRoutes,
     stepSessionCab,
     bookingsByPlate,
     completeArrivedRides,
@@ -10,13 +11,15 @@ where
 
 import Control.Monad.Extra (whenJustM)
 import qualified Data.Aeson as A
-import Data.List (findIndex)
+import Data.List (findIndex, nub)
+import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RouteStopMapping as DRSM
+import Domain.Utils (mapConcurrently)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -25,7 +28,7 @@ import Kernel.Types.Error (MerchantError (MerchantNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, RoutePositions, allocationRoutePass, closeExpired, eachIsolated, readCity, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), ApproachStage (ApproachArrived), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
@@ -33,9 +36,11 @@ import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, p
 import SharedLogic.SharedCab.BookingState (readAlloc, rewriteAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
+import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
 import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePosition, readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
+import SharedLogic.SharedCab.Schedule (withRouteTickLease)
 import SharedLogic.SharedCab.Seats (markDropped, routeStopRows)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionFlow, SessionStatus (..))
@@ -58,31 +63,59 @@ type StopProgressFlow m r c =
     InternalEndpointFlow m r
   )
 
--- | Live = not ENDED: a PAUSED cab still carries and drops its riders, it just isn't checked for off-route.
-runStopProgress ::
-  StopProgressFlow m r c =>
-  Id DMOC.MerchantOperatingCity ->
-  [LiveBooking] ->
-  [(Text, RouteRead)] ->
-  m ()
-runStopProgress cityId live positionsByRoute = do
+-- | Routes run this many at a time, so a city with many routes does not open them all at once on one pod.
+-- ponytail: a constant; give each route its own job chain if one pod cannot finish a city's routes within a tick.
+routeTickParallelism :: Int
+routeTickParallelism = 8
+
+-- | The routes a tick works on: every route with a live booking or a live cab.
+tickRoutes :: [Maybe Text] -> [Text] -> [Text]
+tickRoutes bookingRoutes cabRoutes = nub (catMaybes bookingRoutes <> cabRoutes)
+
+-- | The scheduled tick. The city is read once; each route then runs on its own lease (timers, claims, stop progress), several at a
+-- time, so one slow or failing route holds up no other, and a trigger on a route waits only on that route. Returns the city's live
+-- bookings for the job's timeouts.
+runCityTick :: StopProgressFlow m r c => Id DMOC.MerchantOperatingCity -> m [LiveBooking]
+runCityTick cityId = do
   cfg <- Config.getTunables cityId
+  enabled <- sharedCabEnabled cityId
+  now <- getCurrentTime
+  (live, positionsByRoute) <- readCity cityId
+  sessions <- liveSessions cityId
+  let byPlate = bookingsByPlate live
+      routes = tickRoutes (map (.booking.routeCode) live) (map (.routeCode) sessions)
+      routeTick routeCode =
+        withTryCatch "sharedCabRouteTick" (void . withRouteTickLease cityId routeCode $ onRoute routeCode)
+          >>= either (\e -> logError $ "shared-cab tick failed for route " <> routeCode <> ": " <> show e) pure
+      onRoute routeCode = do
+        let positions = filter ((== routeCode) . fst) positionsByRoute
+        allocationRoutePass cityId cfg enabled now [lb | lb <- live, lb.booking.routeCode == Just routeCode] positions
+        stepRouteCabs cfg now byPlate positions routeCode [s | s <- sessions, s.routeCode == routeCode]
+  forM_ (chunksOf routeTickParallelism routes) $ void . mapConcurrently routeTick
+  -- a booking with no route has only its timers to run
+  closeExpired cfg now [lb | lb <- live, isNothing lb.booking.routeCode] []
+  pure live
+
+-- | Live = not ENDED: a PAUSED cab still carries and drops its riders, it just isn't checked for off-route.
+liveSessions :: StopProgressFlow m r c => Id DMOC.MerchantOperatingCity -> m [Session]
+liveSessions cityId = do
   plates <- shared $ Redis.sMembers (livePlatesKey cityId)
   -- one pipelined MGET (grouped by slot) for every live cab's session; stale members are the expiry pass's to repair
-  sessions <- filter (\s -> s.status /= ENDED && s.merchantOperatingCityId == cityId) <$> shared (Redis.mGetCluster (map sessionKey plates))
-  now <- getCurrentTime
-  let byPlate = bookingsByPlate live
-  forM_ (M.toList $ M.fromListWith (<>) [(s.routeCode, [s]) | s <- sessions]) $ \(routeCode, cabs@(cab : _)) -> do
-    routeRead <- case lookup routeCode positionsByRoute of
-      Just read' -> pure read'
-      Nothing ->
-        withTryCatch "sharedCabStopProgressRead" (RouteRead <$> readRoutePositions cab.integratedBppConfigId routeCode <*> routeStopRows cab.integratedBppConfigId routeCode)
-          >>= either (\e -> RouteRead [] [] <$ logError ("shared-cab stop progress: position read failed for route " <> routeCode <> ": " <> show e)) pure
-    eachIsolated
-      (withTryCatch "sharedCabStopProgressCab")
-      (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
-      (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) routeRead s)
-      cabs
+  filter (\s -> s.status /= ENDED && s.merchantOperatingCityId == cityId) <$> shared (Redis.mGetCluster (map sessionKey plates))
+
+stepRouteCabs :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> M.Map Text [LiveBooking] -> RoutePositions -> Text -> [Session] -> m ()
+stepRouteCabs _ _ _ _ _ [] = pure ()
+stepRouteCabs cfg now byPlate positions routeCode cabs@(cab : _) = do
+  routeRead <- case lookup routeCode positions of
+    Just read' -> pure read'
+    Nothing ->
+      withTryCatch "sharedCabStopProgressRead" (RouteRead <$> readRoutePositions cab.integratedBppConfigId routeCode <*> routeStopRows cab.integratedBppConfigId routeCode)
+        >>= either (\e -> RouteRead [] [] <$ logError ("shared-cab stop progress: position read failed for route " <> routeCode <> ": " <> show e)) pure
+  eachIsolated
+    (withTryCatch "sharedCabStopProgressCab")
+    (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
+    (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) routeRead s)
+    cabs
 
 stepSessionCab :: StopProgressFlow m r c => Session -> m ()
 stepSessionCab s = unless (s.status == ENDED) $ do
