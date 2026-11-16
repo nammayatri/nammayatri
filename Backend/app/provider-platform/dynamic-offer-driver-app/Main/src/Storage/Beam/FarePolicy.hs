@@ -64,6 +64,7 @@ data FarePolicyT f = FarePolicyT
     parkingTaxConfig :: B.C f (Maybe Text),
     commissionTaxConfig :: B.C f (Maybe Text),
     platformFeeChargesBy :: B.C f (Maybe Domain.PlatformFeeMethods),
+    platformFeeSlabSetId :: B.C f (Maybe Text),
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     driverCancellationNotAllowed :: B.C f (Maybe Bool),

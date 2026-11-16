@@ -170,6 +170,9 @@ ensureAutopayRecharge transporterConfig person mbVariant balance = do
             specialZoneRideCount = 0,
             specialZoneAmount = 0,
             specialZoneRideCharges = Nothing,
+            perRideBaseAmount = Nothing,
+            dailyBaseCount = 0,
+            dailyBaseAmount = Nothing,
             createdAt = now,
             updatedAt = now
           }
