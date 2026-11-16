@@ -2747,11 +2747,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1771503695,
-        "narHash": "sha256-zw8fKOzDCy8W5ccF2ArssCL+Otinpn33xDpBTEyQrT8=",
+        "lastModified": 1794820124,
+        "narHash": "sha256-nRGAtdKWTsdbbpKtpGYB7xIb2kO+Gy20WQtDPqgTSmU=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "0e9a41b0ac1b2d58e78e1ef6924309fb2b1e688c",
+        "rev": "465e5e6e7cde01519fc176456d35f9979ba117f2",
         "type": "github"
       },
       "original": {
