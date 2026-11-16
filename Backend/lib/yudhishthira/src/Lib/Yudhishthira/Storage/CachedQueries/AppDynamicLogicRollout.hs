@@ -152,6 +152,15 @@ findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain =
       )
         /=<< Queries.findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain
 
+-- | A non-base rollout counts as a *running experiment* when it is rolled out by a
+-- positive percentage. This holds for both paths: an ungrouped experiment tosses on
+-- its own percentage, and a grouped experiment is gated (after its group wins) by the
+-- shared group-rollout toss against this same percentage -- so a 0% rollout is "off"
+-- either way, and gating it to base here is correct (and saves the rollout load).
+isRunningExperimentRollout :: Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout -> Bool
+isRunningExperimentRollout r =
+  r.isBaseVersion /= Just True && r.percentageRollout > 0
+
 isExperimentRunningCached ::
   BeamFlow.BeamFlow m r =>
   Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
@@ -164,7 +173,7 @@ isExperimentRunningCached cityId domain =
       Just running -> pure running
       Nothing -> do
         active <- findActiveByMerchantOpCityAndDomain cityId domain
-        let running = any (\r -> r.isBaseVersion /= Just True && r.percentageRollout > 0) active
+        let running = any isRunningExperimentRollout active
         expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
         Hedis.setExp (experimentRunningRedisKey cityId domain) running expTime
         logDebug $ "CP Log: [EXPERIMENT_RUNNING_REFILL] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId <> " running=" <> show running
@@ -242,9 +251,43 @@ refreshActiveAndBaseCache cityId domain activeRollouts baseRollouts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (activeDomainCacheKey cityId domain) activeRollouts expTime
   Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (baseRolloutCacheKey cityId domain) baseRollouts expTime
-  let experimentRunning = any (\r -> r.isBaseVersion /= Just True && r.percentageRollout > 0) activeRollouts
+  let experimentRunning = any isRunningExperimentRollout activeRollouts
   Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (experimentRunningRedisKey cityId domain) experimentRunning expTime
   IM.refreshInMem $ experimentRunningInMemInfix cityId domain
   logDebug $ "CP Log: Experiment: domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId <> " running=" <> show experimentRunning
   clearDomainCache cityId domain
   clearCityConfigsCache cityId
+
+-- | Full write-through of every runtime rollout cache for a domain from an authoritative,
+-- in-memory rollout list (the complete set of rows for the domain — base + experiments +
+-- historical). Unlike 'clearCache' (delete, then let the next refill repopulate), this SETs
+-- every cache including the Tools-path ':Domain' cache, so a concurrent consume refill cannot
+-- race the mutation's KV write and re-cache a pre-mutation value under the 24h TTL. Use this
+-- (instead of 'clearCache') from mutation handlers that can reconstruct the domain's full
+-- rollout list in memory — e.g. the experiment-group tag update.
+refreshDomainCaches ::
+  BeamFlow.BeamFlow m r =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] ->
+  m ()
+refreshDomainCaches cityId domain allRollouts = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let activeRollouts =
+        filter
+          (\r -> r.isBaseVersion == Just True || r.experimentStatus == Just Lib.Yudhishthira.Types.RUNNING)
+          allRollouts
+      baseRollouts = filter (\r -> r.isBaseVersion == Just True) allRollouts
+      experimentRunning = any isRunningExperimentRollout activeRollouts
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (domainCacheKey cityId domain) allRollouts expTime
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (activeDomainCacheKey cityId domain) activeRollouts expTime
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (baseRolloutCacheKey cityId domain) baseRollouts expTime
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (experimentRunningRedisKey cityId domain) experimentRunning expTime
+  IM.refreshInMem $ experimentRunningInMemInfix cityId domain
+  clearCityConfigsCache cityId
+  logDebug $
+    "CP Log: [DOMAIN_WRITETHROUGH] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId
+      <> " running="
+      <> show experimentRunning
+      <> " rollouts="
+      <> show (map (\r -> (r.version, r.experimentGroup, r.percentageRollout)) allRollouts)

@@ -26,6 +26,7 @@ import qualified Lib.Yudhishthira.Event.KaalChakra.Internal as KaalChakraInterna
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicAlwaysOn as CADLAO
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicExperimentGroup as CADLEG
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CQTBC
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
@@ -715,8 +716,27 @@ postAppDynamicLogicUpdateExperimentGroup merchantOpCityId reqs = do
       LYSQADLR.findByPrimaryKey domain merchantOpCityId timeBounds' version
         >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show domain <> " City: " <> merchantOpCityId.getId <> " TimeBounds: " <> timeBounds' <> " Version: " <> show version)
     LYSQADLRE.updateExperimentGroup merchantOpCityId domain timeBounds' version experimentGroup
-  forM_ (nub $ map (.domain) reqs) $ \domain -> CADLR.clearCache merchantOpCityId domain
+  -- Write-through (not just clear) each affected domain's rollout caches. clearCache only
+  -- DELETEs the Tools-path :Domain cache, leaving a window where a concurrent consume refill
+  -- races this group write and re-caches the pre-tag (untagged) rollout for the full 24h TTL.
+  -- Instead rebuild the authoritative rollout list in memory (current rows + the group patches
+  -- just applied — the patch overrides experimentGroup, so correctness does not depend on the
+  -- re-read having propagated) and SET every cache.
+  forM_ (nub $ map (.domain) reqs) $ \domain -> do
+    current <- LYSQADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+    CADLR.refreshDomainCaches merchantOpCityId domain (map applyGroupPatch current)
   return Kernel.Types.APISuccess.Success
+  where
+    applyGroupPatch r =
+      case find
+        ( \o ->
+            o.domain == r.domain
+              && fromMaybe "Unbounded" o.timeBounds == r.timeBounds
+              && o.version == r.version
+        )
+        reqs of
+        Just o -> r {experimentGroup = o.experimentGroup}
+        Nothing -> r
 
 -- | Read-only view of active rollouts and their experiment group tags
 getExperimentGroups ::
@@ -806,6 +826,10 @@ postAppDynamicLogicUpsertExperimentGroupConfig merchantOpCityId req = do
             createdAt = now,
             updatedAt = now
           }
+  -- The active-groups cache (group-centric gate + toss input) is keyed per city
+  -- and derived from the registry, so a %/status change must flush it. In-flight
+  -- group locks remain TTL-bound (≤2h), consistent with all other stickiness.
+  CADLEG.clearActiveGroupsCache merchantOpCityId
   return Kernel.Types.APISuccess.Success
 
 -- | List the experiment-group registry entries (names + percentages) for a city.

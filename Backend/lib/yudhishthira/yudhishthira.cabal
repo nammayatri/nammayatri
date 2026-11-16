@@ -41,6 +41,7 @@ library
       Lib.Yudhishthira.Storage.Beam.BeamFlow
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicExperimentGroup
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOnExtra
