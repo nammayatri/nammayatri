@@ -15,7 +15,7 @@ Every automated test, the three workflows, and what a red tick does and does not
 > **The owner chose not to re-enable them (2026-11-09).** Until that changes:
 >
 > - **the gate is `bash tests/run-all.sh` on the laptop** — the same 29 files
->   `algeria: node tests` ran, nothing missing;
+>   `algeria: node tests` ran, nothing missing (37 since 2026-11-16);
 > - **nothing replaces the ride regression before a release.** After one, the
 >   whole ride on the server ([release runbook](runbooks/release.md), step 4.3)
 >   is the ride check — and it needs the simulated fleet, so after the launch
@@ -79,3 +79,71 @@ the wrong image**: `ghcr.io/<repo owner>/ny-backend`, which on MohaGNPro is the
 
 `preflight` accepts a **pulled** image in place of the loose binaries in `bin/`,
 which is what the regression job and `deploy-backend.sh` both do.
+
+## The virtual passenger — `maps-shim/virtual-rider.js`, since 2026-11-16
+
+**A passenger who does not exist books real rides for a real driver**, on his
+own phone, so the driver side can be tried as often as wanted (the boss,
+2026-11-16: « this way we can test the driver side extensively »). It is the
+ride test turned around: in `ops/checks/probe-two-country-rides.py` the
+simulated cars drive and a script is the passenger; here a person drives and
+the script is the passenger. Day 7 of the « Lieux proposés » plan; the
+console button is day 8.
+
+    docker exec ny-maps-shim node virtual-rider.js "+213 0555 12 34 56" 1 | tee ~/vr-1.log
+    docker exec ny-maps-shim node virtual-rider.js stop     # from another terminal
+    docker exec ny-maps-shim node virtual-rider.js list
+
+Run by the owner on the server (`ssh ny '…'`): it books on the live stack.
+Ctrl-C does not reach the process through ssh; `stop` does (SIGTERM), and the
+run then closes what it opened.
+
+| # | Scenario | RÉUSSI when |
+|---|---|---|
+| 1 | a whole ride | COMPLETED, a price, the passenger's 5 stars **and** the driver's rating of her (`movin.driver_rider_rating`) |
+| 2 | the passenger cancels before the arrival | CANCELLED on the driver side; « pas joué » if he arrives or starts first |
+| 3 | she cancels after the arrival | the same, 20 s after « Je suis arrivé » |
+| 4 | she does not come | the driver cancels (`booking_cancellation_reason.source = ByDriver`); starting the ride is PAS RÉUSSI |
+| 5 | she chooses a simulated car, or nobody | his offer was made and not taken; never a real driver's |
+| 6 | three requests in a row | three offers of his, three bookings, three cancels |
+| 7 | to an approved proposed place | as 1, the place's name as the destination |
+| 8 | two at once | refused: needs a 2nd test passenger per country (plan decision V3) |
+
+**What it never does**, each one a test in `tests/virtual-rider.test.js`:
+
+- **run without `VIRTUAL_RIDER=on`** in the server's `.env` (compose passes it
+  to maps-shim, `off` by default). On since 2026-11-16. **Off before launch**
+  ([launch runbook](runbooks/launch.md), 3b);
+- **call the driver API.** Signing in as a driver revokes the session on his
+  phone; everything about him is read from the database;
+- **accept another real driver's offer.** Each offer is traced
+  `atlas_app.quote.driver_offer_id → driver_offer.bpp_quote_id →
+  atlas_driver_offer_bpp.driver_quote.driver_id`; only the tester's is
+  confirmed. Other drivers near him see the request; their offers expire;
+- **book for a driver dispatch would skip:** validated, not blocked, a vehicle,
+  « En service », not on a ride, a position under 10 min old, and
+  `wallet.workState().canWork` — the wallet's own rule, one function the
+  wallet screen reads too;
+- **leave a booking open** (an open one locks the passenger out:
+  `ACTIVE_BOOKING_PRESENT`): leftovers are cancelled first, everything on exit
+  and on `stop`; one run at a time per country (a pid file in the container);
+- **claim a cancel the server refused.** Every answer is read.
+
+Its passengers are the ride test's two test accounts (`+213 0555000199`,
+`+222 22778899`), signed in on loopback 8013 with the backend's fixed code;
+they are already on `launch-cleanup-targets.sql`. The pickup is ~300 m from
+the driver and the arrival ~2 km on, both snapped to a road by OSRM's
+`/nearest` (the raw offset can land in the sea at Algiers).
+
+**First live runs, 2026-11-16, with a simulated car as the tester** (no phone
+was free). Every column it reads exists on the live database (27/27, checked
+in `information_schema`). Scenario 1 went through on the real server: offer
+traced, arrival, a start **with no code** (the guard's day-6 rule, proven
+live), COMPLETED at 211 DA, the passenger's rating — then PAS RÉUSSI, as
+expected, because the simulator never rates a passenger. Scenario 2 found a
+bug: **a simulated car reaches a pickup 282 m away in 26 s and starts the
+same second**, so the passenger's cancel at 30 s was refused (the ride had
+started), and the engine had not read the refusal. Fixed the same evening
+(`bfb4f7a854`): every cancel's answer is read, the driver is watched during
+the wait, a closed terminal no longer skips the clean-up. **So the simulated
+cars can prove scenario 1's chain and nothing else: 2, 3 and 4 need a person.**
