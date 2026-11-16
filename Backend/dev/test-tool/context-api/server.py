@@ -715,35 +715,59 @@ def _redis_quote(key):
     return '"' + key.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _clear_config_caches_on_port(port, cluster):
+    """Scan + DEL the config cache keys on one Redis port.
+    Returns (ok, deleted). ok=False if any scan/DEL timed out, raised,
+    or exited non-zero."""
+    base = ["redis-cli", "-h", "localhost", "-p", str(port)]
+    keys = set()
+    for pattern in _CONFIG_CACHE_PATTERNS:
+        try:
+            r = subprocess.run(base + ["--scan", "--pattern", pattern],
+                               capture_output=True, text=True, timeout=30)
+        except Exception as e:
+            print(f"  \033[96m[config-sync]\033[0m redis :{port} scan failed: {e}")
+            return False, 0
+        if r.returncode != 0:
+            print(f"  \033[96m[config-sync]\033[0m redis :{port} scan exited {r.returncode}: {r.stderr.strip()}")
+            return False, 0
+        keys.update(k for k in r.stdout.splitlines() if k)
+    if not keys:
+        return True, 0
+    # -c follows MOVED redirects (a node can list keys it only replicates).
+    cmds = "".join(f"DEL {_redis_quote(k)}\n" for k in keys)
+    try:
+        r = subprocess.run(base[:1] + (["-c"] if cluster else []) + base[1:],
+                           input=cmds, capture_output=True, text=True, timeout=60)
+    except Exception as e:
+        print(f"  \033[96m[config-sync]\033[0m redis :{port} DEL failed: {e}")
+        return False, 0
+    if r.returncode != 0:
+        print(f"  \033[96m[config-sync]\033[0m redis :{port} DEL exited {r.returncode}: {r.stderr.strip()}")
+        return False, 0
+    return True, sum(int(x) for x in r.stdout.split() if x.isdigit())
+
+
 def _clear_config_caches():
     """Delete cached config keys from this workspace's Redis (every cluster
-    node, plus the standalone instance). Returns the number of keys deleted."""
+    node, plus the standalone instance). Retries a failed port once.
+    Returns (deleted, failed_ports)."""
     targets = [(p, True) for p in _redis_cluster_node_ports()]
     targets.append((_redis_single_port(), False))
-    total = 0
+    total, failed = 0, []
     for port, cluster in targets:
-        base = ["redis-cli", "-h", "localhost", "-p", str(port)]
-        keys = set()
-        for pattern in _CONFIG_CACHE_PATTERNS:
-            try:
-                r = subprocess.run(base + ["--scan", "--pattern", pattern],
-                                   capture_output=True, text=True, timeout=30)
-            except Exception as e:
-                print(f"  \033[96m[config-sync]\033[0m redis :{port} scan failed: {e}")
-                continue
-            keys.update(k for k in r.stdout.splitlines() if k)
-        if not keys:
-            continue
-        # -c follows MOVED redirects (a node can list keys it only replicates).
-        cmds = "".join(f"DEL {_redis_quote(k)}\n" for k in keys)
-        try:
-            r = subprocess.run(base[:1] + (["-c"] if cluster else []) + base[1:],
-                               input=cmds, capture_output=True, text=True, timeout=60)
-            total += sum(int(x) for x in r.stdout.split() if x.isdigit())
-        except Exception as e:
-            print(f"  \033[96m[config-sync]\033[0m redis :{port} DEL failed: {e}")
-    print(f"  \033[96m[config-sync]\033[0m cleared {total} cached config keys from Redis")
-    return total
+        for attempt in (1, 2):
+            ok, n = _clear_config_caches_on_port(port, cluster)
+            if ok:
+                total += n
+                break
+            if attempt == 1:
+                time.sleep(2)  # give Redis a moment, then retry
+        else:
+            failed.append(port)  # both attempts failed
+    print(f"  \033[96m[config-sync]\033[0m cleared {total} cached config keys from Redis"
+          + (f"; FAILED on ports {failed}" if failed else ""))
+    return total, failed
 
 
 def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False,
@@ -856,7 +880,14 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         # Redis config caches first, otherwise the restarted apps can keep
         # reading values cached before the sync (ConfigPilot TTL is hours).
         if restart_services:
-            n = _clear_config_caches()
+            n, failed = _clear_config_caches()
+            if failed:
+                msg = (f"could not clear config caches on Redis port(s) {failed}; "
+                       "not restarting services (they would read stale config). Re-run the sync.")
+                _append_log(f"ERROR: {msg}")
+                with _config_sync_lock:
+                    _config_sync_state["error"] = msg
+                return
             _append_log(f"Cleared {n} cached config keys from Redis.")
             _restart_haskell_services()
             _append_log("Restarted rider/driver/mock-registry to pick up synced config.")
