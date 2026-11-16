@@ -35,7 +35,7 @@ run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
     & crossCloudProxy proxyManager modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
-    & addServantInfo modifiedEnv.appEnv.version riderAPI
+    & addServantInfoWithConfigVersion (readConfigVersionLabel modifiedEnv) modifiedEnv.appEnv.version riderAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where

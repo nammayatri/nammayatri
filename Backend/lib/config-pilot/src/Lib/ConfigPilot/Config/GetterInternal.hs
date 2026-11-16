@@ -15,7 +15,7 @@ import qualified Data.Text as T
 import Data.Time (timeToTimeOfDay, utctDayTime)
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
-import Kernel.Beam.Types (TxnIdKey (..))
+import Kernel.Beam.Types (ConfigVersionKey (..), TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
@@ -60,10 +60,20 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
     else do
       mTxnId <- L.getOptionLocal TxnIdKey
       logDebug $ "CP Log: [SELECT_START] domain=" <> show logicDomain <> " mocId=" <> merchantOpCityId.getId <> " path=" <> maybe "fresh-toss" (const "txn-sticky") mTxnId <> " txnId=" <> show mTxnId
-      case mTxnId of
+      versions <- case mTxnId of
         Just txnId -> getTxnIdStickyVersions txnId
         Nothing -> getActiveRolloutVersionsWithToss
+      recordConfigVersionLabel versions
+      pure versions
   where
+    recordConfigVersionLabel versions = do
+      allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
+      let grouped = [(g, r.version) | r <- allActiveRollouts, r.isBaseVersion /= Just True, Just g <- [r.experimentGroup]]
+      unless (null grouped) $ do
+        let label = maybe "base" fst $ find (\(_, v) -> v `elem` versions) grouped
+        existing <- L.getOptionLocal ConfigVersionKey
+        when (label /= "base" || isNothing existing) $ L.setOptionLocal ConfigVersionKey label
+
     mkTxnIdConfigStickyKey txnId = "sticky_config_versions:" <> txnId <> ":" <> show logicDomain <> ":" <> merchantOpCityId.getId
 
     getTxnIdStickyVersions txnId = do
