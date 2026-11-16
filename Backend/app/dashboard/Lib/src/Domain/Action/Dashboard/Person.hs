@@ -1142,6 +1142,7 @@ buildPerson pid req dashboardAccessType merchantId = do
         secretKey = Nothing,
         is2faEnabled = False,
         twoFaExempt = False,
+        organizationId = Nothing,
         tokenNo = Nothing,
         vpa = Nothing
       }
@@ -1472,6 +1473,7 @@ resolvePersonOp merchant role conflicts entityById reqCity now idx p mbTokenEncr
                 secretKey = Nothing,
                 is2faEnabled = False,
                 twoFaExempt = False,
+                organizationId = Nothing,
                 tokenNo = mbTokenEncrypted,
                 vpa = mbVpaEncrypted
               }

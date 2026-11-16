@@ -106,6 +106,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> valueToMaybe configJSON
     Domain.EventTrackingService EventTracking.Breeze -> Domain.EventTrackingServiceConfig . EventTrackingInterface.BreezeConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
+    Domain.BmsService Domain.Tms -> Domain.BmsServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
@@ -212,6 +213,7 @@ getServiceNameConfigJson = \case
     EventTrackingInterface.FirebaseAnalyticsConfig cfg -> (Domain.EventTrackingService EventTracking.FirebaseAnalytics, toJSON cfg)
     EventTrackingInterface.BreezeConfig cfg -> (Domain.EventTrackingService EventTracking.Breeze, toJSON cfg)
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
+  Domain.BmsServiceConfig cfg -> (Domain.BmsService Domain.Tms, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
 

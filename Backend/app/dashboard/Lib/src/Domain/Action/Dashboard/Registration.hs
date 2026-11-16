@@ -833,6 +833,7 @@ buildFleetOwner req pid roleId dashboardAccessType merchantId = do
         secretKey = Nothing,
         is2faEnabled = False,
         twoFaExempt = False,
+        organizationId = Nothing,
         tokenNo = Nothing,
         vpa = Nothing
       }
@@ -947,6 +948,7 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         secretKey = Nothing,
         is2faEnabled = False,
         twoFaExempt = False,
+        organizationId = Nothing,
         tokenNo = Nothing,
         vpa = Nothing
       }
