@@ -168,7 +168,10 @@ newtype DeleteRCReq = DeleteRCReq
 
 data RCStatusReq = RCStatusReq
   { rcNo :: Text,
-    isActivate :: Bool
+    isActivate :: Bool,
+    -- | Sent as true by driver app builds that have the RC takeover photo screen. Older builds send nothing,
+    --   so a takeover that needs a photo tells them to update the app instead of asking for a photo.
+    supportsTakeoverPhoto :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -893,7 +896,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) source req@RCStatusReq {..
             pure (di, r)
           else pure (driverInfo, rc)
       now <- getCurrentTime
-      activationCheck <- validateRCActivation source lockedDriverInfo transporterConfig lockedRc
+      activationCheck <- validateRCActivation source (supportsTakeoverPhoto == Just True) lockedDriverInfo transporterConfig lockedRc
       case activationCheck of
         RCAlreadyActive -> pure ()
         RCCanBeActivated mbPreviousHolderId mbStagedFromGate -> do
@@ -993,8 +996,8 @@ data RCActivationCheck
     --   the takeover gate used, if any.
     RCCanBeActivated (Maybe (Id Person.Person)) (Maybe RCTakeover.StagedTakeoverVerification)
 
-validateRCActivation :: OnboardingFlow m r => RCActivationSource -> DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m RCActivationCheck
-validateRCActivation source driverInfo transporterConfig rc = do
+validateRCActivation :: OnboardingFlow m r => RCActivationSource -> Bool -> DI.DriverInformation -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m RCActivationCheck
+validateRCActivation source appSupportsTakeoverPhoto driverInfo transporterConfig rc = do
   let driverId = driverInfo.driverId
   now <- getCurrentTime
   -- Same link check verify runs, from one place; only activation records the reason and creates the link.
@@ -1046,6 +1049,11 @@ validateRCActivation source driverInfo transporterConfig rc = do
             | isNothing (RCTakeover.expectedGridVehicleType rc) -> do
               logInfo $ "RC takeover without photo, vehicle type not checkable: rcId=" <> rc.id.getId <> ", driverId=" <> driverInfo.driverId.getId <> ", variant=" <> show rc.vehicleVariant
               pure Nothing
+            -- An app build without the photo screen can't take one: tell the driver to update the app, in the
+            -- errorMessage older builds already show for a reasonCode they don't know.
+            | not appSupportsTakeoverPhoto -> do
+              DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "App update required to take over this RC"
+              throwError RCTakeoverAppUpdateRequired
             | otherwise -> Just <$> RCTakeover.requireFreshTakeoverVerification driverInfo.driverId rc
           RefuseTakeover -> refuseAutoTakeover Nothing driverInfo.driverId rc
 

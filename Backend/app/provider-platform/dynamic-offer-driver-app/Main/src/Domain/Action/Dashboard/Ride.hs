@@ -1161,7 +1161,8 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
       let rcStatusReq =
             DomainRC.RCStatusReq
               { rcNo = req.vehicleNumber,
-                isActivate = True
+                isActivate = True,
+                supportsTakeoverPhoto = Nothing
               }
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) DomainRC.TaxiBooth rcStatusReq
     createRCAssociation driverId rc = do

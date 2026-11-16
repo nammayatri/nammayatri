@@ -346,7 +346,8 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = rcNumber,
-            isActivate = True
+            isActivate = True,
+            supportsTakeoverPhoto = Nothing
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) DomainRC.AutoOnboarding rcStatusReq
 

@@ -1527,6 +1527,7 @@ data DriverOnboardingError
   | RCActivationRCNotLinked
   | RCActivationRCNotInFleet
   | RCTakeoverPhotoRequired
+  | RCTakeoverAppUpdateRequired
   | RCTakeoverVerificationStale
   | RCTakeoverNoClash
   | RCTakeoverCheckUnavailable
@@ -1641,6 +1642,7 @@ instance IsBaseError DriverOnboardingError where
     RCActivationRCNotLinked -> Just "This RC is not linked to your account. Upload it before activating."
     RCActivationRCNotInFleet -> Just "This vehicle does not belong to you or your fleet."
     RCTakeoverPhotoRequired -> Just "Take a photo of the vehicle to switch it to your account."
+    RCTakeoverAppUpdateRequired -> Just "Update the app to switch to this vehicle."
     RCTakeoverVerificationStale -> Just "This vehicle's status changed. Take a new photo to continue."
     RCTakeoverNoClash -> Just "No photo is needed to switch to this vehicle."
     RCTakeoverCheckUnavailable -> Just "The vehicle photo check is unavailable right now. Try again later."
@@ -1754,6 +1756,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationRCNotLinked -> "INVALID_REQUEST"
     RCActivationRCNotInFleet -> "INVALID_REQUEST"
     RCTakeoverPhotoRequired -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCTakeoverAppUpdateRequired -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     RCTakeoverVerificationStale -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     RCTakeoverNoClash -> "INVALID_REQUEST"
     RCTakeoverCheckUnavailable -> "SERVICE_UNAVAILABLE"
@@ -1859,6 +1862,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationRCNotLinked -> E400
     RCActivationRCNotInFleet -> E400
     RCTakeoverPhotoRequired -> E400
+    RCTakeoverAppUpdateRequired -> E400
     RCTakeoverVerificationStale -> E400
     RCTakeoverNoClash -> E400
     RCTakeoverCheckUnavailable -> E503
@@ -1938,6 +1942,7 @@ rcActivationReasonCode = \case
   RCActivationRCNotLinked -> Just "RC_ACTIVATION_RC_NOT_LINKED"
   RCActivationRCNotInFleet -> Just "RC_ACTIVATION_RC_NOT_IN_FLEET"
   RCTakeoverPhotoRequired -> Just "RC_TAKEOVER_PHOTO_REQUIRED"
+  RCTakeoverAppUpdateRequired -> Just "RC_TAKEOVER_APP_UPDATE_REQUIRED"
   RCTakeoverVerificationStale -> Just "RC_TAKEOVER_VERIFICATION_STALE"
   RCTakeoverNoClash -> Just "RC_TAKEOVER_NO_CLASH"
   RCTakeoverCheckUnavailable -> Just "RC_TAKEOVER_CHECK_UNAVAILABLE"
