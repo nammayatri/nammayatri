@@ -26,7 +26,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
-import Domain.Types.TranslationKeys (TranslationKey (..), VerificationMessage (..))
+import Domain.Types.TranslationKeys (DocumentRejectReason, TranslationKey (..), VerificationMessage (..), documentRejectReasonText)
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleFitnessCertificate as VFC
@@ -399,8 +399,9 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
+            mbShownReason <- translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbProcessedReason
             mbFinalMetadata <- withImageMetadataFallback entityImagesInfo (Just rcImagesInfo) docType mbImageId mbMetadata
-            return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = mbImageId2, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
+            return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbShownReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = mbImageId2, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs mbCommonDoc
             mbMessage <- documentStatusMessage status mbReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
@@ -684,7 +685,7 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
         let status = mapStatus vehicleRC.verificationStatus
             reason
               | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
-              | otherwise = vehicleRC.rejectReason
+              | otherwise = storedRejectReason vehicleRC.rejectReasonKey vehicleRC.rejectReason
             (s3, iid) = lookupImage vehicleRC.documentImageId
             iid2 = vehicleRC.documentImageId2 <&> (.getId)
         mbMetadata <- if enableMetadata then Just <$> mkRCMetadata vehicleRC else pure Nothing
@@ -703,7 +704,7 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
         mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehicleInsuranceMetadata vehicleRC mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, Nothing, mbMetadata, Nothing)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), storedRejectReason (mbDoc >>= (.rejectReasonKey)) (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, Nothing, mbMetadata, Nothing)
       DVC.VehiclePUC -> do
         mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
@@ -913,6 +914,24 @@ extractImageFailReason imageError =
     Just (ImageNotValid reason) -> nonEmptyReason reason -- manual reject reason from the update-documents dashboard api
     Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
+
+-- | The reason whose key name a document row stores in @reject_reason_key@, if any.
+documentRejectReasonByKey :: Text -> Maybe DocumentRejectReason
+documentRejectReasonByKey name = find ((== name) . show . DocumentReason_Text) [minBound .. maxBound]
+
+-- | What a document row's reject reason reads as: the key name while the text is still that key's
+-- English sentence (our own code wrote both), else the text, which ops may have replaced since.
+storedRejectReason :: Maybe Text -> Maybe Text -> Maybe Text
+storedRejectReason (Just key) (Just text) | (documentRejectReasonText <$> documentRejectReasonByKey key) == Just text = Just key
+storedRejectReason _ mbText = mbText
+
+-- | A reason that is a key name becomes the row for the city and language, or the key's English
+-- sentence; any other text (typed by ops, returned by a verification provider) is shown as stored.
+translateRejectReason :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Language -> Maybe Text -> m (Maybe Text)
+translateRejectReason merchantOpCityId language = traverse $ \reason ->
+  case documentRejectReasonByKey reason of
+    Just keyed -> fromMaybe (documentRejectReasonText keyed) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (DocumentReason_Text keyed)
+    Nothing -> pure reason
 
 documentStatusMessage :: OnboardingFlow m r => ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Id DMOC.MerchantOperatingCity -> Language -> Bool -> m (Maybe Text)
 documentStatusMessage status mbReason docType mbVerificationUrl merchantOpCityId language skipMessages

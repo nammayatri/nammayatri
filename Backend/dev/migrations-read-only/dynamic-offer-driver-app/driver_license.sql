@@ -43,3 +43,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN reject_reason text 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN reject_reason_key text ;

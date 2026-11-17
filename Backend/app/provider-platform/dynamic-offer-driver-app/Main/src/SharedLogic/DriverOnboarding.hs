@@ -60,7 +60,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as Person
 import Domain.Types.TranslationKey (keyName)
-import Domain.Types.TranslationKeys (TranslationKey (..))
+import Domain.Types.TranslationKeys (DocumentRejectReason (..), TranslationKey (..), documentRejectReasonText)
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
@@ -589,6 +589,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = mbRejectReason,
+        rejectReasonKey = show (DocumentReason_Text NonTransportVehicle) <$ mbRejectReason,
         createdAt = now,
         unencryptedCertificateNumber = input.registrationNumber,
         approved = Nothing,
@@ -616,7 +617,7 @@ validateRCStatus input rcconfigs now expiry = do
       let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
       let vehicleTypeValid = rcconfigs.allowNonTransportVehicle /= Just False || input.rcVehicleType /= Just VT.NonTransport
       let finalStatus = if expiryCheck && isCOVValid && validInsurance && vehicleTypeValid then Documents.VALID else Documents.INVALID
-      let rejectReason = if not vehicleTypeValid then Just "Non Transport vehicles are not allowed" else Nothing
+      let rejectReason = if not vehicleTypeValid then Just (documentRejectReasonText NonTransportVehicle) else Nothing
       logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ", vehicleTypeValid=" <> show vehicleTypeValid <> ")"
       pure (finalStatus, reviewRequired, variant, mbVehicleModel, rejectReason)
     _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing, Nothing)
@@ -1324,7 +1325,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
               Right FMFail -> do
                 let mbReason = toMessage FaceMatchFailed
                 case docType of
-                  ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) docImg.id
+                  ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) Nothing docImg.id
                   ODC.PanCard -> DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
                   ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
                   _ -> pure ()
@@ -1340,7 +1341,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
           whenJust mbDL $ \dl ->
             when (dl.documentImageId1 == docImg.id && dl.verificationStatus == Documents.PENDING) $ do
               rejectImage
-              DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Document archived" mbReason) docImg.id
+              DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Document archived" mbReason) Nothing docImg.id
         ODC.PanCard -> do
           mbPan <- DPQuery.findByDriverId person.id
           whenJust mbPan $ \pan ->

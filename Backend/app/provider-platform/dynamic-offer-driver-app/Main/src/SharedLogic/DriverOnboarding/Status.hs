@@ -894,8 +894,9 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
         Nothing -> getInProgressDriverDocuments person.role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs mbCommonDoc
 
-    mbMessage <- documentStatusMessage status mbReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
-    let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
+    mbShownReason <- translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbReason
+    mbMessage <- documentStatusMessage status mbShownReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
+    let finalMessage = mbShownReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
     mbDocMetadata <- case mbMetadata of
       Just meta -> pure (Just meta)
       Nothing | enableMetadata && isNothing mbProcessedStatus -> inProgressMetadataFor driverId docType
@@ -1154,13 +1155,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
             -- Expiry from DL table's licenseExpiry field (not from Image table)
             let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL'
                 iid2 = mbDL' >>= (.documentImageId2) <&> (.getId)
-                reason = (mbDL' >>= (.rejectReason)) <|> (if (mbDL' <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL' <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+                reason = storedRejectReason (mbDL' >>= (.rejectReasonKey)) (mbDL' >>= (.rejectReason)) <|> (if (mbDL' <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL' <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
             mbDlMetadata <- if enableMetadata then mkDLMetadata mbDL' else pure Nothing
             return (mapStatus <$> (mbDL' <&> (.verificationStatus)), reason, Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata, mbDL' <&> (.id.getId))
           else do
             let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL
                 iid2 = mbDL >>= (.documentImageId2) <&> (.getId)
-                reason = (mbDL >>= (.rejectReason)) <|> (if (mbDL <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+                reason = storedRejectReason (mbDL >>= (.rejectReasonKey)) (mbDL >>= (.rejectReason)) <|> (if (mbDL <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
             mbDlMetadata <- if enableMetadata then mkDLMetadata mbDL else pure Nothing
             return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata, mbDL <&> (.id.getId))
       DVC.AadhaarCard -> do
