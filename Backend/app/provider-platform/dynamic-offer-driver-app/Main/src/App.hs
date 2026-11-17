@@ -48,6 +48,7 @@ import Kernel.External.Verification.InternalScripts.InternalOCR (prepareInternal
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -78,6 +79,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "utils" Utils.Common.Events as UE
+import qualified "utils" Utils.Common.RateLimit as RL
+import qualified "utils" Utils.Common.RateLimit.Redis as RLR
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
@@ -192,7 +195,18 @@ runDynamicOfferDriverApp' appCfg = do
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
     proxyManager <- HttpTLS.newTlsManager
-    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
+    rateLimitXffPosition <- RL.lookupClientIpPositionFromRight
+    rateLimitMiddleware <-
+      RL.rateLimitMiddleware
+        RL.RateLimitBackend
+          { fetchConfig = runFlowR flowRt' appEnv . findById,
+            incrWithExpire = \key ttl -> runFlowR flowRt' appEnv . Redis.withNonCriticalRedis $ RLR.incrWithExpireAtomic key ttl,
+            logInfoIO = runFlowR flowRt' appEnv . logInfo,
+            logErrorIO = runFlowR flowRt' appEnv . logError,
+            refreshSeconds = 10,
+            clientIpPositionFromRight = rateLimitXffPosition
+          }
+    runSettings settings $ timeoutMiddleware (rateLimitMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv)))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList
