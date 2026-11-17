@@ -747,7 +747,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline transporterConfig vehicle.driverId
                     VQuery.upsert updatedVehicle
-                    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver vehicle.driverId person.merchantOperatingCityId
+                    fork "applyFleetSettings" $ FDS.applyFleetSettings False vehicleServiceTiers driver updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
 
@@ -1109,7 +1109,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
-      fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver vehicle.driverId merchantOpCityId
+      fork "applyFleetSettings" $ FDS.applyFleetSettings False cityVehicleServiceTiers person vehicle
       pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()

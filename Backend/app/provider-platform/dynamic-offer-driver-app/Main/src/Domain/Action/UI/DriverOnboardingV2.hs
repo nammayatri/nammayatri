@@ -96,7 +96,6 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.Prepaid as SFPrepaid
 import qualified SharedLogic.Finance.Wallet as SFWallet
-import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
@@ -510,9 +509,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
-  mbFleetAutoAssign <- FDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
-  let autoAcceptLockedByFleet = maybe False (not . (.allowDriverToToggle)) mbFleetAutoAssign
-  mbFleetLock <- FDS.getFleetLock mbFleetAutoAssign person driverInfo vehicle baseCityVehicleServiceTiers
+  autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
@@ -531,7 +528,6 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
                       mode = Just cfg.mode,
                       isSelected = Just $ serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
                     },
-              lockedByFleet = Just $ maybe False ((serviceTierType `elem`) . (.fleetTiers)) mbFleetLock,
               ..
             }
 
@@ -585,9 +581,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
         enableForAirport = effectiveAirport,
         airConditioned = mbAirConditioned,
-        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet,
-        acLockedByFleet = Just $ maybe False (.acLocked) mbFleetLock,
-        intraCityLockedByFleet = Just $ maybe False (.intraCityLocked) mbFleetLock
+        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet
       }
   where
     getDriverCurrentSpecialLocationId personId' =
@@ -668,11 +662,8 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     let hasAutoAssignTag tier =
           Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
-    -- A fleet's lock keeps its tiers selected with auto-accept (lockTiers), and intracity on (lockIntraCity).
-    -- The app sends every switch on each change, so these are ignored rather than rejected.
-    mbFleetAutoAssign <- FDA.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
-    mbFleetLock <- FDS.getFleetLock mbFleetAutoAssign person driverInfo vehicle cityVehicleServiceTiers
-    let fleetTiers = maybe [] (.fleetTiers) mbFleetLock
+    -- A fleet that doesn't let its drivers toggle auto-assign keeps its auto-accept tiers as they are.
+    fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
     tierResults <-
@@ -681,11 +672,9 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             isDefault = vehicle.variant `elem` driverServiceTier.defaultForVehicleVariant
             mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
             isSelectedByDriver = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
-            isFleetTier = driverServiceTier.serviceTierType `elem` fleetTiers
-            AutoAcceptSignal {wantsAutoAccept = wantsAutoAcceptByDriver, shouldForceBaseTier} = computeAutoAcceptSignal hasAutoAssignTag vehicle driverServiceTier mbServiceTierDriverRequest
-            wantsAutoAccept = wantsAutoAcceptByDriver || isFleetTier
-            -- shouldForceBaseTier and isFleetTier are gated below by isUsageRestricted+wallet like every other path -- never a bypass.
-            isSelected = isSelectedByDriver || (isDefault && vehicle.category /= Just DVC.AMBULANCE) || shouldForceBaseTier || isFleetTier -- Suppressing isDefault check for Ambulance
+            AutoAcceptSignal {wantsAutoAccept, shouldForceBaseTier} = computeAutoAcceptSignal hasAutoAssignTag vehicle driverServiceTier mbServiceTierDriverRequest
+            -- shouldForceBaseTier is gated below by isUsageRestricted+wallet like every other path -- never a bypass.
+            isSelected = isSelectedByDriver || (isDefault && vehicle.category /= Just DVC.AMBULANCE) || shouldForceBaseTier -- Suppressing isDefault check for Ambulance
             -- A DISABLED config must not gate anything: mode-only match would still strip the
             -- base tier on wallet shortfall for a tier ops believes is off.
             isAutoAcceptOnlyTier = maybe False (\cfg -> cfg.enabled && cfg.mode == DC.AutoAcceptOnly) driverServiceTier.autoAcceptanceConfig
@@ -704,20 +693,17 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
             pure
               ( if baseTierSurvivesWalletCheck then Just driverServiceTier.serviceTierType else Nothing,
-                if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing,
-                if hasSufficientWalletBalance then Nothing else Just driverServiceTier.serviceTierType
+                if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
               )
-          else pure (Nothing, Nothing, Nothing)
+          else pure (Nothing, Nothing)
     -- Rating-gated tiers (vehicleRating threshold set) are eligibility-driven, not
     -- opt-in: the driver's toggle cannot remove one the vehicle qualifies for — an
     -- automated recompute would re-add it on the next rating/AC event anyway.
     let ratingGatedTiers = [t.serviceTierType | (t, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted, isJust t.vehicleRating]
-        selectedServiceTierTypes = DL.nub $ mapMaybe (\(base, _, _) -> base) tierResults <> ratingGatedTiers
-        walletShortTiers = mapMaybe (\(_, _, walletShort) -> walletShort) tierResults
-        -- Auto-assign the fleet gave stays on while the driver keeps the tier and the wallet covers it; the base tier
-        -- follows their choice.
-        fleetKeptAutoAcceptTiers = [tier | tier <- fleetTiers, tier `elem` selectedServiceTierTypes, tier `notElem` walletShortTiers]
-        selectedAutoAcceptTierTypes = DL.nub $ mapMaybe (\(_, autoAccept, _) -> autoAccept) tierResults <> fleetKeptAutoAcceptTiers
+        selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults <> ratingGatedTiers
+        -- Auto-assign the fleet gave stays on while the driver keeps the tier; the base tier follows their choice.
+        fleetKeptAutoAcceptTiers = [tier | fleetLocksAutoAssign, tier <- fromMaybe [] vehicle.selectedAutoAcceptTiers, hasAutoAssignTag tier, tier `elem` selectedServiceTierTypes]
+        selectedAutoAcceptTierTypes = DL.nub $ mapMaybe snd tierResults <> fleetKeptAutoAcceptTiers
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId
 
@@ -743,7 +729,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
 
         canSwitchToIntraCity' =
           if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
-            then maybe False (.intraCityLocked) mbFleetLock || fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity
+            then fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity
             else True
 
     QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId

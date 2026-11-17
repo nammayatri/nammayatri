@@ -216,9 +216,6 @@ FleetConfig:
       defaultOn: Bool
       allowDriverToToggle: Bool
       disableDriverAreaAndDistancePreference: Bool
-      lockTiers: Maybe Bool
-      lockAc: Maybe Bool
-      lockIntraCity: Maybe Bool
       derive: Eq
 
   fields:

@@ -34,12 +34,5 @@ data FleetConfig = FleetConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data AutoAssignConfig = AutoAssignConfig
-  { allowDriverToToggle :: Kernel.Prelude.Bool,
-    defaultOn :: Kernel.Prelude.Bool,
-    disableDriverAreaAndDistancePreference :: Kernel.Prelude.Bool,
-    lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
-  }
+data AutoAssignConfig = AutoAssignConfig {allowDriverToToggle :: Kernel.Prelude.Bool, defaultOn :: Kernel.Prelude.Bool, disableDriverAreaAndDistancePreference :: Kernel.Prelude.Bool}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
