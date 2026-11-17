@@ -12,7 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Post-transaction dispatch, run automatically after every successful 'runFinance' in this app.
+-- | Post-transaction dispatch, run automatically after every successful 'runFinance' in this app: the pool's wallet
+--   balance cache, and (wallet gate on) the wallet-gated tier strip plus the locked-fleet tier restore.
 --   Call sites must import 'runFinance' from here, not Lib.Finance directly, or dispatch is silently skipped.
 module SharedLogic.Finance.PostActions
   ( runFinance,
@@ -24,12 +25,13 @@ import Data.List (nubBy)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fork, logError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -72,6 +74,10 @@ runPostActions walletGateEnabled finalState = do
 -- | Like 'runPostActions' but for a single, already-known account. No callers remain
 --   outside this module (createWalletEntryDelta now goes through runFinance); kept as
 --   the single-account entry point for future direct dispatch needs.
+--   With the wallet gate on, every driver-wallet posting re-checks the wallet-gated tiers (strip, synchronous), then
+--   gives a locked-fleet driver back the fleet tiers the wallet covers (forked). Not only on a credit: a transfer_ credit
+--   collects no entry id, and the restore writes nothing when nothing changed. A balance moved outside runFinance
+--   (settleEntry, createReversal) is picked up on the driver's next wallet posting.
 runPostActionsForAccount ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
@@ -85,8 +91,10 @@ runPostActionsForAccount walletGateEnabled syncWalletBalance account = do
       logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
-      (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->
+      (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) -> do
         SVST.checkAndAutoDisableWalletGatedTiers (Id driverIdText) (Id account.merchantOperatingCityId)
+        fork "restoreLockedFleetTiersOnWalletPosting" $
+          FDS.applyLockedFleetSettingsOnWalletPosting (Id driverIdText) (Id account.merchantOperatingCityId)
       _ -> pure ()
 
 isDriverWallet :: Finance.AffectedAccount -> Bool

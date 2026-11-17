@@ -10,6 +10,7 @@ module SharedLogic.FleetDriverSettings
     applyFleetSettings,
     applyFleetSettingsToDriver,
     applyLockedFleetSettingsToDriver,
+    applyLockedFleetSettingsOnWalletPosting,
     removeAutoAssign,
     fleetLocksTiers,
     fleetLocksPreferences,
@@ -158,7 +159,7 @@ applyFleetSettingsToDriver = applyFleetSettingsLocked \mbFleetAutoAssign driver 
   -- Forced for a locked driver: with the fleet's default off, the per-driver switch put them on.
   Just <$> lockedOnAutoAssign mbFleetAutoAssign driver
 
--- | After AC is back on: re-applies the fleet's settings, forced, for a locked driver only (others keep their choices).
+-- | After AC is back on or a wallet posting: re-applies the fleet's settings, forced, for a locked driver only (others keep their choices).
 applyLockedFleetSettingsToDriver ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
@@ -166,6 +167,23 @@ applyLockedFleetSettingsToDriver ::
   m ()
 applyLockedFleetSettingsToDriver = applyFleetSettingsLocked \mbFleetAutoAssign driver ->
   bool Nothing (Just True) <$> lockedOnAutoAssign mbFleetAutoAssign driver
+
+-- | 'applyLockedFleetSettingsToDriver' after a posting to the driver's wallet: a fleet tier the wallet covers again (one a
+-- debit stripped, or one the wallet was short for when the fleet's settings were applied) comes back with its auto-accept.
+-- Every posting, not only a credit: a transfer_ credit collects no entry id.
+-- A driver without an AutoAssign tag (outside a fleet, or switched off) stops at the person read: no lock, no fleet read.
+-- With nothing to restore it writes nothing ('applyFleetSettings' writes only a changed column).
+applyLockedFleetSettingsOnWalletPosting ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id Person ->
+  Id MerchantOperatingCity ->
+  m ()
+applyLockedFleetSettingsOnWalletPosting driverId merchantOpCityId = do
+  now <- getCurrentTime
+  mbDriver <- QPerson.findById driverId
+  let onAutoAssign driver = not (null (autoAssignedTiers (Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag))))
+  when (maybe False onAutoAssign mbDriver) $
+    applyLockedFleetSettingsToDriver driverId merchantOpCityId
 
 -- | The driver's fleet locks tiers ('fleetLocksTiers') and the driver is on auto-assign (has the AutoAssign tag).
 lockedOnAutoAssign :: MonadFlow m => Maybe DFC.AutoAssignConfig -> Person -> m Bool
