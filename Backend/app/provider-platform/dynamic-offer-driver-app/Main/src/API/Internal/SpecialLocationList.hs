@@ -60,8 +60,10 @@ getSpecialLocationList ::
 getSpecialLocationList merchantId city apiKey mbLimit mbOffset mbSpecialLocationTypes mbGetAllLocations = withFlowHandlerAPI $ do
   checkListKey "specialLocation/list" merchantId apiKey
   let mbSpecialLocationTypes' = mbSpecialLocationTypes >>= \case [] -> Nothing; xs -> Just xs
+  -- Only LTS calls with getAllLocations=true. It reads `geoJson` for queue membership, so serve
+  -- the queue polygon there when one is configured. Pricing keeps using the original polygon.
   if mbGetAllLocations == Just True
-    then QSL.findAllSpecialLocationsWithGeoJSONAllCities Nothing Nothing mbSpecialLocationTypes'
+    then map QSL.withQueueGeoJson <$> QSL.findAllSpecialLocationsWithGeoJSONAllCities Nothing Nothing mbSpecialLocationTypes'
     else do
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
       QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationTypes'

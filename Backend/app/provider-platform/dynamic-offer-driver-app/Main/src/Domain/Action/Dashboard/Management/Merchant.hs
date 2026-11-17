@@ -3718,10 +3718,16 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
   updatedSL <- mkSpecialLocation mbExistingSL mbGeom
+  -- This path stores an uploaded pricing KML as PostGIS hex in geomGeoJson, so fall back to the
+  -- existing GeoJSON when the new value doesn't parse.
+  let ownPricingGeoJson = find (isJust . GGeom.parseGatePolygons) (catMaybes [updatedSL.geomGeoJson, mbExistingSL >>= (.geomGeoJson)])
+  whenJust request.queueGeom $
+    QSL.validateQueueGeomNoOverlap mbSpecialLocationId updatedSL.locationName ownPricingGeoJson
   void $
     runTransaction $
       if isJust mbExistingSL then QSLG.updateSpecialLocation updatedSL else QSLG.create updatedSL
   QSL.clearSpecialZoneInMemCache
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) (updatedSL : maybeToList mbExistingSL)
   return Success
   where
     mkSpecialLocation :: Maybe SL.SpecialLocation -> Maybe Text -> Flow SL.SpecialLocation
@@ -3772,15 +3778,17 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
             ..
           }
 
 deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
 deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
   QGI.deleteAll specialLocationId
   QSL.clearSpecialZoneInMemCache
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   pure Success
 
 postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
@@ -3789,6 +3797,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate specialLocation existingGates request
   QSL.clearSpecialZoneInMemCache
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   return Success
   where
     createOrUpdateGate :: SL.SpecialLocation -> [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
@@ -3844,13 +3853,14 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
 
 deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
 deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationId gateName = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
   case existingGate of
     Nothing -> throwError $ InvalidRequest "Could not find any gates with the specified name for the given specialLocationId"
     Just gate -> QGI.deleteById gate.id
   QSL.clearSpecialZoneInMemCache
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   return Success
 
 normalizeName :: Text -> Text

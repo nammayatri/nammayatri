@@ -451,6 +451,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
             ..
           }
 
@@ -1939,7 +1940,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
-                boothSpecificFleet = Nothing
+                boothSpecificFleet = Nothing,
+                queueGeomGeoJson = Nothing
               }
           gateInfo =
             DGI.GateInfo
