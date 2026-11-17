@@ -6071,7 +6071,6 @@
     },
     "root": {
       "inputs": {
-        "amazonka-git": "amazonka-git",
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "db-manager-src": "db-manager-src",
