@@ -57,6 +57,7 @@ module SharedLogic.CancellationOrchestrator
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup, mkTaxBreakup)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import qualified BecknV2.OnDemand.Settlement as Settlement
@@ -111,6 +112,7 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
@@ -376,6 +378,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
               feeTax = Nothing,
               commission = Nothing,
               commissionTax = Nothing,
+              feeTaxConfig = Nothing,
               consequenceRowId = Nothing,
               collectionMode = Nothing
             }
@@ -414,6 +417,8 @@ applyTerminalConsequences ctx createLedgerEntries = do
             -- no ledger entries
             when (totalCharges > 0) $
               QRide.updateCancellationChargesOnCancel (Just totalCharges) ride.id
+            whenJust ((,) <$> booking.taxRates <*> outcome.feeTaxConfig) $ \(rates, feeTaxConfig) ->
+              QRB.updateTaxRates (Just Tax.DriverTaxRates {regime = rates.regime, riderPayable = rates.riderPayable {FB.cancellationFee = Just feeTaxConfig}, driverDeductible = rates.driverDeductible}) booking.id
             SCD.applyCancellationCharge
               SCD.ApplyCancellationChargeReq
                 { ride = ride,
@@ -461,6 +466,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
               feeTax = mfilter ((== quotedTax) . (.total)) (breakup >>= (.feeTax)) <|> mkTaxBreakup (mfilter (> 0) (Just quotedTax)) Nothing Nothing Nothing,
               commission = breakup >>= (.commission),
               commissionTax = breakup >>= (.commissionTax),
+              feeTaxConfig = CancellationConsequence.customerFeeTaxConfig =<< mbRow,
               consequenceRowId = Just rowId,
               collectionMode = show <$> (mbRow >>= (.collectionMode))
             }
@@ -473,6 +479,7 @@ data CancellationChargesOutcome = CancellationChargesOutcome
     feeTax :: Maybe TaxBreakup,
     commission :: Maybe HighPrecMoney,
     commissionTax :: Maybe TaxBreakup,
+    feeTaxConfig :: Maybe Tax.TaxConfig,
     -- id of the CancellationConsequenceMatrix row that produced this outcome (audit trail)
     consequenceRowId :: Maybe Text,
     -- show ConsequenceCollectionMode from the row; persisted on the dues row so the BAP
@@ -581,6 +588,7 @@ chargesOutcomeFromRow booking = \case
             feeTax = breakup.feeTax,
             commission = breakup.commission,
             commissionTax = breakup.commissionTax,
+            feeTaxConfig = CancellationConsequence.customerFeeTaxConfig row,
             consequenceRowId = Just row.id.getId,
             collectionMode = show <$> row.collectionMode
           }
@@ -598,7 +606,7 @@ dropZeroCharge :: CancellationChargesOutcome -> CancellationChargesOutcome
 dropZeroCharge o = case o.fee of
   Just charges
     | charges + Tax.taxTotal o.feeTax == 0 ->
-      CancellationChargesOutcome {fee = Nothing, feeTax = Nothing, commission = Nothing, commissionTax = Nothing, consequenceRowId = o.consequenceRowId, collectionMode = o.collectionMode}
+      CancellationChargesOutcome {fee = Nothing, feeTax = Nothing, commission = Nothing, commissionTax = Nothing, feeTaxConfig = Nothing, consequenceRowId = o.consequenceRowId, collectionMode = o.collectionMode}
   _ -> o
 
 -- | Compute (without applying) the customer cancellation charge — used by the
@@ -641,6 +649,7 @@ getCancellationCharges booking ride source reasonCode = do
                 feeTax = Nothing,
                 commission = Nothing,
                 commissionTax = Nothing,
+                feeTaxConfig = Nothing,
                 consequenceRowId = Nothing,
                 collectionMode = Nothing
               }

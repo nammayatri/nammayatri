@@ -4,6 +4,7 @@
 
 module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport) where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.Booking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -29,3 +30,6 @@ updateIsPickupOrDestinationEdited :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r)
 updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isPickupOrDestinationEdited isPickupOrDestinationEdited, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateTaxRates :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.DriverTaxRates -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updateTaxRates taxRates id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.taxRates (toJSON <$> taxRates), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

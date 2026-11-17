@@ -204,10 +204,8 @@ computeCustomerCharge row fareBasis mbBookingDeposit =
     Just (DExtra.MoneyDeduction money) ->
       let deduction = moneyDeductionAmount money fareBasis mbBookingDeposit
           commissionAndTax = row.customerCommissionAndTax
-          asPct = fromRational . (.getHighPrecMoney)
-          feeTaxConfig = commissionAndTax >>= \c -> (\pct -> Tax.TaxConfig {tax = asPct pct, cgst = asPct <$> c.cgstPercentage, sgst = asPct <$> c.sgstPercentage, igst = asPct <$> c.igstPercentage}) <$> c.taxPercentage
           taxWith mbConfig taxable = mbConfig >>= \config -> Tax.taxOn (Tax.chargeRegime config) (Just config) taxable
-          feeTaxOf = taxWith feeTaxConfig
+          feeTaxOf = taxWith (customerFeeTaxConfig row)
           commissionTaxOf = taxWith (commissionAndTax >>= (.commissionTax)) . Tax.Inclusive
           inclusive = amountsAreInclusiveOfTax row
           toTaxable amount = if inclusive then Tax.Inclusive amount else Tax.Exclusive amount
@@ -228,6 +226,11 @@ computeCustomerCharge row fareBasis mbBookingDeposit =
 
 shouldCarryForwardDues :: Maybe DCCM.CancellationConsequenceMatrix -> Bool
 shouldCarryForwardDues mbRow = (mbRow >>= (.collectionMode)) `notElem` [Just DCCM.ImmediateCapture, Just DCCM.PayBeforeNextRide]
+
+customerFeeTaxConfig :: DCCM.CancellationConsequenceMatrix -> Maybe Tax.TaxConfig
+customerFeeTaxConfig row =
+  let asPct = fromRational . (.getHighPrecMoney)
+   in row.customerCommissionAndTax >>= \c -> (\pct -> Tax.TaxConfig {tax = asPct pct, cgst = asPct <$> c.cgstPercentage, sgst = asPct <$> c.sgstPercentage, igst = asPct <$> c.igstPercentage}) <$> c.taxPercentage
 
 amountsAreInclusiveOfTax :: DCCM.CancellationConsequenceMatrix -> Bool
 amountsAreInclusiveOfTax row = fromMaybe False ((.amountsInclusiveOfTax) =<< row.customerCommissionAndTax)

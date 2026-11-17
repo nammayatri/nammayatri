@@ -300,6 +300,10 @@ Booking:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
       where: id
+    updateTaxRates:
+      kvFunction: updateOneWithKV
+      params: [taxRates]
+      where: id
 
   constraints:
     id: PrimaryKey
