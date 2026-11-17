@@ -102,19 +102,19 @@ createSafetyTicket person ride = do
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
+  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, triggerApiList = Nothing} Nothing
+  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createSosTicket person.merchantId person.merchantOperatingCityId sosDetails.id.getId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
-      Right (primaryResp, _) -> do
+      Right primaryResp -> do
         void $ QR.updateSafetyJourneyStatus ride.id DRide.CSAlerted
         logDebug $ "Ticket created when rider didn't picked up call : " <> show (Just primaryResp.ticketId)
         return (Just primaryResp.ticketId)
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, triggerApiList = Nothing} ticketId
   -- SOS persistence via shared-services Safety library
-  void $ SafetySos.createSos sosDetails
+  void $ SafetySos.createSos sosDetails {SafetyDSos.ticketId = ticketId}
 
 mkTicket :: DP.Person -> Maybe Text -> [Text] -> Maybe Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
 mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
