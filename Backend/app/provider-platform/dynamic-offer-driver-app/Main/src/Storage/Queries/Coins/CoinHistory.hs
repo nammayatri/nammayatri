@@ -16,6 +16,7 @@
 module Storage.Queries.Coins.CoinHistory where
 
 import qualified "this" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
+import Data.List.Extra (sortOn)
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Person as SP
@@ -122,19 +123,21 @@ getCoinsEarnedLastDay (Id driverId) now timeDiffFromUtc = do
 getDriverCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
 getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamDC.driverId $ Se.Eq driverId,
-          Se.Is BeamDC.status $ Se.Eq Remaining,
-          Se.Or
-            [ Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime),
-              Se.Is BeamDC.expirationAt $ Se.Eq Nothing
-            ]
-        ]
-    ]
-    (Se.Asc BeamDC.createdAt)
-    Nothing
-    Nothing
+  coinRows <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is BeamDC.driverId $ Se.Eq driverId,
+            Se.Is BeamDC.status $ Se.Eq Remaining,
+            Se.Or
+              [ Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime),
+                Se.Is BeamDC.expirationAt $ Se.Eq Nothing
+              ]
+          ]
+      ]
+      (Se.Asc BeamDC.createdAt)
+      Nothing
+      Nothing
+  pure $ sortOn (\h -> (isNothing h.expirationAt, h.expirationAt, h.createdAt)) coinRows
 
 updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> DCoins.CoinStatus -> m ()
 updateStatusOfCoins id coinsRemainingValue newStatus = do
