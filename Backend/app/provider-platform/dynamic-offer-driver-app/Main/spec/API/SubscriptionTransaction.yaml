@@ -25,6 +25,7 @@ types:
     rideEarning: HighPrecMoney
     planPurchased: HighPrecMoney
     expiryDeduction: HighPrecMoney
+    cancellationDeduction: HighPrecMoney
     entities: "[SubscriptionTransactionEntity]"
 apis:
   - GET:
