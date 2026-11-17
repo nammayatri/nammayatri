@@ -109,15 +109,6 @@
             ]);
         };
         packages = {
-          # amazonka.source = inputs.amazonka-git + /lib/amazonka;
-          # amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
-          # amazonka-s3.source  = inputs.amazonka-git + /lib/services/amazonka-s3;
-          # amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
-          # amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
-          # amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
-          # amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
-          # amazonka-sns.source = inputs.amazonka-git + /lib/services/amazonka-sns;
-
           streamly.source = "0.10.1";
           unicode-data.source = "0.3.1";
           zip-archive.source = inputs.zip-archive-hs;
@@ -148,17 +139,6 @@
             jailbreak = true;
           };
           base32.jailbreak = true;
-          amazonka-core = {
-            jailbreak = true;
-            check = false;
-          };
-
-          amazonka-s3.check = false;
-          amazonka-ses.check = false;
-          amazonka-sns.check = false;
-          amazonka-sso.check = false;
-          amazonka-sts.check = false;
-
           cryptostore.check = false;
           cryptostore.jailbreak = true;
           # Test suite shells out to `which` / infozip; not on PATH in darwin Nix sandbox.

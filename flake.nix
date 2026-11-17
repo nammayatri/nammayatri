@@ -23,7 +23,6 @@
     shared-kernel = {
       url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.amazonka-git.follows = "amazonka-git";
     };
 
     namma-dsl = {
@@ -84,11 +83,6 @@
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";
     easy-purescript-nix.flake = false;
-
-    # Amazonka 2.0 tagged release
-    # amazonka-2.0 flake seems broken still.
-    amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
-    amazonka-git.flake = false;
 
     google-cloud-haskell.url = "github:tusharad/google-cloud-haskell";
     google-cloud-haskell.flake = false;
