@@ -68,6 +68,7 @@ import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
+import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -210,6 +211,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
+  when booking.isScheduled $ FindAnotherDriver.clearSwap booking
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone

@@ -166,9 +166,15 @@ getOrComputeFaultVerdict ride mbEntityTxnId timeDiffFromUtc faultData = do
         then pure Nothing
         else do
           verdict <- computeFaultVerdict ride mbEntityTxnId logics faultData
-          Redis.setExp (faultVerdictKey ride.id) verdict faultVerdictTtl
-          QRide.updateCancellationFaultVerdict (Just $ show verdict.atFault) (Just verdict.rule) ride.id
+          recordFaultVerdict ride verdict
           pure (Just verdict)
+
+-- | Cache the ride's verdict and persist it on the ride row. Also used for a verdict decided
+-- in code rather than by the rules.
+recordFaultVerdict :: FaultFlow m r => DRide.Ride -> FaultVerdict -> m ()
+recordFaultVerdict ride verdict = do
+  Redis.setExp (faultVerdictKey ride.id) verdict faultVerdictTtl
+  QRide.updateCancellationFaultVerdict (Just $ show verdict.atFault) (Just verdict.rule) ride.id
 
 -- | Dry-run twin of 'getOrComputeFaultVerdict' for previews: fetches the same rules and
 -- computes the same verdict, but touches NO state — no Redis cache, no ride-row persist
