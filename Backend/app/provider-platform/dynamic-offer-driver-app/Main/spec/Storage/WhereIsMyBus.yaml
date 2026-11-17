@@ -219,6 +219,7 @@ FleetConfig:
       lockTiers: Maybe Bool
       lockAc: Maybe Bool
       lockIntraCity: Maybe Bool
+      lockPreferences: Maybe Bool
       derive: Eq
 
   fields:

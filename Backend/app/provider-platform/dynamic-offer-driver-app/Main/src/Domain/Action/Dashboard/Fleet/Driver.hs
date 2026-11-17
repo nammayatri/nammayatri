@@ -2793,6 +2793,7 @@ getFleetOrOperatorInfo person = do
                   lockTiers = (.lockTiers) =<< fleetConfig'.autoAssign,
                   lockAc = (.lockAc) =<< fleetConfig'.autoAssign,
                   lockIntraCity = (.lockIntraCity) =<< fleetConfig'.autoAssign,
+                  lockPreferences = (.lockPreferences) =<< fleetConfig'.autoAssign,
                   fleetPoolingPriority = fleetConfig'.fleetPoolingPriority
                 }
       gstNumber' <- decryptWithDefault gstNumber gstNumberDec
@@ -5320,7 +5321,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
 ---------------------------------------------------------------------
 
 defaultAutoAssignConfig :: DFC.AutoAssignConfig
-defaultAutoAssignConfig = DFC.AutoAssignConfig {defaultOn = False, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False, lockTiers = Nothing, lockAc = Nothing, lockIntraCity = Nothing}
+defaultAutoAssignConfig = DFC.AutoAssignConfig {defaultOn = False, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False, lockTiers = Nothing, lockAc = Nothing, lockIntraCity = Nothing, lockPreferences = Nothing}
 
 getFleetConfigOwner :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow (DM.Merchant, Id DMOC.MerchantOperatingCity, DP.Person)
 getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId = do
@@ -5351,6 +5352,7 @@ getDriverFleetConfig merchantShortId opCity requestorId mbFleetOwnerId = do
         lockTiers = FDS.fleetLocksTiers (Just autoAssign),
         lockAc = fromMaybe False autoAssign.lockAc,
         lockIntraCity = fromMaybe False autoAssign.lockIntraCity,
+        lockPreferences = FDS.fleetLocksPreferences (Just autoAssign),
         fleetPoolingPriority = mbFleetConfig >>= (.fleetPoolingPriority)
       }
 
@@ -5373,7 +5375,8 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
             disableDriverAreaAndDistancePreference = fromMaybe current.disableDriverAreaAndDistancePreference req.ignoreDriverAreaAndDistancePreference,
             lockTiers = req.lockTiers <|> current.lockTiers,
             lockAc = req.lockAc <|> current.lockAc,
-            lockIntraCity = req.lockIntraCity <|> current.lockIntraCity
+            lockIntraCity = req.lockIntraCity <|> current.lockIntraCity,
+            lockPreferences = req.lockPreferences <|> current.lockPreferences
           }
       nonEmptyPriority (FleetPoolingPriority priorities) = if Map.null priorities then Nothing else Just (FleetPoolingPriority priorities)
       poolingPriority stored = maybe stored nonEmptyPriority req.fleetPoolingPriority

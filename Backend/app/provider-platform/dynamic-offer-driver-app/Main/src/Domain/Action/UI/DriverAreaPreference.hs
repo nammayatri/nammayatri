@@ -29,6 +29,7 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified Storage.CachedQueries.GeohashArea as CQGA
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -46,8 +47,8 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
-  pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
+  fleetLock <- getFleetPreferenceLock merchantOpCityId personId
+  pure $ buildInfoRes fleetLock minCells person.driverTag
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -59,8 +60,10 @@ postDriverAreaPreferenceUpdateInfo ::
   )
 postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
-  when (fleetDisablesPreference && req.enabled == Just True) $
+  fleetLock <- getFleetPreferenceLock merchantOpCityId personId
+  -- Only the fleet's ignore refuses turning the preference on. The app lock alone ('lockPreferences') doesn't:
+  -- ops set the driver's areas through this endpoint.
+  when (fleetLock.ignore && req.enabled == Just True) $
     throwError AreaPreferenceDisabledByFleet
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
@@ -75,7 +78,7 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
            in retained <> newTags
       updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
-  pure $ buildInfoRes fleetDisablesPreference minCells (Just updatedTags)
+  pure $ buildInfoRes fleetLock minCells (Just updatedTags)
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
       (name : _) -> Just name
@@ -95,9 +98,18 @@ getDriverAreaPreferenceList (_, _, merchantOpCityId) = do
   areas <- CQGA.findAllByMerchantOperatingCity merchantOpCityId
   pure [APIT.GeohashAreaItem {geohash = a.geohash, areaName = a.areaName} | a <- areas]
 
-isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
-isAreaPreferenceDisabledByFleet merchantOpCityId personId =
-  maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+-- | The driver's fleet and the area preference: 'ignore', auto-assign ignores the driver's preferences; 'appLocked',
+-- the app hides the area and trip-distance preferences (on with 'ignore', or the fleet's 'lockPreferences').
+data FleetPreferenceLock = FleetPreferenceLock {ignore :: Bool, appLocked :: Bool}
+
+getFleetPreferenceLock :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow FleetPreferenceLock
+getFleetPreferenceLock merchantOpCityId personId = do
+  mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+  pure
+    FleetPreferenceLock
+      { ignore = maybe False (.disableDriverAreaAndDistancePreference) mbFleetAutoAssign,
+        appLocked = FDS.fleetLocksPreferences mbFleetAutoAssign
+      }
 
 getMinCells ::
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -133,17 +145,17 @@ validateSelection merchantOpCityId minCells = \case
 -- needed at read time, since cell tags already carry their area name as the
 -- tag value. minCells is threaded in rather than refetched here, since both
 -- callers already have it (from getMinCells).
-buildInfoRes :: Bool -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
-buildInfoRes fleetDisablesPreference minCells mbTags =
+buildInfoRes :: FleetPreferenceLock -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
+buildInfoRes fleetLock minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
-    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetDisablesPreference}
+    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetLock.appLocked}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [],
           radiusArea = Just APIT.RadiusAreaSelection {center = center, radiusMeters = radiusMeters},
           minCells = minCells,
           enabled = enabled,
-          lockedByFleet = Just fleetDisablesPreference
+          lockedByFleet = Just fleetLock.appLocked
         }
     Just (AreaPref.PreferredGeohashCells cells) ->
       APIT.AreaPreferenceInfoRes
@@ -151,7 +163,7 @@ buildInfoRes fleetDisablesPreference minCells mbTags =
           radiusArea = Nothing,
           minCells = minCells,
           enabled = enabled,
-          lockedByFleet = Just fleetDisablesPreference
+          lockedByFleet = Just fleetLock.appLocked
         }
   where
-    enabled = not fleetDisablesPreference && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)
+    enabled = not fleetLock.ignore && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

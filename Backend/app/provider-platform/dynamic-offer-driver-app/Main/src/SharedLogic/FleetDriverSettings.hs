@@ -12,6 +12,7 @@ module SharedLogic.FleetDriverSettings
     applyLockedFleetSettingsToDriver,
     removeAutoAssign,
     fleetLocksTiers,
+    fleetLocksPreferences,
     FleetLock (..),
     getFleetLock,
   )
@@ -209,6 +210,10 @@ removeAutoAssign tiers driver vehicle = do
 -- | The fleet locks its auto-assign tiers: 'lockTiers', by default on when drivers can't toggle auto-assign.
 fleetLocksTiers :: Maybe DFC.AutoAssignConfig -> Bool
 fleetLocksTiers = maybe False \cfg -> fromMaybe (not cfg.allowDriverToToggle) cfg.lockTiers
+
+-- | The app hides area/trip-distance preferences: when the fleet ignores them, or 'lockPreferences'.
+fleetLocksPreferences :: Maybe DFC.AutoAssignConfig -> Bool
+fleetLocksPreferences = maybe False \cfg -> cfg.disableDriverAreaAndDistancePreference || fromMaybe False cfg.lockPreferences
 
 -- | What the driver's fleet locks. The driver only: ops, recomputes, the wallet strip and the fleet still can.
 data FleetLock = FleetLock

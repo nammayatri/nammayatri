@@ -40,6 +40,7 @@ data AutoAssignConfig = AutoAssignConfig
     disableDriverAreaAndDistancePreference :: Kernel.Prelude.Bool,
     lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lockPreferences :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

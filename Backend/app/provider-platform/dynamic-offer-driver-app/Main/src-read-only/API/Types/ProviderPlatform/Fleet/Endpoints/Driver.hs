@@ -612,6 +612,7 @@ data FleetConfig = FleetConfig
     lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lockPreferences :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
@@ -644,6 +645,7 @@ data FleetDriverControlsConfigRes = FleetDriverControlsConfigRes
     lockTiers :: Kernel.Prelude.Bool,
     lockAc :: Kernel.Prelude.Bool,
     lockIntraCity :: Kernel.Prelude.Bool,
+    lockPreferences :: Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
@@ -1305,6 +1307,7 @@ data UpdateFleetDriverControlsConfigReq = UpdateFleetDriverControlsConfigReq
     lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lockPreferences :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
