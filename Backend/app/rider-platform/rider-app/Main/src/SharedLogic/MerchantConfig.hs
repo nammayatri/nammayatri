@@ -35,7 +35,6 @@ module SharedLogic.MerchantConfig
 where
 
 import Data.Foldable.Extra
-import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.MerchantConfig as DMC
@@ -52,7 +51,6 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Person as CHP
-import qualified Storage.Clickhouse.Ride as CHR
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
@@ -105,15 +103,14 @@ decrementCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCritic
   where
     decrementCount ind = SWC.decrementWindowCount (mkAuthCounterKey ind clientIP)
 
-updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> Id DBooking.Booking -> Maybe Bool -> m ()
-updateTotalRidesCounters rider bookingId isValidRide = do
+updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> Maybe Bool -> m ()
+updateTotalRidesCounters rider isValidRide = do
   totalRidesCount <- getTotalRidesCountForEndRide rider
-  totalValidRidesCount <- getTotalValidRidesCountForEndRide rider bookingId
   -- the valid count goes up only when the BPP marked the ride valid; a missing flag (non value-add NP) is not counted
+  -- a NULL count (rider created before the column) starts at 0, past rides are not backfilled
   let isValid = isValidRide == Just True
       updTotalValidRidesCount
-        | isValid = (+ 1) <$> totalValidRidesCount
-        | isNothing rider.totalValidRidesCount = totalValidRidesCount
+        | isValid || isNothing rider.totalValidRidesCount = Just (fromMaybe 0 rider.totalValidRidesCount + if isValid then 1 else 0)
         | otherwise = Nothing
   QP.updateTotalRidesCounts rider.id ((+ 1) <$> totalRidesCount) updTotalValidRidesCount
 
@@ -129,20 +126,6 @@ getTotalRidesCountForEndRide rider
   | otherwise = do
     totalCount <- CHP.findTotalRidesCountByPersonId rider.id
     maybe (pure Nothing) (pure $ CHB.findCountByRiderIdAndStatus rider.id BT.COMPLETED rider.createdAt) totalCount
-
--- fills a missing count once from Clickhouse; the current booking is left out because ride end counts it
-getTotalValidRidesCountForEndRide :: (MonadFlow m, ClickhouseFlow m r) => Person.Person -> Id DBooking.Booking -> m (Maybe Int)
-getTotalValidRidesCountForEndRide rider currentBookingId
-  | Just totalValidRidesCount <- rider.totalValidRidesCount = pure (Just totalValidRidesCount)
-  | otherwise = do
-    res <- withTryCatch "getTotalValidRidesCountForEndRide" $ do
-      bookingIds <- filter (/= currentBookingId) <$> CHB.findAllBookingIdsByRiderIdAndStatus rider.id BT.COMPLETED rider.createdAt
-      CHR.findValidRidesCountByBookingIds bookingIds rider.createdAt
-    case res of
-      Right count' -> pure (Just count')
-      Left err -> do
-        logError $ "Failed to count valid rides for rider " <> rider.id.getId <> ": " <> show err
-        pure Nothing
 
 getRidesCountInWindow ::
   (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
