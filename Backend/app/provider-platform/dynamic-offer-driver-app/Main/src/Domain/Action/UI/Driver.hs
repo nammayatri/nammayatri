@@ -1156,9 +1156,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
           unless isPrepaidDriver $
             WalletFloor.checkWalletGoOnlineEligibility transporterConfig person (mbVehicle <&> (.variant))
+          unless (isJust mbVehicle) $
+            throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
           when isPrepaidEnabled $ do
-            unless (isJust mbVehicle) $
-              throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
             whenJust mbFleetAssociation $ \fda -> do
               fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
               unless fleetOwnerInfo.enabled $
