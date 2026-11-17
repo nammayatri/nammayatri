@@ -16,12 +16,14 @@ module SharedLogic.External.LocationTrackingService.Flow where
 
 import qualified Data.Either as Either
 import Domain.Types.DriverLocation
+import qualified Domain.Types.DriverNudge as DN
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import Domain.Types.VehicleVariant
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
@@ -32,6 +34,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriverBlockTill as DriverBlockTill
 import qualified SharedLogic.External.LocationTrackingService.API.DriverLocation as DriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
+import qualified SharedLogic.External.LocationTrackingService.API.EndNudge as EndNudgeAPI
 import qualified SharedLogic.External.LocationTrackingService.API.EndRide as EndRideAPI
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueAdd as ManualQueueAddAPI
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueRemove as ManualQueueRemoveAPI
@@ -40,6 +43,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.NearByTag as N
 import qualified SharedLogic.External.LocationTrackingService.API.PickupDriverLocation as PickupDriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.QueueHistory as QueueHistoryAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
+import qualified SharedLogic.External.LocationTrackingService.API.StartNudge as StartNudgeAPI
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.QuickRetry (withQuickRetry)
@@ -360,3 +364,27 @@ driversLocationByCloudType driverIds mbCloudType = do
       logDebug $ "lts driversLocationByCloudType fallback: " <> show fallbackRes
       return fallbackRes
     _ -> return driversLocationRes
+
+nudgeStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DN.DriverNudge -> Id DM.Merchant -> Id DP.Person -> LatLong -> m APISuccess
+nudgeStart nudgeId merchantId driverId destination = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  let req = StartNudgeReq {merchantId, driverId, destination}
+  nudgeStartRes <-
+    withQuickRetry $
+      callAPI url (StartNudgeAPI.startNudge nudgeId req) "nudgeStart" StartNudgeAPI.locationTrackingServiceAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NUDGE_START_API") url)
+  logDebug $ "lts nudgeStart: " <> show nudgeStartRes
+  return nudgeStartRes
+
+nudgeEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DN.DriverNudge -> Id DM.Merchant -> Id DP.Person -> m APISuccess
+nudgeEnd nudgeId merchantId driverId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  let req = EndNudgeReq {merchantId, driverId}
+  nudgeEndRes <-
+    withQuickRetry $
+      callAPI url (EndNudgeAPI.endNudge nudgeId req) "nudgeEnd" EndNudgeAPI.locationTrackingServiceAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NUDGE_END_API") url)
+  logDebug $ "lts nudgeEnd: " <> show nudgeEndRes
+  return nudgeEndRes

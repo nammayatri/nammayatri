@@ -21,8 +21,8 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import Data.Default.Class
 import qualified Data.Map as M
-import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Text as T
+import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
 import Domain.Action.UI.SearchRequestForDriver
 import Domain.Types.Booking (Booking)
@@ -47,6 +47,7 @@ import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
 import qualified IssueManagement.Common as IMCommon
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
@@ -109,6 +110,12 @@ data DrunkAndDriveViolationWarningData = DrunkAndDriveViolationWarningData
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data DemandNudgeEntityData = DemandNudgeEntityData
+  { location :: LatLong,
+    nudgeId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 -- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
@@ -160,7 +167,7 @@ showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %
 findFCMConfigWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id Person -> m FCMConfig
 findFCMConfigWithFallback merchantOpCityId personId = do
   driver <- QPerson.findById personId
-  mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
+  mbClientConfig <- QMCC.findByPackageOSAndService ClientFCMService (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
   case mbClientConfig of
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
     Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
@@ -1338,6 +1345,37 @@ drunkAndDriveViolationWarningOverlay mOpCityId person req entityData = do
         }
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
+
+sendDemandNudgeOverlay ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMOverlayReq ->
+  DemandNudgeEntityData ->
+  m ()
+sendDemandNudgeOverlay mOpCityId person req entityData = do
+  let notifReq =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_NOTIFY,
+            subCategory = Nothing,
+            showNotification = if isJust req.title then Notification.SHOW else Notification.DO_NOT_SHOW,
+            messagePriority = Just Notification.HIGH,
+            entity = Notification.Entity Notification.Person person.id.getId entityData,
+            dynamicParams = EmptyDynamicParam,
+            body = fromMaybe "Description" req.description,
+            title = fromMaybe "Title" req.title,
+            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing,
+            overlayNotificationData = Just $ buildOverlayNotificationData req
+          }
+  runWithServiceConfigForProviders mOpCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
 
 data UnhygienicVehicleWarningData = UnhygienicVehicleWarningData
   { driverId :: Text

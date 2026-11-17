@@ -30,6 +30,7 @@ import qualified API.Action.UI.DriverCommunication as DriverCommunication
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverFyEarnings as DriverFyEarnings
 import qualified API.Action.UI.DriverIncentiveCoins as DriverIncentiveCoins
+import qualified API.Action.UI.DriverNudge as DriverNudge
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
@@ -137,6 +138,7 @@ type API =
            :<|> MerchantDocument.API
            :<|> Registration.API
            :<|> DemandHotspots.API
+           :<|> DriverNudge.API
            :<|> DriverOnboarding.API
            :<|> DriverOnboardingV2.API
            :<|> DriverProfileQuestions.API
@@ -234,6 +236,7 @@ handler =
     :<|> MerchantDocument.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
+    :<|> DriverNudge.handler
     :<|> DriverOnboarding.handler
     :<|> DriverOnboardingV2.handler
     :<|> DriverProfileQuestions.handler

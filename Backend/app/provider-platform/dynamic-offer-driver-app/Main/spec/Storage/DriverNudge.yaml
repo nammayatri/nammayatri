@@ -1,0 +1,72 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  LatLong: Kernel.External.Maps
+  Value: Data.Aeson
+
+DriverNudge:
+  tableName: driver_nudge
+
+  types:
+    NudgeStatus:
+      enum: "PENDING,ACTIVE,COMPLETED,CANCELLED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id DriverNudge
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: NudgeStatus
+    estimatedDistance: Maybe HighPrecMeters
+    actualDistance: Maybe HighPrecMeters
+    destination: Maybe LatLong
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    destination: Maybe Value
+
+  sqlType:
+    destination: "json"
+
+  fromTType:
+    destination: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< destination|E
+
+  toTType:
+    destination: Kernel.Prelude.toJSON <$> destination|E
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findActiveByDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, status]
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateActualDistance:
+      kvFunction: updateOneWithKV
+      params: [actualDistance, updatedAt]
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

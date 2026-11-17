@@ -37,6 +37,19 @@ data StartRideReq = StartRideReq
   }
   deriving (Generic, ToJSON, ToSchema)
 
+data StartNudgeReq = StartNudgeReq
+  { merchantId :: Id DM.Merchant,
+    driverId :: Id DP.Person,
+    destination :: LatLong
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data EndNudgeReq = EndNudgeReq
+  { merchantId :: Id DM.Merchant,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
 data EndRideReq = EndRideReq
   { lat :: Double,
     lon :: Double,
