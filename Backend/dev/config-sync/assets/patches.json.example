@@ -14,6 +14,11 @@
         "replace": "http://localhost:8015/v1"
       },
       {
+        "_comment": "Bare form (no scheme) is the gateway's registry subscriber_id; the atlas_registry.subscriber BG override matches the replaced value",
+        "find": "api.sandbox.moving.tech/dev/gateway/v1",
+        "replace": "localhost:${BECKN_GATEWAY_PORT:8015}/v1"
+      },
+      {
         "_comment": "Beckn registry URLs"
       },
       {
@@ -2125,7 +2130,7 @@
             "where": {
               "type": "BG",
               "domain": "MOBILITY",
-              "subscriber_id": "api.sandbox.moving.tech/dev/gateway/v1"
+              "subscriber_id": "localhost:${BECKN_GATEWAY_PORT:8015}/v1"
             },
             "set": {
               "subscriber_id": "JUSPAY.BG.1",
