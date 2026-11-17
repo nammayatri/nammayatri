@@ -189,6 +189,7 @@ $(YTH.generateGenericDefault ''OffersFraudChecksReq)
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
+$(YTH.generateGenericDefault ''DTMSUC.MerchantServiceUsageConfig)
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
 $(YTH.generateGenericDefault ''DTBC.BecknConfig)
@@ -434,6 +435,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTM.MerchantConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) req logicData
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider -> do
+      def' <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTMSUC.MerchantServiceUsageConfig))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DTMSUC.MerchantServiceUsageConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTMSUC.MerchantServiceUsageConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYTU.Config def' Nothing 1
