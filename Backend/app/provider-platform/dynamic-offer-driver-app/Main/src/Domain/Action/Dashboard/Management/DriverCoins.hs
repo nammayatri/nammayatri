@@ -98,7 +98,13 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
     else do
       now <- getCurrentTime
       uuid <- generateGUIDText
-      let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+      -- Same gate as updateEventAndGetCoinsvalueWithoutNotification: recovery awards on a
+      -- negative balance must not expire, or the driver falls back into the same debt.
+      currentBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+      let expiryTime =
+            if currentBalance < 0
+              then Nothing
+              else fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
       driverExists <- Person.findById driverId
       if isNothing driverExists
@@ -170,7 +176,13 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
           coinsValue = round coinsValue_
       now <- getCurrentTime
       uuid <- generateGUIDText
-      let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+      -- Same gate as updateEventAndGetCoinsvalueWithoutNotification: recovery awards on a
+      -- negative balance must not expire, or the driver falls back into the same debt.
+      currentBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+      let expiryTime =
+            if currentBalance < 0
+              then Nothing
+              else fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
       driverExists <- Person.findById driverId
       if isNothing driverExists
