@@ -112,6 +112,7 @@ data MessageKey
   | VEHICLE_APPROVED
   | SEND_WHATSAPP_OTP
   | DASHBOARD_WELCOME_EMAIL
+  | TDS_CERTIFICATE_EMAIL
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe
