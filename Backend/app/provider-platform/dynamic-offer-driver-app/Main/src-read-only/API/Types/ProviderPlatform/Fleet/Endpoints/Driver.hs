@@ -609,9 +609,6 @@ data FleetConfig = FleetConfig
     allowDriverToToggleAutoAssign :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowCancellationByDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
@@ -641,9 +638,6 @@ data FleetDriverControlsConfigRes = FleetDriverControlsConfigRes
     allowDriverToToggleAutoAssign :: Kernel.Prelude.Bool,
     allowCancellationByDriver :: Kernel.Prelude.Bool,
     ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Bool,
-    lockTiers :: Kernel.Prelude.Bool,
-    lockAc :: Kernel.Prelude.Bool,
-    lockIntraCity :: Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
@@ -1302,9 +1296,6 @@ data UpdateFleetDriverControlsConfigReq = UpdateFleetDriverControlsConfigReq
     allowDriverToToggleAutoAssign :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowCancellationByDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockAc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    lockIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
