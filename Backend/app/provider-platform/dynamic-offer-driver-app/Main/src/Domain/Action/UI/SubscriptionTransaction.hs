@@ -83,21 +83,23 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
     Nothing -> pure (emptyResponse currentBalance)
     Just acc -> do
       accountEntries <- filter entryMovedMoney <$> getEntriesByAccount acc.id
-      let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType, expiryCreditTransferReferenceType]
+      let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType, expiryCreditTransferReferenceType, prepaidCancellationDebitReferenceType]
           entries = filter (matchesFilters referenceTypes fromDate toDate) accountEntries
           downSorted = sortOn (Down . effectiveAt) entries
           rideEntries = filter (\e -> e.referenceType == prepaidRideDebitReferenceType) entries
           planEntries = filter (\e -> e.referenceType == subscriptionCreditReferenceType) entries
           expiryEntries = filter (\e -> e.referenceType == expiryCreditTransferReferenceType) entries
+          cancellationEntries = filter (\e -> e.referenceType == prepaidCancellationDebitReferenceType) entries
           paged = take limit . drop offset $ downSorted
           rideEarning = sum $ map (.amount) rideEntries
           planPurchased = sum $ map (.amount) planEntries
           expiryDeduction = sum $ map (.amount) expiryEntries
+          cancellationDeduction = sum $ map (.amount) cancellationEntries
           balanceMoves = sortOn fst $ mapMaybe (\e -> (effectiveAt e,) <$> balancesOf acc.id e) accountEntries
           startingBalance = computeStartingBalance fromDate balanceMoves
           finalBalance = computeFinalBalance toDate startingBalance balanceMoves
       -- Enrich ride entries with booking locations
-      let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidRideDebitReferenceType then Just (Id e.referenceId) else Nothing) paged
+      let bookingIds = mapMaybe (\e -> if isBookingEntry e then Just (Id e.referenceId) else Nothing) paged
       bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds
       let bookingMap = M.fromList $ map (\b -> (b.id, (b.fromLocation, b.toLocation))) bookings
       entities <- forM paged $ \entry -> do
@@ -106,9 +108,10 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
               | entry.referenceType == prepaidRideDebitReferenceType -> pure RIDE
               | entry.referenceType == subscriptionCreditReferenceType -> pure PLAN_PURCHASE
               | entry.referenceType == expiryCreditTransferReferenceType -> pure SUBSCRIPTION_EXPIRY
+              | entry.referenceType == prepaidCancellationDebitReferenceType -> pure CANCELLATION_CHARGE
               | otherwise -> throwError $ InternalError $ "Unknown reference type: " <> show entry.referenceType
         let (fromLocation, toLocation) =
-              if entry.referenceType == prepaidRideDebitReferenceType
+              if isBookingEntry entry
                 then case M.lookup (Id entry.referenceId) bookingMap of
                   Just (fromLoc, toLoc) -> (Just fromLoc, toLoc)
                   Nothing -> (Nothing, Nothing)
@@ -133,6 +136,7 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
             rideEarning,
             planPurchased,
             expiryDeduction,
+            cancellationDeduction,
             entities
           }
   where
@@ -145,8 +149,12 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
           rideEarning = 0,
           planPurchased = 0,
           expiryDeduction = 0,
+          cancellationDeduction = 0,
           entities = []
         }
+    isBookingEntry :: LedgerEntry -> Bool
+    isBookingEntry entry = entry.referenceType `elem` [prepaidRideDebitReferenceType, prepaidCancellationDebitReferenceType]
+
     effectiveAt :: LedgerEntry -> UTCTime
     effectiveAt entry = fromMaybe entry.timestamp entry.settledAt
 

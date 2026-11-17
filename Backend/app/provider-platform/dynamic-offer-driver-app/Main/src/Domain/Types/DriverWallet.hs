@@ -12,6 +12,7 @@ data RideTransactionType
   = RIDE
   | PLAN_PURCHASE
   | SUBSCRIPTION_EXPIRY
+  | CANCELLATION_CHARGE
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
