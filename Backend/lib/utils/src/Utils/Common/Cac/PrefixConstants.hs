@@ -36,6 +36,7 @@ data CacPrefix
   | FarePolicyRentalDetailsDistanceBuffers
   | FarePolicyRentalDetailsPricingSlabs
   | FarePolicyInterCityDetailsPricingSlabs
+  | FullFarePolicyInterCityDetailsPerKmRateSection
   | MerchantServiceUsageConfigDriver
   | MerchantServiceUsageConfigRider
   | Empty
@@ -58,6 +59,7 @@ instance Show CacPrefix where
   show FarePolicyRentalDetailsDistanceBuffers = "farePolicyRentalDetailsDistanceBuffers:"
   show FarePolicyRentalDetailsPricingSlabs = "farePolicyRentalDetailsPricingSlabs:"
   show FarePolicyInterCityDetailsPricingSlabs = "farePolicyInterCityDetailsPricingSlabs:"
+  show FullFarePolicyInterCityDetailsPerKmRateSection = "fullFarePolicyInterCityDetailsPerKmRateSection:"
   show MerchantServiceUsageConfigDriver = "merchantServiceUsageConfig:"
   show MerchantServiceUsageConfigRider = "merchantServiceUsageConfig:"
   show Empty = ""

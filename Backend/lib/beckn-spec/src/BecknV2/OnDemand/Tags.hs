@@ -176,6 +176,28 @@ instance Show EXTRA_PER_KM_STEP_FARE where
   show (EXTRA_PER_KM_STEP_FARE startDist (Just endDist)) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
   show (EXTRA_PER_KM_STEP_FARE startDist Nothing) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
 
+-- | An intercity one-way per km rate section, from startThreshold to endThreshold meters
+data PLANNED_PER_KM_STEP_FARE = PLANNED_PER_KM_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PLANNED_PER_KM_STEP_FARE where
+  show (PLANNED_PER_KM_STEP_FARE startDist (Just endDist)) = "PLANNED_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
+  show (PLANNED_PER_KM_STEP_FARE startDist Nothing) = "PLANNED_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
+
+-- | An intercity round-trip per km rate section, from startThreshold to endThreshold meters
+data PLANNED_PER_KM_ROUND_TRIP_STEP_FARE = PLANNED_PER_KM_ROUND_TRIP_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PLANNED_PER_KM_ROUND_TRIP_STEP_FARE where
+  show (PLANNED_PER_KM_ROUND_TRIP_STEP_FARE startDist (Just endDist)) = "PLANNED_PER_KM_ROUND_TRIP_STEP_FARE_" <> show startDist <> "_" <> show endDist
+  show (PLANNED_PER_KM_ROUND_TRIP_STEP_FARE startDist Nothing) = "PLANNED_PER_KM_ROUND_TRIP_STEP_FARE_" <> show startDist <> "_Above"
+
 data PLATFORM_FEE_STEP_FARE = PLATFORM_FEE_STEP_FARE
   { startThreshold :: Int,
     endThreshold :: Maybe Int

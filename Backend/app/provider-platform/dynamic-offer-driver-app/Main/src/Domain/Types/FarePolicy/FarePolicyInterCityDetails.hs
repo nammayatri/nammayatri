@@ -10,11 +10,13 @@
 module Domain.Types.FarePolicy.FarePolicyInterCityDetails where
 
 import Data.Aeson as DA
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import Domain.Types.Common
 import Domain.Types.Extra.IndianState ()
 import Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as Reexport
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+import qualified Domain.Types.FullFarePolicyInterCityDetailsPerKmRateSection as DFFPICDPKRS
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (IndianState)
 import Kernel.Types.Common
@@ -24,6 +26,8 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     perHourCharge :: HighPrecMoney,
     perKmRateOneWay :: HighPrecMoney,
     perKmRateRoundTrip :: HighPrecMoney,
+    perKmRateSectionsOneWay :: Maybe (NonEmpty FPInterCityDetailsPerKmRateSection), -- when set, one-way trips are priced by these instead of perKmRateOneWay
+    perKmRateSectionsRoundTrip :: Maybe (NonEmpty FPInterCityDetailsPerKmRateSection), -- when set, round trips are priced by these instead of perKmRateRoundTrip
     perExtraKmRate :: HighPrecMoney,
     perExtraMinRate :: HighPrecMoney,
     kmPerPlannedExtraHour :: Kilometers,
@@ -51,3 +55,19 @@ instance FromJSON (FPInterCityDetailsD 'Safe)
 
 -- FIXME remove
 instance ToJSON (FPInterCityDetailsD 'Safe)
+
+-- | Priced like progressive's per extra km rate sections: each planned km is charged at the rate of the section it
+-- falls in, a section running from its start distance to the next one's, so the first section starts at 0.
+data FPInterCityDetailsPerKmRateSection = FPInterCityDetailsPerKmRateSection
+  { startDistance :: Meters,
+    perKmRate :: HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+-- | A fare policy's section rows, split into its one-way and round-trip sections, each ordered by start distance.
+mkPerKmRateSections :: [DFFPICDPKRS.FullFarePolicyInterCityDetailsPerKmRateSection] -> (Maybe (NonEmpty FPInterCityDetailsPerKmRateSection), Maybe (NonEmpty FPInterCityDetailsPerKmRateSection))
+mkPerKmRateSections rows = (sectionsFor False, sectionsFor True)
+  where
+    sectionsFor isRoundTrip =
+      NE.sortWith (.startDistance)
+        <$> NE.nonEmpty [FPInterCityDetailsPerKmRateSection {startDistance = row.startDistance, perKmRate = row.perKmRate} | row <- rows, row.isRoundTrip == isRoundTrip]
