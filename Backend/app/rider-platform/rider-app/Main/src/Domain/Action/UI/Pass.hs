@@ -140,6 +140,11 @@ import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Wallet as TWallet
 
+getMaxSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id.Id DPassType.PassType -> m Int
+getMaxSwitchCount passTypeId = do
+  passes <- CQPass.findAllByPassTypeIdAndEnabled passTypeId True
+  pure $ maybe 1 (.maxSwitchCount) (listToMaybe passes >>= (.passConfig))
+
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"
 
@@ -298,10 +303,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
     otherTypePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId pass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
     let isOtherActivePass p = maybe True (\samePass -> p.id /= samePass.id) mbSamePass
     whenJust (listToMaybe (filter isOtherActivePass otherTypePasses)) $ \otherPass -> do
-      passes <- CQPass.findAllByPassTypeIdAndEnabled pass.passTypeId True
-      let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
-            Just pc -> pc.maxSwitchCount
-            Nothing -> 1
+      maxSwitchCount <- getMaxSwitchCount pass.passTypeId
       if otherPass.deviceSwitchCount < maxSwitchCount
         then throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device. Please switch it to this device instead of buying a new pass")
         else throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device and the device switch limit has been reached")
@@ -1031,10 +1033,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         activatedAt <- purchasedPass.activatedAt
         pure $ DT.addUTCTime (secondsToNominalDiffTime reUploadWindow) activatedAt
 
-  passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
-  let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
-        Just pc -> pc.maxSwitchCount
-        Nothing -> 1
+  maxSwitchCount <- getMaxSwitchCount purchasedPass.passTypeId
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
@@ -1692,6 +1691,9 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
 
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
+      maxSwitchCount <- getMaxSwitchCount purchasedPass.passTypeId
+      unless (purchasedPass.deviceSwitchCount < maxSwitchCount) $
+        throwError (InvalidRequest "Device switch limit has been reached for this pass")
       -- Check if there are other passes with the same passTypeId that already have this deviceId.
       duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
       let otherDevicePasses = filter (\p -> p.id /= purchasedPass.id && p.deviceId == deviceId) duplicatePasses

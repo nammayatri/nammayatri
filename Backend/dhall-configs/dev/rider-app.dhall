@@ -445,6 +445,9 @@ let seatBookingConfirmAPIRateLimitOptions =
 
 let passSelectAPIRateLimitOptions = { limit = +10, limitResetTimeInSec = +300 }
 
+let routeServiceabilityRateLimitOptions =
+      { limit = +720, limitResetTimeInSec = +3600 }
+
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
 let erssStatusUpdateRateLimitOptions =
@@ -639,6 +642,7 @@ in  { esqDBCfg
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
     , passSelectAPIRateLimitOptions
+    , routeServiceabilityRateLimitOptions
     , sosTrackingRateLimitOptions
     , erssStatusUpdateRateLimitOptions
     , inMemConfig
