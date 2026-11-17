@@ -946,7 +946,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 Just existingTicketId ->
                   void $
                     withTryCatch "updateTicket:autoConvertSos" $
-                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
+                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId sos.id.getId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
@@ -954,9 +954,9 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
                   ticketResponse <-
                     withTryCatch "createTicket:autoConvertSos" $
-                      Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+                      Ticket.createSosTicket person.merchantId person.merchantOperatingCityId sos.id.getId $
                         SIVR.mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
-                  whenJust (either (const Nothing) (Just . (.ticketId) . fst) ticketResponse) $ \newTicketId ->
+                  whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
                     void $ SafetySos.updateSosTicketId sos (Just newTicketId)
           Just SafetyDSos.LiveTracking -> do
             SafetyQSos.updateStatus SafetyDSos.Resolved sos.id

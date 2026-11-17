@@ -99,13 +99,10 @@ postSupportBotConversationEnd (mbPersonId, merchantId) conversationId = do
 -- | Conversations are bound to the rider who started them: the id alone must not
 -- let another rider read, advance or end someone else's conversation.
 -- | Is the pre-ticket bot usable for this rider right now? Gated by the
--- city's @enableXyneSupportBot@ rider config, then verified end to end by
--- starting a conversation with no ride and ending it straight away, so the
--- category list can switch the app to the bot only when Xyne actually
--- answers. Never throws: any failure reports @False@ and the app shows the
--- category list as before.
+-- city's @enableXyneSupportBot@ rider config. Never throws: any failure
+-- reports @False@ and the app shows the category list as before.
 probeSupportBot :: Id DP.Person -> Id DM.Merchant -> Maybe Language -> Flow Bool
-probeSupportBot personId merchantId mbLanguage = do
+probeSupportBot personId merchantId _mbLanguage = do
   result <- withTryCatch "supportBot:probe" $ do
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     riderConfig <-
@@ -114,31 +111,10 @@ probeSupportBot personId merchantId mbLanguage = do
     if riderConfig.enableXyneSupportBot /= Just True
       then pure False
       else do
-        let language = fromMaybe ENGLISH (mbLanguage <|> person.language)
-            context =
-              A.object
-                [ ("ride_id", A.Null),
-                  ("language", A.toJSON (show language :: Text)),
-                  ("sos_clicked", A.Bool False)
-                ]
-            req =
-              Types.SupportBotConversationReq
-                { context = Just context,
-                  conversationId = Nothing,
-                  turnId = Nothing,
-                  choice = Nothing,
-                  text = Nothing,
-                  values = Nothing
-                }
-        resp <- postSupportBotConversation (Just personId, merchantId) req
-        case responseConversationId resp of
-          Nothing -> pure False
-          Just cid -> do
-            endResult <- withTryCatch "supportBot:probeEnd" $ postSupportBotConversationEnd (Just personId, merchantId) cid
-            case endResult of
-              Left err -> logWarning $ "Support bot probe: could not end conversation " <> cid <> ": " <> show err
-              Right _ -> pure ()
-            pure True
+        cfg <- xyneConfig merchantId person
+        if isNothing cfg.botWorkflowId
+          then pure False
+          else TI.isTicketServiceHealthy (Ticket.XyneSpacesConfig cfg)
   case result of
     Right ok -> pure ok
     Left err -> do

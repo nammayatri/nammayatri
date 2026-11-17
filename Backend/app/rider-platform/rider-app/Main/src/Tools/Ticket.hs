@@ -77,12 +77,10 @@ createTicket merchantId mocId req = do
         -- Kernel error type accepted by 'throwError'.
         throwError $ InternalError $ "createTicket failed: " <> show primaryErr
 
--- | SOS create-ticket entry point. Deliberately does NOT fan out — the SOS
--- flow was scoped to the single-provider behavior when this fan-out was
--- introduced. If the fan-out should later apply to SOS as well, extend
--- 'MerchantServiceUsageConfig' with an @additionalSosTicketServices@ list.
-createSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
-createSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.createTicket
+createSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
+createSosTicket merchantId mocId sosId req = do
+  fork "createSosTicket:xyne" $ mirrorSosTicketToXyne merchantId mocId sosId req
+  resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.createTicket merchantId mocId req
 
 -- | Regular-issue update-ticket entry point. Updates the primary provider's
 -- ticket (using 'req.ticketId') and, when present, also updates the
@@ -100,8 +98,83 @@ updateTicket merchantId mocId additionalTicketId req = do
   fanOutUpdates merchantId mocId secondaries additionalTicketId req
   pure primaryResp
 
-updateSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
-updateSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.updateTicket
+updateSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateSosTicket merchantId mocId sosId req = do
+  fork "updateSosTicket:xyne" $ mirrorSosTicketUpdateToXyne merchantId mocId sosId req
+  resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.updateTicket merchantId mocId req
+
+mirrorSosTicketToXyne :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Ticket.CreateTicketReq -> m ()
+mirrorSosTicketToXyne merchantId mocId sosId req = do
+  result <- withTryCatch "createSosTicket:xyne" $ do
+    mbTarget <- resolveXyneSosTarget merchantId mocId
+    forM mbTarget $ \(xyneConfig, sosChannelId) -> do
+      logXyneHealth "createSosTicket:xyne" sosId xyneConfig
+      TI.createTicket
+        xyneConfig
+        (req :: Ticket.CreateTicketReq)
+          { Ticket.issueId = Just sosId,
+            Ticket.xyneChannelId = Just sosChannelId,
+            Ticket.xyneExternalId = Just (sosId <> "|sos-create")
+          }
+  case result of
+    Right (Just resp) -> logInfo $ "createSosTicket:xyne success sosId=" <> sosId <> " ticketId=" <> resp.ticketId
+    Right Nothing -> pure ()
+    Left err -> logError $ "createSosTicket:xyne failed sosId=" <> sosId <> " mocId=" <> mocId.getId <> " err=" <> show err
+
+mirrorSosTicketUpdateToXyne :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Ticket.UpdateTicketReq -> m ()
+mirrorSosTicketUpdateToXyne merchantId mocId sosId req = do
+  result <- withTryCatch "updateSosTicket:xyne" $ do
+    mbTarget <- resolveXyneSosTarget merchantId mocId
+    forM mbTarget $ \(xyneConfig, sosChannelId) -> do
+      logXyneHealth "updateSosTicket:xyne" sosId xyneConfig
+      let details = req.issueDetails
+          xyneDetails =
+            Ticket.UpdateIssueDetails
+              { issueDescription = details >>= (.issueDescription),
+                issueId = Just sosId,
+                mediaFiles = details >>= (.mediaFiles),
+                subCategory = details >>= (.subCategory),
+                vehicleCategory = details >>= (.vehicleCategory),
+                category = (details >>= (.category)) <|> Just "Code Red"
+              }
+      TI.updateTicket
+        xyneConfig
+        (req :: Ticket.UpdateTicketReq)
+          { Ticket.issueDetails = Just xyneDetails,
+            Ticket.xyneChannelId = Just sosChannelId
+          }
+  case result of
+    Right (Just _) -> logInfo $ "updateSosTicket:xyne success sosId=" <> sosId
+    Right Nothing -> pure ()
+    Left err -> logError $ "updateSosTicket:xyne failed sosId=" <> sosId <> " mocId=" <> mocId.getId <> " err=" <> show err
+
+logXyneHealth :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Ticket.IssueTicketServiceConfig -> m ()
+logXyneHealth logTag sosId xyneConfig = do
+  health <- withTryCatch "xyneHealthCheck" (TI.isTicketServiceHealthy xyneConfig)
+  case health of
+    Right True -> pure ()
+    Right False -> logWarning $ logTag <> " Xyne health check not OK sosId=" <> sosId <> "; sending anyway"
+    Left err -> logWarning $ logTag <> " Xyne health check failed sosId=" <> sosId <> " err=" <> show err <> "; sending anyway"
+
+resolveXyneSosTarget ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe (Ticket.IssueTicketServiceConfig, Text))
+resolveXyneSosTarget merchantId mocId = do
+  merchantConfig <- fetchUsageConfig mocId
+  let sosProvider = fromMaybe merchantConfig.issueTicketService merchantConfig.sosTicketService
+      secondaries = fromMaybe [] merchantConfig.additionalIssueTicketServices
+  if sosProvider == TicketTypes.XyneSpaces || TicketTypes.XyneSpaces `notElem` secondaries
+    then pure Nothing
+    else do
+      mbXyneServiceConfig <-
+        getOneConfig
+          (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService TicketTypes.XyneSpaces)})
+          Nothing
+      pure $ case mbXyneServiceConfig <&> (.serviceConfig) of
+        Just (DMSC.IssueTicketServiceConfig xyneConfig@(Ticket.XyneSpacesConfig cfg)) -> cfg.sosChannelId <&> (xyneConfig,)
+        _ -> Nothing
 
 -- | Update a ticket on a specific configured provider, bypassing the
 -- primary/secondary dispatch. Used by the shared chat-forwarding path to

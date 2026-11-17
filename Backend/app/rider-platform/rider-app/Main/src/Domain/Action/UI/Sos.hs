@@ -363,7 +363,7 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId, existingSos.ticketId)
     Nothing -> do
-      (mbTicketId, mbTicketRequesterId) <- do
+      mbSosTicketReq <-
         if riderConfig.enableSupportForSafety && shouldCreateKaptureTicket
           then do
             phoneNumber <- mapM decrypt person.mobileNumber
@@ -378,18 +378,24 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
                     Nothing
                     merchantShortId
                     rideCityCode
-            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createSosTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
-            case ticketResponse of
-              Right ticketResponse' -> return (Just ticketResponse'.ticketId, ticketResponse'.requesterId)
-              Left _ -> return (Nothing, Nothing)
-          else return (Nothing, Nothing)
+            return . Just $ SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue
+          else return Nothing
 
       -- Create new SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing mbTicketId mbExternalReferenceId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing Nothing mbExternalReferenceId
       QRide.updateSosId (Just $ cast result.sosId) ride.id
-      whenJust mbTicketRequesterId $ \rid ->
-        SafetyQSos.updateRequesterId (Just rid) (cast result.sosId)
-      return (cast result.sosId, mbTicketId)
+      case (result.wasReactivated, result.sosDetails.ticketId, mbSosTicketReq) of
+        (True, Just existingTicketId, _) -> return (cast result.sosId, Just existingTicketId)
+        (_, _, Nothing) -> return (cast result.sosId, Nothing)
+        (_, _, Just sosTicketReq) -> do
+          ticketResponse <- withTryCatch "createTicket:sosTrigger" (createSosTicket person.merchantId person.merchantOperatingCityId result.sosId.getId sosTicketReq)
+          case ticketResponse of
+            Right ticketResponse' -> do
+              void $ SafetySos.updateSosTicketId result.sosDetails (Just ticketResponse'.ticketId)
+              whenJust ticketResponse'.requesterId $ \rid ->
+                SafetyQSos.updateRequesterId (Just rid) (cast result.sosId)
+              return (cast result.sosId, Just ticketResponse'.ticketId)
+            Left _ -> return (cast result.sosId, Nothing)
 
 createNonRideSupportTicket :: Text -> SafetyDSos.SosType -> Person.Person -> Id SafetyDSos.Sos -> DRC.RiderConfig -> Flow (Maybe Text)
 createNonRideSupportTicket logTag flow person sosId' riderConfig = do
@@ -406,7 +412,7 @@ createNonRideSupportTicket logTag flow person sosId' riderConfig = do
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
   ticketResponse <-
     withTryCatch logTag $
-      Ticket.createSosTicket person.merchantId person.merchantOperatingCityId $
+      Ticket.createSosTicket person.merchantId person.merchantOperatingCityId sosId'.getId $
         SIVR.mkTicket person phoneNumber dashboardSosUrl Nothing flow riderConfig.kaptureConfig.disposition kaptureQueue
   case ticketResponse of
     Right resp -> do
@@ -563,7 +569,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateSosTicket:sendSosTracking" $
                   withShortRetry $
-                    Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
+                    Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId sosId.getId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $
@@ -572,6 +578,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
                     createSosTicket
                       person.merchantId
                       person.merchantOperatingCityId
+                      sosId.getId
                       (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
       whenJust riderConfig.externalSOSConfig $ \sosConfig -> do
         when sosConfig.mediaRequired $ do
@@ -598,7 +605,7 @@ callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
       fork "update ticket request" $
-        void $ Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
+        void $ Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId sosDetails.id.getId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
@@ -1077,13 +1084,13 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
         -- Existing ticket from non-ride SOS: update with ride info, no new notifications
         void $
           withTryCatch "updateSosTicket:sosUpdateToRide" $
-            Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId
+            Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId sosId.getId $
               Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = Ticket.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
       Nothing -> do
         -- No existing ticket: create fresh ticket and notify emergency contacts
         ticketResponse <-
           withTryCatch "createSosTicket:sosUpdateToRide" $
-            Ticket.createSosTicket person.merchantId person.merchantOperatingCityId $
+            Ticket.createSosTicket person.merchantId person.merchantOperatingCityId sosId.getId $
               SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
         whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
           void $ SafetySos.updateSosTicketId sosDetails (Just newTicketId)
