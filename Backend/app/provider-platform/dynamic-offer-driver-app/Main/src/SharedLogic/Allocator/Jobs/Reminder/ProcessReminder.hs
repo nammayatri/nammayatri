@@ -37,7 +37,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.ReminderConfig as DRC
-import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
+import Domain.Types.TranslationKeys (DocumentRejectReason (..), DriverPushKey (..), TranslationKey (..), documentRejectReasonText)
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.Beam.Functions as BF
@@ -293,7 +293,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               $ do
                 let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
                 SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetVehicleById rcId) $
-                  invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
+                  invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId VehicleInspectionExpiredReminder
                 logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
         DVC.DriverInspectionHub ->
           processInspectionReminder
@@ -458,7 +458,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
               if isVehicleRelated
                 then do
                   let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
-                      expiryReason = "Expired mandatory vehicle document reminder"
+                      expiryReason = VehicleDocumentExpiredReminder
                   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetVehicleById rcId) $ do
                     invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
                     invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
@@ -466,7 +466,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                 else do
                   let target = if SDO.isFleetRole driver.role then SGuard.TargetFleetOwner reminder.driverId else SGuard.TargetDriver reminder.driverId
                   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire target $ do
-                    invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
+                    invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId DocumentExpired
                     logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
               let rescheduleSeconds = fromMaybe defaultRescheduleIntervalSeconds reminderConfig.reminderRescheduleIntervalSeconds
@@ -506,7 +506,7 @@ invalidateRCAndRemoveVehicleForReminder ::
   Id DVRC.VehicleRegistrationCertificate ->
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
-  Text ->
+  DocumentRejectReason ->
   m ()
 invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = do
   rc <- QVRC.findById rcId >>= fromMaybeM (RCNotFound rcId.getId)
@@ -523,8 +523,8 @@ invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = 
   -- once every invalidation is done.
   unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
     QVRC.updateApproved (Just False) rcId
-  QVRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID reason rc.documentImageId
-  QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid reason) rc.documentImageId
+  QVRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID (documentRejectReasonText reason) (Just (show (DocumentReason_Text reason))) rc.documentImageId
+  QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid (documentRejectReasonText reason)) rc.documentImageId
 
 -- | Invalidate an expired document by setting its verification status to INVALID.
 -- For vehicle types, entityId is rcId: invalidate only the doc-specific row for that document type and its image (RC itself is done by invalidateRCAndRemoveVehicleForReminder).
@@ -537,21 +537,22 @@ invalidateExpiredDocument ::
   Text ->
   Id DM.Merchant ->
   Id DP.Person ->
-  Text ->
+  DocumentRejectReason ->
   m ()
-invalidateExpiredDocument documentType entityId _merchantId _driverId expiryReason = do
+invalidateExpiredDocument documentType entityId _merchantId _driverId reason = do
+  let expiryReason = documentRejectReasonText reason
   case documentType of
     DVC.DriverLicense -> do
       let docId = Id @DDL.DriverLicense entityId
       mbDL <- QDL.findById docId
       Kernel.Prelude.whenJust mbDL $ \dl -> do
-        QDL.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason dl.documentImageId1
+        QDL.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason (Just (show (DocumentReason_Text reason))) dl.documentImageId1
         void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason))) (Just dl.documentImageId1, dl.documentImageId2)
     DVC.VehicleRegistrationCertificate -> pure ()
     DVC.VehicleInsurance -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
           rcIdText = Just (getId rcId)
-      QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID (Just expiryReason) rcId
+      QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID (Just expiryReason) (Just (show (DocumentReason_Text reason))) rcId
       QImage.updateVerificationStatusAndFailureReasonByRcIdAndImageType (Just Documents.INVALID) (Just $ ImageNotValid expiryReason) rcIdText DVC.VehicleInsurance
     DVC.VehiclePermit -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId

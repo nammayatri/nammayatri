@@ -64,7 +64,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
-import Domain.Types.TranslationKeys (RcRuleFailure (..), TranslationKey (..))
+import Domain.Types.TranslationKeys (DocumentRejectReason (..), RcRuleFailure (..), TranslationKey (..), documentRejectReasonText)
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
@@ -626,7 +626,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             | nonTransportRejected = Documents.INVALID
             | null failedRules = Documents.MANUAL_VERIFICATION_REQUIRED
             | otherwise = Documents.INVALID
-          computedRejectReason = if nonTransportRejected then Just "Non Transport vehicles are not allowed" else Nothing
+          computedRejectReason = if nonTransportRejected then Just (documentRejectReasonText NonTransportVehicle) else Nothing
       logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", rejectReason=" <> show computedRejectReason <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
@@ -668,6 +668,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleDoors = mbVehicleDoors,
             vehicleSeatBelts = mbVehicleSeatBelts,
             rejectReason = computedRejectReason,
+            rejectReasonKey = show (DocumentReason_Text NonTransportVehicle) <$ computedRejectReason,
             createdAt = now,
             unencryptedCertificateNumber = input.registrationNumber,
             approved = Nothing,

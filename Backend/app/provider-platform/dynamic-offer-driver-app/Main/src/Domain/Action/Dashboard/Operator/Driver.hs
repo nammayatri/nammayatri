@@ -1198,7 +1198,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
-              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason, DVRC.rejectReasonKey = Nothing}
             DVC.VehicleInspectionForm ->
               IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
@@ -1214,7 +1214,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.VehiclePermit -> QVPermit.updateVerificationStatusByRcId Documents.INVALID rcId
             DVC.VehicleFitnessCertificate -> QFC.updateVerificationStatusByRcId Documents.INVALID rcId
             DVC.VehicleInsurance -> do
-              QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID rejectReason rcId
+              QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID rejectReason Nothing rcId
               -- An insurance uploaded as a common document takes its status from that row instead.
               mbCommonDoc <- QCommonDocExtra.findCurrentVersionByOwnerAndDocumentType (QCommonDocExtra.OwnedByRc rcId) DVC.VehicleInsurance
               forM_ mbCommonDoc $ \commonDoc -> QCommonDoc.updateByPrimaryKey commonDoc {DCommonDoc.verificationStatus = Documents.INVALID, DCommonDoc.rejectReason = rejectReason}
@@ -1230,7 +1230,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
               forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
             DVC.DriverLicense -> do
               mbDoc <- DLQuery.findByDriverId personId
-              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason, DDL.rejectReasonKey = Nothing}
             DVC.SocialSecurityNumber -> do
               mbDoc <- QDSSN.findByDriverId personId
               forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}

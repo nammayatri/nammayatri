@@ -255,6 +255,7 @@ DriverLicense:
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
   excludedFields: [merchantOperatingCityId]
 
   constraints:
@@ -330,6 +331,7 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     isNew: Maybe Bool
@@ -962,6 +964,7 @@ VehicleInsurance:
     limitsOfLiability: Maybe Text
     verificationStatus: VerificationStatus
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
@@ -983,7 +986,7 @@ VehicleInsurance:
       where: documentImageId
     updateVerificationStatusAndRejectReasonByRcId:
       kvFunction: updateWithKV
-      params: [verificationStatus, rejectReason]
+      params: [verificationStatus, rejectReason, rejectReasonKey]
       where: rcId
     findByImageId:
       kvFunction: findOneWithKV

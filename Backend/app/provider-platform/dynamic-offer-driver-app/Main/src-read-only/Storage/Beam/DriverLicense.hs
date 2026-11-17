@@ -29,6 +29,7 @@ data DriverLicenseT f = DriverLicenseT
     licenseNumberEncrypted :: B.C f Kernel.Prelude.Text,
     licenseNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rejectReasonKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

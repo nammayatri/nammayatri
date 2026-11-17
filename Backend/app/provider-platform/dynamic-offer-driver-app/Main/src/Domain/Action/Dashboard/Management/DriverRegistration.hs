@@ -1422,6 +1422,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                   DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
                   DRC.verificationStatus = VALID,
                   DRC.rejectReason = Nothing,
+                  DRC.rejectReasonKey = Nothing,
                   DRC.failedRules = [],
                   DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
                   DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
@@ -1496,6 +1497,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.dateOfRegistration = Nothing,
                       DRC.vehicleModelYear = req.vehicleModelYear,
                       DRC.rejectReason = Nothing,
+                      DRC.rejectReasonKey = Nothing,
                       DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
                       DRC.approved = Nothing,
                       DRC.vehicleImageId = Nothing,
@@ -1599,6 +1601,7 @@ upsertInsurance docStatus req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                     policyExpiry = policyExp,
                     policyProvider = provider,
                     rejectReason = Nothing,
+                    rejectReasonKey = Nothing,
                     ..
                   }
           QVI.create insurance
@@ -1967,6 +1970,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                   DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
                   DDL.verificationStatus = VALID,
                   DDL.rejectReason = Nothing,
+                  DDL.rejectReasonKey = Nothing,
                   DDL.driverId = driverId
                 }
         -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
@@ -2006,6 +2010,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                   DDL.failedRules = [],
                   DDL.dateOfIssue = Nothing,
                   DDL.rejectReason = Nothing,
+                  DDL.rejectReasonKey = Nothing,
                   DDL.vehicleCategory = Nothing,
                   DDL.consent = True,
                   DDL.consentTimestamp = now,
@@ -2739,7 +2744,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           rejectImage imageId
           vInsurance <- QVI.findByImageId imageId
           whenJust vInsurance $ \_ ->
-            QVI.updateVerificationStatusAndRejectReason INVALID reason imageId
+            QVI.updateVerificationStatusAndRejectReason INVALID reason Nothing imageId
         DVC.VehiclePermit -> do
           rejectImage imageId
           QVPermit.updateVerificationStatusByImageId INVALID imageId
@@ -2831,7 +2836,8 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
                   DDL.driverDob = dlMetadata.driverDateOfBirth,
                   DDL.licenseExpiry = fromMaybe dl.licenseExpiry dlMetadata.dateOfExpiry,
                   DDL.verificationStatus = VALID,
-                  DDL.rejectReason = Nothing
+                  DDL.rejectReason = Nothing,
+                  DDL.rejectReasonKey = Nothing
                 }
         _ -> QDL.updateDocImagesAndMarkValidById dl.id front back
 
@@ -2852,7 +2858,8 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
                   DRC.vehicleModelYear = rcMetadata.vehicleModelYear,
                   DRC.vehicleColor = rcMetadata.vehicleColor,
                   DRC.verificationStatus = VALID,
-                  DRC.rejectReason = Nothing
+                  DRC.rejectReason = Nothing,
+                  DRC.rejectReasonKey = Nothing
                 }
         _ -> QRC.updateDocImagesAndMarkValidById rc.id front back
 

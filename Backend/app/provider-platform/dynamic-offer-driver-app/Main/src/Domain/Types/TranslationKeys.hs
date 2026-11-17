@@ -20,6 +20,8 @@ module Domain.Types.TranslationKeys
     AcUsageMessage (..),
     PushWord (..),
     RcRuleFailure (..),
+    DocumentRejectReason (..),
+    documentRejectReasonText,
     DriverPushKey (..),
     pushNotificationType,
     SmsKey (..),
@@ -57,6 +59,7 @@ data TranslationKey
   | Earnings_Label EarningsLabel
   | AcUsage_Message AcUsageMessage
   | RcRule_Failure RcRuleFailure
+  | DocumentReason_Text DocumentRejectReason
   | Coins_MetroMessage DCoins.MetroRideType
   | Coins_Message DCoins.CoinMessage
   | ServiceTier_Name DST.ServiceTierType
@@ -92,6 +95,7 @@ instance Show TranslationKey where
     Earnings_Label l -> dotted ["Earnings", "Label", keyName l]
     AcUsage_Message m -> dotted ["AcUsage", "Message", keyName m]
     RcRule_Failure f -> dotted ["RcRule", "Failure", keyName f]
+    DocumentReason_Text r -> dotted ["DocumentReason", "Text", keyName r]
     Coins_MetroMessage m -> dotted ["Coins", "MetroMessage", keyName m]
     Coins_Message m -> dotted ["Coins", "Message", keyName m]
     ServiceTier_Name t -> dotted ["ServiceTier", "Name", keyName t]
@@ -126,6 +130,7 @@ instance IsTranslationKey TranslationKey where
         map Earnings_Label [minBound .. maxBound],
         map AcUsage_Message [minBound .. maxBound],
         map RcRule_Failure [minBound .. maxBound],
+        map DocumentReason_Text [minBound .. maxBound],
         map Coins_MetroMessage [minBound .. maxBound],
         map Coins_Message [minBound .. maxBound],
         map ServiceTier_Name serviceTiers,
@@ -155,6 +160,7 @@ instance IsTranslationKey TranslationKey where
     AcUsage_Message Restricted -> Just "AC_RESTRICTION_MESSAGE"
     AcUsage_Message Working -> Just "AC_WORKING_MESSAGE"
     RcRule_Failure f -> Just (keyName f)
+    DocumentReason_Text _ -> Nothing
     Coins_MetroMessage m -> Just (keyName m)
     Coins_Message m -> Just (keyName m)
     ServiceTier_Name _ -> Nothing
@@ -267,6 +273,25 @@ data RcRuleFailure
   | PermitExpired
   | PUCExpired
   deriving stock (Show, Eq, Ord, Bounded, Enum)
+
+-- | A reject reason our own code writes on a document row. The row keeps the English sentence in
+-- its @reject_reason@ column for the dashboards and this key's name in @reject_reason_key@, so the
+-- driver app can show it in the driver's language. Reasons typed by ops or returned by a
+-- verification provider have no key and are shown as stored.
+data DocumentRejectReason
+  = NonTransportVehicle
+  | DocumentExpired
+  | VehicleDocumentExpiredReminder
+  | VehicleInspectionExpiredReminder
+  deriving stock (Show, Eq, Ord, Bounded, Enum)
+
+-- | The English sentence each reason is stored as.
+documentRejectReasonText :: DocumentRejectReason -> Text
+documentRejectReasonText = \case
+  NonTransportVehicle -> "Non Transport vehicles are not allowed"
+  DocumentExpired -> "Document expired"
+  VehicleDocumentExpiredReminder -> "Expired mandatory vehicle document reminder"
+  VehicleInspectionExpiredReminder -> "Expired mandatory vehicle inspection reminder"
 
 -- | Text stored in @merchant_push_notification@. The second segment names the recipient where
 -- the same event reaches more than one person.
