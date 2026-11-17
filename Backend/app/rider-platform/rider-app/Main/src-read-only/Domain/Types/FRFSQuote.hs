@@ -6,6 +6,7 @@ module Domain.Types.FRFSQuote where
 import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.FRFSFareClass
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
@@ -27,6 +28,7 @@ data FRFSQuote = FRFSQuote
     busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    fareClassId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSFareClass.FRFSFareClass),
     fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,

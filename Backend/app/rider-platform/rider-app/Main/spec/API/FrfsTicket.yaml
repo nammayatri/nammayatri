@@ -65,6 +65,7 @@ types:
     vehicleNumber: Maybe Text
     tripTime: Maybe UTCTime
     imeiNumber: Maybe Text
+    tripId: Maybe Text # A picked trip; fare classes are then priced at its boarding time at the boarding stop, as confirm checks them
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch

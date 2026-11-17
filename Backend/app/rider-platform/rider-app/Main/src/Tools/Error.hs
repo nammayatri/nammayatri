@@ -673,6 +673,9 @@ data FRFSTicketBookingError
   | FRFSTicketsForBookingExpired Text
   | FRFSTicketsForBookingDoesNotExist Text
   | FRFSQuoteExpired Text
+  | FareClassChanged Text
+  | TripServiceTierMismatch Text
+  | TripDetailsMismatch Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FRFSTicketBookingError
@@ -684,6 +687,9 @@ instance IsBaseError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " has expired."
     FRFSTicketsForBookingDoesNotExist bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " does not exist."
     FRFSQuoteExpired _ -> Just $ "Quote expired"
+    FareClassChanged quoteId -> Just $ "Fare has changed for this trip, please search again:-" <> quoteId
+    TripServiceTierMismatch quoteId -> Just $ "Selected trip is not available for this service:-" <> quoteId
+    TripDetailsMismatch quoteId -> Just $ "Trip details changed, please search again:-" <> quoteId
 
 instance IsHTTPError FRFSTicketBookingError where
   toErrorCode = \case
@@ -692,6 +698,9 @@ instance IsHTTPError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired _ -> "FRFS_TICKETS_FOR_BOOKING_EXPIRED"
     FRFSTicketsForBookingDoesNotExist _ -> "FRFS_TICKETS_FOR_BOOKING_DOES_NOT_EXIST"
     FRFSQuoteExpired _ -> "FRFS_QUOTE_EXPIRED"
+    FareClassChanged _ -> "FARE_CLASS_CHANGED"
+    TripServiceTierMismatch _ -> "TRIP_SERVICE_TIER_MISMATCH"
+    TripDetailsMismatch _ -> "TRIP_DETAILS_MISMATCH"
 
   toHttpCode = \case
     FRFSTicketBookingNotFound _ -> E500
@@ -699,6 +708,9 @@ instance IsHTTPError FRFSTicketBookingError where
     FRFSTicketsForBookingExpired _ -> E400
     FRFSTicketsForBookingDoesNotExist _ -> E400
     FRFSQuoteExpired _ -> E400
+    FareClassChanged _ -> E400
+    TripServiceTierMismatch _ -> E400
+    TripDetailsMismatch _ -> E400
 
 instance IsAPIError FRFSTicketBookingError
 

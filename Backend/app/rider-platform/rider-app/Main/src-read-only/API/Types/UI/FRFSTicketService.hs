@@ -411,6 +411,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
+    tripId :: Data.Maybe.Maybe Data.Text.Text,
     tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }

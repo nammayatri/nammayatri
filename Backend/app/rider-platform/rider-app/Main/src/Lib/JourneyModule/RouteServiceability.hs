@@ -60,8 +60,9 @@ buildRouteWithLiveVehicle ::
   Bool ->
   Maybe Text ->
   Maybe Text ->
+  FRFSUtils.FareClassLookup ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips mbOverrideSourceStopCode mbOverrideDestinationStopCode = do
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips mbOverrideSourceStopCode mbOverrideDestinationStopCode fareClassLookup = do
   upcomingBuses <-
     if allowUpcomingTrips
       then getFreshUpcomingBuses routeInfo.routeId integratedBPPConfig (map (.vehicleNumber) routeInfo.buses)
@@ -113,7 +114,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       ("buildRouteWithLiveVehicle: getRouteByRouteId routeId=" <> routeInfo.routeId)
   schedulesFork <-
     awaitableFork "getBusScheduleInfo" $
-      getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
+      getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo route.routeTag fareClassLookup
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
       getLiveVehicles mergedBuses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
@@ -150,7 +151,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               overrideDestinationStopCode = mbOverrideDestinationStopCode
             }
   where
-    getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' = do
+    getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' mbRouteTag' fareClassLookup' = do
+      boardingStopCodes <- OTPRest.getEquivalentStopCodes fromStopCode' integratedBPPConfig'
       -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
       let vehicleNos = map (.vehicle_no) busScheduleDetails'
       liveInfoResults <-
@@ -207,6 +209,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                   if not isAvailable
                     then return Nothing
                     else do
+                      let mbBoardingTime = FRFSUtils.unixToUTC . (.arrivalTimeUnix) <$> FRFSUtils.etaAtStop boardingStopCodes detail.eta
+                          fareClassTags = maybe [] (fareClassTagsFor fareClassLookup' frfsServiceTier mbRouteTag' (snd <$> mbVehicleMetadata)) mbBoardingTime
                       logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
                       return . Just $
                         API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
@@ -223,7 +227,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleVariant = mbVehicleVariant,
                             availableSeats = availableSeatsCount,
                             seatSelectionType = seatSelType,
-                            vehicleTags = riderVehicleTagsOf (snd <$> mbVehicleMetadata)
+                            vehicleTags = riderVehicleTagsOf (snd <$> mbVehicleMetadata),
+                            fareClassTags = fareClassTags
                           }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -289,6 +294,18 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               sortOn (\v -> distanceBetweenInMeters sourceLatLong v.position) allVehicles
             Nothing -> allVehicles
       pure $ take maxLiveCount sorted
+
+fareClassTagsFor ::
+  FRFSUtils.FareClassLookup ->
+  Maybe DFRFSVehicleServiceTier.FRFSVehicleServiceTier ->
+  Maybe Text ->
+  Maybe NandiTypes.VehicleMetadataResponse ->
+  UTCTime ->
+  [Text]
+fareClassTagsFor fareClassLookup mbVehicleServiceTier mbRouteTag mbVehicleMetadata time = fromMaybe [] $ do
+  vehicleServiceTier <- mbVehicleServiceTier
+  fareClass <- listToMaybe $ FRFSUtils.rankedFareClassesFor fareClassLookup vehicleServiceTier.id mbRouteTag (fromMaybe [] (mbVehicleMetadata >>= (.vehicleTags))) (mbVehicleMetadata >>= (.vehicleVariant)) time
+  pure fareClass.badges
 
 enrichBusStopETA :: DIntegratedBPPConfig.IntegratedBPPConfig -> CQMMB.BusStopETA -> Flow CQMMB.BusStopETA
 enrichBusStopETA integratedBPPConfig' eta =

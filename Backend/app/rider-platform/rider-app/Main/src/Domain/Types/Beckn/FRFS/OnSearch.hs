@@ -1,6 +1,7 @@
 module Domain.Types.Beckn.FRFS.OnSearch where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Types.FRFSFareClass as DFareClass
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSSearch as Search
@@ -10,6 +11,7 @@ import qualified Domain.Types.StationType as Station
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Id (Id)
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -64,7 +66,8 @@ data DQuote = DQuote
     categories :: [DCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     _type :: Quote.FRFSQuoteType,
-    routeGroupKey :: Maybe Text
+    routeGroupKey :: Maybe Text,
+    fareClassId :: Maybe (Id DFareClass.FRFSFareClass)
   }
   deriving (Show)
 

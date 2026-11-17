@@ -271,8 +271,9 @@ upsertFareCache onSearchReq validatedReq = do
 upsertRouteStopFare :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => [DQuote] -> DIBC.IntegratedBPPConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
 upsertRouteStopFare quotes integratedBPPConfig merchantId merchantOperatingCityId = do
   forM_ quotes $ \quote -> do
-    -- Only cache Single Journey tickets, ignore Return Journey tickets
-    when (quote._type == Quote.SingleJourney) $ do
+    -- Only cache Single Journey tickets, ignore Return Journey tickets; a fare-class price is for its class's buses only, so it
+    -- never becomes the route's legacy fare.
+    when (quote._type == Quote.SingleJourney && isNothing quote.fareClassId) $ do
       let routeStartEndStops =
             -- This `null quote.routeStation` check is to ensure that we only update the fare for the route stations if they are present in the quote.
             if null quote.routeStations
@@ -586,7 +587,8 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
       Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
-      Quote.routeGroupKey = quotesFromOnSearch.routeGroupKey
+      Quote.routeGroupKey = quotesFromOnSearch.routeGroupKey,
+      Quote.fareClassId = quotesFromOnSearch.fareClassId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text
@@ -757,6 +759,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   cancellationWindowSeconds = Nothing,
                   cancellationDelayThresholdSeconds = Nothing,
                   useLiveForCancellationAndRescheduling = Nothing,
+                  enableFareClass = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }

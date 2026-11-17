@@ -5,6 +5,7 @@ module Domain.Types.FRFSGtfsStageFare where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.FRFSFareClass
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.Merchant
@@ -19,6 +20,7 @@ data FRFSGtfsStageFare = FRFSGtfsStageFare
     cessCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
     discountIds :: [Kernel.Types.Id.Id Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig],
+    fareClassId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSFareClass.FRFSFareClass),
     id :: Kernel.Types.Id.Id Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

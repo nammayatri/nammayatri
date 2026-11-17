@@ -381,6 +381,7 @@ data RouteServiceabilityReq = RouteServiceabilityReq
   { allowClusteredStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    includeFareClass :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     latLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
@@ -420,6 +421,7 @@ data RouteWithLiveVehicle = RouteWithLiveVehicle
 data ScheduledVehicleInfo = ScheduledVehicleInfo
   { availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    fareClassTags :: [Kernel.Prelude.Text],
     isActiveTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,

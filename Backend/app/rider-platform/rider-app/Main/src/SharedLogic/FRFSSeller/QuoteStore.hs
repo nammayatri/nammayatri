@@ -131,6 +131,7 @@ mkSearch ctx searchId now mbQuote =
   DSearch.FRFSSearch
     { busLocationData = [],
       clientBundleVersion = Nothing,
+      startTime = Nothing,
       clientSdkVersion = Nothing,
       cloudType = Nothing,
       fromStationAddress = Nothing,
@@ -195,6 +196,7 @@ mkQuote ctx searchId quoteId quote now =
       providerName = quote.providerName,
       riderId = Common.sellerRiderId,
       routeGroupKey = Nothing,
+      fareClassId = Nothing,
       routeStationsJson = Nothing,
       searchId = searchId,
       stationsJson = mkStationsJson ctx quote,

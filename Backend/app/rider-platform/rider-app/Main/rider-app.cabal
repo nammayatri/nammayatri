@@ -791,6 +791,7 @@ library
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSCancellationConfig
       Storage.CachedQueries.FRFSConfig
+      Storage.CachedQueries.FRFSFareClass
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
@@ -1390,6 +1391,7 @@ library
       Domain.Types.FeedbackForm
       Domain.Types.FRFSCancellationConfig
       Domain.Types.FRFSConfig
+      Domain.Types.FRFSFareClass
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
       Domain.Types.FRFSPassTicketStatistics
@@ -1570,6 +1572,7 @@ library
       Storage.Beam.FeedbackForm
       Storage.Beam.FRFSCancellationConfig
       Storage.Beam.FRFSConfig
+      Storage.Beam.FRFSFareClass
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
       Storage.Beam.FRFSPassTicketStatistics
@@ -1755,6 +1758,7 @@ library
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSCancellationConfig
       Storage.Queries.FRFSConfig
+      Storage.Queries.FRFSFareClass
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
       Storage.Queries.FRFSPassTicketStatistics
