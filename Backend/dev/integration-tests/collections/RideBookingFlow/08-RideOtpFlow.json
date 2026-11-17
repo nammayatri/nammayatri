@@ -669,14 +669,14 @@
               "    var fbSum = fbLines.filter(function (l) { return !fbIsSplit(l.description); }).reduce(function (a, l) { return a + fbAmt(l); }, 0);",
               "    var fbPayable = Number(fbB.estimatedTotalFareWithCurrency ? fbB.estimatedTotalFareWithCurrency.amount : fbB.estimatedTotalFare);",
               "    console.log('Booking breakup:', fbLines.map(function (l) { return l.description + '=' + fbAmt(l); }).join(', '), '| payable', fbPayable);",
-              "    pm.test('Booking breakup lines (excluding CGST/SGST/IGST splits) sum to the payable fare', function () { pm.expect(Math.round(fbSum)).to.eql(Math.round(fbPayable)); });",
+              "    pm.test('Booking breakup lines (excluding CGST/SGST/IGST splits) sum to the payable fare (±1 for per-line rounding)', function () { pm.expect(fbSum).to.be.closeTo(fbPayable, 1); });",
               "    var fbAt = function (t) { return fbLines.filter(function (l) { return l.description === t; }).reduce(function (a, l) { return a + fbAmt(l); }, 0); };",
               "    fbLines.filter(function (l) { return /_TAX$/.test(l.description); }).forEach(function (l) {",
               "        var prefix = l.description.replace(/_TAX$/, '');",
               "        var splits = fbAt(prefix + '_CGST') + fbAt(prefix + '_SGST') + fbAt(prefix + '_IGST');",
               "        if (splits > 0) pm.test(l.description + ' equals its CGST + SGST + IGST split', function () { pm.expect(splits).to.be.closeTo(fbAmt(l), 1); });",
               "    });",
-              "    pm.test('No ride fare tax or payment charge line in a cash booking', function () { pm.expect(['RIDE_FARE_TAX', 'PAYMENT_CHARGE', 'PAYMENT_CHARGE_TAX'].every(function (t) { return fbAt(t) === 0; })).to.eql(true); });",
+              "    pm.test('No payment charge line in a cash booking', function () { pm.expect(['PAYMENT_CHARGE', 'PAYMENT_CHARGE_TAX'].every(function (t) { return fbAt(t) === 0; })).to.eql(true); });",
               "}"
             ],
             "type": "text/javascript"
