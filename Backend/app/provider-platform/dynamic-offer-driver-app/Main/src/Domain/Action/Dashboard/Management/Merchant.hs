@@ -3548,7 +3548,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
 
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
-            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
+            -- per km rate sections aren't in the CSV, an uploaded policy is priced at its flat per km rates
+            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, perKmRateSectionsOneWay = Nothing, perKmRateSectionsRoundTrip = Nothing, ..}
           FarePolicy.Ambulance -> do
             baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
             baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"

@@ -281,11 +281,16 @@ types:
     - pricingSlabs: "[FPV2PricingSlab]"
     - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
     - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2InterCityPerKmRateSection:
+    - startDistance: Meters
+    - perKmRate: HighPrecMoney
   FPV2InterCityDetails:
     - baseFare: HighPrecMoney
     - perHourCharge: HighPrecMoney
     - perKmRateOneWay: HighPrecMoney
     - perKmRateRoundTrip: HighPrecMoney
+    - perKmRateSectionsOneWay: "Maybe [FPV2InterCityPerKmRateSection]"
+    - perKmRateSectionsRoundTrip: "Maybe [FPV2InterCityPerKmRateSection]"
     - perExtraKmRate: HighPrecMoney
     - perExtraMinRate: HighPrecMoney
     - kmPerPlannedExtraHour: Kilometers
