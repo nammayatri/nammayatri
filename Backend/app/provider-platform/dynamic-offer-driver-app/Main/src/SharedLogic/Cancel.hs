@@ -175,7 +175,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           underRepeatCap = searchTry.searchRepeatCounter < searchRepeatLimit
           bppReallocationAllowed = transporterConfig.enableBppReallocation == Just True
       if isRepeatSearch || (isForceReallocation && (not bppReallocationAllowed || underRepeatCap))
-        then performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch
+        then performStaticOfferReallocation quote searchReq searchTry transporterConfig now
         else cancelRideTransactionForNonReallocation Nothing Nothing
 
     performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry = do
@@ -211,7 +211,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False singleBooking
 
-    performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch = do
+    performStaticOfferReallocation quote searchReq searchTry transporterConfig now = do
       let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
       DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
@@ -242,7 +242,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 messageId = booking.id.getId,
-                isRepeatSearch,
+                isRepeatSearch = True,
                 isAllocatorBatch = False,
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = paymentMethodInfo,

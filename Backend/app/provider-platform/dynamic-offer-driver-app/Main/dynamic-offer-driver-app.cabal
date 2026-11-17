@@ -743,6 +743,7 @@ library
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
+      SharedLogic.FindAnotherDriver
       SharedLogic.Fleet
       SharedLogic.FleetDriverSettings
       SharedLogic.FleetEngine
