@@ -788,6 +788,7 @@ library
       SharedLogic.Finance.WalletFloor
       SharedLogic.Finance.WalletPayout
       SharedLogic.Finance.WalletSubscription
+      SharedLogic.FindAnotherDriver
       SharedLogic.Fleet
       SharedLogic.FleetAnalytics.Realtime
       SharedLogic.FleetDriverSettings

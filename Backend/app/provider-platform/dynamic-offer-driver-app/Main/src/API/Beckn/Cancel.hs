@@ -51,6 +51,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CancellationOrchestrator as SCO
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
+import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
@@ -167,11 +168,14 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                         }
               whenJust mbQuotedRide $ \ride ->
                 QRide.updateCancellationQuoteIfCancelled ride.cancellationFeeIfCancelled ride.cancellationFeeTaxIfCancelled ride.cancellationConsequenceRowIdIfCancelled ride.id
+              -- A trip whose driver was swapped away while a fee applied is cancelled at fault until a new
+              -- driver accepts (Domain.Action.Beckn.Cancel); the swap mark says so
+              mbSwapCancelQuote <- FindAnotherDriver.swapCancelQuote booking mbRide
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
-                        cancellationFee = grossCancellationCharges,
+                        cancellationFee = grossCancellationCharges <|> mbSwapCancelQuote,
                         cancellationReasonCode = resolvedReasonCode,
                         mbRide = mbQuotedRide,
                         -- soft-cancel is a pre-cancel fee preview; no invoice exists yet

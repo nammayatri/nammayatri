@@ -57,6 +57,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OndcCancellationReason as SOCR
@@ -111,6 +112,19 @@ cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id (fromMaybe False req.userReallocationEnabled) $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+    now <- getCurrentTime
+
+    let isFindAnotherDriver =
+          FindAnotherDriver.isFindAnotherDriverRequest req.userReallocationEnabled req.cancellationReason
+            && booking.isScheduled
+            && isJust mbRide
+            && isValueAddNP
+            && diffUTCTime booking.startTime now > transporterConfig.scheduleRideBufferTime
+
+    mbSwapFee <- case mbRide of
+      Just ride | isFindAnotherDriver -> (>>= (.fee)) <$> Orchestrator.getCancellationCharges booking ride DBCR.ByUser Nothing
+      _ -> pure Nothing
     -- releaseLien gates itself on prepaid-or-wallet being enabled.
     whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbRide $ \ride -> do
@@ -143,12 +157,19 @@ cancel req merchant booking mbActiveSearchTry = do
     -- (blacklist, driver overlay, coin event, driver money, rate counter) BEFORE the
     -- reallocation decision: a customer forced to cancel because of the driver must still
     -- produce the driver-side consequences even when the booking reallocates.
-    mbConsequenceCtx <- forM mbRide $ \ride -> do
+    -- A find-another-driver swap skips all of it, including the soft-cancel fee reuse in the
+    -- terminal consequences below.
+    mbRideAndDriver <- forM mbRide $ \ride -> do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
-      let consequenceCtx = Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCR.source, decision = decision}
-      Orchestrator.applyImmediateConsequences consequenceCtx Nothing
-      pure consequenceCtx
+      pure (ride, driver)
+    mbConsequenceCtx <-
+      if isFindAnotherDriver
+        then pure Nothing
+        else forM mbRideAndDriver $ \(ride, driver) -> do
+          decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
+          let consequenceCtx = Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCR.source, decision = decision}
+          Orchestrator.applyImmediateConsequences consequenceCtx Nothing
+          pure consequenceCtx
 
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
@@ -168,25 +189,29 @@ cancel req merchant booking mbActiveSearchTry = do
         PickupStall.flushPickupJourney ride Nothing
         -- Behaviour Engine for scheduled rides is per-city opt-in; default = capture-only.
         let scheduledBehaviourEngineOn = PickupStall.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
-        when (isNothing ride.pickupBehaviour && scheduledBehaviourEngineOn) $
+        when (not isFindAnotherDriver && isNothing ride.pickupBehaviour && scheduledBehaviourEngineOn) $
           whenJust mbJourney $ \journey ->
             when (journey.behaviour `elem` [SRide.STALLED, SRide.MOVING_AWAY]) $
               PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault
 
     isReallocated <-
-      case mbConsequenceCtx of
-        Just consequenceCtx -> do
-          let ride = consequenceCtx.ride
-              driver = consequenceCtx.driver
+      case mbRideAndDriver of
+        Just (ride, driver) -> do
           fork "cancelRide - Notify driver" $
             Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
-          isValueAddNP <- CQVAN.isValueAddNP booking.bapId
           vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-          isReallocat <- reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR False
+          isReallocat <- reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR isFindAnotherDriver
+          when (isFindAnotherDriver && isReallocat) $
+            FindAnotherDriver.recordSwap booking ride mbSwapFee
           -- newRide <- QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
           -- let cancellationFeeIfCancelled = maybe Nothing (\charges-> Just PriceAPIEntity {amount = charges, currency = booking.currency}) newRide.cancellationFeeIfCancelled
           return isReallocat
         Nothing -> return False
+
+    mbSwapCancelCtx <-
+      if isNothing mbRide
+        then FindAnotherDriver.swapCancelConsequences merchant booking transporterConfig bookingCR
+        else pure Nothing
 
     -- Terminal (customer-side money) consequences apply REGARDLESS of reallocation: the
     -- matrix (fault verdict + row) alone decides whether the customer pays — a
@@ -194,12 +219,13 @@ cancel req merchant booking mbActiveSearchTry = do
     -- cancel can no longer dodge its consequences by having reallocation enabled. On a
     -- reallocated booking the charge is recorded as dues and collected on the next ride
     -- (the reallocation on_cancel carries no fee term).
-    chargesOutcome <- case mbConsequenceCtx of
+    chargesOutcome <- case mbConsequenceCtx <|> mbSwapCancelCtx of
       Just consequenceCtx ->
         Orchestrator.applyTerminalConsequences
           consequenceCtx
           (\base feeTax mbCreditDebit -> createCancellationLedgerEntries booking consequenceCtx.ride base feeTax transporterConfig mbCreditDebit)
       Nothing -> pure Nothing
+    whenJust mbSwapCancelCtx $ \_ -> FindAnotherDriver.clearSwap booking
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     if isReallocated
