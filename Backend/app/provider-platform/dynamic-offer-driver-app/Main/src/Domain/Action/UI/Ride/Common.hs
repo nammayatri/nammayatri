@@ -701,6 +701,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   -- paymentInstrument, since that's what actually distinguishes a booth/EDC booking here.
   let offer = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
+      -- No payment method on the booking means cash, as in StartRide and CancellationConsequence.
+      instrumentOrCash = fromMaybe DMPM.Cash booking.paymentInstrument
       mbAmountToCollectInCash =
         if isCancelled
           then Just 0
@@ -711,8 +713,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
             (Just _, Nothing) -> Nothing
             (Nothing, _) ->
-              case (booking.paymentInstrument, ride.fare) of
-                (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+              case (instrumentOrCash, ride.fare) of
+                (DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
                 _ -> Nothing
       mbAmountToBeSettledOnline =
         if isCancelled
@@ -721,8 +723,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             Just SL.FullPayment -> computedFareNet
             Just _ -> Nothing
             Nothing ->
-              case booking.paymentInstrument of
-                Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
+              case instrumentOrCash of
+                DMPM.Cash -> if offer > 0 then Just offer else Nothing
                 _ -> computedFareNet
 
   mbRideEarningsVal <- case mbEarningsLabels of
