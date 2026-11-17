@@ -1,0 +1,29 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Meters: Kernel.Types.Common
+
+FullFarePolicyInterCityDetailsPerKmRateSection:
+  tableName: fare_policy_inter_city_details_per_km_rate_section
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  fields:
+    farePolicyId: Text
+    isRoundTrip: Bool
+    startDistance: Meters
+    perKmRate: HighPrecMoney
+
+  constraints:
+    farePolicyId: "PrimaryKey | SecondaryKey"
+    isRoundTrip: PrimaryKey
+    startDistance: PrimaryKey
+
+  excludedFields:
+    - merchantOperatingCityId
+    - merchantId
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithKV
+      where: farePolicyId
+    deleteAllByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId

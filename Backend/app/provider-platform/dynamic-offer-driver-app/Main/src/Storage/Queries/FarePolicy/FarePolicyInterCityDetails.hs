@@ -12,6 +12,7 @@ module Storage.Queries.FarePolicy.FarePolicyInterCityDetails where
 
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.FullFarePolicyInterCityDetailsPerKmRateSection as FullPerKmDomain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -21,43 +22,72 @@ import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPICDPS
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as QueriesFPICDPS
+import qualified Storage.Queries.FullFarePolicyInterCityDetailsPerKmRateSection as QueriesFullFPICDPerKm
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyInterCityDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyInterCityDetails -> m ()
 create farePolicyInterCityDetails = do
-  mapM_ QueriesFPICDPS.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).pricingSlabs))
+  let fpId = KTI.getId $ fst farePolicyInterCityDetails
+      details = snd farePolicyInterCityDetails
+  mapM_ QueriesFPICDPS.create (map (fst farePolicyInterCityDetails,) (NE.toList details.pricingSlabs))
+  now <- getCurrentTime
+  QueriesFullFPICDPerKm.createMany $
+    mkFullPerKmRateSections fpId False now details.perKmRateSectionsOneWay
+      <> mkFullPerKmRateSections fpId True now details.perKmRateSectionsRoundTrip
   createWithKV farePolicyInterCityDetails
+  where
+    mkFullPerKmRateSections :: Text -> Bool -> UTCTime -> Maybe (NonEmpty Domain.FPInterCityDetailsPerKmRateSection) -> [FullPerKmDomain.FullFarePolicyInterCityDetailsPerKmRateSection]
+    mkFullPerKmRateSections fpIdText isRoundTrip now =
+      maybe [] $
+        map
+          ( \s ->
+              FullPerKmDomain.FullFarePolicyInterCityDetailsPerKmRateSection
+                { farePolicyId = fpIdText,
+                  isRoundTrip,
+                  startDistance = s.startDistance,
+                  perKmRate = s.perKmRate,
+                  createdAt = now,
+                  updatedAt = now
+                }
+          )
+          . NE.toList
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPICDPS.delete farePolicyId
+  QueriesFullFPICDPerKm.deleteAllByFarePolicyId (KTI.getId farePolicyId)
   deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   fromTType' farePolicyInterCityDetails = do
     fullFPICDPS <- QueriesFPICDPS.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
     fPICDPS <- fromMaybeM (InternalError "No pricing slab found for intercity") (NE.nonEmpty fullFPICDPS) -- check it
-    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+    perKmRateSections <- QueriesFullFPICDPerKm.findAllByFarePolicyId farePolicyInterCityDetails.farePolicyId
+    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS perKmRateSections
 
 fromTTypeFarePolicyInterCityDetails ::
   BeamFPRD.FarePolicyInterCityDetails ->
   NonEmpty BeamFPICDPS.FullFarePolicyInterCityDetailsPricingSlabs ->
+  [FullPerKmDomain.FullFarePolicyInterCityDetailsPerKmRateSection] ->
   Domain.FullFarePolicyInterCityDetails
-fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
-  ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails
-      { pricingSlabs = snd <$> fPICDPS,
-        waitingChargeInfo =
-          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-            Domain.WaitingChargeInfo
-              { waitingCharge = waitingCharge',
-                freeWaitingTime = freeWaitingTime'
-              },
-        ..
-      }
-  )
+fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS perKmRateSections =
+  let (oneWayPerKmRateSections, roundTripPerKmRateSections) = Domain.mkPerKmRateSections perKmRateSections
+   in ( KTI.Id farePolicyId,
+        Domain.FPInterCityDetails
+          { pricingSlabs = snd <$> fPICDPS,
+            perKmRateSectionsOneWay = oneWayPerKmRateSections,
+            perKmRateSectionsRoundTrip = roundTripPerKmRateSections,
+            waitingChargeInfo =
+              ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+                Domain.WaitingChargeInfo
+                  { waitingCharge = waitingCharge',
+                    freeWaitingTime = freeWaitingTime'
+                  },
+            ..
+          }
+      )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPInterCityDetails {..}) =

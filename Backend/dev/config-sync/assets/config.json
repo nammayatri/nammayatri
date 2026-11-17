@@ -475,6 +475,9 @@
     "fare_policy_inter_city_details_pricing_slabs": {
       "dim": []
     },
+    "fare_policy_inter_city_details_per_km_rate_section": {
+      "dim": []
+    },
     "fare_policy_rental_details": {
       "dim": []
     },
