@@ -113,6 +113,17 @@ function dz(n) {
   return { country: 'DZ', cc: '+213', candidates: [`0${bare}`, bare] };
 }
 
+const RIDE_ID = /^[0-9a-f-]{36}$/i;
+const countryOfMerchant = (merchantId) => (String(merchantId).trim() === DZ_MERCHANT ? 'DZ' : 'MR');
+
+/** A driver's country, from his merchant: what the console's route needs before it starts a run. */
+async function countryOfDriver(pool, driverId) {
+  if (!pool || !RIDE_ID.test(String(driverId))) return null;
+  const { rows } = await pool.query(
+    `SELECT merchant_id FROM atlas_driver_offer_bpp.person WHERE id = $1 AND role = 'DRIVER'`, [driverId]);
+  return rows[0] ? countryOfMerchant(rows[0].merchant_id) : null;
+}
+
 const hashHex = (salt, number) => crypto.createHash('sha256').update(salt + number).digest('hex');
 
 /** A point `metres` away from (lat, lon) towards `bearing` degrees. */
@@ -138,7 +149,7 @@ function metresBetween(a, b) {
  * deps: { pool, say, sleep, wait?, riderUrl?, osrmUrl?, salt?, enabled? }
  * Returns { ok, reason, lines } -- `ok` is the verdict « réussi ».
  */
-async function run(deps, numberRaw, scenarioRaw) {
+async function run(deps, target, scenarioRaw) {
   const say = deps.say || ((s) => console.log(s));
   const sleep = deps.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
   const W = { ...WAIT, ...(deps.wait || {}) };
@@ -156,24 +167,33 @@ async function run(deps, numberRaw, scenarioRaw) {
   const scenario = Number(scenarioRaw);
   if (!SCENARIOS[scenario]) return fail(`scénario inconnu « ${scenarioRaw} » : 1 à 8`);
   if (scenario === 8) return fail('scénario 8 pas encore : il faut un 2e passager d’essai par pays (décision V3 du plan)');
-  const who = parseNumber(numberRaw);
-  if (!who) return fail(`numéro non reconnu « ${numberRaw} » : +213 0555 12 34 56 ou +222 22 12 34 56`);
+  // Who the tester is: a phone number (the command line), or the driver's id
+  // (the console, which lists the drivers online -- day 8, decision V6).
+  const byId = Boolean(target && typeof target === 'object' && typeof target.driverId === 'string');
+  if (byId && !RIDE_ID.test(target.driverId)) return fail('identifiant de chauffeur invalide');
+  const who = byId ? null : parseNumber(target);
+  if (!byId && !who) return fail(`numéro non reconnu « ${target} » : +213 0555 12 34 56 ou +222 22 12 34 56`);
   if (!pool) return fail('pas de base de données (PG_URL)');
-  if (!salt) return fail('NUMBER_HASH_SALT manque (fichier number-change.env) : impossible de trouver le chauffeur par son numéro');
+  if (!byId && !salt) return fail('NUMBER_HASH_SALT manque (fichier number-change.env) : impossible de trouver le chauffeur par son numéro');
 
   say(`Scénario ${scenario} : ${SCENARIOS[scenario]}.`);
 
   /* ── 1. the tester, and whether dispatch would reach him ── */
-  const found = await pool.query(
-    `SELECT id, first_name, merchant_id FROM atlas_driver_offer_bpp.person
-      WHERE role = 'DRIVER' AND mobile_country_code = $1
-        AND encode(mobile_number_hash, 'hex') = ANY($2::text[])
-      LIMIT 2`,
-    [who.cc, who.candidates.map((n) => hashHex(salt, n))]);
-  if (found.rows.length !== 1) return fail('aucun compte chauffeur à ce numéro');
+  const found = byId
+    ? await pool.query(
+      `SELECT id, first_name, merchant_id FROM atlas_driver_offer_bpp.person
+        WHERE role = 'DRIVER' AND id = $1`, [target.driverId])
+    : await pool.query(
+      `SELECT id, first_name, merchant_id FROM atlas_driver_offer_bpp.person
+        WHERE role = 'DRIVER' AND mobile_country_code = $1
+          AND encode(mobile_number_hash, 'hex') = ANY($2::text[])
+        LIMIT 2`,
+      [who.cc, who.candidates.map((n) => hashHex(salt, n))]);
+  if (found.rows.length !== 1) return fail(byId ? 'aucun compte chauffeur avec cet identifiant' : 'aucun compte chauffeur à ce numéro');
   const tester = found.rows[0];
-  const testerCountry = String(tester.merchant_id).trim() === DZ_MERCHANT ? 'DZ' : 'MR';
-  if (testerCountry !== who.country) return fail('le numéro et le pays du compte chauffeur ne vont pas ensemble');
+  tester.id = String(tester.id).trim();
+  const testerCountry = countryOfMerchant(tester.merchant_id);
+  if (!byId && testerCountry !== who.country) return fail('le numéro et le pays du compte chauffeur ne vont pas ensemble');
 
   const r = (await pool.query(
     `SELECT di.enabled, di.blocked, di.active, di.on_ride,
@@ -324,7 +344,7 @@ async function run(deps, numberRaw, scenarioRaw) {
       for (const quote of (q.json && q.json.selectedQuotes) || []) {
         if (!quote.id || seen.has(quote.id)) continue;
         const d = await driverOf(quote.id);
-        const kind = !d ? 'unknown' : d.driver_id === tester.id ? 'tester' : SIMULATED.has(String(d.num || '').trim()) ? 'simulated' : 'other';
+        const kind = !d ? 'unknown' : String(d.driver_id).trim() === tester.id ? 'tester' : SIMULATED.has(String(d.num || '').trim()) ? 'simulated' : 'other';
         seen.set(quote.id, kind);
         say(`  offre reçue : ${{ tester: `celle de ${name}`, simulated: 'une voiture simulée', other: 'un autre chauffeur réel (ignorée)', unknown: 'introuvable dans la base (ignorée)' }[kind]}`);
       }
@@ -556,7 +576,9 @@ const pidFile = (country) => `${PID_DIR}/virtual-rider-${country}.pid`;
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
 async function main(argv) {
-  const [first, second] = argv;
+  // `--driver <id> <scenario>`: what maps-shim's route runs for the console.
+  const byDriver = argv[0] === '--driver';
+  const [first, second] = byDriver ? [{ driverId: String(argv[1] || '') }, argv[2]] : argv;
   if (first === 'list') {
     for (const [n, s] of Object.entries(SCENARIOS)) console.log(`${n}  ${s}`);
     return 0;
@@ -573,8 +595,13 @@ async function main(argv) {
     return 0;
   }
 
-  const who = parseNumber(first);
-  const country = who ? who.country : null;
+  let pool = null;
+  if (process.env.PG_URL) {
+    const { Pool } = require('pg');
+    pool = new Pool({ connectionString: process.env.PG_URL, max: 2 });
+  }
+  const who = byDriver ? null : parseNumber(first);
+  const country = byDriver ? await countryOfDriver(pool, first.driverId).catch(() => null) : (who ? who.country : null);
   if (country) {
     try {
       const pid = Number(fs.readFileSync(pidFile(country), 'utf8'));
@@ -584,12 +611,6 @@ async function main(argv) {
       }
     } catch { /* none running */ }
     fs.writeFileSync(pidFile(country), String(process.pid));
-  }
-
-  let pool = null;
-  if (process.env.PG_URL) {
-    const { Pool } = require('pg');
-    pool = new Pool({ connectionString: process.env.PG_URL, max: 2 });
   }
   // The terminal can go away (an ssh closed, a laptop asleep): writing to it
   // then fails with EPIPE, which would kill the run mid-ride and skip the
@@ -631,4 +652,7 @@ if (require.main === module) {
   main(process.argv.slice(2)).then((code) => process.exit(code));
 }
 
-module.exports = { run, cleanUp, parseNumber, SCENARIOS, SIMULATED, PASSENGERS, COMMENT, WAIT };
+module.exports = {
+  run, cleanUp, parseNumber, countryOfDriver, pidFile, alive,
+  SCENARIOS, SIMULATED, PASSENGERS, COMMENT, WAIT,
+};

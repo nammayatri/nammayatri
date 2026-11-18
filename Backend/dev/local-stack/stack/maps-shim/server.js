@@ -26,6 +26,7 @@ const pushRelay = require('./push-relay');
 const driverPush = require('./driver-push');
 const numberChange = require('./number-change');
 const rideStart = require('./ride-start');
+const virtualRiderRoute = require('./virtual-rider-route');
 const { directions, OSRM_URL } = require('./directions');
 const { send } = require('./reply');
 const places = require('./places');
@@ -42,6 +43,8 @@ const DRIVER_URL     = (process.env.DRIVER_URL || 'http://localhost:8016').repla
 // paths fall through to mock-google exactly as before, which is what the stack
 // did until geocoder-prepare.sh existed.
 const PG_URL         = process.env.PG_URL || '';
+/** The console's virtual-passenger route, made on first use (it needs the pool). */
+let virtualRider = null;
 
 let pool = null;
 if (PG_URL) {
@@ -135,6 +138,15 @@ http.createServer((req, res) => {
       send(res, r.ok ? 200 : 502, r);
     });
     return undefined;
+  }
+
+  // The virtual passenger, from the console's Tests page (day 8, 2026-11-18).
+  // Like driver-push: admin-api calls it from its container, so the docker
+  // bridge is let in beside loopback; the edge routes nothing under /internal/.
+  // The engine runs as a child process (decision V8). See virtual-rider-route.js.
+  if (url.pathname === '/internal/virtual-rider') {
+    if (!virtualRider) virtualRider = virtualRiderRoute.create({ pool });
+    return virtualRider.handle(req, res, send);
   }
 
   // A person changing their own number, once the auth guard has proved the new

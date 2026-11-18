@@ -29,9 +29,9 @@ const { run, cleanUp, parseNumber, COMMENT } = require(VR);
 const SALT = 'test-salt';
 const hash = (n) => crypto.createHash('sha256').update(SALT + n).digest();
 const DZ = 'algeria0-0000-0000-0000-00000algeria';
-const TESTER = 'd-tester';
-const OTHER = 'd-other-real';
-const SIM = 'd-simulated';
+const TESTER = 'd1d1d1d1-0000-4000-8000-0000000000a1';
+const OTHER = 'd2d2d2d2-0000-4000-8000-0000000000a2';
+const SIM = 'd3d3d3d3-0000-4000-8000-0000000000a3';
 const AT = { lat: 36.7538, lon: 3.0588 };
 
 const SHORT = {
@@ -216,7 +216,7 @@ async function osrm() {
     try {
       verdict = await run({
         pool: db.pool, say: (s) => lines.push(s), sleep: () => (opts.onSleep ? opts.onSleep(w, state) : w.tick()),
-        wait: SHORT, riderUrl: api.url, osrmUrl: routing.url, salt: SALT, enabled: opts.enabled ?? true, state,
+        wait: SHORT, riderUrl: api.url, osrmUrl: routing.url, salt: opts.salt ?? SALT, enabled: opts.enabled ?? true, state,
       }, opts.number || '+213 0555 12 34 56', n);
     } catch (e) {
       verdict = { ok: false, reason: `threw: ${e.message}` };
@@ -282,6 +282,16 @@ async function osrm() {
 
   r = await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start, w.end]; });
   t.ok(!r.verdict.ok && /n’a pas noté/.test(r.verdict.reason), 'the ride ends but he never rates the passenger: PAS RÉUSSI (scenario 1 is « jusqu\'aux deux notes »)', r.verdict.reason);
+
+  t.section('the console gives a driver id, not a number (day 8, V6)');
+  r = await scenario(2, (w) => { w.offers = [[OTHER, TESTER]]; }, { number: { driverId: TESTER } });
+  t.ok(r.verdict.ok && r.confirmedDrivers.join() === TESTER, 'by id: the same run, only his offer taken', r.verdict.reason);
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { number: { driverId: 'not-an-id' } });
+  t.ok(!r.verdict.ok && /identifiant de chauffeur invalide/.test(r.verdict.reason) && r.paths.length === 0, 'a malformed id: refused, nothing asked');
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { number: { driverId: 'eeeeeeee-0000-4000-8000-000000000009' } });
+  t.ok(!r.verdict.ok && /aucun compte chauffeur avec cet identifiant/.test(r.verdict.reason) && r.paths.length === 0, 'an id no driver has: refused, nothing asked');
+  r = await scenario(2, (w) => { w.offers = [[TESTER]]; }, { number: { driverId: TESTER }, salt: '' });
+  t.ok(r.verdict.ok, 'by id the number salt is not needed', r.verdict.reason);
 
   t.section('rule 4: before anything, what an earlier run left open is closed');
   r = await scenario(2, (w) => { w.offers = [[TESTER]]; w.leftovers = [{ id: 'left1', status: 'TRIP_ASSIGNED' }, { id: 'old', status: 'COMPLETED' }]; });
