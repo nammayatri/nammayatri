@@ -42,6 +42,7 @@ types:
     lottie: Maybe Text
     textColor: Maybe Text
     bgGradientColors: Maybe [Text]
+    termsAndConditionUrl: Maybe Text
 
   LiveRewardCardResp:
     card: Maybe LiveRewardCard
