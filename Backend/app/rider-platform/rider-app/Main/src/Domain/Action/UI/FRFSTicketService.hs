@@ -96,7 +96,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPayme
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as QRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
-import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), StopInfo (..), StopSchedule (..))
+import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), MetroHopLeg (..), StopInfo (..), StopSchedule (..))
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
@@ -165,46 +165,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCo
     case (mbStartStationCode, mbEndStationCode) of
       (Just startStationCode, Just endStationCode) -> do
         routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
-        return $
-          map
-            ( \routeInfo ->
-                let stops =
-                      ( mapWithIndex
-                          ( \idx stop ->
-                              FRFSStationAPI
-                                { name = Just stop.stopName,
-                                  code = stop.stopCode,
-                                  routeCodes = Nothing,
-                                  lat = Just stop.stopPoint.lat,
-                                  lon = Just stop.stopPoint.lon,
-                                  stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
-                                  sequenceNum = Just stop.sequenceNum,
-                                  address = Nothing,
-                                  timeTakenToTravelUpcomingStop = Nothing,
-                                  distance = Nothing,
-                                  color = Nothing,
-                                  routeDetails = Nothing,
-                                  towards = Nothing,
-                                  integratedBppConfigId = integratedBPPConfig.id,
-                                  parentStopCode = Nothing
-                                }
-                          )
-                      )
-                        <$> routeInfo.stops
-                 in FRFSTicketService.FRFSRouteAPI
-                      { code = routeInfo.route.code,
-                        shortName = routeInfo.route.shortName,
-                        longName = routeInfo.route.longName,
-                        startPoint = routeInfo.route.startPoint,
-                        endPoint = routeInfo.route.endPoint,
-                        totalStops = routeInfo.totalStops,
-                        stops = stops,
-                        timeBounds = Just routeInfo.route.timeBounds,
-                        waypoints = Nothing,
-                        integratedBppConfigId = integratedBPPConfig.id
-                      }
-            )
-            routesInfo
+        return $ map (toFRFSRouteAPI integratedBPPConfig) routesInfo
       _ -> do
         routes <- OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType
         return $
@@ -212,8 +173,118 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCo
             ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}
             )
             routes
-  where
-    mapWithIndex f xs = zipWith f [0 ..] xs
+
+mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
+mapWithIndex f xs = zipWith f [0 ..] xs
+
+toFRFSRouteAPI :: DIBC.IntegratedBPPConfig -> RouteStopInfo -> FRFSTicketService.FRFSRouteAPI
+toFRFSRouteAPI integratedBPPConfig routeInfo =
+  let stops =
+        ( mapWithIndex
+            ( \idx stop ->
+                FRFSStationAPI
+                  { name = Just stop.stopName,
+                    code = stop.stopCode,
+                    routeCodes = Nothing,
+                    lat = Just stop.stopPoint.lat,
+                    lon = Just stop.stopPoint.lon,
+                    stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
+                    sequenceNum = Just stop.sequenceNum,
+                    address = Nothing,
+                    timeTakenToTravelUpcomingStop = Nothing,
+                    distance = Nothing,
+                    color = Nothing,
+                    routeDetails = Nothing,
+                    towards = Nothing,
+                    integratedBppConfigId = integratedBPPConfig.id,
+                    parentStopCode = Nothing
+                  }
+            )
+        )
+          <$> routeInfo.stops
+   in FRFSTicketService.FRFSRouteAPI
+        { code = routeInfo.route.code,
+          shortName = routeInfo.route.shortName,
+          longName = routeInfo.route.longName,
+          startPoint = routeInfo.route.startPoint,
+          endPoint = routeInfo.route.endPoint,
+          totalStops = routeInfo.totalStops,
+          stops = stops,
+          timeBounds = Just routeInfo.route.timeBounds,
+          waypoints = Nothing,
+          integratedBppConfigId = integratedBPPConfig.id
+        }
+
+getFrfsRoutesV2 ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Maybe Text ->
+  Maybe DIBC.PlatformType ->
+  Maybe Text ->
+  Context.City ->
+  Spec.VehicleCategory ->
+  Environment.Flow [API.Types.UI.FRFSTicketService.FRFSJourneyRouteAPI]
+getFrfsRoutesV2 (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCode _city _vehicleType = do
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _city)
+  let platformType = fromMaybe DIBC.APPLICATION mbPlatformType
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+  SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig ->
+    case (mbStartStationCode, mbEndStationCode) of
+      (Just startStationCode, Just endStationCode) -> do
+        directRoutesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
+        let directJourneys = map (\routeInfo -> FRFSTicketService.FRFSJourneyRouteAPI {legs = [FRFSTicketService.FRFSRouteLegAPI {legRoute = toFRFSRouteAPI integratedBPPConfig routeInfo, interchangeStopCode = Nothing}]}) directRoutesInfo
+        if not (null directJourneys) || _vehicleType /= Spec.METRO
+          then return directJourneys
+          else do
+            eHopJourneys <- try @_ @SomeException $ OTPRest.getMetroHop integratedBPPConfig startStationCode endStationCode
+            case fmap (filter (not . null)) <$> eHopJourneys of
+              Right (Just hopJourneys@(_ : _)) -> do
+                logInfo $ "Metro hop journeys for " <> startStationCode <> " -> " <> endStationCode <> ": " <> show (map (map (.routeCode)) hopJourneys)
+                catMaybes <$> mapM (buildHopJourney integratedBPPConfig) hopJourneys
+              Right _ -> return []
+              Left err -> do
+                logError $ "Metro hop lookup failed for " <> startStationCode <> " -> " <> endStationCode <> ", returning no routes for this provider: " <> show err
+                return []
+      _ -> do
+        routes <- OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType
+        return $
+          map
+            ( \Route.Route {..} ->
+                FRFSTicketService.FRFSJourneyRouteAPI
+                  { legs =
+                      [ FRFSTicketService.FRFSRouteLegAPI
+                          { legRoute = FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..},
+                            interchangeStopCode = Nothing
+                          }
+                      ]
+                  }
+            )
+            routes
+
+buildHopJourney :: DIBC.IntegratedBPPConfig -> [MetroHopLeg] -> Environment.Flow (Maybe FRFSTicketService.FRFSJourneyRouteAPI)
+buildHopJourney integratedBPPConfig hopLegs = do
+  let lastIdx = length hopLegs - 1
+  legs <- mapM (\(idx, hopLeg) -> buildHopLeg integratedBPPConfig (idx == lastIdx) hopLeg) (zip [0 ..] hopLegs)
+  if any isNothing legs
+    then do
+      logError $ "Dropping metro hop journey with an unresolved leg: " <> show (map (.routeCode) hopLegs)
+      return Nothing
+    else return $ Just FRFSTicketService.FRFSJourneyRouteAPI {legs = catMaybes legs}
+
+buildHopLeg :: DIBC.IntegratedBPPConfig -> Bool -> MetroHopLeg -> Environment.Flow (Maybe FRFSTicketService.FRFSRouteLegAPI)
+buildHopLeg integratedBPPConfig isLastLeg hopLeg = do
+  routesInfo <- getPossibleRoutesBetweenTwoStops hopLeg.srcStopCode hopLeg.destStopCode integratedBPPConfig
+  let mbRouteInfo = find (\ri -> ri.route.code == hopLeg.routeCode || ri.route.code `elem` hopLeg.alternateRouteCodes) routesInfo <|> listToMaybe routesInfo
+      interchangeStopCode = if isLastLeg then Nothing else Just hopLeg.destStopCode
+  case mbRouteInfo of
+    Just routeInfo -> return $ Just FRFSTicketService.FRFSRouteLegAPI {legRoute = toFRFSRouteAPI integratedBPPConfig routeInfo, interchangeStopCode}
+    Nothing -> do
+      mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig hopLeg.routeCode
+      case mbRoute of
+        Just Route.Route {..} ->
+          return $ Just FRFSTicketService.FRFSRouteLegAPI {legRoute = FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}, interchangeStopCode}
+        Nothing -> do
+          logError $ "Metro hop leg route not resolvable at all: " <> hopLeg.routeCode
+          return Nothing
 
 data StationResult = StationResult
   { code :: Kernel.Prelude.Text,
