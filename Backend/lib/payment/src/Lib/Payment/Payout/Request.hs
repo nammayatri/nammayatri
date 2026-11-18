@@ -24,6 +24,7 @@ module Lib.Payment.Payout.Request
     toPaymentState,
     getStatusMessage,
     isOrderNotFoundAtPartner,
+    isConfirmedRejection,
     markPayoutOrderNeverReceived,
     runPayoutUnderLock,
     getPayoutLedgerEntryIds,
@@ -39,7 +40,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InternalError, InvalidRequest))
+import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InternalError, InvalidRequest), PaymentOrderError (PayoutOrderAlreadyExists), PayoutNotSentError (..))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (CacheFlow, Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError, withTryCatch)
 import qualified Lib.Finance.Core.Types as Finance
@@ -367,17 +368,23 @@ markPayoutOrderNeverReceived stale = do
     neverReceivedCode = "E09"
     neverReceivedMinAgeSeconds = 600
 
--- | True only when the partner refused the request with a client error (4xx, except 408 timeout and
---   409 conflict), so we know nothing was paid. A 5xx, a timeout, a dropped connection or an
+-- | True only when we know nothing was paid: the partner refused the request with a client error
+--   (4xx, except 408 timeout and 409 conflict), the payout interface reports that the call failed
+--   before any money moved ('PayoutNotSent'), or the order id was already taken so this attempt never
+--   called the partner ('PayoutOrderAlreadyExists'). A 5xx, a timeout, a dropped connection or an
 --   unreadable answer proves nothing: the partner may have processed the request.
 isConfirmedRejection :: SomeException -> Bool
-isConfirmedRejection e = case fromException e of
-  Just (extErr :: ExternalAPICallError) -> case extErr.clientError of
-    FailureResponse _ resp ->
-      let code = statusCode (responseStatusCode resp)
-       in code >= 400 && code < 500 && code `notElem` [408, 409]
-    _ -> False
-  Nothing -> False
+isConfirmedRejection e
+  | Just (PayoutNotSent _) <- fromException e = True
+  | Just (PayoutOrderAlreadyExists _) <- fromException e = True
+  | Just (extErr :: ExternalAPICallError) <- fromException e = isClientRefusal extErr.clientError
+  | otherwise = False
+  where
+    isClientRefusal = \case
+      FailureResponse _ resp ->
+        let code = statusCode (responseStatusCode resp)
+         in code >= 400 && code < 500 && code `notElem` [408, 409]
+      _ -> False
 
 -- | Internal: call Juspay via createPayoutService, manage status transitions.
 executePayoutRequestInternal ::
