@@ -35,6 +35,7 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as AT
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, partition)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
@@ -768,13 +769,11 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
       adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
 
   summaries <- QReconSummaryExtra.findByDateRangeAndSpec domain source target adjustedFromDate adjustedToDate
-  -- Pick the latest by createdAt to mirror the retired findLatestByDateRangeAndType.
-  let latestSummary = listToMaybe (sortBy (comparing (Down . (.createdAt))) summaries)
-      summaryRes = maybe defaultSummary toSummary latestSummary
+  -- One summary per hourly chunk (re-runs add duplicates), combined across the range.
+  let chunkSummaries = Map.elems $ Map.fromListWith preferredRun [(s.reconciliationDate, s) | s <- summaries]
+      summaryRes = combineSummaries chunkSummaries
 
-  entries <- case latestSummary of
-    Just summary -> QReconEntryExtra.findBySummaryIdWithPagination summary.id limit offset
-    Nothing -> pure []
+  entries <- QReconEntryExtra.findBySummaryIdsWithPagination (map (.id) chunkSummaries) limit offset
 
   let (matched, mismatched) = partition (\e -> e.reconStatus == ReconT.MATCHED) entries
   pure
@@ -784,29 +783,29 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
         completed = map (toReconEntry spec) matched
       }
   where
-    defaultSummary :: API.ReconciliationSummary
-    defaultSummary =
-      API.ReconciliationSummary
-        { totalDiscrepancies = 0,
-          matchedRecords = 0,
-          matchRate = "0%",
-          sourceTotal = 0,
-          targetTotal = 0,
-          varianceAmount = 0,
-          disputeAmountTotal = 0
-        }
+    preferredRun :: ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
+    preferredRun a b = if runRank a >= runRank b then a else b
+      where
+        runRank s = (s.status == ReconSummary.COMPLETED, s.createdAt)
 
-    toSummary :: ReconSummary.ReconciliationSummary -> API.ReconciliationSummary
-    toSummary s =
-      API.ReconciliationSummary
-        { totalDiscrepancies = s.totalDiscrepancies,
-          matchedRecords = s.matchedRecords,
-          matchRate = s.matchRate,
-          sourceTotal = s.sourceTotal,
-          targetTotal = s.targetTotal,
-          varianceAmount = s.varianceAmount,
-          disputeAmountTotal = s.disputeAmountTotal
-        }
+    -- Match rate over decided entries, as the runner computes it per chunk.
+    combineSummaries :: [ReconSummary.ReconciliationSummary] -> API.ReconciliationSummary
+    combineSummaries ss =
+      let matched = sum (map (.matchedRecords) ss)
+          discrepancies = sum (map (.totalDiscrepancies) ss)
+          decided = matched + discrepancies
+       in API.ReconciliationSummary
+            { totalDiscrepancies = discrepancies,
+              matchedRecords = matched,
+              matchRate =
+                if decided > 0
+                  then show ((fromIntegral matched * 100 / fromIntegral decided) :: Double) <> "%"
+                  else "0%",
+              sourceTotal = sum (map (.sourceTotal) ss),
+              targetTotal = sum (map (.targetTotal) ss),
+              varianceAmount = sum (map (.varianceAmount) ss),
+              disputeAmountTotal = sum (map (.disputeAmountTotal) ss)
+            }
 
     toReconEntry :: ReconT.ReconciliationSpec -> ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
     toReconEntry spec entry =
