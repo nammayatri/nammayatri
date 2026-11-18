@@ -1074,6 +1074,12 @@ TransporterConfig:
       maxOnlineDurationDays: Int
       useDbForEarningAndMetrics: Bool
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
+      # Merchant-local day from which CH daily_stats.online_duration is trusted for operator KPIs.
+      # null / absent → always Postgres. Windows with fromDate >= this day → ClickHouse; else Postgres.
+      onlineDurationClickhouseFrom: Maybe Day
+      # Operator dashboard KPI thresholds (absent in DB JSON → parseAnalyticsConfig def / default below)
+      lowSubscriptionBalanceThreshold: HighPrecMoney
+      inactiveAvgLoginHoursPerDayThreshold: Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ScheduledRideVisibilityRules:
       requiresWalletBalance: Maybe Bool
@@ -2258,7 +2264,10 @@ TransporterConfig:
       "allowCacheDriverFlowStatus": false,
       "enableFleetOperatorDashboardAnalytics": false,
       "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null,
-      "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}'' :: json'
+      "onlineDurationClickhouseFrom": null,
+      "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4,
+      "lowSubscriptionBalanceThreshold": 400,
+      "inactiveAvgLoginHoursPerDayThreshold": 6.0}'' :: json'
     subscriptionConfig: '''{"prepaidSubscriptionThreshold":
       null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"

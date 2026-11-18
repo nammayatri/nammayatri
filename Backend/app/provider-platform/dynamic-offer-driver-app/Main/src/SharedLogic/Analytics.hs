@@ -16,7 +16,7 @@ module SharedLogic.Analytics where
 
 import qualified Crypto.Hash as Hash
 import Data.Either (lefts)
-import Data.List (sort)
+import Data.List (nub, sort)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
@@ -41,15 +41,197 @@ import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
 import SharedLogic.FleetAnalytics.Realtime
 import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
+import qualified Data.Set as Set
+import qualified Lib.Finance.Domain.Types.Account as Account
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Account as QAccount
+import qualified Storage.Clickhouse.DailyStats as CDaily
 import qualified Storage.Clickhouse.DriverInformation as CDI
+import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
+import qualified Storage.Clickhouse.FleetOperatorAssociation as CFOA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFleetOpDailyStats
+import qualified Storage.Clickhouse.VehicleRegistrationCertificate as CVRC
+import qualified Storage.Queries.DailyStatsExtra as QDailyStatsExtra
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAssoc
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.DriverStatsExtra as QDriverStatsExtra
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCExtra
 import Tools.Error hiding (CustomerCancelled)
+
+-- | Use CH for online-duration KPIs only when ops has set a cutoff and the
+-- window starts on/after that merchant-local day. null cutoff → always PG.
+useClickhouseForOnlineDuration :: Maybe Day -> Day -> Bool
+useClickhouseForOnlineDuration mbCutoff fromDay =
+  maybe False (fromDay >=) mbCutoff
+
+data OperatorAllTimeKpis = OperatorAllTimeKpis
+  { averageLoginHours :: Maybe Double,
+    greaterThanOneRide :: Maybe Int,
+    greaterThanTenRide :: Maybe Int,
+    greaterThanFiftyRide :: Maybe Int,
+    incompleteFirstSubscription :: Maybe Int,
+    documentSubmissionCompletedDrivers :: Maybe Int,
+    documentSubmissionCompletedVehicles :: Maybe Int,
+    planActiveDrivers :: Maybe Int,
+    lowSubscriptionBalanceDrivers :: Maybe Int,
+    inactiveDrivers30 :: Maybe Int,
+    inactiveDrivers60 :: Maybe Int,
+    inactiveDrivers90 :: Maybe Int
+  }
+
+-- | Extra overall / live KPIs for operator all-time analytics (no new endpoint).
+computeOperatorAllTimeKpis ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    BeamFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  TC.TransporterConfig ->
+  Text ->
+  m OperatorAllTimeKpis
+computeOperatorAllTimeKpis transporterConfig operatorId = do
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let today = utctDay localNow
+      lowBalanceThreshold = transporterConfig.analyticsConfig.lowSubscriptionBalanceThreshold
+      inactiveHoursThreshold = transporterConfig.analyticsConfig.inactiveAvgLoginHoursPerDayThreshold
+      onlineDurationChFrom = transporterConfig.analyticsConfig.onlineDurationClickhouseFrom
+      -- Lifetime rides: fixed epoch (not onlineDurationCalculateFrom)
+      lifetimeFrom = fromGregorian 2018 1 1
+      -- "2nd BOT" / enabled semantics for login hrs only when BOT flow is on
+      botFlow = transporterConfig.enableBotFlow == Just True
+
+  driverIdsRaw <- SDFStatus.getFleetDriverIdsAndDriverIdsByOperatorId operatorId
+  let driverIds = nub driverIdsRaw
+      ownerIds = map getId driverIds
+
+  -- Lifetime ride buckets (>=1 / >=10 / >=50 ≈ sum rides > 0 / 9 / 49)
+  (gt1, gt10, gt50) <-
+    if null driverIds
+      then pure (0, 0, 0)
+      else do
+        a <- CDaily.countDriversWithNumRidesGreaterThanBetween driverIds lifetimeFrom today 0
+        b <- CDaily.countDriversWithNumRidesGreaterThanBetween driverIds lifetimeFrom today 9
+        c <- CDaily.countDriversWithNumRidesGreaterThanBetween driverIds lifetimeFrom today 49
+        pure (a, b, c)
+
+  -- Avg login hrs = Σ online hrs of enabled drivers ÷ # enabled.
+  -- Clar ties this to BOT check → only compute when enableBotFlow is on.
+  -- Lifetime window starts at epoch → cutoff routes this to PG (driver_stats) unless
+  -- onlineDurationClickhouseFrom is set at/before lifetimeFrom.
+  averageLoginHours <-
+    if not botFlow || null driverIds
+      then pure Nothing
+      else do
+        enabledIds <- CDI.getEnabledDriverIds driverIds
+        totalOnlineSec <-
+          if null enabledIds
+            then pure 0
+            else
+              if useClickhouseForOnlineDuration onlineDurationChFrom lifetimeFrom
+                then CDaily.sumOnlineDurationSeconds enabledIds
+                else do
+                  stats <- QDriverStatsExtra.findAllByDriverIdList (cast <$> enabledIds)
+                  pure $ sum $ map ((.getSeconds) . (.onlineDuration)) stats
+        let enabledCount = length enabledIds
+        pure $
+          if enabledCount > 0
+            then Just (fromIntegral totalOnlineSec / 3600.0 / fromIntegral enabledCount)
+            else Just 0
+
+  -- Plan-active now (all associated)
+  planActiveOwnerIds <- QSubscriptionPurchaseExtra.findActiveOwnerIdsByOwnerIds ownerIds DSP.DRIVER
+  let planActiveSet = Set.fromList planActiveOwnerIds
+      planActiveDrivers = Set.size planActiveSet
+
+  -- Incomplete first subscription: DCO (operator-code) associations − completed/active first purchase.
+  -- Fleet-mediated drivers excluded until product confirms roster scope.
+  dcoDriverIds <- CDOA.getDriverIdsByOperatorId operatorId
+  let dcoOwnerIds = map getId dcoDriverIds
+  purchasedCount <-
+    QSubscriptionPurchaseExtra.findDistinctOwnersWithStatuses
+      dcoOwnerIds
+      DSP.DRIVER
+      [DSP.ACTIVE, DSP.EXPIRED, DSP.EXHAUSTED]
+  let incompleteFirstSubscription = max 0 (length dcoDriverIds - purchasedCount)
+
+  -- Document submission completed (proxy: verified = all required docs approved)
+  statusCounts <- CDI.getStatusCountsByDriverIds driverIds
+  let documentSubmissionCompletedDrivers =
+        sum [n | (Just True, _, n) <- statusCounts]
+
+  -- Vehicles: operator→driver→RC ∪ operator→fleet→RC (distinct verified)
+  assocs <- QDRCAssoc.findAllActiveByDriverIds driverIds
+  let driverRcIds = Set.fromList $ map (.rcId) assocs
+  rcs <- QVRCExtra.findAllById (Set.toList driverRcIds)
+  let verifiedDriverRcIds = Set.fromList $ map (.id) $ filter (\rc -> rc.verified == Just True) rcs
+  fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
+  verifiedFleetRcIds <- Set.fromList <$> CVRC.findVerifiedIdsByFleetOwnerIds fleetOwnerIds
+  let documentSubmissionCompletedVehicles =
+        Set.size $ verifiedDriverRcIds <> verifiedFleetRcIds
+
+  -- Low subscription balance: RideCredit among drivers with an active plan only
+  -- (no plan / no account ⇒ excluded)
+  accounts <-
+    if null planActiveOwnerIds
+      then pure []
+      else
+        QAccount.findAllByCounterpartyIdsAndType
+          (map Just planActiveOwnerIds)
+          (Just Account.DRIVER)
+          Account.RideCredit
+          Nothing
+  let lowBalanceTotal =
+        Set.size $
+          Set.fromList $
+            mapMaybe
+              ( \acc ->
+                  acc.counterpartyId >>= \cid ->
+                    if Set.member cid planActiveSet && acc.balance < lowBalanceThreshold
+                      then Just cid
+                      else Nothing
+              )
+              accounts
+
+  let countInactive days = do
+        let fromDay = addDays (negate (fromIntegral days - 1)) today
+        perDriver <-
+          if useClickhouseForOnlineDuration onlineDurationChFrom fromDay
+            then CDaily.sumOnlineDurationSecondsByDriverBetween driverIds fromDay today
+            else QDailyStatsExtra.sumOnlineDurationSecondsByDriverBetween driverIds fromDay today
+        let avgHrs secs = fromIntegral secs / 3600.0 / fromIntegral days
+            -- No daily_stats row in the window ⇒ inactive
+            withRows = Set.fromList $ map (getId . fst) perDriver
+            inactiveWithRows = length $ filter (\(_, secs) -> avgHrs secs < inactiveHoursThreshold) perDriver
+            missing = length $ filter (\d -> getId d `Set.notMember` withRows) driverIds
+        pure $ inactiveWithRows + missing
+
+  inactiveDrivers30 <- countInactive (30 :: Int)
+  inactiveDrivers60 <- countInactive (60 :: Int)
+  inactiveDrivers90 <- countInactive (90 :: Int)
+
+  pure
+    OperatorAllTimeKpis
+      { averageLoginHours,
+        greaterThanOneRide = Just gt1,
+        greaterThanTenRide = Just gt10,
+        greaterThanFiftyRide = Just gt50,
+        incompleteFirstSubscription = Just incompleteFirstSubscription,
+        documentSubmissionCompletedDrivers = Just documentSubmissionCompletedDrivers,
+        documentSubmissionCompletedVehicles = Just documentSubmissionCompletedVehicles,
+        planActiveDrivers = Just planActiveDrivers,
+        lowSubscriptionBalanceDrivers = Just lowBalanceTotal,
+        inactiveDrivers30 = Just inactiveDrivers30,
+        inactiveDrivers60 = Just inactiveDrivers60,
+        inactiveDrivers90 = Just inactiveDrivers90
+      }
 
 -- | Update analytics and driver stats counters for a cancelled ride.
 updateCancellationAnalyticsAndDriverStats ::

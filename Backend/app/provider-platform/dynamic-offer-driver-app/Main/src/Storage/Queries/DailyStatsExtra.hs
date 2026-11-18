@@ -1,5 +1,6 @@
 module Storage.Queries.DailyStatsExtra where
 
+import qualified Data.Map.Strict as Map
 import Data.Time (Day)
 import Domain.Types.DailyStats
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -13,6 +14,34 @@ import qualified Storage.Beam.DailyStats as Beam
 import Storage.Queries.OrphanInstances.DailyStats ()
 
 -- Extra code goes here --
+
+-- | Per-driver online duration (seconds) summed over [fromDate, toDate] from Postgres.
+sumOnlineDurationSecondsByDriverBetween ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id SP.Person] ->
+  Day ->
+  Day ->
+  m [(Id SP.Person, Int)]
+sumOnlineDurationSecondsByDriverBetween driverIds fromDate toDate =
+  if null driverIds
+    then pure []
+    else do
+      rows <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is Beam.driverId $ Se.In (getId <$> driverIds),
+                Se.Is Beam.merchantLocalDate $ Se.GreaterThanOrEq fromDate,
+                Se.Is Beam.merchantLocalDate $ Se.LessThanOrEq toDate
+              ]
+          ]
+      let summed =
+            Map.toList $
+              Map.fromListWith
+                (+)
+                [ (stats.driverId, maybe 0 (.getSeconds) stats.onlineDuration)
+                  | stats <- rows
+                ]
+      pure summed
 
 findAllInRangeByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Day -> Day -> m [DailyStats]
 findAllInRangeByDriverId (Id driverId) from to = do

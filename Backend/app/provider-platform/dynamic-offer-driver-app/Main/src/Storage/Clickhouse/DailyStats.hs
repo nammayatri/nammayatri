@@ -19,7 +19,9 @@ data DailyStatsT f = DailyStatsT
     totalDistance :: C f Kernel.Types.Common.Meters,
     numRides :: C f Int,
     cancellationCharges :: C f Kernel.Types.Common.HighPrecMoney,
-    bonusEarnings :: C f Kernel.Types.Common.HighPrecMoney
+    bonusEarnings :: C f Kernel.Types.Common.HighPrecMoney,
+    -- CH stores seconds as Int; helpers return Int (avoids ClickhouseValue Seconds orphan).
+    onlineDuration :: C f (Maybe Int)
   }
   deriving (Generic)
 
@@ -35,7 +37,8 @@ dailyStatsTTable =
       totalDistance = "total_distance",
       numRides = "num_rides",
       cancellationCharges = "cancellation_charges",
-      bonusEarnings = "bonus_earnings"
+      bonusEarnings = "bonus_earnings",
+      onlineDuration = "online_duration"
     }
 
 type DailyStats = DailyStatsT Identity
@@ -152,3 +155,47 @@ countDriversWithNumRidesGreaterThan50Between ::
   m Int
 countDriversWithNumRidesGreaterThan50Between driverIds fromDateU toDateU =
   countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU 50
+
+-- | Total online duration (seconds) across all daily_stats rows for the given drivers.
+sumOnlineDurationSeconds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m Int
+sumOnlineDurationSeconds driverIds =
+  if null driverIds
+    then pure 0
+    else do
+      res <-
+        CH.findAll $
+          CH.select_ (\ds -> CH.aggregate $ CH.sum_ ds.onlineDuration) $
+            CH.filter_
+              (\ds -> ds.driverId `CH.in_` driverIds)
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+      pure $ maybe 0 (fromMaybe 0) (listToMaybe res)
+
+-- | Per-driver online duration (seconds) summed over [fromDate, toDate].
+sumOnlineDurationSecondsByDriverBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m [(Id DP.Person, Int)]
+sumOnlineDurationSecondsByDriverBetween driverIds fromDateU toDateU =
+  if null driverIds
+    then pure []
+    else do
+      res <-
+        CH.findAll $
+          CH.select_
+            ( \ds ->
+                CH.groupBy ds.driverId $ \driverId ->
+                  (driverId, CH.sum_ ds.onlineDuration)
+            )
+            $ CH.filter_
+              ( \ds ->
+                  ds.driverId `CH.in_` driverIds
+                    CH.&&. ds.merchantLocalDate >=. fromDateU
+                    CH.&&. ds.merchantLocalDate <=. toDateU
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+      pure $ map (\(driverId, mbSecs) -> (driverId, fromMaybe 0 mbSecs)) res

@@ -52,6 +52,28 @@ findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
           [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
       pure $ Set.size $ Set.fromList $ map (.ownerId) subs
 
+-- | Distinct owners that have at least one purchase in the given statuses
+-- (used for "completed/active first subscription" — typically ACTIVE/EXPIRED/EXHAUSTED).
+findDistinctOwnersWithStatuses ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Text] ->
+  SubscriptionOwnerType ->
+  [SubscriptionPurchaseStatus] ->
+  m Int
+findDistinctOwnersWithStatuses ownerIds ownerType statuses = do
+  if null ownerIds || null statuses
+    then pure 0
+    else do
+      subs <-
+        findAllWithKV
+          [ Se.And
+              [ Se.Is Beam.ownerId $ Se.In ownerIds,
+                Se.Is Beam.ownerType $ Se.Eq ownerType,
+                Se.Is Beam.status $ Se.In statuses
+              ]
+          ]
+      pure $ Set.size $ Set.fromList $ map (.ownerId) subs
+
 findActiveOwnerIdsByOwnerIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Text] ->
