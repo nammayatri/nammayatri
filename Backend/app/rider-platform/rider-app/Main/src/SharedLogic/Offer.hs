@@ -8,10 +8,12 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Geohash as Geohash
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -858,7 +860,21 @@ mkSearchRequestData SSR.SearchRequest {..} =
       initiatedBy = show <$> initiatedBy,
       vehicleCategory = show <$> vehicleCategory,
       searchMode = show <$> searchMode,
+      fromLocation = Just (mkSearchLocationData fromLocation),
+      toLocation = mkSearchLocationData <$> toLocation,
       ..
+    }
+
+mkSearchLocationData :: DLoc.Location -> Y.SearchLocationData
+mkSearchLocationData loc =
+  Y.SearchLocationData
+    { lat = loc.lat,
+      lon = loc.lon,
+      geohash = T.pack <$> Geohash.encode 9 (loc.lat, loc.lon),
+      title = loc.address.title,
+      placeId = loc.address.placeId,
+      area = loc.address.area,
+      areaCode = loc.address.areaCode
     }
 
 mkOfferListReqWithBasket :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> HighPrecMoney -> Currency -> [Payment.Basket] -> m Payment.OfferListReq
