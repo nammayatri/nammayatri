@@ -19,6 +19,7 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.Bulk.Schedule as BSC
 import Lib.Payment.Payout.Bulk.Submit (markSubmitted)
+import Lib.Payment.Payout.Bulk.Transaction (updateBulkOrderOutcome)
 import Lib.Payment.Payout.Bulk.Types
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutBatch as QPayoutBatch
@@ -280,7 +281,7 @@ applyItemOutcome h merchantOpCityId requestsById order outcome mbSettleStatus
               && newRef == order.settlementRef
               && newRefType == order.settlementRefType
       unless unchanged $
-        QPayoutOrder.updateBulkSettled newStatus mbSettleStatus newRef newRefType mbCode mbNote order.id
+        updateBulkOrderOutcome newStatus mbSettleStatus newRef newRefType mbCode mbNote order
       pure newStatus
 
 -- | The requests behind a batch's orders, by id.

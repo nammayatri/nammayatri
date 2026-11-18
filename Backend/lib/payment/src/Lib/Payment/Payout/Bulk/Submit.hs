@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import Lib.Payment.Payout.Bulk.Schedule (firstCheckAt)
+import Lib.Payment.Payout.Bulk.Transaction (recordBulkTransactions)
 import Lib.Payment.Payout.Bulk.Types
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutBatch as QPayoutBatch
@@ -93,6 +94,7 @@ submitBatch h partner rail executionDate batch items = do
       batchId = batch.id
       clientRefNo = batch.clientRefNo
   let req = Payout.BulkPayoutReq {clientRefNo = clientRefNo, executionDate = executionDate, rail = toPayoutRail rail, items = lineItems}
+  recordBulkTransactions rail items
   submitResult <- try $ Payout.submitBulkPayout partner req
   -- Answers that stop the batch store `now` (send time) as submitted_at and this as resolved_at.
   answeredAt <- getCurrentTime

@@ -38,6 +38,7 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import Lib.Payment.Payout.Bulk.Resolve (allOrdersFinal, unsettledCount)
 import Lib.Payment.Payout.Bulk.Submit (batchRejectedPrefix, gatewayRefusedPrefix)
+import Lib.Payment.Payout.Bulk.Transaction (updateBulkOrderOutcome)
 import Lib.Payment.Payout.StatusCheck (isPayoutOrderSuccess, isTerminalPayoutOrderStatus)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
@@ -224,7 +225,7 @@ closeOrderByDecision stale decision actor reason = do
         ManualFailed -> (Payout.FAILURE, False)
       neverSent = order.responseCode `elem` [Just "NOT_SENT", Just "E09"]
       close = do
-        QPayoutOrder.updateBulkSettled status order.transferStatus order.settlementRef order.settlementRefType (Just "MANUAL") (Just (T.take 500 ("Resolved manually by " <> actor <> ": " <> reason))) order.id
+        updateBulkOrderOutcome status order.transferStatus order.settlementRef order.settlementRefType (Just "MANUAL") (Just (T.take 500 ("Resolved manually by " <> actor <> ": " <> reason))) order
         DPayment.updatePayoutRequestStatusFromOrder order status
   if
       | not (isTerminalPayoutOrderStatus order.status) -> close

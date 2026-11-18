@@ -43,6 +43,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
+import qualified Lib.Payment.Payout.Bulk.Transaction as BulkTransaction
 import qualified Lib.Payment.Payout.Bulk.Types as Bulk
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -183,7 +184,7 @@ failBulkOrderIfAny mbBatchId requestId reason =
     orders <- QPayoutOrder.findAllByBatchId (Just batchId)
     let ordersOfRequest = [order | order <- orders, (listToMaybe =<< order.entityIds) == Just requestId.getId]
     forM_ ordersOfRequest $ \order ->
-      QPayoutOrder.updateBulkSettled IPayout.FAILURE Nothing Nothing Nothing (Just "NOT_SENT") (Just reason) order.id
+      BulkTransaction.updateBulkOrderOutcome IPayout.FAILURE Nothing Nothing Nothing (Just "NOT_SENT") (Just reason) order
 
 resolvePayoutVpa :: (MonadFlow m) => PayoutContext -> m Text
 resolvePayoutVpa ctx =
