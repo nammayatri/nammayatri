@@ -42,6 +42,7 @@ library
       Lib.Payment.Payout.Bulk.Schedule
       Lib.Payment.Payout.Bulk.StatusCheck
       Lib.Payment.Payout.Bulk.Submit
+      Lib.Payment.Payout.Bulk.Transaction
       Lib.Payment.Payout.Bulk.Types
       Lib.Payment.Payout.History
       Lib.Payment.Payout.HoldRelease

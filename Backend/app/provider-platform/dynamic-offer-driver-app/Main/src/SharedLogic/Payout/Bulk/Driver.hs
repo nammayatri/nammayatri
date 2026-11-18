@@ -55,10 +55,10 @@ import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.Bulk.Cycle as Bulk
+import qualified Lib.Payment.Payout.Bulk.Transaction as BulkTransaction
 import Lib.Payment.Payout.Bulk.Types (BulkFinalOutcome (..), finalStatusOf)
 import qualified Lib.Payment.Payout.Bulk.Types as Bulk
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
-import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
@@ -297,12 +297,12 @@ settleBulkItemWith sendPush merchantOpCityId order mbRequest outcome
     callHdfcPayoutServiceAction _orderId _driverId _payoutConfig = do
       case outcome of
         BulkPaid mbSettlementRef refType mbSettleStatus mbCode mbNote ->
-          QPayoutOrder.updateBulkSettled Payout.SUCCESS mbSettleStatus (mbSettlementRef <|> order.settlementRef) (Just refType) mbCode mbNote order.id
+          BulkTransaction.updateBulkOrderOutcome Payout.SUCCESS mbSettleStatus (mbSettlementRef <|> order.settlementRef) (Just refType) mbCode mbNote order
         BulkRejected mbCode detail mbSettleStatus mbRef -> do
           let (newRef, newRefType) = case mbRef of
                 Just (ref, refType) -> (Just ref, Just refType)
                 Nothing -> (order.settlementRef, order.settlementRefType)
-          QPayoutOrder.updateBulkSettled Payout.FAILURE mbSettleStatus newRef newRefType mbCode detail order.id
+          BulkTransaction.updateBulkOrderOutcome Payout.FAILURE mbSettleStatus newRef newRefType mbCode detail order
       pure (status, order.orderId)
 
     -- Called inside the wallet lock right after the ledger step, so the flag proves the settle ran.
