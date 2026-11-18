@@ -177,8 +177,8 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithKVAndConditionalDB [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
 
-findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> Maybe Int -> m [(Ride, Booking)]
-findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays = do
+findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> [Ride.RideStatus] -> Maybe Day -> Maybe Int -> m [(Ride, Booking)]
+findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive rideStatuses mbDay mbNumOfDays = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
       isOnlyActive = Just True == mbOnlyActive
@@ -206,7 +206,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
                 then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
                 else
                   []
-                    <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+                    <> ([Se.Is BeamR.status $ Se.In rideStatuses | not (null rideStatuses)])
                     <> (dateFilters)
           )
       ]
