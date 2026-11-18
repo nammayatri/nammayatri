@@ -121,7 +121,7 @@ validateMergedState layout seats = do
       outOfBounds =
         [ (s.rowNo, s.colNo)
           | s <- seats,
-            s.rowNo < 1 || s.rowNo > layout.rows || s.colNo < 1 || s.colNo > layout.columns
+            s.rowNo < 0 || s.rowNo > layout.rows || s.colNo < 0 || s.colNo > layout.columns
         ]
       dupPositions = findDuplicates positions
       dupLabels = findDuplicates labels
