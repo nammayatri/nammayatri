@@ -1180,6 +1180,7 @@ types:
   UpsertFarePolicyResp:
     - unprocessedFarePolicies: [Text]
     - success: Text
+    - warnings: Maybe [Text]
   UpsertFarePolicyReq:
     - recordType: NewType
     - file: FilePath

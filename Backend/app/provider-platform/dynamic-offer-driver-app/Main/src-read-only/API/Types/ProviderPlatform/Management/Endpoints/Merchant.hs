@@ -947,7 +947,7 @@ newtype UpsertFarePolicyReq = UpsertFarePolicyReq {file :: Kernel.Prelude.FilePa
 instance Kernel.Types.HideSecrets.HideSecrets UpsertFarePolicyReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UpsertFarePolicyResp = UpsertFarePolicyResp {unprocessedFarePolicies :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
+data UpsertFarePolicyResp = UpsertFarePolicyResp {unprocessedFarePolicies :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text, warnings :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

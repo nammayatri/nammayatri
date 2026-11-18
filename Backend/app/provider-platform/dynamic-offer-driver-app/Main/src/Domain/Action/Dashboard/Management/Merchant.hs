@@ -3030,13 +3030,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             "Invalid pricing slabs, rides on such a fare policy could not be ended: "
               <> show pricingSlabIssues
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _) <-
-        foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
+      (farePolicyErrors, farePolicyWarnings, _) <-
+        foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], [], boundedAlreadyDeletedMap) groups
           `finally` CQFProduct.clearCacheById merchantOpCity.id
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
-            success = "Fare Policies updated successfully"
+            success = "Fare Policies updated successfully",
+            warnings = if null farePolicyWarnings then Nothing else Just farePolicyWarnings
           }
   case result of
     Right res -> do
@@ -3092,12 +3093,13 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool) -> [((Maybe Bool, Maybe Bool), Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
+    -- Errors are groups that were not saved; warnings are groups that were saved anyway.
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], [Text], Map.Map Text Bool) -> [((Maybe Bool, Maybe Bool), Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], [Text], Map.Map Text Bool)
     processFarePolicyGroup _ _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap) (x : xs) = do
+    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, groupWarnings, boundedAlreadyDeletedMap) (x : xs) = do
       let ((disableRecompute, disableDownwardRecompute), city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
       if city /= opCity
-        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
+        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], groupWarnings, boundedAlreadyDeletedMap)
         else do
           let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
@@ -3214,9 +3216,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               allowUpdate = fromMaybe True (mbTransporterConfig >>= (.allowFarePolicyUpdateBelowMinBaseFare))
               anyBelowMin = any (isBaseFareBelowMin minBaseFare) baseFares
               belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
-              newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
+              newWarnings = if anyBelowMin then groupWarnings <> [belowMinMsg] else groupWarnings
           if anyBelowMin && not allowUpdate
-            then return (newErrors, boundedAlreadyDeletedMap)
+            then return (errors <> [belowMinMsg], groupWarnings, boundedAlreadyDeletedMap)
             else do
               CQFP.create finalFarePolicy
               -- Like every other column, additional_charges is what the new policy gets: blank means none.
@@ -3285,7 +3287,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
               scheduleDeleteUnreferencedFarePolicies merchantOpCity.merchantId merchantOpCity.id (map (.farePolicyId) oldFareProducts)
 
-              return (newErrors, newBoundedAlreadyDeletedMap)
+              return (errors, newWarnings, newBoundedAlreadyDeletedMap)
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
