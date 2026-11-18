@@ -49,6 +49,12 @@ Configuration, all optional, all in /opt/ny/local-stack/.env:
     BOT_STALE_POSITION_MIN    20     driver positions older than this
     BOT_DISK_PCT              85     root filesystem this full
     BOT_CERT_DAYS             14     certificate expires within this
+    BOT_PLACE_PATIENCE_H      24     a proposed place waited this long
+
+    python3 movin-bot.py --essai-lieu   sends ONE test message: the newest
+                                        proposed place still waiting, marked
+                                        « essai », or an example when none
+                                        waits. Remembers nothing.
 """
 import json
 import os
@@ -102,6 +108,21 @@ SANCTION_REASON = {
     "vehicle": "Véhicule non conforme ou dangereux",
     "impersonation": "Ce n’est pas le titulaire du compte qui conduit",
     "other": "Autre motif",
+}
+
+
+# A proposed place stores its country as a code ('MR' / 'DZ'), decided by the
+# server from the pin.
+BY_CODE = {c["code"]: c for c in COUNTRY.values()}
+CONSOLE = "https://admin.movinapp.net"
+PLACES_URL = f"{CONSOLE}/lieux-proposes"
+# The website's PLACE_TYPE_WORDS, French (packages/domain/src/place-types.ts).
+PLACE_TYPE = {
+    "cafe": "Café", "restaurant": "Restaurant", "pharmacy": "Pharmacie",
+    "hospital": "Hôpital", "mosque": "Mosquée", "school": "École",
+    "shop": "Magasin", "market": "Marché", "bank": "Banque", "hotel": "Hôtel",
+    "fuel": "Station-service", "administration": "Administration",
+    "other": "Autre",
 }
 
 
@@ -167,6 +188,7 @@ NO_RIDES_H = num("BOT_NO_RIDES_H", 6)
 STALE_MIN = num("BOT_STALE_POSITION_MIN", 20)
 DISK_PCT = num("BOT_DISK_PCT", 85)
 CERT_DAYS = num("BOT_CERT_DAYS", 14)
+PLACE_PATIENCE_H = num("BOT_PLACE_PATIENCE_H", 24)
 
 
 # ── the two things it talks to ──────────────────────────────────────────────
@@ -826,13 +848,89 @@ def check_reports(_):
     return out
 
 
+# ── 21 · « Lieux proposés » (2026-11-18) ───────────────────────────────────
+# A passenger or a driver proposes a missing place from the app; it is found
+# by nobody until the office approves it in the console (Lieux proposés). The
+# queue had no way to reach anybody who was not looking at that screen -- the
+# validation queue's story of 2026-09-23 again, so the same answer: say each
+# new one, and say it again when it has waited a day.
+
+def pending_places(order="sp.created_at", limit=None):
+    """Every proposal still waiting, oldest first: id, name, type, locality,
+    country code, side, author's name, author's number, photos, hours waited,
+    lat, lon. Author by side, never by a foreign key (there is none)."""
+    return psql(f"""
+      SELECT sp.id::text,
+             {one_line("sp.name")},
+             sp.type,
+             {one_line("sp.locality")},
+             sp.country,
+             sp.author_side,
+             coalesce(nullif(trim(CASE sp.author_side
+                        WHEN 'rider'  THEN concat_ws(' ', rp.first_name, rp.last_name)
+                        ELSE concat_ws(' ', dp.first_name, dp.last_name) END), ''),
+                      'Nom non renseigné'),
+             coalesce(CASE sp.author_side WHEN 'rider' THEN rp.unencrypted_mobile_number
+                                           ELSE dp.unencrypted_mobile_number END, ''),
+             (SELECT count(*) FROM movin.suggested_place_photo ph
+               WHERE ph.suggested_place_id = sp.id),
+             round(extract(epoch from (now() - sp.created_at)) / 3600)::int,
+             round(sp.lat::numeric, 5), round(sp.lon::numeric, 5)
+        FROM movin.suggested_place sp
+        LEFT JOIN atlas_app.person rp
+               ON sp.author_side = 'rider' AND rp.id = sp.author_id
+        LEFT JOIN atlas_driver_offer_bpp.person dp
+               ON sp.author_side = 'driver' AND dp.id = sp.author_id
+       WHERE sp.status = 'pending'
+       ORDER BY {order}{f" LIMIT {int(limit)}" if limit else ""}""")
+
+
+PLACE_COLUMNS = 12
+
+
+def place_text(row, title):
+    """One proposal, as the console's queue shows it."""
+    (_pid, name, ptype, locality, code, side, author, number, photos, hours,
+     lat, lon) = row
+    c = BY_CODE.get(code)
+    who = "un passager" if side == "rider" else "un chauffeur"
+    kind = PLACE_TYPE.get(ptype, ptype)
+    line2 = f"{kind} · {locality}" if locality else kind
+    photos = int(photos or 0)
+    pics = f"{photos} photo(s)" if photos else "aucune photo"
+    hours = int(hours or 0)
+    waited = "À l'instant" if hours < 1 else f"En attente depuis {hours} h"
+    return (f"Mova · {title}\n{c['label'] if c else 'Pays inconnu'}\n\n"
+            f"{name}\n{line2}\n"
+            + f"Proposé par {who} : {author} {number}".rstrip() + "\n"
+            f"{pics}\n{waited}\n"
+            f"Carte : https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=18/{lat}/{lon}\n\n"
+            f"À valider : {PLACES_URL}")
+
+
+def check_places(_):
+    rows = pending_places()
+    if rows is None:
+        return []
+    out = []
+    for row in rows:
+        if len(row) != PLACE_COLUMNS:
+            continue
+        pid, hours = row[0], int(row[9] or 0)
+        out.append((f"place:new:{pid}", "normal", place_text(row, "nouveau lieu proposé")))
+        if hours >= PLACE_PATIENCE_H:
+            out.append((f"place:waited:{pid}", "normal",
+                        place_text(row, "lieu proposé toujours en attente")))
+    return out
+
+
 CHECKS = [
     check_registrations, check_sms_budget, check_sms_gateway, check_sms_phone,
     check_wallet,
     check_deletions, check_no_rides, check_zero_estimates,
     check_stale_positions, check_nobody_online, check_containers, check_api,
     check_disk, check_certs, check_backups, check_low_ratings,
-    check_cancellations, check_blocked_drivers, check_reports,
+    check_cancellations, check_blocked_drivers, check_reports, check_places,
 ]
 
 
@@ -875,12 +973,16 @@ def numbers(window, merchant):
         (SELECT coalesce(sum(e.amount),0) FROM movin.wallet_entry e
            JOIN atlas_driver_offer_bpp.person p ON p.id = e.driver_id
           WHERE p.merchant_id = '{merchant}' AND e.kind = 'gift'
-            AND e.created_at > now() - interval '{window}')""")
-    if not r or len(r[0]) < 8:
+            AND e.created_at > now() - interval '{window}'),
+        -- « Lieux proposés » still waiting for the office (2026-11-18).
+        (SELECT count(*) FROM movin.suggested_place sp
+          WHERE sp.country = '{COUNTRY[merchant]["code"]}' AND sp.status = 'pending')""")
+    if not r or len(r[0]) < 9:
         return None
     v = r[0]
     return {"rides": v[0], "fare": v[1], "pending": v[2], "fleet": v[3],
-            "new_drivers": v[4], "topups": v[5], "gifts": v[6], "gifted": v[7]}
+            "new_drivers": v[4], "topups": v[5], "gifts": v[6], "gifted": v[7],
+            "places": v[8]}
 
 
 def digest(window, title):
@@ -896,7 +998,8 @@ def digest(window, title):
                      f"Cadeaux offerts    {n['gifts']} · {n['gifted']} {c['cur']}\n"
                      f"Nouveaux chauffeurs {n['new_drivers']}\n"
                      f"Flotte active      {n['fleet']}\n"
-                     f"En attente         {n['pending']}")
+                     f"En attente         {n['pending']}\n"
+                     f"Lieux à valider    {n['places']}")
     return (f"Mova · {title}\n\n" + "\n\n".join(parts)
             + "\n\nhttps://admin.movinapp.net")
 
@@ -912,6 +1015,7 @@ HELP = """Mova · commandes
 /flotte      qui est en ligne
 /serveur     l'état de la machine
 /budget      le budget SMS
+/lieux       les lieux proposés qui attendent
 /aide        ce message
 
 Le bot lit seulement. Valider, refuser, écrire aux chauffeurs
@@ -938,6 +1042,30 @@ def cmd_file(_):
              for n, num_, h, d, m in rows]
     return (f"Mova · {len(rows)} en attente\n\n" + "\n\n".join(lines)
             + "\n\nhttps://admin.movinapp.net")
+
+
+def cmd_lieux(_):
+    rows = pending_places()
+    if rows is None:
+        return "La base n'a pas répondu."
+    rows = [r for r in rows if len(r) == PLACE_COLUMNS]
+    if not rows:
+        return "Aucun lieu proposé n'attend."
+    sections = []
+    for code, c in BY_CODE.items():
+        mine = [r for r in rows if r[4] == code]
+        if not mine:
+            continue
+        lines = []
+        for r in mine[:10]:
+            kind = PLACE_TYPE.get(r[2], r[2])
+            place = f"{kind} · {r[3]}" if r[3] else kind
+            who = "passager" if r[5] == "rider" else "chauffeur"
+            lines.append(f"{r[1]}\n  {place} · {who} · {r[9]} h")
+        more = f"\n… et {len(mine) - 10} de plus" if len(mine) > 10 else ""
+        sections.append(f"{c['label']} · {len(mine)}\n" + "\n".join(lines) + more)
+    return (f"Mova · {len(rows)} lieu(x) proposé(s) en attente\n\n"
+            + "\n\n".join(sections) + f"\n\n{PLACES_URL}")
 
 
 def cmd_jour(_):
@@ -1047,7 +1175,7 @@ def cmd_budget(_):
 COMMANDS = {
     "/file": cmd_file, "/jour": cmd_jour, "/semaine": cmd_semaine,
     "/chauffeur": cmd_chauffeur, "/flotte": cmd_flotte,
-    "/serveur": cmd_serveur, "/budget": cmd_budget,
+    "/serveur": cmd_serveur, "/budget": cmd_budget, "/lieux": cmd_lieux,
     "/aide": lambda _: HELP, "/start": lambda _: HELP, "/help": lambda _: HELP,
 }
 
@@ -1119,6 +1247,21 @@ def main():
     if not TOKEN or not CHAT:
         log("no TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID — nothing to do")
         return 0
+    if "--essai-lieu" in sys.argv:
+        # One test message, to see what the alert looks like on the phone. It
+        # touches no state: the real alert for that place still comes.
+        rows = [r for r in (pending_places(order="sp.created_at DESC", limit=1) or [])
+                if len(r) == PLACE_COLUMNS]
+        if rows:
+            text = place_text(rows[0], "nouveau lieu proposé (ESSAI)")
+        else:
+            text = place_text(["0", "Pharmacie de l'exemple", "pharmacy", "Tevragh Zeina",
+                               "MR", "rider", "Exemple", "", "1", "0",
+                               "18.09", "-15.97"],
+                              "nouveau lieu proposé (ESSAI : exemple, aucun lieu n'attend)")
+        ok_ = send(text)
+        log("test message sent" if ok_ else "test message NOT sent")
+        return 0 if ok_ else 1
     if "--once" in sys.argv or "--seed" in sys.argv:
         state = read_state()
         run_checks(state, seed="--seed" in sys.argv)
