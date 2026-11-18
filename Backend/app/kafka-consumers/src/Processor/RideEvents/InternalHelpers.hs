@@ -67,6 +67,7 @@ import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
+import "dynamic-offer-driver-app" SharedLogic.Finance.PostActions (PostActionsEnv)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
@@ -102,7 +103,8 @@ sendReferralFCM ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     CHConfig.ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    PostActionsEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -252,7 +254,8 @@ sendDriverToDriverReferralReward ::
     Esq.EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    PostActionsEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -376,7 +379,8 @@ creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    PostActionsEnv r
   ) =>
   HighPrecMoney ->
   Id DP.Person ->

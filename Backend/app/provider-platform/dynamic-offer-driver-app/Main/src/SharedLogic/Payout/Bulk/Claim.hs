@@ -49,6 +49,7 @@ import qualified Lib.Payment.Payout.Bulk.Batch as Bulk
 import qualified Lib.Payment.Payout.Bulk.Types as Bulk
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), PayoutPrefetch (..), initiateWalletPayoutWith)
 import SharedLogic.Payout.Bulk.Eligibility
 import qualified Tools.Notifications as Notify
@@ -65,7 +66,8 @@ claimBeneficiary ::
     PaymentBeamFlow.BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->
   PR.PayoutType -> -- SCHEDULED or ADHOC

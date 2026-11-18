@@ -87,6 +87,7 @@ import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
+import "dynamic-offer-driver-app" SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import qualified "dynamic-offer-driver-app" SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
@@ -406,7 +407,8 @@ handleReferral ::
     CoreMetrics.CoreMetrics m,
     CHConfig.ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   RideEndedEvent ->
   m ()
@@ -601,7 +603,8 @@ handleDriverCoinsAndJourney ::
     PaymentBeamFlow.BeamFlow m r,
     BeamFlow m r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PostActionsEnv r
   ) =>
   RideEndedEvent ->
   m ()

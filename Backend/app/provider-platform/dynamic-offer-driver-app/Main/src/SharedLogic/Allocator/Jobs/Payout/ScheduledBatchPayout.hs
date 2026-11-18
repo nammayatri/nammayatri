@@ -57,6 +57,7 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), runWalletPayout)
 import SharedLogic.Payout.Bulk.Driver (runBulkPayoutCycle)
 import SharedLogic.Payout.Bulk.Eligibility (checkBulkPayoutEligibility)
@@ -324,7 +325,8 @@ processOneWalletPayout ::
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PostActionsEnv r
   ) =>
   DTConf.TransporterConfig ->
   Id DM.Merchant ->

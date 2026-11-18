@@ -88,7 +88,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
@@ -560,7 +560,8 @@ settleCancellationLedger ::
     EncFlow m r,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

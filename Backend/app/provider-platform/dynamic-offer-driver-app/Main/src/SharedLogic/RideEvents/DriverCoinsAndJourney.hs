@@ -47,6 +47,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -72,7 +73,8 @@ processRideEndedCoinsAndJourney ::
     BeamFlow m r,
     MonadReader r m,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PostActionsEnv r
   ) =>
   DRide.Ride ->
   SRB.Booking ->

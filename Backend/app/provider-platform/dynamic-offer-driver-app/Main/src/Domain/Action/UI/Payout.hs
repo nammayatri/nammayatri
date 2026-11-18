@@ -98,7 +98,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.IncentiveJourney as SLIJ
@@ -147,7 +147,8 @@ type PayoutSettlementFlow m r =
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig]
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    PostActionsEnv r
   )
 
 juspayPayoutWebhookHandler ::

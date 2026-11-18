@@ -43,7 +43,7 @@ import Lib.Finance hiding (runFinance)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
@@ -159,7 +159,8 @@ accumulateCancellationPenalty ::
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    PostActionsEnv r
   ) =>
   Bool -> -- isWalletEnabled
   SRB.Booking ->
