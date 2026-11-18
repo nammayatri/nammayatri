@@ -6,6 +6,7 @@ module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, mo
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -412,8 +413,11 @@ data AnalyticsConfig = AnalyticsConfig
     earningsWindowSize :: Kernel.Prelude.Int,
     enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     financialYearStartMonth :: Kernel.Prelude.Int,
+    inactiveAvgLoginHoursPerDayThreshold :: Kernel.Prelude.Double,
+    lowSubscriptionBalanceThreshold :: Kernel.Types.Common.HighPrecMoney,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    onlineDurationClickhouseFrom :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     useDbForEarningAndMetrics :: Kernel.Prelude.Bool,
     weekStartMode :: Kernel.Prelude.Int
   }

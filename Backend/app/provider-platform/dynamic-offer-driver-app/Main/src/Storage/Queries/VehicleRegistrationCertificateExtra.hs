@@ -185,6 +185,23 @@ findByRCAndExpiry certNumber expiry = do
 findAllById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
 
+-- | Only verified RC ids (avoids loading full rows then filtering in memory).
+findVerifiedIdsByIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id VehicleRegistrationCertificate] ->
+  m [Id VehicleRegistrationCertificate]
+findVerifiedIdsByIds rcIds =
+  if null rcIds
+    then pure []
+    else
+      map (.id)
+        <$> findAllWithKV
+          [ Se.And
+              [ Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds,
+                Se.Is BeamVRC.verified $ Se.Eq (Just True)
+              ]
+          ]
+
 findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [VehicleRegistrationCertificate]
 findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (.getId) imageIds]
 

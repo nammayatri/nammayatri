@@ -275,6 +275,20 @@ types:
     - totalActiveDrivers: Maybe Int
     - totalAssociatedDriver: Maybe Int
     - totalEnabledDriver: Maybe Int
+    # Overall / lifetime
+    - averageLoginHours: Maybe Double
+    - greaterThanOneRide: Maybe Int
+    - greaterThanTenRide: Maybe Int
+    - greaterThanFiftyRide: Maybe Int
+    - incompleteFirstSubscription: Maybe Int
+    - documentSubmissionCompletedDrivers: Maybe Int
+    - documentSubmissionCompletedVehicles: Maybe Int
+    # Live / rolling (served from allTime; no separate endpoint)
+    - planActiveDrivers: Maybe Int
+    - lowSubscriptionBalanceDrivers: Maybe Int
+    - inactiveDrivers30: Maybe Int
+    - inactiveDrivers60: Maybe Int
+    - inactiveDrivers90: Maybe Int
 
   FilteredOperatorAnalyticsRes:
     - activeDriver: Int
