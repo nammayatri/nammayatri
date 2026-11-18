@@ -4,7 +4,7 @@
 module Storage.Queries.JourneyExtra where
 
 import Control.Monad.Extra (mapMaybeM)
-import Data.List (maximumBy, sortBy)
+import Data.List (maximumBy, sortBy, sortOn)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Common
@@ -139,6 +139,80 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
       (Just limit')
       (Just offset')
   pure journeys
+
+findLiveTicketsByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> UTCTime -> UTCTime -> [DJ.JourneyStatus] -> m [DJ.Journey]
+findLiveTicketsByRiderId (Kernel.Types.Id.Id personId) dayStart now statuses =
+  findAllWithOptionsKV conditions (Se.Desc Beam.createdAt) (Just 20) Nothing
+  where
+    conditions =
+      [ Se.And
+          ( [ Se.Is Beam.riderId $ Se.Eq personId,
+              Se.Is Beam.isPaymentSuccess $ Se.Eq (Just True),
+              Se.Or [Se.Is Beam.isPublicTransportIncluded $ Se.Eq Nothing, Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True)],
+              Se.Is Beam.status $ Se.Eq (Just DJ.INPROGRESS),
+              Se.Or
+                [ Se.Is Beam.journeyExpiryTime $ Se.GreaterThan (Just now),
+                  Se.And [Se.Is Beam.journeyExpiryTime $ Se.Eq Nothing, Se.Is Beam.createdAt $ Se.GreaterThanOrEq dayStart]
+                ]
+            ]
+              <> [Se.Is Beam.status $ Se.In (Just <$> statuses) | not (null statuses)]
+          )
+      ]
+
+findUpcomingTicketsByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> UTCTime -> UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Int -> Int -> [DJ.JourneyStatus] -> m [DJ.Journey]
+findUpcomingTicketsByRiderId (Kernel.Types.Id.Id personId) dayStart now mbFromDate mbToDate limit offset statuses =
+  findAllWithOptionsKV conditions (Se.Asc Beam.startTime) (Just limit) (Just offset)
+  where
+    conditions =
+      [ Se.And
+          ( [ Se.Is Beam.riderId $ Se.Eq personId,
+              Se.Is Beam.isPaymentSuccess $ Se.Eq (Just True),
+              Se.Or [Se.Is Beam.isPublicTransportIncluded $ Se.Eq Nothing, Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True)],
+              Se.Is Beam.status $ Se.Eq (Just DJ.CONFIRMED),
+              Se.Or
+                [ Se.Is Beam.journeyExpiryTime $ Se.GreaterThan (Just now),
+                  Se.And [Se.Is Beam.journeyExpiryTime $ Se.Eq Nothing, Se.Is Beam.startTime $ Se.GreaterThanOrEq (Just dayStart)]
+                ]
+            ]
+              <> [Se.Is Beam.status $ Se.In (Just <$> statuses) | not (null statuses)]
+              <> [Se.Is Beam.startTime $ Se.GreaterThanOrEq (Just fromDate) | Just fromDate <- [mbFromDate]]
+              <> [Se.Is Beam.startTime $ Se.LessThanOrEq (Just toDate) | Just toDate <- [mbToDate]]
+          )
+      ]
+
+findPastTicketsByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> UTCTime -> UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Int -> Int -> [DJ.JourneyStatus] -> m [DJ.Journey]
+findPastTicketsByRiderId (Kernel.Types.Id.Id personId) dayStart now mbFromDate mbToDate limit offset statuses =
+  findAllWithOptionsKV conditions (Se.Desc Beam.createdAt) (Just limit) (Just offset)
+  where
+    conditions =
+      [ Se.And
+          ( [ Se.Is Beam.riderId $ Se.Eq personId,
+              Se.Is Beam.isPaymentSuccess $ Se.Eq (Just True),
+              Se.Or [Se.Is Beam.isPublicTransportIncluded $ Se.Eq Nothing, Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True)],
+              Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.NEW, Just DJ.INITIATED],
+              Se.Or
+                [ Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.CONFIRMED, Just DJ.INPROGRESS],
+                  Se.And
+                    [ Se.Is Beam.journeyExpiryTime $ Se.Not $ Se.Eq Nothing,
+                      Se.Is Beam.journeyExpiryTime $ Se.LessThanOrEq (Just now)
+                    ],
+                  Se.And
+                    [ Se.Is Beam.status $ Se.Eq (Just DJ.INPROGRESS),
+                      Se.Is Beam.journeyExpiryTime $ Se.Eq Nothing,
+                      Se.Is Beam.createdAt $ Se.LessThan dayStart
+                    ],
+                  Se.And
+                    [ Se.Is Beam.status $ Se.Eq (Just DJ.CONFIRMED),
+                      Se.Is Beam.journeyExpiryTime $ Se.Eq Nothing,
+                      Se.Or [Se.Is Beam.startTime $ Se.Eq Nothing, Se.Is Beam.startTime $ Se.LessThan (Just dayStart)]
+                    ]
+                ]
+            ]
+              <> [Se.Is Beam.status $ Se.In (Just <$> statuses) | not (null statuses)]
+              <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq fromDate | Just fromDate <- [mbFromDate]]
+              <> [Se.Is Beam.createdAt $ Se.LessThanOrEq toDate | Just toDate <- [mbToDate]]
+          )
+      ]
 
 findAllByRiderIdAndStatusAndMOCId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> DJ.JourneyStatus -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> m [DJ.Journey]
 findAllByRiderIdAndStatusAndMOCId (Kernel.Types.Id.Id personId) status (Kernel.Types.Id.Id mocId) = do

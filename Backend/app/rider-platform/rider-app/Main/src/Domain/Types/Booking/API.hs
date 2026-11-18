@@ -881,3 +881,8 @@ data BookingRequestType = BookingRequest | JourneyRequest | RequestBoth
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 $(mkHttpInstancesForEnum ''BookingRequestType)
+
+data TicketScope = CURRENT | PAST | ALL
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+$(mkHttpInstancesForEnum ''TicketScope)

@@ -63,7 +63,7 @@ import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
+import Lib.JourneyModule.Base (generateJourneyInfoResponse, generatePastJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
@@ -280,7 +280,9 @@ data BookingListResV2 = BookingListResV2
     bookingOffset :: Maybe Int,
     journeyOffset :: Maybe Int,
     passOffset :: Maybe Int,
-    hasMoreData :: Bool
+    hasMoreData :: Bool,
+    currentCount :: Maybe Int,
+    liveCount :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -393,7 +395,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           bookingOffset = nextBookingOffset,
           journeyOffset = nextJourneyOffset,
           passOffset = nextPassOffset,
-          hasMoreData = hasMoreData
+          hasMoreData = hasMoreData,
+          currentCount = Nothing,
+          liveCount = Nothing
         }
   where
     mbInitialBookingOffset = mbBookingOffset <|> mbOffset
@@ -425,6 +429,86 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
               (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
               checkBookingsForStatus allbookings_
               logInfo $ "rbList: test " <> show rbList_
+
+bookingListV2WithScope :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Maybe Bool -> Maybe SRB.TicketScope -> Flow BookingListResV2
+bookingListV2WithScope (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup = \case
+  Just ticketScope -> ticketScopeBookingList personId mbLimit (mbJourneyOffset <|> mbOffset) (millisecondsToUTC <$> mbFromDate) (millisecondsToUTC <$> mbToDate) billingCategoryList rideTypeList journeyStatusList (fromMaybe False mbDontNeedFareBreakup) ticketScope
+  Nothing -> bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup
+
+ticketScopeBookingList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe DT.UTCTime -> Maybe DT.UTCTime -> [SLT.BillingCategory] -> [SLT.RideType] -> [DJ.JourneyStatus] -> Bool -> SRB.TicketScope -> Flow BookingListResV2
+ticketScopeBookingList personId mbLimit mbOffset mbFromDate mbToDate billingCategoryList rideTypeList journeyStatusList dontNeedFareBreakup ticketScope = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+  now <- getCurrentTime
+  let utcOffset = fromIntegral . getSeconds $ maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+      dayStart = DT.addUTCTime (negate utcOffset) (DT.UTCTime (DT.utctDay (DT.addUTCTime utcOffset now)) 0)
+      requestedOffset = max 0 $ fromMaybe 0 mbOffset
+      offset = fromInteger (min maxTicketOffset requestedOffset)
+      limit = fromInteger . max 1 . min maxTicketPageSize $ fromMaybe 10 mbLimit
+      journeysAllowed = (null billingCategoryList || SLT.PERSONAL `elem` billingCategoryList) && (null rideTypeList || SLT.NORMAL `elem` rideTypeList)
+  if not journeysAllowed || requestedOffset > maxTicketOffset
+    then pure $ mkResponse [] offset False (Just 0) (Just 0)
+    else case ticketScope of
+      SRB.CURRENT -> do
+        liveJourneys <- if offset == 0 then SQJ.findLiveTicketsByRiderId personId dayStart now journeyStatusList else pure []
+        fetchedUpcoming <- SQJ.findUpcomingTicketsByRiderId personId dayStart now mbFromDate mbToDate (limit + 1) offset journeyStatusList
+        let upcomingJourneys = take limit fetchedUpcoming
+        (currentEntities, liveEntityCount) <- buildCurrentEntities liveJourneys upcomingJourneys
+        pure $ mkResponse currentEntities (offset + length upcomingJourneys) (length fetchedUpcoming > limit) (Just $ length currentEntities) (Just liveEntityCount)
+      SRB.PAST -> do
+        fetchedPast <- SQJ.findPastTicketsByRiderId personId dayStart now mbFromDate mbToDate (limit + 1) offset journeyStatusList
+        let pastJourneys = take limit fetchedPast
+        pastEntities <- catMaybes <$> mapM buildPastJourneyEntity pastJourneys
+        pure $ mkResponse pastEntities (offset + length pastJourneys) (length fetchedPast > limit) (Just 0) (Just 0)
+      SRB.ALL -> do
+        liveJourneys <- if offset == 0 then SQJ.findLiveTicketsByRiderId personId dayStart now journeyStatusList else pure []
+        upcomingWindow <- SQJ.findUpcomingTicketsByRiderId personId dayStart now mbFromDate mbToDate (offset + limit + 1) 0 journeyStatusList
+        let upcomingCount = length upcomingWindow
+            upcomingJourneys = take limit (drop offset upcomingWindow)
+            remaining = limit - length upcomingJourneys
+        (pastJourneys, hasMorePast) <-
+          if upcomingCount > offset + limit
+            then pure ([], True)
+            else do
+              fetchedPast <- SQJ.findPastTicketsByRiderId personId dayStart now mbFromDate mbToDate (remaining + 1) (max 0 (offset - upcomingCount)) journeyStatusList
+              pure (take remaining fetchedPast, length fetchedPast > remaining)
+        (currentEntities, liveEntityCount) <- buildCurrentEntities liveJourneys upcomingJourneys
+        let upcomingJourneyIds = map (.id) upcomingJourneys
+        pastEntities <- catMaybes <$> mapM buildPastJourneyEntity (filter (\journey -> journey.id `notElem` upcomingJourneyIds) pastJourneys)
+        pure $ mkResponse (currentEntities <> pastEntities) (offset + length upcomingJourneys + length pastJourneys) hasMorePast (Just $ length currentEntities) (Just liveEntityCount)
+  where
+    buildCurrentEntities liveJourneys upcomingJourneys = do
+      let currentJourneys = sortBy (comparing (Down . tripTime)) liveJourneys <> upcomingJourneys
+          liveJourneyIds = map (.id) liveJourneys
+      (entities, _, _, _) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId (length currentJourneys) [] currentJourneys [] (Just 0) (Just 0) (Just 0) dontNeedFareBreakup
+      let isLiveEntity = \case
+            MultiModalRide journeyEntity -> journeyEntity.journeyId `elem` liveJourneyIds
+            _ -> False
+      pure (entities, length (filter isLiveEntity entities))
+
+    tripTime journey = (fromMaybe journey.createdAt journey.startTime, journey.id)
+
+    maxTicketPageSize = 100 :: Integer
+    maxTicketOffset = 10000 :: Integer
+
+    mkResponse entities nextOffset hasMore mbCurrentCount mbLiveCount =
+      BookingListResV2
+        { list = entities,
+          bookingOffset = Nothing,
+          journeyOffset = Just nextOffset,
+          passOffset = Nothing,
+          hasMoreData = hasMore,
+          currentCount = mbCurrentCount,
+          liveCount = mbLiveCount
+        }
+
+    buildPastJourneyEntity journey =
+      withTryCatch "generatePastJourneyInfoResponse:ticketScopeBookingList" (generatePastJourneyInfoResponse journey)
+        >>= \case
+          Left err -> do
+            logError $ "Error building past journey for journeyId: " <> show journey.id <> ", skipping from ticket list : " <> show err
+            return Nothing
+          Right mbJourneyEntity -> return (MultiModalRide <$> mbJourneyEntity)
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 
