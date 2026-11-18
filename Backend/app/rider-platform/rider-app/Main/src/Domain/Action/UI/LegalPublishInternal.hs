@@ -42,7 +42,10 @@ postInternalLegalPublish mbApiKey req = do
       merchantOperatingCityId = merchantOperatingCity.id
   existing <- QPCD.findByMerchantPolicyTypeEntityTypeVersion merchantId req.policyType req.entityType req.version
   case existing of
-    Just row -> pure $ API.Types.UI.LegalPublishInternal.LegalPublishResp {id = row.id, created = False}
+    Just row -> do
+      QPCD.updateFields req.url row.isMandatory row.enabled req.metadata (Just req.effectiveDate) row.id
+      CPCD.clearMerchantCache merchantId
+      pure $ API.Types.UI.LegalPublishInternal.LegalPublishResp {id = row.id, created = False}
     Nothing -> do
       now <- getCurrentTime
       docId <- generateGUID
