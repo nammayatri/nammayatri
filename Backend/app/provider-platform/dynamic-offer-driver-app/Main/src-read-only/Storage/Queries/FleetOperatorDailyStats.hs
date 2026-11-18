@@ -71,8 +71,8 @@ updateCustomerCancellationCountByFleetOperatorIdAndDate customerCancellationCoun
 
 updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance onlineTotalEarning cashTotalEarning totalCompletedRides cashPlatformFees onlinePlatformFees rideDuration fleetOperatorId fleetDriverId merchantLocalDate = do
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance onlineTotalEarning cashTotalEarning totalCompletedRides cashPlatformFees onlinePlatformFees cashGst onlineGst cashVat onlineVat rideDuration fleetOperatorId fleetDriverId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalDistance (getTotalDistance totalDistance),
@@ -81,6 +81,10 @@ updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance onl
       Se.Set Beam.totalCompletedRides totalCompletedRides,
       Se.Set Beam.cashPlatformFees cashPlatformFees,
       Se.Set Beam.onlinePlatformFees onlinePlatformFees,
+      Se.Set Beam.cashGst cashGst,
+      Se.Set Beam.onlineGst onlineGst,
+      Se.Set Beam.cashVat cashVat,
+      Se.Set Beam.onlineVat onlineVat,
       Se.Set Beam.rideDuration rideDuration,
       Se.Set Beam.updatedAt _now
     ]
@@ -194,6 +198,20 @@ updateRequestCountsByFleetOperatorIdAndDate rejectedRequestCount pulledRequestCo
         ]
     ]
 
+updateTdsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateTdsByFleetOperatorIdAndDate cashTds onlineTds fleetOperatorId fleetDriverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.cashTds cashTds, Se.Set Beam.onlineTds onlineTds, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.fleetDriverId $ Se.Eq fleetDriverId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
 updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
@@ -230,8 +248,11 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
     [ Se.Set Beam.acceptationRequestCount acceptationRequestCount,
       Se.Set Beam.approvedDriverRequests approvedDriverRequests,
       Se.Set Beam.approvedVehicleRequests approvedVehicleRequests,
+      Se.Set Beam.cashGst cashGst,
       Se.Set Beam.cashPlatformFees cashPlatformFees,
+      Se.Set Beam.cashTds cashTds,
       Se.Set Beam.cashTotalEarning cashTotalEarning,
+      Se.Set Beam.cashVat cashVat,
       Se.Set Beam.currency currency,
       Se.Set Beam.customerCancellationCount customerCancellationCount,
       Se.Set Beam.distanceUnit distanceUnit,
@@ -239,8 +260,11 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
       Se.Set Beam.driverFirstSubscription driverFirstSubscription,
       Se.Set Beam.inspectionCompleted inspectionCompleted,
       Se.Set Beam.onlineDuration onlineDuration,
+      Se.Set Beam.onlineGst onlineGst,
       Se.Set Beam.onlinePlatformFees onlinePlatformFees,
+      Se.Set Beam.onlineTds onlineTds,
       Se.Set Beam.onlineTotalEarning onlineTotalEarning,
+      Se.Set Beam.onlineVat onlineVat,
       Se.Set Beam.pulledRequestCount pulledRequestCount,
       Se.Set Beam.rejectedDriverRequests rejectedDriverRequests,
       Se.Set Beam.rejectedRequestCount rejectedRequestCount,
@@ -270,8 +294,11 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
           { acceptationRequestCount = acceptationRequestCount,
             approvedDriverRequests = approvedDriverRequests,
             approvedVehicleRequests = approvedVehicleRequests,
+            cashGst = cashGst,
             cashPlatformFees = cashPlatformFees,
+            cashTds = cashTds,
             cashTotalEarning = cashTotalEarning,
+            cashVat = cashVat,
             currency = currency,
             customerCancellationCount = customerCancellationCount,
             distanceUnit = distanceUnit,
@@ -282,8 +309,11 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
             inspectionCompleted = inspectionCompleted,
             merchantLocalDate = merchantLocalDate,
             onlineDuration = onlineDuration,
+            onlineGst = onlineGst,
             onlinePlatformFees = onlinePlatformFees,
+            onlineTds = onlineTds,
             onlineTotalEarning = onlineTotalEarning,
+            onlineVat = onlineVat,
             pulledRequestCount = pulledRequestCount,
             rejectedDriverRequests = rejectedDriverRequests,
             rejectedRequestCount = rejectedRequestCount,
@@ -306,8 +336,11 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
       { Beam.acceptationRequestCount = acceptationRequestCount,
         Beam.approvedDriverRequests = approvedDriverRequests,
         Beam.approvedVehicleRequests = approvedVehicleRequests,
+        Beam.cashGst = cashGst,
         Beam.cashPlatformFees = cashPlatformFees,
+        Beam.cashTds = cashTds,
         Beam.cashTotalEarning = cashTotalEarning,
+        Beam.cashVat = cashVat,
         Beam.currency = currency,
         Beam.customerCancellationCount = customerCancellationCount,
         Beam.distanceUnit = distanceUnit,
@@ -318,8 +351,11 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
         Beam.inspectionCompleted = inspectionCompleted,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.onlineDuration = onlineDuration,
+        Beam.onlineGst = onlineGst,
         Beam.onlinePlatformFees = onlinePlatformFees,
+        Beam.onlineTds = onlineTds,
         Beam.onlineTotalEarning = onlineTotalEarning,
+        Beam.onlineVat = onlineVat,
         Beam.pulledRequestCount = pulledRequestCount,
         Beam.rejectedDriverRequests = rejectedDriverRequests,
         Beam.rejectedRequestCount = rejectedRequestCount,

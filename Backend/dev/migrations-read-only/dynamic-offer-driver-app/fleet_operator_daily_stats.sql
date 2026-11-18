@@ -32,3 +32,14 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN approve
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN approved_vehicle_requests integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_vehicle_requests integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_driver_requests integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN online_vat double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN online_tds double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN online_gst double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN cash_vat double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN cash_tds double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN cash_gst double precision ;

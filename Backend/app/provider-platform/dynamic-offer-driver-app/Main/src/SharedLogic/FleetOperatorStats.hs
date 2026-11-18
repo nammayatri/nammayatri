@@ -4,6 +4,7 @@ import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Extra.TransporterConfig as DTCExtra
 import qualified Domain.Types.FleetOperatorDailyStats as DFODS
 import qualified Domain.Types.FleetOperatorStats as DFS
 import qualified Domain.Types.Ride as DR
@@ -154,6 +155,10 @@ data CompletedRideStats = CompletedRideStats
     distance :: Meters,
     fare :: HighPrecMoney,
     platformFee :: HighPrecMoney,
+    -- GST or VAT in the fare (fare_parameters.govtCharges); isVatTax says which. Maybe so that
+    -- events published before these fields existed still decode.
+    taxAmount :: Maybe HighPrecMoney,
+    isVatTax :: Maybe Bool,
     isOnlinePayment :: Bool,
     rideDuration :: Maybe Seconds
   }
@@ -161,15 +166,9 @@ data CompletedRideStats = CompletedRideStats
 
 mkCompletedRideStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DR.Ride -> DBooking.Booking -> m CompletedRideStats
 mkCompletedRideStats ride booking = do
-  fee <- case ride.fareParametersId of
-    Just fareParamsId -> maybe 0 (\fareParams -> fromMaybe 0 fareParams.platformFee) <$> QFareParameters.findById fareParamsId
-    Nothing -> pure 0
-  -- Cash and booth payments are offline; with no instrument, fall back to the ride's flag.
-  let online = case booking.paymentInstrument of
-        Just DMPM.Cash -> False
-        Just DMPM.BoothOnline -> False
-        Nothing -> ride.onlinePayment
-        _ -> True
+  mbFareParams <- join <$> traverse QFareParameters.findById ride.fareParametersId
+  let fee = maybe 0 (\fareParams -> fromMaybe 0 fareParams.platformFee) mbFareParams
+  let online = isOnlineRide ride booking
   pure
     CompletedRideStats
       { rideId = ride.id.getId,
@@ -177,11 +176,41 @@ mkCompletedRideStats ride booking = do
         distance = fromMaybe 0 ride.chargeableDistance,
         fare = fromMaybe 0.0 ride.fare,
         platformFee = fee,
+        taxAmount = mbFareParams >>= (.govtCharges),
+        isVatTax = mbFareParams >>= (.isVatTaxType),
         isOnlinePayment = online,
         rideDuration = case (ride.tripStartTime, ride.tripEndTime) of
           (Just startTime, Just endTime) -> Just (Seconds (round $ diffUTCTime endTime startTime))
           _ -> Nothing
       }
+
+-- | Whether a ride's money counts in the online (in-app) or cash columns. Cash and booth payments
+-- are offline; with no instrument, fall back to the ride's flag. Every per-ride amount (fare, fees,
+-- tax, TDS) uses this so they all land in the same bucket.
+isOnlineRide :: DR.Ride -> DBooking.Booking -> Bool
+isOnlineRide ride booking = case booking.paymentInstrument of
+  Just DMPM.Cash -> False
+  Just DMPM.BoothOnline -> False
+  Nothing -> ride.onlinePayment
+  _ -> True
+
+-- | (cash, online) amounts to subtract from gross earnings to get net, per the city's
+-- analyticsConfig.netEarningsDeductions. Each kind is counted once however often it is listed.
+netEarningsDeductionAmounts ::
+  [DTCExtra.EarningsDeduction] ->
+  Maybe HighPrecMoney -> -- cash platform fees
+  Maybe HighPrecMoney -> -- online platform fees
+  QFleetOpsDailyExtra.DeductionSums ->
+  (HighPrecMoney, HighPrecMoney)
+netEarningsDeductionAmounts deductions cashPlatformFees onlinePlatformFees sums =
+  let pick kind (cash, online) = if kind `elem` deductions then (fromMaybe 0 cash, fromMaybe 0 online) else (0, 0)
+      parts =
+        [ pick DTCExtra.DeductPlatformFees (cashPlatformFees, onlinePlatformFees),
+          pick DTCExtra.DeductGST (sums.cashGstSum, sums.onlineGstSum),
+          pick DTCExtra.DeductVAT (sums.cashVatSum, sums.onlineVatSum),
+          pick DTCExtra.DeductTDS (sums.cashTdsSum, sums.onlineTdsSum)
+        ]
+   in (sum (map fst parts), sum (map snd parts))
 
 -- Helper: build initial FleetOperatorStats row for an operator from a ride
 buildInitialFleetOperatorStats :: (MonadFlow m) => Text -> DTTC.TransporterConfig -> m DFS.FleetOperatorStats
@@ -306,6 +335,12 @@ buildInitialFleetOperatorDailyStats fleetOperatorId fleetDriverId merchantLocalD
         cashTotalEarning = Nothing,
         cashPlatformFees = Nothing,
         onlinePlatformFees = Nothing,
+        cashGst = Nothing,
+        onlineGst = Nothing,
+        cashVat = Nothing,
+        onlineVat = Nothing,
+        cashTds = Nothing,
+        onlineTds = Nothing,
         onlineDuration = Nothing,
         rideDuration = Nothing,
         currency = Just transporterConfig.currency,
@@ -430,60 +465,95 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId rideStats tr
   statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOperatorId driverId merchantLocalDate
   let (mbFleetStats, mbDriverStats) = separateFleetAndDriverStats fleetOperatorId driverId statsList
 
-  -- Helper function to compute new earning/distance/rides
-  let computeNewEarningDistanceRides stats =
-        let newTotalCompletedRides = Just (fromMaybe 0 stats.totalCompletedRides + 1)
-            newTotalDistance = Just (fromMaybe 0 stats.totalDistance + rideStats.distance)
-            newOnlineTotalEarning = Just (fromMaybe 0 stats.onlineTotalEarning + onlineEarningIncrement)
-            newCashTotalEarning = Just (fromMaybe 0 stats.cashTotalEarning + cashEarningIncrement)
-            newCashPlatformFees = Just (fromMaybe 0 stats.cashPlatformFees + cashPlatformFeeIncrement)
-            newOnlinePlatformFees = Just (fromMaybe 0 stats.onlinePlatformFees + onlinePlatformFeeIncrement)
-            newRideDuration = case (stats.rideDuration, rideDuration) of
+  -- The ride's GST or VAT (whichever regime its fare used), split by payment type like the fare.
+  let rideTax = fromMaybe 0 rideStats.taxAmount
+      (gstIncrement, vatIncrement) = if fromMaybe False rideStats.isVatTax then (0, rideTax) else (rideTax, 0)
+      (onlineGstIncrement, cashGstIncrement) = splitByPayment gstIncrement
+      (onlineVatIncrement, cashVatIncrement) = splitByPayment vatIncrement
+      splitByPayment amount = if rideStats.isOnlinePayment then (amount, 0) else (0, amount)
+      addTo old increment = Just (fromMaybe 0 old + increment)
+      initWith increment = if increment > 0 then Just increment else Nothing
+
+  -- Helper function to add this ride onto an existing row
+  let addRide stats =
+        stats
+          { DFODS.totalCompletedRides = Just (fromMaybe 0 stats.totalCompletedRides + 1),
+            DFODS.totalDistance = Just (fromMaybe 0 stats.totalDistance + rideStats.distance),
+            DFODS.onlineTotalEarning = addTo stats.onlineTotalEarning onlineEarningIncrement,
+            DFODS.cashTotalEarning = addTo stats.cashTotalEarning cashEarningIncrement,
+            DFODS.cashPlatformFees = addTo stats.cashPlatformFees cashPlatformFeeIncrement,
+            DFODS.onlinePlatformFees = addTo stats.onlinePlatformFees onlinePlatformFeeIncrement,
+            DFODS.cashGst = addTo stats.cashGst cashGstIncrement,
+            DFODS.onlineGst = addTo stats.onlineGst onlineGstIncrement,
+            DFODS.cashVat = addTo stats.cashVat cashVatIncrement,
+            DFODS.onlineVat = addTo stats.onlineVat onlineVatIncrement,
+            DFODS.rideDuration = case (stats.rideDuration, rideDuration) of
               (Just existingDuration, Just newDuration) -> Just (existingDuration + newDuration)
               (Nothing, Just newDuration) -> Just newDuration
               (Just existingDuration, Nothing) -> Just existingDuration
               (Nothing, Nothing) -> Nothing
-         in (newTotalDistance, newOnlineTotalEarning, newCashTotalEarning, newTotalCompletedRides, newCashPlatformFees, newOnlinePlatformFees, newRideDuration)
+          }
 
   -- Helper function to set initial earning/distance/rides
   let setInitEarningDistanceRides stats =
         stats
           { DFODS.totalCompletedRides = Just 1,
             DFODS.totalDistance = Just rideStats.distance,
-            DFODS.onlineTotalEarning = if onlineEarningIncrement > 0 then Just onlineEarningIncrement else Nothing,
-            DFODS.cashTotalEarning = if cashEarningIncrement > 0 then Just cashEarningIncrement else Nothing,
-            DFODS.cashPlatformFees = if cashPlatformFeeIncrement > 0 then Just cashPlatformFeeIncrement else Nothing,
-            DFODS.onlinePlatformFees = if onlinePlatformFeeIncrement > 0 then Just onlinePlatformFeeIncrement else Nothing,
+            DFODS.onlineTotalEarning = initWith onlineEarningIncrement,
+            DFODS.cashTotalEarning = initWith cashEarningIncrement,
+            DFODS.cashPlatformFees = initWith cashPlatformFeeIncrement,
+            DFODS.onlinePlatformFees = initWith onlinePlatformFeeIncrement,
+            DFODS.cashGst = initWith cashGstIncrement,
+            DFODS.onlineGst = initWith onlineGstIncrement,
+            DFODS.cashVat = initWith cashVatIncrement,
+            DFODS.onlineVat = initWith onlineVatIncrement,
             DFODS.rideDuration = rideDuration
           }
 
+  let updateRow fleetDriverId stats = do
+        let n = addRide stats
+        QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate n.totalDistance n.onlineTotalEarning n.cashTotalEarning n.totalCompletedRides n.cashPlatformFees n.onlinePlatformFees n.cashGst n.onlineGst n.cashVat n.onlineVat n.rideDuration fleetOperatorId fleetDriverId merchantLocalDate
+
   -- Update or create fleet-level stats
-  updateOrCreateFleetDriverStats
-    fleetOperatorId
-    fleetOperatorId
-    merchantLocalDate
-    transporterConfig
-    nowUTCTime
-    mbFleetStats
-    ( \fleetStats -> do
-        let (newDistance, newOnlineEarning, newCashEarning, newRides, newCash, newOnline, newRideDur) = computeNewEarningDistanceRides fleetStats
-        QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate newDistance newOnlineEarning newCashEarning newRides newCash newOnline newRideDur fleetOperatorId fleetOperatorId merchantLocalDate
-    )
-    setInitEarningDistanceRides
+  updateOrCreateFleetDriverStats fleetOperatorId fleetOperatorId merchantLocalDate transporterConfig nowUTCTime mbFleetStats (updateRow fleetOperatorId) setInitEarningDistanceRides
 
   -- Update or create driver-level stats
-  updateOrCreateFleetDriverStats
-    fleetOperatorId
-    driverId
-    merchantLocalDate
-    transporterConfig
-    nowUTCTime
-    mbDriverStats
-    ( \driverStats -> do
-        let (newDistance, newOnlineEarning, newCashEarning, newRides, newCash, newOnline, newRideDur) = computeNewEarningDistanceRides driverStats
-        QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate newDistance newOnlineEarning newCashEarning newRides newCash newOnline newRideDur fleetOperatorId driverId merchantLocalDate
-    )
-    setInitEarningDistanceRides
+  updateOrCreateFleetDriverStats fleetOperatorId driverId merchantLocalDate transporterConfig nowUTCTime mbDriverStats (updateRow driverId) setInitEarningDistanceRides
+
+-- | TDS for one ride, known only once the end-ride finance job has run. It lands on the ride's own
+-- merchant-local date, so a job that runs late (or after midnight) still nets against that day's fare.
+data TdsDeductedStats = TdsDeductedStats
+  { rideId :: Text,
+    driverId :: Text,
+    tdsAmount :: HighPrecMoney,
+    isOnlinePayment :: Bool,
+    merchantLocalDate :: Day
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+-- Daily: add a ride's TDS to the fleet/operator row and the driver row of the ride's date
+incrementTdsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> TdsDeductedStats -> DTTC.TransporterConfig -> m ()
+incrementTdsDaily fleetOperatorId tdsStats transporterConfig = do
+  nowUTCTime <- getCurrentTime
+  let driverId = tdsStats.driverId
+      merchantLocalDate = tdsStats.merchantLocalDate
+      (onlineTdsIncrement, cashTdsIncrement) = if tdsStats.isOnlinePayment then (tdsStats.tdsAmount, 0) else (0, tdsStats.tdsAmount)
+  statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOperatorId driverId merchantLocalDate
+  let (mbFleetStats, mbDriverStats) = separateFleetAndDriverStats fleetOperatorId driverId statsList
+      updateRow fleetDriverId stats =
+        QFleetOpsDaily.updateTdsByFleetOperatorIdAndDate
+          (Just (fromMaybe 0 stats.cashTds + cashTdsIncrement))
+          (Just (fromMaybe 0 stats.onlineTds + onlineTdsIncrement))
+          fleetOperatorId
+          fleetDriverId
+          merchantLocalDate
+      setInitTds stats =
+        stats
+          { DFODS.cashTds = if cashTdsIncrement > 0 then Just cashTdsIncrement else Nothing,
+            DFODS.onlineTds = if onlineTdsIncrement > 0 then Just onlineTdsIncrement else Nothing
+          }
+  updateOrCreateFleetDriverStats fleetOperatorId fleetOperatorId merchantLocalDate transporterConfig nowUTCTime mbFleetStats (updateRow fleetOperatorId) setInitTds
+  updateOrCreateFleetDriverStats fleetOperatorId driverId merchantLocalDate transporterConfig nowUTCTime mbDriverStats (updateRow driverId) setInitTds
 
 -- Daily: increment total rating count and total rating score
 incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()

@@ -409,6 +409,7 @@ data AnalyticsConfig = AnalyticsConfig
     enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     financialYearStartMonth :: Kernel.Prelude.Int,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
+    netEarningsDeductions :: [Domain.Types.Extra.TransporterConfig.EarningsDeduction],
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     useDbForEarningAndMetrics :: Kernel.Prelude.Bool,
     weekStartMode :: Kernel.Prelude.Int

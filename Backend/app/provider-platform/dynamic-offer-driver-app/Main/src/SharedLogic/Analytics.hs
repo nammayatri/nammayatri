@@ -158,6 +158,8 @@ data PeriodRes = PeriodRes
 -- fleet operator dashboard analytics is enabled. The fleet-analytics consumer applies it.
 data FleetOperatorAnalytics
   = RideCompleted (Id DP.Person) SFleetOperatorStats.CompletedRideStats
+  | -- Published by the end-ride (or cancel-ride) finance step once the ride's TDS is final.
+    TdsDeducted (Id DP.Person) SFleetOperatorStats.TdsDeductedStats
   | DriverCancelled (Id DP.Person) Text
   | CustomerCancelled (Id DP.Person) Text
   | -- Drivers, search try id, and searchBatchKey of the dispatch. A search try sends
@@ -263,6 +265,9 @@ applyFleetOperatorAnalytics transporterConfig claimEntity fact =
       forOperatorAndFleet "AnalyticsUpdateTotalRideCount" driverId [(TOTAL_RIDE_COUNT, 1)] $ \entityId -> do
         SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning entityId rideStats transporterConfig
         SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily entityId rideStats transporterConfig
+    TdsDeducted driverId tdsStats ->
+      forOperatorAndFleet "AnalyticsUpdateTds" driverId [] $ \entityId ->
+        SFleetOperatorStats.incrementTdsDaily entityId tdsStats transporterConfig
   where
     forOperatorAndFleet tag driverId operatorCounters step = do
       operatorIds <- findOperatorIdForDriver driverId
@@ -313,6 +318,7 @@ searchBatchKey searchRequestForDriverIds =
 fleetEventId :: FleetOperatorAnalytics -> Text
 fleetEventId = \case
   RideCompleted _ rideStats -> "ride.completed:" <> rideStats.rideId
+  TdsDeducted _ tdsStats -> "tds.deducted:" <> tdsStats.rideId
   DriverCancelled _ rideId -> "ride.cancelled:" <> rideId
   CustomerCancelled _ rideId -> "ride.customerCancelled:" <> rideId
   SearchRequested _ searchTryId batchKey -> "search.requested:" <> searchTryId <> ":" <> batchKey

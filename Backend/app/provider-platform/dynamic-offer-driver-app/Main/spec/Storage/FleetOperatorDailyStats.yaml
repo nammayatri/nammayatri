@@ -32,6 +32,12 @@ FleetOperatorDailyStats:
     cashTotalEarning : Maybe HighPrecMoney
     cashPlatformFees : Maybe HighPrecMoney
     onlinePlatformFees : Maybe HighPrecMoney
+    cashGst : Maybe HighPrecMoney
+    onlineGst : Maybe HighPrecMoney
+    cashVat : Maybe HighPrecMoney
+    onlineVat : Maybe HighPrecMoney
+    cashTds : Maybe HighPrecMoney
+    onlineTds : Maybe HighPrecMoney
     onlineDuration : Maybe Seconds
     rideDuration : Maybe Seconds
     currency : Maybe Currency
@@ -111,7 +117,7 @@ FleetOperatorDailyStats:
 
     updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalDistance, onlineTotalEarning, cashTotalEarning, totalCompletedRides, cashPlatformFees, onlinePlatformFees, rideDuration]
+      params: [totalDistance, onlineTotalEarning, cashTotalEarning, totalCompletedRides, cashPlatformFees, onlinePlatformFees, cashGst, onlineGst, cashVat, onlineVat, rideDuration]
       where:
         and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
@@ -124,5 +130,11 @@ FleetOperatorDailyStats:
     updateOnlineDurationByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [onlineDuration]
+      where:
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
+
+    updateTdsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [cashTds, onlineTds]
       where:
         and: [fleetOperatorId, fleetDriverId, merchantLocalDate]

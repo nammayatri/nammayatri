@@ -24,6 +24,21 @@ import Lib.Yudhishthira.TypesTH (GenericDefaults (..))
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
+-- | What fleet analytics subtracts from gross earnings to get net (analyticsConfig.netEarningsDeductions).
+-- Constructors are prefixed so they can't clash with the tax types (GST, VAT) or the driver-fee
+-- PlatformFee; in config JSON they are plain "GST", "VAT", "TDS" and "PlatformFees".
+data EarningsDeduction = DeductGST | DeductVAT | DeductTDS | DeductPlatformFees
+  deriving (Generic, Show, Read, Eq, Ord, Enum, Bounded)
+
+earningsDeductionOptions :: Options
+earningsDeductionOptions = defaultOptions {constructorTagModifier = drop (length ("Deduct" :: String))}
+
+instance ToJSON EarningsDeduction where
+  toJSON = genericToJSON earningsDeductionOptions
+
+instance FromJSON EarningsDeduction where
+  parseJSON = genericParseJSON earningsDeductionOptions
+
 data TdsConfig = TdsConfig {rate :: Double, thresholdAmount :: Maybe HighPrecMoney}
   deriving (Generic, Show, ToJSON, Read, Eq)
 

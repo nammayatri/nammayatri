@@ -77,6 +77,12 @@ CREATE TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats (
     `cash_total_earning` Nullable(Float64),
     `cash_platform_fees` Nullable(Float64),
     `online_platform_fees` Nullable(Float64),
+    `cash_gst` Nullable(Float64),
+    `online_gst` Nullable(Float64),
+    `cash_vat` Nullable(Float64),
+    `online_vat` Nullable(Float64),
+    `cash_tds` Nullable(Float64),
+    `online_tds` Nullable(Float64),
     `online_duration` Nullable(Int64),
     `total_rating_score` Nullable(Int64),
     `ride_duration` Nullable(Int64),
@@ -340,6 +346,12 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fleet_operator_daily_stats_que
     `cash_total_earning` Nullable(Float64),
     `cash_platform_fees` Nullable(Float64),
     `online_platform_fees` Nullable(Float64),
+    `cash_gst` Nullable(Float64),
+    `online_gst` Nullable(Float64),
+    `cash_vat` Nullable(Float64),
+    `online_vat` Nullable(Float64),
+    `cash_tds` Nullable(Float64),
+    `online_tds` Nullable(Float64),
     `online_duration` Nullable(Int64),
     `total_rating_score` Nullable(Int64),
     `ride_duration` Nullable(Int64),
@@ -349,7 +361,7 @@ SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.fleet_operator_daily_stats_mv
 TO atlas_driver_offer_bpp.fleet_operator_daily_stats AS
-SELECT fleet_operator_id, fleet_driver_id, merchant_local_date, rejected_request_count, pulled_request_count, acceptation_request_count, total_request_count, customer_cancellation_count, driver_cancellation_count, total_distance, total_completed_rides, online_total_earning, cash_total_earning, cash_platform_fees, online_platform_fees, online_duration, total_rating_score, ride_duration, updated_at AS version
+SELECT fleet_operator_id, fleet_driver_id, merchant_local_date, rejected_request_count, pulled_request_count, acceptation_request_count, total_request_count, customer_cancellation_count, driver_cancellation_count, total_distance, total_completed_rides, online_total_earning, cash_total_earning, cash_platform_fees, online_platform_fees, cash_gst, online_gst, cash_vat, online_vat, cash_tds, online_tds, online_duration, total_rating_score, ride_duration, updated_at AS version
 FROM atlas_driver_offer_bpp.fleet_operator_daily_stats_queue;
 
 -- driver_operator_association -----------------------------------------------

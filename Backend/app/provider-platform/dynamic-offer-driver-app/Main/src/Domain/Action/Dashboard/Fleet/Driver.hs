@@ -224,6 +224,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
 import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -2298,10 +2299,12 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
           cashPlatformFees = agg.cashPlatformFeesSum
           onlinePlatformFees = agg.onlinePlatformFeesSum
           platformFeeTotal = liftA2 (+) cashPlatformFees onlinePlatformFees
-          totalEarningNet = liftA2 (-) totalEarningGross platformFeeTotal
+          (cashDeduction, onlineDeduction) =
+            SFleetOperatorStats.netEarningsDeductionAmounts config.analyticsConfig.netEarningsDeductions cashPlatformFees onlinePlatformFees agg.deductionSums
+          totalEarningNet = subtract (cashDeduction + onlineDeduction) <$> totalEarningGross
           inAppEarningGross = onlineEarningGross
-          inAppEarningNet = liftA2 (-) inAppEarningGross onlinePlatformFees
-          cashEarningNet = liftA2 (-) cashEarningGross cashPlatformFees
+          inAppEarningNet = subtract onlineDeduction <$> inAppEarningGross
+          cashEarningNet = subtract cashDeduction <$> cashEarningGross
        in ( agg.driverId,
             Common.FleetDriverEarningsStatsRes
               { driverName = "", -- Will be set later
@@ -4341,7 +4344,13 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbRequestor
             earningsAgg.onlineDurationSum >>= \(Seconds sec) ->
               let hours = fromIntegral sec / 3600
                in if hours > 0 then Just hours else Nothing
-          netEarningsAmount = liftA2 (-) grossEarningsAmount totalPlatformFeesAmount
+          (cashDeduction, onlineDeduction) =
+            SFleetOperatorStats.netEarningsDeductionAmounts
+              transporterConfig.analyticsConfig.netEarningsDeductions
+              cashPlatformFeesAmount
+              onlinePlatformFeesAmount
+              earningsAgg.fleetDeductionSums
+          netEarningsAmount = subtract (cashDeduction + onlineDeduction) <$> grossEarningsAmount
           grossEarningsPerHourAmount =
             grossEarningsAmount >>= \gross ->
               onlineDurationInHours <&> \hours -> gross / HighPrecMoney hours

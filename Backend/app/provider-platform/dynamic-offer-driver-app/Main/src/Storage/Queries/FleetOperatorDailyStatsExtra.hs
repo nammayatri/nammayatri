@@ -46,6 +46,24 @@ findByFleetOperatorIdAndDateWithDriverIdsIn fleetOperatorId driverIds merchantLo
         ]
     ]
 
+-- | Summed GST / VAT / TDS columns, split by payment type. Net earnings subtract the ones the
+-- city's analyticsConfig.netEarningsDeductions lists.
+data DeductionSums = DeductionSums
+  { cashGstSum :: Maybe HighPrecMoney,
+    onlineGstSum :: Maybe HighPrecMoney,
+    cashVatSum :: Maybe HighPrecMoney,
+    onlineVatSum :: Maybe HighPrecMoney,
+    cashTdsSum :: Maybe HighPrecMoney,
+    onlineTdsSum :: Maybe HighPrecMoney
+  }
+  deriving (Show, Generic)
+
+emptyDeductionSums :: DeductionSums
+emptyDeductionSums = DeductionSums Nothing Nothing Nothing Nothing Nothing Nothing
+
+mkDeductionSums :: (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) -> DeductionSums
+mkDeductionSums (cgst, ogst, cvat, ovat, ctds, otds) = DeductionSums cgst ogst cvat ovat ctds otds
+
 -- Aggregate earnings by driverId for a fleet owner
 data DriverEarningsAggregated = DriverEarningsAggregated
   { driverId :: Text,
@@ -53,19 +71,21 @@ data DriverEarningsAggregated = DriverEarningsAggregated
     cashTotalEarningSum :: Maybe HighPrecMoney,
     cashPlatformFeesSum :: Maybe HighPrecMoney,
     onlinePlatformFeesSum :: Maybe HighPrecMoney,
-    onlineDurationSum :: Maybe Seconds
+    onlineDurationSum :: Maybe Seconds,
+    deductionSums :: DeductionSums
   }
   deriving (Show, Generic)
 
-mkDriverEarningsAggregated :: (Text, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Seconds) -> DriverEarningsAggregated
-mkDriverEarningsAggregated (driverId, te, ct, cpf, opf, od) =
+mkDriverEarningsAggregated :: (Text, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Seconds) -> DeductionSums -> DriverEarningsAggregated
+mkDriverEarningsAggregated (driverId, te, ct, cpf, opf, od) deductions =
   DriverEarningsAggregated
     { driverId = driverId,
       onlineTotalEarningSum = te,
       cashTotalEarningSum = ct,
       cashPlatformFeesSum = cpf,
       onlinePlatformFeesSum = opf,
-      onlineDurationSum = od
+      onlineDurationSum = od,
+      deductionSums = deductions
     }
 
 sumDriverEarningsByFleetOwnerIdAndDriverIds ::
@@ -89,7 +109,14 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashPlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlinePlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
-                  B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0)))
+                  B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
+                  ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashGst stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineGst stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashVat stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineVat stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTds stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTds stats] (B.val_ (HighPrecMoney 0.0)))
+                  )
                 )
             )
             $ B.filter_'
@@ -101,7 +128,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
               )
               $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
-    Right results -> pure $ map (\(_, fleetDriverId, te, ct, cpf, opf, od) -> mkDriverEarningsAggregated (fleetDriverId, te, ct, cpf, opf, od)) results
+    Right results -> pure $ map (\(_, fleetDriverId, te, ct, cpf, opf, od, deductions) -> mkDriverEarningsAggregated (fleetDriverId, te, ct, cpf, opf, od) (mkDeductionSums deductions)) results
     Left err -> do
       logTagError
         "FleetOperatorDailyStats"
@@ -226,7 +253,14 @@ sumDriverEarningsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toD
                         B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
                         B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashPlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
                         B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlinePlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
-                        B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0)))
+                        B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
+                        ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashGst stats] (B.val_ (HighPrecMoney 0.0))),
+                          B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineGst stats] (B.val_ (HighPrecMoney 0.0))),
+                          B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashVat stats] (B.val_ (HighPrecMoney 0.0))),
+                          B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineVat stats] (B.val_ (HighPrecMoney 0.0))),
+                          B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTds stats] (B.val_ (HighPrecMoney 0.0))),
+                          B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTds stats] (B.val_ (HighPrecMoney 0.0)))
+                        )
                       )
                   )
                   $ B.filter_'
@@ -238,7 +272,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toD
                     )
                     $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
-    Right results -> pure $ map (\(_, fleetDriverId, te, ct, cpf, opf, od) -> mkDriverEarningsAggregated (fleetDriverId, te, ct, cpf, opf, od)) results
+    Right results -> pure $ map (\(_, fleetDriverId, te, ct, cpf, opf, od, deductions) -> mkDriverEarningsAggregated (fleetDriverId, te, ct, cpf, opf, od) (mkDeductionSums deductions)) results
     Left err -> do
       logTagError
         "FleetOperatorDailyStats"
@@ -249,7 +283,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toD
   where
     sortDescFlag = fromMaybe False mbSortDesc
 
-    orderClause sortFlag sortOnField (_, _, onlineEarning, cashEarning, cashFees, onlineFees, _onlineDuration) =
+    orderClause sortFlag sortOnField (_, _, onlineEarning, cashEarning, cashFees, onlineFees, _onlineDuration, _deductions) =
       let column =
             case sortOnField of
               Just Common.CASH_TOTAL_EARNING -> cashEarning
@@ -427,7 +461,8 @@ data DailyFleetEarningsAggregated = DailyFleetEarningsAggregated
   { totalEarningSum :: Maybe HighPrecMoney,
     cashPlatformFeesSum :: Maybe HighPrecMoney,
     onlinePlatformFeesSum :: Maybe HighPrecMoney,
-    onlineDurationSum :: Maybe Seconds
+    onlineDurationSum :: Maybe Seconds,
+    fleetDeductionSums :: DeductionSums
   }
   deriving (Show, Generic)
 
@@ -445,13 +480,15 @@ mkDailyFleetEarningsAggregated ::
     Maybe HighPrecMoney,
     Maybe Seconds
   ) ->
+  DeductionSums ->
   DailyFleetEarningsAggregated
-mkDailyFleetEarningsAggregated (ote, cte, cpf, opf, od) =
+mkDailyFleetEarningsAggregated (ote, cte, cpf, opf, od) deductions =
   DailyFleetEarningsAggregated
     { totalEarningSum = getTotalEarningSum ote cte,
       cashPlatformFeesSum = cpf,
       onlinePlatformFeesSum = opf,
-      onlineDurationSum = od
+      onlineDurationSum = od,
+      fleetDeductionSums = deductions
     }
 
 sumFleetEarningsByFleetOwnerIdAndDateRangeDB ::
@@ -477,7 +514,14 @@ sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
                   B.as_ @(Maybe HighPrecMoney) $
                     B.sum_ (B.coalesce_ [Beam.onlinePlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
                   B.as_ @(Maybe Seconds) $
-                    B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0)))
+                    B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
+                  ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashGst stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineGst stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashVat stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineVat stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTds stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTds stats] (B.val_ (HighPrecMoney 0.0)))
+                  )
                 )
             )
             $ B.filter_'
@@ -491,17 +535,17 @@ sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
   case res of
     Right rows ->
       case listToMaybe rows of
-        Just (onlineTot, cashTot, cashFees, onlineFees, od) ->
-          pure $ mkDailyFleetEarningsAggregated (onlineTot, cashTot, cashFees, onlineFees, od)
+        Just (onlineTot, cashTot, cashFees, onlineFees, od, deductions) ->
+          pure $ mkDailyFleetEarningsAggregated (onlineTot, cashTot, cashFees, onlineFees, od) (mkDeductionSums deductions)
         Nothing ->
-          pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+          pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing emptyDeductionSums
     Left err -> do
       logTagError
         "FleetOperatorDailyStats"
         ( "DB failure in sumFleetEarningsByFleetOwnerIdAndDateRangeDB. Error: "
             <> show err
         )
-      pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+      pure $ DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing emptyDeductionSums
 
 sumApprovedVehicleAndDriverRequestsByFleetOperatorIdsAndDateRangeDB ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

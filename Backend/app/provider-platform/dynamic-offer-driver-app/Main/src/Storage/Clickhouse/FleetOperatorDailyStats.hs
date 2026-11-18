@@ -32,6 +32,12 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     cashTotalEarning :: C f (Maybe HighPrecMoney),
     cashPlatformFees :: C f (Maybe HighPrecMoney),
     onlinePlatformFees :: C f (Maybe HighPrecMoney),
+    cashGst :: C f (Maybe HighPrecMoney),
+    onlineGst :: C f (Maybe HighPrecMoney),
+    cashVat :: C f (Maybe HighPrecMoney),
+    onlineVat :: C f (Maybe HighPrecMoney),
+    cashTds :: C f (Maybe HighPrecMoney),
+    onlineTds :: C f (Maybe HighPrecMoney),
     onlineDuration :: C f (Maybe Seconds),
     totalRatingScore :: C f (Maybe Int),
     totalRatingCount :: C f (Maybe Int),
@@ -63,6 +69,12 @@ fleetOperatorDailyStatsTTable =
       cashTotalEarning = "cash_total_earning",
       cashPlatformFees = "cash_platform_fees",
       onlinePlatformFees = "online_platform_fees",
+      cashGst = "cash_gst",
+      onlineGst = "online_gst",
+      cashVat = "cash_vat",
+      onlineVat = "online_vat",
+      cashTds = "cash_tds",
+      onlineTds = "online_tds",
       onlineDuration = "online_duration",
       totalRatingScore = "total_rating_score",
       totalRatingCount = "total_rating_count",
@@ -173,7 +185,13 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
                 CH.sum_ fos.cashTotalEarning,
                 CH.sum_ fos.cashPlatformFees,
                 CH.sum_ fos.onlinePlatformFees,
-                CH.sum_ fos.onlineDuration
+                CH.sum_ fos.onlineDuration,
+                CH.sum_ fos.cashGst,
+                CH.sum_ fos.onlineGst,
+                CH.sum_ fos.cashVat,
+                CH.sum_ fos.onlineVat,
+                CH.sum_ fos.cashTds,
+                CH.sum_ fos.onlineTds
               )
         )
         $ CH.filter_
@@ -184,7 +202,11 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (listToMaybe res)
+  pure $
+    maybe
+      (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing FODSE.emptyDeductionSums)
+      (\(ote, cte, cpf, opf, od, cgst, ogst, cvat, ovat, ctds, otds) -> FODSE.mkDailyFleetEarningsAggregated (ote, cte, cpf, opf, od) (FODSE.mkDeductionSums (cgst, ogst, cvat, ovat, ctds, otds)))
+      (listToMaybe res)
 
 sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -198,7 +220,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   Maybe Common.FleetDriverListStatsSortOn ->
   m [FODSE.DriverEarningsAggregated]
 sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay limit offset mbSortDesc mbSortOn = do
-  let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) = case mbSortOn of
+  let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration, _, _, _, _, _, _) = case mbSortOn of
         Just Common.ONLINE_TOTAL_EARNING -> castSortBy mbSortDesc onlineTotalEarning
         Just Common.CASH_TOTAL_EARNING -> castSortBy mbSortDesc cashTotalEarning
         Just Common.CASH_PLATFORM_FEES -> castSortBy mbSortDesc cashPlatformFees
@@ -215,8 +237,14 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
                 cashPlatformFees = CH.sum_ fos.cashPlatformFees
                 onlinePlatformFees = CH.sum_ fos.onlinePlatformFees
                 onlineDuration = CH.sum_ fos.onlineDuration
+                cashGst = CH.sum_ fos.cashGst
+                onlineGst = CH.sum_ fos.onlineGst
+                cashVat = CH.sum_ fos.cashVat
+                onlineVat = CH.sum_ fos.onlineVat
+                cashTds = CH.sum_ fos.cashTds
+                onlineTds = CH.sum_ fos.onlineTds
             CH.groupBy (fos.fleetOperatorId, fos.fleetDriverId) $ \(fleetOperatorId, fleetDriverId) -> do
-              (fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration)
+              (fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration, cashGst, onlineGst, cashVat, onlineVat, cashTds, onlineTds)
         )
         $ CH.orderBy_ sortOn $
           CH.limit_ limit $
@@ -229,7 +257,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
                       CH.&&. fos.merchantLocalDate CH.<=. toDay
                 )
                 (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ map (\(_fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) -> FODSE.mkDriverEarningsAggregated (fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration)) res
+  pure $ map (\(_fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration, cashGst, onlineGst, cashVat, onlineVat, cashTds, onlineTds) -> FODSE.mkDriverEarningsAggregated (fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) (FODSE.mkDeductionSums (cashGst, onlineGst, cashVat, onlineVat, cashTds, onlineTds))) res
 
 castSortBy :: forall ord. (CH.ClickhouseQuery ord, CH.IsOrderColumns ord) => Maybe Bool -> ord -> CH.OrderBy 'CH.ORDERED
 castSortBy mbSortDesc = case mbSortDesc of

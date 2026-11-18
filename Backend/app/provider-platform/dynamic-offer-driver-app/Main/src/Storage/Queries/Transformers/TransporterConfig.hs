@@ -45,6 +45,7 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
             allowCacheDriverFlowStatus = False,
             enableFleetOperatorDashboardAnalytics = False,
             maxOnlineDurationDays = 10,
+            netEarningsDeductions = [Extra.DeductPlatformFees],
             onlineDurationCalculateFrom = Nothing,
             useDbForEarningAndMetrics = False
           }

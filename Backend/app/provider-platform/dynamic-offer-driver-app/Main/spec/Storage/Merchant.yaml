@@ -51,6 +51,7 @@ imports:
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
   TdsConfig: Domain.Types.Extra.TransporterConfig
+  EarningsDeduction: Domain.Types.Extra.TransporterConfig
   RecomputePolicy: Domain.Types.Extra.TransporterConfig
   FareBreakupNode: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
@@ -1074,6 +1075,7 @@ TransporterConfig:
       maxOnlineDurationDays: Int
       useDbForEarningAndMetrics: Bool
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
+      netEarningsDeductions: "[EarningsDeduction]" # subtracted from gross to get net earnings in fleet analytics, e.g. ["GST","VAT","TDS","PlatformFees"]; defaults to ["PlatformFees"]
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ScheduledRideVisibilityRules:
       requiresWalletBalance: Maybe Bool

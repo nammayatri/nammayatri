@@ -108,6 +108,7 @@ import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
@@ -126,6 +127,7 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
@@ -538,6 +540,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 
 createDriverWalletTransaction ::
   ( EsqDBFlow m r,
+    HasKafkaProducer r,
     CacheFlow m r,
     EncFlow m r,
     Finance.HasActorInfo m r,
@@ -667,6 +670,21 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             processedAt <- getCurrentTime
             whenJust ride.fareParametersId $ QFare.updateTdsDeduction mbAmount effectiveTdsRate processedAt
             pure mbAmount
+
+    -- Fleet analytics: TDS is final only now, after the ride-completed stats were written, so it
+    -- reaches the daily stats as its own fact. A retried job republishes the same event id, which
+    -- the consumer applies once.
+    whenJust mbTdsAmount $ \tdsAmount ->
+      when (tdsAmount > 0) $
+        Analytics.recordFleetOperatorAnalytics transporterConfig $
+          Analytics.TdsDeducted ride.driverId $
+            SFleetOperatorStats.TdsDeductedStats
+              { rideId = ride.id.getId,
+                driverId = ride.driverId.getId,
+                tdsAmount,
+                isOnlinePayment = SFleetOperatorStats.isOnlineRide ride booking,
+                merchantLocalDate = rideLocalDate
+              }
 
     rideGstBreakdown <-
       computeGstBreakdownForRideOwner
