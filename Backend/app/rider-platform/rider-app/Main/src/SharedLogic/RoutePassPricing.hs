@@ -5,6 +5,7 @@ module SharedLogic.RoutePassPricing
     resolveRoutePassTerm,
     resolveValidityDays,
     normaliseStopCode,
+    stopNameForError,
   )
 where
 
@@ -16,6 +17,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Pass as DPass
 import Domain.Types.PassOverrideConfig
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Station as DStation
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow.Fare as FlowFare
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
@@ -28,6 +30,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
 import qualified SharedLogic.FRFSUtils as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error (PassError (..))
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -89,10 +92,18 @@ resolveRoutePassTerm person pass config selection = do
   void $ normaliseStopCode integratedBPPConfig sourceStopCode
   void $ normaliseStopCode integratedBPPConfig destinationStopCode
   let serviceTier = config.pricing.primaryServiceTier
-  referenceFare <- passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode
+  outboundFare <- passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode
+  referenceFare <-
+    if selection.roundTrip == Just True
+      then do
+        returnFare <- passReferenceFare person pass integratedBPPConfig serviceTier destinationStopCode sourceStopCode
+        pure (max outboundFare returnFare)
+      else pure outboundFare
   let perTripAmount = roundToUnits (max 0 (referenceFare - pricingSaving config.pricing referenceFare))
-  when (perTripAmount <= 0) $
-    throwError (PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode)
+  when (perTripAmount <= 0) $ do
+    sourceStopName <- stopNameForError integratedBPPConfig sourceStopCode
+    destinationStopName <- stopNameForError integratedBPPConfig destinationStopCode
+    throwError (PassUnserviceableBetweenRequestedStops sourceStopName destinationStopName)
   let soldBenefit =
         OverrideBenefit
           { percentageSaving = config.benefit.percentageSaving,
@@ -171,23 +182,25 @@ passReferenceFare ::
   Text ->
   Text ->
   m HighPrecMoney
-passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode = case pass.vehicleType of
-  Spec.BUS -> do
-    mbPrice <- stageFareBetweenStops integratedBPPConfig Spec.BUS serviceTier pass.merchantOperatingCityId sourceStopCode destinationStopCode
-    price <- mbPrice & fromMaybeM noFare
-    pure price.amount
-  _ -> do
-    let fareRoute =
-          CallAPI.FareRoute
-            { segments = CallAPI.BasicRouteDetail {routeCode = "", startStopCode = sourceStopCode, endStopCode = destinationStopCode, color = Nothing} :| [],
-              mbProviderRouteId = Nothing
-            }
-    (_, fares) <- FlowFare.getFares person.id pass.merchantId pass.merchantOperatingCityId integratedBPPConfig fareRoute pass.vehicleType (Just serviceTier) Nothing [] [] False True
-    let onTier = filter ((== serviceTier) . (.vehicleServiceTier.serviceTierType)) fares
-        adultPrice fare = (.price.amount) <$> find ((== ADULT) . (.category)) fare.categories
-    listToMaybe (mapMaybe adultPrice onTier) & fromMaybeM noFare
-  where
-    noFare = PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode
+passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode = do
+  mbAmount <- case pass.vehicleType of
+    Spec.BUS -> fmap (.amount) <$> stageFareBetweenStops integratedBPPConfig Spec.BUS serviceTier pass.merchantOperatingCityId sourceStopCode destinationStopCode
+    _ -> do
+      let fareRoute =
+            CallAPI.FareRoute
+              { segments = CallAPI.BasicRouteDetail {routeCode = "", startStopCode = sourceStopCode, endStopCode = destinationStopCode, color = Nothing} :| [],
+                mbProviderRouteId = Nothing
+              }
+      (_, fares) <- FlowFare.getFares person.id pass.merchantId pass.merchantOperatingCityId integratedBPPConfig fareRoute pass.vehicleType (Just serviceTier) Nothing [] [] False True
+      let onTier = filter ((== serviceTier) . (.vehicleServiceTier.serviceTierType)) fares
+          adultPrice fare = (.price.amount) <$> find ((== ADULT) . (.category)) fare.categories
+      pure $ listToMaybe (mapMaybe adultPrice onTier)
+  case mbAmount of
+    Just amount -> pure amount
+    Nothing -> do
+      sourceStopName <- stopNameForError integratedBPPConfig sourceStopCode
+      destinationStopName <- stopNameForError integratedBPPConfig destinationStopCode
+      throwError (PassUnserviceableBetweenRequestedStops sourceStopName destinationStopName)
 
 normaliseStopCode ::
   (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
@@ -196,3 +209,14 @@ normaliseStopCode ::
   m Text
 normaliseStopCode integratedBPPConfig stopCode =
   stationCodeForMatching integratedBPPConfig stopCode >>= fromMaybeM (InvalidRequest $ "Unknown stop: " <> stopCode)
+
+stopNameForError ::
+  (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
+  DIBC.IntegratedBPPConfig ->
+  Text ->
+  m Text
+stopNameForError integratedBPPConfig stopCode =
+  -- Best-effort: a station lookup failure here must not mask the PassUnserviceableBetweenRequestedStops this is building a message for.
+  withTryCatch "stopNameForError" (OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) >>= \case
+    Right (mbStation :: Maybe DStation.Station) -> pure $ maybe stopCode (.name) mbStation
+    Left _ -> pure stopCode
