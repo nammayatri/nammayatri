@@ -111,6 +111,19 @@ data EndRideOffersTagData = EndRideOffersTagData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+-- Pickup or drop point of a search, so offer rules can target places (brand name, place id, area, coordinates)
+-- without special locations. `geohash` is precision 9; a rule matches a coarser cell with {"take": [geohash, n]}.
+data SearchLocationData = SearchLocationData
+  { lat :: Double,
+    lon :: Double,
+    geohash :: Maybe Text,
+    title :: Maybe Text,
+    placeId :: Maybe Text,
+    area :: Maybe Text,
+    areaCode :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 data SearchRequestData = SearchRequestData
   { id :: Text,
     startTime :: UTCTime,
@@ -166,7 +179,9 @@ data SearchRequestData = SearchRequestData
     fromSpecialLocationId :: Maybe Text,
     toSpecialLocationId :: Maybe Text,
     discoveredSpecialLocationId :: Maybe Text,
-    discoveredDropSpecialLocationId :: Maybe Text
+    discoveredDropSpecialLocationId :: Maybe Text,
+    fromLocation :: Maybe SearchLocationData,
+    toLocation :: Maybe SearchLocationData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -420,6 +435,7 @@ instance ToJSON DRide.Ride where
 
 $(YTH.generateGenericDefault ''LoginTagData)
 $(YTH.generateGenericDefault ''RideData)
+$(YTH.generateGenericDefault ''SearchLocationData)
 $(YTH.generateGenericDefault ''SearchRequestData)
 $(YTH.generateGenericDefault ''BookingData)
 $(YTH.generateGenericDefault ''EstimateData)
