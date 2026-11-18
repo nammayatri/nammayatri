@@ -221,13 +221,13 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
-  Maybe DRide.RideStatus ->
+  [DRide.RideStatus] ->
   Maybe Day ->
   Maybe Text ->
   Maybe Int ->
   Maybe Bool ->
   m DriverRideListRes
-listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays mbFinanceData = do
+listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive rideStatuses mbDay mbFleetOwnerId mbNumOfDays mbFinanceData = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
   driverPerson <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
@@ -239,7 +239,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
     (False, Just True) -> return []
-    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
+    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive rideStatuses mbDay mbNumOfDays
 
   driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
   filteredRides <- case mbFleetOwnerId of
