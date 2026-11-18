@@ -34,6 +34,7 @@ module Tools.Maps
     getInstructionRoute,
     getMapsServiceOverrideFromTags,
     getRoutesForService,
+    getNearestPoints,
   )
 where
 
@@ -54,6 +55,7 @@ import Kernel.External.Maps as Reexport hiding
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Maps.Interface.OSRM as OSRM
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -260,6 +262,15 @@ getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 -- same provider slot as getPlaceName (geocoding).
 searchDestinations :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> SearchDestinationsReq -> m SearchDestinationsResp
 searchDestinations = runWithServiceConfig Maps.searchDestinations (.getPlaceName)
+
+getNearestPoints :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetNearestPointsReq -> m GetNearestPointsResp
+getNearestPoints merchantId merchantOperatingCityId entityId req = do
+  merchantMapsServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService Maps.OSRM)}) Nothing
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show Maps.OSRM))
+  case merchantMapsServiceConfig.serviceConfig of
+    DMSC.MapsServiceConfig (OSRMConfig osrmCfg) -> OSRM.getNearestPoints entityId (Just merchantOperatingCityId.getId) osrmCfg req
+    _ -> throwError $ InternalError "OSRM maps service config expected for nearest API"
 
 callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
 callGetRoutesWrapper isAvoidToll entityId merchantCityId = Maps.getRoutes entityId merchantCityId isAvoidToll

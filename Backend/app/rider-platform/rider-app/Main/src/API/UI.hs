@@ -33,6 +33,7 @@ import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
+import qualified API.Action.UI.NearestRoad as NearestRoad
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
 import qualified API.Action.UI.Offers as Offers
 import qualified API.Action.UI.OpenMeter as OpenMeter
@@ -188,6 +189,7 @@ type API =
            :<|> Miscellaneous.API
            :<|> NearbyDrivers.API
            :<|> NearbyBuses.API
+           :<|> NearestRoad.API
            :<|> SharedCab.API
            :<|> Places.API
            :<|> CRIS.API
@@ -332,6 +334,7 @@ handler =
     :<|> Miscellaneous.handler
     :<|> NearbyDrivers.handler
     :<|> NearbyBuses.handler
+    :<|> NearestRoad.handler
     :<|> SharedCab.handler
     :<|> Places.handler
     :<|> CRIS.handler

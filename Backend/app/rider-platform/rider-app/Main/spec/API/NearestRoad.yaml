@@ -1,0 +1,26 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+
+module: NearestRoad
+
+types:
+  NearestRoadReq:
+    location: LatLong
+    number: Maybe Int
+
+  NearestRoadResp:
+    waypoints: "[NearestRoadWaypoint]"
+
+  NearestRoadWaypoint:
+    location: LatLong
+    name: Maybe Text
+    distance: Double
+
+apis:
+  - POST:
+      endpoint: /nearestRoad
+      auth: TokenAuth
+      request:
+        type: NearestRoadReq
+      response:
+        type: NearestRoadResp
