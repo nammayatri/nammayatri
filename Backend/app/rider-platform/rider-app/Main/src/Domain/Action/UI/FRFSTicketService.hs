@@ -113,6 +113,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
+import SharedLogic.RoutePassPricing (stopNameForError)
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified SharedLogic.SharedCab as SharedCab
 import Storage.Beam.Payment ()
@@ -2425,7 +2426,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
     existingBookingResp recentWindow False >>= \case
       Just res -> pure res
       Nothing ->
-        Hedis.whenWithLockRedisAndReturnValue (PassInstantBook.lockKey req.purchasedPassPaymentId) 600 (existingBookingResp recentWindow True >>= maybe (instantBook personId merchantOperatingCity.city passRow quantity integratedBPPConfig recentWindow) pure) >>= \case
+        Hedis.whenWithLockRedisAndReturnValue (PassInstantBook.lockKey req.purchasedPassPaymentId) 600 (existingBookingResp recentWindow True >>= maybe (instantBook personId merchantOperatingCity.city passRow quantity integratedBPPConfig recentWindow payment) pure) >>= \case
           Left _ -> pure $ instantBookResp Nothing [] False True
           Right res -> pure res
   when resp.isRecentBooking $ throwError (PassRecentTicketExists recentWindow)
@@ -2469,10 +2470,10 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
           | isJust mbInProgress && not insideLock -> pure . Just $ instantBookResp Nothing recentBookingIds False True
           | otherwise -> pure Nothing
 
-    instantBook personId city passRow quantity integratedBPPConfig recentWindow = do
+    instantBook personId city passRow quantity integratedBPPConfig recentWindow payment = do
       attemptStartedAt <- getCurrentTime
       setInProgress Nothing attemptStartedAt
-      result <- withTryCatch "postFrfsPassInstantBook:bookNew" (bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt)
+      result <- withTryCatch "postFrfsPassInstantBook:bookNew" (bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt payment)
       void $ Hedis.del inProgressKey
       case result of
         Left err -> throwM err
@@ -2497,7 +2498,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
                   ]
         && not (booking.status == DFRFSTicketBooking.CONFIRMING && addUTCTime 5 booking.validTill < now)
 
-    bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt = do
+    bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt payment = do
       let vehicleType = passRow.vehicleType
       mbVehicle <- forM req.vehicleNumber $ \vehicleNumber -> do
         mbLive <-
@@ -2522,7 +2523,12 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
         Nothing
           | vehicleType == Spec.BUS -> do
             routeCodes <- FRFSUtils.stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier integratedBPPConfig.merchantOperatingCityId req.sourceStopCode req.destinationStopCode
-            routeCode <- listToMaybe routeCodes & fromMaybeM (PassUnserviceableBetweenRequestedStops req.sourceStopCode req.destinationStopCode)
+            routeCode <- case listToMaybe routeCodes of
+              Just code -> pure code
+              Nothing -> do
+                sourceStopName <- stopNameForError integratedBPPConfig req.sourceStopCode
+                destinationStopName <- stopNameForError integratedBPPConfig req.destinationStopCode
+                throwError (PassUnserviceableBetweenRequestedStops sourceStopName destinationStopName)
             pure (Just routeCode, Just routeCodes)
           | otherwise -> pure (Nothing, Nothing)
       let searchReq =
@@ -2542,7 +2548,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
               }
       searchRes <- postFrfsSearch (Just personId, merchantId) (Just city) (Just True) (Just True) (Just integratedBPPConfig.id) (pure <$> mbServiceTier) vehicleType searchReq
       setInProgress (Just searchRes.searchId) attemptStartedAt
-      quoteRes <- pickPassCoveredQuote mbServiceTier mbRouteCode searchRes.quotes
+      quoteRes <- pickPassCoveredQuote payment mbServiceTier mbRouteCode searchRes.quotes
       quote <- QFRFSQuote.findById quoteRes.quoteId >>= fromMaybeM (InvalidRequest $ "Invalid quote id: " <> quoteRes.quoteId.getId)
       quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
       let selections =
@@ -2580,16 +2586,23 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
         (sourceSequences@(_ : _), destinationSequences@(_ : _)) -> all (\destinationSequence -> all (destinationSequence <) sourceSequences) destinationSequences
         _ -> False
 
-    pickPassCoveredQuote mbServiceTier mbRouteCode quotes = do
+    pickPassCoveredQuote payment mbServiceTier mbRouteCode quotes = do
       let passOptions quote = filter (\option -> option.purchasedPassPaymentId == req.purchasedPassPaymentId) quote.applicablePasses
           fullyCovers quote = any (\option -> option.overriddenTotalPrice.amount <= 0) (passOptions quote)
           tierMatches quote = maybe True (\tier -> quote.serviceTierType == Just tier) mbServiceTier
           routeMatches quote = maybe True (\routeCode -> quote.routeCode == Just routeCode) mbRouteCode
           candidates = filter (\quote -> tierMatches quote && routeMatches quote) quotes
           covered = filter fullyCovers candidates
+          adultFare quote = find ((== ADULT) . (.categoryName)) quote.categories <&> (.categoryPrice.amount)
+          exceedsCap cap = any (maybe False (> cap) . adultFare) candidates
       case covered of
         (quote : _) -> pure quote
         []
           | null candidates -> throwError (InvalidRequest "No fare found for this trip")
           | any (not . null . passOptions) candidates -> throwError (InvalidRequest "This pass covers this trip only partially, book it with payment instead")
+          | payment.availableTripCount == Just 0 ->
+            throwError (InvalidRequest "You've used all the tickets on this pass")
+          | Just cap <- payment.maximumOverrideableFarePerTicket,
+            exceedsCap cap ->
+            throwError (InvalidRequest $ "This trip costs more than your pass covers (up to " <> show cap <> " per ticket)")
           | otherwise -> throwError (InvalidRequest "This pass cannot be used for this trip")
