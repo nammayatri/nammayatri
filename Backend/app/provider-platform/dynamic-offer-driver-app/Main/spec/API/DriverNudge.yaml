@@ -1,0 +1,68 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  DriverNudge: Domain.Types.DriverNudge
+  APISuccess: Kernel.Types.APISuccess
+  LocationUpdate: SharedLogic.External.LocationTrackingService.Types
+
+module: DriverNudge
+
+types:
+  DemandNudgeResponseReq:
+    nudgeId: Id DriverNudge
+    status: NudgeResponseStatus
+  NudgeResponseStatus:
+    enum: "ACCEPTED, DECLINED"
+  NudgeStartReq:
+    driverId: Id Person
+    merchantId: Id Merchant
+
+  NudgeEndReq:
+    driverId: Id Person
+    merchantId: Id Merchant
+
+  NudgeBulkLocUpdateReq:
+    driverId: Id Person
+    loc: "[LocationUpdate]"
+
+apis:
+  - POST:
+      endpoint: /driver/demandHotspot/response
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DemandNudgeResponseReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /internal/nudge/{nudgeId}/start
+      auth: NoAuth
+      params:
+        nudgeId: Text
+      headers:
+        x-internal-api-key: Text
+      request:
+        type: NudgeStartReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /internal/nudge/{nudgeId}/end
+      auth: NoAuth
+      params:
+        nudgeId: Text
+      headers:
+        x-internal-api-key: Text
+      request:
+        type: NudgeEndReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /internal/nudge/{nudgeId}/bulkLocUpdate
+      auth: NoAuth
+      params:
+        nudgeId: Text
+      headers:
+        api-key: Text
+      request:
+        type: NudgeBulkLocUpdateReq
+      response:
+        type: APISuccess

@@ -19,6 +19,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverNudge as DDriverNudge
 import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
@@ -34,6 +35,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
+import qualified Storage.Queries.DriverNudge as QDriverNudge
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
@@ -62,6 +64,11 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer tran
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   rideInfo <- mkInProgressRideLtsInfo ride firstPoint
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just rideInfo)
+  mbActiveNudge <- QDriverNudge.findActiveByDriverId driverId DDriverNudge.ACTIVE
+  whenJust mbActiveNudge $ \nudge ->
+    fork "nudgeEndOnRideStart" $ do
+      void $ LF.nudgeEnd nudge.id merchantId driverId
+      QDriverNudge.updateStatus DDriverNudge.COMPLETED nudge.id
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)

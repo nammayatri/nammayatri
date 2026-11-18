@@ -9,6 +9,10 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data DemandNudgeReq = DemandNudgeReq {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, timestamp :: Kernel.Prelude.UTCTime}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data GetDemandHotspotsResp = GetDemandHotspotsResp {createdAt :: Kernel.Prelude.UTCTime, enableDemandHotspots :: Kernel.Prelude.Bool, expiryAt :: Kernel.Prelude.UTCTime, hotspotsDetails :: [HotspotsDetails]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

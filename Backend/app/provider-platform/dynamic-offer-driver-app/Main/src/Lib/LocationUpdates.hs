@@ -18,6 +18,7 @@ module Lib.LocationUpdates
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
     buildRidePickupInterpolationHandler,
+    buildNudgeInterpolationHandler,
     pickupSnapEntityIdSuffix,
     editDestinationSnapEntityIdSuffix,
     approxRouteEntityIdSuffix,
@@ -380,6 +381,30 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       Nothing
       (\_driverId -> pure ())
       False -- getRecomputeIfPickupDropNotOutsideOfThreshold
+      snapToRoad'
+      (\_driverId -> pure ())
+      (\_driverId -> pure ())
+
+-- | Nudge-leg interpolation handler: snap-to-road for distance tracking only.
+-- No toll, no route-deviation, no distance written to DB — the caller handles
+-- the destination-reach check externally.
+buildNudgeInterpolationHandler :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Text -> Maybe Integer -> (HighPrecMeters -> Bool -> m ()) -> m (RideInterpolationHandler Person m)
+buildNudgeInterpolationHandler merchantOpCityId nudgeEntityId mbBatchSize onDistanceUpdate = do
+  transportConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId (Just nudgeEntityId)
+  return $
+    mkRideInterpolationHandler
+      (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
+      snapToRoadReqPoints
+      False
+      (\_driverId dist _googleCalls _osrmCalls _selfTuned failed -> onDistanceUpdate dist failed)
+      (\_driverId _tollCharges _tollNames _tollIds -> pure ())
+      (\_driverId _accurateWaypoints _allWaypoints _mbPreviousRouteSegment -> pure (True, False, False))
+      (\_mbDriverId _mbPreviousRouteSegment -> const (pure Nothing))
+      (\_driverId estimatedDistance estimatedTollInfo -> pure (estimatedDistance, estimatedTollInfo))
+      Nothing
+      (\_driverId -> pure ())
+      True
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
