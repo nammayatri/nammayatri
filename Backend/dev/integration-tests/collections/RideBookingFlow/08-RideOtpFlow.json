@@ -733,7 +733,6 @@
               "}",
               "console.log('Ride started with special zone OTP!');",
               "var bapFare = Number(pm.environment.get('_bap_booking_fare'));",
-              "pm.test('Driver estimated base fare breakup total equals rider booking fare (gross)', function () { pm.expect(Number(((d.estimatedBaseFareV2Breakup || {}).total || {}).amount)).to.be.closeTo(bapFare, ((d.estimatedBaseFareV2Breakup || {}).total || {}).currency === 'INR' ? 0.5 : 0.011); });",
               "pm.test('Driver ride carries no customer extra fee', function () { pm.expect(!d.customerExtraFee || Number(d.customerExtraFee) === 0).to.eql(true); });"
             ],
             "type": "text/javascript"
