@@ -35,6 +35,7 @@ import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -63,6 +64,8 @@ import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
+import qualified "utils" Utils.Common.RateLimit as RL
+import qualified "utils" Utils.Common.RateLimit.Redis as RLR
 import WhatsappBot.Adapter.Tracker (startWhatsAppTracker)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
@@ -167,4 +170,15 @@ runRiderApp' appCfg = do
     -- is enabled, so a separate "should this process even start" switch was
     -- redundant with logic the loop already has to do anyway.
     runFlowR flowRt' appEnv startWhatsAppTracker
-    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
+    rateLimitXffPosition <- RL.lookupClientIpPositionFromRight
+    rateLimitMiddleware <-
+      RL.rateLimitMiddleware
+        RL.RateLimitBackend
+          { fetchConfig = runFlowR flowRt' appEnv . findById,
+            incrWithExpire = \key ttl -> runFlowR flowRt' appEnv . Redis.withNonCriticalRedis $ RLR.incrWithExpireAtomic key ttl,
+            logInfoIO = runFlowR flowRt' appEnv . logInfo,
+            logErrorIO = runFlowR flowRt' appEnv . logError,
+            refreshSeconds = 10,
+            clientIpPositionFromRight = rateLimitXffPosition
+          }
+    runSettings settings $ timeoutMiddleware (rateLimitMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv)))

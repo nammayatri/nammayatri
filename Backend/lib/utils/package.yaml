@@ -63,6 +63,9 @@ dependencies:
   - generic-lens
   - bytestring
   - cryptonite
+  - hedis
+  - regex-base
+  - regex-posix
   - containers
   - euler-hs
   - exceptions
@@ -166,3 +169,23 @@ library:
     - sessionizer-metrics
     - haskell-cac
 
+
+tests:
+  utils-rate-limit-test:
+    main: Main.hs
+    source-dirs: test
+    ghc-options:
+      - -Wall
+      - -threaded
+      - -Wno-ambiguous-fields
+    dependencies:
+      - utils
+      - mobility-core
+      - hspec
+      - wai
+      - http-types
+      - containers
+      - text
+      - bytestring
+      - record-dot-preprocessor
+      - record-hasfield
