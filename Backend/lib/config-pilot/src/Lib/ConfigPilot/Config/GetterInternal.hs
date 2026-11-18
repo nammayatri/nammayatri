@@ -91,7 +91,6 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
       mbSelectedRollout <- chooseWithGroups nonBaseRollouts tossOverCumulative
       let baseRollout = find (\rollout -> rollout.isBaseVersion == Just True) allActiveRollouts
       let selectedRollouts = maybeToList mbSelectedRollout <> maybeToList baseRollout
-      when (null allActiveRollouts) $ logDebug $ "CP Log: [SELECT_NO_ROLLOUTS] domain=" <> show logicDomain <> " mocId=" <> merchantOpCityId.getId <> " -> serving raw default (no logic applied)"
       when (isNothing baseRollout) $ logDebug $ "CP Log: [SELECT_NO_BASE] domain=" <> show logicDomain <> " mocId=" <> merchantOpCityId.getId <> " -> no base version; only experiment (if any) applied"
       logDebug $ "[GETCONFIG_SELECT] domain=" <> show logicDomain <> " active=" <> show (map (\r -> (r.version, r.isBaseVersion)) allActiveRollouts) <> " base=" <> show ((.version) <$> baseRollout) <> " selected=" <> show ((.version) <$> selectedRollouts)
       pure $ (.version) <$> selectedRollouts

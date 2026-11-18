@@ -166,3 +166,17 @@ library:
     - sessionizer-metrics
     - haskell-cac
 
+tests:
+  utils-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - utils
+      - yudhishthira
+      - mobility-core
+      - time
+      - tasty
+      - tasty-hunit
+

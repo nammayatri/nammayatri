@@ -20,6 +20,8 @@ imports:
   BulkLogicRolloutResult: Lib.Yudhishthira.Types
   UpdateRolloutGroupReq: Lib.Yudhishthira.Types
   RolloutGroupInfo: Lib.Yudhishthira.Types
+  UpsertExperimentGroupConfigReq: Lib.Yudhishthira.Types
+  ExperimentGroupConfigInfo: Lib.Yudhishthira.Types
   TimeBoundResp: Lib.Yudhishthira.Types
   Chakra: Lib.Yudhishthira.Types
   KaalChakraJobRunStatus: Lib.Yudhishthira.Types.KaalChakraJobRun
@@ -281,6 +283,22 @@ apis:
         domain: LogicDomain
       response:
         type: "[RolloutGroupInfo]"
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - POST:
+      endpoint: /appDynamicLogic/upsertExperimentGroupConfig
+      auth: ApiAuthV2
+      request:
+        type: UpsertExperimentGroupConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - GET:
+      endpoint: /appDynamicLogic/experimentGroupConfigs
+      auth: ApiAuthV2
+      response:
+        type: "[ExperimentGroupConfigInfo]"
       migrate:
         capability: system-config.dynamic_logic.read
   - GET:

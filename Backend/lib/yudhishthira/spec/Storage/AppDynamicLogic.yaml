@@ -110,3 +110,41 @@ AppDynamicLogicRollout:
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
 
+
+AppDynamicLogicExperimentGroup:
+  tableName: app_dynamic_logic_experiment_group
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    groupName: Text
+    timeBounds: Text
+    rolloutPercentage: Int
+    merchantId: Maybe (Id Merchant)
+    modifiedBy: Maybe (Id Person)
+    experimentStatus: Maybe ExperimentStatus
+
+  default:
+    timeBounds: "'Unbounded'"
+    rolloutPercentage: "0"
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    groupName: PrimaryKey
+    timeBounds: PrimaryKey
+
+  queries:
+    findByMerchantOpCityAndGroup:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, groupName]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+

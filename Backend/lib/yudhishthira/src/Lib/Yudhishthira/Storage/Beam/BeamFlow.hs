@@ -19,6 +19,7 @@ import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn as BeamADAO
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as BeamADLE
+import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicExperimentGroup as BeamADLEG
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as BeamADLR
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as BeamCQ
 import qualified Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as BeamKCJR
@@ -41,6 +42,7 @@ type HasYudhishthiraTablesSchema =
   ( HasSchemaName BeamADAO.AppDynamicLogicAlwaysOnT,
     HasSchemaName BeamADLR.AppDynamicLogicRolloutT,
     HasSchemaName BeamADLE.AppDynamicLogicElementT,
+    HasSchemaName BeamADLEG.AppDynamicLogicExperimentGroupT,
     HasSchemaName BeamCQ.ChakraQueriesT,
     HasSchemaName BeamKCJR.KaalChakraJobRunT,
     HasSchemaName BeamNT.NammaTagT,

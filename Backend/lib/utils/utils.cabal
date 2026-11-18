@@ -156,3 +156,118 @@ library
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite utils-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      DynamicLogicSpec
+      Paths_utils
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , aeson-casing
+    , async
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , geohash ==1.0.1
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , jwt
+    , lens
+    , mobility-core
+    , openapi3
+    , persistent
+    , postgresql-simple
+    , process
+    , prometheus-client
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , temporary
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , utils
+    , uuid
+    , vector
+    , wai
+    , warp
+    , yudhishthira
+  default-language: Haskell2010
