@@ -318,7 +318,9 @@ the registry or the map.
   `+213 0555000199`, `probe-two-country-rides.py`). They answer real
   requests: uninstall and erase all fourteen before the first real passenger.
   **And since 2026-11-16 the virtual passenger** (`maps-shim/virtual-rider.js`,
-  the boss's request): those two passengers book real rides for a real driver
+  the boss's request): those two passengers -- and since 2026-11-18 a second
+  one per country, `+222 22778898` and `+213 0555000198`, for two requests at
+  once -- book real rides for a real driver
   to test the driver side, only while `VIRTUAL_RIDER=on` in the server's
   `.env`. Switch it off before the clean-up (`docs/runbooks/launch.md`, 3b);
   `launch-gate.sh` says no-go while it is on. Since 2026-11-18 the office runs

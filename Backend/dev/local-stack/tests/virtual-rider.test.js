@@ -24,7 +24,7 @@ const fakes = require('./lib/fakes');
 
 const SHIM = path.join(__dirname, '..', 'stack', 'maps-shim');
 const VR = path.join(SHIM, 'virtual-rider.js');
-const { run, cleanUp, parseNumber, COMMENT } = require(VR);
+const { run, cleanUp, parseNumber, COMMENT, PASSENGERS } = require(VR);
 
 const SALT = 'test-salt';
 const hash = (n) => crypto.createHash('sha256').update(SALT + n).digest();
@@ -82,6 +82,12 @@ function world(db) {
     searches: 0,
     stopped: false,
     estimate: null,
+    estimates: new Map(),
+    searchBodies: [],
+    cancelledEstimates: [],
+    signedIn: [],
+    tokens: new Set(),
+    firstNumber: '0555000199',
   };
   let n = 0;
   w.quoteFor = async (driverId) => {
@@ -134,35 +140,47 @@ async function riderApi(db, w) {
       w.requests.push([req.method, p, body]);
       const json = (status, b) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(b)); };
       let m;
-      if (p === '/v2/auth') return json(200, { authId: 'a1' });
-      if (p === '/v2/auth/a1/verify') return json(200, body && body.otp === '7891' ? { token: 'rider-token' } : {});
-      if (req.headers.token !== 'rider-token') return json(401, { errorCode: 'INVALID_TOKEN' });
-      if (p === '/v2/rideBooking/list') return json(200, { list: w.leftovers });
+      // One token per test passenger: the first is 'rider-token', the second
+      // (scenario 8) 'rider-token-<number>'.
+      if (p === '/v2/auth') { w.signedIn.push(body.mobileNumber); return json(200, { authId: `a-${body.mobileNumber}` }); }
+      if ((m = p.match(/^\/v2\/auth\/a-(\d+)\/verify$/))) {
+        const tok = m[1] === w.firstNumber ? 'rider-token' : `rider-token-${m[1]}`;
+        return json(200, body && body.otp === '7891' ? { token: tok } : {});
+      }
+      const tok = String(req.headers.token || '');
+      if (!tok.startsWith('rider-token')) return json(401, { errorCode: 'INVALID_TOKEN' });
+      w.tokens.add(tok);
+      if (p === '/v2/rideBooking/list') return json(200, { list: tok === 'rider-token' ? w.leftovers : [] });
       if (p === '/v2/rideSearch') {
         w.searches += 1;
+        const n = w.searches;
         w.search = body;
-        const who = w.offers[w.searches - 1] || [];
-        w.estimate = { id: `e${w.searches}`, quotes: [] };
+        w.searchBodies.push({ tok, body });
+        const who = w.offers[n - 1] || [];
+        const est = { id: `e${n}`, quotes: [], tok };
+        w.estimates.set(`e${n}`, est);
+        w.estimates.set(`s${n}`, est);
+        w.estimate = est;
         for (const d of who) {
           const q = await w.quoteFor(d);
           w.quoteDriver.set(q, d);
-          w.estimate.quotes.push(q);
+          est.quotes.push(q);
         }
-        return json(200, { searchId: `s${w.searches}` });
+        return json(200, { searchId: `s${n}` });
       }
       if ((m = p.match(/^\/v2\/rideSearch\/(s\d+)\/results$/))) {
-        return json(200, { estimates: [{ id: w.estimate.id, vehicleVariant: 'SEDAN', estimatedTotalFare: 800 }] });
+        return json(200, { estimates: [{ id: w.estimates.get(m[1]).id, vehicleVariant: 'SEDAN', estimatedTotalFare: 800 }] });
       }
       if ((m = p.match(/^\/v2\/estimate\/(e\d+)\/select$/))) return json(200, { result: 'Success' });
       if ((m = p.match(/^\/v2\/estimate\/(e\d+)\/quotes$/))) {
-        return json(200, { selectedQuotes: w.estimate.quotes.map((id) => ({ id })) });
+        return json(200, { selectedQuotes: w.estimates.get(m[1]).quotes.map((id) => ({ id })) });
       }
-      if ((m = p.match(/^\/v2\/estimate\/(e\d+)\/cancel$/))) return json(200, { result: 'Success' });
+      if ((m = p.match(/^\/v2\/estimate\/(e\d+)\/cancel$/))) { w.cancelledEstimates.push(m[1]); return json(200, { result: 'Success' }); }
       if ((m = p.match(/^\/v2\/rideSearch\/quotes\/(q\d+)\/confirm$/))) {
         const id = `b${w.bookings.size + 1}`;
         const bpp = `dr${w.bookings.size + 1}`;
         await db.sql(`INSERT INTO atlas_driver_offer_bpp.ride (id, driver_id, status) VALUES ($1, $2, 'NEW')`, [bpp, w.quoteDriver.get(m[1])]);
-        w.bookings.set(id, { id, quote: m[1], driver: w.quoteDriver.get(m[1]), status: 'TRIP_ASSIGNED',
+        w.bookings.set(id, { id, quote: m[1], driver: w.quoteDriver.get(m[1]), tok, status: 'TRIP_ASSIGNED',
           ride: { id: `rr${w.bookings.size + 1}`, bppRideId: bpp, status: 'NEW', driverArrivalTime: null } });
         return json(200, { bookingId: id });
       }
@@ -257,8 +275,6 @@ async function osrm() {
   }
   r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { number: '0555000000' });
   t.ok(!r.verdict.ok && /aucun compte chauffeur/.test(r.verdict.reason) && r.paths.length === 0, 'a number with no driver account: refused, nothing asked', r.verdict.reason);
-  r = await scenario(8);
-  t.ok(!r.verdict.ok && /V3/.test(r.verdict.reason) && r.paths.length === 0, 'scenario 8: refused until decision V3', r.verdict.reason);
   r = await scenario(9);
   t.ok(!r.verdict.ok && /inconnu/.test(r.verdict.reason), 'scenario 9: unknown', r.verdict.reason);
 
@@ -400,6 +416,40 @@ async function osrm() {
     '7 · to the nearest APPROVED proposed place, under its name (not the pending one nearer)', `${r.verdict.reason} / ${dest && dest.address.area}`);
   r = await scenario(7, (w) => { w.offers = [[TESTER]]; });
   t.ok(!r.verdict.ok && /aucun lieu proposé approuvé/.test(r.verdict.reason) && !r.paths.includes('POST /v2/rideSearch'), '7 · no approved place: refused before any request', r.verdict.reason);
+
+  t.section('8 · two requests at once (decision V3, 2026-11-18)');
+  r = await scenario(8, (w) => { w.offers = [[TESTER], [TESTER]]; });
+  t.ok(r.verdict.ok && /sur les deux/.test(r.verdict.reason), '8 · he offers on both: RÉUSSI, and the verdict says « les deux »', r.verdict.reason);
+  t.ok(r.w.signedIn.join() === '0555000199,0555000198' && r.w.tokens.size === 2, '   two test passengers, each with her own session', r.w.signedIn.join());
+  t.ok(r.w.searches === 2 && JSON.stringify(r.w.searchBodies[0].body.contents.origin.gps) !== JSON.stringify(r.w.searchBodies[1].body.contents.origin.gps),
+    '   two requests, from two different points');
+  t.ok(r.confirmedDrivers.join() === TESTER, '   only ONE booking: the second offer of his is never taken', r.confirmedDrivers.join());
+  t.ok(r.w.cancelledEstimates.length === 1 && openBookings(r.w).length === 0 && r.rides.every((x) => x.status === 'CANCELLED'),
+    '   the other request closed, the booking cancelled, nothing open');
+  r = await scenario(8, (w) => { w.offers = [[OTHER], [OTHER, TESTER]]; });
+  const b8 = [...r.w.bookings.values()][0];
+  t.ok(r.verdict.ok && /une seule/.test(r.verdict.reason) && b8 && b8.tok !== 'rider-token' && b8.driver === TESTER,
+    '8 · he offers on the second only: it is the second passenger who gets him, never the other driver', r.verdict.reason);
+  t.ok(r.w.cancelledEstimates.includes('e1'), '   and the first request, offered on only by another driver, is closed');
+  r = await scenario(8, (w) => { w.offers = [[OTHER], [SIM]]; });
+  t.ok(!r.verdict.ok && /aucune des deux/.test(r.verdict.reason) && r.confirmedDrivers.length === 0 && r.w.cancelledEstimates.length === 2,
+    '8 · no offer of his: PAS RÉUSSI, nobody else taken, both requests closed', r.verdict.reason);
+  r = await scenario(8, (w) => { w.offers = [[TESTER], []]; w.script = [w.arriveAndStart]; });
+  t.ok(!r.verdict.ok && /a démarré la course avant/.test(r.verdict.reason), '8 · he starts before the passenger cancels: said so', r.verdict.reason);
+  r = await scenario(8, (w) => { w.offers = [[], []]; }, {
+    onSleep: async (w, state) => {
+      if (w.searches === 2 && !w.stopped) { await cleanUp(state); w.stopped = true; }
+      return w.tick();
+    },
+  });
+  t.ok(r.w.cancelledEstimates.includes('e1') && r.w.cancelledEstimates.includes('e2') && r.w.bookings.size === 0,
+    '8 · stopped with two requests open: both closed', r.w.cancelledEstimates.join());
+
+  t.section('the test passengers are the ones the launch erases');
+  const targets = fs.readFileSync(path.join(SHIM, '..', 'launch-cleanup-targets.sql'), 'utf8');
+  const all = Object.values(PASSENGERS).flat();
+  t.ok(all.length === 4 && all.every((p) => targets.includes(`('rider',  '${p.cc}', '${p.number}')`) || targets.includes(`('rider', '${p.cc}', '${p.number}')`)),
+    'every passenger the engine signs in is on launch-cleanup-targets.sql', all.map((p) => p.number).join());
 
   t.section('the file itself');
   const src = fs.readFileSync(VR, 'utf8');

@@ -232,7 +232,8 @@ Restarting `movin-fleet` mid-ride is safe: the new daemon resumes an
 `/tmp`): one passenger per country books every row the app sells
 (SEDAN, HATCHBACK, SUV), the simulated fleet drives it, and the ride must end
 COMPLETED at a price in the country's currency with the driver's wallet
-respected. Its passengers are **test accounts**: `+222 22778899` and
+respected. Its passengers are **test accounts** (the virtual passenger adds
+`+222 22778898` and `+213 0555000198` since 2026-11-18): `+222 22778899` and
 `+213 0555000199`, created by signing in directly on the rider API (the fixed
 code 7891 behind the guard). First full run 2026-10-04, **six of six**:
 Mauritania 102 / 70 / 140 MRU (sedan, hatchback, SUV, 2.5 km), Algeria

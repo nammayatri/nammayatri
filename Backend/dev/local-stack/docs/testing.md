@@ -132,7 +132,7 @@ the ride CANCELLED, never arrived), but not by construction.
 | 5 | she chooses a simulated car, or nobody | his offer was made and not taken; never a real driver's |
 | 6 | three requests in a row | three offers of his, three bookings, three cancels |
 | 7 | to an approved proposed place | as 1, the place's name as the destination |
-| 8 | two at once | refused: needs a 2nd test passenger per country (plan decision V3) |
+| 8 | two requests at once, from two passengers at two points near him (since 2026-11-18, decision V3) | his first offer, on either, gets ONE booking; the other request is closed with no booking (his offer on it, if any, never taken); then cancelled as in 2 |
 
 **What it never does**, each one a test in `tests/virtual-rider.test.js`:
 
@@ -156,7 +156,9 @@ the ride CANCELLED, never arrived), but not by construction.
   and on `stop`; one run at a time per country (a pid file in the container);
 - **claim a cancel the server refused.** Every answer is read.
 
-Its passengers are the ride test's two test accounts (`+213 0555000199`,
+Its passengers are the ride test's two test accounts, plus since 2026-11-18 a
+second one per country for scenario 8 (`+213 0555000198`, `+222 22778898`;
+one passenger cannot hold two bookings) (`+213 0555000199`,
 `+222 22778899`), signed in on loopback 8013 with the backend's fixed code;
 they are already on `launch-cleanup-targets.sql`. The pickup is ~300 m from
 the driver and the arrival ~2 km on, both snapped to a road by OSRM's
