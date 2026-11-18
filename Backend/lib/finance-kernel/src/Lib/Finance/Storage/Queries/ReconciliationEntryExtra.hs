@@ -1,5 +1,5 @@
 module Lib.Finance.Storage.Queries.ReconciliationEntryExtra
-  ( findBySummaryIdWithPagination,
+  ( findBySummaryIdsWithPagination,
     findBySpecAndSourceIds,
     findByNaturalKeys,
     findSourceDerivedByMatchKeys,
@@ -23,15 +23,16 @@ import Lib.Finance.Storage.Queries.ReconciliationEntry ()
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Sequelize as Se
 
-findBySummaryIdWithPagination ::
+findBySummaryIdsWithPagination ::
   (BeamFlow m r) =>
-  Id DomainSummary.ReconciliationSummary ->
+  [Id DomainSummary.ReconciliationSummary] ->
   Int -> -- limit
   Int -> -- offset
   m [Domain.ReconciliationEntry]
-findBySummaryIdWithPagination summaryId limit offset =
+findBySummaryIdsWithPagination [] _ _ = pure []
+findBySummaryIdsWithPagination summaryIds limit offset =
   findAllWithOptionsKV
-    [Se.Is Beam.summaryId $ Se.Eq (getId summaryId)]
+    [Se.Is Beam.summaryId $ Se.In (map getId summaryIds)]
     (Se.Asc Beam.createdAt)
     (Just limit)
     (Just offset)
