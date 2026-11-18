@@ -251,6 +251,92 @@ run_bot(work, "")
 ok("no country on a SIM: a silent phone matters to nobody", len(phone_msgs()) == 2, phone_msgs())
 GUARD = None
 
+print("\n8c. « Lieux proposés »: a passenger proposes a place (2026-11-18)")
+sent.clear()
+PLACE = US.join(["12", "Pharmacie El Amel", "pharmacy", "Bab Ezzouar", "DZ", "rider",
+                 "Sara B", "0555123456", "2", "0", "36.71234", "3.18765"])
+run_bot(work, "", tables={"movin.suggested_place": PLACE})
+pl = [m for m in sent if "lieu proposé" in m]
+ok("announced once", len(pl) == 1, f"{len(pl)} message(s)")
+ok("with the name, the type in French, the district, the country, who, the photos",
+   bool(pl) and all(x in pl[0] for x in (
+       "nouveau lieu proposé", "Pharmacie El Amel", "Pharmacie · Bab Ezzouar",
+       "Algérie", "un passager : Sara B 0555123456", "2 photo(s)")), pl[:1])
+ok("and where to see it and decide",
+   bool(pl) and "mlat=36.71234&mlon=3.18765" in pl[0]
+   and "admin.movinapp.net/lieux-proposes" in pl[0], pl[:1])
+before = len(sent)
+run_bot(work, "", tables={"movin.suggested_place": PLACE})
+ok("silent on the next tick", len(sent) == before, f"{len(sent) - before} extra")
+OLD = PLACE.replace(US + "2" + US + "0" + US, US + "2" + US + "30" + US)
+run_bot(work, "", tables={"movin.suggested_place": OLD})
+w = [m for m in sent if "toujours en attente" in m]
+ok("still waiting after a day: said again, once", len(w) == 1 and "30 h" in w[0], w)
+run_bot(work, "", tables={"movin.suggested_place": OLD})
+ok("   and not on every tick", len([m for m in sent if "toujours en attente" in m]) == 1)
+sent.clear()
+DRV = US.join(["13", "Station Total Ksar", "fuel", "", "MR", "driver",
+               "Yas Kara", "36664750", "0", "1", "18.08", "-15.96"])
+run_bot(work, "", tables={"movin.suggested_place": DRV})
+pl = [m for m in sent if "nouveau lieu proposé" in m]
+ok("a driver's, in Mauritania, with no district and no photo",
+   len(pl) == 1 and all(x in pl[0] for x in (
+       "Mauritanie", "un chauffeur : Yas Kara", "\nStation-service\n", "aucune photo")), pl[:1])
+sent.clear()
+run_bot(work, "", tables={"movin.suggested_place": ""})
+run_bot(work, "", tables={"movin.suggested_place": DRV})
+ok("decided, then a new one with the same id: reportable again",
+   len([m for m in sent if "nouveau lieu proposé" in m]) == 1)
+
+print("\n8d. /lieux, and the test message")
+
+
+def bot_env():
+    return {**os.environ, "PATH": os.path.join(work, "bin") + ":" + os.environ["PATH"],
+            "TELEGRAM_BOT_TOKEN": "t", "TELEGRAM_CHAT_ID": "1",
+            "BOT_TELEGRAM_API": f"http://127.0.0.1:{PORT}",
+            "BOT_STATE": os.path.join(work, "state.json"),
+            "ROWS_FILE": os.path.join(work, "rows"),
+            "ROWS_DIR": os.path.join(work, "tables")}
+
+
+with open(os.path.join(work, "tables", "movin.suggested_place"), "w", encoding="utf-8") as fh:
+    fh.write(PLACE + "\n" + DRV)
+answer = subprocess.run(
+    [sys.executable, "-c",
+     "import importlib.util,sys;"
+     f"s=importlib.util.spec_from_file_location('bot',{BOT!r});"
+     "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
+     "print(m.handle_command('/lieux'))"],
+    env=bot_env(), capture_output=True, text=True, timeout=60).stdout
+ok("/lieux lists both, per country",
+   all(x in answer for x in ("2 lieu(x) proposé(s) en attente", "🇩🇿 Algérie · 1",
+                             "🇲🇷 Mauritanie · 1", "Pharmacie El Amel",
+                             "Station-service · chauffeur")), answer)
+ok("/aide names it", "/lieux" in subprocess.run(
+    [sys.executable, "-c",
+     "import importlib.util;"
+     f"s=importlib.util.spec_from_file_location('bot',{BOT!r});"
+     "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print(m.HELP)"],
+    env=bot_env(), capture_output=True, text=True, timeout=60).stdout)
+with open(os.path.join(work, "state.json"), encoding="utf-8") as fh:
+    state_before = fh.read()
+sent.clear()
+subprocess.run([sys.executable, BOT, "--essai-lieu"], env=bot_env(),
+               capture_output=True, text=True, timeout=60)
+ok("--essai-lieu: one message, marked ESSAI, a real waiting place",
+   len(sent) == 1 and "ESSAI" in sent[0] and "Pharmacie El Amel" in sent[0], sent)
+with open(os.path.join(work, "state.json"), encoding="utf-8") as fh:
+    ok("   and it remembers nothing", fh.read() == state_before)
+os.remove(os.path.join(work, "tables", "movin.suggested_place"))
+with open(os.path.join(work, "rows"), "w", encoding="utf-8") as fh:
+    fh.write("")
+sent.clear()
+subprocess.run([sys.executable, BOT, "--essai-lieu"], env=bot_env(),
+               capture_output=True, text=True, timeout=60)
+ok("   nothing waits: an example, and it says so",
+   len(sent) == 1 and "exemple, aucun lieu n'attend" in sent[0], sent)
+
 print("\n9. The database does not answer")
 sent.clear()
 with open(os.path.join(work, "bin", "docker"), "w", encoding="utf-8") as fh:

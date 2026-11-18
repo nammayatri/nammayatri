@@ -155,7 +155,7 @@ read-only commands on 2026-09-23; validating, messaging the fleet and the
 tariff stay in the console behind a login. A bot in a pocket that can enable a
 driver is a mistake waiting for a thumb.
 
-Twenty checks, grouped by what they are for:
+Twenty-one checks, grouped by what they are for:
 
 | | |
 |---|---|
@@ -164,6 +164,7 @@ Twenty checks, grouped by what they are for:
 | **Silence** | no rides; searches returning no offer; driver positions stale; nobody online |
 | **Machine** | a container not `running`; the API unreachable from outside; disk; TLS expiry; a failed backup |
 | **Rhythm** | a daily digest, a weekly one |
+| **Office queues** | a driver's registration (and again after `BOT_PATIENCE_H`, 4 h); a « Lieu proposé » waiting for the console (since 2026-11-18: name, type, district, who proposed it, photos, a map link, and again after `BOT_PLACE_PATIENCE_H`, 24 h) |
 | **Quality** | a passenger's report (« Signaler »), at any hour; a one or two star rating with a written complaint; a run of cancellations; a driver suspended, closed or blocked, with the console's reason and end date |
 
 The *Silence* group is the point. This stack's documented faults — stale
@@ -171,8 +172,10 @@ positions, the BECKN negative coordinate, Redis-cached merchant rows — each
 produced **no error anywhere** and each cost an afternoon. A check that
 notices nothing happening is worth more here than one that reads a log.
 
-Commands, all read-only: `/file`, `/jour`, `/semaine`, `/chauffeur <numéro>`,
-`/flotte`, `/serveur`, `/budget`, `/aide`. Only the configured chat id is ever
+Commands, all read-only: `/file`, `/lieux`, `/jour`, `/semaine`, `/chauffeur <numéro>`,
+`/flotte`, `/serveur`, `/budget`, `/aide`. The digests carry « Lieux à valider »
+per country. `python3 movin-bot.py --essai-lieu` sends one test message (the
+newest waiting place, marked ESSAI, or an example) and remembers nothing. Only the configured chat id is ever
 obeyed.
 
 Four things about it are deliberate:
