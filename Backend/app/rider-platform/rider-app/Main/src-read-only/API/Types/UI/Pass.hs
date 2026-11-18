@@ -246,6 +246,7 @@ data RoutePassConfigAPIEntity = RoutePassConfigAPIEntity
   { allowRoundTripPurchase :: Kernel.Prelude.Bool,
     maximumPurchaseableTripCount :: Kernel.Prelude.Int,
     primaryServiceTier :: BecknV2.FRFS.Enums.ServiceTierType,
+    roundTripRecommendations :: [Kernel.Prelude.Int],
     tripCountRecommendations :: [Kernel.Prelude.Int],
     variableTripCount :: Kernel.Prelude.Bool
   }

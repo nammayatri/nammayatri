@@ -49,6 +49,7 @@ types:
     variableTripCount: Bool
     tripCountRecommendations: "[Int]"
     allowRoundTripPurchase: Bool
+    roundTripRecommendations: "[Int]"
     derive: "Show"
 
   RoutePassAPIEntity:
