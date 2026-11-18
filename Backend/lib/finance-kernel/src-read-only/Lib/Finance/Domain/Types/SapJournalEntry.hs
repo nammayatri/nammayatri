@@ -12,7 +12,9 @@ import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data SapJournalEntry = SapJournalEntry
-  { batchId :: Kernel.Prelude.Text,
+  { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bapName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    batchId :: Kernel.Prelude.Text,
     belnr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blart :: Kernel.Prelude.Text,
     bldat :: Kernel.Prelude.Text,

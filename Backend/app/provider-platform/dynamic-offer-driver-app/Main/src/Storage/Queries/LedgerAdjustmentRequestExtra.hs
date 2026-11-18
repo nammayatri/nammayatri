@@ -13,6 +13,27 @@ import Storage.Queries.OrphanInstances.LedgerAdjustmentRequest ()
 
 -- Extra code goes here --
 
+findPostedByMocIdAndCategoryAndReferenceTypeAndPostedAtRange ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DLA.AdjustmentCategory ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [DLA.LedgerAdjustmentRequest]
+findPostedByMocIdAndCategoryAndReferenceTypeAndPostedAtRange mocId category referenceType fromTime toTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamLAR.merchantOperatingCityId $ Se.Eq mocId.getId,
+          Se.Is BeamLAR.status $ Se.Eq DLA.POSTED,
+          Se.Is BeamLAR.category $ Se.Eq category,
+          Se.Is BeamLAR.referenceType $ Se.Eq referenceType,
+          Se.Is BeamLAR.postedAt $ Se.GreaterThanOrEq (Just fromTime),
+          Se.Is BeamLAR.postedAt $ Se.LessThan (Just toTime),
+          Se.Is BeamLAR.ledgerEntryId $ Se.Not $ Se.Eq Nothing
+        ]
+    ]
+
 findAllLedgerAdjustmentItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

@@ -452,6 +452,8 @@ data SapJournalItem = SapJournalItem
     glName :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     sapMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.Prelude.Text,
+    bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bapName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

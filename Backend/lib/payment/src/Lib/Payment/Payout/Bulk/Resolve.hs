@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
+import qualified Lib.Payment.Payout.Bulk.Journal as Journal
 import qualified Lib.Payment.Payout.Bulk.Schedule as BSC
 import Lib.Payment.Payout.Bulk.Submit (markSubmitted)
 import Lib.Payment.Payout.Bulk.Transaction (updateBulkOrderOutcome)
@@ -112,12 +113,16 @@ pollBatchStatus h partner batch = do
       batchOrders <- QPayoutOrder.findAllByBatchId (Just batch.id)
       requestsById <- loadRequests batchOrders
       let ordersByRef = Map.fromList [(getShortId sid, o) | o <- batchOrders, Just sid <- [o.shortId]]
+      -- Safety net: ensure INITIATED rows exist (catches missed in Submit.hs)
+      Journal.recordInitiated batch batchOrders
       applied <- forM outcomes $ \(itemRef, outcome, mbSettleStatus) ->
         case Map.lookup itemRef ordersByRef of
           Nothing -> do
             logError $ "HDFC CBX inquiry referenced an unknown order: " <> itemRef
             pure Nothing
           Just order -> do
+            -- Write lifecycle events BEFORE applyItemOutcome (which skips final orders)
+            Journal.recordItemEvents batch order outcome mbSettleStatus
             newStatus <- applyItemOutcome h batch.merchantOperatingCityId requestsById order outcome mbSettleStatus
             pure (Just (order.orderId, newStatus))
       -- Read what is left from the orders, not HDFC's rows: an item missing from the response is
