@@ -32,7 +32,7 @@ findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ S
 
 findDeadKmFareEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [KTI.Id Domain.FareParameters] -> m HighPrecMoney
 findDeadKmFareEarnings fareParamIds = do
-  deadKmFareEarnings <- findAllWithKV [Se.Is BeamFPPD.fareParametersId $ Se.In $ KTI.getId <$> fareParamIds] <&> ((Domain.deadKmFare :: Domain.FParamsProgressiveDetails -> HighPrecMoney) . snd <$>)
+  deadKmFareEarnings <- findAllWithKV [Se.Is BeamFPPD.fareParametersId $ Se.In $ KTI.getId <$> fareParamIds] <&> ((.deadKmFare) . snd <$>)
   pure $ sum deadKmFareEarnings
 
 instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFareParametersProgressiveDetails where
@@ -52,9 +52,9 @@ instance ToTType' FareParametersProgressiveDetails Domain.FullFareParametersProg
   toTType' (KTI.Id fareParametersId, fParamsProgressiveDetails) =
     FareParametersProgressiveDetailsT
       { fareParametersId = fareParametersId,
-        deadKmFare = roundToIntegral $ (Domain.deadKmFare :: Domain.FParamsProgressiveDetails -> HighPrecMoney) fParamsProgressiveDetails,
+        deadKmFare = roundToIntegral fParamsProgressiveDetails.deadKmFare,
         extraKmFare = roundToIntegral <$> Domain.extraKmFare fParamsProgressiveDetails,
-        deadKmFareAmount = Just $ (Domain.deadKmFare :: Domain.FParamsProgressiveDetails -> HighPrecMoney) fParamsProgressiveDetails,
+        deadKmFareAmount = Just fParamsProgressiveDetails.deadKmFare,
         extraKmFareAmount = Domain.extraKmFare fParamsProgressiveDetails,
         rideDurationFare = Domain.rideDurationFare fParamsProgressiveDetails,
         currency = Just fParamsProgressiveDetails.currency

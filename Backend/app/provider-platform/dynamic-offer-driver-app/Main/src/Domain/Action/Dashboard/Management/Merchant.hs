@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 
 module Domain.Action.Dashboard.Management.Merchant
   ( postMerchantServiceConfigMapsUpdate,

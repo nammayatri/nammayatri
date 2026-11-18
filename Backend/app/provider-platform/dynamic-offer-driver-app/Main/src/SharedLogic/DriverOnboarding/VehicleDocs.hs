@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
 
 module SharedLogic.DriverOnboarding.VehicleDocs where
 

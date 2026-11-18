@@ -89,12 +89,12 @@ dependencies:
   - amazonka
   - amazonka-kms
   - amazonka-s3
-  - cryptonite
+  - crypton
   - cryptostore >= 0.2.3.0
   - lens
   - memory
   - resourcet
-  - x509
+  - crypton-x509
 
 ghc-options:
   - -fwrite-ide-info

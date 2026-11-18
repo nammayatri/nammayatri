@@ -70,7 +70,7 @@ dependencies:
   - resource-pool
   - bytestring
   - casing
-  - connection
+  - crypton-connection
   - containers
   - directory
   - errors

@@ -22,7 +22,6 @@ module Domain.Action.UI.DriverOnboarding.GstVerification
   )
 where
 
-import Control.Applicative (liftA2)
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import Data.Text as T hiding (elem, find, length, map, null, zip)

@@ -14,7 +14,7 @@ data ExternalWebhookConfigs = ExternalWebhookConfigs
     username :: Text,
     password :: EncryptedField 'AsEncrypted Text
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data WebhookEvent
   = MANDATE

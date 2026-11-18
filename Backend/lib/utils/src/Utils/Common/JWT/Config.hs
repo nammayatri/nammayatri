@@ -32,8 +32,8 @@ data GoogleWalletCfg = GoogleWalletCfg
     tokenUri :: Text,
     issuerId :: EncryptedField 'AsEncrypted Text
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 newtype WalletServiceConfig = GoogleWalletConfig GoogleWalletCfg
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON)

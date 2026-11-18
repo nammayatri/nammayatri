@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.38.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -2465,7 +2465,8 @@ library
     , config-pilot
     , consequence-engine
     , containers
-    , cryptonite
+    , crypton
+    , crypton-x509
     , cryptostore >=0.2.3.0
     , dashcam
     , data-default-class
@@ -2544,7 +2545,6 @@ library
     , wai-extra
     , warp
     , webhook
-    , x509
     , xml-conduit
     , xmlbf
     , yudhishthira
@@ -2618,7 +2618,8 @@ executable dynamic-offer-driver-app-exe
     , config-pilot
     , consequence-engine
     , containers
-    , cryptonite
+    , crypton
+    , crypton-x509
     , cryptostore >=0.2.3.0
     , data-default-class
     , directory
@@ -2689,7 +2690,6 @@ executable dynamic-offer-driver-app-exe
     , wai
     , wai-extra
     , warp
-    , x509
     , xml-conduit
     , xmlbf
     , yudhishthira
@@ -2769,7 +2769,8 @@ test-suite driver-app-test
     , config-pilot
     , consequence-engine
     , containers
-    , cryptonite
+    , crypton
+    , crypton-x509
     , cryptostore >=0.2.3.0
     , data-default-class
     , directory
@@ -2842,7 +2843,6 @@ test-suite driver-app-test
     , wai
     , wai-extra
     , warp
-    , x509
     , xml-conduit
     , xmlbf
     , yudhishthira

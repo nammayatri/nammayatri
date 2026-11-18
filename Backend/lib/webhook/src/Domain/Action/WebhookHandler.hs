@@ -23,7 +23,7 @@ data WebhookJobInfo = WebhookJobInfo
     rescheduleTimeThreshold :: Int,
     batchId :: Maybe Text
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data FunctionStatus = PROCESS_NEXT_BATCH Int | SCHEDULE_NEXT_JOB Int Int | RETRIES_EXHAUSTED | BATCH_PROCCESSING_COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 

@@ -9,7 +9,7 @@ import Data.Aeson.Types
 import Kernel.Prelude
 
 data LLMChatCompletionServiceConfig = AzureOpenAI AzureOpenAI.AzureOpenAICfg | Gemini Gemini.GeminiCfg
-  deriving (Show, Eq, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype GeneralChatCompletionReq = GeneralChatCompletionReq
   { genMessages :: [GeneralChatCompletionMessage]
