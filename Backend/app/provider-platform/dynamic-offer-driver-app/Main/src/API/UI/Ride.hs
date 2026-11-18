@@ -86,6 +86,7 @@ type API =
                     :> QueryParam "offset" Integer
                     :> QueryParam "onlyActive" Bool
                     :> QueryParam "status" Ride.RideStatus
+                    :> QueryParams "statuses" Ride.RideStatus
                     :> QueryParam "day" Day
                     :> QueryParam "numOfDay" Int
                     :> QueryParam "financeData" Bool
@@ -336,11 +337,12 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
+  [Ride.RideStatus] ->
   Maybe Day ->
   Maybe Int ->
   Maybe Bool ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay mbFinanceData = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay mbFinanceData
+listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbStatus mbStatuses mbDay mbNumOfDay mbFinanceData = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive (case mbStatuses of [] -> maybeToList mbStatus; _ -> mbStatuses) mbDay Nothing mbNumOfDay mbFinanceData
 
 getDriverRideById ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
