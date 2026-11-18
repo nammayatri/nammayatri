@@ -1222,8 +1222,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         }
   fork "Evaluate rider incentive journey" $ do
     let validRideTaken = fromMaybe True isValidRide
+        rideVehicleCategory = Just (show (DV.castVehicleVariantToVehicleCategory updRide.vehicleVariant))
+        rideServiceTier = Just (show booking.vehicleServiceTierType)
     when validRideTaken $ do
-      hasJourneys <- SLJourney.hasAssignedJourneys person.id
+      hasJourneys <- SLJourney.hasAssignedJourneys person.id booking.merchantId booking.merchantOperatingCityId rideVehicleCategory
       when hasJourneys $
         IJ.withJourneyEvalIdempotency IJ.RiderActor ride.id.getId $ do
           mbSearchRequest <- B.runInReplica $ QSearchRequest.findById (Id booking.transactionId)
@@ -1251,6 +1253,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 riderConfig.timeDiffFromUtc
                 (mbSearchRequest >>= (.fromSpecialLocationId))
                 (mbSearchRequest >>= (.toSpecialLocationId))
+                rideVehicleCategory
+                rideServiceTier
                 timeBoundReferenceUtc
                 rideDeltas
   -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line

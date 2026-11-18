@@ -65,6 +65,10 @@ data CohortJourneyMappingListRes = CohortJourneyMappingListRes {mappings :: [Coh
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data CouponRewardConfig = CouponRewardConfig {offerCode :: Kernel.Prelude.Text, validityHours :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CreateCohortDetailsReq = CreateCohortDetailsReq {name :: Kernel.Prelude.Text, category :: Kernel.Prelude.Text, description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, cohortRule :: Kernel.Prelude.Maybe Data.Aeson.Value}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -114,6 +118,7 @@ data CreateIncentiveJourneyMilestoneReq = CreateIncentiveJourneyMilestoneReq
     rewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     subscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
+    couponReward :: Kernel.Prelude.Maybe CouponRewardConfig,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound
   }
   deriving stock (Generic)
@@ -169,6 +174,7 @@ data IncentiveJourneyMilestoneListItem = IncentiveJourneyMilestoneListItem
     rewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     subscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
+    couponReward :: Kernel.Prelude.Maybe CouponRewardConfig,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

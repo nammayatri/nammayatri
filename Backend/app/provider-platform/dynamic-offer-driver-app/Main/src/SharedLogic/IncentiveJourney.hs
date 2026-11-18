@@ -121,7 +121,7 @@ findAssignmentsByUserId personId = do
   case mbPerson of
     Nothing -> CQAssignment.findAssignmentsByUserId IJ.DriverActor (cast personId)
     Just person ->
-      CQAssignment.findAssignmentsForDriver
+      CQAssignment.findAssignmentsForPerson
         IJ.DriverActor
         (cast personId)
         (cast person.merchantId)
