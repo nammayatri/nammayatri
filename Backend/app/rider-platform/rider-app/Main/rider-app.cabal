@@ -380,6 +380,7 @@ library
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
+      Domain.Action.UI.NearestRoad
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.Offers
       Domain.Action.UI.OpenMeter
@@ -1138,6 +1139,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
+      API.Action.UI.NearestRoad
       API.Action.UI.NyRegularSubscription
       API.Action.UI.Offers
       API.Action.UI.OpenMeter
@@ -1309,6 +1311,7 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
+      API.Types.UI.NearestRoad
       API.Types.UI.NyRegularSubscription
       API.Types.UI.OpenMeter
       API.Types.UI.ParkingBooking
