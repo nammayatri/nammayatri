@@ -738,6 +738,13 @@ keyboard): the app's `docs/driver.md` and `docs/passenger.md`.
   A live ride with a simulated car as the driver proved the **start with no
   code** on the real server.
 
+**Day 8 (2026-11-18)** — the virtual passenger in the office's hands: the
+console's Tests page runs it (maps-shim `/internal/virtual-rider`, the engine
+as a child process; backend `5f0d5ddf27`, website `e6d92b2`, both released),
+proved live with a simulated car, stopped halfway, nothing left open. A stop
+now reads the server's answer before saying so, and `launch-gate.sh` refuses
+the launch while it is on ([testing.md](testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)).
+
 Left:
 
 - **The end-of-day test on phones**, in each country, with the APK of
