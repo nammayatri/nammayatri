@@ -28,6 +28,7 @@ data LiveRewardCard = LiveRewardCard
     lottie :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     subtitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     subtitleInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    termsAndConditionUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     textColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text
   }

@@ -104,7 +104,7 @@ mkLiveRewardCandidates campaigns =
         isPoolSourced = campaign.couponSourceType == DRCmp.Pool,
         maxUnlocksPerCohort = cohort.maxUnlocksPerCohort,
         unlockResetPeriod = cohort.unlockResetPeriod,
-        card = homeCardValue,
+        card = homeCardValue {API.termsAndConditionUrl = presentationLinkUrl termsAndConditionLabel presentation},
         targetingJsonLogic = homeCardAudience
       }
     | (campaign, cohorts) <- sortOn (\(c, _) -> (c.displayOrder, c.createdAt, c.id.getId)) campaigns,
@@ -114,6 +114,23 @@ mkLiveRewardCandidates campaigns =
       Just homeCard <- [KM.lookup "homeCard" presentation],
       Right (homeCardValue, homeCardAudience) <- [parseHomeCard homeCard]
   ]
+
+termsAndConditionLabel :: Text
+termsAndConditionLabel = "TERMS_AND_CONDITION"
+
+-- | URL of the first @presentation.detail.links@ entry (@{label, url}@) with
+-- this label. Missing or malformed links yield Nothing rather than hiding the card.
+presentationLinkUrl :: Text -> A.Object -> Maybe Text
+presentationLinkUrl label presentation = do
+  A.Object detail <- KM.lookup "detail" presentation
+  A.Array links <- KM.lookup "links" detail
+  listToMaybe
+    [ url
+      | A.Object link <- toList links,
+        KM.lookup "label" link == Just (A.String label),
+        Just (A.String url) <- [KM.lookup "url" link],
+        not (T.null url)
+    ]
 
 -- | The campaign's window covers @now@ (same bounds as findAllActiveInCityAtTime).
 isLiveAt :: UTCTime -> LiveRewardCandidate -> Bool
