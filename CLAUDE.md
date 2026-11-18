@@ -320,7 +320,10 @@ the registry or the map.
   **And since 2026-11-16 the virtual passenger** (`maps-shim/virtual-rider.js`,
   the boss's request): those two passengers book real rides for a real driver
   to test the driver side, only while `VIRTUAL_RIDER=on` in the server's
-  `.env`. Switch it off before the clean-up (`docs/runbooks/launch.md`, 3b).
+  `.env`. Switch it off before the clean-up (`docs/runbooks/launch.md`, 3b);
+  `launch-gate.sh` says no-go while it is on. Since 2026-11-18 the office runs
+  it from the console's Tests page, through maps-shim `/internal/virtual-rider`
+  (the engine as a child process, never inside maps-shim itself).
   It never calls the driver API and never takes another real driver's offer;
   `docs/testing.md` → *The virtual passenger*.
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds

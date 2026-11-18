@@ -96,6 +96,14 @@ else pass "no personal driver codes"; fi
 say "the simulated fleet and the test accounts are gone"
 if systemctl is-active --quiet movin-fleet 2>/dev/null; then fail "movin-fleet is running: simulated cars answer real ride requests"
 else pass "movin-fleet is not running"; fi
+# -- the virtual passenger (2026-11-18, day 8 of « Lieux proposés ») -- {vr}
+# A test tool that books REAL rides for a real driver, with the two test
+# passengers launch-cleanup erases (maps-shim/virtual-rider.js). Off before the
+# first real passenger: VIRTUAL_RIDER=on in maps-shim's environment is a no-go.
+vr="$(envof ny-maps-shim | sed -n 's/^VIRTUAL_RIDER=//p')"
+if [ "$vr" = "on" ]; then fail "the virtual passenger is ON (VIRTUAL_RIDER=on in maps-shim): remove it from the stack's .env and recreate maps-shim (runbook launch.md, 3b)"
+else pass "the virtual passenger is off"; fi
+# {/vr}
 left="$(./launch-cleanup.sh 2>&1 | sed 's/\x1b\[[0-9;]*m//g')"
 if grep -q 'nothing to do' <<<"$left"; then pass "none of the 12 cars or 2 test passengers can be found by their numbers"
 else fail "launch-cleanup.sh still finds test accounts: run it (see docs/runbooks/launch.md, day 1)"; fi

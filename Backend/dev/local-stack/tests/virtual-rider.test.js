@@ -311,6 +311,31 @@ async function osrm() {
   });
   t.ok(r.w.bookings.size === 1 && openBookings(r.w).length === 0, 'stopped while waiting for the driver: its booking is cancelled', JSON.stringify([...r.w.bookings.values()].map((b) => b.status)));
   t.ok(r.rides[0] && r.rides[0].status === 'CANCELLED', 'and the ride is CANCELLED on the driver side');
+
+  // 2026-11-18: the stop said « rien n'est resté ouvert » whatever the cancel
+  // got back. Stopped once the driver has STARTED, the cancel is refused and
+  // the stop must say so.
+  let left = null;
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arriveAndStart]; }, {
+    onSleep: async (w, state) => {
+      const b = w.current();
+      if (b && b.ride.status === 'INPROGRESS' && !w.stopped) {
+        left = await cleanUp(state);
+        w.stopped = true;
+      }
+      return w.tick();
+    },
+  });
+  t.ok(left && left.closed === false && /a déjà démarré/.test(left.message) && /doit la terminer/.test(left.message),
+    'stopped after the driver started: the stop says the ride must be ended by him, never « rien n’est resté ouvert »', JSON.stringify(left));
+  left = null;
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, {
+    onSleep: async (w, state) => {
+      if (w.bookings.size && !w.stopped) { left = await cleanUp(state); w.stopped = true; }
+      return w.tick();
+    },
+  });
+  t.ok(left && left.closed === true && /rien n’est resté ouvert/.test(left.message), 'stopped before he arrives: closed, and said so', JSON.stringify(left));
   r = await scenario(1, (w) => { w.offers = [[]]; }, {
     onSleep: async (w, state) => {
       if (w.searches && !w.stopped) { await cleanUp(state); w.stopped = true; }

@@ -558,16 +558,41 @@ async function closeLeftovers(call, token, say) {
   }
 }
 
-/** What an interrupted run leaves: closed. */
+/**
+ * What an interrupted run leaves: closed -- and the server's answer READ, so
+ * the stop says the truth (2026-11-18: « rien n'est resté ouvert » used to be
+ * printed whatever the cancel got back). A ride the driver has already
+ * started cannot be cancelled by the passenger: he must end it, and that is
+ * what is said. Returns { closed, message }.
+ */
 async function cleanUp(state) {
-  if (!state || !state.call || !state.token) return;
+  if (!state || !state.call || !state.token) return { closed: true, message: 'rien n’était ouvert.' };
+  let closed = true;
+  let message = 'rien n’est resté ouvert.';
   if (state.bookingId) {
-    await state.call('POST', `/v2/rideBooking/${state.bookingId}/cancel`,
+    const id = state.bookingId;
+    const res = await state.call('POST', `/v2/rideBooking/${id}/cancel`,
       { reasonCode: 'CHANGE_OF_PLANS', reasonStage: 'OnAssign', additionalInfo: COMMENT }, state.token);
+    if (!(res && res.status >= 200 && res.status < 300)) {
+      // Refused: why? Read where the booking is.
+      const b = await state.call('POST', `/v2/rideBooking/${id}`, undefined, state.token);
+      const ride = (b && b.json && b.json.rideList && b.json.rideList[0]) || {};
+      const status = ride.status || (b && b.json && b.json.status) || 'inconnu';
+      if (status === 'INPROGRESS') {
+        closed = false;
+        message = 'la course a déjà démarré : le passager ne peut plus l’annuler, le chauffeur doit la terminer.';
+      } else if (status === 'COMPLETED' || status === 'CANCELLED') {
+        message = `rien n’est resté ouvert (la course était déjà ${status === 'COMPLETED' ? 'terminée' : 'annulée'}).`;
+      } else {
+        closed = false;
+        message = `le serveur a refusé l’annulation (${res ? res.status : 0}) et la course est « ${status} » : à vérifier dans la console.`;
+      }
+    }
   }
   if (state.estimateId) await state.call('POST', `/v2/estimate/${state.estimateId}/cancel`, undefined, state.token);
   state.bookingId = null;
   state.estimateId = null;
+  return { closed, message };
 }
 
 /* ── From the command line, inside the maps-shim container ────────────────── */
@@ -625,9 +650,9 @@ async function main(argv) {
     if (stopping) return;
     stopping = true;
     say('Arrêt demandé : le passager ferme ce qu’il a ouvert.');
-    await cleanUp(state).catch(() => {});
+    const left = await cleanUp(state).catch((e) => ({ closed: false, message: `erreur à la fermeture : ${e.message}` }));
     if (country) try { fs.unlinkSync(pidFile(country)); } catch { /* gone */ }
-    console.log('ARRÊTÉ : rien n’est resté ouvert.');
+    console.log(`ARRÊTÉ : ${left.message}`);
     process.exit(130);
   };
   process.on('SIGTERM', stop);

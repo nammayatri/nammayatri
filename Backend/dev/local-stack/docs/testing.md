@@ -87,8 +87,11 @@ own phone, so the driver side can be tried as often as wanted (the boss,
 2026-11-16: « this way we can test the driver side extensively »). It is the
 ride test turned around: in `ops/checks/probe-two-country-rides.py` the
 simulated cars drive and a script is the passenger; here a person drives and
-the script is the passenger. Day 7 of the « Lieux proposés » plan; the
-console button is day 8.
+the script is the passenger. Day 7 of the « Lieux proposés » plan; since
+day 8 (2026-11-18) **the office runs it from the console**: Tests → « Passager
+virtuel » (admins), a driver online in the country viewed — real ones first,
+the simulated cars marked — a scenario, « Lancer » / « Arrêter », the
+passenger's lines every 2 s and the verdict. The command line still works:
 
     docker exec ny-maps-shim node virtual-rider.js "+213 0555 12 34 56" 1 | tee ~/vr-1.log
     docker exec ny-maps-shim node virtual-rider.js stop     # from another terminal
@@ -97,6 +100,28 @@ console button is day 8.
 Run by the owner on the server (`ssh ny '…'`): it books on the live stack.
 Ctrl-C does not reach the process through ssh; `stop` does (SIGTERM), and the
 run then closes what it opened.
+
+**The console's route** is `POST /internal/virtual-rider` in maps-shim
+(`virtual-rider-route.js`): `start {driverId, scenario}`, `stop {country}`,
+`status`. Loopback and the docker bridge only, like `/internal/driver-push`
+(admin-api reaches 8030 through the ufw bridge rule; the edge routes nothing
+under `/internal/`: 404 on every public name). **The engine runs as a child
+process** (plan decision V8): maps-shim serves the live maps, search and
+wallet, and a fault in a test tool must not stop them. One run per country,
+whoever started it — a command-line run's pid file also answers 409. Runs are
+kept in maps-shim's memory: a restart empties the status (and kills a running
+child; the next run cancels what it left). The console's side, its audit rows
+(`virtual_rider_start` / `_stop`) and its list of drivers are the website's
+`apps/api/src/modules/tests/virtual-rider.ts`. Tests:
+`tests/virtual-rider-route.test.js` (a fake child, the real engine as the
+child, server.js).
+
+**A stop says the truth** (2026-11-18). It cancels the booking and reads the
+answer: before the driver starts, « rien n'est resté ouvert »; after, the
+passenger can no longer cancel and the stop says « la course a déjà démarré :
+… le chauffeur doit la terminer ». It used to print « rien n'est resté
+ouvert » unchecked — true the first time from the console (the server showed
+the ride CANCELLED, never arrived), but not by construction.
 
 | # | Scenario | RÉUSSI when |
 |---|---|---|
@@ -113,7 +138,9 @@ run then closes what it opened.
 
 - **run without `VIRTUAL_RIDER=on`** in the server's `.env` (compose passes it
   to maps-shim, `off` by default). On since 2026-11-16. **Off before launch**
-  ([launch runbook](runbooks/launch.md), 3b);
+  ([launch runbook](runbooks/launch.md), 3b): `launch-gate.sh` says no-go while
+  it is on (since 2026-11-18, `tests/launch-gate.test.sh` runs that check on
+  and off);
 - **call the driver API.** Signing in as a driver revokes the session on his
   phone; everything about him is read from the database;
 - **accept another real driver's offer.** Each offer is traced
