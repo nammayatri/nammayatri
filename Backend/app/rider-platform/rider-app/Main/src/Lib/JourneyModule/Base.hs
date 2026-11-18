@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wwarn=x-partial #-}
+
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
@@ -243,21 +245,21 @@ busEquivalent = \case
   mode -> mode
 
 getAllLegsInfoWithoutSearch ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DPerson.Person ->
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getAllLegsInfoWithoutSearch personId journeyId = getAllLegsInfo' personId journeyId False
 
 getAllLegsInfo ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DPerson.Person ->
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getAllLegsInfo personId journeyId = getAllLegsInfo' personId journeyId True
 
 getAllLegsInfo' ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DPerson.Person ->
   Id DJourney.Journey ->
   Bool ->
@@ -269,7 +271,7 @@ getAllLegsInfo' personId journeyId checkSearch = do
     mapMaybeM (\leg -> measureLatency (getLegInfo personId checkSearch allLegs mbPassCandidates leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
 
 getAllLegsInfoFromLegs ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DPerson.Person ->
   Id DJourney.Journey ->
   [DJourneyLeg.JourneyLeg] ->
@@ -351,7 +353,7 @@ hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
    in d1 > (round busTrackingConfig.movementThresholdInMeters)
 hasSignificantMovement _ _ = False
 
-getRiderConfig :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJourney.Journey -> m Domain.Types.RiderConfig.RiderConfig
+getRiderConfig :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) => DJourney.Journey -> m Domain.Types.RiderConfig.RiderConfig
 getRiderConfig journey = getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
 
 defaultBusTrackingConfig :: Domain.Types.RiderConfig.BusTrackingConfig
@@ -369,7 +371,7 @@ defaultBusTrackingConfig =
     }
 
 checkAndMarkTerminalJourneyStatus ::
-  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   DJourney.Journey ->
   [JL.JourneyLegState] ->
   m ()
@@ -409,7 +411,7 @@ checkAndMarkTerminalJourneyStatus journey allLegStates = do
       | otherwise = pure ()
 
 getAllLegsStatus ::
-  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   DJourney.Journey ->
   Maybe Text ->
   m [JL.JourneyLegState]
@@ -430,7 +432,7 @@ getAllLegsStatus journey mbFleetNo = do
     getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((.routeGtfsId) >=> (pure . gtfsIdtoDomainCode))
 
     processLeg ::
-      (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+      (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
       [APITypes.RiderLocationReq] ->
       Bool ->
       (Maybe DJourneyLeg.JourneyLeg, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)]) ->
@@ -458,7 +460,7 @@ getAllLegsStatus journey mbFleetNo = do
         Nothing -> throwError $ JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber
 
 getMultiModalTransitOptions ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   APITypes.MultimodalUserPreferences ->
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -554,7 +556,7 @@ data LegConfirmPlan = LegConfirmPlan
   }
 
 startJourney ::
-  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DPerson.Person ->
   [APITypes.JourneyConfirmReqElement] ->
   Maybe Int ->
@@ -706,7 +708,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
       JLI.confirm plan.isForcedBooking plan.shouldBookLater plan.legInfo plan.mbCrisSdkResponse plan.categorySelection journey.isSingleMode mbEnableOffer mbIsMockPayment (plan.mbElement >>= (.tripId)) (plan.mbElement >>= (.vehicleNumber)) (plan.mbElement >>= (.purchasedPassPaymentId))
 
 startJourneyLeg ::
-  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => JL.LegInfo -> Maybe Bool -> m ()
+  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) => JL.LegInfo -> Maybe Bool -> m ()
 startJourneyLeg legInfo isSingleMode = do
   (categories, crisSdkResponse) <-
     case legInfo.legExtraInfo of
@@ -732,7 +734,8 @@ startJourneyLeg legInfo isSingleMode = do
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
     JL.GetStateFlow m r c,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   DJourney.Journey ->
   Maybe [DJourneyLeg.JourneyLeg] ->
@@ -918,7 +921,7 @@ addTaxiLeg journey journeyLeg originAddress destinationAddress upsertJourneyLegA
           }
 
 addMetroLeg ::
-  (JL.SearchRequestFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.SearchRequestFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
@@ -1067,7 +1070,8 @@ deleteLeg ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   DJourneyLeg.JourneyLeg ->
   SCR.CancellationReasonCode ->
@@ -1084,7 +1088,8 @@ softCancelLeg ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   DJourneyLeg.JourneyLeg ->
   SCR.CancellationReasonCode ->
@@ -1100,7 +1105,8 @@ cancelLeg ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   DJourneyLeg.JourneyLeg ->
   SCR.CancellationReasonCode ->
@@ -1132,7 +1138,8 @@ cancelLegUtil ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   Maybe SharedCab.Refund ->
   DJourneyLeg.JourneyLeg ->
@@ -1229,7 +1236,7 @@ updateJourneyStatus journey newStatus = do
     QJourneyExtra.updateStatusAndEndTime newStatus journey.id
 
 extendLeg ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv, r ~ AppEnv) =>
   Id DJourney.Journey ->
   JL.ExtendLegStartPoint ->
   Maybe DLocation.LocationAPIEntity ->
@@ -1348,7 +1355,8 @@ extendLegEstimatedFare ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   Id DJourney.Journey ->
   JL.ExtendLegStartPoint ->
@@ -1391,7 +1399,8 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
         EsqDBReplicaFlow m r,
         EncFlow m r,
         Monad m,
-        m ~ Kernel.Types.Flow.FlowR AppEnv
+        m ~ Kernel.Types.Flow.FlowR AppEnv,
+        r ~ AppEnv
       ) =>
       DJourney.Journey ->
       DJourneyLeg.JourneyLeg ->
@@ -1485,7 +1494,8 @@ switchLeg ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   Id DJourney.Journey ->
   Id DPerson.Person ->
@@ -1753,7 +1763,8 @@ cancelOngoingTaxiLegs ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    m ~ Kernel.Types.Flow.FlowR AppEnv
+    m ~ Kernel.Types.Flow.FlowR AppEnv,
+    r ~ AppEnv
   ) =>
   [DJourneyLeg.JourneyLeg] ->
   m ()

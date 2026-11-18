@@ -18,7 +18,6 @@ module Lib.DriverScore
 where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
-import Control.Applicative (liftA2)
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (utctDay)
@@ -27,7 +26,6 @@ import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverStats as DS
 import Domain.Types.FareParameters
-import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as DP
@@ -259,9 +257,9 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let deadKmFares =
         ( \x -> case fareParametersDetails x of
-            ProgressiveDetails det -> Just ((deadKmFare :: Fare.FParamsProgressiveDetails -> HighPrecMoney) det)
+            ProgressiveDetails det -> Just det.deadKmFare
             SlabDetails _ -> Nothing
-            RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
+            RentalDetails det -> Just det.deadKmFare
             InterCityDetails det -> Just (pickupCharge det)
             AmbulanceDetails _ -> Nothing
         )

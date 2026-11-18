@@ -99,7 +99,7 @@ assignTagsToDrivers driverIds driverTag =
                   (driverPoolResult dp :: DriverPoolResult)
                     { driverTags =
                         insertInObject
-                          (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
+                          (((.driverTags) . driverPoolResult) dp)
                           [driverTag]
                     }
               }
@@ -606,7 +606,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                       (driverPoolResult dp :: DriverPoolResult)
                         { driverTags =
                             insertInObject
-                              (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
+                              (((.driverTags) . driverPoolResult) dp)
                               [driverTag]
                         }
                   }

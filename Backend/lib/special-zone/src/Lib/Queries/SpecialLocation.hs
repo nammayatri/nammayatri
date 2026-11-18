@@ -343,7 +343,7 @@ updateParkingFeeExemptionEnabled parkingFeeExemptionEnabled now specialLocationI
     [ SpecialLocationParkingFeeExemptionEnabled =. val parkingFeeExemptionEnabled,
       SpecialLocationUpdatedAt =. val now
     ]
-  where_ $ tbl ^. SpecialLocationId ==. val specialLocationId.getId
+  where_ $ tbl ^. SpecialLocationUuid ==. val specialLocationId.getId
 
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT

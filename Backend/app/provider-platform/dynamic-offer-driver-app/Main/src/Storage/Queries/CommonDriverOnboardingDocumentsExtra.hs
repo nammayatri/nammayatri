@@ -98,7 +98,7 @@ countForCommonDocuments CommonDocumentsFilter {..} = do
             )
             do
               B.all_ (BeamCommon.commonDriverOnboardingDocuments BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+  pure $ either (const 0) (fromMaybe 0 . listToMaybe) res
 
 -- | Whom a common document belongs to. The type guarantees at least one identifier is present, so
 --   the lookup can never degrade into an unscoped scan or a @driver_id IS NULL@ filter.

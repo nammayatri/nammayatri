@@ -193,7 +193,8 @@ createInKafka kafkaProducerTools dbObject dbStreamKey model = do
         { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
-          prValue = Just . LBS.toStrict $ A.encode event
+          prValue = Just . LBS.toStrict $ A.encode event,
+          prHeaders = KafkaProd.headersFromList []
         }
 
 shouldPushToKafkaOnly :: DBModel -> [Text] -> Bool

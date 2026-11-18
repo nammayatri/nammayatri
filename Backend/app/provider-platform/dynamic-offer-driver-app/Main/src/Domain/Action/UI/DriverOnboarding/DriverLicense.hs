@@ -25,7 +25,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
   )
 where
 
-import Control.Applicative (liftA2, (<|>))
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay, utctDay)
 import Data.Tuple.Extra (both)
