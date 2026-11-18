@@ -55,6 +55,7 @@ async function database() {
     CREATE TABLE atlas_driver_offer_bpp.booking_cancellation_reason (ride_id text, source text);
     CREATE TABLE atlas_app.driver_offer (id text PRIMARY KEY, bpp_quote_id text NOT NULL);
     CREATE TABLE atlas_app.quote (id text PRIMARY KEY, driver_offer_id text);
+    ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN fare numeric;
     CREATE TABLE movin.driver_rider_rating (ride_id text PRIMARY KEY, driver_id text NOT NULL, rider_id text, stars smallint NOT NULL);
   `);
   const driver = async (id, number, first) => {
@@ -116,8 +117,10 @@ function world(db) {
   // and start the same second.
   w.arriveAndStart = async (b) => { await w.arrive(b); await w.start(b); };
   w.end = async (b) => {
-    await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'COMPLETED' WHERE id = $1`, [b.ride.bppRideId]);
-    b.status = 'COMPLETED'; b.ride.status = 'COMPLETED'; b.ride.computedPrice = 812;
+    // The price lives on the driver's side; the passenger's copy has none yet
+    // when the ride ends (« prix ? », seen live 2026-11-18).
+    await db.sql(`UPDATE atlas_driver_offer_bpp.ride SET status = 'COMPLETED', fare = 812 WHERE id = $1`, [b.ride.bppRideId]);
+    b.status = 'COMPLETED'; b.ride.status = 'COMPLETED';
   };
   w.rate = async (b) => { await db.sql(`INSERT INTO movin.driver_rider_rating VALUES ($1, $2, 'r', 4)`, [b.ride.bppRideId, TESTER]); };
   w.driverCancels = async (b) => {
@@ -285,6 +288,8 @@ async function osrm() {
     'three offers (a real driver\'s first): only the tester\'s was confirmed', r.confirmedDrivers.join());
   t.ok(/COMPLETED/.test(r.verdict.reason) && /812/.test(r.verdict.reason) && /le chauffeur 4/.test(r.verdict.reason),
     'the verdict carries the end state, the price and both ratings', r.verdict.reason);
+  t.ok(/prix 812 DA/.test(r.verdict.reason) && r.lines.some((l) => /Course terminée, prix 812 DA\./.test(l)),
+    '   the price read from the driver\'s side, in the country\'s money (never « prix ? »)', r.verdict.reason);
   const rate = r.w.requests.find(([, p]) => p === '/v2/feedback/rateRide');
   t.ok(rate && rate[2].rating === 5 && rate[2].feedbackDetails === COMMENT, `the passenger's rating says « ${COMMENT} »`);
   t.ok(noDriverRoute(r.paths), 'not one driver route (/ui/...): it never signs in as the driver');
@@ -298,6 +303,22 @@ async function osrm() {
 
   r = await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start, w.end]; });
   t.ok(!r.verdict.ok && /n’a pas noté/.test(r.verdict.reason), 'the ride ends but he never rates the passenger: PAS RÉUSSI (scenario 1 is « jusqu\'aux deux notes »)', r.verdict.reason);
+
+  // A simulated car as the tester never rates (owner, 2026-11-18): the run
+  // ends RÉUSSI at once, without the 5-minute wait. Only for those twelve.
+  let waited = 0;
+  r = await scenario(1, async (w, db) => {
+    await db.sql(`INSERT INTO movin.wallet (driver_id, balance) VALUES ($1, 500)`, [SIM]);
+    w.offers = [[SIM]]; w.script = [w.arrive, w.start, w.end];
+  }, { number: { driverId: SIM }, onSleep: (w) => { waited += 1; return w.tick(); } });
+  t.ok(r.verdict.ok && /voiture simulée : elle ne note pas/.test(r.verdict.reason) && /prix 812 DA/.test(r.verdict.reason),
+    'a simulated car as the tester: RÉUSSI once the ride ends and the passenger has rated, it says why', r.verdict.reason);
+  t.ok(!r.lines.some((l) => /note le passager à son tour/.test(l)), '   and nobody is told to wait for its rating', r.lines.slice(-2).join(' | '));
+  const sleepsSim = waited;
+  waited = 0;
+  await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start, w.end]; },
+    { onSleep: (w) => { waited += 1; return w.tick(); } });
+  t.ok(waited > sleepsSim, `   a real driver is still waited for (${waited} polls against ${sleepsSim})`);
 
   t.section('the console gives a driver id, not a number (day 8, V6)');
   r = await scenario(2, (w) => { w.offers = [[OTHER, TESTER]]; }, { number: { driverId: TESTER } });

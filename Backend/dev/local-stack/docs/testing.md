@@ -125,7 +125,7 @@ the ride CANCELLED, never arrived), but not by construction.
 
 | # | Scenario | RÉUSSI when |
 |---|---|---|
-| 1 | a whole ride | COMPLETED, a price, the passenger's 5 stars **and** the driver's rating of her (`movin.driver_rider_rating`) |
+| 1 | a whole ride | COMPLETED, a price (the driver's side, `ride.fare`, since 2026-11-18: the passenger's copy has none yet), the passenger's 5 stars **and** the driver's rating of her (`movin.driver_rider_rating`). **A simulated car never rates**, so with one as the tester the run ends RÉUSSI after the passenger's stars (owner, 2026-11-18); a real driver must still rate within 5 min |
 | 2 | the passenger cancels before the arrival | CANCELLED on the driver side; « pas joué » if he arrives or starts first |
 | 3 | she cancels after the arrival | the same, 20 s after « Je suis arrivé » |
 | 4 | she does not come | the driver cancels (`booking_cancellation_reason.source = ByDriver`); starting the ride is PAS RÉUSSI |

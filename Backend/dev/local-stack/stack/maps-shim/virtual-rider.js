@@ -78,7 +78,7 @@ const SIMULATED = new Set([
 const OPEN_BOOKING = new Set(['NEW', 'CONFIRMED', 'AWAITING_REASSIGNMENT', 'TRIP_ASSIGNED']);
 
 const SCENARIOS = {
-  1: 'une course normale, jusqu’aux deux notes',
+  1: 'une course normale, jusqu’aux deux notes (une voiture simulée ne note pas)',
   2: 'le passager annule avant l’arrivée du chauffeur',
   3: 'le passager annule après l’arrivée du chauffeur',
   4: 'le passager ne vient pas : le chauffeur attend, puis annule',
@@ -185,10 +185,10 @@ async function run(deps, target, scenarioRaw) {
   /* ── 1. the tester, and whether dispatch would reach him ── */
   const found = byId
     ? await pool.query(
-      `SELECT id, first_name, merchant_id FROM atlas_driver_offer_bpp.person
+      `SELECT id, first_name, merchant_id, unencrypted_mobile_number FROM atlas_driver_offer_bpp.person
         WHERE role = 'DRIVER' AND id = $1`, [target.driverId])
     : await pool.query(
-      `SELECT id, first_name, merchant_id FROM atlas_driver_offer_bpp.person
+      `SELECT id, first_name, merchant_id, unencrypted_mobile_number FROM atlas_driver_offer_bpp.person
         WHERE role = 'DRIVER' AND mobile_country_code = $1
           AND encode(mobile_number_hash, 'hex') = ANY($2::text[])
         LIMIT 2`,
@@ -209,6 +209,10 @@ async function run(deps, target, scenarioRaw) {
        LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
       WHERE p.id = $1`, [tester.id])).rows[0] || {};
   const name = (tester.first_name || 'le testeur').trim();
+  // A simulated car (simulate-driver.py) never rates its passenger: scenario 1
+  // does not wait for a rating that cannot come (owner, 2026-11-18). A real
+  // driver still must.
+  const simulatedTester = SIMULATED.has(String(tester.unencrypted_mobile_number || '').trim());
   if (!r.enabled) return fail(`${name} : compte pas encore validé par le bureau`);
   if (r.blocked) return fail(`${name} : compte bloqué`);
   if (!r.variant) return fail(`${name} : aucun véhicule enregistré`);
@@ -613,15 +617,25 @@ async function run(deps, target, scenarioRaw) {
     const b = await book(c.bookingId);
     const ride = (b.json && b.json.rideList && b.json.rideList[0]) || {};
     await call('POST', '/v2/feedback/rateRide', { rideId: ride.id || c.ride.id, rating: 5, feedbackDetails: COMMENT }, token);
-    say(`Course terminée, prix ${ride.computedPrice ?? '?'}. Le passager a noté 5 étoiles (« ${COMMENT} »). → Le chauffeur note le passager à son tour.`);
+    // The price from the driver's side: the passenger's copy of the ride has
+    // none yet at this moment (« prix ? », seen live 2026-11-18).
+    const fare = await pool.query(`SELECT fare FROM atlas_driver_offer_bpp.ride WHERE id = $1`, [bpp])
+      .then((q) => (q.rows[0] && q.rows[0].fare != null ? q.rows[0].fare : null)).catch(() => null);
+    const amount = fare ?? ride.computedPrice;
+    const price = amount == null ? '?' : `${Number(amount)} ${testerCountry === 'MR' ? 'MRU' : 'DA'}`;
+    if (simulatedTester) {
+      say(`Course terminée, prix ${price}. Le passager a noté 5 étoiles (« ${COMMENT} »). Voiture simulée : elle ne note pas le passager, le test s’arrête ici.`);
+      return done(true, `course COMPLETED, prix ${price} ; le passager a donné 5 étoiles (voiture simulée : elle ne note pas le passager)`);
+    }
+    say(`Course terminée, prix ${price}. Le passager a noté 5 étoiles (« ${COMMENT} »). → Le chauffeur note le passager à son tour.`);
     let stars = null;
     for (let i = 0; i < polls(W.driverRating) && stars === null; i += 1) {
       const n = await pool.query(`SELECT stars FROM movin.driver_rider_rating WHERE ride_id = $1`, [bpp]).catch(() => null);
       if (n && n.rows[0]) stars = n.rows[0].stars;
       else await sleep(W.poll * 1000);
     }
-    if (stars === null) return done(false, `course COMPLETED (${ride.computedPrice ?? '?'}), mais ${name} n’a pas noté le passager en ${Math.round(W.driverRating / 60)} min`);
-    return done(true, `course COMPLETED, prix ${ride.computedPrice ?? '?'} ; le passager a donné 5 étoiles, le chauffeur ${stars}`);
+    if (stars === null) return done(false, `course COMPLETED (prix ${price}), mais ${name} n’a pas noté le passager en ${Math.round(W.driverRating / 60)} min`);
+    return done(true, `course COMPLETED, prix ${price} ; le passager a donné 5 étoiles, le chauffeur ${stars}`);
   }
   return fail('rien à faire');
 }
