@@ -64,7 +64,6 @@ import qualified SharedLogic.Finance.PostActions as PostActions
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
-import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Beam.LedgerAdjustmentRequest as BeamLA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -929,11 +928,6 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
                 DLA.postedAt = Just now,
                 DLA.updatedAt = now
               }
-          when (adjustmentRequest.direction == DLA.Debit) $
-            fork "wallet floor after ledger adjustment debit" $ do
-              mbPerson <- QP.findById adjustmentRequest.personId
-              whenJust mbPerson $ \person ->
-                WalletFloor.enforceWalletFloorForOwner transporterConfig (Wallet.counterpartyFromRole person.role) person.id.getId
         Left (err :: SomeException) -> do
           let errMessage = T.pack (displayException err)
           logError $
@@ -986,7 +980,7 @@ ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustme
 -- | Common direction mapping for category-specific manual adjustments.
 --   Uses the collecting finance helper because the request stores ledgerEntryId.
 adjustment ::
-  (EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r) =>
+  (EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r, PostActions.PostActionsEnv r) =>
   DLA.AdjustmentDirection ->
   Finance.AccountRole ->
   Finance.AccountRole ->

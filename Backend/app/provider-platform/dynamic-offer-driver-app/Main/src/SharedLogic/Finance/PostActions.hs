@@ -17,26 +17,34 @@
 module SharedLogic.Finance.PostActions
   ( runFinance,
     runPostActionsForAccount,
+    PostActionsEnv,
   )
 where
 
 import Data.List (nubBy)
+import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fork, logError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+
+-- | What the hook needs beyond the finance kernel: taking a driver offline below the wallet floor
+--   changes driver mode, which also updates the fleet/operator status counters (ClickHouse).
+type PostActionsEnv r = (HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv)
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.
 runFinance ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
   Finance.FinanceCtx ->
   Finance.FinanceM m a ->
   m (Either Finance.FinanceError (a, [Id Finance.LedgerEntry]))
@@ -51,7 +59,7 @@ runFinance ctx action = do
 
 -- | Runs 'runPostActionsForAccount' against every account a runFinance call touched.
 runPostActions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
   Bool ->
   Finance.FinanceState ->
   m ()
@@ -59,30 +67,37 @@ runPostActions walletGateEnabled finalState = do
   let accounts = nubBy (\a b -> a.id == b.id) finalState.affectedAccounts
   -- The pool caches driver wallet balances only where the wallet is on (it reads the cache only where
   -- the minimum can be enforced); the city's config is read only when a driver wallet moved.
-  syncWalletBalance <- case find isDriverWallet accounts of
-    Nothing -> pure False
+  mbWalletCityConfig <- case find isDriverWallet accounts of
+    Nothing -> pure Nothing
     Just account ->
-      (maybe False (.driverWalletConfig.enableDriverWallet) <$> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = account.merchantOperatingCityId}) Nothing) `catchAny` \e -> do
+      (mfilter (.driverWalletConfig.enableDriverWallet) <$> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = account.merchantOperatingCityId}) Nothing) `catchAny` \e -> do
         logError ("PostActions: wallet config read failed for city " <> account.merchantOperatingCityId <> ", skipping the pool balance sync: " <> show e)
-        pure False
+        pure Nothing
   forM_ accounts $ \account ->
-    runPostActionsForAccount walletGateEnabled syncWalletBalance account `catchAny` \e ->
+    runPostActionsForAccount walletGateEnabled mbWalletCityConfig account `catchAny` \e ->
       logError ("PostActions: processing accountId=" <> account.id.getId <> " failed, skipping: " <> show e)
 
 -- | Like 'runPostActions' but for a single, already-known account. No callers remain
 --   outside this module (createWalletEntryDelta now goes through runFinance); kept as
 --   the single-account entry point for future direct dispatch needs.
 runPostActionsForAccount ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
-  Bool -> -- the city has driverWalletConfig.enableDriverWallet: keep the pool's cached balance in sync
+  Maybe DTC.TransporterConfig -> -- the city's config when it has driverWalletConfig.enableDriverWallet
   Finance.AffectedAccount ->
   m ()
-runPostActionsForAccount walletGateEnabled syncWalletBalance account = do
+runPostActionsForAccount walletGateEnabled mbWalletCityConfig account = do
   -- Only driver wallets are cached in the pool (fleet owner postings never change it).
-  when (syncWalletBalance && isDriverWallet account) $
-    syncWalletBalanceToPool account.id `catchAny` \e ->
-      logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
+  whenJust mbWalletCityConfig $ \transporterConfig ->
+    when (isDriverWallet account) $ do
+      syncWalletBalanceToPool account.id `catchAny` \e ->
+        logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
+      -- The pool stops offering rides as soon as the balance is below the minimum; take an online,
+      -- free driver offline too, after whichever posting crossed it. A driver on a ride is skipped and
+      -- re-checked by the ride-end postings.
+      whenJust account.counterpartyId $ \driverId ->
+        fork "wallet floor after posting" $
+          WalletFloor.enforceWalletFloorForOwner transporterConfig FAccount.DRIVER driverId
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
       (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->

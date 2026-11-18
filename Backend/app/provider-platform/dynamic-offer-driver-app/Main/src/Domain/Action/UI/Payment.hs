@@ -111,7 +111,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.GstBreakdown
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
@@ -558,7 +558,8 @@ processWalletTopupWebhook ::
     CacheFlow m r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   DP.Person ->
   DOrder.PaymentOrder ->

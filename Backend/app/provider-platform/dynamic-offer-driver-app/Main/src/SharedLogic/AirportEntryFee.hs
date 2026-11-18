@@ -51,7 +51,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
@@ -178,7 +178,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
 --   Allows negative balance; does nothing if feature off or required fee 0.
 --   Runs inside startRide before the ride is marked INPROGRESS, so a failed debit fails the start.
 deductAirportEntryFeeAtStartRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
   Bool ->
   DRide.Ride ->
   SRB.Booking ->

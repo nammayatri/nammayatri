@@ -48,8 +48,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance hiding (runFinance)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Wallet (buildDriverChargeCtx)
+import SharedLogic.Finance.WalletAccount (resolveWalletOwner)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
 import Tools.Notifications (sendNotificationToDriver)
@@ -83,12 +84,6 @@ referenceTypes :: WalletDebitKind -> (Text, Text, Text)
 referenceTypes = \case
   DailySubscription -> (walletReferenceSubscriptionFee, walletReferenceSubscriptionGST, walletReferenceSubscriptionPenalty)
   MigratedDues -> (walletReferenceMigratedDues, walletReferenceMigratedDuesGST, walletReferenceMigratedDuesPenalty)
-
--- | The wallet the charges of this feature settle in: always the driver's own, fleet driver or not.
---   (Ride earnings, ride GST and cancellation postings keep following the ride's fleet owner, as they
---   did before this feature; the airport entry fee at ride start is posted to the driver.)
-resolveWalletOwner :: (Applicative m) => Id DP.Person -> m (CounterpartyType, Text)
-resolveWalletOwner driverId = pure (DRIVER, driverId.getId)
 
 -- | The three amounts a fee is debited as: its platform fee, the GST on it (cgst + sgst + govt charges)
 --   and any cancellation penalty folded onto it, in paise. The nightly run debits the fee before it is
@@ -148,7 +143,8 @@ debitDriverFeeFromWallet ::
     BeamFlow m r,
     HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   DTC.TransporterConfig ->
   WalletDebitKind ->
@@ -189,7 +185,8 @@ debitBehaviourPenaltyFromWallet ::
     BeamFlow m r,
     HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   DTC.TransporterConfig ->
   Text ->
@@ -226,7 +223,8 @@ creditWalletForPaidDriverFees ::
     BeamFlow m r,
     HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   DTC.TransporterConfig ->
   DP.Person ->

@@ -121,7 +121,7 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
@@ -548,7 +548,8 @@ createDriverWalletTransaction ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PostActionsEnv r
   ) =>
   Ride.Ride ->
   SRB.Booking ->

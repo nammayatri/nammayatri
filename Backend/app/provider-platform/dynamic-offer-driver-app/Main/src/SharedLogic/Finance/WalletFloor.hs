@@ -16,9 +16,9 @@
 --   driver may not be online. It applies in any city where it is enforced ('isMinBalanceEnforced'),
 --   wallet-subscription or not; it is the only wallet block (the plan credit limit plays no part).
 --
---   'enforceWalletFloorForOwner' runs after the debits that can cross the floor (nightly fee,
---   dues migration, penalties, ledger adjustments). It needs the app environment to change
---   driver mode, so it lives here rather than in the generic post-posting hook.
+--   'enforceWalletFloorForOwner' runs from the post-posting hook ('SharedLogic.Finance.PostActions')
+--   after every posting on a driver wallet, so any debit that crosses the floor takes an online, free
+--   driver offline. A driver on a ride is skipped there and re-checked by the ride-end postings.
 module SharedLogic.Finance.WalletFloor
   ( WalletFloor (..),
     getWalletFloor,
@@ -53,7 +53,6 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.WalletAccount
 import SharedLogic.Finance.WalletAutopay (ensureAutopayRecharge)
 import SharedLogic.Finance.WalletBalanceCache (setDriverWalletBalanceInPool)
-import SharedLogic.Finance.WalletSubscription (resolveWalletOwner)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -144,7 +143,9 @@ enforceWalletFloorForDriver transporterConfig counterpartyType ownerId driverId 
       mbVehicle <- QVehicle.findById driverId
       mbFloor <- getWalletFloor transporterConfig person ((.variant) <$> mbVehicle)
       whenJust mbFloor $ \floor' -> do
-        balance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner counterpartyType ownerId
+        -- The raw balance, as the pool checks it: a hold (the cash-ride GST reservation, posted before
+        -- the driver is marked on the ride) must not take a driver offline while a ride is assigned.
+        balance <- fromMaybe 0 <$> getWalletBalanceByOwner counterpartyType ownerId
         setOfflineIfBelowFloor transporterConfig person driverInfo floor' balance
 
 -- | Only online drivers are taken offline; one on a ride or with an accepted advance booking keeps it.
@@ -176,9 +177,9 @@ setOfflineIfBelowFloor transporterConfig person driverInfo floor' balance =
       sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message person person.deviceToken
 
 -- | Follow-up to a debit that may have crossed a threshold (nightly fee, dues migration, penalty):
---   take this driver offline if below the floor; then, when the driver's wallet is at or below the
---   trigger level ('autopayTriggerBalance'), schedule an Autopay recharge (wallet-subscription cities
---   only) or nudge the driver to recharge, at most once a day.
+--   when the driver's wallet is at or below the trigger level ('autopayTriggerBalance'), schedule an
+--   Autopay recharge (wallet-subscription cities only) or nudge the driver to recharge, at most once a
+--   day. Taking the driver offline below the floor happens in the post-posting hook for every debit.
 afterWalletDebit ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -196,17 +197,11 @@ afterWalletDebit transporterConfig driver = do
   walletSubscription <- isWalletSubscriptionCity transporterConfig
   minBalanceEnforced <- isMinBalanceEnforced transporterConfig
   when (walletSubscription || minBalanceEnforced) $ do
-    -- Balance, vehicle and tiers are read once and serve both the floor check and the recharge/nudge.
+    -- The offline flip for this debit already ran in the post-posting hook (PostActions).
     (counterpartyType, ownerId) <- resolveWalletOwner driver.id
     balance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner counterpartyType ownerId
     mbVariant <- fmap (.variant) <$> QVehicle.findById driver.id
     tiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
-    floorNow <- getCurrentTime
-    whenJust (walletFloorFromTiers minBalanceEnforced floorNow driver tiers mbVariant) $ \floor' ->
-      when (isBelowWalletFloor floor' balance) $ do
-        mbDriverInfo <- QDI.findById (cast driver.id)
-        whenJust mbDriverInfo $ \driverInfo ->
-          when (isOnlineAndFree driverInfo) $ setOfflineIfBelowFloor transporterConfig driver driverInfo floor' balance
     let mbMinimum = mbVariant >>= tierMinimum tiers
         -- Recharge and nudge start at the autopay trigger (above the blocking minimum), so the driver
         -- is topped up before they would be blocked.

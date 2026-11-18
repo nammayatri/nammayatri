@@ -37,6 +37,7 @@ module SharedLogic.Finance.WalletAccount
     getWalletAvailableBalanceByOwner,
     buildDriverChargeCtx,
     isWalletSubscriptionCity,
+    resolveWalletOwner,
     isMinBalanceEnforced,
     walletClassConfig,
     driverWalletConfigErrors,
@@ -51,6 +52,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
@@ -58,6 +60,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -213,6 +216,12 @@ walletClassConfig merchantId merchantOperatingCityId counterparty =
         counterpartyType = Just counterparty,
         subLedger = Nothing
       }
+
+-- | The wallet the charges of this feature settle in: always the driver's own, fleet driver or not.
+--   (Ride earnings, ride GST and cancellation postings keep following the ride's fleet owner, as they
+--   did before this feature; the airport entry fee at ride start is posted to the driver.)
+resolveWalletOwner :: (Applicative m) => Id DP.Person -> m (CounterpartyType, Text)
+resolveWalletOwner driverId = pure (DRIVER, driverId.getId)
 
 -- | The subscription is paid from the driver wallet: the wallet is on and the driver wallet class has
 --   subscriptionFromBalance.

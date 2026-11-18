@@ -48,7 +48,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
-import SharedLogic.Finance.PostActions (runFinance)
+import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletAccount (makeWalletOfferHoldsKey)
@@ -100,7 +100,8 @@ type WalletPayoutFlow m r =
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Redis.HedisLTSFlowEnv r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PostActionsEnv r
   )
 
 loadPayoutContext ::
@@ -255,7 +256,8 @@ initiateWalletPayoutWith ::
     BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r
   ) =>
   PayoutContext ->
   HighPrecMoney -> -- payoutable balance
