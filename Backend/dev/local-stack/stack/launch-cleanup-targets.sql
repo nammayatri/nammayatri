@@ -1,5 +1,6 @@
--- The accounts the day-1 clean-up removes: the twelve simulated cars and the two
--- test passengers, and NOBODY else. Reads only.
+-- The accounts the day-1 clean-up removes: the twelve simulated cars, the four
+-- test passengers (two until 2026-11-18) and the review accounts, and NOBODY
+-- else. Reads only.
 --
 --   psql -At -F'|' -f launch-cleanup-targets.sql
 --
@@ -9,7 +10,9 @@
 -- It names them by (country code, number) exactly as the people who made them
 -- stored them -- simulate-driver.py for the cars (Mauritania 22100001..06,
 -- Algeria 0555100001..06 with the trunk zero) and the ride tests' passengers
--- (+222 22778899, +213 0555000199). A pattern ("anything starting 2210") would
+-- (+222 22778899, +213 0555000199) and, since 2026-11-18, the virtual
+-- passenger's second one per country (+222 22778898, +213 0555000198:
+-- scenario 8, two requests at once). A pattern ("anything starting 2210") would
 -- be shorter and one real number away from erasing a real person, so the list
 -- is the list. The Algerian numbers appear with and without the trunk zero
 -- because the backend accepts either and the stored form has been seen both
@@ -29,7 +32,10 @@ WITH wanted (side, cc, num) AS (VALUES
   -- (passenger) and 22000702 (driver). Each number may exist on either side.
   ('driver', '+222', '22000701'), ('driver', '+222', '22000702'),
   ('rider',  '+222', '22000701'), ('rider',  '+222', '22000702'),
-  ('rider',  '+213', '0555000199'), ('rider', '+213', '555000199')
+  ('rider',  '+213', '0555000199'), ('rider', '+213', '555000199'),
+  -- The virtual passenger's second test passenger per country (2026-11-18).
+  ('rider',  '+222', '22778898'),
+  ('rider',  '+213', '0555000198'), ('rider', '+213', '555000198')
 )
 SELECT 'driver', p.id::text, p.mobile_country_code, p.unencrypted_mobile_number, coalesce(p.first_name, '')
   FROM atlas_driver_offer_bpp.person p

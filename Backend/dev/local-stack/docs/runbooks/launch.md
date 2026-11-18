@@ -46,16 +46,16 @@ This restores last night's off-site backup into throwaway containers (about 70 s
 
 **Rehearsed 2026-10-18, passed (105 s).** On the backup of 20261018T003335Z (the 106 tables exact, 20 numbers decrypted, 25 documents): the script found exactly **12 drivers and 2 passengers**, with the number formats the simulator had written (Algerian drivers `+213` with the trunk zero, Mauritanian `+222` without; the two passengers `+213 0555000199` and `+222 22778899`); no uploaded papers; **39 wallet-ledger entries** belonging to those cars, which stay by design (see below). Each erase touched 6 rows per car and 4 per passenger, left every person row in place (56 drivers and 84 passengers before and after), wrote 14 audit rows and found none of the numbers afterwards. 6 drivers still have a number on record: the real ones.
 
-### 3b. Remove the 12 simulated cars and the 2 test passengers
+### 3b. Remove the 12 simulated cars and the 4 test passengers
 
-> **First, switch off the virtual passenger** (since 2026-11-16, [testing.md](../testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)): it books with the two test passengers this step erases. Remove `VIRTUAL_RIDER=on` from `/opt/ny/local-stack/.env`, then `docker compose up -d maps-shim` from `/opt/ny/local-stack`, and check `docker exec ny-maps-shim node virtual-rider.js "+213 0555000000" 1` answers « éteint ». `launch-gate.sh` says no-go while it is on (since 2026-11-18). The console's Tests page then answers « éteint » too.
+> **First, switch off the virtual passenger** (since 2026-11-16, [testing.md](../testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)): it books with the four test passengers this step erases (two per country since 2026-11-18). Remove `VIRTUAL_RIDER=on` from `/opt/ny/local-stack/.env`, then `docker compose up -d maps-shim` from `/opt/ny/local-stack`, and check `docker exec ny-maps-shim node virtual-rider.js "+213 0555000000" 1` answers « éteint ». `launch-gate.sh` says no-go while it is on (since 2026-11-18). The console's Tests page then answers « éteint » too.
 
 > Since 2026-10-25 the list also names the two **review accounts** made for the stores' reviewers: `+222 22000701` (passenger) and `+222 22000702` (driver), so up to 14 drivers and 4 passengers. Their bypass (`SMS_BYPASS` in `/opt/ny/secrets/test-accounts.env`) must already be gone: remove it the day the review ends.
 
     sudo ./launch-cleanup.sh              # who would go, and what stays. Writes nothing.
     sudo ./launch-cleanup.sh --apply      # does it
 
-`--apply` takes a fresh backup first, dumps the three account schemas into `/root/pre-launch-clean/` (root-only: it is the way back if a number was wrong, and it holds **real** people's data), stops and removes the simulated fleet **before** erasing (otherwise the daemon signs the cars back in), erases each account with the console's own `anonymise.sql` (one transaction each, an audit row each), drops their Redis sessions and checks again. It asks you to type `erase 14 accounts`.
+`--apply` takes a fresh backup first, dumps the three account schemas into `/root/pre-launch-clean/` (root-only: it is the way back if a number was wrong, and it holds **real** people's data), stops and removes the simulated fleet **before** erasing (otherwise the daemon signs the cars back in), erases each account with the console's own `anonymise.sql` (one transaction each, an audit row each), drops their Redis sessions and checks again. It asks you to type `erase N accounts`, N being what it found (16 with every test account still there, more with the review accounts).
 
 What it does **not** do, and you do:
 

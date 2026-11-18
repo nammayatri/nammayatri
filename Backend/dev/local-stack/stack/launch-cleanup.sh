@@ -61,7 +61,7 @@ TARGETS_SQL="$HERE/launch-cleanup-targets.sql"
 ACTOR="${ACTOR:-owner: test accounts removed for the launch $(date -u +%F)}"
 NOTE="${NOTE:-launch clean-up: simulated cars and test passengers}"
 MAX_DRIVERS=14   # the twelve cars + the two review accounts (2026-10-25)
-MAX_RIDERS=4     # the two test passengers + the two review accounts
+MAX_RIDERS=6     # the four test passengers (two since 2026-11-18) + the two review accounts
 
 APPLY=0 REHEARSAL=0 PAPERS_HANDLED=0
 while [ $# -gt 0 ]; do

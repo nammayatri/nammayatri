@@ -9,7 +9,8 @@
 //     is the simulator's own roster, not a copy that can drift;
 //   * a real person is never selected, even one whose number looks like a
 //     test number in the other country or on the other side;
-//   * a dry run writes nothing; the rehearsal erases those fourteen and no one
+//   * a dry run writes nothing; the rehearsal erases those sixteen (twelve cars,
+//     four test passengers -- two since 2026-11-18) and no one
 //     else, leaves an audit row each, and is idempotent;
 //   * it refuses, changing nothing, when the selection is not what it was
 //     written for or when a target has papers on a volume SQL cannot reach.
@@ -56,7 +57,7 @@ const run = (args, env) => new Promise((resolve) => {
     await db.sql('INSERT INTO atlas_driver_offer_bpp.person (id, merchant_id, role, unencrypted_mobile_number, mobile_country_code, first_name) VALUES ($1,$2,$3,$4,$5,$6)',
       [`car${i}`, MR, 'DRIVER', n, cc(n), `Car${i}`]);
   }
-  await db.sql("INSERT INTO atlas_app.person (id, unencrypted_mobile_number, mobile_country_code, first_name) VALUES ('rider-mr','22778899','+222','Test MR'), ('rider-dz','0555000199','+213','Test DZ')");
+  await db.sql("INSERT INTO atlas_app.person (id, unencrypted_mobile_number, mobile_country_code, first_name) VALUES ('rider-mr','22778899','+222','Test MR'), ('rider-dz','0555000199','+213','Test DZ'), ('rider-mr2','22778898','+222','Test MR 2'), ('rider-dz2','0555000198','+213','Test DZ 2')");
 
   // People who must survive, and the ones that only look like targets.
   const keep = [
@@ -90,36 +91,36 @@ const run = (args, env) => new Promise((resolve) => {
   const rowsOf = (sql) => db.sql(sql);
 
   try {
-    t.section('1. a dry run lists the fourteen and writes nothing');
+    t.section('1. a dry run lists the sixteen and writes nothing');
     const total = await people();
     let r = await run(['--rehearsal', 'fake-pg'], env);
     t.ok(r.code === 0, 'exit 0', r.out.slice(-300));
-    t.ok(/12 driver\(s\) and 2 passenger\(s\)/.test(r.out), 'twelve cars and two passengers', r.out.split('\n').filter((l) => /driver\(s\)/.test(l)).join());
-    for (const n of [...cars, '22778899', '0555000199']) t.ok(r.out.includes(n), `lists ${n}`);
+    t.ok(/12 driver\(s\) and 4 passenger\(s\)/.test(r.out), 'twelve cars and four passengers', r.out.split('\n').filter((l) => /driver\(s\)/.test(l)).join());
+    for (const n of [...cars, '22778899', '0555000199', '22778898', '0555000198']) t.ok(r.out.includes(n), `lists ${n}`);
     for (const [, id] of keep) t.ok(!r.out.includes(id), `does not list ${id}`);
     t.ok(!r.out.includes('real-d4'), 'does not list the non-driver on a car number');
     t.ok(/dry run: nothing was written/.test(r.out), 'says it wrote nothing');
     t.ok((await rowsOf("SELECT 1 FROM atlas_driver_offer_bpp.person WHERE first_name = 'deleted'")).length === 0
       && (await rowsOf('SELECT 1 FROM movin.admin_audit')).length === 0, 'and wrote nothing');
 
-    t.section('2. the rehearsal erases those fourteen and nobody else');
+    t.section('2. the rehearsal erases those sixteen and nobody else');
     r = await run(['--rehearsal', 'fake-pg', '--apply'], env);
     t.ok(r.code === 0, 'exit 0', r.out.slice(-400));
     const gone = await rowsOf("SELECT id FROM atlas_driver_offer_bpp.person WHERE first_name = 'deleted' ORDER BY id");
     const goneR = await rowsOf("SELECT id FROM atlas_app.person WHERE first_name = 'deleted' ORDER BY id");
-    t.ok(gone.length === 12 && goneR.length === 2, 'twelve drivers and two passengers erased', `${gone.length}/${goneR.length}`);
+    t.ok(gone.length === 12 && goneR.length === 4, 'twelve drivers and four passengers erased', `${gone.length}/${goneR.length}`);
     const left = await rowsOf("SELECT id FROM atlas_driver_offer_bpp.person WHERE first_name <> 'deleted' ORDER BY id");
     t.ok(left.map((x) => x.id).join() === 'real-d1,real-d2,real-d3,real-d4', 'the four look-alikes and the real driver are untouched', left.map((x) => x.id).join());
     const leftR = await rowsOf("SELECT id FROM atlas_app.person WHERE first_name <> 'deleted' ORDER BY id");
     t.ok(leftR.map((x) => x.id).join() === 'real-r1,real-r2,real-r3', 'the real passengers are untouched', leftR.map((x) => x.id).join());
     t.ok((await people()) === total, 'no person row was deleted: erased, not removed');
-    t.ok((await rowsOf("SELECT 1 FROM movin.admin_audit WHERE actor_email = 'owner: test run'")).length === 14, 'one audit row per account');
+    t.ok((await rowsOf("SELECT 1 FROM movin.admin_audit WHERE actor_email = 'owner: test run'")).length === 16, 'one audit row per account');
     t.ok(/none of the listed numbers can be found any more/.test(r.out), 'it checked afterwards that none can be found');
 
     t.section('3. run again: nothing to do');
     r = await run(['--rehearsal', 'fake-pg', '--apply'], env);
     t.ok(r.code === 0 && /nothing to do/.test(r.out), 'a second run finds none and says so', r.out.slice(-200));
-    t.ok((await rowsOf('SELECT 1 FROM movin.admin_audit')).length === 14, 'and writes no more audit rows');
+    t.ok((await rowsOf('SELECT 1 FROM movin.admin_audit')).length === 16, 'and writes no more audit rows');
 
     t.section('4. it refuses, changing nothing, when the selection is not what it was written for');
     // More than fourteen drivers: a duplicate of a car's number, and fourteen extras.

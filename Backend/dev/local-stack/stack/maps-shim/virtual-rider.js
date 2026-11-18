@@ -58,9 +58,14 @@ const RIDER_MERCHANT = 'YATRI';
 const DZ_MERCHANT = 'algeria0-0000-0000-0000-00000algeria';
 const COMMENT = 'Passager virtuel · essai';
 
+/**
+ * Two test passengers per country (the second since 2026-11-18, decision V3:
+ * scenario 8 needs two requests at once, and one passenger cannot hold two
+ * bookings). All four are on launch-cleanup-targets.sql.
+ */
 const PASSENGERS = {
-  DZ: { cc: '+213', number: '0555000199' },
-  MR: { cc: '+222', number: '22778899' },
+  DZ: [{ cc: '+213', number: '0555000199' }, { cc: '+213', number: '0555000198' }],
+  MR: [{ cc: '+222', number: '22778899' }, { cc: '+222', number: '22778898' }],
 };
 
 /** The simulated fleet (simulate-driver.py): the only offers scenario 5 may take. */
@@ -166,7 +171,6 @@ async function run(deps, target, scenarioRaw) {
   if (!enabled) return fail('le passager virtuel est éteint (VIRTUAL_RIDER=on manque dans le .env du serveur)');
   const scenario = Number(scenarioRaw);
   if (!SCENARIOS[scenario]) return fail(`scénario inconnu « ${scenarioRaw} » : 1 à 8`);
-  if (scenario === 8) return fail('scénario 8 pas encore : il faut un 2e passager d’essai par pays (décision V3 du plan)');
   // Who the tester is: a phone number (the command line), or the driver's id
   // (the console, which lists the drivers online -- day 8, decision V6).
   const byId = Boolean(target && typeof target === 'object' && typeof target.driverId === 'string');
@@ -230,8 +234,8 @@ async function run(deps, target, scenarioRaw) {
     } catch { /* OSRM down: the raw point */ }
     return { point: p, off: 0 };
   };
-  const onRoad = async (from, metres) => {
-    for (const bearing of [0, 90, 180, 270, 45, 135, 225, 315]) {
+  const onRoad = async (from, metres, bearings = [0, 90, 180, 270, 45, 135, 225, 315]) => {
+    for (const bearing of bearings) {
       const s = await snap(offset(from, metres, bearing));
       if (s.off < 150) return s.point;
     }
@@ -273,30 +277,33 @@ async function run(deps, target, scenarioRaw) {
     }
   };
 
-  const passenger = PASSENGERS[testerCountry];
-  const a = await call('POST', '/v2/auth', { mobileCountryCode: passenger.cc, mobileNumber: passenger.number, merchantId: RIDER_MERCHANT });
-  if (!a.json || !a.json.authId) return fail(`connexion du passager d’essai refusée (${a.status})`);
-  const v = await call('POST', `/v2/auth/${a.json.authId}/verify`, { otp: OTP, deviceToken: 'virtual-rider' });
-  const token = v.json && v.json.token;
-  if (!token) return fail(`connexion du passager d’essai refusée (${v.status})`);
+  /** A test passenger's session token, or null. */
+  const signIn = async (passenger) => {
+    const a = await call('POST', '/v2/auth', { mobileCountryCode: passenger.cc, mobileNumber: passenger.number, merchantId: RIDER_MERCHANT });
+    if (!a.json || !a.json.authId) return null;
+    const v = await call('POST', `/v2/auth/${a.json.authId}/verify`, { otp: OTP, deviceToken: 'virtual-rider' });
+    return (v.json && v.json.token) || null;
+  };
+  const token = await signIn(PASSENGERS[testerCountry][0]);
+  if (!token) return fail('connexion du passager d’essai refusée');
   state.token = token;
   state.call = call;
 
   await closeLeftovers(call, token, say);
 
-  const book = (b) => call('POST', `/v2/rideBooking/${b}`, undefined, token);
-  const cancelBooking = (b) => call('POST', `/v2/rideBooking/${b}/cancel`,
-    { reasonCode: 'CHANGE_OF_PLANS', reasonStage: 'OnAssign', additionalInfo: COMMENT }, token);
+  const book = (b, tok = token) => call('POST', `/v2/rideBooking/${b}`, undefined, tok);
+  const cancelBooking = (b, tok = token) => call('POST', `/v2/rideBooking/${b}/cancel`,
+    { reasonCode: 'CHANGE_OF_PLANS', reasonStage: 'OnAssign', additionalInfo: COMMENT }, tok);
   /** The passenger cancels, and the server's answer is READ: null when done, else why not. */
-  const passengerCancels = async (b) => {
-    const res = await cancelBooking(b);
+  const passengerCancels = async (b, tok = token) => {
+    const res = await cancelBooking(b, tok);
     if (res.status >= 200 && res.status < 300) return null;
     const code = (res.json && (res.json.errorCode || res.json.errorMessage)) || String(res.text || '').slice(0, 80);
     return `le serveur a refusé l’annulation du passager (${res.status} ${code})`;
   };
   /** Where the ride is now, as the passenger's server says. */
-  const where = async (b) => {
-    const res = await book(b);
+  const where = async (b, tok = token) => {
+    const res = await book(b, tok);
     const ride = (res.json && res.json.rideList && res.json.rideList[0]) || {};
     return { arrived: Boolean(ride.driverArrivalTime), started: ride.status === 'INPROGRESS' || ride.status === 'COMPLETED', status: ride.status };
   };
@@ -313,34 +320,34 @@ async function run(deps, target, scenarioRaw) {
   const polls = (seconds) => Math.max(1, Math.ceil(seconds / W.poll));
 
   /** One request: search, select, the offers. Returns { estimateId, offers } or a failure. */
-  const request = async (label) => {
+  const request = async (label, { tok = token, from = pickup, track = state } = {}) => {
     const s = await call('POST', '/v2/rideSearch', {
       fareProductType: 'ONE_WAY',
       contents: {
-        origin: { address: { area: 'Passager virtuel (essai)', city: '' }, gps: pickup },
+        origin: { address: { area: 'Passager virtuel (essai)', city: '' }, gps: from },
         destination: { address: { area: dropName, city: '' }, gps: drop },
       },
-    }, token);
+    }, tok);
     const searchId = s.json && s.json.searchId;
     if (!searchId) return { error: `recherche refusée (${s.status} ${String(s.text).slice(0, 120)})` };
     let est = null;
     for (let i = 0; i < polls(W.results) && !est; i += 1) {
-      const res = await call('GET', `/v2/rideSearch/${searchId}/results`, undefined, token);
+      const res = await call('GET', `/v2/rideSearch/${searchId}/results`, undefined, tok);
       const list = (res.json && res.json.estimates) || [];
       est = list.find((e) => e.vehicleVariant === r.variant) || null;
       if (!est) await sleep(W.poll * 1000);
     }
     if (!est) return { error: `aucune estimation ${r.variant} : le serveur ne propose pas sa catégorie ici (est-il vraiment disponible ?)` };
-    state.estimateId = est.id;
-    await call('POST', `/v2/estimate/${est.id}/select`, undefined, token);
+    track.estimateId = est.id;
+    await call('POST', `/v2/estimate/${est.id}/select`, undefined, tok);
     say(`${label}Demande envoyée (${est.estimatedTotalFare ?? '?'}). → Le chauffeur doit voir une demande de course « Passager virtuel (essai) » et pouvoir faire une offre.`);
     return { estimateId: est.id };
   };
 
   /** The offers on an estimate until `want` says stop; every one traced to its driver. */
-  const offers = async (estimateId, want, seen = new Map(), seconds = W.offer) => {
+  const offers = async (estimateId, want, seen = new Map(), seconds = W.offer, tok = token) => {
     for (let i = 0; i < polls(seconds); i += 1) {
-      const q = await call('GET', `/v2/estimate/${estimateId}/quotes`, undefined, token);
+      const q = await call('GET', `/v2/estimate/${estimateId}/quotes`, undefined, tok);
       for (const quote of (q.json && q.json.selectedQuotes) || []) {
         if (!quote.id || seen.has(quote.id)) continue;
         const d = await driverOf(quote.id);
@@ -359,15 +366,15 @@ async function run(deps, target, scenarioRaw) {
     return null;
   };
 
-  const confirm = async (quoteId) => {
-    const c = await call('POST', `/v2/rideSearch/quotes/${quoteId}/confirm`, undefined, token);
+  const confirm = async (quoteId, tok = token, track = state) => {
+    const c = await call('POST', `/v2/rideSearch/quotes/${quoteId}/confirm`, undefined, tok);
     const bookingId = c.json && c.json.bookingId;
     if (!bookingId) return { error: `confirmation refusée (${c.status} ${String(c.text).slice(0, 120)})` };
-    state.bookingId = bookingId;
-    state.estimateId = null;
+    track.bookingId = bookingId;
+    track.estimateId = null;
     let ride = null;
     for (let i = 0; i < polls(W.assigned) && !ride; i += 1) {
-      const b = await book(bookingId);
+      const b = await book(bookingId, tok);
       ride = (b.json && b.json.rideList && b.json.rideList[0]) || null;
       if (!ride) await sleep(W.poll * 1000);
     }
@@ -399,8 +406,81 @@ async function run(deps, target, scenarioRaw) {
   const done = (ok, reason) => {
     state.bookingId = null;
     state.estimateId = null;
+    for (const o of state.others || []) { o.bookingId = null; o.estimateId = null; }
     return { ok, reason };
   };
+
+  /* ── 4a. scenario 8: two requests at once ── */
+  if (scenario === 8) {
+    // The second passenger, on another side of him: two requests on his screen together.
+    const token2 = await signIn(PASSENGERS[testerCountry][1]);
+    if (!token2) return fail('connexion du 2e passager d’essai refusée');
+    await closeLeftovers(call, token2, say);
+    const second = { call, token: token2, estimateId: null, bookingId: null };
+    state.others = [second];
+    const pickup2 = await onRoad(at, 400, [180, 270, 90, 225, 135, 315, 45, 0]);
+    const reqs = await Promise.all([
+      request('[1/2] '),
+      request('[2/2] ', { tok: token2, from: pickup2, track: second }),
+    ]);
+    const closeRequests = async () => {
+      if (state.estimateId) await call('POST', `/v2/estimate/${state.estimateId}/cancel`, undefined, token);
+      if (second.estimateId) await call('POST', `/v2/estimate/${second.estimateId}/cancel`, undefined, token2);
+      state.estimateId = null;
+      second.estimateId = null;
+    };
+    const broken = reqs.find((q) => q.error);
+    if (broken) { await closeRequests(); return fail(broken.error); }
+    say('→ Le chauffeur doit voir les DEUX demandes en même temps, et peut faire une offre sur l’une ou les deux.');
+
+    // Whichever request he offers on first is the one given to him.
+    const legs = [
+      { label: '1', est: reqs[0].estimateId, tok: token, track: state, seen: new Map() },
+      { label: '2', est: reqs[1].estimateId, tok: token2, track: second, seen: new Map() },
+    ];
+    let won = null;
+    for (let i = 0; i < polls(W.offer) && !won; i += 1) {
+      for (const leg of legs) {
+        if (won) break;
+        const q = await offers(leg.est, testerOffer, leg.seen, W.poll, leg.tok);
+        if (q) won = { leg, quoteId: q };
+      }
+    }
+    if (!won) { await closeRequests(); return fail(`${name} n’a fait d’offre sur aucune des deux demandes en ${W.offer} s`); }
+    const other = legs.find((l) => l !== won.leg);
+    const c = await confirm(won.quoteId, won.leg.tok, won.leg.track);
+    if (c.error) {
+      if (c.bookingId) await cancelBooking(c.bookingId, won.leg.tok);
+      await closeRequests();
+      return fail(c.error);
+    }
+    say(`Offre de ${name} acceptée sur la demande ${won.leg.label}. → L’autre demande doit disparaître de son écran : il est pris.`);
+    // Did he offer on the other one too? Seen, never taken.
+    const both = Boolean(testerOffer(other.seen)) || Boolean(await offers(other.est, testerOffer, other.seen, W.others, other.tok));
+    await call('POST', `/v2/estimate/${other.est}/cancel`, undefined, other.tok);
+    other.track.estimateId = null;
+    say(`La demande ${other.label} est close sans réservation${both ? ' (il avait aussi fait une offre dessus : elle n’a pas été prise)' : ''}.`);
+
+    // Then, as in scenario 6, the passenger who got him cancels before he arrives.
+    let early = null;
+    for (let i = 0; i < polls(W.beforeCancel) && !early; i += 1) {
+      await sleep(W.poll * 1000);
+      const now = await where(c.bookingId, won.leg.tok);
+      if (now.started) early = 'started';
+      else if (now.arrived) early = 'arrived';
+    }
+    if (early === 'started') {
+      won.leg.track.bookingId = null;
+      return fail(`${name} a démarré la course avant que le passager annule -- la course doit être terminée par lui`);
+    }
+    const refused = await passengerCancels(c.bookingId, won.leg.tok);
+    if (refused) { won.leg.track.bookingId = null; return fail(refused); }
+    say('Le passager annule. → Le chauffeur doit voir que la course est annulée par le passager.');
+    await sleep(W.poll * 1000);
+    const st = await rideStatus(c.ride.bppRideId);
+    if (st !== 'CANCELLED') return done(false, `annulée par le passager, mais la course est « ${st} » côté chauffeur`);
+    return done(true, `deux demandes en même temps : ${name} a fait une offre sur ${both ? 'les deux' : 'une seule'} ; une course lui a été donnée, l’autre demande est close sans réservation ; puis annulée par le passager`);
+  }
 
   /* ── 4. the scenarios ── */
   const rounds = scenario === 6 ? 3 : 1;
@@ -592,6 +672,20 @@ async function cleanUp(state) {
   if (state.estimateId) await state.call('POST', `/v2/estimate/${state.estimateId}/cancel`, undefined, state.token);
   state.bookingId = null;
   state.estimateId = null;
+  // Scenario 8's second passenger: its request or booking, closed the same way.
+  for (const o of state.others || []) {
+    if (o.bookingId) {
+      const res = await state.call('POST', `/v2/rideBooking/${o.bookingId}/cancel`,
+        { reasonCode: 'CHANGE_OF_PLANS', reasonStage: 'OnAssign', additionalInfo: COMMENT }, o.token);
+      if (!(res && res.status >= 200 && res.status < 300)) {
+        closed = false;
+        message = 'une des deux courses n’a pas pu être annulée (elle a sans doute démarré) : le chauffeur doit la terminer.';
+      }
+    }
+    if (o.estimateId) await state.call('POST', `/v2/estimate/${o.estimateId}/cancel`, undefined, o.token);
+    o.bookingId = null;
+    o.estimateId = null;
+  }
   return { closed, message };
 }
 
