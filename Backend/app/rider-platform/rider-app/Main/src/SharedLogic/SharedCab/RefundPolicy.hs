@@ -42,9 +42,9 @@ decideCancel by state noShows tickets riderNear
   where
     rideStarted = state `elem` [BOARDED, DEGRADED, DROPPED] || any (`elem` [DFRFSTicket.INPROGRESS, DFRFSTicket.USED]) tickets
 
-cancelState :: UTCTime -> Maybe Text -> SharedCabState
-cancelState now plate =
-  fromMaybe FINDING $ deriveSharedCabState now (JMState.FRFSBooking DFRFSBooking.CONFIRMED) plate True Nothing
+cancelState :: Maybe Text -> SharedCabState
+cancelState plate =
+  fromMaybe FINDING $ deriveSharedCabState (JMState.FRFSBooking DFRFSBooking.CONFIRMED) plate True
 
 -- | Near counts only while the cab waits for the rider (its arrival deadline runs); beside an assigned cab still on its way is not near.
 besideWaitingCab :: Maybe UTCTime -> Bool -> Bool

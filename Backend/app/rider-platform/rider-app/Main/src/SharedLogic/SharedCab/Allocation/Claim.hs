@@ -7,7 +7,6 @@ module SharedLogic.SharedCab.Allocation.Claim
     ClaimMiss (..),
     liveBookingsOf,
     findLive,
-    claimFallbackPush,
   )
 where
 
@@ -27,11 +26,10 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), armedTimer, claimPush, claimable, pushedStage, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (shared, stopAddresses, withBookingLock)
+import SharedLogic.SharedCab.Booking (stopAddresses, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -134,9 +132,6 @@ claimUnderLocks cfg booking cand s = do
       writeAlloc (allocKeyTtl cfg) booking.bookingId st
       when cfg.driverAcceptEnabled $ writeOffersMade (allocKeyTtl cfg) booking.bookingId (offersMade + 1)
       pure st
-
-claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
-claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec
 
 offerDeadline :: AllocationState -> Maybe UTCTime
 offerDeadline st = case st.timer of

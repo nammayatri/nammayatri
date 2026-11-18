@@ -21,13 +21,12 @@ import Kernel.Utils.Common
 import qualified SharedLogic.FRFSCancelEffects as FRFSCancelEffects
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, findLive)
-import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), closable, crossedMaxAttempts, isRescheduledChild)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, findLive)
+import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), closable, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -45,8 +44,6 @@ data Closed = Closed
 data CloseResult
   = -- | back to FINDING
     Reallocated
-  | -- | back to FINDING, and this close crossed maxAttempts: the rider is offered any cab
-    ReallocatedIntoFallback
   | -- | the rider's last allowed no-show: the booking is cancelled, not FINDING
     AutoCancelled
   deriving (Show, Eq)
@@ -59,7 +56,7 @@ closeAllocation cfg bookingId plate outcome inLock = do
     mbClosed <- closeLocked cfg bookingId plate outcome
     when (isJust mbClosed) inLock
     pure mbClosed
-  afterClose cfg bookingId plate outcome closed
+  afterClose bookingId plate outcome closed
   pure closed
 
 -- | Inside the booking lock: CAS plate -> null (back to FINDING), clear the alloc key, bump attempts. Nothing when another closer won.
@@ -92,13 +89,9 @@ closeLocked cfg bookingId expectedPlate outcome =
       attemptsBefore <- readAttempts bookingId
       let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
       writeAttempts (allocKeyTtl cfg) bookingId attemptsNow
-      let fallbackJustTriggered = crossedMaxAttempts cfg.maxAttempts attemptsBefore attemptsNow
       now <- getCurrentTime
       writeFindingSince (allocKeyTtl cfg) bookingId now
-      when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId)
-      when fallbackJustTriggered $
-        logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, result = if fallbackJustTriggered then ReallocatedIntoFallback else Reallocated}
+      pure Closed {closedCity = b.merchantOperatingCityId, result = Reallocated}
 
 -- | The rider's last allowed no-show: cancelled by the system, fare kept (marking it refund-pending would make the payment
 -- service refund). SMS and Google Wallet flips are skipped: they need the API Flow the scheduler env lacks. The row flips
@@ -124,17 +117,14 @@ releaseCancelledBooking b = do
   mbPerson <- QPerson.findById b.riderId
   FRFSCancelEffects.releaseCancelledBooking True (not (isRescheduledChild b.parentBookingId)) b mbPerson quantity
 
-afterClose :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
-afterClose cfg bookingId plate outcome closed =
+afterClose :: AllocFlow m r => Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
+afterClose bookingId plate outcome closed =
   whenJust closed $ \Closed {result} -> do
     mbBooking <- QFRFSTicketBooking.findById bookingId
     case result of
       AutoCancelled -> do
         mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking
       Reallocated -> notifyReassignment mbBooking
-      ReallocatedIntoFallback -> do
-        notifyReassignment mbBooking
-        whenM (claimFallbackPush cfg bookingId) $ mapM_ Notify.notifyBoardAny mbBooking
     when (outcome `elem` [DriverDeclined, OfferTimeout]) $ onOfferLost bookingId plate mbBooking
   where
     notifyReassignment mbBooking = forM_ (Notify.reassignReasonFor outcome) $ \reason -> mapM_ (Notify.notifyReassigned reason) mbBooking

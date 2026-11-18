@@ -7,8 +7,6 @@ module SharedLogic.SharedCab.LegState
     tripMatches,
     callWindowState,
     CancelReason (..),
-    FallbackGate (..),
-    fallbackDue,
     fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
@@ -41,21 +39,13 @@ import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.SharedCab.Lts as Lts
 
+-- | FALLBACK ("board any cab on the route") is no longer produced: a booking with no cab stays FINDING. Kept for apps that decode it.
 data SharedCabState = FINDING | ALLOCATED | FALLBACK | BOARDED | DEGRADED | DROPPED | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Why the leg was cancelled, for "cancelled after missed cabs". NO_CAB_FOUND and SYSTEM cover cancels outside the shared-cab code.
 data CancelReason = NO_SHOW_CAP | DRIVER | RIDER | SYSTEM | NO_CAB_FOUND
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-
--- | A FINDING booking falls back to "board any cab" after maxAttempts closed allocations or fallbackAfterSec, whichever first.
-data FallbackGate = FallbackGate
-  { attempts :: Int,
-    maxAttempts :: Int,
-    findingSince :: UTCTime,
-    fallbackAfterSec :: Int
-  }
-  deriving (Show, Eq)
 
 data CabPosition = CabPosition {lat :: Double, lon :: Double}
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
@@ -121,15 +111,12 @@ sharedCabFareTiers mbAgencyGtfsId = [SHARED_CAB] <$ guard (maybe False isSharedC
 fallbackTimeElapsed :: UTCTime -> UTCTime -> Int -> Bool
 fallbackTimeElapsed now findingSince fallbackAfterSec = diffUTCTime now findingSince >= fromIntegral fallbackAfterSec
 
-fallbackDue :: UTCTime -> FallbackGate -> Bool
-fallbackDue now g = fallbackReached now g.maxAttempts g.attempts g.findingSince g.fallbackAfterSec
-
 fallbackReached :: UTCTime -> Int -> Int -> UTCTime -> Int -> Bool
 fallbackReached now maxAttempts attempts findingSince fallbackAfterSec = attempts >= maxAttempts || fallbackTimeElapsed now findingSince fallbackAfterSec
 
 -- | A cab at (or passing) the stop is ALLOCATED with the leg's boardDeadlineSec set; there is no separate state for it.
-deriveSharedCabState :: UTCTime -> JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe FallbackGate -> Maybe SharedCabState
-deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGate = case bookingStatus of
+deriveSharedCabState :: JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe SharedCabState
+deriveSharedCabState bookingStatus mbVehicleNumber hasLiveSession = case bookingStatus of
   JMState.FRFSBooking DFRFSBooking.CONFIRMED -> Just waiting
   JMState.FRFSTicket DFRFSTicket.ACTIVE -> Just waiting
   JMState.FRFSTicket DFRFSTicket.INPROGRESS -> Just $ if hasLiveSession then BOARDED else DEGRADED
@@ -141,11 +128,7 @@ deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGa
     | status `elem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED, DFRFSBooking.RESCHEDULED, DFRFSBooking.FAILED] -> Just CANCELLED
   _ -> Nothing
   where
-    waiting
-      | isJust mbVehicleNumber = ALLOCATED
-      | fallbackDue' = FALLBACK
-      | otherwise = FINDING
-    fallbackDue' = maybe False (fallbackDue now) fallbackGate
+    waiting = if isJust mbVehicleNumber then ALLOCATED else FINDING
 
 -- | Calling and chatting with the cab's driver is open only while a cab holds the rider's seat.
 callWindowState :: SharedCabState -> Bool
