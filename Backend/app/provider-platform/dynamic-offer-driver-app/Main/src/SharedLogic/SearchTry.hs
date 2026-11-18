@@ -27,11 +27,13 @@ import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTTC
+import qualified Domain.Types.VehicleServiceTier as DVSTI
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps
@@ -58,6 +60,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Pricing
 import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime)
 import qualified SharedLogic.Type as SLT
@@ -464,8 +467,10 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe Bool ->
   Maybe HighPrecMoney -> -- bufferedFare, from this estimate/quote's FareParameters
+  Maybe DFP.FarePolicy -> -- the estimate's fare policy, for the luggage rate
+  Maybe DFParams.FareParameters -> -- the estimate's fare parameters, for the luggage charge it already holds
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges priorityCharges commissionCharges mbTollCharges govtCharges mbDriverCancellationNotAllowed bufferedFare = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges priorityCharges commissionCharges mbTollCharges govtCharges mbDriverCancellationNotAllowed bufferedFare mbEstimateFarePolicy mbEstimateFareParams = do
   mbVehicleServiceTierItem <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   let vehicleCategory = mbVehicleServiceTierItem >>= (.vehicleCategory)
   vehicleServiceTierName <-
@@ -495,4 +500,32 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
             mbDriverExtraFeeBounds <&> (.defaultStepFee),
             mbDriverCancellationNotAllowed <|> farePolicy.driverCancellationNotAllowed
           )
-  return $ TripQuoteDetail {..}
+  (luggageFareAdjustment, luggageCharges) <-
+    luggageQuoteCharges searchReq mbVehicleServiceTierItem mbEstimateFarePolicy mbEstimateFareParams $
+      getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+  return $ TripQuoteDetail {baseFare = baseFare + luggageFareAdjustment, ..}
+
+-- The stored bags price the booking: the excess charge replaces the estimate's plain luggage charge.
+-- Returns the fare change and the luggage charge shown to the driver, present only when counts are stored.
+-- The fare policy is fetched only when there is an excess.
+luggageQuoteCharges ::
+  Monad m =>
+  DSR.SearchRequest ->
+  Maybe DVSTI.VehicleServiceTier ->
+  Maybe DFP.FarePolicy ->
+  Maybe DFParams.FareParameters ->
+  m DFP.FullFarePolicy ->
+  m (HighPrecMoney, Maybe HighPrecMoney)
+luggageQuoteCharges searchReq mbVehicleServiceTierItem mbEstimateFarePolicy mbEstimateFareParams fetchFarePolicy = do
+  let mbExcessHalfUnits = do
+        passengerLuggage <- SPL.storedPassengerLuggage searchReq.numberOfPassengers searchReq.numberOfCheckInBags searchReq.numberOfCabinBags
+        tier <- mbVehicleServiceTierItem
+        SPL.excessLuggageHalfUnits tier (Just passengerLuggage.checkInBags) (Just passengerLuggage.cabinBags)
+      luggageFareAdjustment = SPL.luggageFareAdjustment mbExcessHalfUnits (DFP.perUnitLuggageCharge ((.luggageFitEnabled) =<< mbEstimateFarePolicy) ((.perLuggageCharge) =<< mbEstimateFarePolicy)) (mbEstimateFareParams >>= (.luggageCharge))
+  luggageCharges <- case mbExcessHalfUnits of
+    Just excessHalfUnits | excessHalfUnits > 0 -> do
+      farePolicy <- fetchFarePolicy
+      let charge = SPL.excessLuggageCharge (DFP.perUnitLuggageCharge farePolicy.luggageFitEnabled farePolicy.perLuggageCharge) mbExcessHalfUnits
+      pure $ if charge > 0 then Just charge else Nothing
+    _ -> pure Nothing
+  pure (luggageFareAdjustment, luggageCharges)

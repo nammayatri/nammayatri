@@ -220,6 +220,9 @@ processAssignment req = do
                 merchant = merchant,
                 requiresPaymentBeforeConfirm = False,
                 supportsBookingDeposit = Nothing,
+                numberOfPassengers = Nothing,
+                numberOfCheckInBags = Nothing,
+                numberOfCabinBags = Nothing,
                 mbBetterDriverSwapDetails = (\oldBooking -> SConfirm.BetterDriverSwapDetails {oldBookingId = oldBooking.id}) <$> mbOldBooking,
                 mbOneShotDetails =
                   Just

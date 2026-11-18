@@ -376,6 +376,7 @@ data FPV2Policy = FPV2Policy
     driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     negotiationFareMinTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     negotiationFareMaxTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    luggageFitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     cancellationFarePolicy :: Kernel.Prelude.Maybe FPV2CancellationFarePolicy,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }

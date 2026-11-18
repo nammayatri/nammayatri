@@ -73,6 +73,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FarePolicy (getScheduledRideMinWalletBalance)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.PassengerLuggage as SPL
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -337,7 +338,10 @@ buildListItem ctx booking =
           cancellationSource = castCancellationSource . (.source) <$> mbCancellation,
           cancellationReasonCode = cancellationReasonCodeText =<< mbCancellation,
           cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation,
-          pickupArea = SL.areaToText <$> pickupAreaOf booking
+          pickupArea = SL.areaToText <$> pickupAreaOf booking,
+          numberOfPassengers = booking.numberOfPassengers,
+          numberOfCheckInBags = booking.numberOfCheckInBags,
+          numberOfCabinBags = booking.numberOfCabinBags
         }
 
 -- | Latest booking of a scheduled transaction. Once any booking of a transaction is scheduled, all of
@@ -402,7 +406,11 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
         vehicleServiceTierName = booking.vehicleServiceTierName,
         reallocationHistory,
         opsNotes,
-        minWalletBalance
+        minWalletBalance,
+        numberOfPassengers = booking.numberOfPassengers,
+        numberOfCheckInBags = booking.numberOfCheckInBags,
+        numberOfCabinBags = booking.numberOfCabinBags,
+        luggageCharge = mfilter (> 0) booking.fareParams.luggageCharge
       }
 
 -- | Reconstruct the reallocation timeline: every booking that has ever shared this
@@ -578,7 +586,8 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbLimit mb
               rating = realToFrac <$> c.driverRating,
               totalRides = c.completedRides,
               cancellationRatePercent = c.cancellationRate,
-              isFavourite = c.favourite
+              isFavourite = c.favourite,
+              fitsGroup = SPL.fitsStoredPassengerLuggage c.poolData.luggageCapacity (HashMap.lookup booking.vehicleServiceTier cityServiceTiersHashMap) booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags
             }
       pure Common.NearbyDriversRes {radiusKm, searchedAt = now, totalCount = length sorted, drivers}
 

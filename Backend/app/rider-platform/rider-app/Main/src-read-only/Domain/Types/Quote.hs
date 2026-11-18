@@ -49,6 +49,7 @@ data Quote = Quote
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSafetyPlus :: Kernel.Prelude.Bool,
     itemId :: Kernel.Prelude.Text,
+    luggageFitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

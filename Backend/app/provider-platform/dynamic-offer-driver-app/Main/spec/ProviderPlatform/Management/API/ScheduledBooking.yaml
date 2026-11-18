@@ -154,6 +154,9 @@ types:
     - cancellationReasonCode: Maybe Text
     - cancellationAdditionalInfo: Maybe Text
     - pickupArea: Maybe Text # Pickup_<specialLocationId>[_Gate_<gateId>]
+    - numberOfPassengers: Maybe Int
+    - numberOfCheckInBags: Maybe Int
+    - numberOfCabinBags: Maybe Int
 
   ScheduledBookingInfoRes:
     - transactionId: Text
@@ -183,6 +186,10 @@ types:
     - reallocationHistory: [ReallocationEventItem]
     - opsNotes: [OpsNote]
     - minWalletBalance: Maybe HighPrecMoney
+    - numberOfPassengers: Maybe Int
+    - numberOfCheckInBags: Maybe Int
+    - numberOfCabinBags: Maybe Int
+    - luggageCharge: Maybe HighPrecMoney
 
   OpsNote:
     - id: Text
@@ -211,6 +218,7 @@ types:
     - totalRides: Int
     - cancellationRatePercent: Maybe Int
     - isFavourite: Bool
+    - fitsGroup: Bool # false when the vehicle cannot take the booking's passengers and luggage
 
   NearbyDriverSortBy:
     - enum: "DISTANCE, RATING"

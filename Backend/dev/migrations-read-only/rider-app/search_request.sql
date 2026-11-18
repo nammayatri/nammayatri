@@ -549,3 +549,10 @@ ALTER TABLE atlas_app.search_request ADD COLUMN is_silent_reallocation_enabled b
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN number_of_passengers integer ;
+ALTER TABLE atlas_app.search_request ADD COLUMN number_of_check_in_bags integer ;
+ALTER TABLE atlas_app.search_request ADD COLUMN number_of_cabin_bags integer ;
+
+
+------- SQL updates -------
+

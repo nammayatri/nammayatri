@@ -151,7 +151,16 @@ mkItemTags res =
       itemTags'' = mkInsuranceTagGroup res : itemTags'
       itemTags''' = maybe itemTags'' (\displayId -> mkDisplayBookingIdTagGroup displayId : itemTags'') res.booking.displayBookingId
       itemTags'''' = mkOfferInfoTagGroup res : itemTags'''
-   in itemTags'''' <> fromMaybe [] (Tags.buildTagGroups (PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails))
+   in mkPassengerLuggageTagGroups res <> itemTags'''' <> fromMaybe [] (Tags.buildTagGroups (PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails))
+
+mkPassengerLuggageTagGroups :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
+mkPassengerLuggageTagGroups res =
+  fromMaybe [] $
+    Tags.buildTagGroups
+      [ Tags.NUMBER_OF_PASSENGERS Tags.~=? (show <$> res.numberOfPassengers),
+        Tags.NUMBER_OF_CHECKIN_BAGS Tags.~=? (show <$> res.numberOfCheckInBags),
+        Tags.NUMBER_OF_CABIN_BAGS Tags.~=? (show <$> res.numberOfCabinBags)
+      ]
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =

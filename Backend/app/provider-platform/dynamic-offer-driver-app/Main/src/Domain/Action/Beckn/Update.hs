@@ -66,6 +66,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
+import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
@@ -203,21 +204,41 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   -- and the quote's fare was valid at search time. If we need expiry checks
   -- later, add: unless (quote.validTill > now) $ throwError QuoteExpired
 
+  -- Look up VehicleServiceTier config for AC/seating info
+  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  let tollApplicable = DVST.isTollApplicableForTrip newVehicleServiceTier booking.tripCategory
+
+  -- A booking with a passenger and luggage group must fit the new tier, and the group is priced for it
+  let isLuggageFitOn = (quote.farePolicy >>= (.luggageFitEnabled)) == Just True
+  when isLuggageFitOn $
+    unless (SPL.fitsStoredPassengerLuggage Nothing mbVehicleServiceTierItem booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags) $
+      throwError (InvalidRequest "The new service tier cannot take this booking's passengers and luggage.")
+  let mbExcessHalfUnits = if isLuggageFitOn && isJust booking.numberOfPassengers then mbVehicleServiceTierItem >>= \tier -> SPL.excessLuggageHalfUnits tier booking.numberOfCheckInBags booking.numberOfCabinBags else Nothing
+      mbPerLuggageCharge = DFP.perUnitLuggageCharge (Just True) (quote.farePolicy >>= (.perLuggageCharge))
+      luggageFareChange = SPL.luggageFareAdjustment mbExcessHalfUnits mbPerLuggageCharge quote.fareParams.luggageCharge
+
+  -- Use the quote's pre-calculated fare params; the quote keeps the luggage fare for later reallocation
+  newFareParamsId <- generateGUID
+  let luggageCharge = SPL.excessLuggageCharge mbPerLuggageCharge mbExcessHalfUnits
+      quoteEstimatedFare = quote.estimatedFare + luggageFareChange
+      quoteFareParams
+        | luggageFareChange == 0 = quote.fareParams
+        | otherwise = quote.fareParams {DFP.id = newFareParamsId, DFP.luggageCharge = if luggageCharge > 0 then Just luggageCharge else Nothing}
+
   mbQuoteFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
   commission <- FC.calculateCommission quote.fareParams mbQuoteFarePolicy
   let cancellationDuesCommission = FC.calculateCancellationDuesCommission booking.cancellationDuesCommission quote.fareParams
   refreshedDiscount <- CallBAPInternal.refreshOfferDiscount booking booking.discountAmount (Just newVehicleServiceTier) booking.fareParams quote.fareParams
   let discountAmount = FC.clampDiscountToDiscountable quote.fareParams refreshedDiscount
-      chargeRes = FC.finalisePaymentCharge booking.paymentChargeDetails quote.estimatedFare (fromMaybe 0 quote.fareParams.paymentProcessingFee + fromMaybe 0 quote.fareParams.paymentProcessingFeeTax) discountAmount quote.fareParams
+      chargeRes = FC.finalisePaymentCharge booking.paymentChargeDetails quoteEstimatedFare (fromMaybe 0 quote.fareParams.paymentProcessingFee + fromMaybe 0 quote.fareParams.paymentProcessingFeeTax) discountAmount quoteFareParams
       newEstimatedFare = chargeRes.adjustedFare
       newFareParams = chargeRes.adjustedFareParams
 
-  -- Look up VehicleServiceTier config for AC/seating info
-  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
-  let tollApplicable = DVST.isTollApplicableForTrip newVehicleServiceTier booking.tripCategory
-
   -- Persist new fare params and update booking
-  QFP.updatePaymentCharge quote.fareParams newFareParams
+  when (luggageFareChange /= 0) $ do
+    QFP.create quoteFareParams
+    QQuote.updateEstimatedFareAndFareParameters quote.id quoteEstimatedFare quoteFareParams.id
+  QFP.updatePaymentCharge quoteFareParams newFareParams
   QRB.updateVehicleServiceTierAndFare
     booking
       { DBooking.vehicleServiceTier = newVehicleServiceTier,
@@ -273,6 +294,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
 
   let origFareParams = booking.fareParams
       origAdditionalCategories = (.chargeCategory) <$> origFareParams.conditionalCharges
+  mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits booking.merchantOperatingCityId booking.vehicleServiceTier booking.numberOfCheckInBags booking.numberOfCabinBags
   let params =
         CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
@@ -315,6 +337,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             merchantOperatingCityId = booking.merchantOperatingCityId,
             mbAdditonalChargeCategories = if null origAdditionalCategories then Nothing else Just origAdditionalCategories,
             numberOfLuggages = Just numberOfLuggages,
+            excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
             pickupGateId = booking.pickupGateId,
             fareSettlementType = booking.fareSettlementType,
             isParkingFeeExempt = False
@@ -492,6 +515,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   Just r -> QRD.findById r.id >>= \mbRideDetails -> SPFE.isParkingFeeExemptByVehicleNumber ((.vehicleNumber) <$> mbRideDetails)
                   Nothing -> pure False
                 else pure False
+            mbExcessLuggageHalfUnits <- SPL.findExcessLuggageHalfUnits booking.merchantOperatingCityId booking.vehicleServiceTier booking.numberOfCheckInBags booking.numberOfCabinBags
             fareParameters <-
               FC.calculateFareParameters
                 CalculateFareParametersParams
@@ -535,6 +559,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
                     numberOfLuggages = booking.numberOfLuggages,
+                    excessLuggageHalfUnits = mbExcessLuggageHalfUnits,
                     pickupGateId = booking.pickupGateId,
                     fareSettlementType = booking.fareSettlementType,
                     isParkingFeeExempt = rcParkingFeeExempt

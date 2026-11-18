@@ -618,3 +618,10 @@ ALTER TABLE atlas_app.booking ADD COLUMN better_driver_abort_radius_meters integ
 ALTER TABLE atlas_app.booking ADD COLUMN rider_tax_rates json ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_tax_no text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_gstin text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN number_of_passengers integer ;
+ALTER TABLE atlas_app.booking ADD COLUMN number_of_check_in_bags integer ;
+ALTER TABLE atlas_app.booking ADD COLUMN number_of_cabin_bags integer ;

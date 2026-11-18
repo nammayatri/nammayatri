@@ -89,6 +89,7 @@ import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
+import SharedLogic.PassengerLuggage (validatePassengerLuggageCounts, validatePassengerLuggageFit)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
 import qualified SharedLogic.Settlement as Settlement
@@ -159,6 +160,9 @@ data DSelectReq = DSelectReq
     preferSafetyPlus :: Maybe Bool,
     driverPreference :: Maybe [Text],
     selectedOfferId :: Maybe Text,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int,
     -- | What the app's own geocoder calls a walk-and-save pickup/drop the customer is
     -- selecting. Ignored for an ordinary estimate, whose locations the customer named
     -- themselves when they searched. See 'updateSuggestedLocationAddresses'.
@@ -182,6 +186,7 @@ validateDSelectReq DSelectReq {..} =
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0,
       validateField "negativeFareAdjustment" negativeFareAdjustment $ InMaybe $ InRange @Money minNegativeFareAdjustment 0,
+      validatePassengerLuggageCounts (numberOfPassengers, numberOfCheckInBags, numberOfCabinBags),
       whenJust negativeFareAdjustmentWithCurrency $ \obj ->
         validateObject "negativeFareAdjustmentWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney minNegativeFareAdjustmentAmount 0.0,
@@ -238,7 +243,10 @@ data DSelectRes = DSelectRes
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Int,
-    customerGender :: DPerson.Gender
+    customerGender :: DPerson.Gender,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -283,10 +291,16 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   let searchRequestId = estimate.requestId
   remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
+  validatePassengerLuggageFit numberOfPassengers numberOfCheckInBags numberOfCabinBags (estimate : remainingEstimates)
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  -- The counts are kept on the search request, for the booking, only when every selected estimate has the feature on.
+  let isPassengerLuggageKept = all (\selected -> selected.luggageFitEnabled == Just True) (estimate : remainingEstimates)
+      (keptPassengers, keptCheckInBags, keptCabinBags) = if isPassengerLuggageKept then (numberOfPassengers, numberOfCheckInBags, numberOfCabinBags) else (Nothing, Nothing, Nothing)
+  when ((keptPassengers, keptCheckInBags, keptCabinBags) /= (searchRequest.numberOfPassengers, searchRequest.numberOfCheckInBags, searchRequest.numberOfCabinBags)) $
+    QSearchRequest.updatePassengerLuggage keptPassengers keptCheckInBags keptCabinBags searchRequest.id
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   -- Do this before anything is dispatched to the provider: from here on the address is

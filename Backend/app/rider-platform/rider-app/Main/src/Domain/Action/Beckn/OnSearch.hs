@@ -173,6 +173,7 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
+    luggageFitEnabled :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
@@ -254,6 +255,7 @@ data QuoteInfo = QuoteInfo
     driverCancellationNotAllowed :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
+    luggageFitEnabled :: Maybe Bool,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
     fareSettlementType :: Maybe SL.FareSettlementType,
@@ -395,7 +397,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True && not isShadowSearch) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing Nothing
+        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing Nothing Nothing Nothing Nothing
 
       unless isShadowSearch $
         whenJust mbRequiredEstimate $ \requiredEstimate -> do
@@ -441,6 +443,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 preferSafetyPlus = Nothing,
                 driverPreference = Nothing,
                 selectedOfferId = Nothing,
+                numberOfPassengers = Nothing,
+                numberOfCheckInBags = Nothing,
+                numberOfCabinBags = Nothing,
                 -- A reserved ride is never a walk-and-save shadow: its standing pickup is
                 -- one the customer already committed to, so no endpoint has moved to name.
                 suggestedPickupAddress = Nothing,

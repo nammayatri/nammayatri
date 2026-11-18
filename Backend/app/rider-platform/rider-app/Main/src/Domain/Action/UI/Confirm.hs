@@ -37,10 +37,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Confirm as SConfirm
+import SharedLogic.PassengerLuggage (validatePassengerLuggageCounts, validatePassengerLuggageOnTier)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -80,9 +82,20 @@ confirm ::
   Bool ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Int ->
   m SConfirm.DConfirmRes
-confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm supportsBookingDeposit mbSelectedOfferId = do
+confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm supportsBookingDeposit mbSelectedOfferId requestedPassengers requestedCheckInBags requestedCabinBags = do
   quote' <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  runRequestValidation validatePassengerLuggageCounts (requestedPassengers, requestedCheckInBags, requestedCabinBags)
+  -- The counts are used only when the quote's fare policy has the feature on.
+  let (numberOfPassengers, numberOfCheckInBags, numberOfCabinBags) =
+        if quote'.luggageFitEnabled == Just True
+          then (requestedPassengers, requestedCheckInBags, requestedCabinBags)
+          else (Nothing, Nothing, Nothing)
+  whenJust numberOfPassengers $ \passengers ->
+    validatePassengerLuggageOnTier passengers numberOfCheckInBags numberOfCabinBags (show quote'.vehicleServiceTierType) quote'.vehicleServiceTierLuggageCapacity quote'.vehicleServiceTierSeatingCapacity
   let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId

@@ -31,6 +31,17 @@ updateHasMultimodalSearch hasMultimodalSearch id = do updateOneWithKV [Se.Set Be
 updateInitiatedBy :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateInitiatedBy initiatedBy id = do updateOneWithKV [Se.Set Beam.initiatedBy initiatedBy] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePassengerLuggage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updatePassengerLuggage numberOfPassengers numberOfCheckInBags numberOfCabinBags id = do
+  updateOneWithKV
+    [ Se.Set Beam.numberOfPassengers numberOfPassengers,
+      Se.Set Beam.numberOfCheckInBags numberOfCheckInBags,
+      Se.Set Beam.numberOfCabinBags numberOfCabinBags
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePetRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePetRide isPetRide id = do updateOneWithKV [Se.Set Beam.isPetRide isPetRide] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

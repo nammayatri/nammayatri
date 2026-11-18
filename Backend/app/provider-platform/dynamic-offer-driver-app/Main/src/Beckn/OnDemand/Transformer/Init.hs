@@ -61,6 +61,9 @@ buildDInitReq subscriber req isValueAddNP = do
   let displayBookingId = getDisplayBookingId orderItem.itemTags
   let discountAmount = getOfferDiscountAmount orderItem.itemTags
       paymentChargeDetails = PaymentCharge.paymentChargeDetailsFromTags orderItem.itemTags
+  let numberOfPassengers = readCountTag Tag.NUMBER_OF_PASSENGERS orderItem.itemTags
+      numberOfCheckInBags = readCountTag Tag.NUMBER_OF_CHECKIN_BAGS orderItem.itemTags
+      numberOfCabinBags = readCountTag Tag.NUMBER_OF_CABIN_BAGS orderItem.itemTags
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, riderGender = riderGender, addOns = [], ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
@@ -141,6 +144,9 @@ getIsInsured tagGroups =
         Just "True" -> (Just True, insuredAmount)
         Just "False" -> (Just False, Nothing)
         _ -> (Nothing, Nothing)
+
+readCountTag :: Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe Int
+readCountTag tag tagGroups = readMaybe . T.unpack =<< Utils.getTag tag tagGroups
 
 getDisplayBookingId :: Maybe [Spec.TagGroup] -> Maybe Text
 getDisplayBookingId = Utils.getTag Tag.DISPLAY_BOOKING_ID

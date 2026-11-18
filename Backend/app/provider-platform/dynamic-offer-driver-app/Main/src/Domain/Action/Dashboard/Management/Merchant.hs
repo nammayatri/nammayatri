@@ -1888,7 +1888,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     commissionChargeConfig :: Text,
     negotiationFareMinTolerancePct :: Text,
     negotiationFareMaxTolerancePct :: Text,
-    platformFeeSlabSetId :: Text
+    platformFeeSlabSetId :: Text,
+    luggageFitEnabled :: Text
   }
   deriving (Show)
 
@@ -2005,7 +2006,8 @@ instance ToNamedRecord FarePolicyCSVRow where
           "commission_charge_config" .= commissionChargeConfig,
           "negotiation_fare_min_tolerance_pct" .= negotiationFareMinTolerancePct,
           "negotiation_fare_max_tolerance_pct" .= negotiationFareMaxTolerancePct,
-          "platform_fee_slab_set_id" .= platformFeeSlabSetId
+          "platform_fee_slab_set_id" .= platformFeeSlabSetId,
+          "luggage_fit_enabled" .= luggageFitEnabled
         ]
     where
       sanitizeNamedField (columnName, value) =
@@ -2118,7 +2120,8 @@ farePolicyCSVHeader =
       "commission_charge_config",
       "negotiation_fare_min_tolerance_pct",
       "negotiation_fare_max_tolerance_pct",
-      "platform_fee_slab_set_id"
+      "platform_fee_slab_set_id",
+      "luggage_fit_enabled"
     ]
 
 instance FromNamedRecord FarePolicyCSVRow where
@@ -2238,6 +2241,7 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> (r .: "negotiation_fare_min_tolerance_pct" <|> pure "")
           <*> (r .: "negotiation_fare_max_tolerance_pct" <|> pure "")
           <*> (r .: "platform_fee_slab_set_id" <|> pure "")
+          <*> (r .: "luggage_fit_enabled" <|> pure "")
 
 -- | Total UTF-8 decode. TEnc.decodeUtf8 is partial and throws UnicodeException; the CSV paths
 -- must not fail on a byte sequence Postgres happened to accept.
@@ -2907,7 +2911,8 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     commissionChargeConfig = commissionChargeJson,
                     negotiationFareMinTolerancePct = maybe "" showT farePolicy.negotiationFareMinTolerancePct,
                     negotiationFareMaxTolerancePct = maybe "" showT farePolicy.negotiationFareMaxTolerancePct,
-                    platformFeeSlabSetId = fromMaybe "" farePolicy.platformFeeSlabSetId
+                    platformFeeSlabSetId = fromMaybe "" farePolicy.platformFeeSlabSetId,
+                    luggageFitEnabled = maybe "" showT farePolicy.luggageFitEnabled
                   }
        in map buildRow [0 .. numRows - 1]
 
@@ -3331,6 +3336,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let personalDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.personalDiscountPercentage "Personal Discount Percentage"
       let negotiationFareMinTolerancePct :: (Maybe Double) = readMaybeCSVField idx row.negotiationFareMinTolerancePct "Negotiation Fare Min Tolerance Pct"
       let negotiationFareMaxTolerancePct :: (Maybe Double) = readMaybeCSVField idx row.negotiationFareMaxTolerancePct "Negotiation Fare Max Tolerance Pct"
+      let luggageFitEnabled :: (Maybe Bool) = readMaybeCSVField idx row.luggageFitEnabled "Luggage Fit Enabled"
       let validateNegotiationTolerance label mbPct =
             whenJust mbPct $ \pct ->
               when (pct < 0 || pct > FarePolicy.maxNegotiationTolerancePct) $

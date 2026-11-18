@@ -431,6 +431,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   merchantOperatingCityId = merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,
                   numberOfLuggages = Nothing,
+                  excessLuggageHalfUnits = Nothing,
                   pickupGateId = Nothing,
                   fareSettlementType = fullFarePolicy.fareSettlementType,
                   isParkingFeeExempt = False

@@ -772,6 +772,9 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         preferSafetyPlus = False,
         isPetRide = False,
         numberOfLuggages = numberOfLuggages,
+        numberOfCheckInBags = Nothing,
+        numberOfCabinBags = Nothing,
+        numberOfPassengers = Nothing,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,
         ..
@@ -878,6 +881,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           merchantOperatingCityId = merchantOpCityId,
           mbAdditonalChargeCategories = Nothing,
           numberOfLuggages = searchRequest.numberOfLuggages,
+          excessLuggageHalfUnits = Nothing,
           pickupGateId = searchRequest.pickupGateId,
           fareSettlementType = fullFarePolicy.fareSettlementType,
           isParkingFeeExempt = False
@@ -997,6 +1001,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               merchantOperatingCityId = merchantOperatingCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages),
+              excessLuggageHalfUnits = Nothing,
               pickupGateId = mbSearchReq >>= (.pickupGateId),
               fareSettlementType = fullFarePolicy.fareSettlementType,
               isParkingFeeExempt = False

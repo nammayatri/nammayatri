@@ -129,7 +129,10 @@ data BookingLite = BookingLite
     isScheduled :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
-    area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area
+    area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
+    numberOfPassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCheckInBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfCabinBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -158,5 +161,8 @@ instance FromTType' BookingLiteTable BookingLite where
             isScheduled = fromMaybe False isScheduled,
             createdAt = createdAt,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
-            area = area
+            area = area,
+            numberOfPassengers = numberOfPassengers,
+            numberOfCheckInBags = numberOfCheckInBags,
+            numberOfCabinBags = numberOfCabinBags
           }

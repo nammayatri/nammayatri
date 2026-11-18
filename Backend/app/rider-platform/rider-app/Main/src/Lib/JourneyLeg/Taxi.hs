@@ -146,6 +146,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     preferSafetyPlus = Nothing,
                     driverPreference = Nothing,
                     selectedOfferId = Nothing,
+                    numberOfPassengers = Nothing,
+                    numberOfCheckInBags = Nothing,
+                    numberOfCabinBags = Nothing,
                     -- A multimodal taxi leg is never a walk-and-save shadow, so there is
                     -- no moved endpoint here to name.
                     suggestedPickupAddress = Nothing,

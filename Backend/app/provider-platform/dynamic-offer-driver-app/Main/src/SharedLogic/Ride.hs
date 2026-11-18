@@ -73,6 +73,7 @@ import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, removePrep
 import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -290,10 +291,12 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     messageForScheduled timeDiffFromUtc uBooking =
       cs $
         unwords
-          [ "You have been assigned a scheduled ride for",
-            cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> ".",
-            "Check the app for more details."
-          ]
+          ( [ "You have been assigned a scheduled ride for",
+              cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> "."
+            ]
+              <> maybe [] (\group -> ["Group: " <> cs group <> "."]) (SPL.passengerLuggageSummary uBooking.numberOfPassengers uBooking.numberOfCheckInBags uBooking.numberOfCabinBags)
+              <> ["Check the app for more details."]
+          )
 
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent}) Nothing

@@ -106,6 +106,7 @@ import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Tags as Tags
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -191,6 +192,7 @@ import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleServiceTier as DVSTItem
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -303,6 +305,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OneShotAssign as OneShot
+import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Payout.Bulk.Eligibility (mkBankVerificationStatus)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -739,7 +742,10 @@ data BookingAPIEntity = BookingAPIEntity
     coinsRewardedOnGoldTierRide :: Maybe Int,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
-    paymentInstrument :: Maybe DMPM.PaymentInstrument
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    numberOfPassengers :: Maybe Int,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -2046,7 +2052,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       nowForWalletFlag <- getCurrentTime
       mbScheduledRideMinWalletBalance <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime nowForWalletFlag (pure $ scheduledRideMinWalletFloor farePolicy.conditionalCharges) driverId.getId
       -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest Nothing) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2430,11 +2436,21 @@ assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver trans
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
       | otherwise = throwM exc
 
+-- A booking is not accepted by a driver whose vehicle cannot take its group, whichever way it reached them.
+ensurePassengerLuggageFits :: SP.Person -> DRB.Booking -> Flow ()
+ensurePassengerLuggageFits driver booking =
+  whenJust (SPL.storedPassengerLuggage booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags) $ \_ -> do
+    mbVehicle <- QVehicle.findById driver.id
+    mbServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId Nothing
+    unless (SPL.fitsStoredPassengerLuggage (mbVehicle >>= (.luggageCapacity)) mbServiceTier booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags) $
+      throwError (InvalidRequest "Your vehicle cannot take this booking's passengers and luggage.")
+
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> Maybe SearchRequestForDriver -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Maybe DRide.ScheduledAcceptanceMode -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
 acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
+  ensurePassengerLuggageFits driver booking
   when booking.isScheduled $ do
     nowT <- getCurrentTime
     mbShortOf <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig booking.isScheduled booking.startTime nowT (getScheduledRideMinWalletBalance quote transporterConfig) driver.id.getId
@@ -3511,7 +3527,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           case mbCommittedForBoard of
             Nothing -> pure $ ScheduledBookingRes []
             Just committed -> do
-              serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) Nothing Nothing Nothing personId cityId
+              mbVehicle <- QVehicle.findById personId
+              serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) mbVehicle Nothing Nothing personId cityId
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               now <- getCurrentTime
@@ -3521,7 +3538,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                   offset = fromMaybe 0 mbOffset
                   safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
               scheduledBookings <- getReachableScheduledBookingsInPickupOrder from cityId availableServiceTiers dLoc transporterConfig tripCategory safelimit
-              stageVisibleBookings <- filterBookingsByVisibilityStages driver transporterConfig now driverActiveTags dLoc (catMaybes scheduledBookings)
+              visibleBookings <- filterBookingsByVisibilityStages driver transporterConfig now driverActiveTags dLoc (catMaybes scheduledBookings)
+              stageVisibleBookings <- filterBookingsByPassengerLuggage (mbVehicle >>= (.luggageCapacity)) availableServiceTierItems visibleBookings
               -- Board feasibility: drop candidates that overlap the driver's already-committed intervals.
               feasibleBookings <-
                 if null committed
@@ -3616,7 +3634,11 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
     Just quote -> do
       let mbBearer = paymentChargeBearer >>= (readMaybe . T.unpack)
           farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp mbTransporterConfig (not $ null stops) . withPricedStateEntryPermitCharges fareParams) quote.farePolicy
-      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) [fareParams.govtCharges, fareParams.tollFareTax, fareParams.parkingChargeTax, fareParams.cancellationDuesTax])) (fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} (catMaybes farePolicyBreakups)
+      let luggageChargeCaption = show Tags.LUGGAGE_CHARGE
+          -- The policy lists the price of one bag. The driver is shown what this booking is charged.
+          luggageChargeItem = mfilter (> 0) fareParams.luggageCharge >>= \luggageCharge -> mkBreakupItem currency luggageChargeCaption (show luggageCharge)
+          fareDetails = catMaybes (filter (\item -> fmap (.title) item /= Just luggageChargeCaption) farePolicyBreakups) <> maybeToList luggageChargeItem
+      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) [fareParams.govtCharges, fareParams.tollFareTax, fareParams.parkingChargeTax, fareParams.cancellationDuesTax])) (fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} fareDetails
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
 mkBreakupItem currency title valueInText = do
@@ -3627,6 +3649,14 @@ mkBreakupItem currency title valueInText = do
         price = priceObject.amountInt,
         priceWithCurrency = mkPriceAPIEntity priceObject
       }
+
+-- | Keeps the bookings whose group the driver's vehicle can take, given the vehicle's trunk.
+filterBookingsByPassengerLuggage :: Maybe Int -> [DVSTItem.VehicleServiceTier] -> [DRB.Booking] -> Flow [DRB.Booking]
+filterBookingsByPassengerLuggage mbVehicleTrunk serviceTierItems bookings
+  | all (\booking -> isNothing $ SPL.storedPassengerLuggage booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags) bookings = pure bookings
+  | otherwise = do
+    let fitsVehicle booking = SPL.fitsStoredPassengerLuggage mbVehicleTrunk (find (\item -> item.serviceTierType == booking.vehicleServiceTier) serviceTierItems) booking.numberOfPassengers booking.numberOfCheckInBags booking.numberOfCabinBags
+    pure $ filter fitsVehicle bookings
 
 -- | Keeps the bookings whose visibility stage, chosen from the time left to pickup, admits this driver.
 -- A booking inside the open-to-all window is kept whatever the stages say.

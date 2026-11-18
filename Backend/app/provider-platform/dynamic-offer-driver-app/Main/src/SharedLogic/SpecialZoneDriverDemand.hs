@@ -305,6 +305,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               merchantOperatingCityId = merchantOpCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = Nothing,
+              excessLuggageHalfUnits = Nothing,
               pickupGateId = Just pickupGateId,
               fareSettlementType = fullFarePolicy.fareSettlementType,
               isParkingFeeExempt = False
