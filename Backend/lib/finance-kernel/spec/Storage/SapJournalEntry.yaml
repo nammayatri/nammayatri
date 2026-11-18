@@ -41,6 +41,8 @@ SapJournalEntry:
     periodStartTime: UTCTime
     periodEndTime: UTCTime
     rawResponse: Maybe Text                        # Full SAP XML response for audit SENSITIVE
+    bapId: Maybe Text                               # Buyer App ID (for per-BAP JVs)
+    bapName: Maybe Text                              # Buyer App Name (for per-BAP JVs)
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime

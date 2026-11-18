@@ -38,6 +38,7 @@ library
       Lib.Payment.Payment.History
       Lib.Payment.Payout.Bulk.Batch
       Lib.Payment.Payout.Bulk.Cycle
+      Lib.Payment.Payout.Bulk.Journal
       Lib.Payment.Payout.Bulk.Resolve
       Lib.Payment.Payout.Bulk.Schedule
       Lib.Payment.Payout.Bulk.StatusCheck
@@ -63,6 +64,7 @@ library
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
       Lib.Payment.Storage.Queries.PayoutBatchExtra
+      Lib.Payment.Storage.Queries.PayoutLifecycleEventExtra
       Lib.Payment.Storage.Queries.PayoutOrderExtra
       Lib.Payment.Storage.Queries.PayoutRequestExtra
       Lib.Payment.Storage.Queries.RefundsExtra
@@ -76,6 +78,7 @@ library
       Lib.Payment.Domain.Types.PaymentOrderOffer
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutBatch
+      Lib.Payment.Domain.Types.PayoutLifecycleEvent
       Lib.Payment.Domain.Types.PayoutOrder
       Lib.Payment.Domain.Types.PayoutRequest
       Lib.Payment.Domain.Types.PayoutTransaction
@@ -94,6 +97,7 @@ library
       Lib.Payment.Storage.Beam.PaymentOrderOffer
       Lib.Payment.Storage.Beam.PaymentOrderSplit
       Lib.Payment.Storage.Beam.PayoutBatch
+      Lib.Payment.Storage.Beam.PayoutLifecycleEvent
       Lib.Payment.Storage.Beam.PayoutOrder
       Lib.Payment.Storage.Beam.PayoutRequest
       Lib.Payment.Storage.Beam.PayoutTransaction
@@ -110,11 +114,13 @@ library
       Lib.Payment.Storage.Queries.OfferStats
       Lib.Payment.Storage.Queries.OfflineOffer
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutBatch
+      Lib.Payment.Storage.Queries.OrphanInstances.PayoutLifecycleEvent
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
       Lib.Payment.Storage.Queries.OrphanInstances.Refunds
       Lib.Payment.Storage.Queries.PaymentOrderOffer
       Lib.Payment.Storage.Queries.PaymentOrderSplit
       Lib.Payment.Storage.Queries.PayoutBatch
+      Lib.Payment.Storage.Queries.PayoutLifecycleEvent
       Lib.Payment.Storage.Queries.PayoutOrder
       Lib.Payment.Storage.Queries.PayoutRequest
       Lib.Payment.Storage.Queries.PayoutTransaction

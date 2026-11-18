@@ -29,3 +29,10 @@ ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN updated_at timestamp with tim
 ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN updated_by text NOT NULL;
 ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN updated_by_id text ;
 ALTER TABLE atlas_app.sap_journal_entry ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN bap_name text ;
+ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN bap_id text ;

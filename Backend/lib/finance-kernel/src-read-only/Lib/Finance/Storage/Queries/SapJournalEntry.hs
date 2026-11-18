@@ -43,7 +43,9 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.batchId batchId,
+    [ Se.Set Beam.bapId bapId,
+      Se.Set Beam.bapName bapName,
+      Se.Set Beam.batchId batchId,
       Se.Set Beam.belnr belnr,
       Se.Set Beam.blart blart,
       Se.Set Beam.bldat bldat,

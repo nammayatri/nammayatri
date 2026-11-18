@@ -150,12 +150,12 @@ dispatchEntry ::
   m Bool
 dispatchEntry _ _ _ _ _ entryType amount _ _ _ _utcOffset _currency _
   | amount == 0 = do
-    logInfo $ "No amount for " <> show entryType <> ", skipping"
+    logInfo $ "No amount for " <> labelOf entryType <> ", skipping"
     pure True
 dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime utcOffset currency pgRows = do
-  let label = show entryType
+  let label = labelOf entryType
       txnType = toTransactionType entryType
-  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType
+  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType Nothing
   if alreadyPosted
     then pure True
     else do
@@ -164,7 +164,7 @@ dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTi
       logInfo $ "SAP journal entry request body = " <> show req
       result <- callSAPWithRetry sapCfg token req label maxRetries
       let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId currency pgRows
-      handleSAPResponse label req result txnType txnCount mId mocid fromTime toTime currency saveTransactionAction
+      handleSAPResponse label req result txnType txnCount mId mocid fromTime toTime currency Nothing Nothing saveTransactionAction
 
 scheduleNextSubscriptionPurchaseJob ::
   ( BeamFlow m r,
@@ -203,6 +203,12 @@ data SAPEntryType
   | ChargebackEntry
   deriving (Show)
 
+labelOf :: SAPEntryType -> Text
+labelOf SubscriptionPurchase = "Online Subscription Sale"
+labelOf PGSettlementOrder = "Online Subscription PG Settlement - Order"
+labelOf RefundEntry = "Online Subscription PG Settlement - Refund"
+labelOf ChargebackEntry = "Online Subscription PG Settlement - Chargeback"
+
 -- ---------------------------------------------------------------------------
 -- Journal request builder
 -- ---------------------------------------------------------------------------
@@ -220,7 +226,7 @@ buildJournalRequest sapCfg entryType amount fromTime utcOffset currency = do
   let acctMap = sapCfg.accountMapping
   bId <- getNextBatchId
   items <- buildItems entryType acctMap bId currency amount
-  buildJournalRequestFromItems sapCfg (show entryType) fromTime utcOffset items
+  buildJournalRequestFromItems sapCfg (labelOf entryType) fromTime utcOffset items
 
 -- ---------------------------------------------------------------------------
 -- Item builders per entry type
@@ -280,8 +286,8 @@ dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ _utcOffset _currency _ totals
     logInfo "No subscription purchase data found, skipping"
     pure True
 dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime utcOffset currency subRows totals = do
-  let label = show entryType
-  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label SJE.SubscriptionPurchase
+  let label = labelOf entryType
+  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label SJE.SubscriptionPurchase Nothing
   if alreadyPosted
     then pure True
     else do
@@ -300,7 +306,7 @@ dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTim
       req <- buildSubscriptionJournalRequest sapCfg fromTime utcOffset totals entryType currency
       result <- callSAPWithRetry sapCfg token req label maxRetries
       let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId currency subRows
-      handleSAPResponse label req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency saveTransactionAction
+      handleSAPResponse label req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency Nothing Nothing saveTransactionAction
 
 buildSubscriptionJournalRequest ::
   (BeamFlow m r, CacheFlow m r) =>
@@ -322,7 +328,7 @@ buildSubscriptionJournalRequest sapCfg fromTime utcOffset totals entryType curre
         mkItem bId "4" "SGST_PAYABLE A/C" acctMap Credit totals.sgst currency,
         mkItem bId "5" "IGST_PAYABLE A/C" acctMap Credit totals.igst currency
       ]
-  buildJournalRequestFromItems sapCfg (show entryType) fromTime utcOffset items
+  buildJournalRequestFromItems sapCfg (labelOf entryType) fromTime utcOffset items
 
 -- ---------------------------------------------------------------------------
 -- SAP Journal Entry persistence
