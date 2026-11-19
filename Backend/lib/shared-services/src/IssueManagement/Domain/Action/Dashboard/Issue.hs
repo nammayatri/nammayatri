@@ -283,6 +283,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             customerResponse = Nothing,
             submitLabel = Nothing,
             additionalTicketIds = Nothing,
+            ticketFormFields = Nothing,
             scheduledBookingTransactionId = Nothing,
             ..
           }

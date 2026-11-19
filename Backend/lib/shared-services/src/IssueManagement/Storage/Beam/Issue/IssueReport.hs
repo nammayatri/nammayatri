@@ -14,6 +14,7 @@
 
 module IssueManagement.Storage.Beam.Issue.IssueReport where
 
+import qualified Data.Aeson as A
 import Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -48,7 +49,8 @@ data IssueReportT f = IssueReportT
     becknIssueId :: B.C f (Maybe Text),
     reopenedCount :: B.C f (Maybe Int),
     customerResponse :: B.C f (Maybe Domain.CustomerResponse),
-    submitLabel :: B.C f (Maybe Text)
+    submitLabel :: B.C f (Maybe Text),
+    ticketFormFields :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 
