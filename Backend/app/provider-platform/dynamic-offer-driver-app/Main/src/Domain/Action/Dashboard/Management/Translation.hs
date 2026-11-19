@@ -50,6 +50,7 @@ import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as CQDVSC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -95,7 +96,9 @@ bodyField = "body"
 -- The order the dashboard lists them in.
 domains :: [Domain]
 domains =
-  map translationsDomain ["Document", "FleetOwnerDocument", "OnboardingStage", "Verification", "ServiceTier", "OnboardingAs", "DocumentDecision", "RcRule", "DocumentReason", "AcUsage", "Coins", "Earnings", "PushValue"]
+  map translationsDomain ["Document", "FleetOwnerDocument"]
+    <> [onboardingStageDomain]
+    <> map translationsDomain ["Verification", "ServiceTier", "OnboardingAs", "DocumentDecision", "RcRule", "DocumentReason", "AcUsage", "Coins", "Earnings", "PushValue"]
     <> [walletDomain, documentFieldDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain
@@ -285,6 +288,25 @@ documentFieldDomain =
       pure . map keyRef . List.nub $
         [k | config <- driverConfigs, k <- SDO.documentFieldKeys config.documentType (fromMaybe [] config.documentFields)]
           <> [k | config <- fleetConfigs, k <- SDO.documentFieldKeys config.documentType (fromMaybe [] config.documentFields)]
+
+-- | Onboarding stages: the stage keys, plus the Do's/Don'ts and media items read off the city's
+-- stage configs.
+onboardingStageDomain :: Domain
+onboardingStageDomain =
+  Domain
+    { domainName = "OnboardingStage",
+      domainFields = [messageField],
+      domainDimensions = [],
+      domainKeys = stageKeys,
+      readRows = readTranslations,
+      writeEntry = mapM_ . writeTranslation
+    }
+  where
+    stageKeys cityId = do
+      stageConfigs <- CQDVSC.findAllByMerchantOpCityId cityId Nothing
+      pure . map keyRef . List.nub $
+        [k | k <- allKeys @TranslationKey, keyDomain (keyName k) == "OnboardingStage"]
+          <> concatMap SDO.stageTextKeys stageConfigs
 
 readTranslations :: [KeyRef] -> Id DMOC.MerchantOperatingCity -> Flow [Row]
 readTranslations refs cityId = do

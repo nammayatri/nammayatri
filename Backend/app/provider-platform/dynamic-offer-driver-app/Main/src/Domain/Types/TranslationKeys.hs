@@ -53,6 +53,14 @@ data TranslationKey
   | FleetOwnerDocument_Description DVC.DocumentType
   | OnboardingStage_Title DocumentOnboardingStage
   | OnboardingStage_Description DocumentOnboardingStage
+  | OnboardingStage_Hint DocumentOnboardingStage
+  | -- A stage's Do's/Don'ts and media items, named by their English title ('textKeyName')
+    OnboardingStage_GuidelineTitle DocumentOnboardingStage Text
+  | OnboardingStage_GuidelineText DocumentOnboardingStage Text
+  | OnboardingStage_MediaTitle DocumentOnboardingStage Text
+  | OnboardingStage_MediaDescription DocumentOnboardingStage Text
+  | Document_DisableWarning DVC.DocumentType
+  | FleetOwnerDocument_DisableWarning DVC.DocumentType
   | Verification_Message VerificationMessage
   | DocumentDecision_Title DMM.MessageKey
   | DocumentDecision_Body DMM.MessageKey
@@ -89,6 +97,13 @@ instance Show TranslationKey where
     FleetOwnerDocument_Description d -> dotted ["FleetOwnerDocument", "Description", keyName d]
     OnboardingStage_Title s -> dotted ["OnboardingStage", "Title", keyName s]
     OnboardingStage_Description s -> dotted ["OnboardingStage", "Description", keyName s]
+    OnboardingStage_Hint s -> dotted ["OnboardingStage", "Hint", keyName s]
+    OnboardingStage_GuidelineTitle s n -> dotted ["OnboardingStage", "GuidelineTitle", keyName s, n]
+    OnboardingStage_GuidelineText s n -> dotted ["OnboardingStage", "GuidelineText", keyName s, n]
+    OnboardingStage_MediaTitle s n -> dotted ["OnboardingStage", "MediaTitle", keyName s, n]
+    OnboardingStage_MediaDescription s n -> dotted ["OnboardingStage", "MediaDescription", keyName s, n]
+    Document_DisableWarning d -> dotted ["Document", "DisableWarning", keyName d]
+    FleetOwnerDocument_DisableWarning d -> dotted ["FleetOwnerDocument", "DisableWarning", keyName d]
     Verification_Message m -> dotted ["Verification", "Message", verificationMessageText m]
     DocumentDecision_Title k -> dotted ["DocumentDecision", "Title", keyName k]
     DocumentDecision_Body k -> dotted ["DocumentDecision", "Body", keyName k]
@@ -124,6 +139,9 @@ instance IsTranslationKey TranslationKey where
         map FleetOwnerDocument_Description documentTypes,
         map OnboardingStage_Title allDocumentOnboardingStages,
         map OnboardingStage_Description allDocumentOnboardingStages,
+        map OnboardingStage_Hint allDocumentOnboardingStages,
+        map Document_DisableWarning documentTypes,
+        map FleetOwnerDocument_DisableWarning documentTypes,
         map Verification_Message [minBound .. maxBound],
         map DocumentDecision_Title documentDecisions,
         map DocumentDecision_Body documentDecisions,
@@ -153,6 +171,13 @@ instance IsTranslationKey TranslationKey where
     FleetOwnerDocument_Description d -> Just (keyName d <> "_Description")
     OnboardingStage_Title s -> Just ("DocumentOnboardingStage_" <> keyName s <> "_Title")
     OnboardingStage_Description s -> Just ("DocumentOnboardingStage_" <> keyName s <> "_Description")
+    OnboardingStage_Hint _ -> Nothing
+    OnboardingStage_GuidelineTitle {} -> Nothing
+    OnboardingStage_GuidelineText {} -> Nothing
+    OnboardingStage_MediaTitle {} -> Nothing
+    OnboardingStage_MediaDescription {} -> Nothing
+    Document_DisableWarning _ -> Nothing
+    FleetOwnerDocument_DisableWarning _ -> Nothing
     Verification_Message m -> Just (keyName m)
     DocumentDecision_Title k -> Just (keyName k <> "_TITLE")
     DocumentDecision_Body k -> Just (keyName k <> "_BODY")
