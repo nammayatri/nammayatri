@@ -1,0 +1,25 @@
+CREATE TABLE atlas_app.favourite_route ();
+
+ALTER TABLE atlas_app.favourite_route ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN favourite_type text NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN from_stop_code text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN integrated_bpp_config_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN notify_on text[] NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN notifying_stop text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN recurrence_rule_days text[] NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN rider_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN route_code text NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN route_short_name text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN should_notify boolean NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN to_stop_code text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN trip_id text ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN vehicle_type text NOT NULL;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN window_end_time time ;
+ALTER TABLE atlas_app.favourite_route ADD COLUMN window_start_time time ;
+ALTER TABLE atlas_app.favourite_route ADD PRIMARY KEY ( id);

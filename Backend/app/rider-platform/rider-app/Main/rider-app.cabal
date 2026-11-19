@@ -297,6 +297,7 @@ library
       Domain.Action.UI.EstimateBP
       Domain.Action.UI.FareBreakup
       Domain.Action.UI.FavouriteDriver
+      Domain.Action.UI.FavouriteRoute
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.File
@@ -386,6 +387,7 @@ library
       Domain.Types.Extra.AssetRelease
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
+      Domain.Types.Extra.FavouriteRoute
       Domain.Types.Extra.FeedbackForm
       Domain.Types.Extra.FRFSCachedQuote
       Domain.Types.Extra.IntegratedBPPConfig
@@ -946,6 +948,7 @@ library
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
+      API.Action.UI.FavouriteRoute
       API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FollowRide
@@ -1063,6 +1066,7 @@ library
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
+      API.Types.UI.FavouriteRoute
       API.Types.UI.FinanceInvoice
       API.Types.UI.FollowRide
       API.Types.UI.FRFSInternal
@@ -1143,6 +1147,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FareBreakup
       Domain.Types.FareBreakupInfo
+      Domain.Types.FavouriteRoute
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
       Domain.Types.FeedbackForm
@@ -1316,6 +1321,7 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
       Storage.Beam.FareBreakupInfo
+      Storage.Beam.FavouriteRoute
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
       Storage.Beam.FeedbackForm
@@ -1494,6 +1500,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FareBreakupInfo
+      Storage.Queries.FavouriteRoute
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
       Storage.Queries.FeedbackForm

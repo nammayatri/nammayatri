@@ -19,3 +19,7 @@ data NotifyBusApproachingReq = NotifyBusApproachingReq
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NotifyTripStartedReq = NotifyTripStartedReq {gtfsId :: Kernel.Prelude.Text, routeId :: Kernel.Prelude.Text, startedAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int, vehicleNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

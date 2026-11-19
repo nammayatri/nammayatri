@@ -1,0 +1,99 @@
+imports:
+  Text: Data.Text
+  UTCTime: Data.Time
+  TimeOfDay: Data.Time.LocalTime
+  Id: Kernel.Types.Id
+  FavouriteRoute: Domain.Types.FavouriteRoute
+  FavouriteRouteType: Domain.Types.FavouriteRoute
+  FavouriteRouteStatus: Domain.Types.FavouriteRoute
+  FavouriteNotifyType: Domain.Types.FavouriteRoute
+  DayOfWeek: Data.Time.Calendar
+  ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
+
+module: FavouriteRoute
+
+types:
+  CreateFavouriteRouteReq:
+    favouriteType: FavouriteRouteType
+    vehicleType: VehicleCategory
+    routeCode: Text
+    routeShortName: Maybe Text
+    tripId: Maybe Text
+    notifyOn: "Maybe [FavouriteNotifyType]"
+    shouldNotify: Maybe Bool
+    notifyingStop: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    windowStartTime: Maybe TimeOfDay
+    windowEndTime: Maybe TimeOfDay
+    recurrenceRuleDays: "Maybe [DayOfWeek]"
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+
+  UpdateFavouriteRouteReq:
+    notifyOn: "[FavouriteNotifyType]"
+    shouldNotify: Bool
+    recurrenceRuleDays: "[DayOfWeek]"
+    notifyingStop: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    windowStartTime: Maybe TimeOfDay
+    windowEndTime: Maybe TimeOfDay
+    routeShortName: Maybe Text
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+
+  FavouriteRouteAPIEntity:
+    id: Id FavouriteRoute
+    favouriteType: FavouriteRouteType
+    vehicleType: VehicleCategory
+    routeCode: Text
+    routeShortName: Maybe Text
+    tripId: Maybe Text
+    notifyOn: "[FavouriteNotifyType]"
+    shouldNotify: Bool
+    notifyingStop: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    windowStartTime: Maybe TimeOfDay
+    windowEndTime: Maybe TimeOfDay
+    recurrenceRuleDays: "[DayOfWeek]"
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+    status: FavouriteRouteStatus
+    createdAt: UTCTime
+
+apis:
+  # POST /favouriteRoute/create
+  - POST:
+      endpoint: /favouriteRoute/create
+      auth: TokenAuth
+      request:
+        type: CreateFavouriteRouteReq
+      response:
+        type: FavouriteRouteAPIEntity
+
+  # GET /favouriteRoute/list
+  - GET:
+      endpoint: /favouriteRoute/list
+      auth: TokenAuth
+      response:
+        type: "[FavouriteRouteAPIEntity]"
+
+  # PUT /favouriteRoute/{favouriteId}
+  - PUT:
+      endpoint: /favouriteRoute/{favouriteId}
+      auth: TokenAuth
+      params:
+        favouriteId: Id FavouriteRoute
+      request:
+        type: UpdateFavouriteRouteReq
+      response:
+        type: FavouriteRouteAPIEntity
+
+  # DELETE /favouriteRoute/{favouriteId}
+  - DELETE:
+      endpoint: /favouriteRoute/{favouriteId}
+      auth: TokenAuth
+      params:
+        favouriteId: Id FavouriteRoute
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

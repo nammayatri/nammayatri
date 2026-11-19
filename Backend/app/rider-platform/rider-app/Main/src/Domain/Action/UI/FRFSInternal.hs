@@ -1,8 +1,9 @@
-module Domain.Action.UI.FRFSInternal (getFrfsTripRouteManifest, postFrfsTripNotifyTripStarted, postFrfsTripStopNotifyApproaching) where
+module Domain.Action.UI.FRFSInternal (getFrfsTripRouteManifest, postFrfsTripNotifyTripStarted, postFrfsTripNotifyTripStartedV2, postFrfsTripStopNotifyApproaching) where
 
 import qualified API.Types.UI.FRFSInternal
 import qualified API.Types.UI.FRFSTicketService
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.FavouriteRoute as DFavouriteRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -22,13 +23,29 @@ getFrfsTripRouteManifest tripId routeId mbToken = do
 
 postFrfsTripNotifyTripStarted ::
   Text ->
+  Maybe DFavouriteRoute.NotifyTripStartedSource ->
   Maybe Text ->
   Environment.Flow APISuccess.APISuccess
-postFrfsTripNotifyTripStarted tripId mbToken = do
+postFrfsTripNotifyTripStarted tripId mbSource mbToken = do
   internalAPIKey <- asks (.internalAPIKey)
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  fork ("notifyBusTripStartedForTrip" <> tripId) (FRFSTicketService.notifyBusTripStartedForTrip tripId)
+  fork ("notifyBusTripStartedForTrip" <> tripId) (FRFSTicketService.notifyBusTripStartedForTrip tripId mbSource)
+  pure APISuccess.Success
+
+-- | gps-processor's trip-start hook. Separate from the shared route above because that
+-- one must stay bodyless for crew apps already in the field; this one carries the
+-- payload, so the favourite audience gets a route and a vehicle to work with.
+postFrfsTripNotifyTripStartedV2 ::
+  Text ->
+  Maybe Text ->
+  API.Types.UI.FRFSInternal.NotifyTripStartedReq ->
+  Environment.Flow APISuccess.APISuccess
+postFrfsTripNotifyTripStartedV2 tripId mbToken req = do
+  internalAPIKey <- asks (.internalAPIKey)
+  unless (Just internalAPIKey == mbToken) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  fork ("notifyFavouriteRoutesTripStarted" <> tripId) (FRFSTicketService.notifyFavouriteRoutesTripStarted tripId (Just req))
   pure APISuccess.Success
 
 postFrfsTripStopNotifyApproaching ::

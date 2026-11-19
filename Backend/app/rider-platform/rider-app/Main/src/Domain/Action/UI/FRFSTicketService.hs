@@ -30,6 +30,7 @@ import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFee
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.FavouriteRoute as DFavouriteRoute
 import qualified Domain.Types.FleetOperatorTripAction as FOTripAction
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJL
@@ -39,6 +40,7 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
@@ -127,6 +129,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
+import qualified Storage.Queries.FavouriteRoute as QFavouriteRoute
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SeatLayout as QSeatLayout
@@ -1962,11 +1965,103 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
             hasUpcomingTrips = not (null (filter (> newCursor) allTripNumbers))
           }
 
+notifyBusTripStartedForTrip :: Text -> Maybe DFavouriteRoute.NotifyTripStartedSource -> Environment.Flow ()
+notifyBusTripStartedForTrip tripId mbSource =
+  case fromMaybe DFavouriteRoute.TRIP_ACTION mbSource of
+    DFavouriteRoute.TRIP_ACTION -> notifyBookedRidersForTrip tripId
+    DFavouriteRoute.TRACKING -> notifyFavouriteRoutesTripStarted tripId Nothing
+
+data TripContext = TripContext
+  { routeCode :: Text,
+    serviceTierType :: Maybe Spec.ServiceTierType
+  }
+
+collectFavourites ::
+  DFavouriteRoute.FavouriteNotifyType ->
+  Text ->
+  Maybe TripContext ->
+  Maybe Text ->
+  Environment.Flow [DFavouriteRoute.FavouriteRoute]
+collectFavourites notifyType tripId mbCtx mbTriggerStop = do
+  tripRows <- QFavouriteRoute.findAllActiveByTripId (Just tripId) DFavouriteRoute.ACTIVE
+  patternRows <- case (mbCtx, mbTriggerStop) of
+    (Just ctx, Just triggerStop) -> do
+      -- Every operating city is IST, and a window is wall-clock in that city.
+      let istOffset = Seconds 19800
+      -- getCurrentTime is UTC; adding the offset makes the components read as IST.
+      shiftedNow <- getLocalCurrentTime istOffset
+      -- Calendar date (YYYY-MM-DD), used only to work out the weekday.
+      let today = Time.utctDay shiftedNow
+          -- Clock reading (HH:MM:SS), compared against the window's start/end.
+          currTime = Time.timeToTimeOfDay (Time.utctDayTime shiftedNow)
+      rows <- QFavouriteRoute.findAllActivePatternByRouteCodeAndNotifyingStop ctx.routeCode DFavouriteRoute.PATTERN (Just triggerStop) DFavouriteRoute.ACTIVE (Just currTime) (Just currTime)
+      pure $ filter (patternMatches today currTime ctx) rows
+    _ -> pure []
+  -- Nothing here means "no stop to match" (trip-started), not "match nothing" --
+  -- a TRIP favourite must still fire when the trip it names starts.
+  let atTriggerStop fav = maybe True (\stop -> fav.notifyingStop == Just stop) mbTriggerStop
+      -- shouldNotify is already filtered at the query level (both queries above).
+      wantsCommon fav = notifyType `elem` fav.notifyOn
+  pure $
+    nubBy ((==) `on` (.riderId)) $
+      filter (\fav -> wantsCommon fav && atTriggerStop fav) tripRows
+        <> filter wantsCommon patternRows
+
+patternMatches :: Time.Day -> Time.TimeOfDay -> TripContext -> DFavouriteRoute.FavouriteRoute -> Bool
+patternMatches today currTime ctx fav = tierOk && dayOk && windowOk
+  where
+    tierOk = maybe False (\t -> Just t == ctx.serviceTierType) fav.serviceTierType
+    dayOk = Time.dayOfWeek today `elem` fav.recurrenceRuleDays
+    windowOk = case (fav.windowStartTime, fav.windowEndTime) of
+      (Just s, Just e) -> currTime >= s && currTime <= e
+      _ -> False
+
+fanOutToFavourites ::
+  [DFavouriteRoute.FavouriteRoute] ->
+  (DRC.RiderConfig -> DFavouriteRoute.FavouriteRoute -> Bool) ->
+  (DFavouriteRoute.FavouriteRoute -> DP.Person -> Environment.Flow ()) ->
+  Environment.Flow ()
+fanOutToFavourites favourites tierAllowed send =
+  unless (null favourites) $ do
+    persons <- QP.findAllByIds (map (.riderId) favourites)
+    let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+    forM_ favourites $ \fav ->
+      case Map.lookup fav.riderId personMap of
+        Nothing -> logError $ "FavouriteRoute " <> fav.id.getId <> " has no person row"
+        Just person -> do
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+          when (maybe False (`tierAllowed` fav) mbRiderConfig) $ send fav person
+
+-- | `mbReq` is Nothing when this came through the shared bodyless route, which crew
+-- apps in the field still call. Without it there is no route and no vehicle, so only
+-- TRIP favourites (which key off tripId alone) can match.
+notifyFavouriteRoutesTripStarted :: Text -> Maybe FRFSInternal.NotifyTripStartedReq -> Environment.Flow ()
+notifyFavouriteRoutesTripStarted tripId mbReq = do
+  mbCtx <- forM mbReq $ \req -> do
+    -- The tier comes from the vehicle's duty metadata, cached 12h per vehicle.
+    mbIntegratedBPPConfig <- findIntegratedBPPConfigByGtfsId req.gtfsId
+    mbServiceTier <- case mbIntegratedBPPConfig of
+      Nothing -> pure Nothing
+      Just integratedBPPConfig -> do
+        mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] req.vehicleNumber
+        pure $ mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
+    pure TripContext {routeCode = req.routeId, serviceTierType = mbServiceTier}
+  favourites <- collectFavourites DFavouriteRoute.TRIP_STARTED tripId mbCtx Nothing
+  let tierAllowed riderConfig fav = maybe False (`elem` fromMaybe [] riderConfig.busTrackingNotificationTiers) fav.serviceTierType
+  fanOutToFavourites favourites tierAllowed $ \fav person -> do
+    -- Prefer the live shortname gps-processor resolved for this trip's actual route over
+    -- the favourite's own stored value, which was only ever a snapshot from creation time.
+    let mbLiveShortName = mbReq >>= (.routeShortName)
+        routeName = fromMaybe fav.routeCode (mbLiveShortName <|> fav.routeShortName)
+        vehicleNumber = maybe "" (.vehicleNumber) mbReq
+    logInfo $ "Notifying rider " <> person.id.getId <> " that their favourite bus has started on route " <> routeName <> " trip " <> tripId
+    Notifications.notifyFavouriteRouteTripStarted person routeName vehicleNumber tripId
+
 -- | Notify every confirmed passenger of a trip that their bus has started.
 -- Lives on the rider app because it needs rider `Person` device tokens (atlas_app);
 -- the provider (BPP) tripAction triggers it over the internal API in `FRFSInternal`.
-notifyBusTripStartedForTrip :: Text -> Environment.Flow ()
-notifyBusTripStartedForTrip tripId = do
+notifyBookedRidersForTrip :: Text -> Environment.Flow ()
+notifyBookedRidersForTrip tripId = do
   -- Fetch all confirmed bookings for this trip
   bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
   unless (null bookings) $ do
@@ -2012,9 +2107,22 @@ formatApproachingDistance distanceMeters =
                 else Data.Text.pack (show wholeKm) <> "." <> Data.Text.pack (show tenths) <> " km"
         else Data.Text.pack (show roundedMeters) <> " m"
 
+-- | gps-processor identifies the feed it is reporting on by `gtfsId`, which is exactly
+-- what `IntegratedBPPConfig.feedKey` holds (`postFrfsFleetOperatorCurrentOperation`
+-- derives one from the other). The across-cities fetch goes through config-pilot's
+-- cache, so this is not a per-event database hit.
+findIntegratedBPPConfigByGtfsId :: Text -> Environment.Flow (Maybe DIBC.IntegratedBPPConfig)
+findIntegratedBPPConfigByGtfsId gtfsId = do
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfigAcrossCities Enums.BUS DIBC.MULTIMODAL
+  let mbIntegratedBPPConfig = find (\config -> config.feedKey == gtfsId) integratedBPPConfigs
+  when (isNothing mbIntegratedBPPConfig) $
+    logWarning $ "No integrated BPP config found for gtfsId " <> gtfsId
+  pure mbIntegratedBPPConfig
+
 -- | Shared prep for both stop-notification flows below: batched bookings/persons/legs, plus
 -- route/vehicle info resolved once per event (same for every booking).
 fetchStopBookingsForNotify ::
+  Text ->
   Text ->
   Text ->
   Text ->
@@ -2025,9 +2133,10 @@ fetchStopBookingsForNotify ::
       Map Text DJL.JourneyLeg,
       Text,
       Maybe Text,
+      Maybe Spec.ServiceTierType,
       Maybe DIBC.IntegratedBPPConfig
     )
-fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber = do
+fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber gtfsId = do
   bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
   let stopBookings = filter (\b -> b.fromStationCode == stopCode) bookings
   let riderIds = map (.riderId) stopBookings
@@ -2035,14 +2144,20 @@ fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber = do
   let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
   legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) stopBookings)
   let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
-  (routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig) <- case stopBookings of
-    (sampleBooking : _) -> do
-      integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity sampleBooking
+  mbIntegratedBPPConfig <- case stopBookings of
+    (sampleBooking : _) -> Just <$> SIBC.findIntegratedBPPConfigFromEntity sampleBooking
+    [] -> findIntegratedBPPConfigByGtfsId gtfsId
+  (routeNumber, mbVehicleTagNumber, mbServiceTier) <- case mbIntegratedBPPConfig of
+    Just integratedBPPConfig -> do
       mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeId
       mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
-      pure (maybe "" (.shortName) mbRoute, mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber), Just integratedBPPConfig)
-    [] -> pure ("", Nothing, Nothing)
-  pure (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig)
+      pure
+        ( maybe "" (.shortName) mbRoute,
+          mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber),
+          mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
+        )
+    Nothing -> pure ("", Nothing, Nothing)
+  pure (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbServiceTier, mbIntegratedBPPConfig)
 
 approachingNotificationKey :: Text -> Text
 approachingNotificationKey "nearing" = "BUS_APPROACHING_NEARING"
@@ -2051,7 +2166,7 @@ approachingNotificationKey _ = "BUS_APPROACHING_RELAXED"
 -- | Distance-threshold ("relaxed"/"nearing") stop-approach notification.
 notifyBusApproachingStopForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
 notifyBusApproachingStopForTrip tripId stopCode req = do
-  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, _) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber
+  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, _, _) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber req.gtfsId
   unless (null stopBookings) $ do
     let distanceDisplay = formatApproachingDistance req.distanceMeters
         notificationKey = approachingNotificationKey req.thresholdType
@@ -2078,7 +2193,7 @@ notifyBusApproachingStopForTrip tripId stopCode req = do
 -- notifying N stops ahead instead of 1) only touches this function.
 notifyBusPrevStopCrossedForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
 notifyBusPrevStopCrossedForTrip tripId stopCode req = do
-  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber
+  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbServiceTier, mbIntegratedBPPConfig) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber req.gtfsId
   unless (null stopBookings) $ do
     -- crossedStopId is the gtfs stop code of the stop just left; resolve its display name once.
     mbPrevStopName <- case (mbIntegratedBPPConfig, req.crossedStopId) of
@@ -2103,6 +2218,45 @@ notifyBusPrevStopCrossedForTrip tripId stopCode req = do
                 stopName = fromMaybe "-" booking.fromStationName
             logInfo $ "Notifying passenger " <> person.id.getId <> " that bus crossed prev stop " <> prevStopName <> " heading to stop " <> stopCode <> " on trip " <> tripId
             Notifications.notifyBusPrevStopCrossed person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode prevStopName stopName mbJourneyId (Just booking.id.getId)
+  -- Same event, second audience. OUTSIDE the `unless` above: a favourites-only crossing
+  -- has zero bookings and must still fire.
+  whenJust req.crossedStopId $ \crossedStop ->
+    notifyFavouriteRoutesOnStopCrossed tripId crossedStop stopCode req mbServiceTier mbIntegratedBPPConfig -- crossedStop is the match key; stopCode is push copy
+
+-- | Favourite audience for a stop-crossed event.
+--
+-- Matches `notifyingStop` against `crossedStopId`, NOT against the path `stopCode`.
+-- gps-processor sends `crossedStopId` = the stop just left and `stopCode` = the stop
+-- ahead. A favourite's trigger is "after the bus crosses this stop", so the crossed one
+-- is the match key; the next one is push copy, and is what the ETA belongs to.
+notifyFavouriteRoutesOnStopCrossed ::
+  Text ->
+  Text ->
+  Text ->
+  FRFSInternal.NotifyBusApproachingReq ->
+  Maybe Spec.ServiceTierType ->
+  Maybe DIBC.IntegratedBPPConfig ->
+  Environment.Flow ()
+notifyFavouriteRoutesOnStopCrossed tripId crossedStop nextStopCode req mbServiceTier mbIntegratedBPPConfig = do
+  let ctx = TripContext {routeCode = req.routeId, serviceTierType = mbServiceTier}
+  favourites <- collectFavourites DFavouriteRoute.APPROACHING tripId (Just ctx) (Just crossedStop)
+  unless (null favourites) $ do
+    crossedStopName <- resolveStopName mbIntegratedBPPConfig crossedStop
+    nextStopName <- resolveStopName mbIntegratedBPPConfig nextStopCode
+    -- Same gate as the booked approaching flow, tier taken off the row.
+    let tierAllowed riderConfig fav = maybe False (`elem` fromMaybe [] riderConfig.busApproachingNotificationTiers) fav.serviceTierType
+    fanOutToFavourites favourites tierAllowed $ \fav person -> do
+      -- Riders recognise "12M", not "2295"; routeCode is the fallback only.
+      let routeName = fromMaybe fav.routeCode fav.routeShortName
+      logInfo $ "Notifying rider " <> person.id.getId <> " that bus crossed " <> crossedStopName <> " heading to " <> nextStopName <> " on trip " <> tripId
+      Notifications.notifyFavouriteRouteStopCrossed person routeName req.vehicleNumber tripId crossedStopName nextStopName req.etaSeconds
+
+-- | Same "-" fallback as the booked flow: a feed miss degrades the push copy rather
+-- than dropping the push.
+resolveStopName :: Maybe DIBC.IntegratedBPPConfig -> Text -> Environment.Flow Text
+resolveStopName mbIntegratedBPPConfig stopCode = do
+  mbStation <- forM mbIntegratedBPPConfig $ OTPRest.getStationByGtfsIdAndStopCode stopCode
+  pure $ fromMaybe "-" (join mbStation <&> (.name))
 
 postFrfsFleetOperatorCurrentOperation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

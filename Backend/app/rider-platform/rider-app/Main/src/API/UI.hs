@@ -20,6 +20,7 @@ import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
+import qualified API.Action.UI.FavouriteRoute as FavouriteRoute
 import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FollowRide as FollowRide
@@ -195,6 +196,7 @@ type API =
            :<|> ZendeskSdkToken.API
            :<|> FleetEngineToken.API
            :<|> VehicleServiceTier.API
+           :<|> FavouriteRoute.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -331,3 +333,4 @@ handler =
     :<|> ZendeskSdkToken.handler
     :<|> FleetEngineToken.handler
     :<|> VehicleServiceTier.handler
+    :<|> FavouriteRoute.handler

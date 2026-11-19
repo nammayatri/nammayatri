@@ -1,0 +1,115 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
+  TimeOfDay: Data.Time.LocalTime
+  DayOfWeek: Data.Time.Calendar
+
+FavouriteRoute:
+  tableName: favourite_route
+  derives: "Generic, Eq, Show, ToJSON, FromJSON, ToSchema"
+
+  types:
+    FavouriteRouteType:
+      enum: "TRIP, PATTERN"
+    FavouriteRouteStatus:
+      enum: "ACTIVE, INACTIVE"
+    FavouriteNotifyType:
+      enum: "TRIP_STARTED, APPROACHING"
+    NotifyTripStartedSource:
+      enum: "TRIP_ACTION, TRACKING"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id FavouriteRoute
+    riderId: Id Person
+    favouriteType: FavouriteRouteType
+    vehicleType: VehicleCategory
+    routeCode: Text
+    routeShortName: Maybe Text
+    tripId: Maybe Text
+    notifyOn: "[FavouriteNotifyType]"
+    shouldNotify: Bool
+    notifyingStop: Maybe Text
+
+    serviceTierType: Maybe ServiceTierType
+    windowStartTime: Maybe TimeOfDay
+    windowEndTime: Maybe TimeOfDay
+    recurrenceRuleDays: "[DayOfWeek]"
+
+    fromStopCode: Maybe Text
+    toStopCode: Maybe Text
+
+    integratedBppConfigId: Id IntegratedBPPConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+    status: FavouriteRouteStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+    tripId: SecondaryKey
+    routeCode: SecondaryKey
+    notifyingStop: SecondaryKey
+
+  beamType:
+    recurrenceRuleDays: "[Text]"
+
+  toTType:
+    recurrenceRuleDays: map show recurrenceRuleDays|E
+
+  fromTType:
+    recurrenceRuleDays: (read . Data.Text.unpack) <$> recurrenceRuleDays|E
+
+  sqlType:
+    notifyOn: text[]
+    recurrenceRuleDays: text[]
+    windowStartTime: time
+    windowEndTime: time
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  queries:
+    findAllActiveByTripId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - tripId
+          - status
+          - shouldNotify: True|CB
+    findAllActivePatternByRouteCodeAndNotifyingStop:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - routeCode
+          - favouriteType
+          - notifyingStop
+          - status
+          - shouldNotify: True|CB
+          - lte: [windowStartTime]
+          - gte: [windowEndTime]
+    findAllByRider:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderId, status]
+    findByIdAndRider:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, riderId]
+    findAllByRiderRouteAndStop:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderId, routeCode, notifyingStop]
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [ status ]
+      where: id
+
+  extraOperations:
+  - EXTRA_DOMAIN_TYPE_FILE

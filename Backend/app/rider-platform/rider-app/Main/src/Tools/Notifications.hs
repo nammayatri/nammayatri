@@ -2222,6 +2222,81 @@ notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNu
     Nothing
     Nothing
 
+notifyFavouriteRouteTripStarted ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+notifyFavouriteRouteTripStarted person routeName vehicleNumber tripId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = Nothing,
+            notificationType = TRIP_STARTED,
+            journeyId = Nothing,
+            bookingId = Nothing
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusTripStartedParam vehicleNumber routeName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "FAVOURITE_ROUTE_TRIP_STARTED" identity)
+    dynamicParams
+    entity
+    Nothing
+    [("routeName", routeName)]
+    Nothing
+    Nothing
+
+data FavouriteRouteStopCrossedParam = FavouriteRouteStopCrossedParam
+  { vehicleNumber :: Text,
+    routeName :: Text,
+    prevStopName :: Text,
+    stopName :: Text,
+    etaSeconds :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+notifyFavouriteRouteStopCrossed ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Int ->
+  m ()
+notifyFavouriteRouteStopCrossed person routeName vehicleNumber tripId prevStopName stopName mbEtaSeconds = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = Just stopName,
+            notificationType = PREV_STOP_CROSSED,
+            journeyId = Nothing,
+            bookingId = Nothing
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = FavouriteRouteStopCrossedParam vehicleNumber routeName prevStopName stopName mbEtaSeconds
+      etaDisplay = maybe "-" (\seconds -> show (max 1 ((seconds + 59) `div` 60)) <> " min") mbEtaSeconds
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "FAVOURITE_ROUTE_PREV_STOP_CROSSED" (\r -> r {notificationTypeForSound = Just Notification.BUS_PREV_STOP_CROSSED}))
+    dynamicParams
+    entity
+    Nothing
+    [("routeName", routeName), ("vehicleNumber", vehicleNumber), ("prevStopName", prevStopName), ("stopName", stopName), ("etaDisplay", etaDisplay)]
+    Nothing
+    Nothing
+
 -- | Notify a passenger that the operator changed the driver and/or the assigned bus for their upcoming
 -- FRFS bus trip (waybill-details update). Push-only. A single notification covers both fields; the
 -- `updatedField` template variable carries the three-way wording (driver details / bus number / both) so
