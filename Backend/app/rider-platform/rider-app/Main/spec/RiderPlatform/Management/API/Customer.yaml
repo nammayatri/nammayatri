@@ -117,6 +117,7 @@ apis:
         type: APISuccess
   - POST:
       endpoint: /offersList
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: CustomerOffersListReq

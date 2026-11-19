@@ -1694,6 +1694,7 @@ apis:
 
   - GET:
       endpoint: /vehicle/info
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - vehicleNo: Text
