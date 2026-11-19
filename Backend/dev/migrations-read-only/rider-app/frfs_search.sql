@@ -186,3 +186,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN enforce_frfs_pass boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

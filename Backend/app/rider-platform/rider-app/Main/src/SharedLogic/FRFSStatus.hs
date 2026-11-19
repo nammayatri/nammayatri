@@ -50,6 +50,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FRFSNudge
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -466,7 +467,8 @@ buildFRFSTicketBookingStatusAPIRes ::
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     SchedulerFlow r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m
   ) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   [FRFSQuoteCategory.FRFSQuoteCategory] ->
@@ -499,6 +501,8 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
           Nothing -> do
             let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
             return (routeStations, Nothing)
+  nudge <- SharedLogic.FRFSNudge.computeShuttleNudge booking
+  let failureReason = booking.failureReason
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,

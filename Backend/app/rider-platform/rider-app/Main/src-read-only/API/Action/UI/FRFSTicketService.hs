@@ -13,6 +13,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.FRFSTicketService
+import qualified Domain.Types.FRFSBookingGroup
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
@@ -182,6 +183,27 @@ type API =
            API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
       :<|> TokenAuth
       :> "frfs"
+      :> "searchGroup"
+      :> QueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> QueryParam
+           "integratedBppConfigId"
+           (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+      :> QueryParam
+           "newServiceTiers"
+           [BecknV2.FRFS.Enums.ServiceTierType]
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSSearchGroupReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSSearchGroupRes
+      :<|> TokenAuth
+      :> "frfs"
       :> "discovery"
       :> "search"
       :> QueryParam
@@ -239,6 +261,29 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "bookingGroup"
+      :> "checkout"
+      :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSBookingGroupCheckoutReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "bookingGroup"
+      :> Capture
+           "bookingGroupId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup)
+      :> "status"
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
       :<|> TokenAuth
       :> "frfs"
       :> "pass"
@@ -381,16 +426,6 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "frfs"
-      :> "booking"
-      :> Capture
-           "bookingId"
-           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-      :> "rating"
-      :> Get
-           '[JSON]
-           API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
-      :<|> TokenAuth
-      :> "frfs"
       :> "trip"
       :> Capture
            "tripId"
@@ -481,10 +516,20 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "booking"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "repeatSlots"
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSRepeatSlotsRes
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsPassInstantBook :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsBookingRating :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsSearchGroup :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsBookingGroupCheckout :<|> getFrfsBookingGroupStatus :<|> postFrfsPassInstantBook :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> getFrfsBookingRepeatSlots
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -579,6 +624,19 @@ postFrfsSearch ::
   )
 postFrfsSearch a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
+postFrfsSearchGroup ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
+    Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
+    BecknV2.FRFS.Enums.VehicleCategory ->
+    API.Types.UI.FRFSTicketService.FRFSSearchGroupReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchGroupRes
+  )
+postFrfsSearchGroup a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSTicketService.postFrfsSearchGroup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+
 postFrfsDiscoverySearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -620,6 +678,25 @@ postFrfsQuoteV2Confirm ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postFrfsBookingGroupCheckout ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    API.Types.UI.FRFSTicketService.FRFSBookingGroupCheckoutReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+  )
+postFrfsBookingGroupCheckout a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsBookingGroupCheckout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getFrfsBookingGroupStatus ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+  )
+getFrfsBookingGroupStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSTicketService.getFrfsBookingGroupStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFrfsPassInstantBook ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -729,15 +806,6 @@ postFrfsBookingFeedback ::
   )
 postFrfsBookingFeedback a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsBookingFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getFrfsBookingRating ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
-    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
-  )
-getFrfsBookingRating a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingRating (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
-
 getFrfsTripRouteSeats ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -807,3 +875,12 @@ postFrfsFleetOperatorCurrentOperation ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSTicketService.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFrfsBookingRepeatSlots ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSRepeatSlotsRes
+  )
+getFrfsBookingRepeatSlots a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSTicketService.getFrfsBookingRepeatSlots (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

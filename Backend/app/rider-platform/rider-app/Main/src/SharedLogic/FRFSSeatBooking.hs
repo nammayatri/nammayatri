@@ -7,6 +7,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Database.Redis as RawRedis
+import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.SeatLayout as SeatLayout
 import Kernel.Prelude
@@ -15,6 +16,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSSeatBooking.Lua as Lua
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.Seat as QSeat
 
 data SeatHoldMeta = SeatHoldMeta
@@ -208,6 +210,21 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
             RawRedis.Redis (Either RawRedis.Reply Integer)
         )
   logInfo $ "SeatBooking:releaseConfirmedSeats completed tripId=" <> tripId
+
+-- | Release every seat hold still attached to a group's bookings (each booking already carries
+-- its own tripId/holdId, so this is just a loop over the existing per-booking releaseHold).
+-- Bookings with no hold (unreserved seating, or the hold already converted/expired) are skipped.
+-- Reads the hold to release from FRFSQuoteCategory, not FRFSTicketBooking.holdId -- the booking
+-- column is only ever set on creation and goes stale on a reused/retried confirm, whereas the
+-- category-level holdId is refreshed on every confirm call. See the DEPRECATED note on
+-- FRFSTicketBooking.holdId.
+releaseGroupHolds :: (MonadFlow m, Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => [Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ()
+releaseGroupHolds bookings =
+  forM_ bookings $ \booking ->
+    whenJust booking.tripId $ \tripId -> do
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+      whenJust (listToMaybe quoteCategories >>= (.holdId)) $ \holdId ->
+        releaseHold tripId holdId
 
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]

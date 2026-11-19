@@ -7,11 +7,12 @@ import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
@@ -29,6 +30,7 @@ onCancelCore ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     CallFRFSBPP.BecknAPICallFlow m r,
     Metrics.HasBAPMetrics m r,
@@ -40,6 +42,7 @@ onCancelCore ::
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
     HasLongDurationRetryCfg r c,
+    HasKafkaProducer r,
     Finance.HasActorInfo m r
   ) =>
   Merchant ->

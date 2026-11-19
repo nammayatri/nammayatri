@@ -405,7 +405,10 @@ data RefundPaymentServiceReq = RefundPaymentServiceReq
     amount :: Maybe HighPrecMoney,
     retryIfFailed :: Bool,
     -- Nothing = fresh attempt; Just rid = retry that specific Refunds row (only when FAILED).
-    refundsId :: Maybe (Id Refunds)
+    refundsId :: Maybe (Id Refunds),
+    -- Vendor-split clawback for this specific refund. Nothing means no split adjustment is sent --
+    -- correct for a non-split order, but also means a split order's vendor share is NOT reversed.
+    splitSettlementDetails :: Maybe PInterface.RefundSplitSettlementDetails
   }
   deriving (Show, Eq, Generic)
 
@@ -748,7 +751,7 @@ refundPaymentService req refundCall = do
                 chargeRouting = order.chargeRouting,
                 driverAccountId = req.driverAccountId,
                 email = req.email,
-                splitSettlementDetails = Nothing -- TODO: build from PaymentOrderSplit if needed
+                splitSettlementDetails = req.splitSettlementDetails
               }
       resp <- withTryCatch "refundCall:refundPaymentService" (refundCall refundReq)
       case resp of

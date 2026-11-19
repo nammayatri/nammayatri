@@ -43,7 +43,9 @@ data DIRECTConfig = DIRECTConfig
     -- (the default) means unbounded -- fine for almost every operator. Only needed when this
     -- operator's gtfs_id has GIMS's repeater automation enabled, since that's the only case
     -- where an `upcoming` waybill can be real and far in the future.
-    checkAheadDaysSchedule :: Maybe Int
+    checkAheadDaysSchedule :: Maybe Int,
+    repeatSlotTimeToleranceSec :: Maybe Seconds,
+    repeatSlotLookaheadDays :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

@@ -233,7 +233,8 @@ submitRefundToPaymentService refundRequest retryIfFailed = do
             retryIfFailed = retryIfFailed,
             -- targets THIS refund, so the payment lib's latest-by-order lookup doesn't
             -- no-op the attempt when a prior sibling on the order already succeeded.
-            refundsId = refundRequest.refundsId
+            refundsId = refundRequest.refundsId,
+            splitSettlementDetails = Nothing
           }
   SPayment.makeRefundPayment refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refundReq >>= \case
     Nothing -> do

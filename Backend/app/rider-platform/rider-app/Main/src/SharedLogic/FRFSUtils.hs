@@ -34,6 +34,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
+import qualified Domain.Types.FRFSBookingGroup as DFRFSBookingGroup
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSGtfsStageFare as DFRFSGtfsStageFare
@@ -110,6 +111,7 @@ import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.OfferSegment as SOfferSegment
+import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -1146,6 +1148,33 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
+-- | Which grouping mechanism, if any, ties this booking's payment to sibling bookings'.
+-- A cart's bookingGroupId always takes priority over the trivial per-booking Journey every
+-- FRFS booking still gets wrapped in (see buildJourneyAndLeg) -- that Journey exists for
+-- history/live-tracking, not for payment grouping, once a bookingGroupId is present.
+data BookingPaymentGroup
+  = JourneyPaymentGroup (Id DJourney.Journey)
+  | BookingGroupPaymentGroup (Id DFRFSBookingGroup.FRFSBookingGroup)
+  | NoPaymentGroup
+
+getBookingPaymentSiblings ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m (BookingPaymentGroup, [DFRFSTicketBooking.FRFSTicketBooking])
+getBookingPaymentSiblings booking = case booking.bookingGroupId of
+  Just bookingGroupId -> do
+    bookings <- QFRFSTicketBooking.findAllByBookingGroupId (Just bookingGroupId)
+    return (BookingGroupPaymentGroup bookingGroupId, bookings)
+  Nothing -> do
+    (mbJourneyId, bookings) <- getAllJourneyFrfsBookings booking
+    return (maybe NoPaymentGroup JourneyPaymentGroup mbJourneyId, bookings)
+
 -- | Cash is collected in the vehicle for a pay-on-board tier (shared cab): the booking never gets a payment order.
 isPayOnBoard :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
 isPayOnBoard booking = case getServiceTierTypeFromRouteStationsJson booking.routeStationsJson of
@@ -1941,6 +1970,33 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
           vendorSplitDetails <- convertVendorDetails splitDetailsZippedByBooking vendorSplitDetailsListToIncludeInSplit isFRFSTestingEnabled
           return (vendorSplitDetails, amount)
         else return ([], amount)
+
+-- | Refund-side vendor split for one cancelled booking. Uses PaymentVendorSplits.createVendorSplit
+-- (not the deprecated createVendorSplitFromBookings above) specifically because its ItemDetail takes
+-- the amount to split explicitly -- the vendor's share must be computed against refundAmount, not
+-- the booking's original ticket price, since cancellationCharges can make the two differ.
+buildFRFSBookingRefundSplit ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  FTBooking.FRFSTicketBooking ->
+  HighPrecMoney ->
+  Payment.PaymentServiceType ->
+  m (Maybe Payment.RefundSplitSettlementDetails)
+buildFRFSBookingRefundSplit booking refundAmount paymentType = do
+  isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId booking.merchantOperatingCityId Nothing paymentType
+  if not isSplitEnabled
+    then pure Nothing
+    else do
+      vendorSplitDetails <-
+        PaymentVendorSplits.createVendorSplit
+          booking.merchantId
+          booking.merchantOperatingCityId
+          paymentType
+          [PaymentVendorSplits.ItemDetail {itemId = booking.integratedBppConfigId.getId, itemTransactionId = booking.id.getId, amount = refundAmount}]
+      Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled refundAmount vendorSplitDetails
 
 convertVendorDetails ::
   ( EsqDBReplicaFlow m r,
