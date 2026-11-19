@@ -6,7 +6,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Kernel.Prelude
 import Network.HTTP.Types (Status, status200, status429)
-import Network.Wai (Application, Request, defaultRequest, rawPathInfo, requestHeaders, requestMethod, responseHeaders, responseLBS, responseStatus)
+import Network.Wai (Application, Request, defaultRequest, pathInfo, requestHeaders, requestMethod, responseHeaders, responseLBS, responseStatus)
 import Network.Wai.Internal (ResponseReceived (..))
 import Test.Hspec
 import Utils.Common.RateLimit
@@ -19,14 +19,42 @@ main = hspec $ do
 pureSpec :: Spec
 pureSpec = do
   describe "clientIpFromXff" $ do
+    let nat = ["65.1.235.189", "10.0.0.0/8"]
     it "takes the entry at the given position from the right" $
-      clientIpFromXff 3 "1.1.1.1, 2.2.2.2, 3.3.3.3, 4.4.4.4" `shouldBe` Just "2.2.2.2"
+      clientIpFromXff 3 [] "1.1.1.1, 2.2.2.2, 3.3.3.3, 4.4.4.4" `shouldBe` Just "2.2.2.2"
     it "strips a port" $
-      clientIpFromXff 1 "1.1.1.1:5555" `shouldBe` Just "1.1.1.1"
+      clientIpFromXff 1 [] "1.1.1.1:5555" `shouldBe` Just "1.1.1.1"
     it "returns Nothing when the header has too few entries" $
-      clientIpFromXff 3 "1.1.1.1, 2.2.2.2" `shouldBe` Nothing
+      clientIpFromXff 3 [] "1.1.1.1, 2.2.2.2" `shouldBe` Nothing
     it "ignores empty entries" $
-      clientIpFromXff 2 "1.1.1.1,, 2.2.2.2" `shouldBe` Just "1.1.1.1"
+      clientIpFromXff 2 [] "1.1.1.1,, 2.2.2.2" `shouldBe` Just "1.1.1.1"
+    it "resolves the client on the direct load balancer chain" $
+      clientIpFromXff 3 nat "152.57.89.201, 136.110.179.139,35.191.57.76" `shouldBe` Just "152.57.89.201"
+    it "resolves the client through the nat chain" $
+      clientIpFromXff 3 nat "152.58.117.128,10.6.2.152, 65.1.235.189, 136.110.179.139,35.191.69.247" `shouldBe` Just "152.58.117.128"
+    it "trusts nothing beyond the load balancer hops when no proxies are configured" $
+      clientIpFromXff 3 [] "152.58.117.128,10.6.2.152, 65.1.235.189, 136.110.179.139,35.191.69.247" `shouldBe` Just "65.1.235.189"
+    it "skips a configured cidr of internal hops" $
+      clientIpFromXff 3 ["10.0.0.0/8"] "152.58.117.128,10.6.2.152, 136.110.179.139,35.191.69.247" `shouldBe` Just "152.58.117.128"
+    it "ignores spoofed entries added by the caller on the left" $ do
+      clientIpFromXff 3 nat "9.9.9.9, 8.8.8.8, 152.57.89.201, 136.110.179.139,35.191.57.76" `shouldBe` Just "152.57.89.201"
+      clientIpFromXff 3 nat "65.1.235.189, 152.57.89.201, 136.110.179.139,35.191.57.76" `shouldBe` Just "152.57.89.201"
+    it "falls back to the leftmost entry when every hop is trusted" $
+      clientIpFromXff 3 nat "65.1.235.189, 136.110.179.139,35.191.57.76" `shouldBe` Just "65.1.235.189"
+    it "keeps an ipv6 client intact" $
+      clientIpFromXff 3 nat "2401:4900:1c2a::1, 136.110.179.139,35.191.57.76" `shouldBe` Just "2401:4900:1c2a::1"
+  describe "normalizedPath" $ do
+    let pathOf segs = normalizedPath defaultRequest {pathInfo = segs}
+    it "joins decoded segments" $ pathOf ["v2", "rideSearch"] `shouldBe` "/v2/rideSearch"
+    it "drops empty and dot segments" $ do
+      pathOf ["v2", "rideSearch", ""] `shouldBe` "/v2/rideSearch"
+      pathOf ["", "v2", "", "rideSearch"] `shouldBe` "/v2/rideSearch"
+      pathOf ["v2", ".", "rideSearch", "."] `shouldBe` "/v2/rideSearch"
+    it "returns the root for an empty path" $ pathOf [] `shouldBe` "/"
+  describe "limitWindowSeconds" $ do
+    it "prefers seconds" $ limitWindowSeconds (RateLimit 5 (Just 10) (Just 1)) `shouldBe` 10
+    it "converts minutes" $ limitWindowSeconds (RateLimit 5 Nothing (Just 2)) `shouldBe` 120
+    it "is zero without a window" $ limitWindowSeconds (RateLimit 5 Nothing Nothing) `shouldBe` 0
   describe "ipMatchesEntry" $ do
     it "matches an exact address" $ ipMatchesEntry "10.1.2.3" "10.1.2.3" `shouldBe` True
     it "does not match a different address" $ ipMatchesEntry "10.1.2.4" "10.1.2.3" `shouldBe` False
@@ -58,7 +86,7 @@ pureSpec = do
       retryAfterSeconds 120 60 `shouldBe` 60
       retryAfterSeconds 179 60 `shouldBe` 1
   describe "compileRules" $ do
-    let lim = Just (RateLimit 5 1)
+    let lim = Just (RateLimit 5 Nothing (Just 1))
         mk n pat i t = RateLimitRule n pat Nothing i t Nothing
     it "accepts a valid rule" $ do
       let (errs, ok) = compileRules [mk "a" ".*/x" lim Nothing]
@@ -69,14 +97,20 @@ pureSpec = do
       length errs `shouldBe` 1
       length ok `shouldBe` 0
     it "rejects non-positive limits" $ do
-      fst (compileRules [mk "a" ".*/x" (Just (RateLimit 0 1)) Nothing]) `shouldSatisfy` (not . null)
-      fst (compileRules [mk "a" ".*/x" Nothing (Just (RateLimit 5 0))]) `shouldSatisfy` (not . null)
+      fst (compileRules [mk "a" ".*/x" (Just (RateLimit 0 Nothing (Just 1))) Nothing]) `shouldSatisfy` (not . null)
+      fst (compileRules [mk "a" ".*/x" Nothing (Just (RateLimit 5 Nothing (Just 0)))]) `shouldSatisfy` (not . null)
+      fst (compileRules [mk "a" ".*/x" Nothing (Just (RateLimit 5 Nothing Nothing))]) `shouldSatisfy` (not . null)
+    it "accepts a window in seconds" $
+      fst (compileRules [mk "a" ".*/x" Nothing (Just (RateLimit 5 (Just 10) Nothing))]) `shouldBe` []
+    it "accepts a token only rule and an ip only rule" $ do
+      fst (compileRules [mk "t" ".*/x" Nothing lim]) `shouldBe` []
+      fst (compileRules [mk "i" ".*/x" lim Nothing]) `shouldBe` []
     it "rejects an invalid regex and keeps the valid rules" $ do
       let (errs, ok) = compileRules [mk "bad" "(" lim Nothing, mk "good" ".*/x" lim Nothing]
       length errs `shouldBe` 1
       map (.rule.name) ok `shouldBe` ["good"]
   describe "matchingRules" $ do
-    let rules = snd (compileRules [RateLimitRule "list" ".*/ui/driver/ride/list.*" Nothing (Just (RateLimit 5 1)) Nothing Nothing, RateLimitRule "post-only" ".*/confirm" (Just ["POST"]) (Just (RateLimit 5 1)) Nothing Nothing])
+    let rules = snd (compileRules [RateLimitRule "list" ".*/ui/driver/ride/list.*" Nothing (Just (RateLimit 5 Nothing (Just 1))) Nothing Nothing, RateLimitRule "post-only" ".*/confirm" (Just ["POST"]) (Just (RateLimit 5 Nothing (Just 1))) Nothing Nothing])
     it "matches by path regex" $
       map (.rule.name) (matchingRules rules "GET" "/dobpp/ui/driver/ride/list") `shouldBe` ["list"]
     it "respects the method filter" $ do
@@ -112,7 +146,7 @@ backendOf fx =
 mkRequest :: ByteString -> Maybe ByteString -> Maybe ByteString -> Request
 mkRequest path xff tok =
   defaultRequest
-    { rawPathInfo = path,
+    { pathInfo = filter (not . T.null) (T.splitOn "/" (decodeUtf8 path)),
       requestMethod = "GET",
       requestHeaders = maybe [] (\v -> [("x-forwarded-for", v)]) xff <> maybe [] (\v -> [("token", v)]) tok
     }
@@ -121,7 +155,7 @@ callWith :: (Application -> Application) -> Request -> IO (Status, Maybe ByteStr
 callWith middleware req = do
   out <- newIORef (status200, Nothing)
   let inner _ respond = respond (responseLBS status200 [] "")
-      respondTo res = writeOut out res
+      respondTo = writeOut out
   _ <- middleware inner req respondTo
   readIORef out
   where
@@ -197,16 +231,77 @@ middlewareSpec = describe "rateLimitMiddleware" $ do
     rs <- runN 5 mw (mkRequest path (Just "1.1.1.1") (Just "tok"))
     map fst rs `shouldSatisfy` all (== status200)
     logged <- readIORef fx.logs
-    length (filter ("Rate limit exceeded" `T.isInfixOf`) logged) `shouldBe` 4
+    length (filter ("Rate limit exceeded" `T.isInfixOf`) logged) `shouldBe` 1
+
+  it "samples the overage log lines" $ do
+    let shadowRules = "[{\"name\":\"s\",\"pathPattern\":\".*/ride/list.*\",\"token\":{\"maxRequests\":1,\"windowMinutes\":1},\"shadow\":true}]"
+    fx <- newFixture [("rate_limit_rules", shadowRules)]
+    mw <- rateLimitMiddleware (backendOf fx)
+    _ <- runN 202 mw (mkRequest path (Just "1.1.1.1") (Just "tok"))
+    logged <- readIORef fx.logs
+    length (filter ("Rate limit exceeded" `T.isInfixOf`) logged) `shouldBe` 3
+
+  it "limits by a window given in seconds" $ do
+    let secRules = "[{\"name\":\"s\",\"pathPattern\":\".*/ride/list.*\",\"token\":{\"maxRequests\":2,\"windowSeconds\":30}}]"
+    fx <- newFixture [("rate_limit_rules", secRules)]
+    mw <- rateLimitMiddleware (backendOf fx)
+    rs <- runN 3 mw (mkRequest path (Just "1.1.1.1") (Just "tok"))
+    map fst rs `shouldBe` [status200, status200, status429]
+    (snd (last rs) >>= readMaybe . T.unpack . decodeUtf8) `shouldSatisfy` maybe False (\(n :: Int) -> n >= 1 && n <= 30)
+
+  it "a token only rule ignores the ip and a rule without ip does not fail the others" $ do
+    let mixed = "[{\"name\":\"t\",\"pathPattern\":\".*/ride/list.*\",\"token\":{\"maxRequests\":2,\"windowMinutes\":1}},{\"name\":\"broken\",\"pathPattern\":\".*/ride/list.*\"}]"
+    fx <- newFixture [("rate_limit_rules", mixed)]
+    mw <- rateLimitMiddleware (backendOf fx)
+    sameToken <- forM [1 .. 3 :: Int] $ \i -> callWith mw (mkRequest path (Just ("9.9.9." <> show i)) (Just "tok"))
+    map fst sameToken `shouldBe` [status200, status200, status429]
+    otherTokens <- forM [1 .. 5 :: Int] $ \i -> callWith mw (mkRequest path (Just "1.1.1.1") (Just ("t" <> show i)))
+    map fst otherTokens `shouldSatisfy` all (== status200)
+    logged <- readIORef fx.logs
+    length (filter ("rule ignored" `T.isInfixOf`) logged) `shouldBe` 1
+
+  it "an ip only rule does not need a token" $ do
+    let ipOnly = "[{\"name\":\"i\",\"pathPattern\":\".*/ride/list.*\",\"ip\":{\"maxRequests\":2,\"windowMinutes\":1}}]"
+    fx <- newFixture [("rate_limit_rules", ipOnly)]
+    mw <- rateLimitMiddleware (backendOf fx)
+    rs <- runN 3 mw (mkRequest path (Just "1.1.1.1") Nothing)
+    map fst rs `shouldBe` [status200, status200, status429]
+
+  it "cannot be bypassed with trailing slashes, empty or dot segments" $ do
+    let anchored = "[{\"name\":\"a\",\"pathPattern\":\"^/v2/rideSearch$\",\"token\":{\"maxRequests\":1,\"windowMinutes\":1}}]"
+    fx <- newFixture [("rate_limit_rules", anchored)]
+    mw <- rateLimitMiddleware (backendOf fx)
+    initial <- callWith mw (mkRequest "/v2/rideSearch" Nothing (Just "tok"))
+    fst initial `shouldBe` status200
+    forM_ ["/v2/rideSearch/", "//v2//rideSearch", "/v2/rideSearch/."] $ \variant -> do
+      r <- callWith mw (mkRequest variant Nothing (Just "tok"))
+      fst r `shouldBe` status429
+
+  it "limits each client behind the nat separately and exempts the nat itself" $ do
+    fx <- fixtureWithRules [("rate_limit_exceptions", "{\"ips\":[\"65.1.235.189\"]}"), ("rate_limit_trusted_proxies", "[\"65.1.235.189\", \"10.0.0.0/8\"]")]
+    mw <- rateLimitMiddleware ((backendOf fx) {clientIpPositionFromRight = 3})
+    let viaNat client = client <> ",10.6.2.152, 65.1.235.189, 136.110.179.139,35.191.69.247"
+    a <- forM [1 .. 4 :: Int] $ \i -> callWith mw (mkRequest path (Just (viaNat "152.58.1.1")) (Just ("tok" <> show i)))
+    map fst a `shouldBe` [status200, status200, status200, status429]
+    b <- callWith mw (mkRequest path (Just (viaNat "152.58.1.2")) (Just "tokB"))
+    fst b `shouldBe` status200
+    own <- replicateM 10 (callWith mw (mkRequest path (Just "65.1.235.189, 136.110.179.139,35.191.69.247") (Just "ownTok")))
+    map fst own `shouldSatisfy` all (== status200)
+
+  it "stays open when the trusted proxies row is invalid" $ do
+    fx <- fixtureWithRules [("rate_limit_trusted_proxies", "oops")]
+    mw <- rateLimitMiddleware (backendOf fx)
+    rs <- runN 2 mw (mkRequest path (Just "1.1.1.1") (Just "tok"))
+    map fst rs `shouldBe` [status200, status200]
 
   it "never logs the raw token" $ do
     fx <- fixtureWithRules []
     mw <- rateLimitMiddleware (backendOf fx)
     _ <- runN 5 mw (mkRequest path Nothing (Just "super-secret-token"))
     logged <- readIORef fx.logs
-    logged `shouldSatisfy` all (not . T.isInfixOf "super-secret-token")
+    logged `shouldSatisfy` (not . any (T.isInfixOf "super-secret-token"))
     keys <- Map.keys <$> readIORef fx.counters
-    keys `shouldSatisfy` all (not . T.isInfixOf "super-secret-token")
+    keys `shouldSatisfy` (not . any (T.isInfixOf "super-secret-token"))
 
   it "fails open when the counter store is down" $ do
     fx <- fixtureWithRules []

@@ -13,9 +13,12 @@ module Utils.Common.RateLimit
     hashToken,
     windowBucket,
     retryAfterSeconds,
+    limitWindowSeconds,
+    normalizedPath,
     lookupClientIpPositionFromRight,
     rulesConfigId,
     exceptionsConfigId,
+    trustedProxiesConfigId,
   )
 where
 
@@ -30,8 +33,9 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Word (Word32)
 import Kernel.Prelude
 import Network.HTTP.Types (status429)
-import Network.Wai (Middleware, Request, Response, rawPathInfo, requestHeaders, requestMethod, responseLBS)
+import Network.Wai (Middleware, Request, Response, pathInfo, requestHeaders, requestMethod, responseLBS)
 import qualified System.Environment as Env
+import System.Timeout (timeout)
 import Text.Regex.Base (makeRegexM, matchTest)
 import Text.Regex.Posix (Regex)
 
@@ -41,11 +45,21 @@ rulesConfigId = "rate_limit_rules"
 exceptionsConfigId :: Text
 exceptionsConfigId = "rate_limit_exceptions"
 
+trustedProxiesConfigId :: Text
+trustedProxiesConfigId = "rate_limit_trusted_proxies"
+
 data RateLimit = RateLimit
   { maxRequests :: Int,
-    windowMinutes :: Int
+    windowSeconds :: Maybe Int,
+    windowMinutes :: Maybe Int
   }
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
+
+limitWindowSeconds :: RateLimit -> Int
+limitWindowSeconds l = case (l.windowSeconds, l.windowMinutes) of
+  (Just s, _) -> s
+  (Nothing, Just m) -> m * 60
+  _ -> 0
 
 data RateLimitRule = RateLimitRule
   { name :: Text,
@@ -84,7 +98,8 @@ data RateLimitBackend = RateLimitBackend
 data CachedConfig = CachedConfig
   { fetchedAt :: Int,
     compiled :: [CompiledRule],
-    exceptions :: RateLimitExceptions
+    exceptions :: RateLimitExceptions,
+    trustedProxies :: [Text]
   }
 
 data Violation = Violation
@@ -107,16 +122,25 @@ retryAfterSeconds now windowSecs = windowSecs - (now `mod` windowSecs)
 hashToken :: Text -> Text
 hashToken t = show (hash (encodeUtf8 t :: ByteString) :: Digest SHA256)
 
-clientIpFromXff :: Int -> Text -> Maybe Text
-clientIpFromXff positionFromRight header =
-  let entries = filter (not . T.null) (map T.strip (T.splitOn "," header))
-      idx = length entries - positionFromRight
-   in if idx < 0
-        then Nothing
-        else
-          listToMaybe (drop idx entries) >>= \entry ->
-            let host = T.takeWhile (/= ':') entry
-             in if T.null host then Nothing else Just host
+xffHost :: Text -> Maybe Text
+xffHost raw =
+  let entry = T.strip raw
+      host
+        | T.count ":" entry == 1 = T.takeWhile (/= ':') entry
+        | otherwise = T.dropAround (`elem` ['[', ']']) entry
+   in if T.null host then Nothing else Just host
+
+clientIpFromXff :: Int -> [Text] -> Text -> Maybe Text
+clientIpFromXff positionFromRight trusted header =
+  let entries = mapMaybe xffHost (T.splitOn "," header)
+      remaining = take (length entries - max 0 (positionFromRight - 1)) entries
+      isTrusted addr = any (ipMatchesEntry addr) trusted
+   in case reverse (filter (not . isTrusted) remaining) of
+        (client : _) -> Just client
+        [] -> listToMaybe remaining
+
+normalizedPath :: Request -> Text
+normalizedPath req = "/" <> T.intercalate "/" (filter (\seg -> not (T.null seg) && seg /= ".") (pathInfo req))
 
 parseIPv4 :: Text -> Maybe Word32
 parseIPv4 t = case T.splitOn "." t of
@@ -156,11 +180,11 @@ compileRules = foldr step ([], [])
       Right c -> (errs, c : ok)
     validate r
       | isNothing r.ip && isNothing r.token = Left ("rule " <> r.name <> " defines neither ip nor token limit")
-      | any invalid (catMaybes [r.ip, r.token]) = Left ("rule " <> r.name <> " has non-positive maxRequests or windowMinutes")
+      | any invalid (catMaybes [r.ip, r.token]) = Left ("rule " <> r.name <> " has non-positive maxRequests or window")
       | otherwise = case makeRegexM (T.unpack r.pathPattern) of
         Nothing -> Left ("rule " <> r.name <> " has invalid pathPattern " <> r.pathPattern)
         Just re -> Right (CompiledRule r re)
-    invalid l = l.maxRequests <= 0 || l.windowMinutes <= 0
+    invalid l = l.maxRequests <= 0 || limitWindowSeconds l <= 0
 
 matchingRules :: [CompiledRule] -> Text -> Text -> [CompiledRule]
 matchingRules rules meth path = filter matches rules
@@ -184,6 +208,7 @@ refreshConfig :: RateLimitBackend -> IORef CachedConfig -> Int -> CachedConfig -
 refreshConfig backend ref now previous = do
   rulesRes <- fetchOne rulesConfigId
   excRes <- fetchOne exceptionsConfigId
+  proxyRes <- fetchOne trustedProxiesConfigId
   newRules <- case rulesRes of
     Left err -> backend.logErrorIO ("rate limit rules fetch failed: " <> err) >> pure previous.compiled
     Right Nothing -> pure []
@@ -199,43 +224,57 @@ refreshConfig backend ref now previous = do
     Right (Just txt) -> case eitherDecodeStrict (encodeUtf8 txt) of
       Left err -> backend.logErrorIO ("rate limit exceptions parse failed: " <> T.pack err) >> pure previous.exceptions
       Right ex -> pure ex
-  let fresh = CachedConfig now newRules newExceptions
+  newProxies <- case proxyRes of
+    Left err -> backend.logErrorIO ("rate limit trusted proxies fetch failed: " <> err) >> pure previous.trustedProxies
+    Right Nothing -> pure []
+    Right (Just txt) -> case eitherDecodeStrict (encodeUtf8 txt) of
+      Left err -> backend.logErrorIO ("rate limit trusted proxies parse failed: " <> T.pack err) >> pure previous.trustedProxies
+      Right (ps :: [Text]) -> pure ps
+  let fresh = CachedConfig now newRules newExceptions newProxies
   atomicModifyIORef' ref (const (fresh, ()))
   pure fresh
   where
-    fetchOne cid = either (Left . show) Right <$> E.try @SomeException (backend.fetchConfig cid)
+    fetchOne cid = do
+      res <- E.try @SomeException (timeout 2000000 (backend.fetchConfig cid))
+      pure $ case res of
+        Left err -> Left (show err)
+        Right Nothing -> Left "timed out"
+        Right (Just v) -> Right v
 
 checkLimit :: RateLimitBackend -> Int -> CompiledRule -> Text -> Text -> RateLimit -> IO (Maybe Violation)
 checkLimit backend now c dimension subject lim = do
-  let windowSecs = lim.windowMinutes * 60
-      key = "RateLimit:" <> c.rule.name <> ":" <> dimension <> ":" <> subject <> ":" <> show (windowBucket now windowSecs)
-  result <- E.try @SomeException (backend.incrWithExpire key (retryAfterSeconds now windowSecs + 1))
+  let windowSecs = limitWindowSeconds lim
+      key = "RateLimit:" <> c.rule.name <> ":" <> dimension <> ":" <> subject <> ":" <> show windowSecs <> ":" <> show (windowBucket now windowSecs)
+  result <- E.try @SomeException (timeout 200000 (backend.incrWithExpire key (retryAfterSeconds now windowSecs + 1)))
   case result of
     Left err -> backend.logErrorIO ("rate limit counter failed, allowing request: " <> show err) >> pure Nothing
-    Right count
+    Right Nothing -> backend.logErrorIO "rate limit counter timed out, allowing request" >> pure Nothing
+    Right (Just count)
       | count > fromIntegral lim.maxRequests -> do
         let isShadow = fromMaybe False c.rule.shadow
-        backend.logInfoIO
-          ( "Rate limit exceeded: rule=" <> c.rule.name <> " by=" <> dimension <> " subject=" <> subject
-              <> " count="
-              <> show count
-              <> " limit="
-              <> show lim.maxRequests
-              <> "/"
-              <> show lim.windowMinutes
-              <> "m"
-              <> " shadow="
-              <> show isShadow
-          )
+            over = count - fromIntegral lim.maxRequests
+        when (over == 1 || over `mod` 100 == 0) $
+          backend.logInfoIO
+            ( "Rate limit exceeded: rule=" <> c.rule.name <> " by=" <> dimension <> " subject=" <> subject
+                <> " count="
+                <> show count
+                <> " limit="
+                <> show lim.maxRequests
+                <> "/"
+                <> show windowSecs
+                <> "s"
+                <> " shadow="
+                <> show isShadow
+            )
         pure (Just (Violation (retryAfterSeconds now windowSecs) isShadow))
       | otherwise -> pure Nothing
 
 evaluate :: RateLimitBackend -> CachedConfig -> Request -> IO (Maybe Int)
 evaluate backend cfg req = do
-  let path = decodeUtf8 (rawPathInfo req)
+  let path = normalizedPath req
       meth = T.toUpper (decodeUtf8 (requestMethod req))
       headers = requestHeaders req
-      clientIp = lookup "x-forwarded-for" headers >>= clientIpFromXff backend.clientIpPositionFromRight . decodeUtf8
+      clientIp = lookup "x-forwarded-for" headers >>= clientIpFromXff backend.clientIpPositionFromRight cfg.trustedProxies . decodeUtf8
       tokenValue = decodeUtf8 <$> lookup "token" headers
       applicable = matchingRules cfg.compiled meth path
   if null applicable || isExcepted cfg.exceptions clientIp tokenValue
@@ -258,7 +297,7 @@ tooManyRequests retryAfterSecs =
 
 rateLimitMiddleware :: RateLimitBackend -> IO Middleware
 rateLimitMiddleware backend = do
-  ref <- newIORef (CachedConfig 0 [] (RateLimitExceptions [] []))
+  ref <- newIORef (CachedConfig 0 [] (RateLimitExceptions [] []) [])
   pure $ \inner req respond -> do
     cfg <- currentConfig backend ref
     verdict <- evaluate backend cfg req
