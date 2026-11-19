@@ -132,11 +132,6 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking
   where
-    isNormalRideJourney :: DJ.Journey -> Bool
-    isNormalRideJourney journey =
-      case listToMaybe journey.modes of
-        Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
-        Nothing -> False
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
@@ -199,9 +194,18 @@ notifyEvent personId merchantId req = do
     markJourneysComplete =
       mapM_
         ( \journey ->
-            when (journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]) $
+            when (closesOnSkip journey) $
               JM.updateJourneyStatus journey DJ.COMPLETED
         )
+    closesOnSkip journey =
+      journey.status == DJ.FEEDBACK_PENDING
+        || (isNormalRideJourney journey && journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED])
+
+isNormalRideJourney :: DJ.Journey -> Bool
+isNormalRideJourney journey =
+  case listToMaybe journey.modes of
+    Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
+    Nothing -> False
 
 -- filter payment success journeys and update journey status if expired
 processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
