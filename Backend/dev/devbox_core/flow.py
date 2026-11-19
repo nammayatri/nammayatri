@@ -102,7 +102,23 @@ def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = ""
         "cc_url": _cc_url(c, url_host, public),
         "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
         "cache_commit": commit,
+        "grpc_address": _grpc_address(t, wdir),
     }
+
+
+def _grpc_address(t: ssh.Target, wdir: str) -> str:
+    """host:port of the workspace's notification-service gRPC on the devbox's
+    tailnet address, for driver app builds (ny-react-native's grpc_address
+    input): ride requests reach the driver app over this stream, and the app
+    falls back to production gRPC without it. The tailnet address, not t.host,
+    because t.host can be the office address and the phone is on the tailnet.
+    "" when the port is not known yet."""
+    port = stack.ports(t, wdir).get("notification-service-grpc")
+    if not port:
+        return ""
+    r = ssh.run(t, "tailscale ip -4 2>/dev/null | head -1")
+    ip = r.stdout.strip() if r.returncode == 0 else ""
+    return f"{ip or t.host}:{port}"
 
 
 def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
