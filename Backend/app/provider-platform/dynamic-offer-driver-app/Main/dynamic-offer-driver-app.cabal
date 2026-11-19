@@ -718,6 +718,7 @@ library
       SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
+      SharedLogic.DriverOnboarding.VehicleImageGridVerification
       SharedLogic.DriverOnboardingDocumentVersion
       SharedLogic.DriverOnlineHoursCache
       SharedLogic.DriverPool
@@ -800,6 +801,7 @@ library
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
+      SharedLogic.Grid.GridDecision
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
       SharedLogic.IntegratedBPPConfig

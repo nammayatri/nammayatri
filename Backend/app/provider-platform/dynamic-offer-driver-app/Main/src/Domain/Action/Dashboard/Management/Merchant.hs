@@ -1452,7 +1452,9 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
   now <- getCurrentTime
   pure
     DVC.DocumentVerificationConfig
-      { merchantId = merchantId,
+      { aiImageVerificationEnabled = Nothing,
+        aiVerificationQuestions = Nothing,
+        merchantId = merchantId,
         merchantOperatingCityId = merchantOpCityId,
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
         supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,

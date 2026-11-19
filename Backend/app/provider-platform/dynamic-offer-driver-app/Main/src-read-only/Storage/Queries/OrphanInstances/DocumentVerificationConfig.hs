@@ -22,7 +22,9 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
     pure $
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig
-          { allowLicenseTransfer = allowLicenseTransfer,
+          { aiImageVerificationEnabled = aiImageVerificationEnabled,
+            aiVerificationQuestions = aiVerificationQuestions,
+            allowLicenseTransfer = allowLicenseTransfer,
             allowNonTransportVehicle = allowNonTransportVehicle,
             applicableTo = fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo,
             checkExpiry = checkExpiry,
@@ -67,7 +69,9 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
 instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   toTType' (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..}) = do
     Beam.DocumentVerificationConfigT
-      { Beam.allowLicenseTransfer = allowLicenseTransfer,
+      { Beam.aiImageVerificationEnabled = aiImageVerificationEnabled,
+        Beam.aiVerificationQuestions = aiVerificationQuestions,
+        Beam.allowLicenseTransfer = allowLicenseTransfer,
         Beam.allowNonTransportVehicle = allowNonTransportVehicle,
         Beam.applicableTo = Kernel.Prelude.Just applicableTo,
         Beam.checkExpiry = checkExpiry,
