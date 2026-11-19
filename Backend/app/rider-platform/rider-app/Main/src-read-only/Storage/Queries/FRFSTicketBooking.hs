@@ -28,7 +28,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -146,13 +146,14 @@ updateOndcOnInitReceivedById ondcOnInitReceived ondcOnInitReceivedAt id = do
 
 updatePassOverrideById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updatePassOverrideById overrideType overriddenAmount overrideAppliedEntityId id = do
+  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePassOverrideById overrideType overriddenAmount overrideAppliedEntityId settleableAmount id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.overrideType overrideType,
       Se.Set Beam.overriddenAmount overriddenAmount,
       Se.Set Beam.overrideAppliedEntityId overrideAppliedEntityId,
+      Se.Set Beam.settleableAmount settleableAmount,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -219,7 +220,7 @@ updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.T
 updateTotalPriceById totalPrice id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.updatedAt _now
     ]
@@ -319,6 +320,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.settleableAmount settleableAmount,
       Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
@@ -329,7 +331,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.toStopIdx toStopIdx,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.tripId tripId,
       Se.Set Beam.validTill validTill,

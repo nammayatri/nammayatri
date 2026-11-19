@@ -20,8 +20,8 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -101,6 +101,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             searchId = Kernel.Types.Id.Id searchId,
             seatSelectionType = seatSelectionType,
             serviceTierType = serviceTierType,
+            settleableAmount = settleableAmount,
             sharedCabNoShows = Kernel.Prelude.fromMaybe 0 sharedCabNoShows,
             startTime = startTime,
             stationsJson = stationsJson,
@@ -201,6 +202,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.seatSelectionType = seatSelectionType,
         Beam.serviceTierType = serviceTierType,
+        Beam.settleableAmount = settleableAmount,
         Beam.sharedCabNoShows = Kernel.Prelude.Just sharedCabNoShows,
         Beam.startTime = startTime,
         Beam.stationsJson = stationsJson,
@@ -211,7 +213,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
+        Beam.currency = ((Kernel.Prelude.Just . (.currency))) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,

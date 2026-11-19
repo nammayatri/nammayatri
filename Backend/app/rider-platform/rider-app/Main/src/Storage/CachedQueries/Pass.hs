@@ -1,8 +1,7 @@
 module Storage.CachedQueries.Pass
   ( findById,
     findAllByPassTypeIdAndEnabled,
-    clearCacheById,
-    clearCacheByPassTypeIdAndEnabled,
+    clearCache,
   )
 where
 
@@ -48,16 +47,20 @@ findAllByPassTypeIdAndEnabled passTypeId enabled = do
           Hedis.setExp cacheKey passes expTime
         pure passes
 
-clearCacheById :: (CacheFlow m r) => Id DPass.Pass -> m ()
-clearCacheById passId = Hedis.del (makePassIdKey passId)
+clearCache :: (CacheFlow m r, MonadFlow m) => Id DPass.Pass -> [Id DPassType.PassType] -> m ()
+clearCache passId passTypeIds = do
+  Hedis.runInMultiCloudRedisWrite $ do
+    Hedis.del (makePassIdKey passId)
+    forM_ passTypeIds $ \passTypeId ->
+      forM_ [True, False] $ Hedis.del . makePassTypeIdAndEnabledKey passTypeId
+  IM.refreshInMem passCacheKeyPrefix
 
-clearCacheByPassTypeIdAndEnabled :: (CacheFlow m r) => Id DPassType.PassType -> Bool -> m ()
-clearCacheByPassTypeIdAndEnabled passTypeId enabled =
-  Hedis.del (makePassTypeIdAndEnabledKey passTypeId enabled)
+passCacheKeyPrefix :: Text
+passCacheKeyPrefix = "CachedQueries:Pass:"
 
 makePassIdKey :: Id DPass.Pass -> Text
-makePassIdKey passId = "CachedQueries:Pass:Id-" <> passId.getId
+makePassIdKey passId = passCacheKeyPrefix <> "Id-" <> passId.getId
 
 makePassTypeIdAndEnabledKey :: Id DPassType.PassType -> Bool -> Text
 makePassTypeIdAndEnabledKey passTypeId enabled =
-  "CachedQueries:Pass:PassTypeId-" <> passTypeId.getId <> ":Enabled-" <> show enabled
+  passCacheKeyPrefix <> "PassTypeId-" <> passTypeId.getId <> ":Enabled-" <> show enabled

@@ -1,8 +1,7 @@
 module Storage.CachedQueries.PassCategory
   ( findById,
     findAllByMerchantOperatingCityId,
-    clearCacheById,
-    clearCacheByMerchantOperatingCityId,
+    clearCache,
   )
 where
 
@@ -13,6 +12,8 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.Queries.PassCategoryExtra as Queries
 
 findById ::
@@ -47,11 +48,13 @@ findAllByMerchantOperatingCityId merchantOperatingCityId = do
           Hedis.setExp cacheKey categories expTime
         pure categories
 
-clearCacheById :: (CacheFlow m r) => Id Domain.PassCategory -> m ()
-clearCacheById passCategoryId = Hedis.del (makePassCategoryIdKey passCategoryId)
-
-clearCacheByMerchantOperatingCityId :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
-clearCacheByMerchantOperatingCityId mocId = Hedis.del (makeMerchantOperatingCityIdKey mocId)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id Domain.PassCategory -> Id DMOC.MerchantOperatingCity -> m ()
+clearCache passCategoryId mocId = do
+  Hedis.runInMultiCloudRedisWrite $ do
+    Hedis.del (makePassCategoryIdKey passCategoryId)
+    Hedis.del (makeMerchantOperatingCityIdKey mocId)
+    invalidateConfigInMem LYT.PassCategory
+  IM.refreshInMem "PassCategory"
 
 makePassCategoryIdKey :: Id Domain.PassCategory -> Text
 makePassCategoryIdKey passCategoryId = "CachedQueries:PassCategory:Id-" <> getId passCategoryId

@@ -152,8 +152,8 @@ dropPassOverrideOnFareChange booking = case booking.overrideAppliedEntityId of
     -- on_init runs before the ticket is confirmed, and the trip is only spent at confirm
     -- (spendTripForBooking), so there is nothing to give back here -- just drop the override.
     logError $ "OnInit:dropPassOverrideOnFareChange fare changed under a pass-covered booking, dropping override bookingId=" <> booking.id.getId
-    QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
-    pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
+    QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing Nothing booking.id
+    pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing, FTBooking.settleableAmount = Nothing}
 
 createPayments ::
   forall m r.

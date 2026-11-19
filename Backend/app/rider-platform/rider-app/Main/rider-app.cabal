@@ -1385,6 +1385,7 @@ library
       Domain.Types.DriverOffer
       Domain.Types.EDCMachineMapping
       Domain.Types.EmailTemplate
+      Domain.Types.EntityValueLog
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
@@ -1565,6 +1566,7 @@ library
       Storage.Beam.DriverOffer
       Storage.Beam.EDCMachineMapping
       Storage.Beam.EmailTemplate
+      Storage.Beam.EntityValueLog
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
@@ -1750,6 +1752,7 @@ library
       Storage.Queries.DriverOffer
       Storage.Queries.EDCMachineMapping
       Storage.Queries.EmailTemplate
+      Storage.Queries.EntityValueLog
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup

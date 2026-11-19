@@ -486,6 +486,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
     { overriddenAmount = Nothing,
       overrideAppliedEntityId = Nothing,
       overrideType = Nothing,
+      settleableAmount = Nothing,
       parentBookingId = Nothing,
       rescheduleCount = Nothing,
       sharedCabNoShows = 0,

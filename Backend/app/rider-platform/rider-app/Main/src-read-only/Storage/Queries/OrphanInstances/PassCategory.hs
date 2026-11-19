@@ -18,6 +18,7 @@ instance FromTType' Beam.PassCategory Domain.Types.PassCategory.PassCategory whe
       Just
         Domain.Types.PassCategory.PassCategory
           { description = description,
+            enable = enable,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -31,6 +32,7 @@ instance ToTType' Beam.PassCategory Domain.Types.PassCategory.PassCategory where
   toTType' (Domain.Types.PassCategory.PassCategory {..}) = do
     Beam.PassCategoryT
       { Beam.description = description,
+        Beam.enable = enable,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

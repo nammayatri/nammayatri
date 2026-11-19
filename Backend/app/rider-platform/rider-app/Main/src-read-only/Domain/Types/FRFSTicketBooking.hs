@@ -103,6 +103,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    settleableAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sharedCabNoShows :: Kernel.Prelude.Int,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
@@ -122,14 +123,14 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OverrideType = PassOverride | OtherOverride deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OverrideType = PassOverride | OtherOverride deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''OverrideType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''OverrideType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''OverrideType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''OverrideType))
