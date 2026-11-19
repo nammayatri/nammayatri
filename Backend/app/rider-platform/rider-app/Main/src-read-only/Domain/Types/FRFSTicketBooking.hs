@@ -103,6 +103,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    settleableAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sharedCabNoShows :: Kernel.Prelude.Int,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,

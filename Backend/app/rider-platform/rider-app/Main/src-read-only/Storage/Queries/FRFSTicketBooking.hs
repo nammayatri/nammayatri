@@ -155,13 +155,14 @@ updateOndcOnInitReceivedById ondcOnInitReceived ondcOnInitReceivedAt id = do
 updatePassOverrideById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType ->
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())))
-updatePassOverrideById overrideType overriddenAmount overrideAppliedEntityId id = do
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()))))
+updatePassOverrideById overrideType overriddenAmount overrideAppliedEntityId settleableAmount id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.overrideType overrideType,
       Se.Set Beam.overriddenAmount overriddenAmount,
       Se.Set Beam.overrideAppliedEntityId overrideAppliedEntityId,
+      Se.Set Beam.settleableAmount settleableAmount,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -333,6 +334,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.settleableAmount settleableAmount,
       Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
