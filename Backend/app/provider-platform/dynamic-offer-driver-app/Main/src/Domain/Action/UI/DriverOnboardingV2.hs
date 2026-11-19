@@ -174,10 +174,12 @@ mkDocumentVerificationConfigAPIEntityWithStage onboardingStages language verific
   mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (Document_Title documentType)
   mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (Document_Description documentType)
   translatedFields <- traverse (SDO.translateDocumentFields merchantOperatingCityId language documentType) documentFields
+  translatedDisableWarning <- forM disableWarning $ \warning -> fromMaybe warning <$> CQTranslations.findTextByKey (Just merchantOperatingCityId) language (Document_DisableWarning documentType)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = fromMaybe title mbTitle,
         description = mbDescription <|> description,
+        disableWarning = translatedDisableWarning,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         applicableTo = applicableTo,
         documentFields = translatedFields,
@@ -196,7 +198,8 @@ mkOnboardingStageAPIEntity ::
   Language ->
   Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentOnboardingStageAPIEntity
-mkOnboardingStageAPIEntity language Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig {..} = do
+mkOnboardingStageAPIEntity language config = do
+  Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig {..} <- SDO.translateStageTexts language config
   mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (OnboardingStage_Title documentOnboardingStage)
   mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (OnboardingStage_Description documentOnboardingStage)
   return $

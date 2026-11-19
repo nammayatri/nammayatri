@@ -40,6 +40,7 @@ import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DocumentVerificationStagesConfig as DVSC
 import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as Fields
@@ -828,9 +829,10 @@ documentFieldKeys documentType = concatMap keysOf
             <> concat [DocumentField_ImageTitle documentType fieldId name : [DocumentField_ImageText documentType fieldId name | isJust image.text] | (Just name, image) <- keyedByTitle field.images]
             <> maybe [] (concatMap keysOf) field.fields
 
--- | Items listed by ops (a field's sample images), each with the name its keys carry: its English
--- title made key-safe ('textKeyName'). A title with no letter or digit has no keys, and of items
--- sharing a name only the first has them, so a repeated title keeps its configured text.
+-- | Items listed by ops (a field's sample images, a stage's Do's/Don'ts and media), each with the
+-- name its keys carry: its English title made key-safe ('textKeyName'). A title with no letter or
+-- digit has no keys, and of items sharing a name only the first has them, so a repeated title keeps
+-- its configured text.
 keyedByTitle :: HasField "title" item Text => Maybe [item] -> [(Maybe Text, item)]
 keyedByTitle = snd . DL.mapAccumL nameOf Set.empty . fromMaybe []
   where
@@ -872,7 +874,7 @@ translateDocumentFields merchantOpCityId language documentType fields = do
 
 -- | The text of each key in the reader's language where it has a row, else its English row, a
 -- city row before a shared one; Nothing where neither exists. One cached read per owner (a
--- document type) and city, in every language, rather than one per key; none when there
+-- document type, a stage) and city, in every language, rather than one per key; none when there
 -- are no keys. The cache is named under the driver translations' config-pilot prefix, so a save
 -- that clears the translations' cache (the dashboard translation editor, NammaTag) clears it on
 -- every pod too. A digest of the keys is part of the name: one document type has a form per
@@ -893,15 +895,58 @@ translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.
 translateDocumentType merchantOpCityId language documentType =
   fromMaybe (show documentType) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name documentType)
 
+-- | The keys of a stage's text read off its config: the hint, and each Do's/Don'ts and media
+-- item's title and text, named by its English title like a field's sample images.
+stageTextKeys :: DVSC.DocumentVerificationStagesConfig -> [TranslationKey]
+stageTextKeys config =
+  [OnboardingStage_Hint stage | isJust config.hint]
+    <> concat [OnboardingStage_GuidelineTitle stage name : [OnboardingStage_GuidelineText stage name | isJust guideline.text] | (Just name, guideline) <- keyedByTitle config.guidelines]
+    <> concat [OnboardingStage_MediaTitle stage name : [OnboardingStage_MediaDescription stage name | isJust item.description] | (Just name, item) <- keyedByTitle config.media]
+  where
+    stage = config.documentOnboardingStage
+
+-- | A stage's hint, Do's/Don'ts and media in the reader's language where their keys have text,
+-- else as configured; image and video links untouched.
+translateStageTexts :: (CacheFlow m r, EsqDBFlow m r) => Language -> DVSC.DocumentVerificationStagesConfig -> m DVSC.DocumentVerificationStagesConfig
+translateStageTexts language config = do
+  textOf <- cachedTexts (show stage) config.merchantOperatingCityId language (stageTextKeys config)
+  let translateGuideline (mbName, guideline) = case mbName of
+        Nothing -> guideline
+        Just name ->
+          Domain.Types.DocumentVerificationConfig.ImageInfo
+            { title = fromMaybe guideline.title (textOf (OnboardingStage_GuidelineTitle stage name)),
+              text = textOf (OnboardingStage_GuidelineText stage name) <|> guideline.text,
+              imageUrl = guideline.imageUrl
+            }
+      translateMedia (mbName, item) = case mbName of
+        Nothing -> item
+        Just name ->
+          DVSC.MediaInfo
+            { title = fromMaybe item.title (textOf (OnboardingStage_MediaTitle stage name)),
+              description = textOf (OnboardingStage_MediaDescription stage name) <|> item.description,
+              url = item.url,
+              thumbnailUrl = item.thumbnailUrl
+            }
+  pure
+    config
+      { DVSC.hint = textOf (OnboardingStage_Hint stage) <|> config.hint,
+        DVSC.guidelines = map translateGuideline (keyedByTitle config.guidelines) <$ config.guidelines,
+        DVSC.media = map translateMedia (keyedByTitle config.media) <$ config.media
+      }
+  where
+    stage = config.documentOnboardingStage
+
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
   translatedFields <- traverse (translateDocumentFields merchantOperatingCityId language documentType) documentFields
   mbTitle <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Title documentType)
   mbDescription <- CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_Description documentType)
+  translatedDisableWarning <- forM disableWarning $ \warning -> fromMaybe warning <$> CQTranslations.findTextByKey (Just merchantOperatingCityId) language (FleetOwnerDocument_DisableWarning documentType)
   return $
     API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
       { title = fromMaybe title mbTitle,
         description = mbDescription <|> description,
+        disableWarning = translatedDisableWarning,
         applicableTo = API.Types.ProviderPlatform.Fleet.Onboarding.FLEET,
         filterForOldApks = Nothing,
         rcNumberPrefixList = [],
