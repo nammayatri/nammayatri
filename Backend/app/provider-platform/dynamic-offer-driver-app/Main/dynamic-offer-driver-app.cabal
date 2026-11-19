@@ -134,6 +134,7 @@ library
       API.UI.LiwipStore
       API.UI.Maps
       API.UI.Message
+      API.UI.NavigationRoute
       API.UI.OnMessage
       API.UI.OrgAdmin
       API.UI.Payment
@@ -456,6 +457,7 @@ library
       Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
       Domain.Action.UI.MeterRide
+      Domain.Action.UI.NavigationRoute
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OperationHub
       Domain.Action.UI.Operator

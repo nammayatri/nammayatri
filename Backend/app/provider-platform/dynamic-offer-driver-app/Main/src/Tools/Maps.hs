@@ -32,6 +32,7 @@ module Tools.Maps
     getDistanceForScheduledRides,
     getDistancesForScheduledRides,
     getDynamicPickupDistances,
+    getOsrmServiceConfig,
   )
 where
 
@@ -296,6 +297,14 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   msc <- getMapsServiceConfig merchantOpCityId (getCfg orgMapsConfig)
   func entityId (Just merchantOpCityId.getId) msc req
+
+-- | This city's OSRM settings (its OSRM server address), for callers that talk to OSRM directly
+-- instead of through the provider-agnostic interface, e.g. turn-by-turn navigation routes.
+getOsrmServiceConfig :: ServiceFlow m r => Id MerchantOperatingCity -> m OSRMCfg
+getOsrmServiceConfig merchantOpCityId =
+  getMapsServiceConfig merchantOpCityId Maps.OSRM >>= \case
+    Maps.OSRMConfig osrmCfg -> pure osrmCfg
+    _ -> throwError $ InternalError "OSRM maps service config expected"
 
 getMapsServiceConfig :: ServiceFlow m r => Id MerchantOperatingCity -> MapsService -> m MapsServiceConfig
 getMapsServiceConfig merchantOpCityId mapsService = do
