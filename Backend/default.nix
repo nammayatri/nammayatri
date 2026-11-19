@@ -68,6 +68,29 @@
         };
       };
       localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
+      # The upstream haskell-cac flake builds its Rust `cac_client` with
+      # `pkgs.darwin.apple_sdk.frameworks.{Security,SystemConfiguration}`.
+      # Those legacy framework stubs throw on evaluation in nixpkgs >= 25.11
+      # (see <https://nixos.org/manual/nixpkgs/stable/#sec-darwin-legacy-frameworks>);
+      # the frameworks now ship with the default Apple SDK, so simply dropping
+      # them is the documented migration. We cannot change the input itself, so
+      # rebuild both the package and its crane deps-only artifact with a
+      # framework-free buildInputs list. Linux never evaluates the stubs
+      # (`lib.optionals` is lazy), so it keeps the upstream derivation as-is.
+      cacClient =
+        let
+          upstream = inputs.haskell-cac.packages.${system}.cac_client;
+          withoutFrameworks = drv: drv.overrideAttrs (_: {
+            buildInputs = [ pkgs.fixDarwinDylibNames pkgs.libiconv pkgs.openssl ];
+          });
+        in
+        if pkgs.stdenv.isDarwin
+        then
+          (withoutFrameworks upstream).overrideAttrs
+            (old: {
+              cargoArtifacts = withoutFrameworks old.cargoArtifacts;
+            })
+        else upstream;
     in
     {
       pre-commit.settings.imports = [
@@ -128,19 +151,24 @@
           kafka-consumers.custom = cacConfig;
           driver-offer-allocator.custom = cacConfig;
           namma-dsl.libraryProfiling = false;
+          # Overrides the definition from inputs.haskell-cac.haskellFlakeProjectModules.output
+          cac_client.custom = lib.mkForce (_: cacClient);
           location-updates.check = false;
           singletons-th.jailbreak = true;
           singletons-base = {
             jailbreak = true;
             check = false;
           };
-          streamly = {
-            extraBuildDepends = lib.optional pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Cocoa;
-            jailbreak = true;
-          };
+          # Cocoa used to be added here on Darwin via the legacy
+          # `darwin.apple_sdk.frameworks` stubs, which now throw; the default
+          # Apple SDK already provides it.
+          streamly.jailbreak = true;
           base32.jailbreak = true;
           cryptostore.check = false;
           cryptostore.jailbreak = true;
+          # store-0.7.20's test suite references `CTimer`, which base-4.19
+          # (GHC 9.8) dropped from Foreign.C.Types; the library itself builds.
+          store.check = false;
           # Test suite shells out to `which` / infozip; not on PATH in darwin Nix sandbox.
           zip-archive.check = false;
           google-cloud-pubsub.check = false;
@@ -230,9 +258,15 @@
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
-          inputs.haskell-cac.devShells.${system}.haskell-cac
+          # NOTE: deliberately *not* `inputs.haskell-cac.devShells.${system}.haskell-cac`:
+          # that shell is built against upstream's unpatched `cac_client` (see
+          # `cacClient` above) and would re-introduce the darwin.apple_sdk
+          # evaluation failure. haskell-cac's Haskell deps already come from our
+          # own haskellProjects (via haskellFlakeProjectModules.output); the only
+          # other thing that shell did was export LIBRARY_PATH, done below.
         ];
         shellHook = ''
+          export LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
           export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
           # Default stack limit (8 MB) is too small for linking rider-app-exe
           # and dynamic-offer-driver-app-exe — ld recurses the symbol table and
