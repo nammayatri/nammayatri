@@ -1601,6 +1601,53 @@ getJourneyChangeLogCounter journeyId = do
   mbJourneyChangeLogCounter <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId)
   return $ fromMaybe 0 mbJourneyChangeLogCounter
 
+generatePastJourneyInfoResponse ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  DJourney.Journey ->
+  m (Maybe APITypes.JourneyInfoResp)
+generatePastJourneyInfoResponse journey = do
+  allLegs <- QJourneyLeg.getJourneyLegs journey.id
+  legs <- mapMaybeM (getPastLegInfo allLegs) allLegs
+  if null legs
+    then return Nothing
+    else do
+      let totalFareAmount = sum $ mapMaybe (\leg -> leg.totalFare <&> (.amount)) legs
+          mbCurrency = KP.listToMaybe (mapMaybe (\leg -> leg.totalFare <&> (.currency)) legs)
+          totalFare = mkPriceAPIEntity $ mkPrice mbCurrency totalFareAmount
+      return $
+        Just
+          APITypes.JourneyInfoResp
+            { estimatedDuration = journey.estimatedDuration,
+              estimatedMinFare = totalFare,
+              estimatedMaxFare = totalFare,
+              estimatedDistance = journey.estimatedDistance,
+              journeyStatus = journey.status,
+              legs,
+              unifiedQR = Nothing,
+              journeyId = journey.id,
+              startTime = journey.startTime,
+              createdAt = journey.createdAt,
+              endTime = journey.endTime,
+              merchantOperatingCityName = Nothing,
+              paymentOrderShortId = journey.paymentOrderShortId,
+              unifiedQRV2 = Nothing,
+              result = Just "Success",
+              isSingleMode = journey.isSingleMode,
+              offer = Nothing,
+              boardingConfirmationRequired = Nothing,
+              boardingDistanceFromBusMeters = Nothing,
+              boardingConfirmationReason = Nothing
+            }
+  where
+    getPastLegInfo allLegs journeyLeg
+      | DTrip.isFrfsTransitMode journeyLeg.mode,
+        Just legSearchId <- journeyLeg.legSearchId = do
+        mbBooking <- QTBooking.findBySearchId (Id legSearchId)
+        case mbBooking of
+          Just booking -> Just <$> JL.mkPastLegInfoFromFrfsBooking booking journeyLeg
+          Nothing -> getLegInfo journey.riderId False allLegs (Just []) journeyLeg
+      | otherwise = getLegInfo journey.riderId False allLegs (Just []) journeyLeg
+
 generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs

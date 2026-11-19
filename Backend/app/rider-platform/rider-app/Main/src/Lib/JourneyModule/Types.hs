@@ -1170,6 +1170,193 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   categoryBookingDetails = Just categoryBookingDetails
                 }
 
+mkPastLegInfoFromFrfsBooking ::
+  (ServiceFlow m r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "cloudType" r (Maybe CloudType)) => DFRFSBooking.FRFSTicketBooking -> DJourneyLeg.JourneyLeg -> m LegInfo
+mkPastLegInfoFromFrfsBooking booking journeyLeg = do
+  now <- getCurrentTime
+  (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
+  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+  let ticketValidity = Just (tickets <&> (.validTill))
+  mbAppliedPass <-
+    if booking.overrideType == Just DFRFSBooking.PassOverride
+      then do
+        mbResolved <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+        pure $
+          mbResolved <&> \(payment, pass) ->
+            AppliedPassInfo
+              { purchasedPassPaymentId = payment.id,
+                passId = pass.id,
+                passName = payment.passName,
+                overriddenTotalFare = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount
+              }
+      else pure Nothing
+  let routeInfo = zipWith mkPastLegRouteInfo journeyLeg.routeDetails trackingStatuses
+  bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
+  paymentOrders <- mapMaybeM QPaymentOrder.findById (nub $ map (.paymentOrderId) bookingPayments)
+  refunds <- concat <$> mapM (HQRefunds.findAllByOrderId . (.shortId)) paymentOrders
+  let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = refundEntry.refundAmount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
+  legExtraInfo <- case booking.vehicleType of
+    Spec.METRO ->
+      return $
+        Metro $
+          MetroLegExtraInfo
+            { routeInfo = routeInfo,
+              bppOrderId = booking.bppOrderId,
+              bookingId = Just booking.id,
+              tickets = Nothing,
+              ticketValidity = ticketValidity,
+              ticketsCreatedAt = Nothing,
+              providerName = Just booking.providerName,
+              ticketNo = Nothing,
+              adultTicketQuantity = Nothing,
+              childTicketQuantity = Nothing,
+              refund = listToMaybe refunds',
+              refunds = refunds',
+              categories = [],
+              categoryBookingDetails = Nothing,
+              qrEncoding = Nothing
+            }
+    Spec.BUS -> do
+      journeyLegDetail <- listToMaybe routeInfo & fromMaybeM (InternalError "Journey Leg Detail not found")
+      journeyRouteDetail <- listToMaybe journeyLeg.routeDetails & fromMaybeM (InternalError "Journey Route Detail not found")
+      mbSelectedServiceTier <- getSelectedServiceTier
+      return $
+        Bus $
+          BusLegExtraInfo
+            { originStop = journeyLegDetail.originStop,
+              destinationStop = journeyLegDetail.destinationStop,
+              routeCode = journeyLegDetail.routeCode,
+              bookingId = Just booking.id,
+              tickets = Nothing,
+              ticketValidity = ticketValidity,
+              ticketsCreatedAt = Nothing,
+              providerName = Just booking.providerName,
+              routeName = journeyRouteDetail.routeShortName,
+              frequency = journeyRouteDetail.frequency,
+              alternateShortNames = journeyRouteDetail.alternateShortNames,
+              selectedServiceTier = mbSelectedServiceTier,
+              ticketNo = Nothing,
+              adultTicketQuantity = Nothing,
+              childTicketQuantity = Nothing,
+              refund = listToMaybe refunds',
+              refunds = refunds',
+              trackingStatus = journeyLegDetail.trackingStatus,
+              trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
+              fleetNo = journeyLeg.finalBoardedBusNumber,
+              busConductorId = Nothing,
+              busDriverId = Nothing,
+              busTagNumber = Nothing,
+              busVehicleVariant = journeyLeg.busVehicleVariant,
+              legStartTime = journeyRouteDetail.legStartTime,
+              legEndTime = journeyRouteDetail.legEndTime,
+              discounts = Nothing,
+              categories = [],
+              categoryBookingDetails = Nothing,
+              tripId = booking.tripId,
+              tripStartTime = Nothing,
+              bookedStopETA = Nothing,
+              driverName = Nothing,
+              driverMobileNumber = Nothing,
+              seatSelectionType = booking.seatSelectionType
+            }
+    Spec.SUBWAY -> do
+      mbSelectedServiceTier <- getSelectedServiceTier
+      return $
+        Subway $
+          SubwayLegExtraInfo
+            { routeInfo = routeInfo,
+              bookingId = Just booking.id,
+              tickets = Nothing,
+              ticketValidity = ticketValidity,
+              ticketsCreatedAt = Nothing,
+              ticketValidityHours = [],
+              providerName = Just booking.providerName,
+              deviceId = Nothing,
+              providerRouteId = Nothing,
+              ticketTypeCode = Nothing,
+              selectedServiceTier = mbSelectedServiceTier,
+              ticketNo = Nothing,
+              adultTicketQuantity = Nothing,
+              childTicketQuantity = Nothing,
+              refund = listToMaybe refunds',
+              refunds = refunds',
+              categories = [],
+              categoryBookingDetails = Nothing
+            }
+  return $
+    LegInfo
+      { applicablePasses = [],
+        appliedPass = mbAppliedPass,
+        journeyLegId = journeyLeg.id,
+        skipBooking = False,
+        bookingAllowed = True,
+        searchId = booking.searchId.getId,
+        pricingId = Just booking.quoteId.getId,
+        travelMode = journeyLeg.mode,
+        startTime = fromMaybe now booking.startTime,
+        order = journeyLeg.sequenceNumber,
+        estimatedDuration = journeyLeg.duration,
+        estimatedMinFare = Nothing,
+        estimatedChildFare = Nothing,
+        estimatedMaxFare = Nothing,
+        estimatedTotalFare = Nothing,
+        estimatedDistance = journeyLeg.distance,
+        merchantId = booking.merchantId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
+        personId = booking.riderId,
+        status = oldStatus,
+        bookingStatus,
+        legExtraInfo = legExtraInfo,
+        actualDistance = journeyLeg.distance,
+        totalFare = Just $ mkPriceAPIEntity booking.totalPrice,
+        entrance = journeyLeg.osmEntrance,
+        exit = journeyLeg.osmExit,
+        validTill = Just booking.validTill,
+        hasApplicablePasses = Nothing,
+        observingFailures = Nothing,
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
+      }
+  where
+    getSelectedServiceTier = do
+      mbQuote <- QFRFSQuote.findById booking.quoteId
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+      return $ getServiceTierFromQuote quoteCategories =<< mbQuote
+
+    fallback = mkFallbackFromFrfsBooking booking
+
+    mkPastLegRouteInfo journeyRouteDetail (_, trackingStatus, trackingStatusLastUpdatedAt) =
+      LegRouteInfo
+        { originStop = mkStation (journeyRouteDetail.fromStopCode <|> fallbackFromStationCode fallback) (journeyRouteDetail.fromStopName <|> fallbackFromStationName fallback) (fallbackFromStationAddress fallback) (LatLong {lat = journeyRouteDetail.startLocationLat, lon = journeyRouteDetail.startLocationLon}),
+          destinationStop = mkStation (journeyRouteDetail.toStopCode <|> fallbackToStationCode fallback) (journeyRouteDetail.toStopName <|> fallbackToStationName fallback) (fallbackToStationAddress fallback) (LatLong {lat = journeyRouteDetail.endLocationLat, lon = journeyRouteDetail.endLocationLon}),
+          routeCode = fromMaybe unknownLegRouteField ((journeyRouteDetail.routeGtfsId <&> gtfsIdtoDomainCode) <|> fallbackRouteCode fallback),
+          subOrder = journeyRouteDetail.subLegOrder,
+          platformNumber = journeyRouteDetail.fromStopPlatformCode,
+          journeyStatus = Just $ JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
+          trackingStatus,
+          trackingStatusLastUpdatedAt,
+          lineColor = journeyRouteDetail.routeColorName,
+          lineColorCode = journeyRouteDetail.routeColorCode,
+          trainNumber = journeyRouteDetail.routeShortName <|> fallbackRouteName fallback,
+          frequency = journeyRouteDetail.frequency,
+          legStartTime = journeyRouteDetail.legStartTime,
+          legEndTime = journeyRouteDetail.legEndTime,
+          allAvailableRoutes = []
+        }
+
+    mkStation mbCode mbName mbAddress point =
+      FRFSStationAPI
+        { name = fromMaybe unknownLegRouteField mbName,
+          code = fromMaybe unknownLegRouteField mbCode,
+          lat = Just point.lat,
+          lon = Just point.lon,
+          address = mbAddress,
+          regionalName = Nothing,
+          hindiName = Nothing,
+          integratedBppConfigId = cast booking.integratedBppConfigId
+        }
+
 -- safeDiv :: (Eq a, Fractional a) => a -> a -> a
 -- safeDiv x 0 = x
 -- safeDiv x y = x / y

@@ -13,7 +13,7 @@ import qualified Domain.Action.UI.InvoiceGeneration as DInvoice
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity)
+import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity, TicketScope)
 import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Journey as DJ
@@ -74,6 +74,7 @@ type API =
              :> QueryParam "sendEligiblePassIfAvailable" Bool
              :> QueryParams "passTypes" Domain.Types.PassType.PassEnum
              :> QueryParam "dontNeedFareBreakup" Bool
+             :> QueryParam "ticketScope" TicketScope
              :> Get '[JSON] DBooking.BookingListResV2
            :<|> "favourites"
              :> "list"
@@ -152,8 +153,8 @@ getBookingFareBreakup (personId, merchantId) entityId mbEntityType = withFlowHan
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Bool -> FlowHandler DBooking.BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingList (Just personId, merchantId) Nothing False mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup
 
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe BookingRequestType -> Maybe Bool -> [Domain.Types.PassType.PassEnum] -> Maybe Bool -> FlowHandler DBooking.BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes) mbDontNeedFareBreakup
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe BookingRequestType -> Maybe Bool -> [Domain.Types.PassType.PassEnum] -> Maybe Bool -> Maybe TicketScope -> FlowHandler DBooking.BookingListResV2
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes mbDontNeedFareBreakup mbTicketScope = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV2WithScope (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes) mbDontNeedFareBreakup mbTicketScope
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
 favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo
