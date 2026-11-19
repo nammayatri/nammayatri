@@ -324,6 +324,7 @@ RiderConfig:
     enableEditLocationWithoutRide: Maybe Bool
     enableShareNumberWithDriver: Maybe Bool
     pushConsentToBpp: Maybe Bool
+    callingMode: Maybe Text
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
@@ -676,6 +677,14 @@ RiderConfig:
     findByFrfsMetricsApiKey:
       kvFunction: findOneWithKV
       where: frfsMetricsApiKey
+    updateCallingConfig:
+      kvFunction: updateOneWithKV
+      params: [enableShareNumberWithDriver, pushConsentToBpp, callingMode]
+      where: merchantOperatingCityId
+    updateCallingMode:
+      kvFunction: updateOneWithKV
+      params: [callingMode]
+      where: merchantOperatingCityId
 
   beamInstance:
     - MakeTableInstances

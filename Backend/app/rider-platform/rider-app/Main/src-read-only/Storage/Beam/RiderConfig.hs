@@ -56,6 +56,7 @@ data RiderConfigT f = RiderConfigT
     busTrackingNotificationTiers :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     busTransitTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     busTripTtl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    callingMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateThresholdDaily :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
