@@ -798,6 +798,7 @@ shadowRecomputeDecision req booking ride mbOdometer mbPickupDropOutside mbDistan
                               )
                               mbFarePolicy
                         },
+                    earlyEndFacts = mkEarlyEndFacts booking ride tripEndPoint now (fromMaybe False mbDistanceCalcFailed) dropOutside,
                     cfg = RD.mkRecomputeConfig thresholdConfig
                   }
             mismatch = maybe False (/= billedDistance) decision.predictedChargeableDistance
@@ -820,6 +821,17 @@ shadowRecomputeDecision req booking ride mbOdometer mbPickupDropOutside mbDistan
       pure Nothing
     Right d -> pure d
 
+mkEarlyEndFacts :: SRB.Booking -> DRide.Ride -> LatLong -> UTCTime -> Bool -> Bool -> RD.EarlyEndFacts
+mkEarlyEndFacts booking ride tripEndPoint tripEndTime distanceCalculationFailed dropOutsideOfThreshold = do
+  let startPoint = fromMaybe (getCoordinates booking.fromLocation) ride.tripStartPos
+  RD.EarlyEndFacts
+    { eeTraveledDistance = ride.traveledDistance,
+      eeDistanceFromPickup = roundToIntegral $ distanceBetweenInMeters startPoint tripEndPoint,
+      eeTripDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime tripEndTime startTime,
+      eeDistanceCalculationFailed = distanceCalculationFailed,
+      eeDropOutsideOfThreshold = dropOutsideOfThreshold
+    }
+
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => Bool -> ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   tripEndTime <- getCurrentTime
@@ -831,7 +843,16 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
   let rcfg = RD.mkRecomputeConfig thresholdConfig
-  let (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` rcfg.cfgNoRecomputeTripCategories && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) rcfg.cfgMinThresholdForPassThroughDestination)
+  let notAllowedComponents =
+        if useEstimatedDuration || DTC.isOdometerReadingsRequired booking.tripCategory
+          then Nothing
+          else RD.detectEndedAtPickup rcfg (mkEarlyEndFacts booking ride tripEndPoint tripEndTime (ride.distanceCalculationFailed == Just True) pickupDropOutsideOfThreshold)
+      endedAtPickup = isJust notAllowedComponents
+  whenJust notAllowedComponents $ \components -> logTagInfo "EndedAtPickup" $ "ride " <> ride.id.getId <> ", not billing: " <> show components
+  let (recalcDistance, finalDuration) =
+        if endedAtPickup
+          then (roundToIntegral ride.traveledDistance, measuredDuration)
+          else bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` rcfg.cfgNoRecomputeTripCategories && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) rcfg.cfgMinThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams Nothing
       destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> pure tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
@@ -847,7 +868,7 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
       then getFarePolicyOnEndRide pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
       else getFarePolicyByEstOrQuoteId pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
   QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
-  if farePolicy.disableRecompute == Just True
+  if farePolicy.disableRecompute == Just True && not endedAtPickup
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       -- Fare can go up but never below the estimate: charge at least the estimated distance and duration
@@ -873,9 +894,12 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
             DFP.ProgressiveDetails _ -> True
             DFP.SlabsDetails _ -> True
             _ -> False
-          (chargeableDistance, chargeableDuration) = getChargeableDistanceAndDuration farePolicy.disableDownwardRecompute rcfg sectionsBillChargeableMinutes timeLeversApplicable (not pickupDropOutsideOfThreshold) booking.estimatedDuration oldDistance recalcDistance finalDuration
+          (chargeableDistance, chargeableDuration) =
+            if endedAtPickup
+              then (recalcDistance, finalDuration)
+              else getChargeableDistanceAndDuration farePolicy.disableDownwardRecompute rcfg sectionsBillChargeableMinutes timeLeversApplicable (not pickupDropOutsideOfThreshold) booking.estimatedDuration oldDistance recalcDistance finalDuration
           durationForTimeFare =
-            if sectionsBillChargeableMinutes
+            if endedAtPickup || sectionsBillChargeableMinutes
               then chargeableDuration <|> booking.estimatedDuration
               else booking.estimatedDuration
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
@@ -944,7 +968,7 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
         calculateFareParameters
           Fare.CalculateFareParametersParams
             { farePolicy = farePolicy',
-              computationPhase = Fare.FCRecompute,
+              computationPhase = Fare.FCRecompute notAllowedComponents,
               mbCapConfig = farePolicy.fareRecomputeCapConfig,
               mbEstimateFareParams = Just booking.fareParams,
               paymentChargeDetails = booking.paymentChargeDetails,
@@ -1074,8 +1098,8 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg sectionsBillCharg
     -- estimate, overage beyond it bills only the excess past the window
     -- (city pricing only; rental/intercity time is contractual).
     mbForgivenessAdjusted =
-      if timeLeversApplicable && not isFloored
-        then RD.forgivenessAdjustedDuration rcfg.cfgTimeForgivenessBands estimatedDuration finalDuration
+      if timeLeversApplicable
+        then RD.forgivenessAdjustedDuration rcfg.cfgTimeForgivenessBands rcfg.cfgMaxChargeableOverageSeconds estimatedDuration finalDuration
         else Nothing
     -- Never bill below the estimated duration: within the pickup/drop
     -- threshold by default, outside it only when configured. Binds only when
@@ -1095,9 +1119,10 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
       shouldRecompute = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (highPrecMetersToMeters distanceDiff)
-      -- Outside the threshold the same bands gate BOTH directions: a
-      -- sub-band |delta| (overage or shortfall) keeps the estimate.
-      deltaQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
+      -- Outside the threshold a sub-band |delta| keeps the estimate: upward
+      -- bands gate an overage, downward bands a shortfall.
+      upwardQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
+      shortfallQualifies = RD.recomputeBandQualifies rcfg.cfgDownwardRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
       thresholdChecks = rcfg.cfgRecomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
@@ -1113,12 +1138,12 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
         then
           if isDownwardRecomputeEnabledForRide booking thresholdConfig
             then
-              if deltaQualifies
+              if shortfallQualifies
                 then recalculateFareForDistance False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
                 else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
             else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
         else
-          if deltaQualifies
+          if upwardQualifies
             then recalculateFareForDistance False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
             else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
   where
@@ -1164,20 +1189,21 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints (Just $ ride.id.getId <> LocUpd.approxRouteEntityIdSuffix) tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
-      -- Same bands gate both directions on the approx route: a sub-band
-      -- delta (overage or shortfall) keeps the estimate.
-      let deltaQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
+      -- On the approx route a sub-band delta keeps the estimate: downward
+      -- bands gate a shortfall, upward bands an overage.
+      let upwardQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
+          shortfallQualifies = RD.recomputeBandQualifies rcfg.cfgDownwardRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
       (d, f, p) <-
         if distanceDiff < 0
           then do
             if isDownwardRecomputeEnabledForRide booking thresholdConfig
               then
-                if deltaQualifies
+                if shortfallQualifies
                   then recalculateFareForDistance False handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
                   else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
               else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
           else
-            if not deltaQualifies
+            if not upwardQualifies
               then do
                 recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
               else do
