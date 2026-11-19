@@ -1,0 +1,17 @@
+{
+  "name": "movin-maps-shim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Google's APIs, answered from our own services: routes (OSRM), places (Postgres), and the wallet, payments, push and avatars beside them.",
+  "license": "UNLICENSED",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "pg": "8.13.1"
+  }
+}
