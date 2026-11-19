@@ -18,6 +18,7 @@ module Tools.Auth.Verify
 where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantPair as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DSN

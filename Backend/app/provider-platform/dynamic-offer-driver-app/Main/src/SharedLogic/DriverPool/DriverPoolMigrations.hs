@@ -13,6 +13,10 @@ where
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (partition, sortOn)
 import qualified Data.List as DL
+import qualified Domain.Types.DriverBankAccount as Fields
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.FleetDriverAssociation as Fields
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Types.Id

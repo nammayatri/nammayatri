@@ -36,9 +36,11 @@ import Lib.ConfigPilot.Config.GetterInternal (selectActiveElementVersions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as Fields
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (RideFeedbackConfig))
 import SharedLogic.RideFeedback.Context
 import SharedLogic.RideFeedback.Selection (selectQuestions)
+import qualified SharedLogic.RideFeedback.Selection as Fields
 import SharedLogic.RideFeedback.Validation (isBookingQuestion, questionStages)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RideFeedbackConfig (RideFeedbackConfigDimensions (..))
@@ -49,6 +51,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideFeedbackResponse as QRFR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | A rider's journey from booking to drop-off, as feedback sees it. A reallocation can replace the
 -- driver-side booking (same transactionId) or reuse it with a new ride, so everything is resolved

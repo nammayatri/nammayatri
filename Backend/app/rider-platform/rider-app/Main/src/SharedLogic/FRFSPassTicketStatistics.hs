@@ -14,6 +14,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Storage.Queries.FRFSPassTicketStatistics as QFPTS
 

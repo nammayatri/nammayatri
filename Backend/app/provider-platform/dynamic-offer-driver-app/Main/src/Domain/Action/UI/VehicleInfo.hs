@@ -5,9 +5,12 @@ where
 
 import qualified API.Types.UI.VehicleInfo as UIVI
 import qualified Domain.Types.DocumentReminderHistory as DRH
+import qualified Domain.Types.EntityInfo as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Vehicle as Fields
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude

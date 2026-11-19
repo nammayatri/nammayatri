@@ -6,7 +6,9 @@ import qualified Data.Time as DT
 import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (listToMaybe, showBaseUrl)
@@ -22,6 +24,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as YudhishthiraBeamFlow

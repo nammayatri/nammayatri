@@ -28,19 +28,25 @@ import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuote as FQ
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as Fields
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
+import qualified Domain.Types.PartnerOrgStation as Fields
 import Domain.Types.PartnerOrganization
+import qualified Domain.Types.Pass as Fields
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonPTStats as DPUS
+import qualified Domain.Types.PurchasedPassPayment as Fields
 import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
@@ -58,6 +64,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSCancel as FRFSCancel
@@ -93,6 +100,7 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.EventTracking as ET
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Notifications as Notifications
 import qualified Tools.SMS as Sms

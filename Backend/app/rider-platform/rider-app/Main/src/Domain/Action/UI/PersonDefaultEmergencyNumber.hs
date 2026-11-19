@@ -12,6 +12,7 @@ where
 
 import Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, RideShareOptions (..))
+import qualified Domain.Types.Person as Fields
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
 import Kernel.Types.Id

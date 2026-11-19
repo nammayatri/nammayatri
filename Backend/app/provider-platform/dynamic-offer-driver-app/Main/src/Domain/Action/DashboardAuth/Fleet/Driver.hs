@@ -67,6 +67,7 @@ import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
 import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person.Type as Fields
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified Environment
 import EulerHS.Prelude
@@ -82,7 +83,9 @@ import Servant
 import qualified SharedLogic.Fleet
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
+import qualified Tools.Auth.DashboardUser as Fields
 import Tools.Auth.DashboardUserAuth
+import qualified Tools.Fields as Fields
 
 postDriverFleetAddVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.CreateVehiclesReq -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities)
 postDriverFleetAddVehicles a5 a4 a3 a2 a1 = do

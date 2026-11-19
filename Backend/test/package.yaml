@@ -55,6 +55,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - OverloadedRecordDot
 
 dependencies:
   - mock-sms
@@ -87,8 +88,6 @@ dependencies:
   - hspec-core
   - tasty
   - tasty-hspec
-  - record-hasfield
-  - record-dot-preprocessor
   - hspec-expectations-lifted
   - HUnit
   - unix
@@ -114,7 +113,6 @@ ghc-options:
   - -fhide-source-paths
   - -Werror
   - -Wno-unrecognised-pragmas
-  - -fplugin=RecordDotPreprocessor
   - -threaded
 
 library:

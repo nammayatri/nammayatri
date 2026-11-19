@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Update where
 import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import Data.List (last)
 import Data.List.Split (chunksOf)
 import Data.Maybe
@@ -32,6 +33,7 @@ import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
@@ -40,14 +42,19 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
+import qualified Domain.Types.Overlay as DOverlay
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.RideRoute as RR
 import Domain.Types.Trip (isRideOtpTrip)
 import qualified Domain.Types.Trip as DTC
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
 import Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as CallAPIDetails (CallAPIDetails (..))
 import Kernel.External.Types
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -59,6 +66,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
@@ -89,6 +97,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Toll.SharedLogic.TollsDetector
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -617,7 +626,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                         actions2 = map (mkActions2 bookingUpdateReq.id.getId dropLocation.lat dropLocation.lon) overlayActions2
                         secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
                         okButtonText = if isRideInProgress then overlay.okButtonText else Just "Accept"
-                        overlay' = overlay{actions2, secondaryActions2, okButtonText}
+                        overlay' = overlay{DOverlay.actions2 = actions2, DOverlay.secondaryActions2 = secondaryActions2, DOverlay.okButtonText = okButtonText}
                     Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
                   else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
               _ -> EditBooking.postEditResultNoRide booking bookingUpdateReq dropLocation
@@ -670,7 +679,7 @@ mkActions2 bookingUpdateReqId lat long action = do
   let primaryAction' = case action.primaryAction of
         FCM.CALL_API details -> do
           let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
-          let details' = details{endPoint = ep}
+          let details' = details{CallAPIDetails.endPoint = ep}
           CALL_API details'
         FCM.NAVIGATE details -> do
           let details' = details{lat, long}
@@ -694,7 +703,7 @@ mkSecondaryActions2 bookingUpdateReqId action = do
   let primaryAction' = case action.primaryAction of
         FCM.CALL_API details -> do
           let ep = T.replace (Notify.templateText "bookingUpdateRequestId") bookingUpdateReqId details.endPoint
-          let details' = details{endPoint = ep}
+          let details' = details{CallAPIDetails.endPoint = ep}
           CALL_API details'
         _ -> action.primaryAction
   let dependentActions' = map (mkSecondaryActions2 bookingUpdateReqId) action.dependentActions

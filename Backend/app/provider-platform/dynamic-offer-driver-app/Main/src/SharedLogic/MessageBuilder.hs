@@ -66,12 +66,13 @@ import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message as Message
+import qualified Domain.Types.MessageTranslation as Fields
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer
 import Kernel.Streaming.Kafka.Producer.Types

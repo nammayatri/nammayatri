@@ -14,6 +14,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney.Assignment as Assignment
+import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as Fields
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM

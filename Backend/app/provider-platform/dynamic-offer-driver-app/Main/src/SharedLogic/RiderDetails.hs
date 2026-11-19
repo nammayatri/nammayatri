@@ -32,7 +32,7 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
       case riderD of
         Nothing -> fmap (,True) . encrypt =<< buildRiderDetails now
         Just riderDetails -> do
-          let updatedRiderDetails = riderDetails{bapId = Just bapId}
+          let updatedRiderDetails = riderDetails{DRD.bapId = Just bapId}
           QRD.updateByPrimaryKey updatedRiderDetails
           return (updatedRiderDetails, False)
     Just a -> return (a, False)

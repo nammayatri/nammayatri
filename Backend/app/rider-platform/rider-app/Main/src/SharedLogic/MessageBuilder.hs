@@ -59,12 +59,15 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.Location as Fields
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import qualified Domain.Types.PartnerOrganization as DPO
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)

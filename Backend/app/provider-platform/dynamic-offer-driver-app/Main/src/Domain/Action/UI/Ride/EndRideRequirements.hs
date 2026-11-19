@@ -30,11 +30,13 @@ import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import qualified Domain.Action.UI.Ride.EndRide.TollDecision as TollDecision
 import qualified Domain.Types as DTC
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Storage.Hedis as Redis

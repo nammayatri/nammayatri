@@ -15,6 +15,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverInformationExtra as QDIE
+import qualified Tools.Fields as Fields
 
 triggerIffcoTokioInsuranceForOnRideDrivers ::
   ( EncFlow m r,

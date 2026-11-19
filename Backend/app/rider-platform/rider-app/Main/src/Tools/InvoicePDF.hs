@@ -21,7 +21,8 @@ import qualified Data.Text as T
 -- import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Time as DT
 import qualified Domain.Types.Booking.API as DBAPI
-import Domain.Types.Location (LocationAPIEntity)
+import qualified Domain.Types.Extra.Ride as Fields
+import Domain.Types.Location (LocationAPIEntity (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide

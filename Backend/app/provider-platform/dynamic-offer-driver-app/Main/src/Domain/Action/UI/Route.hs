@@ -26,6 +26,7 @@ import Domain.Action.UI.Ride.EndRide.Internal (pickNWayPoints)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideRoute as RI
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude

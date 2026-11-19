@@ -32,15 +32,20 @@ import Domain.Types.Alert
 import Domain.Types.Common
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.TransporterConfig
+import qualified Domain.Types.FleetBadge as Fields
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person
 import Domain.Types.Route
 import Domain.Types.TripTransaction
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVehCategory
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
+import qualified Domain.Types.VehicleRouteMapping as Fields
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
 import Kernel.Beam.Functions as B
@@ -82,6 +87,7 @@ import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 
 getWmbFleetBadges ::

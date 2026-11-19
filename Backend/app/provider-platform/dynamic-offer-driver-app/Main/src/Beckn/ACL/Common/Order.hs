@@ -66,6 +66,7 @@ import SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Tools
 
 -- Identical for on_update and on_status

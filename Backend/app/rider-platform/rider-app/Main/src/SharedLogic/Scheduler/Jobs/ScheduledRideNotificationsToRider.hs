@@ -23,7 +23,9 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingStatus as DB
 import Domain.Types.CallStatus
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as Fields
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Person as DPerson
 import Domain.Types.Ride as DRide
 import Domain.Types.RideRelatedNotificationConfig
@@ -32,7 +34,7 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id

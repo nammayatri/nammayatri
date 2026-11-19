@@ -8,7 +8,6 @@ import qualified IGM.Enums as Spec
 import IssueManagement.Common
 import qualified IssueManagement.Common as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory (IssueCategory)
-import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Id
 
 data IssueOption = IssueOption

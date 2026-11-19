@@ -30,17 +30,22 @@ import qualified Data.Text as T
 import Domain.Types.Beckn.FRFS.OnSearch
 import qualified Domain.Types.Beckn.FRFS.OnSearch as Reexport
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as Fields
 import qualified Domain.Types.FRFSVehicleServiceTier as FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PersonStats as Fields
+import qualified Domain.Types.RouteDetails as Fields
+import qualified Domain.Types.Station as Fields
 import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
 import qualified Domain.Types.Trip as DTripTypes
@@ -79,6 +84,7 @@ import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.StopFare as QRSF
 import qualified Storage.Queries.Transformers.FRFSQuoteCategory as TFQC
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch

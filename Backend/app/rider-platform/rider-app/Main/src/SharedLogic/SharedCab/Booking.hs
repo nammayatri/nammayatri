@@ -33,10 +33,13 @@ where
 
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
+import qualified Domain.Types.FRFSQuoteCategory as Fields
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.StationsExtraInformation as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id

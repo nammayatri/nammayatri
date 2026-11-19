@@ -20,6 +20,7 @@ import qualified Domain.Types.DocumentVersionMetadata as DDVM
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.Image as Image
 import Domain.Types.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id

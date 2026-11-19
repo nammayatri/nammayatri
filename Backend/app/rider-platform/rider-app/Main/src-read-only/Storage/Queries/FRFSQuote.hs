@@ -8,6 +8,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id

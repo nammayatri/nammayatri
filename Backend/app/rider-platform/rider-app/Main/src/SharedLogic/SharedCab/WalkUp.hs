@@ -32,8 +32,11 @@ import Data.Either (partitionEithers)
 import Data.List (nub, sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
+import Domain.Action.UI.Person as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Person as DP
+import Domain.Types.Route as Fields
+import Domain.Types.RouteStopMapping as Fields
 import qualified Environment
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude

@@ -19,10 +19,11 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig (..))
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import Domain.Types.MerchantOperatingCity
 import EulerHS.Prelude hiding (concatMap, find, length, map, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET

@@ -1,6 +1,7 @@
 module Storage.Queries.Transformers.SearchRequest where
 
 import qualified Domain.Types.Location
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Common

@@ -6,6 +6,7 @@ module API.Internal.FleetBookingInformation where
 
 import qualified Domain.Action.Internal.FleetBookingInformation as Domain
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant

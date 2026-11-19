@@ -19,6 +19,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.DriverQuote as Beam
 import Storage.Queries.Transformers.DriverQuote
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
   fromTType' (Beam.DriverQuoteT {..}) = do

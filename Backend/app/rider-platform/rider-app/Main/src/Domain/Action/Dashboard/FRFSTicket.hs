@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.FRFSTicket
 where
 
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
+import qualified API.Types.UI.FRFSTicketService as Fields
 import qualified BecknV2.FRFS.Enums
 import BecknV2.FRFS.Utils
 import qualified Dashboard.Common as Common
@@ -24,11 +25,14 @@ import qualified Data.Text
 import qualified Data.Vector as V
 import qualified Domain.Action.Internal.FRFS as InternalFRFS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.FRFSFarePolicy as Fields
 import qualified Domain.Types.FRFSGtfsStageFare as DFRFSGtfsStageFare
 import qualified Domain.Types.FRFSQuoteCategoryType as DTFRFSQuoteCategoryType
+import qualified Domain.Types.FRFSRouteFareProduct as Fields
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.StopFare as Fields
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, groupBy, id, length, map, null, readMaybe)
@@ -53,6 +57,7 @@ import qualified Storage.Queries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.StopFare as QRSF
+import qualified Tools.Fields as Fields
 
 postFRFSTicketFrfsStatusUpdate :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity _mbRequestorId req =

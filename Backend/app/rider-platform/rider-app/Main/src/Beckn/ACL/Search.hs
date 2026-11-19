@@ -22,9 +22,11 @@ import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
+import qualified Domain.Types.Merchant as Fields
 import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS

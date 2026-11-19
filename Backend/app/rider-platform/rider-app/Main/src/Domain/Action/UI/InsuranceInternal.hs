@@ -1,6 +1,8 @@
 module Domain.Action.UI.InsuranceInternal (getInsurance) where
 
 import qualified API.Types.UI.Insurance as Insurance
+import qualified Domain.Types.Insurance as Fields
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.RideStatus as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (id)

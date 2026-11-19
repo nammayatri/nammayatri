@@ -16,6 +16,7 @@ import SharedLogic.Payment (roundToTwoDecimalPlaces)
 import qualified Storage.Beam.VendorFee as Beam
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.VendorFee ()
+import qualified Tools.Fields as Fields
 
 -- Extra code goes here --
 

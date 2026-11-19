@@ -3,6 +3,7 @@ module SharedLogic.AnalyticsExtra where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Domain.Types.DriverFlowStatus as DDF
+import qualified Domain.Types.DriverOperatorAssociation as Fields
 import qualified Domain.Types.FleetOperatorStats as DFS
 import Domain.Types.Person as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP

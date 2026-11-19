@@ -5,6 +5,7 @@ import qualified Data.Text as T
 import Data.Time.Format
 import qualified Data.Time.LocalTime as LT
 import qualified Domain.Types.DriverGullakAssociation as Domain.Types.DriverGullakAssociation
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DomainMSC
@@ -24,6 +25,7 @@ import qualified Storage.Queries.DriverGullakAssociation as QDGA
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.Person as SQP
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDriverSdkToken ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

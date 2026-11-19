@@ -62,6 +62,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 
 -- FIXME this is temprorary solution for backward compatibility

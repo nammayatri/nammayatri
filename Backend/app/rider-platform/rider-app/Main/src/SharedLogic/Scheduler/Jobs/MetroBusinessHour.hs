@@ -8,9 +8,11 @@ import qualified Data.Time as Time
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.RiderConfig as RC
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.BusinessHour as Fields
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler

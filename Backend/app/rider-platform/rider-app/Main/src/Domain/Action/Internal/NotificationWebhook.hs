@@ -6,6 +6,7 @@ where
 
 import qualified Control.Exception as E
 import qualified Data.Text as T
+import qualified Domain.Types.MerchantMessage as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Email.Flow as Email
@@ -15,6 +16,7 @@ import qualified IssueManagement.Utils.RemoteFile as RemoteFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
+import qualified Kernel.Sms.Config as Fields
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -24,6 +26,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp

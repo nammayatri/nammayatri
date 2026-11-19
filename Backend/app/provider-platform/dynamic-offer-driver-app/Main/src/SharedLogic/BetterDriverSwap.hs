@@ -53,6 +53,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.OneShotAssign (buildAssignedDriverRideRes, buildOneShotAssignPayload)
 import SharedLogic.QuickRetry (withQuickRetry)
@@ -67,6 +68,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 

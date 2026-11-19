@@ -6,6 +6,7 @@ import qualified BecknV2.NTS10.APIs as NTS10
 import qualified BecknV2.NTS10.Types as NTS10
 import qualified Domain.Types.Merchant as DM
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common

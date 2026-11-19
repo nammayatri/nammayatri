@@ -25,8 +25,10 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Ride as Fields
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
@@ -56,6 +58,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API =

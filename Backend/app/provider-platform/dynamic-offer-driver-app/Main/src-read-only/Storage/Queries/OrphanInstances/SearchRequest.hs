@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
@@ -26,6 +27,7 @@ import qualified Storage.Queries.Location
 import qualified Storage.Queries.LocationMapping
 import qualified Storage.Queries.Transformers.SearchRequest
 import qualified Tools.Error
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
   fromTType' (Beam.SearchRequestT {..}) = do

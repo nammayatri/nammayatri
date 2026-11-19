@@ -18,6 +18,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified Storage.Queries.BookingPayment as QBookingPayment
+import qualified Tools.Fields as Fields
 
 data DepositLedgerView = DepositLedgerView
   { captured :: Bool,

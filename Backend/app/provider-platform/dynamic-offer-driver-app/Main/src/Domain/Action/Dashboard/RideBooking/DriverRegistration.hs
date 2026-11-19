@@ -8,6 +8,7 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.Person as Fields
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM

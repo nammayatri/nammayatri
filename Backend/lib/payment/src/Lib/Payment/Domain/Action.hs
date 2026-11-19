@@ -79,6 +79,8 @@ module Lib.Payment.Domain.Action
     applyOfferService,
     applyOfferWithoutPaymentService,
     updateShortId,
+    PayoutPaymentStatus (..),
+    OrderTxn (..),
   )
 where
 
@@ -131,7 +133,7 @@ import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPersonDailyO
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import qualified Lib.Payment.Offer.Counters as Counters
-import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
+import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeResult (..), PGFeeType (..), recordPGFeeLedgerEntries)
 import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
@@ -147,6 +149,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
+import qualified Lib.Yudhishthira.Types as Fields
 
 data PaymentStatusResp
   = PaymentStatus
@@ -2025,56 +2028,56 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
           HQTransaction.create merchantOpCityId transaction (Just "order status response or webhook")
         return mbTxn
       Nothing -> HQTransaction.findNewTransactionByOrderId order.id
-  let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
+  let updOrder = order{DOrder.status = resp.transactionStatus, DOrder.isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, DOrder.isRetried = fromMaybe order.isRetried resp.isRetried, DOrder.retargetLink = resp.retargetLink}
   case mbTransaction of
     Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
     -- Nothing -> runInReplica $ HQTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
-            transaction{statusId = resp.transactionStatusId,
-                        status = resp.transactionStatus,
-                        paymentMethodType = resp.paymentMethodType,
-                        paymentMethod = resp.paymentMethod,
-                        paymentMethodId = resp.paymentMethodId <|> transaction.paymentMethodId,
-                        respMessage = resp.respMessage,
-                        respCode = resp.respCode,
-                        gatewayReferenceId = resp.gatewayReferenceId,
-                        amount = resp.amount,
+            transaction{DTransaction.statusId = resp.transactionStatusId,
+                        DTransaction.status = resp.transactionStatus,
+                        DTransaction.paymentMethodType = resp.paymentMethodType,
+                        DTransaction.paymentMethod = resp.paymentMethod,
+                        DTransaction.paymentMethodId = resp.paymentMethodId <|> transaction.paymentMethodId,
+                        DTransaction.respMessage = resp.respMessage,
+                        DTransaction.respCode = resp.respCode,
+                        DTransaction.gatewayReferenceId = resp.gatewayReferenceId,
+                        DTransaction.amount = resp.amount,
                         -- Stripe reports no application fee for a platform-only intent, and the
                         -- fromMaybe below would then preserve the stale locally-written value and
                         -- over-report platform revenue. Pin it to 0 for those.
-                        applicationFeeAmount = case order.chargeRouting of
+                        DTransaction.applicationFeeAmount = case order.chargeRouting of
                           Just Payment.PlatformOnlyCharge -> 0
                           _ -> fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
-                        currency = resp.currency,
-                        mandateStatus = resp.mandateStatus,
-                        mandateStartDate = resp.mandateStartDate,
-                        mandateEndDate = resp.mandateEndDate,
-                        mandateId = resp.mandateId,
-                        mandateFrequency = resp.mandateFrequency,
-                        mandateMaxAmount = resp.mandateMaxAmount,
-                        juspayResponse = respDump,
-                        txnId = resp.txnId,
-                        splitSettlementResponse = resp.splitSettlementResponse,
-                        customerName = resp.customerName,
-                        gatewayName = resp.gatewayName,
+                        DTransaction.currency = resp.currency,
+                        DTransaction.mandateStatus = resp.mandateStatus,
+                        DTransaction.mandateStartDate = resp.mandateStartDate,
+                        DTransaction.mandateEndDate = resp.mandateEndDate,
+                        DTransaction.mandateId = resp.mandateId,
+                        DTransaction.mandateFrequency = resp.mandateFrequency,
+                        DTransaction.mandateMaxAmount = resp.mandateMaxAmount,
+                        DTransaction.juspayResponse = respDump,
+                        DTransaction.txnId = resp.txnId,
+                        DTransaction.splitSettlementResponse = resp.splitSettlementResponse,
+                        DTransaction.customerName = resp.customerName,
+                        DTransaction.gatewayName = resp.gatewayName,
                         -- Preserve, do not overwrite. The card is written at intent creation and
                         -- Stripe's payment_intent/charge events carry no card object, so a plain
                         -- assignment would null these out on the first webhook. Also hardens
                         -- Juspay, where a status response lacking a card object previously erased
                         -- values an earlier response had captured.
-                        cardType = resp.cardType <|> transaction.cardType,
-                        surchargeAmount = resp.surchargeAmount,
-                        taxAmount = resp.taxAmount,
-                        netAmount = resp.netAmount,
-                        epgTxnId = resp.epgTxnId,
-                        cardBrand = resp.cardBrand <|> transaction.cardBrand,
-                        cardIsin = resp.cardIsin <|> transaction.cardIsin,
-                        cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
-                        cardIssuer = resp.cardIssuer <|> transaction.cardIssuer,
-                        authorizationDateTime = resp.authorizationDateTime,
-                        captureDateTime = resp.captureDateTime,
-                        rrn = resp.rrn <|> transaction.rrn
+                        DTransaction.cardType = resp.cardType <|> transaction.cardType,
+                        DTransaction.surchargeAmount = resp.surchargeAmount,
+                        DTransaction.taxAmount = resp.taxAmount,
+                        DTransaction.netAmount = resp.netAmount,
+                        DTransaction.epgTxnId = resp.epgTxnId,
+                        DTransaction.cardBrand = resp.cardBrand <|> transaction.cardBrand,
+                        DTransaction.cardIsin = resp.cardIsin <|> transaction.cardIsin,
+                        DTransaction.cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
+                        DTransaction.cardIssuer = resp.cardIssuer <|> transaction.cardIssuer,
+                        DTransaction.authorizationDateTime = resp.authorizationDateTime,
+                        DTransaction.captureDateTime = resp.captureDateTime,
+                        DTransaction.rrn = resp.rrn <|> transaction.rrn
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions

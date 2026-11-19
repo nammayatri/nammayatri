@@ -17,7 +17,7 @@ module Storage.CachedQueries.Maps.LocationMapCache where
 import Domain.Types.HotSpot
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 
 makeHotSpotKey :: Text -> Text
 makeHotSpotKey geohash = "CachedQueries:HotSpot:" <> geohash

@@ -32,8 +32,10 @@ import Domain.Types.Extra.Plan ()
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Overlay as DOverlay
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DTV
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)

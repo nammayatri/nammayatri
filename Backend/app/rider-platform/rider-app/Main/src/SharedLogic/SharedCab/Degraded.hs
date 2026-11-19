@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Degraded
   )
 where
 
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as TicketStatus

@@ -15,7 +15,7 @@
 module Storage.Queries.Booking.Internal where
 
 import qualified Domain.Types.Booking as Booking
-import Domain.Types.DriverQuote (DriverQuote)
+import Domain.Types.DriverQuote (DriverQuote (..))
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -23,6 +23,7 @@ import qualified Sequelize as Se
 import Storage.Beam.Booking as BeamB
 import Storage.Queries.Booking ()
 import Storage.Queries.OrphanInstances.Person ()
+import qualified Tools.Fields as Fields
 
 getBookingInfo ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

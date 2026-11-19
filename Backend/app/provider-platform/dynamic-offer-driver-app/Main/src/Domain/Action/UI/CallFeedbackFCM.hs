@@ -1,8 +1,10 @@
 module Domain.Action.UI.CallFeedbackFCM where
 
 import Data.Text hiding (map)
+import qualified Domain.Types.CallFeedbackOptions as Fields
 import qualified Domain.Types.CallStatus as CallStatus
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
+import qualified Domain.Types.Translations as Fields
 import EulerHS.Prelude hiding (id, map, state)
 import Kernel.External.Types (Language)
 import Kernel.Prelude

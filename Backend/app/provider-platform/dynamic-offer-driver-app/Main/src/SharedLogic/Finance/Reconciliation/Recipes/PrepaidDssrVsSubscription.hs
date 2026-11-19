@@ -22,6 +22,7 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.Time (nominalDay)
+import qualified Domain.Types.SubscriptionPurchase as Fields
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common

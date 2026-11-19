@@ -9,6 +9,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 getDriverMobileNumber :: (EncFlow m r, EsqDBFlow m r, MonadFlow m) => DRide.Ride -> m (Maybe Text)
 getDriverMobileNumber ride = case (ride.driverPhoneNumber, ride.driverMobileNumber) of

@@ -25,6 +25,7 @@ import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.DriverReferral as DR
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person

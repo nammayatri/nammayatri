@@ -168,7 +168,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
       -- Completed rides return the deposit too: only a fee-bearing cancellation captures it.
       when (isJust booking.bookingDepositAmount && bookingNewStatus `elem` [DBooking.COMPLETED, DBooking.CANCELLED]) $
         void . withTryCatch "bookingSync:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
-      let updBooking = booking{status = bookingNewStatus}
+      let updBooking = booking{DBooking.status = bookingNewStatus}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
@@ -180,7 +180,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
       -- cancellationTransaction.
       void $ withTryCatch "bookingSyncNoRide:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
       QBCR.upsert cancellationReason
-      let updBooking = booking{status = DBooking.CANCELLED}
+      let updBooking = booking{DBooking.status = DBooking.CANCELLED}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqv2:-" <> show becknStatusReq

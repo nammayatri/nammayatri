@@ -17,6 +17,7 @@ where
 
 import qualified API.Types.UI.Dispatcher
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified Domain.Types.DepotManager as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

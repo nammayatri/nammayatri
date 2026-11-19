@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.Fleet.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.Person as DP
 import Environment
 import qualified Kernel.Beam.Functions as B

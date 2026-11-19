@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.CancellationDuesDetails as Fields
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.FinancialYear (financialYearOf)
@@ -79,6 +80,7 @@ import qualified Storage.Queries.LedgerAdjustmentRequest as QLedgerAdjustmentReq
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 mkAdminName :: Text -> Maybe DP.Person -> Text
 mkAdminName requestorName = \case

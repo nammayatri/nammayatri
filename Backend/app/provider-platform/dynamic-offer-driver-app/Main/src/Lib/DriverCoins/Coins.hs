@@ -48,11 +48,13 @@ import qualified Domain.Types.Coins.CoinsConfig as DTCoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.FleetConfig as DFC
+import qualified Domain.Types.FleetDriverAssociation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MonetaryRewardConfig as DWC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
+import qualified Domain.Types.Translations as Fields
 import Domain.Types.TransporterConfig
 import Domain.Types.VehicleCategory as DTV
 import qualified Domain.Types.VehicleVariant as DTVeh

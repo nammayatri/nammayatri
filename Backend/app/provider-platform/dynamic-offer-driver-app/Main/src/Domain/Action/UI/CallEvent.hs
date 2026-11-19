@@ -20,6 +20,7 @@ module Domain.Action.UI.CallEvent
 where
 
 import Data.Aeson
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Ride as Ride
@@ -44,6 +45,7 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 
 data CallEventReq = CallEventReq
   { rideId :: Id Ride.Ride,

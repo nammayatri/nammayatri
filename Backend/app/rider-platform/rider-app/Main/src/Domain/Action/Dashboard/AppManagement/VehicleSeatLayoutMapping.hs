@@ -9,6 +9,7 @@ import qualified API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping as A
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.VehicleSeatLayoutMapping
 import qualified Environment
 import EulerHS.Prelude hiding (id)

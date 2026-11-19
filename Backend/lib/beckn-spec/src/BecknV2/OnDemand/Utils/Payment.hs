@@ -26,7 +26,7 @@ import Data.Aeson as A
 import Domain.Types
 import qualified Domain.Types.PaymentMode as DPM
 import Kernel.Prelude
-import Kernel.Types.Common (Price)
+import Kernel.Types.Common (Price (..))
 
 type TxnId = Text
 

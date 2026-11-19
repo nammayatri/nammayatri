@@ -31,7 +31,12 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverGstin as Fields
+import qualified Domain.Types.DriverLicense as Fields
+import qualified Domain.Types.DriverPanCard as Fields
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.InitiatedBy as DIB
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -46,6 +51,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common

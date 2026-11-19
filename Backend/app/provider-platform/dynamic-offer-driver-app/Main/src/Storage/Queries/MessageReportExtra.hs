@@ -20,6 +20,7 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Message as BeamM
 import qualified Storage.Beam.MessageReport as BeamMR
 import qualified Storage.Beam.MessageTranslation as BeamMT
+import qualified Storage.Beam.Person as Fields
 import Storage.Queries.Message as QMM hiding (create)
 import qualified Storage.Queries.Message ()
 import Storage.Queries.MessageTranslation as QMMT hiding (create)

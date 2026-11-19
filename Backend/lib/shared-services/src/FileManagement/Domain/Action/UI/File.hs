@@ -9,12 +9,14 @@ import EulerHS.Types (base64Encode)
 import FileManagement.Common.UI.File
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified IssueManagement.Common.UI.Issue as Fields
 import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
 import qualified IssueManagement.Domain.Types.MediaFile as D
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 
 fileUploadToS3 ::

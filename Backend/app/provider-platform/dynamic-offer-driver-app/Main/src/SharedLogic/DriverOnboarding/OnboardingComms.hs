@@ -39,6 +39,7 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 
 driverOnboardingAsChangedKey :: Text

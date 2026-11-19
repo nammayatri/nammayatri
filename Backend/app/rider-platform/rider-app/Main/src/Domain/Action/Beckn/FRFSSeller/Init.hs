@@ -17,7 +17,9 @@ import qualified Data.Text as T
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified ExternalBPP.ExternalAPI.CallAPI as ExternalCallAPI
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import Kernel.Prelude

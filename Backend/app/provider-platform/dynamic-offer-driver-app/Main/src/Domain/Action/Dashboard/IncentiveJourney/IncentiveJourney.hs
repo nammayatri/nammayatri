@@ -28,6 +28,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DTV
 import qualified Domain.Types.VehicleVariant as VecVariant
 import qualified Environment
@@ -43,6 +44,7 @@ import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Provider as LibProvider
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
 import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3 as DBulkAssign
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as Fields
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
@@ -63,6 +65,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Fields as Fields
 
 mkHandle :: ServiceHandle Environment.Flow
 mkHandle =

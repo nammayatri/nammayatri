@@ -1,10 +1,12 @@
 module Domain.Action.UI.Performance where
 
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -12,6 +14,7 @@ import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HighPrecMoney, fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -21,6 +24,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data Results = Results
   { totalReferredCustomers :: Int,

@@ -11,7 +11,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
-import Domain.Types.RouteStopMapping (RouteStopMapping)
+import Domain.Types.RouteStopMapping (RouteStopMapping (..))
 import Domain.Types.Station
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -29,6 +29,7 @@ import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.External.Nandi.Types as Fields
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB

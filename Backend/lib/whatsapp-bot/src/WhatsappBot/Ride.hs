@@ -41,8 +41,10 @@ import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import Kernel.Prelude
 import WhatsappBot.Env (BotEnv, btn, mkUserKey, reply, replyButtons, replyWithMenu, resetContext, save, scopedSessionId)
+import qualified WhatsappBot.Env as Fields
 import WhatsappBot.Handles (RegisteredRide (..))
-import WhatsappBot.I18n (LanguageStrings, t)
+import qualified WhatsappBot.Handles as Fields
+import WhatsappBot.I18n (LanguageStrings (..), t)
 -- Instances only: LanguageStrings is dot-accessed via RDP (getField), so its
 -- selectors are never referenced by name, but the HasField instances are needed.
 -- (Naming them would trip -Wunused-imports under -Werror.)

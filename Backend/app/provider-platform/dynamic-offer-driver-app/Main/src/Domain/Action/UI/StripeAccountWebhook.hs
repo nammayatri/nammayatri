@@ -5,6 +5,7 @@ module Domain.Action.UI.StripeAccountWebhook
 where
 
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM

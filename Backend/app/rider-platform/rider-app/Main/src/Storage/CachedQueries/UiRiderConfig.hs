@@ -17,13 +17,14 @@ module Storage.CachedQueries.UiRiderConfig where
 
 import qualified Data.Text as Text
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.RiderConfig as Fields
 import Domain.Types.UiRiderConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
 import Kernel.Utils.Time
 import qualified Lib.ConfigPilot.Interface.Types as CPI
 import qualified Lib.Yudhishthira.Types as LYT

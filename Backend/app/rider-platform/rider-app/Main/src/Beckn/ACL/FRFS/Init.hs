@@ -25,6 +25,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 

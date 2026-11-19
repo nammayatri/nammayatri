@@ -15,7 +15,6 @@
 
 module Beckn.ACL.IGM.Utils where
 
-import Control.Lens ((%~))
 import Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM

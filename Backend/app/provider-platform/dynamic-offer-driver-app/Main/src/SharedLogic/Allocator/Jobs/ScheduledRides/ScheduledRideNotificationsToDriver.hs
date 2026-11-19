@@ -22,8 +22,11 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Common as DInfo
+import qualified Domain.Types.DriverInformation as Fields
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as Fields
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Overlay as DOverlay
 import Domain.Types.Person
 import Domain.Types.RideRelatedNotificationConfig
@@ -32,7 +35,7 @@ import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..), SchedulerFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -52,6 +55,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Call
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 import qualified Tools.SMS as Sms
 

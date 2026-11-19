@@ -49,6 +49,7 @@ import Servant.Client (ClientError (..), ResponseF (..))
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Type as SLT
 import Tools.Error (BapProxyError (..))
+import qualified Tools.Fields as Fields
 import Tools.Metrics (CoreMetrics)
 
 data FeedbackAnswer = FeedbackAnswer

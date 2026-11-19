@@ -1,6 +1,7 @@
 module ExternalBPP.ExternalAPI.Bus.EBIX.Status where
 
 import Data.Aeson
+import qualified Domain.Types.FRFSTicket as Fields
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Domain.Types.IntegratedBPPConfig

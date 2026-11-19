@@ -23,6 +23,9 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverOperatorAssociation as Fields
+import qualified Domain.Types.DriverStats as Fields
+import qualified Domain.Types.FleetDriverAssociation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP

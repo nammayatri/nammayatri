@@ -20,6 +20,7 @@ module Storage.GraphqlQueries.RouteStopTimeTable
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (..), VehicleCategory (..))
+import qualified Domain.Types.FRFSVehicleServiceTier as Fields
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity

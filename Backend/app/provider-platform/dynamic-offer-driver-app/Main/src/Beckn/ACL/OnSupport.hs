@@ -18,6 +18,7 @@ import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import qualified Domain.Types.BapMetadata as Fields
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
@@ -28,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetadata
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Tools.Fields as Fields
 
 buildOnSupportMessageV2 ::
   ( MonadFlow m,

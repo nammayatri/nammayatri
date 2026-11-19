@@ -23,7 +23,7 @@ import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Kernel.Storage.Hedis.Config (HedisCloudCfg (..))
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Version (CloudType (..), localCloudType)

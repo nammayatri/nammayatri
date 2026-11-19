@@ -14,6 +14,7 @@
 
 module Tools.Payment where
 
+import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -22,6 +23,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Juspay.Config as Fields
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -34,6 +36,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverPlan as QDPlan
+import qualified Tools.Fields as Fields
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
 createOrder = runWithServiceConfigAndName Payment.createOrder

@@ -20,15 +20,19 @@ import Data.Time (utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.DriverReferral as Domain
 import qualified Domain.Types.DriverStats as DS
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as VC
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
@@ -57,6 +61,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideExtra as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 import Tools.Utils
 

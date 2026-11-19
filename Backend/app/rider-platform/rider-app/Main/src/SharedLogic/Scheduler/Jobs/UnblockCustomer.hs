@@ -20,6 +20,7 @@ where
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified SharedLogic.JobScheduler as RJS

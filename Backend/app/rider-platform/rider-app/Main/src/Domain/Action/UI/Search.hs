@@ -40,9 +40,12 @@ import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
 import qualified Domain.Types.Location as Location
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantConfig as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.NyRegularSubscription as Fields
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonDisability as Fields
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
@@ -69,6 +72,7 @@ import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Types.SpecialLocation as Fields
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC

@@ -21,12 +21,18 @@ import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverModuleCompletion
+import qualified Domain.Types.DriverProfileQuestions as Fields
+import qualified Domain.Types.DriverStats as Fields
+import qualified Domain.Types.Feedback as Fields
 import qualified Domain.Types.Image as DImage
+import qualified Domain.Types.LmsModule as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -49,6 +55,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
 import qualified Storage.Queries.RatingExtra as QRating
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data DriverReview = DriverReview
   { riderName :: Maybe Text,

@@ -36,6 +36,7 @@ import qualified "lib-dashboard" Dashboard.Common.Exotel as Common
 import Data.List (nub, sort)
 import qualified Domain.Action.Dashboard.Exotel as DExotel
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
+import qualified Domain.Types.TransactionView as Fields
 import Environment
 import Kernel.Beam.Functions (runInDashboardDb)
 import qualified Kernel.Beam.Functions as B

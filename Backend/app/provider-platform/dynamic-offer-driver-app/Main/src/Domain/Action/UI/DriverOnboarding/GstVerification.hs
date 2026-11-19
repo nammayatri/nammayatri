@@ -33,6 +33,7 @@ import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.IdfyVerification as Domain
@@ -43,6 +44,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.External.Encryption
+import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
@@ -69,6 +71,7 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 

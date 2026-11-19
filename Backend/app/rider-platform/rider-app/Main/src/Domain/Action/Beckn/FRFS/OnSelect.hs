@@ -15,7 +15,9 @@ module Domain.Action.Beckn.FRFS.OnSelect where
 
 import API.Types.UI.FRFSTicketService
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
+import qualified Domain.Action.Beckn.FRFS.Common as Fields
 import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import ExternalBPP.CallAPI.Types

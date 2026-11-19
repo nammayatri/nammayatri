@@ -64,8 +64,9 @@ where
 import qualified Data.Aeson as A
 import Data.OpenApi (ToSchema)
 import qualified Data.Time as DT
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
-import Domain.Types.TransporterConfig (TransporterConfig)
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (Language (ENGLISH), ServiceFlow)

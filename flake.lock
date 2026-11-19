@@ -118,10 +118,10 @@
       },
       "locked": {
         "lastModified": 1795081937,
-        "narHash": "sha256-d7hySGTbI/rIj4QY50nEpTXBVO+ByxRcm6tEL5ud7L4=",
+        "narHash": "sha256-RmIhWMnvoW6U5I3sGxjcMBnbg1EBKsLxL97WIUPqeUk=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "e83f05a57545a2f7d828969cbc4d4e8897726750",
+        "rev": "7a27f9e305a3dad4f20900b96b24c4e2610a7496",
         "type": "github"
       },
       "original": {
@@ -330,16 +330,15 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1794583075,
-        "narHash": "sha256-pbko0nTc0eAg//GPlmoazb5rLH8MR2j3VQF/3mHDSNs=",
+        "lastModified": 1794911044,
+        "narHash": "sha256-rfySHCDwoYtE7j7zFcJHzaxPpZV3iCy1V2kta5nNjLA=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "f3b017068d09963fbb1fd27109b759d3b1a5f278",
+        "rev": "deccce98dbefdc8e26dc2fb71c35fa1eed604fd9",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "ghc-98-upgrade",
         "repo": "common",
         "type": "github"
       }
@@ -2991,10 +2990,10 @@
       },
       "locked": {
         "lastModified": 1795082562,
-        "narHash": "sha256-mPCXnN3tFbpPh/DYgkMvMLZVcbfSfpyKbpdPeV83+Bo=",
+        "narHash": "sha256-Rqa4D1h4zhHRPwY4of/DlW5btm+QMjO+yRlP3uY046s=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "94e4fedf035507774b3e4f47d6692541d2e62f80",
+        "rev": "8427ed4290379e87193e9c89a8c4f9c4ea01c121",
         "type": "github"
       },
       "original": {
@@ -6496,10 +6495,10 @@
       },
       "locked": {
         "lastModified": 1795081262,
-        "narHash": "sha256-Jqi0j3Hr/6TFQDEmtvHoNPa8ByxNwcw6SzrwiuEn+XY=",
+        "narHash": "sha256-yIEnEj4gf0vYUo1Whrp+Znnpj5qvobzmo4INxyRXgCs=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "a0f930e053530871a6303d64221df0304560a542",
+        "rev": "10624e98e6bc10e099aa2856280b6dd8c6ad3249",
         "type": "github"
       },
       "original": {

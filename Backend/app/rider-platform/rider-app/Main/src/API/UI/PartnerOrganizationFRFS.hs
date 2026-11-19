@@ -23,11 +23,13 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.PartnerOrganizationFRFS as DPOFRFS
+import qualified Domain.Types.FRFSQuote as Fields
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
+import qualified Domain.Types.Route as Fields
 import Environment
 import EulerHS.Prelude hiding (map)
 import Kernel.Beam.Functions as B
@@ -48,6 +50,7 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type API =
   "frfs"

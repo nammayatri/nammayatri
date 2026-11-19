@@ -6,11 +6,14 @@ import Data.List (lookup)
 import Data.Maybe (listToMaybe)
 import Data.Singletons.TH
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
 import Environment (AppEnv)
+import qualified Environment as Fields
 import EulerHS.Prelude
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))

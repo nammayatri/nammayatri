@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Types.SpecialLocation as Fields
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -38,6 +39,7 @@ import qualified Storage.Queries.VehicleExtra as QVehicleExtra
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QRCExtra
 import Tools.Auth ()
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getVehicleList ::
   ShortId DM.Merchant ->

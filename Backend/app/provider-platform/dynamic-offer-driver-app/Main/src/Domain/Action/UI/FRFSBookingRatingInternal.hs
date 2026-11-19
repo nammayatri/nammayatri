@@ -2,6 +2,7 @@ module Domain.Action.UI.FRFSBookingRatingInternal (postInternalFrfsBookingRating
 
 import qualified API.Types.UI.FRFSBookingRatingInternal as API
 import qualified Domain.Action.Beckn.Rating as BecknRating
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.FRFSBookingRating as DFRFSBookingRating
 import qualified Domain.Types.FRFSFleetStats as DFRFSFleetStats
 import qualified Domain.Types.Merchant as DM

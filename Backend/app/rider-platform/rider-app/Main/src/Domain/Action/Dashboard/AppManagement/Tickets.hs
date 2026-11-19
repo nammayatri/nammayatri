@@ -57,6 +57,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 
 postTicketsVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

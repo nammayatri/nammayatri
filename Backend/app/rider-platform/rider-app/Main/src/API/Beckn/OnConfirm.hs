@@ -17,8 +17,10 @@ module API.Beckn.OnConfirm (API, handler, onConfirmWebhook) where
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
+import qualified Domain.Action.Beckn.Common as Fields
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Domain.Types
 import Environment
@@ -35,6 +37,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 

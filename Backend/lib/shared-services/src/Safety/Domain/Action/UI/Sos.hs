@@ -42,9 +42,9 @@ updateSosFromNonRideToRide sos newRideId = do
     throwError $ InvalidRequest $ "SOS entityType is not NonRide. Current entityType: " <> show sos.entityType
 
   let updatedSos =
-        sos{entityType = Just DSos.Ride,
-            rideId = Just newRideId,
-            sosState = Just DSos.SosActive
+        sos{DSos.entityType = Just DSos.Ride,
+            DSos.rideId = Just newRideId,
+            DSos.sosState = Just DSos.SosActive
            }
 
   QSos.updateByPrimaryKey updatedSos

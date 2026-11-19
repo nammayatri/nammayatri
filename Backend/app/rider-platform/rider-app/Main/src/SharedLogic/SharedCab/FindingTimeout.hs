@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.FindingTimeout
 where
 
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFTBStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -42,6 +43,7 @@ import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Tools.Fields as Fields
 import Tools.Metrics (HasBAPMetrics)
 import qualified UrlShortner.Common as UrlShortner
 

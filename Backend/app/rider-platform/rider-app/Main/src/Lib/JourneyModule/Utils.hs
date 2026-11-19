@@ -17,11 +17,13 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
+import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -33,6 +35,7 @@ import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteDetails
 import qualified Domain.Types.RouteDetails as DRouteDetails
+import qualified Domain.Types.RouteStopMapping as Fields
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.SeatLayout as SeatLayout
@@ -86,6 +89,7 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import System.Environment (lookupEnv)
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.BAPMetrics as Metrics

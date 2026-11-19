@@ -20,6 +20,7 @@ import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Ticket.XyneSpaces.Config as Fields
 import qualified Kernel.External.Ticket.XyneSpaces.Types as XyneTypes
 import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString (..), verifyXyneSignature)
 import qualified Kernel.Storage.Hedis as Redis

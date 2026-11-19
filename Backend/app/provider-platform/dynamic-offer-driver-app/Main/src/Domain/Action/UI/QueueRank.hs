@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import Tools.Error

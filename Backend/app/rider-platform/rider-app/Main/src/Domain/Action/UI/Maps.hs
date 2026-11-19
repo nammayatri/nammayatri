@@ -34,10 +34,12 @@ import Data.List (nub)
 import Data.Text (pack)
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Action.UI.Person as Fields
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.PlaceNameCache as DTM
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)

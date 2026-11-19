@@ -5,6 +5,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common (CacheConfig (..))
 import Kernel.Utils.Logging (logDebug)
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Beam
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow

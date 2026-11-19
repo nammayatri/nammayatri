@@ -13,6 +13,7 @@ import qualified SharedLogic.InternalAuth as SIA
 import qualified SharedLogic.Settlement as Settlement
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 
 type API =
   "paymentChargeDetails"

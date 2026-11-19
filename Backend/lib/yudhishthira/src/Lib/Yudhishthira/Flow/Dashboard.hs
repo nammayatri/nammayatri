@@ -233,7 +233,7 @@ postQueryUpdate merchantOpCityId queryRequest = do
       let queryResults = fromMaybe existingChakraQuery.queryResults queryRequest.queryResults
       let queryText = fromMaybe existingChakraQuery.queryText queryRequest.queryText
       let queryType = fromMaybe (fromMaybe Lib.Yudhishthira.Types.CLICKHOUSE existingChakraQuery.queryType) queryRequest.queryType
-      return $ existingChakraQuery{queryResults = queryResults, queryText = queryText, queryType = Just queryType}
+      return $ existingChakraQuery{LYTCQ.queryResults = queryResults, LYTCQ.queryText = queryText, LYTCQ.queryType = Just queryType}
 
 validateQueryResults :: (MonadThrow m, Log m) => [Lib.Yudhishthira.Types.QueryResult] -> m ()
 validateQueryResults newQueryFields = do

@@ -39,6 +39,7 @@ import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DT
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, EncKind (..), EncryptedHashedField, decrypt, encrypt, getDbHash, unEncrypted)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis

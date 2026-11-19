@@ -17,6 +17,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.API.Payout as PayoutAPI
+import qualified Lib.Payment.Domain.Types.PayoutRequest as Fields
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth

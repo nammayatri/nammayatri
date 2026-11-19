@@ -19,10 +19,12 @@ import Kernel.Prelude hiding (map, minimumBy)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
+import qualified Kernel.Types.Geofencing as Fields
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Types as JL
+import qualified Lib.Queries.SpecialLocation as Fields
 import qualified Lib.Types.SpecialLocation as LSS
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -30,6 +32,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (..))
+import qualified Tools.Fields as Fields
 
 rentalsIntercityCache ::
   JL.GetFareFlow m r =>

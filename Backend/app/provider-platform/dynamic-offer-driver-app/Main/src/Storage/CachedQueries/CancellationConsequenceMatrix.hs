@@ -20,7 +20,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheConfig (..), CacheFlow, MonadFlow)
 import qualified Storage.Queries.CancellationConsequenceMatrix as Queries
 
 -- Any writer (dashboard CRUD) MUST call clearCacheByCity afterwards.

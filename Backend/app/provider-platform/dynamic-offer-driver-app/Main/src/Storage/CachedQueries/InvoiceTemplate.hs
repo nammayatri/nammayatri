@@ -19,6 +19,7 @@ import qualified Lib.Finance.Storage.Queries.InvoiceTemplate as Queries
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Tools.DynamicLogic as DynamicLogic
+import qualified Tools.Fields as Fields
 
 makeCacheKey :: Id DMOC.MerchantOperatingCity -> LYT.InvoiceTemplateScope -> Kernel.External.Types.Language -> Text
 makeCacheKey mocId scope lang =

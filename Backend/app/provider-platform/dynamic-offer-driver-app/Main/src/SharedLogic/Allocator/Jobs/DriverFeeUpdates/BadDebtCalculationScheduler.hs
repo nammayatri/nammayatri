@@ -2,6 +2,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler w
 
 import qualified Data.Map as M
 import Data.Time (UTCTime (UTCTime, utctDay), fromGregorian, secondsToDiffTime, toGregorian)
+import qualified Domain.Types.DriverFee as Fields
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -14,6 +15,7 @@ import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverFee as QDF
+import qualified Tools.Fields as Fields
 
 badDebtCalculation ::
   ( CacheFlow m r,

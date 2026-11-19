@@ -20,6 +20,7 @@ import Kernel.Utils.Common (fork, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import Storage.Queries.OrphanInstances.DriverFee ()
+import qualified Tools.Fields as Fields
 
 -- Extra code goes here --
 

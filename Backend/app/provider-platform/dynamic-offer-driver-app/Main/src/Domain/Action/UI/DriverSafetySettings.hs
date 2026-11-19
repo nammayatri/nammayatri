@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as Fields
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings

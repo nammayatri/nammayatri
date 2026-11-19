@@ -193,6 +193,7 @@ import Kernel.Utils.Common (MonadFlow, logDebug, logError, logInfo)
 import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData)
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
@@ -204,6 +205,7 @@ import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Finance.Utils.GstBreakdown as GstBreakdown
 import qualified SharedLogic.InvoiceEmailSchedule as SInvoiceEmailSchedule
+import qualified Tools.Fields as Fields
 
 -- ---------------------------------------------------------------------------
 -- Reference type constants (no hardcoded strings)

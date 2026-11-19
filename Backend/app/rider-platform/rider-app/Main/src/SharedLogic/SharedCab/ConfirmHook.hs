@@ -33,6 +33,7 @@ import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Tools.Fields as Fields
 
 type SharedCabConfirmFlow m r =
   ( JobCreator r m,

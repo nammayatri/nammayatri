@@ -48,6 +48,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.RideFeedbackResponse as QRFR
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -------------------------------------------------------------------------------
 -- API types (rider-app mirrors these in its BPP client)

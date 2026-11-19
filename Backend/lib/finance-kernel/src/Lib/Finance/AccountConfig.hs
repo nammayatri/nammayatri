@@ -34,7 +34,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Account (Account, AccountType, CounterpartyType)
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import Lib.Finance.Domain.Types.FinanceAccountConfig (CutoffSpec (..), FeeSpec, FinanceAccountConfig)
+import qualified Lib.Finance.Domain.Types.FinanceAccountConfig as Fields
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.FinanceAccountConfig as QFAC
 

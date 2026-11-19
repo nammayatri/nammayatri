@@ -63,6 +63,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVehicleRC
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 checkOperatorActiveAssociations :: Id DP.Person -> Flow ()
 checkOperatorActiveAssociations personId = do

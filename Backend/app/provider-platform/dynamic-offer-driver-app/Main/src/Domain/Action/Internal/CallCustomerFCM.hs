@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.CallCustomerFCM where
 
+import qualified Domain.Types.MerchantPushNotification as Fields
 import Domain.Types.Ride
 import Environment
 import EulerHS.Prelude
@@ -27,6 +28,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 
 callCustomerFCM :: Id Ride -> Maybe Text -> Flow APISuccess

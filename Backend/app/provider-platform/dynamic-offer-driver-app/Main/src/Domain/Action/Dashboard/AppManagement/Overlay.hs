@@ -45,6 +45,7 @@ import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Overlay as SQMO
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- =============================================
 ------------- create overlay -------------------

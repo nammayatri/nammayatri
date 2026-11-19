@@ -22,6 +22,7 @@ where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.AadhaarVerification as Reexport hiding
   ( generateAadhaarOtp,
     verifyAadhaarOtp,

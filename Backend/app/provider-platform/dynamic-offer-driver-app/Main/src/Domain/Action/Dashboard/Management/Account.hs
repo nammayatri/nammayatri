@@ -30,6 +30,7 @@ import Storage.Queries.Person ()
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.PersonExtra (updatePersonRole)
 import Tools.Error (FleetOwnerNotFoundError (FleetOwnerNotFound), MerchantError (MerchantNotFound), TransporterError (TransporterConfigNotFound))
+import qualified Tools.Fields as Fields
 
 -- This function will not be called.
 getAccountFetchUnverifiedAccounts ::

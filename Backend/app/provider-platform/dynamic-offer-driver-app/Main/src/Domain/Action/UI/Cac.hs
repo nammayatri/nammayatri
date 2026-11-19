@@ -10,6 +10,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common as Fields
 import qualified Kernel.Types.Id
 import SharedLogic.Cac
 

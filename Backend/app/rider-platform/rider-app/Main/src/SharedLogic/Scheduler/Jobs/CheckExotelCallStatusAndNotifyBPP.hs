@@ -16,10 +16,12 @@ module SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP where
 
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.CallStatus as DCallStatus hiding (rideId)
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Ride as Ride
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common

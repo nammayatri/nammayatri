@@ -21,6 +21,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.EmailDelivery as QEmailDelivery
 import qualified Storage.Queries.TDSDistributionRecord as QRecord
+import qualified Tools.Fields as Fields
 
 -- | Where the event came from; checked against the delivery's city configuration.
 data EventSource

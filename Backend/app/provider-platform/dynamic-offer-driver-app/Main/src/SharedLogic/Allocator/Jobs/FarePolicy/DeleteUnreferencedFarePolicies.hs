@@ -19,6 +19,7 @@ module SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies
 where
 
 import qualified Data.List as DL
+import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC

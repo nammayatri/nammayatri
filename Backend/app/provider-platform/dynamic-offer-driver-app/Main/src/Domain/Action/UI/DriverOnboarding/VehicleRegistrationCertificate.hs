@@ -54,6 +54,7 @@ import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -62,9 +63,11 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleDetails as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.VehicleVariant as DV

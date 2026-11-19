@@ -4,6 +4,7 @@ module SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
   )
 where
 
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -17,7 +18,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler
+import qualified Lib.Types.GateInfo as Fields
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import SharedLogic.SpecialZoneDriverDemand (mkSpecialZoneQueueRequestLockKey)

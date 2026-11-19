@@ -75,6 +75,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
+import qualified Domain.Types.PlatformFeeSlab as Fields
 import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (elem, id, map, or, sum)
 import GHC.Float (int2Double)

@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.Fields as Fields
 
 -- | Thin internal (api-key authed) wrapper that reuses the existing
 -- UnifiedDashboard person-create handler so dashboards can create a driver-side

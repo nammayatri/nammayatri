@@ -52,6 +52,7 @@ import Kernel.External.Encryption (encrypt, getDbHash)
 import qualified Kernel.External.Types as KET
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
@@ -76,6 +77,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.SMS as Sms hiding (Success)
 
 ---------------------------------------------------------------------

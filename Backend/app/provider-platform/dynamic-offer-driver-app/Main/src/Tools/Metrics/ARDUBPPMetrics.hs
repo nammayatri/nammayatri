@@ -20,7 +20,6 @@ where
 
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import GHC.Records.Extra
 import Kernel.Types.Common
 import Kernel.Utils.Time (getClockTimeInMs)
 import Prometheus as P

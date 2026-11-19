@@ -48,6 +48,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Extra.SurgeConfig as DSCE
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Domain.Types.SurgeConfig as DSC
 import Environment
 import Kernel.Beam.Functions (runInReplica)
@@ -70,6 +71,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.RiderDetailsExtra as QRD
 import qualified Storage.Queries.SearchRequestExtra as QSR
 import qualified Storage.Queries.SurgeConfig as QSC
+import qualified Tools.Fields as Fields
 
 resolveCity :: ShortId DM.Merchant -> Context.City -> Flow (DM.Merchant, DMOC.MerchantOperatingCity)
 resolveCity merchantShortId opCity = do

@@ -5,6 +5,7 @@ module Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig where
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheConfig (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.TimeBoundConfig as Queries
 import Lib.Yudhishthira.Types

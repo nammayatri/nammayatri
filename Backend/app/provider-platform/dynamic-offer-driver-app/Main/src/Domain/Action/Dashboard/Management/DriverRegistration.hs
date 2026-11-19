@@ -70,6 +70,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Common.BulkUpload as BulkUpload
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
+import qualified Domain.Action.UI.Driver as Fields
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -93,15 +94,21 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.DriverRCAssociation as DRCA
+import qualified Domain.Types.DriverSSN as Fields
 import qualified Domain.Types.DriverUdyam as DUdyam
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.HyperVergeVerification as Fields
+import qualified Domain.Types.IdfyVerification as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.SubscriptionConfig as Fields
+import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
@@ -123,7 +130,7 @@ import qualified Kernel.External.Types as Lang
 import Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types as VerificationTypes
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
@@ -134,10 +141,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
+import qualified Lib.Finance.Domain.Types.Invoice as Fields
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
@@ -190,8 +200,10 @@ import qualified Storage.Queries.VehicleNOC as QVNOC
 import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import qualified TempAppCode.Types as Fields
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms

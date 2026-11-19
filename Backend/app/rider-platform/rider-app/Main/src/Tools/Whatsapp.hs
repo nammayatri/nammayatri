@@ -23,6 +23,7 @@ where
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Whatsapp.Interface as Reexport hiding
   ( whatsAppOptApi,

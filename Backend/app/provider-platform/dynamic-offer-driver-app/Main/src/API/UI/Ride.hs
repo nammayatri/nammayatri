@@ -38,7 +38,9 @@ import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.EndRideRequirements as RideEndRequirements
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -69,6 +71,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type API =
   "driver"

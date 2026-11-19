@@ -29,6 +29,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Network.HTTP.Types as HTTP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal

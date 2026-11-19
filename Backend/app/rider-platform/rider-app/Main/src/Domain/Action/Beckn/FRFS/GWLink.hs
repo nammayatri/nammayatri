@@ -11,6 +11,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
 import qualified Domain.Types.FRFSTicketStatus as FRFS
 import Domain.Types.Merchant as M
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as Fields
 import EulerHS.Prelude hiding (exp)
 import qualified EulerHS.Types as Euler
 import Kernel.External.Encryption

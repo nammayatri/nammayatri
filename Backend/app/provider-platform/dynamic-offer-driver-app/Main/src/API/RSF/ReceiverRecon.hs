@@ -10,6 +10,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RsfReconLedgerEntry as L
 import Environment
@@ -26,6 +27,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RsfReconLedgerEntry as QLedger
+import qualified Tools.Fields as Fields
 
 -- Mounted beside the other Beckn callbacks: the registry advertises this BPP as
 -- <bpp_uri>/beckn/<merchantId>, and collectors append the action to it. SignatureAuth

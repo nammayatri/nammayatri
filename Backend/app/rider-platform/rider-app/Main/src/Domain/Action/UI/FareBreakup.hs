@@ -2,6 +2,7 @@ module Domain.Action.UI.FareBreakup where
 
 import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Data.Aeson
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP

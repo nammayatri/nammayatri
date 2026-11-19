@@ -2,6 +2,7 @@
 
 module Lib.JourneyLeg.Taxi where
 
+import qualified API.Types.UI.MultimodalConfirm as Fields
 import qualified API.UI.Select as DSelect
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
@@ -18,9 +19,12 @@ import Domain.Types.BookingStatus
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Journey as Fields
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.SearchRequest as Fields
 import Domain.Types.ServiceTierType ()
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Fields
 import Kernel.External.Maps.Types
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -46,6 +50,7 @@ import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchReques
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Fields as Fields
 import TransactionLogs.Types
 
 instance JT.JourneyLeg TaxiLegRequest m where

@@ -1,5 +1,6 @@
 module ExternalBPP.ExternalAPI.Direct.Status where
 
+import qualified Domain.Types.FRFSTicket as Fields
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Domain.Types.IntegratedBPPConfig

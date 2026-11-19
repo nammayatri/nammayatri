@@ -6,6 +6,7 @@ module Domain.Action.Internal.SendEmailOTP
 where
 
 import qualified Control.Exception as E
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Email.Flow as Email
 import Email.OTP.Types
 import Environment

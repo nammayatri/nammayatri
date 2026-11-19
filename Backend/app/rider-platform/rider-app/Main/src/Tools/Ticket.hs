@@ -36,6 +36,7 @@ import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Ticket.Types as TicketTypes
+import qualified Kernel.External.Ticket.XyneSpaces.Config as Fields
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id

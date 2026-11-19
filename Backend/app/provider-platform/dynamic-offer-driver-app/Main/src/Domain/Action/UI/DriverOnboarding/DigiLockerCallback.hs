@@ -12,9 +12,11 @@ import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DLModule
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.DriverPanCard as DPC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -47,6 +49,7 @@ import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 
 type DigiLockerCallbackAPI =

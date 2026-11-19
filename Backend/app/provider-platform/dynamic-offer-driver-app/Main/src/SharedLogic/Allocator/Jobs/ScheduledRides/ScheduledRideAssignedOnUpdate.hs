@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason as DCR
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -63,6 +64,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types

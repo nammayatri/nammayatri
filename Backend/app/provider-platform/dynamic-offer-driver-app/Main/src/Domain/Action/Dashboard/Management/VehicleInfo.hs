@@ -7,8 +7,10 @@ where
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo as Common
 import qualified Data.List as DL
 import qualified Domain.Types.DocumentReminderHistory as DRH
+import qualified Domain.Types.EntityInfo as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleInfo as DVI
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.APISuccess

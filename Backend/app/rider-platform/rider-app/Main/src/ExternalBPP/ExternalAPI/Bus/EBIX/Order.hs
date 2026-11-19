@@ -11,6 +11,9 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Route as Fields
+import qualified Domain.Types.RouteStopMapping as Fields
+import qualified Domain.Types.Station as Fields
 import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Bus.EBIX.Auth
 import ExternalBPP.ExternalAPI.Types
@@ -19,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
 import SharedLogic.FRFSUtils

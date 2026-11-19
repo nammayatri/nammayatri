@@ -6,6 +6,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Payment.Interface.Types as Fields
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
@@ -21,6 +22,7 @@ import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 data OfferDiscountReq = OfferDiscountReq
   { fareAmount :: Maybe HighPrecMoney,

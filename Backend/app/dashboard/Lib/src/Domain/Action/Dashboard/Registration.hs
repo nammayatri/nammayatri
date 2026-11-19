@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.Entity as Entity
+import qualified Domain.Types.EntityAccess as Fields
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import Domain.Types.Person as DP
@@ -32,6 +33,7 @@ import qualified Domain.Types.Transaction as DT
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import qualified Kernel.External.Encryption as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))

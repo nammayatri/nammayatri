@@ -15,6 +15,7 @@
 module Domain.Action.Internal.SharedCabAllocation where
 
 import API.Types.UI.SharedCabInternal (SharedCabCheckInReq)
+import qualified API.Types.UI.SharedCabInternal as Fields
 import Domain.Types.Person (Person)
 import Environment
 import EulerHS.Prelude
@@ -27,6 +28,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 
 sharedCabAllocationFCM :: SharedCabAllocationEntityData -> Maybe Text -> Flow APISuccess

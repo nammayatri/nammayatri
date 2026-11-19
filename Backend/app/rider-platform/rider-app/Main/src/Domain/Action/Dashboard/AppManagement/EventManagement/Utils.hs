@@ -6,6 +6,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Domain.Types.TicketPlace
 import qualified Environment
 import qualified EulerHS.Language as L

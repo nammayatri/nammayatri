@@ -32,6 +32,7 @@ import Domain.Action.UI.TollChargeApproval (TollChargeApprovalRequestRes, acknow
 import Domain.Types
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import qualified Domain.Types.BookingPartiesLink as Fields
 import Domain.Types.BookingStatus
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
@@ -57,6 +58,7 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (elem, find, id, length, map, notElem, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.FleetEngine.Config as Fields
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -70,6 +72,7 @@ import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
@@ -104,6 +107,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.JSON as J
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Schema as S

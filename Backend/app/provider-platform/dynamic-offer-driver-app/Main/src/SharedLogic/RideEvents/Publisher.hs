@@ -15,6 +15,7 @@ import Domain.Types.Event.RideEndedEvent
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import Environment (RideEventsKafkaCfg, RideEventsPublisherCfg, RideEventsRedisCfg)
+import qualified Environment as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Hedis.Config (HedisFlow)

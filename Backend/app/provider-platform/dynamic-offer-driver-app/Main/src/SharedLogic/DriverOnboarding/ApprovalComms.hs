@@ -21,6 +21,8 @@ module SharedLogic.DriverOnboarding.ApprovalComms
   )
 where
 
+import qualified Domain.Types.DriverRCAssociation as Fields
+import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -43,6 +45,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 

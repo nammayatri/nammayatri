@@ -5,10 +5,15 @@ module SharedLogic.RuleBasedTierUpgrade
 where
 
 import Data.Either.Extra (eitherToMaybe)
+import qualified Domain.Types.Booking as Fields
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.ServiceTierType as ST
 import qualified Domain.Types.TransporterConfig as DTTC
 import qualified Domain.Types.UpgradedTier as DU
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.Yudhishthira as Yudhishthira
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude

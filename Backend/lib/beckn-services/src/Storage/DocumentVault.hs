@@ -14,7 +14,7 @@ import Amazonka.Env (env_region)
 import qualified Amazonka.KMS as KMS
 import qualified Amazonka.KMS.Lens as KMS
 import Control.Concurrent.MVar (MVar, newMVar, withMVar)
-import Control.Lens ((.~), (?~), (^.), (^?))
+import Control.Lens ((?~), (^.), (^?))
 import Control.Monad.Trans.Resource (runResourceT)
 import Crypto.Cipher.AES (AES256)
 import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..), aeadInit, aeadSimpleDecrypt, aeadSimpleEncrypt, cipherInit)

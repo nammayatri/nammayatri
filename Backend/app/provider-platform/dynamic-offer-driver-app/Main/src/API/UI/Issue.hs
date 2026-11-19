@@ -5,6 +5,7 @@ import qualified API.Types.ProviderPlatform.Management.Ride as PPMR
 import qualified AWS.S3 as S3
 import qualified Data.Text as T
 import Domain.Action.Dashboard.Ride as DRide
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -31,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.CallBAPInternal as Fields
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -43,6 +45,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Ticket as TT
 

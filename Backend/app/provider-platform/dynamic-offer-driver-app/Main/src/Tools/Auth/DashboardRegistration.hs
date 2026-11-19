@@ -51,6 +51,7 @@ import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DRegistration
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
+import qualified Domain.Types.MerchantPair as Fields
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DTServer

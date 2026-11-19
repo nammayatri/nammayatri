@@ -25,6 +25,7 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as Map
 import Domain.Action.UI.NearbyBuses (getSimpleNearbyBuses)
 import Domain.Action.UI.Serviceability (getNearestOperatingAndCurrentCity)
+import qualified Domain.Action.UI.Serviceability as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -39,9 +40,9 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.HasCoordinates as Maps
 import qualified Kernel.External.Maps.Types as MapsTypes
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Geofencing as Fields
 import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Logging as Log
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
@@ -55,6 +56,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 deriving instance Hashable Meters
 

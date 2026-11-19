@@ -24,6 +24,7 @@ import Domain.Types.PlatformFeeSlab
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Types.CacheFlow as Fields
 import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.PlatformFeeSlab as Queries
 

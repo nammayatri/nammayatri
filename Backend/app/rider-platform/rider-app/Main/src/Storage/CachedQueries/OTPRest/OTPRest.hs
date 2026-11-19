@@ -11,9 +11,12 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Route as Route
+import qualified Domain.Types.RoutePolylines as Fields
 import Domain.Types.RouteStopMapping
 import qualified Domain.Types.Station as Station
+import qualified Domain.Types.StationsExtraInformation as Fields
 import GHC.Num (integerFromInt)
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM

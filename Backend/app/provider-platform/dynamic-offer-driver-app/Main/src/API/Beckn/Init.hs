@@ -27,7 +27,9 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequest as Fields
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
@@ -52,6 +54,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API =

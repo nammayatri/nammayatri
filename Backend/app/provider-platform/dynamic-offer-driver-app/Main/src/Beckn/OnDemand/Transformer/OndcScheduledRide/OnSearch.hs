@@ -21,8 +21,11 @@ import Domain.Types.AddOnConfig (AddOnConfig)
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.Common (ServiceTierType)
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Quote as Fields
+import qualified Domain.Types.VehicleServiceTier as Fields
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -32,6 +35,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import qualified SharedLogic.AddOn as SAddOn
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Tools.Fields as Fields
 
 -- | Single entry point for API.Beckn.Search.search: fetches beckn_config,
 -- the BAP's BapMetadata, and the add-ons on offer in this city, then applies

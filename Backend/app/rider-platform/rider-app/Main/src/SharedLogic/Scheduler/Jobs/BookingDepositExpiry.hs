@@ -36,6 +36,7 @@ import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.Fields as Fields
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types (KeyConfig, TokenConfig)
 import qualified UrlShortner.Common as UrlShortner

@@ -26,6 +26,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Tools.Fields as Fields
 
 mkOnSearchRequest ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

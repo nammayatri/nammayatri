@@ -10,9 +10,12 @@ import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequest as Fields
+import qualified Domain.Types.SearchTry as Fields
 import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
+import qualified Kernel.External.Encryption as Fields
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -22,6 +25,7 @@ import qualified Storage.Queries.RiderDetailsExtra as QRD
 import qualified Storage.Queries.SearchRequestExtra as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error (GenericError (InvalidRequest))
+import qualified Tools.Fields as Fields
 
 postSearchTryRecentSearchTries ::
   ShortId DM.Merchant ->

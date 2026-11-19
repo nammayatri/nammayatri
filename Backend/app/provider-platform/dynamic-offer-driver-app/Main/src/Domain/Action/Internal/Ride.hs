@@ -23,6 +23,7 @@ import qualified Domain.Types.RideEvidence as DRE
 import Domain.Utils
 import Environment
 import qualified FileManagement.Domain.Action.UI.File as DFile
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -37,6 +38,7 @@ import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.RideEvidence as QRideEvidence
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getDeliveryImage :: Id Ride -> Maybe Text -> Flow Text
 getDeliveryImage rideId apiKey = do

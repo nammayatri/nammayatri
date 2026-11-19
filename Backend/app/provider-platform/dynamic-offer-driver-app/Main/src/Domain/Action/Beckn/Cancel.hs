@@ -24,6 +24,7 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Fields
 import Data.Maybe
 import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide.Internal
@@ -81,6 +82,7 @@ import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 
@@ -172,8 +174,8 @@ cancel req merchant booking mbActiveSearchTry = do
           pure consequenceCtx
 
     whenJust mbRide $ \ride -> do
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
-      triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      triggerRideCancelledEvent RideEventData {ride = ride{SRide.status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      triggerBookingCancelledEvent BookingEventData {booking = booking{SRB.status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
 
     -- Driver-fault attribution: persist the pickup journey onto the ride, and if the
     -- monitor saw the driver in a hard fault state (STALLED / MOVING_AWAY) when the

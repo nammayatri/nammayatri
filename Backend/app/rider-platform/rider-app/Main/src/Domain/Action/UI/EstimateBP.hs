@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DriverOffer as Fields
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant as Merchant

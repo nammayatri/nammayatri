@@ -5,7 +5,9 @@ where
 
 import qualified API.Types.UI.LegalPublishInternal
 import qualified Dashboard.Common as Common
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude

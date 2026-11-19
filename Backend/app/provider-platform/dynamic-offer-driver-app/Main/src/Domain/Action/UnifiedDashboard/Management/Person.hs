@@ -14,7 +14,8 @@ import qualified Domain.Types.Person as DP
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
-import Kernel.Sms.Config (SmsConfig, useFakeSms)
+import Kernel.Sms.Config (SmsConfig (..), useFakeSms)
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context

@@ -33,6 +33,7 @@ import Data.List (nub)
 import qualified Domain.Action.Dashboard.RideBooking.Driver as RBDriver
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.MerchantAccess as DAccess
+import qualified Domain.Types.Person.Type as Fields
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import Environment
 import Kernel.Beam.Functions (runInDashboardDb)

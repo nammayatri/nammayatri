@@ -21,6 +21,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 newtype AddBaggageConfirmReq = AddBaggageConfirmReq
   { numberOfLuggages :: Int

@@ -15,6 +15,7 @@ import qualified Storage.Beam.Message as BeamM
 import qualified Storage.Beam.MessageTranslation as BeamMT
 import qualified Storage.Queries.MessageTranslation as MT
 import Storage.Queries.OrphanInstances.Message ()
+import qualified Tools.Fields as Fields
 
 -- Extra code goes here --
 createMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()

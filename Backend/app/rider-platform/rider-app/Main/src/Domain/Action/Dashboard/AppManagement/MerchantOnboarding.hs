@@ -29,8 +29,10 @@ import qualified Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handle
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOnboarding as DMO
 import qualified "this" Domain.Types.MerchantOnboarding
+import qualified Domain.Types.MerchantOnboarding.Handler as Fields
 import qualified Domain.Types.MerchantOnboardingStep as DMOS
 import qualified "this" Domain.Types.MerchantOnboardingStep
+import qualified Domain.Types.MerchantOnboardingStepConfig as Fields
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
