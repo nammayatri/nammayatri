@@ -572,7 +572,7 @@ let documentVaultConfig =
         { region : Text
         , processingKeyAliasPrefix : Text
         , processingWindowDays : Integer
-        , processingRoleArn : Text
+        , processingRoleArns : List Text
         , keyAdminRoleArn : Text
         , archiveKeyArn : Text
         , kmsEndpoint : Optional Text

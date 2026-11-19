@@ -192,7 +192,8 @@ def open_archive(sealed_bytes):
 
     if not sealed_bytes.startswith(_OBJECT_MAGIC):
         raise ValueError("not a sealed document")
-    archive_encrypted_data_key, offset = _take_length_prefixed(sealed_bytes, len(_OBJECT_MAGIC))
+    _, offset = _take_length_prefixed(sealed_bytes, len(_OBJECT_MAGIC))
+    archive_encrypted_data_key, offset = _take_length_prefixed(sealed_bytes, offset)
     document_id, offset = _take_length_prefixed(sealed_bytes, offset)
     nonce = sealed_bytes[offset:offset + 12]
     tag = sealed_bytes[offset + 12:offset + 28]
