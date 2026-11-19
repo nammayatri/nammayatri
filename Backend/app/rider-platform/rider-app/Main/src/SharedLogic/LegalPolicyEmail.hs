@@ -1,35 +1,35 @@
 module SharedLogic.LegalPolicyEmail
-  ( LegalPolicyEmailLogicInput (..),
-    LegalPolicyEmailLogicOutput (..),
+  ( RenderedLegalPolicyEmail (..),
+    renderLegalPolicyEmail,
   )
 where
 
-import qualified Dashboard.Common as Common
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
-import Kernel.External.Maps (Language)
 import Kernel.Prelude
-import Kernel.Types.Id
+import Lib.Finance.Invoice.RenderTemplate (buildTemplateChecked, escHtml)
 
-data LegalPolicyEmailLogicInput = LegalPolicyEmailLogicInput
-  { policyDocId :: Id DPCD.PolicyAndComplianceDocument,
-    merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    policyType :: Common.PolicyType,
-    entityType :: Maybe Common.LegalEntityType,
-    version :: Text,
-    url :: Text,
-    isMandatory :: Bool,
-    personId :: Id DP.Person,
-    language :: Maybe Language
+data RenderedLegalPolicyEmail = RenderedLegalPolicyEmail
+  { subject :: Text,
+    html :: Text,
+    missingKeys :: [Text]
   }
-  deriving (Generic, Show, ToJSON)
 
-data LegalPolicyEmailLogicOutput = LegalPolicyEmailLogicOutput
-  { subject :: [Text],
-    body :: [Text],
-    fromEmail :: Maybe Text
-  }
-  deriving (Generic, Show, FromJSON)
+renderLegalPolicyEmail :: DET.EmailTemplate -> DET.LegalPolicyEmailConfig -> DPCD.PolicyAndComplianceDocument -> RenderedLegalPolicyEmail
+renderLegalPolicyEmail template config policy =
+  let vars =
+        [ ("policyName", fromMaybe (show policy.policyType) (Map.lookup policy.policyType config.policyTypeLabels)),
+          ("version", policy.version),
+          ("url", policy.url),
+          ("mandatoryStyle", if policy.isMandatory then "" else "display:none;"),
+          ("optionalStyle", if policy.isMandatory then "display:none;" else "")
+        ]
+      (renderedSubject, subjectMissing) = buildTemplateChecked vars template.subjectTemplate
+      (renderedHtml, htmlMissing) = buildTemplateChecked (map (\(k, v) -> (k, escHtml v)) vars) template.htmlTemplate
+   in RenderedLegalPolicyEmail
+        { subject = T.strip renderedSubject,
+          html = renderedHtml,
+          missingKeys = subjectMissing <> htmlMissing
+        }

@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Language: Kernel.External.Types
   Value: Data.Aeson
-  InvoiceEmailConfig: Lib.Finance.Invoice.Email
+  EmailTemplateConfig: Domain.Types.Extra.EmailTemplate
 
 EmailTemplate:
   tableName: email_template
@@ -11,7 +11,7 @@ EmailTemplate:
 
   types:
     EmailTemplateKey:
-      enum: "RIDE_INVOICE,REFUND_INVOICE,RIDE_CANCELLATION_INVOICE"
+      enum: "RIDE_INVOICE,REFUND_INVOICE,RIDE_CANCELLATION_INVOICE,LEGAL_POLICY_UPDATE"
       derive: "Bounded, Enum"
 
   fields:
@@ -22,7 +22,7 @@ EmailTemplate:
     language: Language
     subjectTemplate: Text
     htmlTemplate: Text
-    config: InvoiceEmailConfig
+    config: EmailTemplateConfig
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -30,7 +30,7 @@ EmailTemplate:
     config: Value
 
   fromTType:
-    config: Storage.Queries.Transformers.EmailTemplate.getInvoiceEmailConfig config|EM
+    config: Storage.Queries.Transformers.EmailTemplate.getEmailTemplateConfig config|EM
 
   toTType:
     config: Data.Aeson.toJSON config|E
@@ -59,3 +59,4 @@ EmailTemplate:
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_DOMAIN_TYPE_FILE

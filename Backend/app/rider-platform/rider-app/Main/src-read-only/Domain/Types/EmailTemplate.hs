@@ -1,19 +1,21 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.EmailTemplate where
+module Domain.Types.EmailTemplate (module Domain.Types.EmailTemplate, module ReExport) where
 
 import Data.Aeson
+import Domain.Types.Extra.EmailTemplate as ReExport
+import qualified Domain.Types.Extra.EmailTemplate
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Lib.Finance.Invoice.Email
 import qualified Tools.Beam.UtilsTH
 
 data EmailTemplate = EmailTemplate
-  { config :: Lib.Finance.Invoice.Email.InvoiceEmailConfig,
+  { config :: Domain.Types.Extra.EmailTemplate.EmailTemplateConfig,
     createdAt :: Kernel.Prelude.UTCTime,
     htmlTemplate :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.EmailTemplate.EmailTemplate,
@@ -26,6 +28,6 @@ data EmailTemplate = EmailTemplate
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-data EmailTemplateKey = RIDE_INVOICE | REFUND_INVOICE | RIDE_CANCELLATION_INVOICE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+data EmailTemplateKey = RIDE_INVOICE | REFUND_INVOICE | RIDE_CANCELLATION_INVOICE | LEGAL_POLICY_UPDATE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EmailTemplateKey))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmailTemplateKey)
