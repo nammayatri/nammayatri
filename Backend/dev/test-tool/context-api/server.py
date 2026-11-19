@@ -642,7 +642,7 @@ def _apply_devbox_fcm(key_file: Path = DEVBOX_FCM_KEY_FILE) -> str:
             f" {transporter_rows} transporter_config row(s)")
 
 
-PC_SOCKET_PATH =os.environ.get("PC_SOCKET_PATH") or str(PROJECT_ROOT / "data" / "process-compose.sock")
+PC_SOCKET_PATH = os.environ.get("PC_SOCKET_PATH") or str(PROJECT_ROOT / "data" / "process-compose.sock")
 PC_ACTIONS = {"start": ("POST", "/process/start/{}"), "stop": ("PATCH", "/process/stop/{}"), "restart": ("POST", "/process/restart/{}")}
 
 
