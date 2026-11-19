@@ -210,3 +210,18 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN allow
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN ai_image_verification_enabled boolean ;
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN ai_verification_questions text ;
+
+
+------- SQL updates -------

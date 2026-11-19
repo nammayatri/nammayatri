@@ -17,7 +17,9 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data DocumentVerificationConfig = DocumentVerificationConfig
-  { allowLicenseTransfer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { aiImageVerificationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    aiVerificationQuestions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    allowLicenseTransfer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowNonTransportVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,
