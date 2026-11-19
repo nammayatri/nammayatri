@@ -4,8 +4,8 @@ module SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification where
 
 import qualified Control.Exception as E
 import qualified Dashboard.Common as Common
-import qualified Data.Aeson as A
 import qualified Data.Text as T
+import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import qualified Domain.Types.RiderConfig as Fields
@@ -13,33 +13,27 @@ import qualified Email.Flow as Email
 import Kernel.Beam.Functions (findAllWithOptionsKV)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (Language (ENGLISH), SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified Sequelize as Se
+import SharedLogic.InvoiceEmail (findEmailTemplate)
 import SharedLogic.JobScheduler
-import SharedLogic.LegalPolicyEmail (LegalPolicyEmailLogicInput (..), LegalPolicyEmailLogicOutput (..))
+import SharedLogic.LegalPolicyEmail (RenderedLegalPolicyEmail (..), renderLegalPolicyEmail)
 import qualified Storage.Beam.Person as BeamP
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.PolicyAndComplianceDocument as QPCD
-import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 
 defaultBatchSize :: Int -- Check in evaluation
 defaultBatchSize = 1000
-
-defaultFromAddress :: Text -- Check in evaluation
-defaultFromAddress = "noreply@moving.tech"
 
 handleSendLegalPolicyNotification ::
   ( EncFlow m r,
@@ -72,15 +66,14 @@ handleSendLegalPolicyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id
       if null recipients
         then return Complete
         else do
-          now <- getCurrentTime
-          (dynamicLogics, _mbVersion) <- getAppDynamicLogic (cast jobData.merchantOperatingCityId) LYT.LEGAL_POLICY_UPDATE_EMAIL now Nothing Nothing
-          if null dynamicLogics
-            then do
-              logError $ "LEGAL_POLICY_UPDATE_EMAIL dynamic logic not configured for city " <> jobData.merchantOperatingCityId.getId <> " — aborting batch"
+          mbFallbackTemplate <- findEmailTemplate jobData.merchantOperatingCityId DET.LEGAL_POLICY_UPDATE ENGLISH
+          case mbFallbackTemplate of
+            Nothing -> do
+              logError $ "LEGAL_POLICY_UPDATE email template not configured for city " <> jobData.merchantOperatingCityId.getId <> " — aborting batch"
               return Complete
-            else do
+            Just _ -> do
               emailServiceConfig <- asks (.emailServiceConfig)
-              forM_ recipients $ sendOne emailServiceConfig policy jobData dynamicLogics
+              forM_ recipients $ sendOne emailServiceConfig policy jobData
               createJobIn @_ @'SendLegalPolicyNotification
                 (Just jobData.merchantId)
                 (Just jobData.merchantOperatingCityId)
@@ -90,6 +83,8 @@ handleSendLegalPolicyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id
 
 sendOne ::
   ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
     MonadFlow m,
     HasKafkaProducer r,
     MonadReader r m
@@ -97,18 +92,19 @@ sendOne ::
   Email.EmailServiceConfig ->
   DPCD.PolicyAndComplianceDocument ->
   SendLegalPolicyNotificationJobData ->
-  [A.Value] ->
   DP.Person ->
   m ()
-sendOne emailServiceConfig policy jobData dynamicLogics person = do
+sendOne emailServiceConfig policy jobData person = do
   mbRecipientEmail <- mapM decrypt person.email
   case mbRecipientEmail of
     Nothing -> emitEvent person policy jobData AttemptFailed (Just "no_email") (Just "person has no email on file")
     Just recipientEmail -> do
-      logicResp <- LYTU.runLogics dynamicLogics (buildLogicInput policy jobData person)
-      case A.fromJSON logicResp.result :: A.Result LegalPolicyEmailLogicOutput of
-        A.Error parseErr -> emitEvent person policy jobData AttemptFailed (Just "logic_result_parse_failed") (Just . T.pack $ parseErr)
-        A.Success emailContent -> dispatchEmail emailServiceConfig recipientEmail emailContent person policy jobData
+      mbTemplate <- findEmailTemplate jobData.merchantOperatingCityId DET.LEGAL_POLICY_UPDATE (fromMaybe ENGLISH person.language)
+      case mbTemplate of
+        Nothing -> emitEvent person policy jobData AttemptFailed (Just "template_not_found") (Just "no LEGAL_POLICY_UPDATE email template for city")
+        Just template -> case template.config of
+          DET.LegalPolicyEmailTemplateConfig config -> dispatchEmail emailServiceConfig recipientEmail template config person policy jobData
+          DET.InvoiceEmailTemplateConfig _ -> emitEvent person policy jobData AttemptFailed (Just "template_config_invalid") (Just $ "email template " <> template.id.getId <> " has no legal policy config")
 
 dispatchEmail ::
   ( MonadFlow m,
@@ -117,34 +113,20 @@ dispatchEmail ::
   ) =>
   Email.EmailServiceConfig ->
   Text ->
-  LegalPolicyEmailLogicOutput ->
+  DET.EmailTemplate ->
+  DET.LegalPolicyEmailConfig ->
   DP.Person ->
   DPCD.PolicyAndComplianceDocument ->
   SendLegalPolicyNotificationJobData ->
   m ()
-dispatchEmail emailServiceConfig recipientEmail emailContent person policy jobData = do
-  let fromAddress = fromMaybe defaultFromAddress emailContent.fromEmail
-      subject = T.concat emailContent.subject
-      body = T.concat emailContent.body
-  sendResult <- liftIO $ E.try @E.SomeException $ Email.sendPlainEmail emailServiceConfig fromAddress [recipientEmail] subject body Email.HtmlText
+dispatchEmail emailServiceConfig recipientEmail template config person policy jobData = do
+  let rendered = renderLegalPolicyEmail template config policy
+  unless (null rendered.missingKeys) $
+    logWarning $ "Legal policy email template has unfilled keys: " <> T.intercalate "," rendered.missingKeys
+  sendResult <- liftIO $ E.try @E.SomeException $ Email.sendPlainEmail emailServiceConfig config.fromEmail [recipientEmail] rendered.subject rendered.html Email.HtmlText
   case sendResult of
     Right () -> emitEvent person policy jobData AttemptedOk Nothing Nothing
     Left sendErr -> emitEvent person policy jobData AttemptFailed (Just "send_exception") (Just . show $ sendErr)
-
-buildLogicInput :: DPCD.PolicyAndComplianceDocument -> SendLegalPolicyNotificationJobData -> DP.Person -> LegalPolicyEmailLogicInput
-buildLogicInput policy jobData person =
-  LegalPolicyEmailLogicInput
-    { policyDocId = policy.id,
-      merchantId = jobData.merchantId,
-      merchantOperatingCityId = jobData.merchantOperatingCityId,
-      policyType = policy.policyType,
-      entityType = policy.entityType,
-      version = policy.version,
-      url = policy.url,
-      isMandatory = policy.isMandatory,
-      personId = person.id,
-      language = person.language
-    }
 
 data AttemptStatus = AttemptedOk | AttemptFailed
 

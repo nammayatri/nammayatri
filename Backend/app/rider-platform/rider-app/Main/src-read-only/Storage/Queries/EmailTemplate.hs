@@ -56,7 +56,7 @@ updateByPrimaryKey (Domain.Types.EmailTemplate.EmailTemplate {..}) = do
 
 instance FromTType' Beam.EmailTemplate Domain.Types.EmailTemplate.EmailTemplate where
   fromTType' (Beam.EmailTemplateT {..}) = do
-    config' <- Storage.Queries.Transformers.EmailTemplate.getInvoiceEmailConfig config
+    config' <- Storage.Queries.Transformers.EmailTemplate.getEmailTemplateConfig config
     pure $
       Just
         Domain.Types.EmailTemplate.EmailTemplate
