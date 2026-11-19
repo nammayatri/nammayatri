@@ -294,7 +294,8 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
       else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
     fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
     updatedJourney <- JM.getJourney journeyId
-    paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    journeyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+    paymentGateWayId <- getJourneyGatewayReferenceId journey.merchantId journey.merchantOperatingCityId journeyFrfsBookings
     (sdkPayload, orderCreationReq) <-
       case updatedJourney.paymentOrderShortId of
         Just paymentOrderShortId -> do
@@ -311,8 +312,7 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
                       | otherwise = Nothing
                 if paymentOrder.isExternalOrder == Just True
                   then do
-                    bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-                    orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder bookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
+                    orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder journeyFrfsBookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
                     return (Nothing, Just orderCreationReq')
                   else do
                     mbSdkPayload <- buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
@@ -376,7 +376,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
               Nothing -> return (Nothing, Nothing, False)
       )
       allJourneyFrfsBookings
-  paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+  paymentGateWayId <- getJourneyGatewayReferenceId merchantId person.merchantOperatingCityId allJourneyFrfsBookings
   let anyFirstBookingPaymentOrder = listToMaybe bookingsPaymentOrders
       -- An external order never produces an SDK payload, so a missing payload cannot be what
       -- withholds the response: the rider still has to be told whether the payment succeeded, and
@@ -433,6 +433,22 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
         pure (paymentFulfillStatus, Nothing, Nothing)
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
+-- | The gateway the journey's order is opened on (see FRFSUtils.createPaymentOrder), so the app
+-- initiates the payment on the same one.
+--
+-- Looks at the same bookings the order is opened for (OnInit drops the ones with no payment due).
+-- A single booking uses its integrated BPP config's gateway, falling back to the merchant service
+-- config's; several bookings go straight to the merchant service config's. The fallback is read in
+-- the bookings' city, as the order is, not the rider's current one.
+getJourneyGatewayReferenceId :: Id Domain.Types.Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Environment.Flow (Maybe Text)
+getJourneyGatewayReferenceId merchantId defaultMerchantOperatingCityId bookings = do
+  payableBookings <- filterM (fmap not . FRFSUtils.noPaymentDue) bookings
+  let merchantOperatingCityId = maybe defaultMerchantOperatingCityId (.merchantOperatingCityId) (listToMaybe payableBookings)
+      merchantServiceConfigGateway = Payment.fetchGatewayReferenceId merchantId merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+  case payableBookings of
+    [booking] -> SIBC.findGatewayReferenceId [booking.integratedBppConfigId] |<|>| merchantServiceConfigGateway
+    _ -> merchantServiceConfigGateway
+
 buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Maybe (Id DFRFSQuote.FRFSQuote) -> Environment.Flow (Maybe Payment.CreateOrderResp)
 buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId
   -- Nothing to build for an order we never opened a session for: there is no SDK payload to hand
@@ -482,7 +498,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             }
     mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
     isMetroTestTransaction <- asks (.isMetroTestTransaction)
-    let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+    mbGatewayReferenceId <- FRFSUtils.findGatewayReferenceIdForPaymentOrder paymentOrder.id
+    let createOrderCall = Payment.createOrderWithGatewayReferenceId mbGatewayReferenceId (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
         createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
     DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing False
 

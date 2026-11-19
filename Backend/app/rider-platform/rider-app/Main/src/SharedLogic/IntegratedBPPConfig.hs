@@ -260,3 +260,13 @@ findSharedCabConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Pl
 findSharedCabConfig agencyKey platformType =
   getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyKeyAndPlatformType agencyKey platformType))
     >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyKey (show platformType))
+
+-- | The Juspay gateway a payment order is opened on when its operator has its own, e.g. one per
+-- Mumbai metro operator. Takes the integrated BPP config of each booking the order covers.
+--
+-- Single mode only: an order for exactly one booking uses that booking's config. An order covering
+-- several bookings (multimodal) gives Nothing, as does a config with no gateway, and the merchant
+-- service config's gateway is used instead.
+findGatewayReferenceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id IntegratedBPPConfig] -> m (Maybe Text)
+findGatewayReferenceId [configId] = (>>= (.paymentGatewayReferenceId)) <$> findByIdCP configId
+findGatewayReferenceId _ = pure Nothing

@@ -1344,7 +1344,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
         commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
         commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-        createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
+    mbGatewayReferenceId <- SIBC.findGatewayReferenceId (bookings <&> (.integratedBppConfigId))
+    let createOrderCall = Payment.createOrderWithGatewayReferenceId mbGatewayReferenceId merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
     mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
     isMetroTestTransaction <- asks (.isMetroTestTransaction)
     let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
@@ -2161,3 +2162,16 @@ markFRFSBookingPaymentStatus status reason mbBooking bookingPayment = do
   unless (bookingPayment.status == status) $
     fork "FRFS booking payment status metrics" $
       countFRFSBookingPaymentStatus status reason mbBooking bookingPayment
+
+-- | The operator gateway of the booking a payment order was opened for, for re-opening a session
+-- on that order: it has to go to the same gateway createPaymentOrder used. Only an order for a
+-- single booking has one; an order covering several bookings gives Nothing, so the merchant service
+-- config's gateway is used.
+findGatewayReferenceIdForPaymentOrder :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DOrder.PaymentOrder -> m (Maybe Text)
+findGatewayReferenceIdForPaymentOrder paymentOrderId = do
+  bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrderId
+  case bookingPayments of
+    [bookingPayment] -> do
+      mbBooking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId
+      maybe (pure Nothing) (\booking -> SIBC.findGatewayReferenceId [booking.integratedBppConfigId]) mbBooking
+    _ -> pure Nothing

@@ -18,6 +18,8 @@
 module Tools.Payment
   ( module Reexport,
     createOrder,
+    createOrderWithGatewayReferenceId,
+    withGatewayReferenceId,
     getPaymentServiceConfig,
     updateOrder,
     orderStatus,
@@ -134,7 +136,19 @@ rideBookingPaymentService :: Payment.PaymentService
 rideBookingPaymentService = Payment.PaytmEDC
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
-createOrder = runWithServiceConfigAndServiceName Payment.createOrder
+createOrder = createOrderWithGatewayReferenceId Nothing
+
+-- | createOrder, opening the order on the given Juspay gateway instead of the one in the merchant
+-- service config. Nothing keeps the merchant service config's gateway.
+--
+-- The override goes on the config rather than on the request because the shared kernel's
+-- createOrder overwrites metadataGatewayReferenceId with the config's gatewayReferenceId.
+createOrderWithGatewayReferenceId :: ServiceFlow m r => Maybe Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrderWithGatewayReferenceId mbGatewayReferenceId = runWithServiceConfigAndServiceName (Payment.createOrder . withGatewayReferenceId mbGatewayReferenceId)
+
+withGatewayReferenceId :: Maybe Text -> Payment.PaymentServiceConfig -> Payment.PaymentServiceConfig
+withGatewayReferenceId (Just gatewayReferenceId) (Payment.JuspayConfig cfg) = Payment.JuspayConfig $ cfg {JuspayConfig.gatewayReferenceId = Just gatewayReferenceId}
+withGatewayReferenceId _ vsc = vsc
 
 -- | Resolve the payment service config without calling the gateway.
 --
