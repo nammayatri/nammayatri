@@ -2529,7 +2529,8 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
       whenJust mbServiceTier $ \serviceTier ->
         unless (null passRow.applicableVehicleServiceTiers || serviceTier `elem` passRow.applicableVehicleServiceTiers) $
           throwError (PassUnserviceableOnServiceTier (show serviceTier))
-      whenJust mbVehicle $ \(vehicleNumber, _, mbLiveRouteCode) ->
+      let mbLiveRouteCode = mbVehicle >>= (\(_, _, liveRouteCode) -> liveRouteCode)
+      whenJust mbVehicle $ \(vehicleNumber, _, _) ->
         whenJust mbLiveRouteCode $ \liveRouteCode -> do
           onOppositeRoute <- vehicleOnOppositeRoute integratedBPPConfig liveRouteCode
           when onOppositeRoute $ throwError (PassRequestedVehicleOnOppositeRoute vehicleNumber)
@@ -2538,12 +2539,14 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
         Nothing
           | vehicleType == Spec.BUS -> do
             routeCodes <- FRFSUtils.stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier integratedBPPConfig.merchantOperatingCityId req.sourceStopCode req.destinationStopCode
-            routeCode <- case listToMaybe routeCodes of
-              Just code -> pure code
-              Nothing -> do
-                sourceStopName <- stopNameForError integratedBPPConfig req.sourceStopCode
-                destinationStopName <- stopNameForError integratedBPPConfig req.destinationStopCode
-                throwError (PassUnserviceableBetweenRequestedStops sourceStopName destinationStopName)
+            routeCode <- case mbLiveRouteCode of
+              Just liveRouteCode | liveRouteCode `elem` routeCodes -> pure liveRouteCode
+              _ -> case listToMaybe routeCodes of
+                Just code -> pure code
+                Nothing -> do
+                  sourceStopName <- stopNameForError integratedBPPConfig req.sourceStopCode
+                  destinationStopName <- stopNameForError integratedBPPConfig req.destinationStopCode
+                  throwError (PassUnserviceableBetweenRequestedStops sourceStopName destinationStopName)
             pure (Just routeCode, Just routeCodes)
           | otherwise -> pure (Nothing, Nothing)
       let searchReq =
