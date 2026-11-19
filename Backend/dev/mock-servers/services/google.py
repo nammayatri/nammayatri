@@ -396,12 +396,15 @@ def _place_details(handler):
 
 
 def _geocode(handler):
+    """Geocoding API. place_id (a place picked from search) → that place, as real Google
+    answers; latlng (map pin / GPS) → that point; neither → the default point."""
     qp = _qp(handler)
-    latlng = qp.get("latlng", ["12.97,77.59"])[0]
-    try:
-        lat, lon = (float(x) for x in latlng.split(","))
-    except (ValueError, AttributeError):
-        lat, lon = 12.97, 77.59
+    place_id = qp.get("place_id", [""])[0]
+    if place_id:
+        pid, address, lat, lon = _place_for_id(place_id)
+    else:
+        lat, lon = _parse_lat_lon(qp.get("latlng", [""])[0]) or (12.97, 77.59)
+        pid, address = "mock_place_id", "Mock Address, Mock City, Mock State, India"
     return {
         "results": [
             {
@@ -411,9 +414,9 @@ def _geocode(handler):
                     {"long_name": "Mock State", "short_name": "MS", "types": ["administrative_area_level_1"]},
                     {"long_name": "India", "short_name": "IN", "types": ["country"]},
                 ],
-                "formatted_address": "Mock Address, Mock City, Mock State, India",
+                "formatted_address": address,
                 "geometry": {"location": {"lat": lat, "lng": lon}, "location_type": "APPROXIMATE"},
-                "place_id": "mock_place_id",
+                "place_id": pid,
                 "types": ["street_address"],
             }
         ],

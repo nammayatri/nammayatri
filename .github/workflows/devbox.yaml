@@ -75,6 +75,11 @@ jobs:
       INPUT_HOST: ${{ inputs.devbox_host }}
       INPUT_USER: ${{ inputs.devbox_user }}
       SRC: ${{ github.workspace }}/ws/nammayatri
+      # Public gRPC address handed to driver app builds (devbox_core flow.py
+      # _grpc_address), e.g. service-discovery.devenv.movingtech.net:443 so
+      # ride requests reach phones through the relay without Tailscale.
+      # Repo variable; unset/empty keeps the tailnet address.
+      DEVBOX_GRPC_PUBLIC_ADDRESS: ${{ vars.DEVBOX_GRPC_PUBLIC_ADDRESS }}
     steps:
       - name: Check inputs
         run: |

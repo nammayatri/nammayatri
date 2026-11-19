@@ -582,6 +582,118 @@ def _apply_local_testing_data():
         conn.close()
 
 
+# Google service account (base64 of its JSON, the format driver FCM configs store) that
+# lets a devbox send real pushes. Kept on the devbox host only: never in git, the
+# config-sync zip (public) or the logs.
+DEVBOX_FCM_KEY_FILE = Path(os.environ.get(
+    "DEVBOX_FCM_SERVICE_ACCOUNT_FILE", "~/.config/devbox/fcm-service-account.b64")).expanduser()
+# The same for the rider app (customer notifications), whose Firebase project can differ.
+DEVBOX_FCM_RIDER_KEY_FILE = Path(os.environ.get(
+    "DEVBOX_FCM_RIDER_SERVICE_ACCOUNT_FILE", "~/.config/devbox/fcm-rider-service-account.b64")).expanduser()
+
+
+def _devbox_fcm_project(key: str) -> str:
+    """project_id of a base64-encoded service account; ValueError if it is not a usable one
+    (FCM needs client_email and private_key to sign its access token). Error messages name
+    fields only, never values."""
+    try:
+        account = json.loads(base64.b64decode(key, validate=True))
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"not base64 of a JSON service account ({type(e).__name__})") from None
+    if not isinstance(account, dict) or account.get("type") != "service_account":
+        raise ValueError("not a Google service account (type is not service_account)")
+    missing = [f for f in ("project_id", "client_email", "private_key") if not account.get(f)]
+    if missing:
+        raise ValueError(f"service account is missing {', '.join(missing)}")
+    return account["project_id"]
+
+
+def _read_devbox_fcm_key(key_file: Path) -> tuple[str, str]:
+    """(key, project_id) from a service account key file. All whitespace is dropped, so
+    files written by `base64` (which wraps lines at 76 characters) are accepted.
+    Raises OSError / ValueError."""
+    key = "".join(key_file.read_text().split())
+    return key, _devbox_fcm_project(key)
+
+
+def _apply_devbox_fcm(key_file: Path = DEVBOX_FCM_KEY_FILE) -> str:
+    """Point the driver app's FCM at the real Firebase project when the devbox host has a
+    service account file, so ride requests and other driver notifications reach phones
+    on any network. config-sync imports FCM pointing at the mock with a fake key; without
+    the file that stays as it is. Updates the two places driver-app reads FCM from:
+    merchant_service_config Notification_FCM (ride requests) and transporter_config
+    (other notifications), in one transaction. Must run before the apps restart.
+    Returns (ok, log line); the log line never includes the key. ok is False when a key
+    file is present but unusable or the DB update fails, so the sync reports a failure
+    instead of silently leaving FCM on the mock."""
+    if not key_file.is_file():
+        return True, f"[devbox-fcm] no {key_file}; FCM stays on the mock"
+    try:
+        key, project = _read_devbox_fcm_key(key_file)
+    except (OSError, ValueError) as e:
+        return False, f"[devbox-fcm] ERROR {key_file}: {e}; FCM not changed"
+    url = f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/"
+    params = {"url": url, "key": key}
+    conn = None
+    try:
+        conn = get_conn()
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE atlas_driver_offer_bpp.merchant_service_config"
+                " SET config_json = (config_json::jsonb"
+                "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
+                " WHERE service_name = 'Notification_FCM'",
+                params,
+            )
+            service_rows = cur.rowcount
+            cur.execute(
+                "UPDATE atlas_driver_offer_bpp.transporter_config"
+                " SET fcm_url = %(url)s, fcm_service_account = %(key)s",
+                params,
+            )
+            transporter_rows = cur.rowcount
+    except Exception as e:
+        return False, f"[devbox-fcm] ERROR updating FCM config ({type(e).__name__}); nothing changed"
+    finally:
+        if conn is not None:
+            conn.close()
+    return True, (f"[devbox-fcm] FCM -> {project}: {service_rows} merchant_service_config row(s),"
+                  f" {transporter_rows} transporter_config row(s)")
+
+
+def _apply_devbox_rider_fcm(key_file: Path = DEVBOX_FCM_RIDER_KEY_FILE) -> str:
+    """The rider-app counterpart of _apply_devbox_fcm: points rider FCM (driver assigned,
+    driver arrived, ride started, ...) at the real Firebase project when the devbox host
+    has a rider service account file. Rider-app reads FCM only from merchant_service_config
+    Notification_FCM. Without the file it stays on the mock. Must run before the apps
+    restart. Returns (ok, log line) like _apply_devbox_fcm; never includes the key."""
+    if not key_file.is_file():
+        return True, f"[devbox-fcm] no {key_file}; rider FCM stays on the mock"
+    try:
+        key, project = _read_devbox_fcm_key(key_file)
+    except (OSError, ValueError) as e:
+        return False, f"[devbox-fcm] ERROR {key_file}: {e}; rider FCM not changed"
+    url = f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/"
+    conn = None
+    try:
+        conn = get_conn()
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE atlas_app.merchant_service_config"
+                " SET config_json = (config_json::jsonb"
+                "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
+                " WHERE service_name = 'Notification_FCM'",
+                {"url": url, "key": key},
+            )
+            rows = cur.rowcount
+    except Exception as e:
+        return False, f"[devbox-fcm] ERROR updating rider FCM config ({type(e).__name__}); nothing changed"
+    finally:
+        if conn is not None:
+            conn.close()
+    return True, f"[devbox-fcm] rider FCM -> {project}: {rows} merchant_service_config row(s)"
+
+
 PC_SOCKET_PATH = os.environ.get("PC_SOCKET_PATH") or str(PROJECT_ROOT / "data" / "process-compose.sock")
 PC_ACTIONS = {"start": ("POST", "/process/start/{}"), "stop": ("PATCH", "/process/stop/{}"), "restart": ("POST", "/process/restart/{}")}
 
@@ -894,6 +1006,17 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
             with _config_sync_lock:
                 _config_sync_state["error"] = f"feature-migrations exited with {rc}"
             return
+
+        # Step 3b: real FCM (driver, rider) when the devbox host has key files (before the restart).
+        # No key file is fine (FCM stays on the mock); an unusable file or a failed update
+        # fails the sync, like the steps above.
+        for apply_fcm in (_apply_devbox_fcm, _apply_devbox_rider_fcm):
+            ok, msg = apply_fcm()
+            _append_log(msg)
+            if not ok:
+                with _config_sync_lock:
+                    _config_sync_state["error"] = msg
+                return
 
         # Step 4: restart so haskell services see the new config. Clear the
         # Redis config caches first, otherwise the restarted apps can keep
