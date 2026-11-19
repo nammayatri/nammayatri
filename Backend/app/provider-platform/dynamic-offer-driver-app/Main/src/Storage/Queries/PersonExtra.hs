@@ -79,6 +79,17 @@ updateAcceptedPolicies (Id personId) acceptedPolicies = do
 getDriversByIdIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Person]
 getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
 
+-- | Same rows as 'getDriversByIdIn', but Redis is read once and Postgres is queried only for
+-- the persons with no row in Redis. id is the primary key, so a person found in Redis is complete.
+getDriversByIdInBatch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Person]
+getDriversByIdInBatch personIds =
+  if null personIds
+    then pure []
+    else findAllWithKVInBatch (clauseFor ids) BeamP.id ids clauseFor
+  where
+    ids = getId <$> personIds
+    clauseFor idTexts = [Se.Is BeamP.id $ Se.In idTexts]
+
 findPersonsByIdsForAnalytics ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id Person] ->

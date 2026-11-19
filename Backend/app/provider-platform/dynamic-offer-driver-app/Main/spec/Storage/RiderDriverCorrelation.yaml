@@ -64,3 +64,6 @@ RiderDriverCorrelation:
     favourite: 'false'
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
