@@ -22,7 +22,18 @@ in
                 nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
                 buildInputs =
                   config.haskellProjects.default.outputs.devShell.buildInputs
-                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client pkgs.libsodium pkgs.rdkafka ];
+                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client pkgs.libsodium pkgs.rdkafka ]
+                  ++ (with pkgs; [
+                    pcre # libpcre.so.1
+                    elfutils # libelf.so.1, libdw.so.1 (GHC 9.8 RTS)
+                    double-conversion # libdouble-conversion.so.3
+                    ncurses
+                    libpq
+                    gmp
+                    libffi
+                    numactl
+                    zlib
+                  ]);
                 src = /. + localBinariesPath;
               } ''
               cp -r $src $out
