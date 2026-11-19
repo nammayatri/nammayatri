@@ -158,6 +158,30 @@ function post(p, body, method = 'POST') {
   t.ok(r.status().body.runs.DZ.lines.length === 300, 'at most 300 lines kept per run');
   chatty.c.emit('exit', 0);
 
+  // A trip chosen on the console's map (2026-11-19).
+  a = await r.start(DZ_DRIVER, 1, { from: { lat: 36.76, lon: 3.06 }, to: { lat: 36.79, lon: 3.07 } });
+  const chosen = spawned.at(-1);
+  t.ok(a.status === 202 && chosen.args.slice(1).join(' ') === `--driver ${DZ_DRIVER} 1 --from 36.76,3.06 --to 36.79,3.07`,
+    'a chosen trip: passed as --from lat,lon --to lat,lon', chosen.args.slice(1).join(' '));
+  chosen.c.stdout.write('@trajet {"driver":{"lat":36.75,"lon":3.05},"from":{"lat":36.7601,"lon":3.0602},"to":{"lat":36.79,"lon":3.07},"toName":"Arrivée choisie","chosen":true}\n[   0 s] Départ choisi, à 1100 m de lui.\n');
+  await tick();
+  s = r.status().body.runs.DZ;
+  t.ok(s.trip && s.trip.from.lat === 36.7601 && s.trip.driver.lon === 3.05 && s.trip.chosen === true && s.asked.from.lat === 36.76,
+    '   the engine\'s @trajet line becomes the run\'s trip, for the map; what was asked is kept too', JSON.stringify(s.trip));
+  t.ok(s.lines.length === 1 && !s.lines.some((l) => l.startsWith('@trajet')), '   and never one of its lines', JSON.stringify(s.lines));
+  chosen.c.stdout.write('@trajet {"driver":{"lat":99,"lon":3},"from":{"lat":36.7,"lon":3},"to":{"lat":36.8,"lon":3}}\n@trajet pas du json\n');
+  await tick();
+  t.ok(r.status().body.runs.DZ.trip.from.lat === 36.7601 && r.status().body.runs.DZ.lines.length === 1,
+    '   a trip outside our countries, or not JSON: dropped, the last good one kept');
+  chosen.c.emit('exit', 0);
+  await tick();
+  for (const [label, trip] of [['a start in Paris', { from: { lat: 48.85, lon: 2.35 } }], ['an arrival « here »', { to: 'here' }],
+    ['an arrival with no lon', { to: { lat: 36.7 } }]]) {
+    const before = spawned.length;
+    a = await r.start(DZ_DRIVER, 1, trip);
+    t.ok(a.status === 400 && spawned.length === before, `${label}: 400, nothing started`, JSON.stringify(a));
+  }
+
   t.section('3. the real engine as the child');
   // No PG_URL in its environment: it starts, refuses, says why, and the
   // route reads that as the verdict -- the whole process chain, for real.
@@ -186,6 +210,8 @@ function post(p, body, method = 'POST') {
   t.ok(h.status === 200 && h.json.enabled === true && h.json.runs.DZ === null && h.json.runs.MR === null, 'status: 200, nothing running', JSON.stringify(h.json));
   h = await post('/internal/virtual-rider', { action: 'start', driverId: DZ_DRIVER, scenario: 1 });
   t.ok(h.status === 503 && h.json.error === 'unavailable', 'start without a database in this shim: 503');
+  h = await post('/internal/virtual-rider', { action: 'start', driverId: DZ_DRIVER, scenario: 1, from: { lat: 'x', lon: 1 } });
+  t.ok(h.status === 400, 'a start whose « from » is not a point: 400 through server.js too');
   h = await post('/internal/virtual-rider', { action: 'drop tables' });
   t.ok(h.status === 400, 'an unknown action: 400');
   shim.kill();
