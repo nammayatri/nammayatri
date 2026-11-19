@@ -188,6 +188,10 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSJourneyRouteAPI = FRFSJourneyRouteAPI {legs :: [FRFSRouteLegAPI]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPassInstantBookReq = FRFSPassInstantBookReq
   { destinationStopCode :: Data.Text.Text,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
@@ -362,6 +366,10 @@ data FRFSRouteDetailsAPI = FRFSRouteDetailsAPI
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     startStationCode :: Data.Text.Text
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRouteLegAPI = FRFSRouteLegAPI {interchangeStopCode :: Data.Maybe.Maybe Data.Text.Text, legRoute :: FRFSRouteAPI}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

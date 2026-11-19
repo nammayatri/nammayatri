@@ -443,6 +443,15 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
+  FRFSRouteLegAPI:
+    legRoute: FRFSRouteAPI
+    interchangeStopCode: Maybe Text
+    derive: "Show"
+
+  FRFSJourneyRouteAPI:
+    legs: "[FRFSRouteLegAPI]"
+    derive: "Show"
+
   AutocompleteRes:
     routes: [FRFSRouteAPI]
     stops: [FRFSStationAPI]
@@ -583,6 +592,21 @@ apis:
         platformType: PlatformType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
+
+  # GET metro/bus routes for the merchant city, with metro interchange support
+  - GET:
+      endpoint: /frfs/routesV2
+      name: getFrfsRoutesV2
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        city: City
+      query:
+        startStationCode: Text
+        endStationCode: Text
+        platformType: PlatformType
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSJourneyRouteAPI]"
 
   # GET metro/bus stops for the merchant city
   # - Get all stations when routeCode and startStationCode is Unknown.
