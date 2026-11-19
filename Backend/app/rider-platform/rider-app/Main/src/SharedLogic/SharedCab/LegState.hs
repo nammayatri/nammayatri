@@ -36,7 +36,9 @@ import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.Trip as DTrip
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency)
+import qualified Kernel.External.MultiModal.Interface.Types as Fields
 import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.SharedCab.Lts as Lts

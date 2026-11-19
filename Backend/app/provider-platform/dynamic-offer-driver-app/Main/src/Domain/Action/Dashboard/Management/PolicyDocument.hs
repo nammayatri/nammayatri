@@ -10,6 +10,7 @@ import qualified Dashboard.Common as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
@@ -21,6 +22,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PolicyAndComplianceDocument as CPCD
 import qualified Storage.Queries.PolicyAndComplianceDocument as QPCD
 import qualified Storage.Queries.PolicyAndComplianceDocumentExtra as QPCDX
+import qualified Tools.Fields as Fields
 
 postPolicyDocumentCreate ::
   ShortId DM.Merchant ->

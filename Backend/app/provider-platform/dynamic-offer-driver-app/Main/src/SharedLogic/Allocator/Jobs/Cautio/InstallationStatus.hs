@@ -3,6 +3,7 @@ module SharedLogic.Allocator.Jobs.Cautio.InstallationStatus where
 import qualified Data.Map as M
 import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.SubscriptionConfig as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis

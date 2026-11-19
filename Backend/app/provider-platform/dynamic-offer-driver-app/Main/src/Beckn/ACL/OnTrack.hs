@@ -17,6 +17,7 @@ module Beckn.ACL.OnTrack (mkOnTrackMessage, mkOnTrackMessageV2) where
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Track as DTrack
+import qualified Domain.Types.DriverLocation as Fields
 import Kernel.Prelude
 
 mkOnTrackMessage :: DTrack.DTrackRes -> OnTrack.OnTrackMessage

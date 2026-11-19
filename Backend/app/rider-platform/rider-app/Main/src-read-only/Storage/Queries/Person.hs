@@ -19,6 +19,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version as Fields
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils

@@ -9,6 +9,7 @@ import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Error.Throwing (throwError)
 import Servant hiding (throwError)
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 type API =
   "frequentLocUser"

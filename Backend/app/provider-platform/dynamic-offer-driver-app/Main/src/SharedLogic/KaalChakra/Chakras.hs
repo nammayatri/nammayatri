@@ -25,6 +25,7 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Yudhishthira.Event.KaalChakra as Event
 import qualified Lib.Yudhishthira.Event.KaalChakra.JobControl as JobControl
+import qualified Lib.Yudhishthira.Types as KaalChakraJobData (KaalChakraJobData (..))
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
 import qualified SharedLogic.KaalChakra.Actions as Actions
@@ -82,7 +83,7 @@ createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData schedul
       LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime updJobData
       LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime updJobData
   where
-    updJobData = jobData{startTime = Just scheduledTime}
+    updJobData = jobData{KaalChakraJobData.startTime = Just scheduledTime}
 
 createUpdateUserTagDataJob ::
   ( ChakraJobs m r,
@@ -114,7 +115,8 @@ createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData sch
 runDailyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'Daily ->
   m ExecutionResult
@@ -127,7 +129,8 @@ runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} 
 runWeeklyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'Weekly ->
   m ExecutionResult
@@ -140,7 +143,8 @@ runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt}
 runQuarterlyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'Quarterly ->
   m ExecutionResult
@@ -153,7 +157,8 @@ runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduled
 runMonthlyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'Monthly ->
   m ExecutionResult
@@ -166,7 +171,8 @@ runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt
 runDailyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
@@ -179,7 +185,8 @@ runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, sche
 runWeeklyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
@@ -192,7 +199,8 @@ runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, sch
 runQuarterlyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
@@ -205,7 +213,8 @@ runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, 
 runMonthlyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasFieldUpd "url" r (Maybe Text)
   ) =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult

@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.Booking where
 
 import qualified Domain.Types.Booking
+import qualified Domain.Types.DeliveryPersonDetails as Fields
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,6 +23,7 @@ import qualified Storage.Queries.FareParameters
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
+import qualified Tools.Fields as Fields
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do

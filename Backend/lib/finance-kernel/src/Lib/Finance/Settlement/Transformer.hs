@@ -8,6 +8,7 @@ where
 
 import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
+import qualified Kernel.Types.ActorInfo as Fields
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
 import Lib.Finance.Core.Types (HasActorInfo)

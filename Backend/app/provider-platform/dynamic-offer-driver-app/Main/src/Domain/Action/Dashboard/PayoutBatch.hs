@@ -45,6 +45,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Fields as Fields
 
 -- | Cap on one page of any payout list, so a single request cannot force an unbounded read.
 --   Safe because 'hasMore' tells the caller the page was cut short.

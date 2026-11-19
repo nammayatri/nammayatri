@@ -28,9 +28,11 @@ import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Person as DP
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
@@ -38,6 +40,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Tools.Fields as Fields
 
 data BPPInvoiceInfo = BPPInvoiceInfo
   { issuedById :: Maybe Text,

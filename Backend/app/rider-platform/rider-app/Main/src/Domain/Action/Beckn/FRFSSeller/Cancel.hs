@@ -10,12 +10,14 @@ import Control.Monad.Trans.Except (runExceptT, throwE, withExceptT)
 import qualified Domain.Action.Beckn.FRFSSeller.Confirm as Confirm
 import qualified Domain.Action.Beckn.FRFSSeller.Init as Init
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment (Flow)
 import qualified ExternalBPP.ExternalAPI.CallAPI as ExternalCallAPI
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.Cancel as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
@@ -25,6 +27,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data CancelPhase = SoftCancel | ConfirmCancel
 

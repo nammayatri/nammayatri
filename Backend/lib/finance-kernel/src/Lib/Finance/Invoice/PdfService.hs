@@ -17,7 +17,7 @@ import Domain.Types.Invoice (DateOrTime (..), toUTCTimeFrom, toUTCTimeTo)
 import Kernel.Prelude
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (IndirectTaxTransaction)
 import Lib.Finance.Domain.Types.Invoice (Invoice)
-import Lib.Finance.Invoice.Interface (InvoiceLineItem)
+import Lib.Finance.Invoice.Interface (InvoiceLineItem (..))
 
 data InvoicePdfData = InvoicePdfData
   { financeInvoice :: Invoice,

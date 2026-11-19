@@ -11,7 +11,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Distance (HighPrecMeters (..), highPrecMetersToMeters)
+import Kernel.Types.Distance (HighPrecMeters (..), Meters (..), highPrecMetersToMeters)
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Storage.Queries.TicketPlace as QTicketPlace

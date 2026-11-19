@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Roles where
 
 import Dashboard.Common
+import qualified Domain.Types.Person.Type as Fields
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B

@@ -55,6 +55,7 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
+  - OverloadedRecordDot
 
 dependencies:
   - aeson
@@ -80,8 +81,6 @@ dependencies:
   - passetto-client
   - passetto-lib
   - prometheus-client
-  - record-hasfield
-  - record-dot-preprocessor
   - servant-openapi3
   - openapi3
   - string-conversions
@@ -98,7 +97,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

@@ -17,6 +17,7 @@ import Kernel.Types.Id
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as Fields
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SubscriptionPurchase as Beam

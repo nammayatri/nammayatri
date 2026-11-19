@@ -30,7 +30,7 @@ import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
 import Email.Types (EmailServiceConfig)
 import "dynamic-offer-driver-app" Environment (AppCfg (..), RideEventsPublisherCfg)
-import Kernel.External.Encryption (EncTools)
+import Kernel.External.Encryption (EncTools (..))
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config

@@ -8,7 +8,7 @@ import Kernel.Beam.Functions (findAllWithKV, updateOneWithKV)
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -20,6 +20,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as SMS
 
 -- | Update ScheduledPayout status and record history entry in one call

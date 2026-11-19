@@ -32,17 +32,24 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride.EndRide.Internal as EndRideInt
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as SRB
 import qualified "dynamic-offer-driver-app" Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverInformation as Fields
+import qualified Domain.Types.DriverStats as Fields
+import qualified Domain.Types.FleetDriverAssociation as Fields
 import qualified "dynamic-offer-driver-app" Domain.Types.LeaderBoardConfigs as LConfig
 import "dynamic-offer-driver-app" Domain.Types.Merchant (Merchant)
 import qualified "dynamic-offer-driver-app" Domain.Types.MerchantOperatingCity as DMOC
+import qualified "dynamic-offer-driver-app" Domain.Types.MerchantPushNotification as Fields
 import qualified "dynamic-offer-driver-app" Domain.Types.PayoutConfig as DPC
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RiderDetails as RD
+import qualified Domain.Types.TransporterConfig as Fields
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.Vehicle as Fields
 import qualified "beckn-spec" Domain.Types.VehicleCategory as DVC
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Encryption (DbHash, EncFlow)
+import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CHConfig

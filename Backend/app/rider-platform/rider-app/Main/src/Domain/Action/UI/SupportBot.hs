@@ -32,6 +32,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)

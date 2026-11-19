@@ -23,7 +23,6 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified EulerHS.Types as Euler
-import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context

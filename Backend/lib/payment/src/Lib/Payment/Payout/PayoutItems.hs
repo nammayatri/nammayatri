@@ -13,7 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id (getId, getShortId)
 import qualified Lib.Payment.Domain.Types.Common as DCommon
-import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder)
+import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder, PayoutOrderE (..))
 import Lib.Payment.Domain.Types.PayoutRequest (PayoutRequest (..), PayoutRequestStatus (..), PayoutType)
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutOrderExtra as QPayoutOrderExtra

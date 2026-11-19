@@ -55,13 +55,17 @@ import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
+import qualified Domain.Types.Disability as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.PayoutConfig as Fields
 import Domain.Types.Person (RideShareOptions)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonPTStats as Fields
+import qualified Domain.Types.PersonStats as Fields
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
@@ -77,7 +81,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow, SchedulerType, ServiceFlow)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig, useFakeSms)
+import Kernel.Sms.Config (SmsConfig (..), SmsSessionConfig (..), useFakeSms)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -99,6 +103,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib

@@ -5,6 +5,7 @@ module Domain.Action.UI.RideEvidence
 where
 
 import qualified API.Types.UI.RideEvidence
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride

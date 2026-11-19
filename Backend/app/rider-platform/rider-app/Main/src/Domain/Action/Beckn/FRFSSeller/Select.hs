@@ -9,9 +9,12 @@ import Control.Monad.Trans.Except (runExceptT, throwE)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFSSeller.Init as Init
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Merchant as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common

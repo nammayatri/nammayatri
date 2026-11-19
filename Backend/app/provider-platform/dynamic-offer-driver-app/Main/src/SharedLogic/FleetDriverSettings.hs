@@ -12,10 +12,12 @@ module SharedLogic.FleetDriverSettings
   )
 where
 
+import qualified Dashboard.Common as Fields
 import qualified Data.Aeson as A
 import qualified Data.List as DL
 import qualified Data.Vector as V
 import Domain.Types.Common (ServiceTierType)
+import qualified Domain.Types.FleetConfig as Fields
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Vehicle as DV
@@ -32,6 +34,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 autoAssignTagName :: Text
 autoAssignTagName = "AutoAssign"

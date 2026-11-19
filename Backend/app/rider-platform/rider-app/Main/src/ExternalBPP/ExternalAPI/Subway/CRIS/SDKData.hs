@@ -3,14 +3,13 @@ module ExternalBPP.ExternalAPI.Subway.CRIS.SDKData where
 import API.Types.UI.CRIS as CRIS
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig (..))
 import Domain.Types.Person
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (encryptPayload)
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (app)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error

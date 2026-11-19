@@ -7,6 +7,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
+import qualified Tools.Auth.DashboardUser as Fields
 import qualified Tools.Auth.DashboardUserAuth as DashboardUser
 
 withMbActorInfo :: (HasCallStack, Finance.HasActorInfo m r) => Maybe ActorInfo -> m a -> m a

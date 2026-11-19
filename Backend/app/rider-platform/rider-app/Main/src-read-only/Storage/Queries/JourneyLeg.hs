@@ -12,6 +12,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient
 import qualified Kernel.External.Maps.Google.MapsClient.Types
+import qualified Kernel.External.MultiModal.Interface.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

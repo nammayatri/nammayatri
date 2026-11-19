@@ -17,7 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Ride as DRide
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Maps.Google.Config (GoogleCfg)
+import Kernel.External.Maps.Google.Config (GoogleCfg (..))
 import qualified Kernel.External.Maps.Google.MobilityBilling as GoogleBilling
 import qualified Kernel.External.Maps.Interface.Types as MapsIface
 import qualified Kernel.External.Maps.Types as MapsTypes

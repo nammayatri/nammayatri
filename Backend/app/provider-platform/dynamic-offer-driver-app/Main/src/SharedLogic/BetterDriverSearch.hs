@@ -24,6 +24,7 @@ import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
@@ -64,6 +65,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types (KeyConfig, TokenConfig)
 

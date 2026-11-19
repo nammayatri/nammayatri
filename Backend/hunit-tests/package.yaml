@@ -32,8 +32,6 @@ dependencies:
   - lib-dashboard
   - mobility-core
   - mock-sms
-  - record-dot-preprocessor
-  - record-hasfield
   - rider-app
   - string-conversions
   - tasty
@@ -81,6 +79,7 @@ default-extensions:
   - TypeFamilies
   - TypeOperators
   - ViewPatterns
+  - OverloadedRecordDot
 
 library:
   source-dirs: src

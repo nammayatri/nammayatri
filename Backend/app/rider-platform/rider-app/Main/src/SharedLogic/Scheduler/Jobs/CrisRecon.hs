@@ -14,13 +14,16 @@
 
 module SharedLogic.Scheduler.Jobs.CrisRecon where
 
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry (getReconTicketEnquiry)
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry as Fields
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)

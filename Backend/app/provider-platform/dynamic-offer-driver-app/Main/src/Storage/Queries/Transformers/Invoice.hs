@@ -1,5 +1,6 @@
 module Storage.Queries.Transformers.Invoice where
 
+import qualified Domain.Types.DriverFee as Fields
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC

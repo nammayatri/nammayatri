@@ -1008,6 +1008,7 @@ library
       Tools.Error
       Tools.Event
       Tools.EventTracking
+      Tools.Fields
       Tools.FlowHandling
       Tools.HTTPManager
       Tools.Insurance
@@ -2013,7 +2014,8 @@ library
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , amazonka-core
@@ -2078,8 +2080,6 @@ library
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-compat
     , regex-posix
     , resource-pool
@@ -2169,7 +2169,8 @@ executable rider-app-exe
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , amazonka-core
@@ -2227,8 +2228,6 @@ executable rider-app-exe
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-compat
     , regex-posix
     , resource-pool
@@ -2339,7 +2338,8 @@ test-suite rider-app-test
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , amazonka-core
@@ -2398,8 +2398,6 @@ test-suite rider-app-test
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-compat
     , regex-posix
     , resource-pool

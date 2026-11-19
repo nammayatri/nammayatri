@@ -27,6 +27,7 @@ module SharedLogic.Allocator.Jobs.Wallet.WalletIntegrityCheck
 where
 
 import qualified Data.HashMap.Strict as HashMap
+import qualified Domain.Types.DriverFee as Fields
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))

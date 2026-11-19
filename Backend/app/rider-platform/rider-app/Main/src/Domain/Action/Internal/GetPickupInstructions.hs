@@ -20,9 +20,11 @@ import qualified Data.Text as T
 import Domain.Types.Booking ()
 import Domain.Types.Merchant ()
 import Domain.Types.PickupInstructions ()
+import qualified Domain.Types.PickupInstructions as Fields
 import Domain.Types.Ride ()
 import qualified Domain.Types.Ride
 import Environment
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -32,6 +34,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PickupInstructions as QPickupInstructions
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data PickupInstructionResp = PickupInstructionResp
   { instruction :: Maybe Text,

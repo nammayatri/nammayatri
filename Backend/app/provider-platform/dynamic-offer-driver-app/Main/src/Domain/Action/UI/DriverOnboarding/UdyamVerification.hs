@@ -18,6 +18,7 @@ import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverUdyam as DUdyam
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -33,13 +34,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SharedLogic.DriverOnboarding (VerificationReqRecord, getDriverDocumentInfo)
+import SharedLogic.DriverOnboarding (VerificationReqRecord (..), getDriverDocumentInfo)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 
 data DriverUdyamReq = DriverUdyamReq

@@ -24,6 +24,7 @@ where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRideStatus
 import Environment (Flow)
@@ -38,6 +39,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 data RequestTollChargeApprovalReq = RequestTollChargeApprovalReq

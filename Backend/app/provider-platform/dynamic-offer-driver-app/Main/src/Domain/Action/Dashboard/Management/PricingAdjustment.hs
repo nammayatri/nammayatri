@@ -45,6 +45,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareAdjustment as DFA
 import qualified Domain.Types.FareAlertSubscription as DFAS
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TransporterConfig (TransporterConfig)
@@ -70,6 +71,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FareAdjustment as QFA
 import qualified Storage.Queries.FareAlertSubscription as QFAS
 import qualified Storage.Queries.FareProductExtra as QFareProductExtra
+import qualified Tools.Fields as Fields
 
 resolveCity :: ShortId DM.Merchant -> Context.City -> Flow (DM.Merchant, DMOC.MerchantOperatingCity)
 resolveCity merchantShortId opCity = do

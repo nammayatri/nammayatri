@@ -20,6 +20,7 @@ where
 import qualified Data.Map as HM
 import "dynamic-offer-driver-app" Domain.Types.Message as Types
 import "dynamic-offer-driver-app" Domain.Types.MessageReport as Types
+import "dynamic-offer-driver-app" Domain.Types.Person as Fields
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM

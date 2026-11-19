@@ -17,7 +17,9 @@ module Tools.MultiModal where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.MultiModal.Interface.Types as MultiModal
+import qualified Kernel.External.MultiModal.OpenTripPlanner.Config as Fields
 import Kernel.External.MultiModal.Types as MultiModal
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude

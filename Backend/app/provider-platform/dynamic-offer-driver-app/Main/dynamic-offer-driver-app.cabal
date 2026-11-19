@@ -1263,6 +1263,7 @@ library
       Tools.Event
       Tools.EventTracking
       Tools.FieldParse
+      Tools.Fields
       Tools.Grid
       Tools.Maps
       Tools.MarketingEvents
@@ -2442,7 +2443,8 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -2509,8 +2511,6 @@ library
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-posix
     , resource-pool
     , scheduler
@@ -2596,7 +2596,8 @@ executable dynamic-offer-driver-app-exe
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -2658,8 +2659,6 @@ executable dynamic-offer-driver-app-exe
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-posix
     , resource-pool
     , scheduler
@@ -2745,7 +2744,8 @@ test-suite driver-app-test
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
   extra-libraries:
       cac_client
   build-depends:
@@ -2809,8 +2809,6 @@ test-suite driver-app-test
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
-    , record-hasfield
     , regex-posix
     , resource-pool
     , scheduler

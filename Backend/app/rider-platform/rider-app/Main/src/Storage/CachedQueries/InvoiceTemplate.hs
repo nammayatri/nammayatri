@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id (Id, cast)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.InvoiceTemplate as FInvoiceTemplate
 import qualified Lib.Finance.Storage.Beam.BeamFlow

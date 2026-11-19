@@ -30,9 +30,11 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Trip as DTrip
+import qualified Domain.Types.Vehicle as Fields
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types
@@ -66,6 +68,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as TN

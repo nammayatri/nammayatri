@@ -21,8 +21,10 @@ where
 
 import Data.Aeson
 import qualified Data.Map as M
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.CallStatus
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption

@@ -17,6 +17,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error

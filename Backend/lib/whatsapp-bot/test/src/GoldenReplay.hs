@@ -85,6 +85,7 @@ import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
+import qualified WhatsappBot.I18n.Types as Fields
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
 import WhatsappBot.Types

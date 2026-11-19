@@ -16,8 +16,9 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.InvoiceTemplate as Fields
 import qualified Lib.Finance.Invoice.RenderTemplate as RT
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow

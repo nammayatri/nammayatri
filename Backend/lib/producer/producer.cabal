@@ -68,7 +68,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+      OverloadedRecordDot
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -89,8 +90,6 @@ library
     , persistent-postgresql
     , postgresql-simple
     , random
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , scheduler
     , sequelize
@@ -151,7 +150,8 @@ executable producer-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+      OverloadedRecordDot
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -173,8 +173,6 @@ executable producer-exe
     , postgresql-simple
     , producer
     , random
-    , record-dot-preprocessor
-    , record-hasfield
     , rider-app
     , scheduler
     , sequelize

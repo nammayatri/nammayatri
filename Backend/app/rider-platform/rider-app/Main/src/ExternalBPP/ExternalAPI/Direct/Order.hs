@@ -10,12 +10,16 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Route as Fields
+import qualified Domain.Types.RouteStopMapping as Fields
+import qualified Domain.Types.Station as Fields
 import ExternalBPP.ExternalAPI.Direct.Utils
 import ExternalBPP.ExternalAPI.Types
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest

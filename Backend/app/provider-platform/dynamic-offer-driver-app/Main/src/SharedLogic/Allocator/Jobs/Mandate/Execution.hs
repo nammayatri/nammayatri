@@ -16,6 +16,7 @@ import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.VendorFee as Fields
 import Kernel.Beam.Functions as B
 import Kernel.External.Payment.Interface.Types (SplitSettlementDetails (..))
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
@@ -47,6 +48,7 @@ import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
 
 startMandateExecutionForDriver ::

@@ -14,6 +14,7 @@ import Kernel.External.Encryption
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Types.App
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Tools.Error

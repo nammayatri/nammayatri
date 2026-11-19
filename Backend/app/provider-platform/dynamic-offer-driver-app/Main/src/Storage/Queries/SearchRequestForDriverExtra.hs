@@ -24,6 +24,7 @@ import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.SearchRequestForDriver ()
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 
 -- Extra code goes here --
 

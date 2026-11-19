@@ -32,16 +32,20 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.SearchRequest as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import qualified Domain.Types.VehicleVariant as Veh
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Beam.Types (TxnIdKey (..))
@@ -100,6 +104,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.ARDUBPPMetrics as TMetrics
 import qualified Tools.Notifications as Notify
 

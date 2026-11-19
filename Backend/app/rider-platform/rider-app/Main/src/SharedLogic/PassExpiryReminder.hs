@@ -17,6 +17,7 @@ import qualified Storage.ConfigPilot.Config.RiderConfig as SCRC
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TNotifications
 
 defaultDaysToExpire :: Int

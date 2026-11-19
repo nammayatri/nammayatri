@@ -15,8 +15,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Vehicle as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -36,6 +38,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.ChatCompletion as TC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 

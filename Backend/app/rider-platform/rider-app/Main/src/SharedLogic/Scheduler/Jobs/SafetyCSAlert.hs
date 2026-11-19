@@ -20,8 +20,14 @@ module SharedLogic.Scheduler.Jobs.SafetyCSAlert where
 import API.Types.UI.Sos
 import qualified Data.Aeson as A
 import qualified Data.Text as T
+import qualified Domain.Types.Location as Fields
+import qualified Domain.Types.LocationAddress as Fields
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RiderConfig as Fields
+import qualified IssueManagement.Common as Fields
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket

@@ -4,6 +4,7 @@ import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
+import qualified Domain.Types.PayoutConfig as Fields
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as PS
 import qualified Domain.Types.VehicleCategory as VehicleCategory
@@ -22,11 +23,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.Transfer as Fields
 import qualified Lib.Finance.Storage.Queries.Transfer as QTransfer
 import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Fields
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR

@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson (eitherDecodeStrict')
+import qualified Domain.Action.Beckn.FRFS.Common as Fields
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -28,6 +29,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()

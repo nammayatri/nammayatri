@@ -33,6 +33,7 @@ import Lib.Scheduler.Environment
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP

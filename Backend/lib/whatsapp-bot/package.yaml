@@ -57,6 +57,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - OverloadedRecordDot
 
 dependencies:
   - base >= 4.7 && < 5
@@ -69,8 +70,6 @@ dependencies:
   - base16-bytestring
   - containers
   - unordered-containers
-  - record-dot-preprocessor
-  - record-hasfield
 
 ghc-options:
   - -Wall
@@ -79,7 +78,6 @@ ghc-options:
   - -Widentities
   - -Wunused-imports
   - -Wwarn=ambiguous-fields
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
 

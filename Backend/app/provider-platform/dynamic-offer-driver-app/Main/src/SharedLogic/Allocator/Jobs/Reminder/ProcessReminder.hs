@@ -28,9 +28,12 @@ import qualified Domain.Types.Common as DDriverInfo
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DDriverInfoDI
 import qualified Domain.Types.DriverLicense as DDL
+import qualified Domain.Types.DriverRCAssociation as Fields
+import qualified Domain.Types.FleetOperatorAssociation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Reminder as DR
@@ -44,7 +47,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
+import Kernel.Sms.Config (SmsConfig (..))
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -94,6 +97,7 @@ import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCExtra
 import Tools.Error (DriverOnboardingError (ImageNotValid, RCNotFound), GenericError (InternalError))
+import qualified Tools.Fields as Fields
 import Tools.Notifications (NotifReq (..), notifyDriverOnEvents, notifyFleetWithGRPCProvider, notifyWithGRPCProvider)
 import qualified Tools.SMS as Sms
 

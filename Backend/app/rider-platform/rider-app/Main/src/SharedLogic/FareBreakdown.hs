@@ -25,6 +25,7 @@ import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
+import qualified Tools.Fields as Fields
 
 data FareBreakdown = FareBreakdown
   { estimateRows :: [DFareBreakup.FareBreakup],

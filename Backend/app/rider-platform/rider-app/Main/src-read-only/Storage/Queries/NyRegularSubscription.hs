@@ -9,8 +9,10 @@ import qualified Data.Time
 import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
 import qualified Domain.Types.Extra.NyRegularSubscription
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.NyRegularSubscription
 import qualified Domain.Types.Person
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

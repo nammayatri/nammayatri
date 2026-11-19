@@ -4,6 +4,7 @@ import Domain.Types.Booking as DBooking
 import Domain.Types.BookingStatus as DTaxiBooking
 import Domain.Types.Estimate as DEstimate
 import Domain.Types.EstimateStatus as DTaxiEstimate
+import qualified Domain.Types.FRFSTicket as Fields
 import Domain.Types.FRFSTicketBooking as DFRFSBooking
 import Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import Domain.Types.FRFSTicketStatus as DFRFSTicket

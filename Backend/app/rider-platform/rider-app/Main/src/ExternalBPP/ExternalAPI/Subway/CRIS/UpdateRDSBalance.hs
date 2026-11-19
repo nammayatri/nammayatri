@@ -18,7 +18,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig (..))
 import EulerHS.Prelude hiding (concatMap, find, length, map, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)

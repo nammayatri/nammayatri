@@ -6,6 +6,8 @@ module Storage.Queries.Estimate where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.FarePolicy as Fields
+import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as Fields
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -20,6 +22,7 @@ import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Cac.FarePolicy
 import qualified Storage.Queries.FareParameters
 import qualified Storage.Queries.Transformers.Estimate
+import qualified Tools.Fields as Fields
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
 create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParameters.create; createWithKV tbl

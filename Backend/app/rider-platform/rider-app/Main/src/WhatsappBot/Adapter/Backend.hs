@@ -45,6 +45,7 @@ import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as DBS
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Extra.Ride as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBPC
 import qualified Domain.Types.LocationAddress as LA
 import qualified Domain.Types.Merchant as DM
@@ -56,8 +57,10 @@ import Environment (Flow)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
+import qualified Kernel.Types.Geofencing as Fields
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, throwError, withShortRetry)
+import qualified Kernel.Types.Price as Fields
+import Kernel.Utils.Common (Seconds (..), fromMaybeM, getCurrentTime, logError, throwError, withShortRetry)
 import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Search as SLS
@@ -67,6 +70,7 @@ import qualified Storage.Queries.PersonExtra as Person
 import qualified Storage.Queries.Ride as QR
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest), MerchantError (MerchantOperatingCityNotFound))
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import WhatsappBot.Handles (BackendHandle (..))
 import WhatsappBot.Types

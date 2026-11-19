@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.NyRegularSubscription where
 
 import qualified Data.Text
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.NyRegularSubscription
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

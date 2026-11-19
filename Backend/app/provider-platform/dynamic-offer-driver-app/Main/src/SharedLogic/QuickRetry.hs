@@ -16,6 +16,7 @@ module SharedLogic.QuickRetry (withQuickRetry) where
 
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics (..))
+import qualified Kernel.Types.Error as Fields
 import Kernel.Utils.Common
 
 -- | Retry tuned for intra-VPC service calls (LTS, the BAP internal API). The kernel's

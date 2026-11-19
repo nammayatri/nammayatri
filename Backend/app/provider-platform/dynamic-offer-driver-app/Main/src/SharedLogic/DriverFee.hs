@@ -27,7 +27,6 @@ import qualified Domain.Types.Plan as Plan
 import Domain.Types.TransporterConfig as TC
 import EulerHS.Prelude hiding (id, state)
 import GHC.Float (double2Int)
-import GHC.Records.Extra
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis

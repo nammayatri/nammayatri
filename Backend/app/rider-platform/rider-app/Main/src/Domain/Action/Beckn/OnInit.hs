@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
@@ -44,6 +45,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 

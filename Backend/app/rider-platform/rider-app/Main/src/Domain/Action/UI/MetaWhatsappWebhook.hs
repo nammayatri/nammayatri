@@ -32,7 +32,8 @@ import Data.ByteArray (constEq)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import Domain.Types.MetaWebhookConfig (MetaWebhookConfig)
+import qualified Domain.Types.Extra.MetaWebhookConfig as Fields
+import Domain.Types.MetaWebhookConfig (MetaWebhookConfig (..))
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -44,9 +45,10 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.MetaWebhookConfig as CQMWC
 import qualified Storage.Queries.MetaWebhookConfig as QMWC
 import Tools.Error (MetaWebhookError (MetaAppSecretNotConfigured, MetaWebhookSignatureInvalid, MetaWebhookVerifyFailed))
+import qualified Tools.Fields as Fields
 import qualified WhatsappBot.Adapter.Env as Env
 import WhatsappBot.Inbound (parseInbound)
-import WhatsappBot.Types (InboundEvent)
+import WhatsappBot.Types (InboundEvent (..))
 
 -- | Minimal, tolerant peek at just enough of the envelope to resolve which
 -- MetaWebhookConfig row owns this request — decoded from the SAME raw bytes

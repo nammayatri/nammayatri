@@ -19,6 +19,7 @@ module Storage.CachedQueries.JourneyLeg
 where
 
 import Domain.Types.Journey as Journey
+import qualified Domain.Types.JourneyLeg as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM

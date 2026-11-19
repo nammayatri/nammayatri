@@ -2,6 +2,7 @@ module Domain.Action.UI.Insurance (getInsurance, getDriverInsurance) where
 
 import Data.Time (UTCTime (..), utctDay)
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
+import qualified Domain.Types.IffcoTokioInsurance as Fields
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -19,6 +20,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Fields as Fields
 
 -- | GET /ui/insurance/{referenceId}
 -- Ride-level insurance: looks up the ride and calls BAP-internal for insurance info.

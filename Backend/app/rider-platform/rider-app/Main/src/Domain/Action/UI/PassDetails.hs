@@ -23,14 +23,19 @@ import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Time
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
+import qualified Domain.Types.FRFSRouteFareProduct as Fields
+import qualified Domain.Types.FRFSRouteStopStageFare as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOnboardingStepConfig as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PassDetails as DPassDetails
 import qualified Domain.Types.PassOrganization as DPassOrganization
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderConfig as DRiderConfig
+import qualified Domain.Types.RouteStopMapping as Fields
+import qualified Domain.Types.Station as Fields
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -57,6 +62,7 @@ import Kernel.Types.TryException (withTryCatch)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.External.Nandi.Types as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab as SharedCab
 import Storage.Beam.IssueManagement ()

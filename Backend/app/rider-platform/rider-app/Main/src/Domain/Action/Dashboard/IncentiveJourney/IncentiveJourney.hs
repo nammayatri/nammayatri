@@ -19,6 +19,8 @@ import qualified API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney as Co
 import qualified Dashboard.Common
 import Data.Time (Day)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as Fields
+import qualified Domain.Types.RiderConfig as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess)
@@ -31,6 +33,7 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Rider as LibRider
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as Fields
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney

@@ -5,6 +5,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)

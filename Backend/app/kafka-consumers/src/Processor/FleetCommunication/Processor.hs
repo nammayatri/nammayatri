@@ -12,6 +12,7 @@ import "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.Communicati
   ( CommunicationDeliveryDispatchPayload,
     processFleetCommunicationDeliveryPayload,
   )
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.Communication as Fields
 import Environment
 import EulerHS.Prelude
 import Kernel.Utils.Common (withLogTag)

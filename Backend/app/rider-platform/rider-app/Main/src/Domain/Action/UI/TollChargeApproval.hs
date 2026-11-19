@@ -7,6 +7,7 @@ module Domain.Action.UI.TollChargeApproval
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.Internal.TollChargeApproval as Internal
@@ -26,6 +27,7 @@ import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics (CoreMetrics)
 
 data TollChargeApprovalDecisionReq = TollChargeApprovalDecisionReq

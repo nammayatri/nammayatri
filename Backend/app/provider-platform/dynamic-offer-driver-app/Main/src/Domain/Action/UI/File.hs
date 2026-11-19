@@ -19,6 +19,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postFilesUpload ::
   ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),

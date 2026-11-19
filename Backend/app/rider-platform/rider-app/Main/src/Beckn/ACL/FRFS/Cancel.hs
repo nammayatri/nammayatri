@@ -25,6 +25,7 @@ import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 
 buildCancelReq ::

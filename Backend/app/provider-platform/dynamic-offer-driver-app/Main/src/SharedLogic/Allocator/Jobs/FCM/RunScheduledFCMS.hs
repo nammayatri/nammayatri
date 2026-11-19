@@ -10,8 +10,10 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import System.Environment (lookupEnv)
+import qualified Tools.Fields as Fields
 
 lookupBroadcastPush :: IO Bool
 lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"

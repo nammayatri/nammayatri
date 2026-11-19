@@ -19,6 +19,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -39,6 +40,7 @@ import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 

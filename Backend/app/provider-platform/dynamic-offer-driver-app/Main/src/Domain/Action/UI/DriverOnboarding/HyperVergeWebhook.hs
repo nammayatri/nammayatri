@@ -6,6 +6,8 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.HyperVergeVerification as Fields
+import qualified Domain.Types.Image as Fields
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Environment
 import Kernel.External.Encryption
@@ -25,6 +27,7 @@ import qualified Storage.Queries.HyperVergeVerification as QHVVerification
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Verification as Verification
 
 type HyperVergeResultWebhookAPI =

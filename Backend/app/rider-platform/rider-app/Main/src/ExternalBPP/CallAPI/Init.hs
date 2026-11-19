@@ -19,6 +19,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 
 init :: (FRFSConfirmFlow m r c, HasMasterCloudForwarder r, Finance.HasActorInfo m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()

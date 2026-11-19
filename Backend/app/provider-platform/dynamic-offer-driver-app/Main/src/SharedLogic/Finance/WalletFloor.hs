@@ -33,12 +33,15 @@ where
 import Data.Time (utctDay)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.DriverFee as Fields
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as Fields
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import qualified Domain.Types.Mandate as DMandate
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Kernel.External.Notification.FCM.Types as FCM

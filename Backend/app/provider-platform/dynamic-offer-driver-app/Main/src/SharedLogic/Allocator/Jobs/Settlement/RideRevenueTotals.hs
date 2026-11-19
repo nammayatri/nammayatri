@@ -16,6 +16,7 @@ import qualified Data.HashSet as HS
 import Data.List (partition)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -26,7 +27,10 @@ import qualified Lib.Finance.Domain.Types.Account as AccountDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DDirectTaxTransaction
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
+import qualified Lib.Finance.Storage.Beam.Account as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as Fields
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as Fields
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTaxTransaction
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified SharedLogic.Finance.Prepaid as Prepaid

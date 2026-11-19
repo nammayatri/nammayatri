@@ -10,12 +10,14 @@ import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.FarePolicy as Fields
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Price
 import qualified SharedLogic.Settlement
+import qualified Tools.Fields as Fields
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
 buildOnSearchMessage res bppConfig isValueAddNP = do

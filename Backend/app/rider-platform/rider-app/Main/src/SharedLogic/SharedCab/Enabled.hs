@@ -20,6 +20,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error (GenericError (InvalidRequest))
+import qualified Tools.Fields as Fields
 
 -- | A suspended city takes no new intake (sessions, bookings, boardings, walk-ups, search results); what is already in flight
 -- still drains: finding timeouts, refunds, session expiry and degraded-ride expiry keep running.

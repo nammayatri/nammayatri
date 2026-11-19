@@ -17,6 +17,8 @@ module SharedLogic.CancellationFee
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Fields
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.EmailTemplate as DET
 import qualified Domain.Types.Person as DPerson
@@ -35,6 +37,7 @@ import SharedLogic.Payment (MakePaymentIntentConstraints)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Charge a customer's cancellation fee via Stripe and reconcile the finance ledger.
 --   Used by the immediate-charge path (Beckn.Common.cancellationTransaction, Card):

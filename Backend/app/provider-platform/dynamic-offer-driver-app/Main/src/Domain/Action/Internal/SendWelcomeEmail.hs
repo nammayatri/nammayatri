@@ -35,6 +35,7 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 
 -- | Details of a just-created Control Centre user. @password@ is the plaintext
 -- the creating admin set: never log this value.

@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RouteStopMapping as Fields
 import qualified Environment
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude

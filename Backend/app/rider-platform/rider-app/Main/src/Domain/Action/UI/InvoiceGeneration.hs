@@ -21,6 +21,7 @@ import Data.Time.Calendar (toGregorian)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.EmailTemplate as DET
+import qualified Domain.Types.Extra.Ride as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide
@@ -49,6 +50,7 @@ import qualified Storage.Queries.Booking as QBE
 import qualified Storage.Queries.Person as QPerson
 import System.Directory (doesFileExist)
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.InvoicePDF as PDF
 import Tools.Metrics (CoreMetrics)
 

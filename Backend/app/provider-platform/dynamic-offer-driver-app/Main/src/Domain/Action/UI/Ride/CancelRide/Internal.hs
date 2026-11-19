@@ -29,6 +29,7 @@ where
 
 import BecknV2.OnDemand.FareBreakup.Tax (TaxBreakup)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Settlement as Fields
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -68,6 +69,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, FinanceM, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), getEntriesByReference, includeEntryIds, invoice, settleEntry, transferPending, updateEntryStatus, voidEntry, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
@@ -119,6 +121,7 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -237,8 +240,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 (Just ride.driverId)
 
             fork "cancelRide - Notify driver" $ do
-              triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
-              triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
+              triggerRideCancelledEvent RideEventData {ride = ride{DRide.status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
+              triggerBookingCancelledEvent BookingEventData {booking = booking{SRB.status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               Notify.notifyOnCancel ride.merchantOperatingCityId ride.id booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               -- INSTANT_AUTO bookings reassign through the same broadcast path as every other tier.

@@ -20,6 +20,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Prelude as P
 

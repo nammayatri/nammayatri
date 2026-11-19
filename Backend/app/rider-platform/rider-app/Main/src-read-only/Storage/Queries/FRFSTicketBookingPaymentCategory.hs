@@ -4,6 +4,7 @@
 
 module Storage.Queries.FRFSTicketBookingPaymentCategory where
 
+import qualified Domain.Types.FRFSQuoteCategory as Fields
 import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPaymentCategory

@@ -17,6 +17,7 @@ module API.Beckn.OnStatus (API, handler, onStatusWebhook) where
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
@@ -33,6 +34,7 @@ import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API = OnStatus.OnStatusAPIV2

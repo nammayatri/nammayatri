@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError, withTryCatch)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 
 postCrisGetSDKData ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

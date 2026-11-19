@@ -44,6 +44,7 @@ import qualified Lib.Finance.AccountConfig as FinanceConfig
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account (Account, AccountType (Liability), CounterpartyType (RIDER))
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.FinanceM (FinanceCtx, runFinance)
@@ -65,6 +66,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
+import qualified Tools.Fields as Fields
 
 -- | The ONE rider-side mapping from Juspay's raw payout-status vocabulary to the
 --   kernel's canonical outcomes. Unparseable text goes to review, never to a guess.

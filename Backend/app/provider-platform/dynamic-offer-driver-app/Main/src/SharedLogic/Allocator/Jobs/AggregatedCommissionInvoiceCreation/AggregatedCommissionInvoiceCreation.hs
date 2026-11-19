@@ -50,6 +50,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Buffer past the calendar boundary so in-flight ride-end commission inserts settle.
 schedulerSafetyOffsetSeconds :: NominalDiffTime

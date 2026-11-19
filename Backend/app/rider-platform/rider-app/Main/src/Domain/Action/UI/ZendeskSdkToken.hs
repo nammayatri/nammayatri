@@ -4,11 +4,14 @@ import qualified API.Types.UI.ZendeskSdkToken as Types
 import qualified Data.Map.Strict as M
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.MerchantServiceConfig
+import qualified Domain.Types.Person as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Ticket.Zendesk.Config as Fields
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))

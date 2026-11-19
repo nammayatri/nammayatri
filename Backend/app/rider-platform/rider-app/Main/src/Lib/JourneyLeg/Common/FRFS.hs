@@ -26,12 +26,14 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.RouteDetails as RD
+import qualified Domain.Types.RouteStopMapping as Fields
 import Domain.Types.Trip as DTrip
 import Domain.Utils (mapConcurrently)
 import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import qualified Kernel.External.MultiModal.Interface.Types as Fields
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -73,6 +75,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- getState and other functions from the original file...

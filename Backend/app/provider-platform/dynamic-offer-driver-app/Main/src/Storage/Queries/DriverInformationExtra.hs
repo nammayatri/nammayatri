@@ -36,6 +36,7 @@ import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation as Transformers
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)

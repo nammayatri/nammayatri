@@ -66,6 +66,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RCStatsExtra as QRCStats
 import qualified Storage.Queries.Reminder as QReminder
 import qualified Storage.Queries.ReminderConfig as QRC
+import qualified Tools.Fields as Fields
 
 -- ============================================================================
 -- Helper functions for common patterns

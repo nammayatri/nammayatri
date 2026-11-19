@@ -10,6 +10,7 @@ import Lib.Scheduler
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.Queries.Booking as QB
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 -- | End of a silent reallocation window. If the window is still open for this booking,

@@ -23,8 +23,10 @@ import Data.Char (isAlphaNum, isAscii)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RiderConfig as Fields
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Id as Fields
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID

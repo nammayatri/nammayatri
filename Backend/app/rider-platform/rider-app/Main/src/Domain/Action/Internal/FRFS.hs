@@ -21,6 +21,7 @@ where
 import Data.List (nubBy, sortBy)
 import Domain.Action.UI.Payment
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess

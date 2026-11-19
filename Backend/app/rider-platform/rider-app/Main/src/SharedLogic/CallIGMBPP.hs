@@ -17,7 +17,6 @@ module SharedLogic.CallIGMBPP where
 import qualified BecknV2.IGM.APIs as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified EulerHS.Types as Euler
-import GHC.Records.Extra
 import qualified IGM.Types as Spec
 import Kernel.Prelude
 import Kernel.Types.Error

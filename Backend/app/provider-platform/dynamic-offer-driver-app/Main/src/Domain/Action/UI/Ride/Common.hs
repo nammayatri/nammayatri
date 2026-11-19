@@ -25,6 +25,7 @@ module Domain.Action.UI.Ride.Common
   )
 where
 
+import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponent (..), FareUIComponentType (..), FareUISection (..), FareUISubItem (..), computeFareBreakupLines)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
@@ -54,6 +55,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
+import qualified Domain.Types.DeliveryPersonDetails as Fields
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -63,6 +65,7 @@ import Domain.Types.FarePolicy (FareChargeComponent (CustomerCancellationChargeC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
@@ -70,6 +73,8 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.Translations as Fields
+import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
@@ -80,8 +85,10 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
+import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Id
 import Kernel.Types.Price
+import qualified Kernel.Types.Time as Fields
 import Kernel.Utils.Common (fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
@@ -114,6 +121,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error (LocationMappingError (..))
+import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
 

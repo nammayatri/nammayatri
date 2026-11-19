@@ -59,6 +59,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types

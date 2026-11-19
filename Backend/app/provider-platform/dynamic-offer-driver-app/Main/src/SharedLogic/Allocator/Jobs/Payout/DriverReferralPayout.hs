@@ -23,6 +23,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as IPayout
@@ -55,6 +56,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
+import qualified Tools.Fields as Fields
 import qualified Tools.Payout as TP
 
 data DailyStatsWithVpa = DailyStatsWithVpa

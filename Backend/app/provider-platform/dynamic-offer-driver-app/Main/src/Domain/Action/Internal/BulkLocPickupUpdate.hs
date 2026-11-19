@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.LocationUpdates.Internal as Fields
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTS
 import qualified Storage.Queries.Ride as QRide

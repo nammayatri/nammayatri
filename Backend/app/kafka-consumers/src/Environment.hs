@@ -21,6 +21,7 @@ import EulerHS.Prelude hiding (maybe, show)
 import qualified EulerHS.Runtime as R
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.Encryption as Fields
 import Kernel.External.Types (SchedulerType)
 import qualified Kernel.Prelude
 import qualified Kernel.Prelude as Kernel

@@ -22,6 +22,7 @@ where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id

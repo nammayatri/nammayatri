@@ -22,6 +22,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.WhiteListOrg as Fields
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.Beckn.Domain as BecknDomain
@@ -31,6 +32,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.WhiteListOrg as CQWLO
 import qualified Storage.Queries.BecknConfig as QBC
+import qualified Tools.Fields as Fields
 
 dispatchAction ::
   ( MonadFlow m,

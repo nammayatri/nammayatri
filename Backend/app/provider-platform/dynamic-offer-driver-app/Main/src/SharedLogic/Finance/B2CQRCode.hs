@@ -32,6 +32,7 @@ import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
+import qualified Tools.Fields as Fields
 
 -- | Build + persist the unsigned B2C QR payload for a customer (B2C) invoice when
 --   @invoiceConfig.enableB2CUnsignedQR@ is on. Skips non-customer invoices — B2B

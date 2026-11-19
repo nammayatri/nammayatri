@@ -57,6 +57,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags

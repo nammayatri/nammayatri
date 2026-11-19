@@ -27,6 +27,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Route as Fields
 import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (mapConcurrently)
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
@@ -55,6 +56,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
 import qualified Storage.Queries.Location as QLocation
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
 

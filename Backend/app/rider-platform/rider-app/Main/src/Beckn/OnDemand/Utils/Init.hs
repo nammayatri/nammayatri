@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import Data.List (singleton)
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
+import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderConfig as DRC
 import EulerHS.Prelude hiding (id, state)

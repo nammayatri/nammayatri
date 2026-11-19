@@ -52,7 +52,9 @@ import qualified Domain.Types.DriverRCAssociation as DRCA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as Fields
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleVariant as DV
@@ -84,6 +86,7 @@ import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Text.Show
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Grid as TGrid
 
 -- | Who holds the RC right now (clash case 1: another driver has it active). The holder's vehicle row is

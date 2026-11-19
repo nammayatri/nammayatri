@@ -7,11 +7,15 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Types.Id (cast)
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.BeamFlow as SafetyBeam
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal

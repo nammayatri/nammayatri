@@ -3,10 +3,13 @@
 module SharedLogic.Scheduler.Jobs.NyRegularMaster where
 
 import qualified Data.Time as Time
+import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
+import qualified Domain.Types.RiderConfig as Fields
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Logging (logInfo)
 import Lib.ConfigPilot.Interface.Types (getConfig)

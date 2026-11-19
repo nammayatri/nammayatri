@@ -9,6 +9,7 @@ import qualified Data.Text as T
 import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import Lib.Payment.Payout.Bulk.Resolve (advanceBatch)

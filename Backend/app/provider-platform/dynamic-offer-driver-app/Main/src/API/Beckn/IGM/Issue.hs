@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified Tools.Fields as Fields
 
 type API = BI.IssueAPI
 

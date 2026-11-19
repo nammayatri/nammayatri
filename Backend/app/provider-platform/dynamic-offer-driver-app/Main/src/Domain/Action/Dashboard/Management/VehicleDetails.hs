@@ -13,6 +13,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Fields as Fields
 
 getVehicleDetailsVehicleModels :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [API.Types.ProviderPlatform.Management.VehicleDetails.VehicleMakeModelsItem])
 getVehicleDetailsVehicleModels merchantShortId opCity = do

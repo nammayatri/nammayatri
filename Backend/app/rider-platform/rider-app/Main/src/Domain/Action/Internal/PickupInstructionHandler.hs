@@ -20,10 +20,16 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Geohash as Geohash
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Location as Fields
+import qualified Domain.Types.Merchant as Fields
+import qualified Domain.Types.Person as Fields
+import qualified Domain.Types.PickupInstructions as Fields
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()

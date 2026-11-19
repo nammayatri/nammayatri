@@ -14,6 +14,7 @@ import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified "this" Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingPayment as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified "this" Domain.Types.Person as DP
@@ -44,6 +45,7 @@ import qualified Storage.Queries.BookingPayment as QBookingPayment
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 getPaymentRefundRequestList ::
@@ -190,12 +192,12 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId _mbReques
         let updRefundsAmount = Just (sum (map (.amount) comps))
         QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) deductFromDriver (Just comps) refundRequest.id
         let updRefundRequest =
-              refundRequest{status = DRefundRequest.APPROVED,
-                            responseDescription = req.responseDescription,
-                            refundsAmount = updRefundsAmount,
-                            refundsTries = refundRequest.refundsTries + 1,
-                            deductFromDriver = deductFromDriver,
-                            approvedRefundedComponents = Just comps
+              refundRequest{DRefundRequest.status = DRefundRequest.APPROVED,
+                            DRefundRequest.responseDescription = req.responseDescription,
+                            DRefundRequest.refundsAmount = updRefundsAmount,
+                            DRefundRequest.refundsTries = refundRequest.refundsTries + 1,
+                            DRefundRequest.deductFromDriver = deductFromDriver,
+                            DRefundRequest.approvedRefundedComponents = Just comps
                            }
         QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
         Notify.notifyRefunds updRefundRequest
@@ -205,7 +207,7 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId _mbReques
     rejectRefunds refundRequest = do
       logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
       QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing Nothing refundRequest.id
-      let updRefundRequest = refundRequest{status = DRefundRequest.REJECTED, responseDescription = req.responseDescription}
+      let updRefundRequest = refundRequest{DRefundRequest.status = DRefundRequest.REJECTED, DRefundRequest.responseDescription = req.responseDescription}
       mbRideId <- SPayment.getRideIdForOrder updRefundRequest.orderId
       whenJust mbRideId $ \rid -> QRide.updateRefundRequestStatus (Just updRefundRequest.status) rid
       Notify.notifyRefunds updRefundRequest

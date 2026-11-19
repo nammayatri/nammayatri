@@ -24,6 +24,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.Dashboard.Management.DriverRegistration
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person.Type as Fields
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified Environment
 import EulerHS.Prelude
@@ -37,6 +38,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth
+import qualified Tools.Auth.DashboardUser as Fields
 import Tools.Auth.DashboardUserAuth
 
 postDriverRegistrationDocumentUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq -> Environment.Flow API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp)

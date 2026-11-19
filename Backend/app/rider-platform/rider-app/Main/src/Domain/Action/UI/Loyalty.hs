@@ -19,6 +19,7 @@ import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (PersonError (PersonNotFound))
+import qualified Tools.Fields as Fields
 
 postWalletLoyaltyInfo ::
   ( ( Maybe (Id Person.Person),

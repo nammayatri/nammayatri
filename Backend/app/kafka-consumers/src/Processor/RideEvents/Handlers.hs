@@ -30,14 +30,21 @@ import qualified "dynamic-offer-driver-app" Domain.Action.UI.Registration as DRe
 import "dynamic-offer-driver-app" Domain.Action.UI.Ride.EndRide (RideInterpolationData (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as SRB
 import qualified "dynamic-offer-driver-app" Domain.Types.DocumentVerificationConfig as DTO
+import qualified Domain.Types.DriverPanCard as Fields
+import qualified Domain.Types.DriverPlan as Fields
+import qualified Domain.Types.DriverRCAssociation as Fields
+import qualified Domain.Types.DriverStats as Fields
 import "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent (RideEndedEvent (..))
+import qualified Domain.Types.Image as Fields
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Domain.Types.MerchantOperatingCity as DMOC
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.TransporterConfig as Fields
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified "beckn-spec" Domain.Types.Trip as DTrip
+import qualified Domain.Types.Vehicle as Fields
 import qualified "beckn-spec" Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
@@ -70,6 +77,7 @@ import Kernel.Utils.Common
     logWarning,
   )
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorEngine.Types as Fields
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)

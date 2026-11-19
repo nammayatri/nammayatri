@@ -28,6 +28,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Action.UI.RidePayment as Fields
 import qualified Domain.Types.FareBreakupInfo as DFBI
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context

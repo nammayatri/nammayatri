@@ -56,6 +56,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms

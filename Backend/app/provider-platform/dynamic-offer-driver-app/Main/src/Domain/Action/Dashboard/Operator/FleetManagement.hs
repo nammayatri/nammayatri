@@ -19,6 +19,7 @@ import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.FleetMemberAssociation as DFMA
+import qualified Domain.Types.FleetOperatorAssociation as Fields
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -29,7 +30,9 @@ import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
+import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
@@ -57,6 +60,7 @@ import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.SMS as SMSHelper
 
 ---------------------------------------------------------------------

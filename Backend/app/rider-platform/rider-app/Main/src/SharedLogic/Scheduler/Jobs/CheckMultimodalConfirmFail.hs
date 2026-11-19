@@ -15,6 +15,7 @@
 module SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail where
 
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.FRFSTicketBooking as Fields
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
@@ -29,6 +30,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -40,6 +42,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Tools.Fields as Fields
 import Tools.Metrics (HasBAPMetrics)
 import qualified UrlShortner.Common as UrlShortner
 

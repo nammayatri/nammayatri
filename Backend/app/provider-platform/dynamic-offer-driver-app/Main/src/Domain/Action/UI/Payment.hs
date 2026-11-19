@@ -39,6 +39,7 @@ import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverGstin as DDG
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
 import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
@@ -53,6 +54,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
@@ -144,6 +146,7 @@ import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge

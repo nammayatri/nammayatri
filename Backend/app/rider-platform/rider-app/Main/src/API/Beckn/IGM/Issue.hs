@@ -21,6 +21,7 @@ import qualified IssueManagement.API.Beckn.Issue as BI
 import qualified IssueManagement.Common as Common
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)

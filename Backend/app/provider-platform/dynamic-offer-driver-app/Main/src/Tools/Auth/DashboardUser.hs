@@ -52,6 +52,7 @@ module Tools.Auth.DashboardUser
 where
 
 import "lib-dashboard" Dashboard.Common ()
+import qualified DashboardAlert.Domain.Types.Audience as Fields
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Capability as DDashboardCapability
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
@@ -59,6 +60,7 @@ import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.External.Encryption (EncryptedHashed, decrypt, encrypt)
 import Kernel.Prelude
@@ -89,6 +91,7 @@ import qualified "lib-dashboard" Tools.Auth.Scope as DashboardScope
 import qualified "lib-dashboard" Tools.Auth.Verify as Verify
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 import qualified "lib-dashboard" Tools.Error as DashboardError
+import qualified Tools.Fields as Fields
 
 -- | What an application server needs in its environment to verify a dashboard
 -- session: the dashboard token caches, the registration-token policy, and the

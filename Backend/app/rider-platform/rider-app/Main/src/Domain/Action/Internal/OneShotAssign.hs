@@ -25,8 +25,10 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types
+import qualified Domain.Types.Estimate as Fields
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.FareBreakupInfo as DFBI
+import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
@@ -49,6 +51,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Event
+import qualified Tools.Fields as Fields
 
 -- NOTE: field names (and JSON encoding) must stay in sync with the BPP client type
 -- in dynamic-offer-driver-app SharedLogic.CallBAPInternal.OneShotAssignReq.

@@ -20,6 +20,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PurchaseHistory as DPH
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id

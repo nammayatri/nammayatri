@@ -19,6 +19,7 @@ module Domain.Action.UI.KioskLocation
 where
 
 import qualified Domain.Types.KioskLocation as DTK
+import qualified Domain.Types.KioskLocationTranslation as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person

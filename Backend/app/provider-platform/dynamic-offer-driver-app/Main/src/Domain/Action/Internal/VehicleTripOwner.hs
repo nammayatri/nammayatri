@@ -24,6 +24,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (throwError)

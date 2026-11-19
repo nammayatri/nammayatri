@@ -22,7 +22,9 @@ import qualified BecknV2.OnDemand.Utils.Context as BecknContext
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types as Domain
+import qualified Domain.Types.BecknConfig as Fields
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.WhiteListOrg as Fields
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.Beckn.Domain as BecknDomain

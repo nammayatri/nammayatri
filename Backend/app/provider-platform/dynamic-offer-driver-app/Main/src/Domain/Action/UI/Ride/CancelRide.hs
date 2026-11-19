@@ -29,6 +29,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Text as Text
+import qualified Domain.Action.UI.DriverGoHomeRequest as Fields
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types as DTC
@@ -36,6 +37,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.GoHomeConfig as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -78,6 +80,7 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 

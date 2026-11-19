@@ -3,6 +3,7 @@ module Domain.Action.Internal.FavouriteDrivers where
 import Domain.Types.DriverStats
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RiderDriverCorrelation as Fields
 import EulerHS.Prelude hiding (id, map)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -16,6 +17,7 @@ import Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data GetFavouriteDriverInfoReq = GetFavouriteDriverInfoReq
   { customerMobileNumber :: Text,

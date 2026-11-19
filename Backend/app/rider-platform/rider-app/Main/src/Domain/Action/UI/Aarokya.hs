@@ -1,6 +1,7 @@
 module Domain.Action.UI.Aarokya where
 
 import qualified Data.Aeson as A
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide

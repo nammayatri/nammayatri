@@ -8,6 +8,7 @@ import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
@@ -16,6 +17,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 data VehicleServiceTierInfo = VehicleServiceTierInfo
   { serviceTierType :: ServiceTierType,

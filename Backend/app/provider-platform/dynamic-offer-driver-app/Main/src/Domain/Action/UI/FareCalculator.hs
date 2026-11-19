@@ -31,6 +31,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Merchant as QM
 import qualified Toll.SharedLogic.TollsDetector as TD
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 
 getCalculateFare ::

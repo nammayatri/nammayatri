@@ -40,6 +40,7 @@ import qualified API.Types.ProviderPlatform.Management.FarePolicyV2 as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import qualified BecknV2.OnDemand.Settlement as Fields
 import Control.Applicative ((<|>))
 import qualified "lib-dashboard" Dashboard.Common as DCommon
 import qualified Data.Aeson as A
@@ -68,6 +69,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VehicleServiceTier as Fields
 import qualified Email.Flow as Email
 import qualified Email.Types as EmailT
 import Environment
@@ -98,6 +100,7 @@ import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QF
 import qualified Storage.Queries.FarePolicyChangeRequest as QFPCR
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.FareProductExtra as QFareProductExtra
+import qualified Tools.Fields as Fields
 
 --------------------------------------------------------------------------------
 -- context resolution

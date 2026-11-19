@@ -21,6 +21,7 @@ where
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import EulerHS.Prelude
 import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Types.App

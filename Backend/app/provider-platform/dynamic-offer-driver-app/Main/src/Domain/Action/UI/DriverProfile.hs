@@ -30,7 +30,8 @@ import qualified Email.Types
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig, useFakeSms)
+import Kernel.Sms.Config (SmsConfig (..), useFakeSms)
+import qualified Kernel.Sms.Config as Fields
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)

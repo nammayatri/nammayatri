@@ -27,7 +27,9 @@ import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis.Config as Fields
 import Kernel.Tools.LoopGracefully (loopGracefully)
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow (runFlowR)
 import qualified Kernel.Utils.Common as KUC

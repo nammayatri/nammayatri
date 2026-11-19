@@ -46,6 +46,7 @@ import qualified Storage.Queries.DriverRCAssociation ()
 import qualified Storage.Queries.IdfyVerification ()
 import qualified Storage.Queries.Person ()
 import qualified Storage.Queries.VehicleRegistrationCertificate ()
+import qualified Tools.Fields as Fields
 
 data DriverDocsInfo = DriverDocsInfo
   { person :: Person,

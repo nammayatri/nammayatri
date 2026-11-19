@@ -4,16 +4,19 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
+import qualified Domain.Types.Location as Fields
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version as Fields
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON

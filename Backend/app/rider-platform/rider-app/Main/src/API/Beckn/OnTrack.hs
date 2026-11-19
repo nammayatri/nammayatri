@@ -17,13 +17,17 @@ module API.Beckn.OnTrack (API, handler, onTrackWebhook) where
 import qualified Beckn.ACL.OnTrack as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
+import qualified BecknV2.OnDemand.Types as Fields
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnTrack as DOnTrack
+import qualified Domain.Types.Ride as Fields
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Id as Fields
+import qualified Kernel.Types.Registry.Subscriber as Fields
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.DummySignatureAuth as DummySig

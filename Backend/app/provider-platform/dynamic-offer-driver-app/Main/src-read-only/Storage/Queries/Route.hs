@@ -9,6 +9,7 @@ import qualified Domain.Types.Route
 import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error

@@ -31,6 +31,7 @@ import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- Custom response types tailored for boat fleet listing
 newtype BoatFleetVehicleListRes = BoatFleetVehicleListRes {vehicles :: [BoatFleetVehicle]}

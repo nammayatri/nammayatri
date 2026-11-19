@@ -13,6 +13,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
+import qualified Domain.Action.UI.Person as Fields
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Action.UI.SupportBot as SupportBot
 import Domain.Types.Booking
@@ -79,6 +80,7 @@ import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RideExtra as QRE
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import Tools.Ticket as TT
 

@@ -8,6 +8,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Fields
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id

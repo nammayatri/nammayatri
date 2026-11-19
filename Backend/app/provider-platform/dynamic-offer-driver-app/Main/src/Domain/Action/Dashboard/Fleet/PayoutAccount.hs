@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Verification.Types as Fields
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -23,6 +24,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postPayoutAccount ::
   ShortId DMerchant.Merchant ->

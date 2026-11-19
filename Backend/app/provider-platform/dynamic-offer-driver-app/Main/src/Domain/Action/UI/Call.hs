@@ -55,6 +55,8 @@ import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.DeliveryPersonDetails as Fields
+import qualified Domain.Types.DriverRCAssociation as Fields
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.External.LiveEKD as TLiveEKD
@@ -63,7 +65,9 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified EulerHS.Prelude as EulerHS.Prelude
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call as Call
@@ -73,6 +77,7 @@ import qualified Kernel.External.Call.Interface.Types as CallTypes
 import qualified Kernel.External.Call.Ozonetel.Types as Ozonetel
 import Kernel.External.Encryption as KE
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Notification.FCM.Types as Fields
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
@@ -80,6 +85,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
@@ -105,6 +111,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Text.XML as XML
 import Tools.Call hiding (addCampaignData)
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications hiding (priority)
 import TransactionLogs.Types
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)

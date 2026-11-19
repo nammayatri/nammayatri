@@ -4,7 +4,9 @@ module Domain.Action.Internal.SharedCabCallNumber where
 
 import API.Types.UI.SharedCabInternal (SharedCabDriverCallNumberResp (..))
 import qualified Domain.Types.Common as DCommon
+import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Vehicle as Fields
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)

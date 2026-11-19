@@ -16,6 +16,8 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Person as Fields
+import qualified Domain.Types.Station as Fields
 import EulerHS.Prelude hiding (readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
@@ -27,6 +29,7 @@ import Kernel.Prelude ((!!))
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import Servant.API
 import SharedLogic.FRFSUtils

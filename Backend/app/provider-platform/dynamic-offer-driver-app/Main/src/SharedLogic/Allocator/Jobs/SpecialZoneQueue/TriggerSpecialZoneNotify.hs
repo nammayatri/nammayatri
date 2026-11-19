@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SpecialZone ()

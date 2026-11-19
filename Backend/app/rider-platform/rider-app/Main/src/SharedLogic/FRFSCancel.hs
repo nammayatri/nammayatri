@@ -6,7 +6,9 @@ import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
+import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
@@ -39,6 +41,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner

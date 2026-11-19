@@ -7,6 +7,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MessageDictionary as DMD
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified Domain.Types.Translations as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Types as Language
@@ -15,6 +16,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as Fields
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.MessageDictionary as QMD
 import qualified Storage.Queries.Person as QPerson

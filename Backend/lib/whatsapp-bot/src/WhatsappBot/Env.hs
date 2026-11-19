@@ -58,7 +58,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Kernel.Prelude
 import WhatsappBot.Handles
-import WhatsappBot.I18n (LanguageStrings, SupportedLanguage, t)
+import WhatsappBot.I18n (LanguageStrings (..), SupportedLanguage, t)
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
 -- (getField), so their selectors are never referenced by name, but the HasField
 -- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)

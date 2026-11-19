@@ -40,6 +40,7 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
 
 type API =

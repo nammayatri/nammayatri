@@ -23,10 +23,13 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text.Encoding as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverInformation as Fields
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
+import qualified Domain.Types.TransporterConfig as Fields
 import qualified DriverTrackingHealthCheck.API as HC
 import qualified DriverTrackingHealthCheck.Event as Event
 import Environment (Flow, HealthCheckAppCfg)
+import qualified Environment as Fields
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -36,6 +39,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Service
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Processor.LocationUpdate.Types (DriverIdTokenKey)
+import qualified Processor.LocationUpdate.Types as Fields
 import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as SQP

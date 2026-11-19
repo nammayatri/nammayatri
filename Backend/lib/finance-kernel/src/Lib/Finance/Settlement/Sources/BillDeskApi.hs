@@ -7,6 +7,7 @@ import qualified EulerHS.Language as L
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Settlement.Interface (getSettlementDetailReports, getSettlements)
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..), SettlementSummary (..))
+import qualified Kernel.External.Settlement.Interface.Types as Fields
 import Kernel.External.Settlement.Types (BillDeskApiConfig)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics

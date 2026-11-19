@@ -17,6 +17,7 @@ module Tools.Metrics.ARDUBPPMetrics.Types
     BPPMetricsContainer (..),
     module CoreMetrics,
     registerBPPMetricsContainer,
+    CountingDeviationMetric (..),
   )
 where
 

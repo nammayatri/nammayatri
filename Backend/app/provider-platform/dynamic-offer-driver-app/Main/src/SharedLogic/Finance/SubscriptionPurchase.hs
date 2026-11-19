@@ -20,6 +20,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
+import qualified Tools.Fields as Fields
 
 --------------------------------------------------------------------------------
 -- AUDIT HELPERS

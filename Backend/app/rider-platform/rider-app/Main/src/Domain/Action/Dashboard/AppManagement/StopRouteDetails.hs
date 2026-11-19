@@ -13,6 +13,8 @@ import qualified API.Types.Dashboard.AppManagement.Endpoints.StopRouteDetails as
 import qualified "beckn-spec" BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as Fields
+import qualified Domain.Types.RoutePolylines as Fields
 import qualified "this" Domain.Types.RouteStopMapping
 import qualified "this" Domain.Types.Station
 import qualified Environment
@@ -27,6 +29,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 resolveBppConfig ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

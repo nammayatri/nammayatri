@@ -24,9 +24,11 @@ import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
 import Kernel.Utils.Common
+import qualified Tools.Fields as Fields
 
 mkOnInitMessageV2 :: Utils.IsValueAddNP -> DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
 mkOnInitMessageV2 isValueAddNP res becknConfig mbFarePolicy =

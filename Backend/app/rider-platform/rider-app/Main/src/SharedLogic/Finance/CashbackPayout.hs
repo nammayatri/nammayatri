@@ -1,6 +1,6 @@
 module SharedLogic.Finance.CashbackPayout (runCashbackPayout) where
 
-import Domain.Types.PayoutConfig (PayoutConfig)
+import Domain.Types.PayoutConfig (PayoutConfig (..))
 import Domain.Types.Person (Person)
 import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
@@ -32,6 +32,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 

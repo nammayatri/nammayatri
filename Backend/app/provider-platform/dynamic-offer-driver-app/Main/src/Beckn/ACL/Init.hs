@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Field
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
+import qualified Tools.Fields as Fields
 
 buildInitReqV2 ::
   ( MonadThrow m,

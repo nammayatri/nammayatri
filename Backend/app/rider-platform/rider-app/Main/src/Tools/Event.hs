@@ -28,6 +28,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.EventStream

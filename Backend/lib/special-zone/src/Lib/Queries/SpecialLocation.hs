@@ -32,6 +32,7 @@ import Lib.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Tabular.SpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
 import qualified Lib.Types.SpecialLocation as D
+import qualified Lib.Types.SpecialLocationPriority as Fields
 
 data SpecialLocationFull = SpecialLocationFull
   { id :: Id D.SpecialLocation,

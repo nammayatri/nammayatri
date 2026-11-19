@@ -9,6 +9,7 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Fields as Fields
 
 --------------------------------------- Single Fleet Owners Access --------------------------------------
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text

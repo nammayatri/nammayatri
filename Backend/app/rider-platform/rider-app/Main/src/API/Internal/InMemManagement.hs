@@ -1,6 +1,7 @@
 module API.Internal.InMemManagement where
 
 import Environment (FlowHandler, FlowServer)
+import qualified Environment as Fields
 import Kernel.Prelude
 import Kernel.Storage.InMem.Management.API (InMemManagementAPI)
 import qualified Kernel.Storage.InMem.Management.Handler as Handler

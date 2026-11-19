@@ -58,6 +58,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 rideSync :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Bool -> Flow Common.RideSyncRes
 rideSync mbCancellationSource (Just ride) booking merchant allowSnapshotVehicleFallback =

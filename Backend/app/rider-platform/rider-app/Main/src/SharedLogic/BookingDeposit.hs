@@ -75,6 +75,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Account.Service as Account
 import qualified Lib.Finance.Balance as FinanceBalance
 import Lib.Finance.Domain.Types.Account (Account, CounterpartyType (..))
+import qualified Lib.Finance.Domain.Types.Account as Fields
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Domain.Types.Transfer as DT
 import Lib.Finance.FinanceM
@@ -84,6 +85,7 @@ import qualified Lib.Finance.Transfer.Inbound as Inbound
 import Lib.Finance.Transfer.Rail (TransferOutcome (OutcomeSucceeded))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder

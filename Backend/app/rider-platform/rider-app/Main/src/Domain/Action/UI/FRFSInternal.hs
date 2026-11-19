@@ -20,6 +20,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (ShortId (..))
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Tools.Fields as Fields
 
 getFrfsTripRouteManifest ::
   Text ->

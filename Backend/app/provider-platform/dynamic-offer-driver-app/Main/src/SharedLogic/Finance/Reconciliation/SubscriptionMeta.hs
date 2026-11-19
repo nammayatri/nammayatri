@@ -28,10 +28,13 @@ where
 
 import Data.Aeson ((.=))
 import Data.Aeson.Types (Pair)
+import qualified Domain.Types.Plan as Fields
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (EsqDBFlow, MonadFlow)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
@@ -41,6 +44,7 @@ import SharedLogic.Finance.Prepaid
     prepaidRideDebitReferenceType,
   )
 import qualified Storage.Queries.Plan as QPlan
+import qualified Tools.Fields as Fields
 
 subscriptionMetaPairs ::
   (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

@@ -14,7 +14,12 @@ import Data.ByteString (ByteString)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
+import qualified Domain.Types.AadhaarCard as Fields
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverGstin as Fields
+import qualified Domain.Types.DriverLicense as Fields
+import qualified Domain.Types.DriverPanCard as Fields
+import qualified Domain.Types.DriverUdyam as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
@@ -26,6 +31,7 @@ import Kernel.Types.Documents (VerificationStatus (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.DocumentVault (DocumentVault, DocumentVaultError (..), isSealedObject)
+import qualified Storage.DocumentVault as Fields
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverLicense as QDL

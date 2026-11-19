@@ -11,6 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Tools.Fields as Fields
 
 makeMerchantAPIEntity :: Merchant -> MerchantAPIEntity
 makeMerchantAPIEntity Merchant {..} =

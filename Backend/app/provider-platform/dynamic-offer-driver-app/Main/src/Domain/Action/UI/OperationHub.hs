@@ -24,6 +24,7 @@ import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 getOperationGetAllHubs :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> Flow [OperationHub]
 getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId

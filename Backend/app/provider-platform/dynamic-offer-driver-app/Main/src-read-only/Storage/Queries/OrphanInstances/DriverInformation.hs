@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Domain.Types.DriverInformation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Fields
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error

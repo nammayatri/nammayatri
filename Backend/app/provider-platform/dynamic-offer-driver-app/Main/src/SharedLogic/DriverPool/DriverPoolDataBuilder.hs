@@ -6,8 +6,12 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import qualified Domain.Types.DriverBankAccount as Fields
+import qualified Domain.Types.FleetDriverAssociation as Fields
+import qualified Domain.Types.FleetOwnerInformation as Fields
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Vehicle as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -21,6 +25,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
+import qualified Tools.Fields as Fields
 
 -- | Get pool data for drivers, lazily building from DB for any missing keys.
 -- This handles cold start: first call after deploy fetches from DB and caches.

@@ -31,8 +31,10 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingUpdateRequest as Fields
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
+import qualified Domain.Types.Ride as Fields
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -43,6 +45,7 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Tools.Fields as Fields
 
 buildOnUpdateReqV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>

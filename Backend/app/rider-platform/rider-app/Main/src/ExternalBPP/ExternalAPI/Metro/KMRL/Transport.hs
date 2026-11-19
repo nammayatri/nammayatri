@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wwarn=unused-top-binds #-}
+
 module ExternalBPP.ExternalAPI.Metro.KMRL.Transport
   ( callKMRL,
     envelope,

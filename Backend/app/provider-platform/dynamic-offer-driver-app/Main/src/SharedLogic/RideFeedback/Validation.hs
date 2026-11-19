@@ -17,9 +17,11 @@ import Data.List (nub, sort, (\\))
 import qualified Data.Text as T
 import qualified Domain.Types.RideFeedbackConfig as DRFC
 import IssueManagement.Common (IssueReportType (..))
+import qualified IssueManagement.Common as Fields
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import SharedLogic.RideFeedback.Rule (decodeCondition, unsupportedOperators)
+import qualified Tools.Fields as Fields
 
 -- | Problems with a Config Pilot patch of a city's questions, given the questions before and after
 -- it (same order): a patch may change any question's content, but not which questions exist, their

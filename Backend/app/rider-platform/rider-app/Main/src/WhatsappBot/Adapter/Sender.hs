@@ -23,11 +23,13 @@ module WhatsappBot.Adapter.Sender (mkWaSender) where
 
 import qualified Data.Text as T
 import Environment (Flow)
+import qualified Environment as Fields
 import qualified Kernel.External.Meta as Meta
 import Kernel.Prelude
 import Kernel.Utils.Common (logError, logWarning)
 import WhatsappBot.Handles (WaSender (..))
 import WhatsappBot.Types ()
+import qualified WhatsappBot.Types as Fields
 
 mkWaSender :: Meta.MetaCfg -> WaSender Flow
 mkWaSender cfg =

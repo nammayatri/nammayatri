@@ -20,6 +20,7 @@ import Domain.Types.PlaceNameCache
 import Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Prometheus.Internal (incrementCounter)

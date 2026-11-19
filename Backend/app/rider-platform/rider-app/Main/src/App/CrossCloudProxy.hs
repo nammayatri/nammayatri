@@ -18,10 +18,12 @@ import qualified API.UI as UI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RegistrationToken as Fields
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
+import qualified Kernel.Types.App as Fields
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import qualified Network.HTTP.Client as Http

@@ -15,9 +15,12 @@ import qualified Data.ByteString.Char8 as C8
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Merchant as Fields
 import Environment (Flow)
+import qualified Environment as Fields
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.Common as Common
 import qualified SharedLogic.IntegratedBPPConfig as SIBC

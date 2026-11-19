@@ -9,6 +9,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (throwError)
 import Lib.Queries.SpecialLocation
+import qualified Lib.Types.GateInfoExtra as Fields
 import Servant (Header, Headers, addHeader)
 import Storage.Beam.SpecialZone ()
 import Tools.Error (SpecialZoneErrors (SpecialLocationNotModified))

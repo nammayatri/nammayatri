@@ -18,6 +18,7 @@ module Tools.Auth.Scope
   )
 where
 
+import qualified Domain.Types.MerchantAccess as Fields
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis

@@ -8,6 +8,7 @@ import qualified API.Types.UI.FRFSFleetOperator
 import qualified Domain.Action.UI.FRFSFleetOperator as UIFRFSFleetOperator
 import qualified Domain.Types.Merchant
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id

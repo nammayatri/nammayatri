@@ -34,7 +34,9 @@ import qualified Domain.Types.Message as DMessage
 import qualified Domain.Types.MessageReport as DMessageReport
 import qualified Domain.Types.Person
 import Environment (Flow)
+import qualified Environment as Fields
 import EulerHS.Prelude hiding (id, unpack)
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Fields
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.MultiModal.Utils (decode)
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -51,9 +53,11 @@ import Kernel.Utils.Common (fork, fromMaybeM, generateGUID, getCurrentTime, high
 import qualified Lib.BmsBackend.Flow as BmsFlow
 import qualified Lib.BmsBackend.Types as BmsTypes
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.GtfsDataServer.Domain.Types.RouteStopMapping as Fields
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripEnded, notifyFrfsTripStarted)
+import qualified SharedLogic.CallBAPInternal as Fields
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -62,6 +66,7 @@ import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageReport as MRQuery
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InternalError, InvalidRequest), MerchantError (MerchantServiceConfigNotFound))
+import qualified Tools.Fields as Fields
 import Tools.Notifications (NotifReq (..), notifyDriverOnEvents)
 
 getV2FrfsRoute ::

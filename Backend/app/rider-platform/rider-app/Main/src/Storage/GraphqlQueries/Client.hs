@@ -37,6 +37,7 @@ import qualified Data.Text as Text
 import qualified Data.Time.LocalTime as LocalTime
 import Domain.Types.IntegratedBPPConfig
 import Kernel.Prelude
+import qualified Kernel.Types.Id as Fields
 import Kernel.Types.Time
 import Kernel.Utils.Common
 import SharedLogic.External.Nandi.Flow (postGtfsGraphQL)

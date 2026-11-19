@@ -23,6 +23,7 @@ where
 
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DMandate
 import qualified Domain.Types.Person as DP

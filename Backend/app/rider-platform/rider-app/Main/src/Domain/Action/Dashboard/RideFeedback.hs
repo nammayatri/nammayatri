@@ -13,6 +13,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.RideFeedback.Actions (ActionEnv (..), runActionsAndReport)
+import qualified SharedLogic.RideFeedback.Types as Fields
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -20,6 +21,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 -- | Re-runs an answer's actions that have not succeeded yet (e.g. after Kapture or the driver platform
 -- was down). The driver platform says which ones; actions that already succeeded are never repeated.

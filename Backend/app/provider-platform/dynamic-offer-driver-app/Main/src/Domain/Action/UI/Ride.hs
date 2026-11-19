@@ -57,6 +57,7 @@ import qualified Domain.Action.UI.SharedCab as SharedCab
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -65,6 +66,7 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Trip (isInterCityTrip, isRentalTrip, isRideOtpTrip)
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as Fields
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -125,6 +127,7 @@ import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 

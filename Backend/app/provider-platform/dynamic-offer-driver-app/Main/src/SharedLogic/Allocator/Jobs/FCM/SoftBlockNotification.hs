@@ -25,10 +25,12 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as Fields
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import Tools.Notifications
 
 softBlockNotifyDriver ::

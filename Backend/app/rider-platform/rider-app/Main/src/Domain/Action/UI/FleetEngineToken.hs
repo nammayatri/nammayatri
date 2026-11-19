@@ -17,6 +17,7 @@ module Domain.Action.UI.FleetEngineToken
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DOSC

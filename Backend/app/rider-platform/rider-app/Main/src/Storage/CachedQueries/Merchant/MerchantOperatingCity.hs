@@ -27,8 +27,8 @@ module Storage.CachedQueries.Merchant.MerchantOperatingCity
   )
 where
 
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.Merchant (Merchant, MerchantD (..))
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM

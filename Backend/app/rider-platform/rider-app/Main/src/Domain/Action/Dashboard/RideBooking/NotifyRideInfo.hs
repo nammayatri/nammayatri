@@ -18,6 +18,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Fields as Fields
 
 postNotifyRideInfoNotifyRideInfo :: ShortId DM.Merchant -> City -> Id Domain.Types.Person.Person -> NRI.NotifyRideInfoRequest -> Environment.Flow APISuccess
 postNotifyRideInfoNotifyRideInfo merchantShortId opCity personId req = do

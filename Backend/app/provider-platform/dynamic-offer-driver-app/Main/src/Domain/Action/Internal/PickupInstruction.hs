@@ -22,6 +22,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notifications
 
 data PickupInstructionReq = PickupInstructionReq

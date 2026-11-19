@@ -18,6 +18,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as Fields
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN

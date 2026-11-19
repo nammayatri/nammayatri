@@ -20,6 +20,7 @@ where
 import Domain.Types.PartnerOrganization
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
+import qualified Kernel.External.Encryption as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common

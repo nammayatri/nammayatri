@@ -21,6 +21,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.GSTEInvoice.CharteredInfo.Types as CITypes
 import qualified Kernel.External.GSTEInvoice.Interface as GSTEInvoice
 import Kernel.External.GSTEInvoice.Interface.Types (GSTEInvoiceConfig (..))
+import qualified Kernel.External.GSTEInvoice.Interface.Types as Fields
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoiceTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -31,7 +32,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
-import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
+import Lib.Finance.Invoice.Interface (InvoiceLineItem (..), LineItemDescription (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice

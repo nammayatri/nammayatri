@@ -28,7 +28,7 @@ where
 
 import Domain.Types.DocumentVerificationConfig as DTO
   ( DocumentType,
-    DocumentVerificationConfig,
+    DocumentVerificationConfig (..),
     SupportedVehicleClasses,
   )
 import Domain.Types.MerchantOperatingCity

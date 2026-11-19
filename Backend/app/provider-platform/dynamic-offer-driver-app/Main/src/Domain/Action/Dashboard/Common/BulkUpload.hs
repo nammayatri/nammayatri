@@ -53,6 +53,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as Fields
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.SlidingWindowCounters as SWC

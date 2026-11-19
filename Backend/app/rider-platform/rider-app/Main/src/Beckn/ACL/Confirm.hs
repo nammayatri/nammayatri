@@ -24,7 +24,6 @@ import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
-import Control.Lens ((%~))
 import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -41,6 +40,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
+import qualified Tools.Fields as Fields
 
 buildConfirmReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>

@@ -22,7 +22,7 @@ import Data.Char (isDigit)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Kernel.Prelude
-import WhatsappBot.I18n (LanguageStrings, SupportedLanguage, t)
+import WhatsappBot.I18n (LanguageStrings (..), SupportedLanguage, t)
 -- Instances only: LanguageStrings is dot-accessed via RDP (getField), so its
 -- name/selectors are never referenced directly, but the HasField instances are
 -- needed. (Importing the names triggers -Wunused-imports under -Werror.)
