@@ -930,6 +930,9 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
           ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
     ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId botLabel
+    withTryCatch "createTicket:storeFormFields" (QIR.updateTicketFormFields issueReport.id (xyneTicketFormFields ticket)) >>= \case
+      Left err -> logWarning $ "Could not store ticket form fields for issue " <> issueReport.id.getId <> ": " <> show err
+      Right _ -> pure ()
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -984,6 +987,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             deleted = False,
             ticketId = Nothing,
             additionalTicketIds = Nothing,
+            ticketFormFields = Nothing,
             createdAt = now,
             updatedAt = now,
             description,
@@ -1592,7 +1596,14 @@ mkIssueMessageList ::
   D.IssueConfig ->
   Maybe RideInfoRes ->
   [Common.Message]
-mkIssueMessageList mbList language issueConfig mbRideInfoRes = case mbList of
+mkIssueMessageList mbList language issueConfig mbRideInfoRes =
+  mkIssueMessageListWith (getConfigValue language issueConfig mbRideInfoRes) mbList
+
+mkIssueMessageListWith ::
+  (Text -> Text) ->
+  Maybe [(D.IssueMessage, D.DetailedTranslation, [Text])] ->
+  [Common.Message]
+mkIssueMessageListWith resolvePlaceholder mbList = case mbList of
   Nothing -> []
   Just list ->
     map
@@ -1614,7 +1625,7 @@ mkIssueMessageList mbList language issueConfig mbRideInfoRes = case mbList of
       list
   where
     messageTransformer :: [Text] -> Text -> Text
-    messageTransformer = transformText (getConfigValue language issueConfig mbRideInfoRes)
+    messageTransformer = transformText resolvePlaceholder
 
 transformText :: (Text -> Text) -> [Text] -> Text -> Text
 transformText getCfgValue mediaFileUrls text =
@@ -1660,6 +1671,11 @@ transformText getCfgValue mediaFileUrls text =
             replacement = T.unwords $ map (\url -> "{IMAGE} " <> url <> " ") groupUrls
             newText = before <> "{SUBPART}{IMAGE_GROUP}{!!!} " <> replacement <> T.drop (T.length pattern_) after
          in (newText, remainingUrls)
+
+getConfigValueWithoutRideInfo :: Language -> D.IssueConfig -> Text -> Text
+getConfigValueWithoutRideInfo language issueConfig key
+  | key `elem` ["MERCHANT", "SUPPORT_MAIL", "HEADING", "BODY"] = getConfigValue language issueConfig Nothing key
+  | otherwise = "{#" <> key <> "#}"
 
 getConfigValue :: Language -> D.IssueConfig -> Maybe RideInfoRes -> Text -> Text
 getConfigValue language issueConfig mbRideInfoRes key = do
@@ -1843,7 +1859,12 @@ getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId rideI
 
 mkIssueOptionList ::
   D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
-mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslation) =
+mkIssueOptionList issueConfig language mbRideInfoRes =
+  mkIssueOptionListWith (getConfigValue language issueConfig mbRideInfoRes)
+
+mkIssueOptionListWith ::
+  (Text -> Text) -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
+mkIssueOptionListWith resolvePlaceholder (issueOption, issueTranslation) =
   Common.IssueOptionRes
     { issueOptionId = issueOption.id,
       label = fromMaybe (issueOption.option & T.toUpper & T.replace " " "_") issueOption.label,
@@ -1852,21 +1873,25 @@ mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslat
     }
   where
     transformOption :: Text -> Text
-    transformOption = transformText (getConfigValue language issueConfig mbRideInfoRes) []
+    transformOption = transformText resolvePlaceholder []
 
 recreateIssueChats :: BeamFlow m r => D.IssueReport -> D.IssueConfig -> Maybe RideInfoRes -> Language -> Identifier -> m [ChatDetail]
-recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
+recreateIssueChats issueReport issueConfig mbRideInfoRes language =
+  recreateIssueChatsWith (getConfigValue language issueConfig mbRideInfoRes) issueReport language
+
+recreateIssueChatsWith :: BeamFlow m r => (Text -> Text) -> D.IssueReport -> Language -> Identifier -> m [ChatDetail]
+recreateIssueChatsWith resolvePlaceholder issueReport language identifier =
   concat
     <$> mapM
       ( \item -> case item.chatType of
           IssueMessage -> do
             mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
+            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageListWith resolvePlaceholder (Just messageList)) . (: []) =<< mbIssueMessageTranslation
             let label = (.label) . fst_ =<< mbIssueMessageTranslation
             pure [mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label]
           IssueOption -> do
             mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language identifier
-            let mbIssueOption = mkIssueOptionList issueConfig language mbRideInfoRes <$> mbIssueOptionTranslation
+            let mbIssueOption = mkIssueOptionListWith resolvePlaceholder <$> mbIssueOptionTranslation
                 label = (.label) . fst =<< mbIssueOptionTranslation
             pure [mkChatDetail item.chatId item.timestamp Text USER (mbIssueOption <&> (.option)) Nothing Nothing label]
           IssueDescription -> pure [mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing]
@@ -1982,6 +2007,40 @@ xyneHistoricalExternalId templateId threadId ts = templateId <> "|" <> threadId.
 
 xyneChatExternalId :: Id D.IssueReport -> Chat -> Text
 xyneChatExternalId threadId chat = xyneHistoricalExternalId chat.chatId threadId chat.timestamp
+
+xyneTicketFormFields :: TIT.CreateTicketReq -> Map.Map Text Text
+xyneTicketFormFields req =
+  Map.fromList $
+    catMaybes $
+      [ nonEmpty "Category" req.category,
+        req.subCategory >>= nonEmpty "Sub Category",
+        req.name >>= nonEmpty "Customer Name",
+        req.phoneNo >>= nonEmpty "Customer Phone Number",
+        req.xyneBotLabel >>= nonEmpty "Bot Label"
+      ]
+        <> maybe [] rideFields req.rideDescription
+        <> mediaField req.mediaFiles
+  where
+    rideFields r =
+      [ nonEmpty "Ride ID" r.rideShortId,
+        nonEmpty "Ride City" r.rideCity,
+        nonEmpty "Ride Status" r.status,
+        r.rideType >>= nonEmpty "Ride Type",
+        nonEmpty "Vehicle Number" r.vehicleNo,
+        r.vehicleCategory >>= nonEmpty "Vehicle Category",
+        r.vehicleServiceTier >>= nonEmpty "Vehicle Service Tier",
+        Just ("Ride Created At", showTimeIst r.rideCreatedAt),
+        (\f -> ("Fare", T.pack $ show f)) <$> r.fare,
+        r.driverName >>= nonEmpty "Driver Name",
+        r.driverPhoneNo >>= nonEmpty "Driver Phone Number"
+      ]
+    nonEmpty k v =
+      let stripped = T.strip v
+       in if T.null stripped then Nothing else Just (k, stripped)
+    mediaField Nothing = []
+    mediaField (Just urls) =
+      let hosted = filter (not . ("data:" `T.isPrefixOf`)) urls
+       in if null hosted then [] else [Just ("Media URLs", T.intercalate ", " hosted)]
 
 xyneDescriptionExternalId :: Id D.IssueReport -> Text
 xyneDescriptionExternalId threadId = "description|" <> threadId.getId
