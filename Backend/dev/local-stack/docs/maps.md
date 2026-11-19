@@ -745,6 +745,17 @@ proved live with a simulated car, stopped halfway, nothing left open. A stop
 now reads the server's answer before saying so, and `launch-gate.sh` refuses
 the launch while it is on ([testing.md](testing.md#the-virtual-passenger--maps-shimvirtual-riderjs-since-2026-11-16)).
 
+**After day 8 (2026-11-18 → 19), the boss's feedback.** Scenario 8 (two
+requests at once, a second test passenger per country; `1c863644ad`). A
+simulated car ends scenario 1 without waiting for the rating it never gives,
+and the price is read from the driver's side (`687366debd`). The console's
+card redrawn, with **a start and an arrival placed on a map**
+(`--from` / `--to`, 7 km from the tester at most; backend `603e7f204f`,
+website `49131aa`, both released). The owner's bot announces each pending
+« Lieu proposé » and `/lieux` lists them ([sign-in.md](sign-in.md),
+`9f1d2252f1`). App, versionCode 6: the plate in three groups, the vehicle's
+mark beside the driver, « Autour de vous » as four icons and « Plus ».
+
 Left:
 
 - **The end-of-day test on phones**, in each country, with the APK of
@@ -752,10 +763,9 @@ Left:
   a passenger finds it by name and by its type; a ride from acceptance to the
   end with no code shown or typed. Then the same erase file for its « Test
   jour 6 » places.
-- **Google Play's « Sécurité des données »**: add « Other user-generated
-  content » (the place's name and pin) before the AAB of 2026-11-16 is
-  uploaded — the boss's account. The privacy page and the app's policy are
-  done (day 7).
+- ~~Google Play's « Sécurité des données »~~: « Other user-generated content »
+  added by the boss on 2026-11-18 (collected, not shared, optional, not
+  ephemeral, app functionality).
 - **The virtual passenger on a real phone**: scenarios 1 to 7 with a person
   driving, in each country (Mauritania needs someone there). The console
   button and the `launch-gate.sh` check are day 8.
