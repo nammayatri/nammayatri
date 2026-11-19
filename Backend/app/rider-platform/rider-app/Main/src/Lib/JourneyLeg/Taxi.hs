@@ -41,6 +41,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
 import SharedLogic.Cancel
 import qualified SharedLogic.CreateFareForMultiModal as CFFM
+import SharedLogic.RescheduleReason (rescheduleCancellationReasonCode)
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
@@ -114,6 +115,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 doMultimodalSearch = Just True,
                 shouldCacheRoute = Nothing,
                 city = Nothing,
+                rescheduledFromBookingId = Nothing,
                 ..
               }
   search _ = throwError (InternalError "Not Supported")
@@ -173,6 +175,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
   update _ = throwError (InternalError "Not Supported")
 
   cancel (TaxiLegRequestCancel legData) = do
+    -- RESCHEDULED is reserved for the reschedule flow's own penalty-free cancel; see API.UI.Cancel.
+    when (legData.reasonCode == SCR.CancellationReasonCode rescheduleCancellationReasonCode) $
+      throwError (InvalidRequest "Cancellation reason RESCHEDULED is reserved for rescheduling a ride")
     mbBooking <- QBooking.findByTransactionIdAndStatus legData.searchRequestId.getId activeBookingStatus
     case mbBooking of
       Just booking -> do

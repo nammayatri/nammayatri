@@ -108,6 +108,7 @@ data Booking = Booking
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     requiresPaymentBeforeConfirm :: Kernel.Prelude.Bool,
+    rescheduledFromBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderTaxRates :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.RiderTaxRates,

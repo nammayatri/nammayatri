@@ -87,6 +87,7 @@ data SearchRequest = SearchRequest
     parentSearchRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest),
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
+    rescheduledFromBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.RiderPreferredOption.RiderPreferredOption,
@@ -105,7 +106,7 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, (Show), (ToJSON), (FromJSON))
 
 data SearchMode
   = NORMAL
@@ -120,10 +121,10 @@ data SearchRequestStatus
   | CLOSED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchMode))
 
-$(mkHttpInstancesForEnum ''SearchMode)
+$(mkHttpInstancesForEnum (''SearchMode))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
 
-$(mkHttpInstancesForEnum ''SearchRequestStatus)
+$(mkHttpInstancesForEnum (''SearchRequestStatus))

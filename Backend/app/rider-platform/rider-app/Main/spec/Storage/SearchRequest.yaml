@@ -133,6 +133,11 @@ SearchRequest:
     betterPointRideDistanceSaved: Maybe Meters
     routeCacheUsed: Maybe Bool
     isSilentReallocationEnabled: Maybe Bool
+    # Set when this search reschedules an existing scheduled booking to a new pickup time.
+    # Select/confirm read it to skip the active-booking block for that one booking and to
+    # cancel it once the new ride is placed. Untyped: a typed Booking id would make
+    # Booking -> Quote -> SearchRequest -> Booking an import cycle.
+    rescheduledFromBookingId: Maybe Text
 
 
   default:

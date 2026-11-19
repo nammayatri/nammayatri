@@ -671,6 +671,8 @@ library
       SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.RenderInvoiceFromTemplate
+      SharedLogic.Reschedule
+      SharedLogic.RescheduleReason
       SharedLogic.Ride
       SharedLogic.RideFeedback.Actions
       SharedLogic.RideFeedback.Types

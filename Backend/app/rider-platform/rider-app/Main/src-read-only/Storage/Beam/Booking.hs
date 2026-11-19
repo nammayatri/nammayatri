@@ -114,6 +114,7 @@ data BookingT f = BookingT
     quoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     requiresPaymentBeforeConfirm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    rescheduledFromBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f Kernel.Prelude.Text,
     riderTaxRates :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

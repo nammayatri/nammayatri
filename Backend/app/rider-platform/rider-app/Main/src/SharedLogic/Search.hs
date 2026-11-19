@@ -11,6 +11,7 @@ import Data.List (group, sort)
 import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import Data.Ord (comparing)
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBPC
 import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
@@ -122,7 +123,9 @@ data OneWaySearchReq = OneWaySearchReq
     verifyBeforeCancellingOldBooking :: Maybe Bool,
     numberOfLuggages :: Maybe Int,
     doMultimodalSearch :: Maybe Bool,
-    shouldCacheRoute :: Maybe Bool
+    shouldCacheRoute :: Maybe Bool,
+    -- | Set when this search reschedules that scheduled booking to the new startTime.
+    rescheduledFromBookingId :: Maybe (Id DBooking.Booking)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -162,7 +165,9 @@ data RentalSearchReq = RentalSearchReq
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    -- | Set when this search reschedules that scheduled booking to the new startTime.
+    rescheduledFromBookingId :: Maybe (Id DBooking.Booking)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -199,7 +204,9 @@ data InterCitySearchReq = InterCitySearchReq
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    -- | Set when this search reschedules that scheduled booking to the new startTime.
+    rescheduledFromBookingId :: Maybe (Id DBooking.Booking)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -253,7 +260,8 @@ data SearchDetails = SearchDetails
     fromSpecialLocationId :: Maybe Text, -- Fixed route: origin area ID
     toSpecialLocationId :: Maybe Text, -- Fixed route: destination area ID
     enforceTollRoute :: Maybe Bool, -- echoed from serviceability response; drives toll-aware route filtering
-    city :: Maybe City
+    city :: Maybe City,
+    rescheduledFromBookingId :: Maybe (Id DBooking.Booking) -- only one-way, rental and intercity searches can reschedule
   }
   deriving (Generic, Show)
 

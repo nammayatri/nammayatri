@@ -109,6 +109,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.poolingConfigVersion poolingConfigVersion,
       Se.Set Beam.poolingLogicVersion poolingLogicVersion,
       Se.Set Beam.preferSafetyPlus (Kernel.Prelude.Just preferSafetyPlus),
+      Se.Set Beam.preferredDriverId (Kernel.Types.Id.getId <$> preferredDriverId),
       Se.Set Beam.providerId (Kernel.Types.Id.getId providerId),
       Se.Set Beam.returnTime returnTime,
       Se.Set Beam.riderId (Kernel.Types.Id.getId <$> riderId),

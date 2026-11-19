@@ -145,6 +145,7 @@ import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import qualified SharedLogic.PassengerLuggage as SPL
@@ -1032,7 +1033,11 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     excludeDriverIds :: [Id DP.Driver],
     prevAttemptedDriverIds :: [Id DP.Driver],
     mbSearchTryId :: Maybe Text,
-    dedicatedDrivers :: DedicatedDrivers
+    dedicatedDrivers :: DedicatedDrivers,
+    -- | When non-empty the pool is exactly these drivers, wherever they are: no search radius
+    -- and no actual-distance cut; every other eligibility check still applies. Used for the
+    -- previous driver's head start when a rider reschedules a ride.
+    forcedDriverIds :: [Id DP.Driver]
   }
 
 isScheduledOpenToAll :: Maybe Minutes -> UTCTime -> UTCTime -> Bool
@@ -1240,7 +1245,10 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             mbSearchTryId,
             bufferedFareByTier
           }
-  sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
+  sortedCandidates <-
+    if null forcedDriverIds
+      then withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
+      else withTimeAPI "driverPooling" "fetchForcedCandidates" $ fetchForcedCandidates coord
   let totalCandidates = length sortedCandidates
   (offRideFinal, onRideFinal) <-
     if hasDedicatedDrivers dedicatedDrivers
@@ -1282,6 +1290,19 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
 
     isBookAnyRequest = length serviceTiers > 1
     searchTryId = currentSearchInfo.searchTry.id
+
+    -- Live location of each forced driver, by id rather than by radius; blocklisted ones dropped.
+    fetchForcedCandidates fromLatLong = do
+      locs <- LTF.driversLocation (cast <$> forcedDriverIds)
+      pure
+        [ QPG.SortedLTSCandidate
+            { driverLoc = dl,
+              straightLineDistanceMeters = realToFrac $ distanceBetweenInMeters fromLatLong (LatLong dl.lat dl.lon),
+              isPrevAttempted = False
+            }
+          | dl <- locs,
+            dl.driverId `notElem` excludeDriverIds
+        ]
 
     -- Drops previously-attempted drivers whose per-search re-ask counter (set by
     -- `incrementDriverRequestCount` at end of each batch) is at the configured limit.
@@ -1365,8 +1386,11 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
         [] -> pure []
         (a : as) -> do
           let chunkPool = NE.toList $ makeDriverPoolResult <$> (a :| as)
+              -- Forced drivers may be anywhere: straight-line distance only, never a distance cut.
               (skipMapsPool, needMapsPool) =
-                partitionByIgnoreActualDistanceThreshold driverPoolCfg.thresholdToIgnoreActualDistanceThreshold chunkPool
+                if null forcedDriverIds
+                  then partitionByIgnoreActualDistanceThreshold driverPoolCfg.thresholdToIgnoreActualDistanceThreshold chunkPool
+                  else (chunkPool, [])
               skippedWithStraightLine =
                 map (mkDriverPoolWithStraightLineAsActualDistance transporterConfig.defaultPopupDelay) skipMapsPool
           mapsThresholded <- case needMapsPool of

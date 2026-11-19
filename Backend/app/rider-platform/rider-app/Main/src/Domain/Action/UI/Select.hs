@@ -95,6 +95,7 @@ import qualified SharedLogic.Offer as SOffer
 import SharedLogic.PassengerLuggage (validatePassengerLuggageCounts, validatePassengerLuggageFit)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
+import qualified SharedLogic.Reschedule as SReschedule
 import qualified SharedLogic.Settlement as Settlement
 import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -305,6 +306,12 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       (keptPassengers, keptCheckInBags, keptCabinBags) = if isPassengerLuggageKept then (numberOfPassengers, numberOfCheckInBags, numberOfCabinBags) else (Nothing, Nothing, Nothing)
   when ((keptPassengers, keptCheckInBags, keptCabinBags) /= (searchRequest.numberOfPassengers, searchRequest.numberOfCheckInBags, searchRequest.numberOfCabinBags)) $
     QSearchRequest.updatePassengerLuggage keptPassengers keptCheckInBags keptCabinBags searchRequest.id
+  -- Rescheduling (dynamic offer): only the time may change, so exactly one estimate of the booking's tier.
+  -- The old booking is cancelled by the API handler once the BPP has taken this select.
+  mbRescheduleSource <- SReschedule.findActiveRescheduleSource searchRequest
+  whenJust mbRescheduleSource $ \oldBooking -> do
+    unless (null remainingEstimates) $ throwError (RescheduleTripMismatch "number of selected vehicle tiers")
+    SReschedule.validateRescheduleAccept merchant searchRequest oldBooking estimate.vehicleServiceTierType estimate.tripCategory
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   -- Do this before anything is dispatched to the provider: from here on the address is
@@ -373,7 +380,9 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory, searchRequestId = Just searchRequest.id}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
-  offerDiscountAmount <- case selectedOfferId of
+  -- Reschedule: keep the old booking's offer unless the rider picked another (re-validated at confirm).
+  let effectiveOfferId = selectedOfferId <|> (mbRescheduleSource >>= (.selectedOfferId))
+  offerDiscountAmount <- case effectiveOfferId of
     Nothing -> pure Nothing
     Just offerId -> do
       fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback estimate.id.getId DFareBreakup.ESTIMATE (pure [])
@@ -385,7 +394,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
           logError $ "Failed to compute selected offer discount for estimateId " <> estimateId.getId <> ": " <> show err
           pure Nothing
         Right mbOffer -> pure $ mfilter (> 0) ((.discountAmount) . snd <$> mbOffer)
-  QEstimate.updateSelectedOfferId selectedOfferId offerDiscountAmount estimateId
+  QEstimate.updateSelectedOfferId effectiveOfferId offerDiscountAmount estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
   when (isJust mbCustomerExtraFee || isJust mbNegativeFareAdjustment || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee mbNegativeFareAdjustment req.paymentMethodId req.paymentInstrument

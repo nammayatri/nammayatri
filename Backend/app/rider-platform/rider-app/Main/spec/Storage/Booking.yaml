@@ -276,6 +276,9 @@ Booking:
     # Set on the OLD booking after a swap: the new Booking to switch to. Untyped to
     # avoid a self-import.
     supersededByBookingId: Maybe Text
+    # Set on the NEW booking when it was created by rescheduling the booking with this id.
+    # Untyped to avoid a self-import, same as supersededByBookingId.
+    rescheduledFromBookingId: Maybe Text
     commission: Maybe HighPrecMoney
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text

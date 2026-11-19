@@ -171,7 +171,8 @@ transformToSearchReq req subscriptionId =
             numberOfLuggages = Nothing, -- Not applicable for NY Regular as of now
             doMultimodalSearch = Just False,
             shouldCacheRoute = Nothing,
-            city = Nothing
+            city = Nothing,
+            rescheduledFromBookingId = Nothing
           }
 
 getNyRegularSubscriptionsEstimate ::

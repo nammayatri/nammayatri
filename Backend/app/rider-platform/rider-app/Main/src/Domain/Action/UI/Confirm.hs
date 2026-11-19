@@ -18,6 +18,7 @@ module Domain.Action.UI.Confirm
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.SharedLogic.Cancel as SharedCancel
@@ -44,6 +45,7 @@ import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Confirm as SConfirm
 import SharedLogic.PassengerLuggage (validatePassengerLuggageCounts, validatePassengerLuggageOnTier)
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Reschedule as SReschedule
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
@@ -96,7 +98,13 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
           else (Nothing, Nothing, Nothing)
   whenJust numberOfPassengers $ \passengers ->
     validatePassengerLuggageOnTier passengers numberOfCheckInBags numberOfCabinBags (show quote'.vehicleServiceTierType) quote'.vehicleServiceTierLuggageCapacity quote'.vehicleServiceTierSeatingCapacity
-  let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
+  -- Reschedule: keep the old booking's offer unless the rider picked another; it is re-validated
+  -- against the new fare when the booking is built.
+  rescheduleOfferId <- do
+    mbSearchRequest <- QSR.findById quote'.requestId
+    mbOldBooking <- maybe (pure Nothing) SReschedule.findActiveRescheduleSource mbSearchRequest
+    pure (mbOldBooking >>= (.selectedOfferId))
+  let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId <|> rescheduleOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do

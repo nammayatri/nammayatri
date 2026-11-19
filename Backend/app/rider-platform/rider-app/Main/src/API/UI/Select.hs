@@ -46,6 +46,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Cancel
+import qualified SharedLogic.Reschedule as SReschedule
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
@@ -94,6 +95,8 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId person
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
+    -- Reschedule: the BPP now allocates for the new time, so release the old booking's driver.
+    SReschedule.cancelRescheduleSourceAfterSelect dSelectReq.searchRequest
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequestLite.findByIdLite searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
@@ -121,6 +124,8 @@ select2' (personId, merchantId) estimateId req mbJourneyLegData = withPersonIdLo
     dSelectReq <- DSelect.select2 personId estimateId req mbJourneyLegData
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
+    -- Reschedule: the BPP now allocates for the new time, so release the old booking's driver.
+    SReschedule.cancelRescheduleSourceAfterSelect dSelectReq.searchRequest
     let journeyId = dSelectReq.mbJourneyId
     pure journeyId
   case journeyID of

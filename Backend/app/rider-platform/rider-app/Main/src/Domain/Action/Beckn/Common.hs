@@ -140,6 +140,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
+import qualified SharedLogic.RescheduleReason as RescheduleReason
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import qualified SharedLogic.SilentReallocation as SilentRealloc
@@ -1478,12 +1479,15 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   -- Before the deposit settlement below releases any hold.
   abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking cancellationSource
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
+  -- A booking retired by a reschedule is not a customer cancellation: no fraud counters,
+  -- cancel tags or cancellation-rate count (the BPP waives its consequences the same way).
+  isRescheduleCancel <- RescheduleReason.isRescheduleCancellation booking.id
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   fork "incrementing fraud counters" $ do
     case mbRide of
       Just ride -> do
         case cancellationSource of
-          DBCR.ByUser -> do
+          DBCR.ByUser -> unless isRescheduleCancel $ do
             handleUpgradedToCabRideCancellation
             SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
           DBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
@@ -1615,7 +1619,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   fork "Update namma tags and cancellation rate for customer cancellation" $ do
-    when (cancellationSource == DBCR.ByUser) $ do
+    when (cancellationSource == DBCR.ByUser && not isRescheduleCancel) $ do
       case mbRide of
         Just ride -> do
           now <- getCurrentTime
