@@ -47,7 +47,7 @@ data DocumentVaultConfig = DocumentVaultConfig
   { region :: Text,
     processingKeyAliasPrefix :: Text,
     processingWindowDays :: Integer,
-    processingRoleArn :: Text,
+    processingRoleArns :: [Text],
     keyAdminRoleArn :: Text,
     archiveKeyArn :: Text,
     kmsEndpoint :: Maybe BaseUrl,
@@ -75,6 +75,11 @@ data DocumentVaultError
   deriving (Show)
 
 instance Exception DocumentVaultError
+
+data ArchiveKey = ArchiveKey
+  { keyArn :: Text,
+    publicKey :: RSA.PublicKey
+  }
 
 data ObjectParts = ObjectParts
   { authenticatedHeader :: ByteString,
@@ -132,7 +137,7 @@ cachedKmsEnv cfg envRef =
       writeIORef envRef (Just env)
       pure env
 
-cachedArchiveKey :: Amazonka.Env -> DocumentVaultConfig -> IORef (Maybe RSA.PublicKey) -> IO RSA.PublicKey
+cachedArchiveKey :: Amazonka.Env -> DocumentVaultConfig -> IORef (Maybe ArchiveKey) -> IO ArchiveKey
 cachedArchiveKey env cfg archiveKeyRef =
   readIORef archiveKeyRef >>= \case
     Just key -> pure key
@@ -141,7 +146,7 @@ cachedArchiveKey env cfg archiveKeyRef =
       writeIORef archiveKeyRef (Just key)
       pure key
 
-fetchArchiveKey :: Amazonka.Env -> DocumentVaultConfig -> IO RSA.PublicKey
+fetchArchiveKey :: Amazonka.Env -> DocumentVaultConfig -> IO ArchiveKey
 fetchArchiveKey env cfg = do
   response <- runResourceT (Amazonka.sendEither env $ KMS.newGetPublicKey cfg.archiveKeyArn) >>= either (throwIO . VaultFailure . show) pure
   unless (response ^. KMS.getPublicKeyResponse_keyId == Just cfg.archiveKeyArn) $
@@ -151,7 +156,8 @@ fetchArchiveKey env cfg = do
   unless (response ^. KMS.getPublicKeyResponse_keySpec == Just KMS.KeySpec_RSA_4096) $
     throwIO $ VaultFailure "Archive key is not RSA_4096"
   der <- maybe (throwIO $ VaultFailure "Archive key has no public key") pure (response ^. KMS.getPublicKeyResponse_publicKey)
-  either (throwIO . VaultFailure) pure $ parseArchiveKey der
+  key <- either (throwIO . VaultFailure) pure $ parseArchiveKey der
+  pure ArchiveKey {keyArn = cfg.archiveKeyArn, publicKey = key}
 
 buildKmsEnv :: DocumentVaultConfig -> IO Amazonka.Env
 buildKmsEnv cfg = case cfg.kmsEndpoint of
@@ -182,7 +188,7 @@ parseArchiveKey der = case readPubKeyFileFromMemory pem of
 documentContext :: Text -> HM.HashMap Text Text
 documentContext documentId = HM.singleton "documentId" documentId
 
-sealWithProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> MVar () -> RSA.PublicKey -> Text -> ByteString -> IO SealedDocument
+sealWithProcessingKey :: Amazonka.Env -> DocumentVaultConfig -> MVar () -> ArchiveKey -> Text -> ByteString -> IO SealedDocument
 sealWithProcessingKey env cfg keyCreationLock archiveKey documentId document = do
   response <- generateProcessingKey env cfg keyCreationLock documentId
   sealedBytes <- sealObject archiveKey documentId (response ^. KMS.generateDataKeyResponse_plaintext) document
@@ -268,7 +274,7 @@ processingKeyPolicy cfg deadline =
                  A.object
                    [ "Sid" A..= ("ProcessingUntilDeadline" :: Text),
                      "Effect" A..= ("Allow" :: Text),
-                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArn],
+                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArns],
                      "Action" A..= (["kms:GenerateDataKey", "kms:Decrypt"] :: [Text]),
                      "Resource" A..= ("*" :: Text),
                      "Condition"
@@ -281,7 +287,7 @@ processingKeyPolicy cfg deadline =
                  A.object
                    [ "Sid" A..= ("ProcessingAliasUntilDeadline" :: Text),
                      "Effect" A..= ("Allow" :: Text),
-                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArn],
+                     "Principal" A..= A.object ["AWS" A..= cfg.processingRoleArns],
                      "Action" A..= ("kms:CreateAlias" :: Text),
                      "Resource" A..= ("*" :: Text),
                      "Condition" A..= A.object ["DateLessThan" A..= A.object ["aws:CurrentTime" A..= formatInstant deadline]]
@@ -298,16 +304,21 @@ formatInstant = T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 processingKeyAlias :: DocumentVaultConfig -> Day -> Text
 processingKeyAlias cfg day = cfg.processingKeyAliasPrefix <> formatDay day
 
-sealWithArchiveKeyOnly :: RSA.PublicKey -> Text -> ByteString -> IO ByteString
+sealWithArchiveKeyOnly :: ArchiveKey -> Text -> ByteString -> IO ByteString
 sealWithArchiveKeyOnly archiveKey documentId document = do
   dek <- getRandomBytes dekSizeBytes
   sealObject archiveKey documentId dek document
 
-sealObject :: RSA.PublicKey -> Text -> ByteString -> ByteString -> IO ByteString
+sealObject :: ArchiveKey -> Text -> ByteString -> ByteString -> IO ByteString
 sealObject archiveKey documentId dek document = do
-  archiveEncryptedDataKey <- OAEP.encrypt (OAEP.defaultOAEPParams SHA256) archiveKey dek >>= either (throwIO . VaultFailure . show) pure
+  archiveEncryptedDataKey <- OAEP.encrypt (OAEP.defaultOAEPParams SHA256) archiveKey.publicKey dek >>= either (throwIO . VaultFailure . show) pure
   iv <- getRandomBytes nonceSizeBytes
-  let header = objectMagic <> lengthPrefixed archiveEncryptedDataKey <> lengthPrefixed (TE.encodeUtf8 documentId) <> iv
+  let header =
+        objectMagic
+          <> lengthPrefixed (TE.encodeUtf8 archiveKey.keyArn)
+          <> lengthPrefixed archiveEncryptedDataKey
+          <> lengthPrefixed (TE.encodeUtf8 documentId)
+          <> iv
   cipherState <- either (throwIO . VaultFailure) pure $ initCipher dek iv
   let (tag, encrypted) = aeadSimpleEncrypt cipherState header document authTagSizeBytes
   pure $ header <> BA.convert (unAuthTag tag) <> encrypted
@@ -352,7 +363,8 @@ takeLengthPrefixed bytes = case BS.unpack (BS.take 2 bytes) of
 parseObject :: ByteString -> Maybe ObjectParts
 parseObject sealedBytes = do
   afterMagic <- BS.stripPrefix objectMagic sealedBytes
-  (_, afterArchiveLock) <- takeLengthPrefixed afterMagic
+  (_, afterArchiveKeyArn) <- takeLengthPrefixed afterMagic
+  (_, afterArchiveLock) <- takeLengthPrefixed afterArchiveKeyArn
   (_, afterDocumentId) <- takeLengthPrefixed afterArchiveLock
   let (iv, afterIv) = BS.splitAt nonceSizeBytes afterDocumentId
       (tag, encrypted) = BS.splitAt authTagSizeBytes afterIv
