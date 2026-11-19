@@ -784,6 +784,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
       SharedLogic.QuickRetry
+      SharedLogic.RCTransferNotice
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
