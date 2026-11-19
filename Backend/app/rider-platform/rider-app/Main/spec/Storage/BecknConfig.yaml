@@ -126,6 +126,7 @@ IntegratedBPPConfig:
     operatorConfig: Maybe OperatorConfig
     ondcRegistryPublicKey: Maybe Text
     ondcEncryptionPrivateKey: Maybe (EncryptedField 'AsEncrypted Text)
+    passTicketOverlapWarningTime: Maybe Int
 
   beamFields:
     providerConfig:

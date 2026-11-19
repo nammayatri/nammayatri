@@ -339,6 +339,11 @@ data PassError
   | PassAlreadyInProgress Text -- passId
   | PassOverlappingFRFSBooking Text -- purchasedPassPaymentId
   | PassNotActiveForTripDate Text Text -- purchasedPassPaymentId, reason
+  | PassRequestedVehicleOnOppositeRoute Text
+  | PassInvalidVehicleNumber Text
+  | PassUnserviceableBetweenRequestedStops Text Text
+  | PassUnserviceableOnServiceTier Text
+  | PassRecentTicketExists Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -360,6 +365,11 @@ instance IsBaseError PassError where
   toMessage (PassAlreadyInProgress _passId) = Just "Pass purchase already in progress, please try again."
   toMessage (PassOverlappingFRFSBooking _paymentId) = Just "You already have a ticket booked with this pass for this time period."
   toMessage (PassNotActiveForTripDate _paymentId reason) = Just reason
+  toMessage (PassRequestedVehicleOnOppositeRoute vehicleNumber) = Just $ "Bus " <> vehicleNumber <> " is running in the opposite direction of your trip."
+  toMessage (PassInvalidVehicleNumber vehicleNumber) = Just $ "Bus number " <> vehicleNumber <> " is invalid. Please check again."
+  toMessage (PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode) = Just $ "This pass cannot be used between " <> sourceStopCode <> " and " <> destinationStopCode
+  toMessage (PassUnserviceableOnServiceTier serviceTier) = Just $ "This pass cannot be used on " <> serviceTier <> " buses"
+  toMessage (PassRecentTicketExists windowSeconds) = Just $ "You already booked a ticket with this pass in the last " <> show (max 1 (windowSeconds `div` 60)) <> " minute(s)."
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -379,6 +389,11 @@ instance IsHTTPError PassError where
     PassAlreadyInProgress _ -> "PASS_ALREADY_IN_PROGRESS"
     PassOverlappingFRFSBooking _ -> "PASS_OVERLAPPING_FRFS_BOOKING"
     PassNotActiveForTripDate _ _ -> "PASS_NOT_ACTIVE_FOR_TRIP_DATE"
+    PassRequestedVehicleOnOppositeRoute _ -> "REQUESTED_VEHICLE_ON_OPPOSITE_ROUTE"
+    PassInvalidVehicleNumber _ -> "INVALID_VEHICLE_NUMBER"
+    PassUnserviceableBetweenRequestedStops _ _ -> "PASS_UNSERVICEABLE_BETWEEN_REQUESTED_STOPS"
+    PassUnserviceableOnServiceTier _ -> "PASS_UNSERVICEABLE_ON_SERVICE_TIER"
+    PassRecentTicketExists _ -> "PASS_RECENT_TICKET_EXISTS"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
@@ -396,6 +411,11 @@ instance IsHTTPError PassError where
     PassAlreadyInProgress _ -> E409
     PassOverlappingFRFSBooking _ -> E400
     PassNotActiveForTripDate _ _ -> E400
+    PassRequestedVehicleOnOppositeRoute _ -> E400
+    PassInvalidVehicleNumber _ -> E400
+    PassUnserviceableBetweenRequestedStops _ _ -> E400
+    PassUnserviceableOnServiceTier _ -> E400
+    PassRecentTicketExists _ -> E400
 
 instance IsAPIError PassError
 
