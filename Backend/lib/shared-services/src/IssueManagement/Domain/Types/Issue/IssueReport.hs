@@ -3,6 +3,7 @@
 module IssueManagement.Domain.Types.Issue.IssueReport where
 
 import Data.Aeson
+import qualified Data.Map.Strict as Map
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
@@ -45,6 +46,7 @@ data IssueReport = IssueReport
     -- ACCEPT  : customer marked the resolution satisfactory (issue moved to CLOSED).
     -- ESCALATE: customer was not satisfied (drove the reopen-prompt branch).
     customerResponse :: Maybe CustomerResponse,
-    submitLabel :: Maybe Text
+    submitLabel :: Maybe Text,
+    ticketFormFields :: Maybe (Map.Map Text Text)
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

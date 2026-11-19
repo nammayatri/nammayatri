@@ -2,6 +2,8 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueReport where
 
+import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
 import qualified Data.Time as T
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -179,6 +181,15 @@ updateTicketIds issueId ticketId additionalTicketId = do
     ]
     [Is BeamIR.id (Eq $ getId issueId)]
 
+updateTicketFormFields :: BeamFlow m r => Id IssueReport -> Map.Map Text Text -> m ()
+updateTicketFormFields issueId formFields = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Set BeamIR.ticketFormFields (Just $ A.toJSON formFields),
+      Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now
+    ]
+    [Is BeamIR.id (Eq $ getId issueId)]
+
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
 
@@ -231,8 +242,13 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             becknIssueId = becknIssueId,
             reopenedCount = fromMaybe 0 reopenedCount,
             customerResponse = customerResponse,
+            ticketFormFields = ticketFormFields >>= parseFormFields,
             ..
           }
+    where
+      parseFormFields value = case A.fromJSON value of
+        A.Success fields -> Just fields
+        A.Error _ -> Nothing
 
 instance ToTType' BeamIR.IssueReport IssueReport where
   toTType' IssueReport {..} = do
@@ -262,5 +278,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.becknIssueId = becknIssueId,
         BeamIR.reopenedCount = Just reopenedCount,
         BeamIR.customerResponse = customerResponse,
-        BeamIR.submitLabel = submitLabel
+        BeamIR.submitLabel = submitLabel,
+        BeamIR.ticketFormFields = A.toJSON <$> ticketFormFields
       }
