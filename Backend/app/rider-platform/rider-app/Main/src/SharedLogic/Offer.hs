@@ -531,9 +531,20 @@ listOffersForPerson ::
   Person.Person ->
   Maybe HighPrecMoney ->
   m [OfferRespAPIEntity]
-listOffersForPerson merchantId person mbAmount = do
+listOffersForPerson = listOffersForPerson' Nothing
+
+-- | 'listOffersForPerson' with the offer texts in the given language rather than the person's:
+-- the dashboard passes its own user's.
+listOffersForPerson' ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Maybe Language ->
+  Id Merchant.Merchant ->
+  Person.Person ->
+  Maybe HighPrecMoney ->
+  m [OfferRespAPIEntity]
+listOffersForPerson' mbLanguage merchantId person mbAmount = do
   let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
-  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] [] Nothing Nothing Nothing
+  productOffers <- offerListWithBasket' mbLanguage merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] [] Nothing Nothing Nothing
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
@@ -729,7 +740,24 @@ offerListWithBasket ::
   Maybe DRB.Booking ->
   Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
-offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
+offerListWithBasket = offerListWithBasket' Nothing
+
+-- | 'offerListWithBasket' with the offer texts in the given language rather than the person's.
+offerListWithBasket' ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Maybe Language ->
+  Id Merchant.Merchant ->
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  DOrder.PaymentServiceType ->
+  [(Text, Price)] -> -- [(productId, price)]
+  [DEstimate.Estimate] -> -- matched to products by service tier
+  [DQuote.Quote] -> -- matched to products by service tier
+  Maybe DRide.Ride ->
+  Maybe DRB.Booking ->
+  Maybe SSR.SearchRequest ->
+  m [(Text, Payment.OfferListResp)]
+offerListWithBasket' mbLanguage merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
   -- Confirm also passes a search request, so a booking marks it as not being the quote flow.
   let isQuoteFlow = isJust mbSearchReq && isNothing mbBooking && isNothing (mbSearchReq >>= (.parentSearchRequestId))
   (person, personOfferStats, mbPersonStats) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
@@ -790,7 +818,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         offersByProduct <- timeQuoteOfferStep isQuoteFlow "quotesOfferEligibility" $ DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            language = fromMaybe ENGLISH person.language
+            language = fromMaybe ENGLISH (mbLanguage <|> person.language)
         fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
         isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist fraudLogics person
         forM offersByProduct $ \(productId, offersForProduct) -> do

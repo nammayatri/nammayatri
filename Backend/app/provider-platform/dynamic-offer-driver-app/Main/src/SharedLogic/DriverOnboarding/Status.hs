@@ -582,6 +582,8 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
 --     • enableBotFlow off — legacy: auto-enable/RC-activate/fleet-disable inline (unchanged).
 statusHandler' ::
   OnboardingFlow m r =>
+  -- | The reader's language when it is not the person's (a dashboard user's)
+  Maybe Language ->
   DP.Person ->
   IQuery.EntityImagesInfo ->
   Maybe Bool ->
@@ -594,13 +596,13 @@ statusHandler' ::
   Bool ->
   Maybe Text ->
   m StatusRes'
-statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages mbReqRegistrationNo = do
+statusHandler' mbLanguage person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages mbReqRegistrationNo = do
   let merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = entityImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
       transporterConfig = entityImagesInfo.transporterConfig
       personId = person.id
-  let language = fromMaybe merchantOperatingCity.language person.language
+  let language = fromMaybe merchantOperatingCity.language (mbLanguage <|> person.language)
 
   let mbFetchScopedRegistrationNo = if SDO.isFleetRole person.role then mbReqRegistrationNo else Nothing
   VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified} <-

@@ -205,6 +205,7 @@ import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude hiding (toList)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -239,6 +240,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as SVehicleDocs
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -5230,8 +5232,8 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
         statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
         pure $ mkStatusSummaryResponse statusCounts
 
-getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
-getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
+getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
+getDriverVehicleInfo merchantShortId opCity mbDashboardLanguage mbVehicleNo mbRcId = do
   when (isNothing mbVehicleNo && isNothing mbRcId) $ throwError (InvalidRequest "either vehicleNo or rcId is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -5277,6 +5279,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
       mbPerson <- B.runInReplica $ QPerson.findById dra.driverId
       DVehicle.mkAssociationInfo mbPerson Nothing dra.associatedTill dra.isRcActive
   let linkedDriverInfo = listToMaybe $ filter (.isActive) linkedDrivers <> linkedDrivers
+  rejectReason <- SVehicleDocs.translateRejectReason merchantOpCityId (fromMaybe ENGLISH mbDashboardLanguage) (SVehicleDocs.storedRejectReason vrc.rejectReasonKey vrc.rejectReason)
 
   pure $
     Common.VehicleInfo
@@ -5306,7 +5309,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
         Common.vehicleRatingRemark = vrc.vehicleRatingRemark,
         Common.vehicleModelYear = vrc.vehicleModelYear,
         Common.dateOfRegistration = vrc.dateOfRegistration,
-        Common.rejectReason = vrc.rejectReason,
+        Common.rejectReason = rejectReason,
         Common.approved = vrc.approved,
         Common.verified = vrc.verified,
         Common.reviewRequired = vrc.reviewRequired,

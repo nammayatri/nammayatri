@@ -579,7 +579,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
             let shouldActivateRc = False
                 skipMessages = False -- Need translations for API response
-            Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages Nothing
+            Just . castStatusRes <$> SStatus.statusHandler' Nothing person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages Nothing
           else pure Nothing
 
       driverInfo <- HashMap.lookup drvOpAsn.driverId.getId driverInfoMap & fromMaybeM DriverInfoNotFound

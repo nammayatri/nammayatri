@@ -63,17 +63,19 @@ import qualified Tools.Fields as Fields
 getOnboardingDocumentConfigs ::
   ShortId DM.Merchant ->
   Context.City ->
+  -- | The dashboard user's language
+  Maybe Language ->
   Text ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe CommonOnboarding.Role ->
   Maybe OnboardingExtra.DocumentOnboardingStage ->
   Environment.Flow CommonOnboarding.DocumentVerificationConfigList
-getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role documentOnboardingStage = do
+getOnboardingDocumentConfigs merchantShortId opCity mbDashboardLanguage fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role documentOnboardingStage = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mbPerson <- runInReplica $ PersonQuery.findById (Id fleetOwnerId)
-  let personLanguage = maybe ENGLISH (fromMaybe ENGLISH . language) mbPerson
+  let personLanguage = fromMaybe ENGLISH (mbDashboardLanguage <|> (mbPerson >>= language))
 
   fleetConfigsRaw <- case role of
     Just CommonOnboarding.NORMAL_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just [FLEET_OWNER]}) Nothing
@@ -176,6 +178,8 @@ getOnboardingGetReferralDetails merchantShortId opCity requestorId referralCode 
 getOnboardingRegisterStatus ::
   ShortId DM.Merchant ->
   Context.City ->
+  -- | The dashboard user's language
+  Maybe Language ->
   Text ->
   Maybe (Id Dashboard.Common.Driver) ->
   Maybe Bool ->
@@ -185,7 +189,7 @@ getOnboardingRegisterStatus ::
   Maybe Bool ->
   Maybe Text ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs enableDocumentMetadata mbRcNo = do
+getOnboardingRegisterStatus merchantShortId opCity mbDashboardLanguage fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs enableDocumentMetadata mbRcNo = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -198,7 +202,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
+  statusRes <- SStatus.statusHandler' mbDashboardLanguage person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
   -- Re-pull stuck doc verifications; fleet-owner GST/UDYAM are reachable only via this endpoint.
   UIStatus.pullPendingDocStatuses transporterConfig person statusRes.driverDocuments statusRes.vehicleDocuments
   pure $ castStatusRes statusRes

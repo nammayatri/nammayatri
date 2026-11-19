@@ -286,6 +286,7 @@ library
       Domain.Action.DashboardAuth.AppManagement.MerchantOnboarding
       Domain.Action.DashboardAuth.AppManagement.Payment
       Domain.Action.DashboardAuth.IssueManagement.Issue
+      Domain.Action.DashboardAuth.Management.Customer
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
