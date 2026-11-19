@@ -102,7 +102,7 @@ Ctrl-C does not reach the process through ssh; `stop` does (SIGTERM), and the
 run then closes what it opened.
 
 **The console's route** is `POST /internal/virtual-rider` in maps-shim
-(`virtual-rider-route.js`): `start {driverId, scenario}`, `stop {country}`,
+(`virtual-rider-route.js`): `start {driverId, scenario, from?, to?}`, `stop {country}`,
 `status`. Loopback and the docker bridge only, like `/internal/driver-push`
 (admin-api reaches 8030 through the ufw bridge rule; the edge routes nothing
 under `/internal/`: 404 on every public name). **The engine runs as a child
@@ -115,6 +115,22 @@ child; the next run cancels what it left). The console's side, its audit rows
 `apps/api/src/modules/tests/virtual-rider.ts`. Tests:
 `tests/virtual-rider-route.test.js` (a fake child, the real engine as the
 child, server.js).
+
+**The trip can be chosen** (2026-11-19, the boss: « Can we choose depart and
+end locations? »). The console's card was redrawn the same day — the drivers
+as cards, the scenarios as tiles, a map, and while a run goes, what the driver
+must do now in a strip of its own above the journal — and its « Trajet »
+choice is « Automatique » (as before: ~300 m from him, ~2 km on) or « Choisir
+sur la carte »: a click for the start, a click for the arrival. They reach the
+engine as `--from lat,lon --to lat,lon` (also on the command line), are
+snapped to a road, and are refused before any request when the start is more
+than **7 km** from him (dispatch looks 5 km, widening to 7: a start beyond it
+is a request he never gets — `docs/fares-and-dispatch.md`), the ride shorter
+than 300 m or longer than 50 km, or a point outside our two countries.
+Scenario 7's arrival stays the nearest approved place. The engine says the
+trip it settled on in one machine line, `@trajet {json}`, printed only for the
+console (`--driver`): the route turns it into the run's `trip` and the
+console draws him, the start and the arrival.
 
 **A stop says the truth** (2026-11-18). It cancels the booking and reads the
 answer: before the driver starts, « rien n'est resté ouvert »; after, the

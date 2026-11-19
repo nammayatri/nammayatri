@@ -24,7 +24,7 @@ const fakes = require('./lib/fakes');
 
 const SHIM = path.join(__dirname, '..', 'stack', 'maps-shim');
 const VR = path.join(SHIM, 'virtual-rider.js');
-const { run, cleanUp, parseNumber, COMMENT, PASSENGERS } = require(VR);
+const { run, cleanUp, parseNumber, parsePoint, COMMENT, PASSENGERS } = require(VR);
 
 const SALT = 'test-salt';
 const hash = (n) => crypto.createHash('sha256').update(SALT + n).digest();
@@ -234,11 +234,13 @@ async function osrm() {
     const lines = [];
     const state = opts.state || {};
     let verdict;
+    const emitted = [];
     try {
       verdict = await run({
         pool: db.pool, say: (s) => lines.push(s), sleep: () => (opts.onSleep ? opts.onSleep(w, state) : w.tick()),
         wait: SHORT, riderUrl: api.url, osrmUrl: routing.url, salt: opts.salt ?? SALT, enabled: opts.enabled ?? true, state,
-      }, opts.number || '+213 0555 12 34 56', n);
+        emit: (o) => emitted.push(o),
+      }, opts.number || '+213 0555 12 34 56', n, opts.trip);
     } catch (e) {
       verdict = { ok: false, reason: `threw: ${e.message}` };
     }
@@ -247,7 +249,7 @@ async function osrm() {
     await db.close();
     const paths = w.requests.map(([m, p]) => `${m} ${p}`);
     const confirmedDrivers = [...w.bookings.values()].map((b) => b.driver);
-    return { verdict, w, lines, rides, paths, confirmedDrivers, state };
+    return { verdict, w, lines, rides, paths, confirmedDrivers, state, emitted };
   }
   const openBookings = (w) => [...w.bookings.values()].filter((b) => !['CANCELLED', 'COMPLETED'].includes(b.status));
   const noDriverRoute = (paths) => paths.every((p) => !/ \/ui\//.test(p));
@@ -437,6 +439,33 @@ async function osrm() {
     '7 · to the nearest APPROVED proposed place, under its name (not the pending one nearer)', `${r.verdict.reason} / ${dest && dest.address.area}`);
   r = await scenario(7, (w) => { w.offers = [[TESTER]]; });
   t.ok(!r.verdict.ok && /aucun lieu proposé approuvé/.test(r.verdict.reason) && !r.paths.includes('POST /v2/rideSearch'), '7 · no approved place: refused before any request', r.verdict.reason);
+
+  t.section('a trip chosen on the console\'s map (the boss, 2026-11-19)');
+  const near = { lat: AT.lat + 0.009, lon: AT.lon };            // ~1 km north of him
+  const away = { lat: AT.lat + 0.036, lon: AT.lon + 0.01 };     // ~3 km further on
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start, w.end, w.rate]; }, { trip: { from: near, to: away } });
+  const sent = r.w.search && r.w.search.contents;
+  t.ok(r.verdict.ok && sent.origin.gps.lat === near.lat && sent.origin.gps.lon === near.lon
+    && sent.destination.gps.lat === away.lat && sent.destination.gps.lon === away.lon,
+    'start and arrival chosen: the request goes from and to them (snapped to a road), and the ride runs', r.verdict.reason);
+  t.ok(sent.destination.address.area === 'Arrivée choisie' && r.lines.some((l) => /^Départ choisi, à 10\d\d m de lui/.test(l)),
+    '   and says so: « Départ choisi », « Arrivée choisie »', r.lines.find((l) => /Départ/.test(l)));
+  t.ok(r.emitted.length === 1 && r.emitted[0].chosen === true && r.emitted[0].from.lat === near.lat && r.emitted[0].to.lat === away.lat
+    && r.emitted[0].driver.lat === AT.lat, '   the trip is emitted once, for the console\'s map: him, the start, the arrival', JSON.stringify(r.emitted));
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; w.script = [w.arrive, w.start, w.end, w.rate]; });
+  t.ok(r.emitted.length === 1 && r.emitted[0].chosen === false && r.emitted[0].from.lat !== AT.lat,
+    'left out: its own ~300 m / ~2 km, as before, and emitted all the same', JSON.stringify(r.emitted));
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { trip: { from: { lat: AT.lat + 0.08, lon: AT.lon } } });
+  t.ok(!r.verdict.ok && /départ choisi est à 8\.9 km de Karim/.test(r.verdict.reason) && /7 km/.test(r.verdict.reason)
+    && !r.paths.includes('POST /v2/rideSearch'), 'a start 9 km from him: refused before any request (dispatch looks 7 km at most)', r.verdict.reason);
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { trip: { from: near, to: { lat: near.lat + 0.001, lon: near.lon } } });
+  t.ok(!r.verdict.ok && /au moins 300 m/.test(r.verdict.reason) && !r.paths.includes('POST /v2/rideSearch'), 'an arrival 111 m from the start: refused', r.verdict.reason);
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { trip: { from: near, to: { lat: near.lat + 0.6, lon: near.lon } } });
+  t.ok(!r.verdict.ok && /50 km au plus/.test(r.verdict.reason), 'an arrival 67 km on: refused', r.verdict.reason);
+  r = await scenario(1, (w) => { w.offers = [[TESTER]]; }, { trip: { from: { lat: 48.85, lon: 2.35 } } });
+  t.ok(!r.verdict.ok && /illisible/.test(r.verdict.reason) && !r.paths.includes('POST /v2/rideSearch'), 'a point outside our two countries (Paris): refused', r.verdict.reason);
+  t.ok(parsePoint('36.75,3.06').lat === 36.75 && parsePoint('18.08,-15.97').lon === -15.97 && parsePoint('36.75;3.06') === null
+    && parsePoint('1e3,2') === null && parsePoint('48.85,2.35') === null, 'the command line\'s « lat,lon »: read, or refused');
 
   t.section('8 · two requests at once (decision V3, 2026-11-18)');
   r = await scenario(8, (w) => { w.offers = [[TESTER], [TESTER]]; });

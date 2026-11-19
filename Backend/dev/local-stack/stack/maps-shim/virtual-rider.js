@@ -10,6 +10,7 @@
  * here a person drives and this file is the passenger.
  *
  *   docker exec ny-maps-shim node virtual-rider.js <tester's number> <scenario>
+ *       [--from lat,lon] [--to lat,lon]     the trip, when not left to it
  *   docker exec ny-maps-shim node virtual-rider.js stop
  *   docker exec ny-maps-shim node virtual-rider.js list
  *
@@ -67,6 +68,31 @@ const PASSENGERS = {
   DZ: [{ cc: '+213', number: '0555000199' }, { cc: '+213', number: '0555000198' }],
   MR: [{ cc: '+222', number: '22778899' }, { cc: '+222', number: '22778898' }],
 };
+
+/**
+ * A chosen trip's limits. The pickup: dispatch's widest radius (7 km,
+ * docs/fares-and-dispatch.md) -- beyond it the tester is never asked. The
+ * length: a few hundred metres to a city's width; a test ride, not a journey.
+ */
+const MAX_PICKUP_M = 7000;
+const MIN_TRIP_M = 300;
+const MAX_TRIP_M = 50000;
+
+/** A {lat, lon} inside the box around both countries, or null. */
+function point(p) {
+  if (!p || typeof p !== 'object') return null;
+  const lat = Number(p.lat);
+  const lon = Number(p.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < 14 || lat > 38 || lon < -18 || lon > 12.5) return null;
+  return { lat, lon };
+}
+
+/** `lat,lon` from the command line, or null. */
+function parsePoint(text) {
+  const m = String(text || '').match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+  return m ? point({ lat: m[1], lon: m[2] }) : null;
+}
 
 /** The simulated fleet (simulate-driver.py): the only offers scenario 5 may take. */
 const SIMULATED = new Set([
@@ -151,10 +177,14 @@ function metresBetween(a, b) {
 /**
  * One scenario, start to verdict.
  *
- * deps: { pool, say, sleep, wait?, riderUrl?, osrmUrl?, salt?, enabled? }
+ * deps: { pool, say, sleep, wait?, riderUrl?, osrmUrl?, salt?, enabled?, emit? }
+ * trip: { from?: {lat, lon}, to?: {lat, lon} } -- where the passenger waits and
+ *   where she goes, chosen on the console's map (the boss, 2026-11-19); each
+ *   one left out is chosen here, as before (~300 m from him, ~2 km on).
+ * emit(obj): the trip as decided -- the console draws it on its map.
  * Returns { ok, reason, lines } -- `ok` is the verdict « réussi ».
  */
-async function run(deps, target, scenarioRaw) {
+async function run(deps, target, scenarioRaw, trip = {}) {
   const say = deps.say || ((s) => console.log(s));
   const sleep = deps.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
   const W = { ...WAIT, ...(deps.wait || {}) };
@@ -245,10 +275,21 @@ async function run(deps, target, scenarioRaw) {
     }
     return (await snap(offset(from, metres, 0))).point;
   };
-  const pickup = await onRoad(at, 300);
+  const chosenFrom = point(trip && trip.from);
+  const chosenTo = point(trip && trip.to);
+  if ((trip && trip.from && !chosenFrom) || (trip && trip.to && !chosenTo)) return fail('point de départ ou d’arrivée illisible');
+  const pickup = chosenFrom ? (await snap(chosenFrom)).point : await onRoad(at, 300);
+  if (chosenFrom) {
+    // Dispatch looks 5 km around the pickup, widening to 7 (fares-and-dispatch.md):
+    // a pickup further from him is a request he never gets.
+    const far = metresBetween(at, pickup);
+    if (far > MAX_PICKUP_M) return fail(`le départ choisi est à ${(far / 1000).toFixed(1)} km de ${name} : la recherche de chauffeurs s’arrête à ${MAX_PICKUP_M / 1000} km, la demande ne lui arriverait pas`);
+  }
   let drop;
-  let dropName = 'Arrivée d’essai';
+  let dropName = chosenTo ? 'Arrivée choisie' : 'Arrivée d’essai';
   if (scenario === 7) {
+    if (chosenTo) say('Scénario 7 : l’arrivée est le lieu approuvé le plus proche ; l’arrivée choisie sur la carte n’est pas utilisée.');
+    dropName = 'Arrivée d’essai';
     const place = (await pool.query(
       `SELECT name, lat, lon FROM movin.suggested_place
         WHERE status = 'approved' AND country = $1
@@ -258,10 +299,16 @@ async function run(deps, target, scenarioRaw) {
     drop = { lat: Number(place.lat), lon: Number(place.lon) };
     if (metresBetween(pickup, drop) > 15000) return fail(`le lieu approuvé le plus proche (« ${place.name} ») est à plus de 15 km`);
     dropName = place.name;
+  } else if (chosenTo) {
+    drop = (await snap(chosenTo)).point;
+    const length = metresBetween(pickup, drop);
+    if (length < MIN_TRIP_M) return fail(`l’arrivée choisie est à ${length} m du départ : il faut au moins ${MIN_TRIP_M} m`);
+    if (length > MAX_TRIP_M) return fail(`l’arrivée choisie est à ${(length / 1000).toFixed(1)} km du départ : ${MAX_TRIP_M / 1000} km au plus pour un essai`);
   } else {
     drop = await onRoad(pickup, 2000);
   }
-  say(`Départ à ${metresBetween(at, pickup)} m de lui ; arrivée « ${dropName} » à ${metresBetween(pickup, drop)} m du départ.`);
+  say(`Départ ${chosenFrom ? 'choisi, ' : ''}à ${metresBetween(at, pickup)} m de lui ; arrivée « ${dropName} » à ${metresBetween(pickup, drop)} m du départ.`);
+  if (deps.emit) deps.emit({ driver: at, from: pickup, to: drop, toName: dropName, chosen: Boolean(chosenFrom || chosenTo) });
 
   /* ── 3. the passenger ── */
   const call = async (method, path, body, token) => {
@@ -710,6 +757,18 @@ const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { retu
 
 async function main(argv) {
   // `--driver <id> <scenario>`: what maps-shim's route runs for the console.
+  // `--from lat,lon` / `--to lat,lon`, anywhere after: a trip chosen on its map.
+  const trip = {};
+  const rest = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--from' || argv[i] === '--to') {
+      const p = parsePoint(argv[i + 1]);
+      if (!p) { console.log(`PAS RÉUSSI : ${argv[i]} attend « lat,lon » dans nos deux pays, pas « ${argv[i + 1] || ''} »`); return 1; }
+      trip[argv[i].slice(2)] = p;
+      i += 1;
+    } else rest.push(argv[i]);
+  }
+  argv = rest;
   const byDriver = argv[0] === '--driver';
   const [first, second] = byDriver ? [{ driverId: String(argv[1] || '') }, argv[2]] : argv;
   if (first === 'list') {
@@ -769,7 +828,10 @@ async function main(argv) {
 
   let verdict;
   try {
-    verdict = await run({ pool, say, state }, first, second);
+    // The console reads the trip from one machine line; a person at the
+    // command line is told in words (« Départ à … ») and never sees it.
+    const emit = byDriver ? (o) => console.log(`@trajet ${JSON.stringify(o)}`) : undefined;
+    verdict = await run({ pool, say, state, emit }, first, second, trip);
   } catch (e) {
     await cleanUp(state).catch(() => {});
     verdict = { ok: false, reason: `erreur : ${e.message}` };
@@ -787,5 +849,5 @@ if (require.main === module) {
 
 module.exports = {
   run, cleanUp, parseNumber, countryOfDriver, pidFile, alive,
-  SCENARIOS, SIMULATED, PASSENGERS, COMMENT, WAIT,
+  SCENARIOS, SIMULATED, PASSENGERS, COMMENT, WAIT, MAX_PICKUP_M, MIN_TRIP_M, MAX_TRIP_M, point, parsePoint,
 };
