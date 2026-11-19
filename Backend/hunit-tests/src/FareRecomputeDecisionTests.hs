@@ -9,7 +9,8 @@ module FareRecomputeDecisionTests (tests) where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import qualified Domain.Types as DTC
-import Domain.Types.Extra.TransporterConfig (RecomputeBand (..), TimeForgivenessBand (..))
+import Domain.Types.Extra.TransporterConfig (EarlyEndPolicy (..), RecomputeBand (..), TimeForgivenessBand (..))
+import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Prelude
 import Kernel.Types.Common
 import Test.Tasty
@@ -28,6 +29,7 @@ baseCfg =
   RD.RecomputeConfig
     { RD.cfgRecomputeIfPickupDropNotOutsideOfThreshold = True,
       RD.cfgRecomputeThresholds = Just [band],
+      RD.cfgDownwardRecomputeThresholds = Just [band],
       RD.cfgUpwardsRecomputeBuffer = 2000,
       RD.cfgUpwardsRecomputeBufferPercentage = Nothing,
       RD.cfgFareRecomputeDailyExtraKmsThreshold = 5000,
@@ -40,12 +42,14 @@ baseCfg =
       -- billing actual duration; the fleet default (5-min catch-all band)
       -- has its own dedicated test below
       RD.cfgTimeForgivenessBands = [],
+      RD.cfgMaxChargeableOverageSeconds = Nothing,
       RD.cfgGateExtraTimeChargeByRecompute = False,
       RD.cfgFloorTimeAtEstimateWithinThreshold = True,
       RD.cfgFloorTimeAtEstimateOutsideThreshold = False,
       RD.cfgRecomputeCongestionOnEndRide = False,
       RD.cfgEstimatedTollFallback = False,
-      RD.cfgNotifyDriverOnBudgetExceeded = True
+      RD.cfgNotifyDriverOnBudgetExceeded = True,
+      RD.cfgEndedAtPickup = Nothing
     }
 
 -- Estimated 10km / 30min ride that actually ran 12km; endpoints matched.
@@ -70,8 +74,47 @@ baseInput =
       RD.passedThroughDrop = False,
       RD.budgetState = Just (RD.ExtraKmBudgetState 2000 4000),
       RD.productFlags = cityFlags,
+      RD.earlyEndFacts = baseFacts,
       RD.cfg = baseCfg
     }
+
+-- A full trip from pickup.
+baseFacts :: RD.EarlyEndFacts
+baseFacts =
+  RD.EarlyEndFacts
+    { RD.eeTraveledDistance = 12000,
+      RD.eeDistanceFromPickup = 11000,
+      RD.eeTripDuration = Just 2000,
+      RD.eeDistanceCalculationFailed = False,
+      RD.eeDropOutsideOfThreshold = False
+    }
+
+-- 200 m / 2 min, no stop or waiting charge.
+earlyEndPolicy :: EarlyEndPolicy
+earlyEndPolicy =
+  EarlyEndPolicy
+    { distanceThresholdMeters = 200,
+      durationThresholdSeconds = 120,
+      notAllowedComponents = [DFP.StopChargeComponent, DFP.WaitingCharge]
+    }
+
+earlyEndCfg :: RD.RecomputeConfig
+earlyEndCfg = baseCfg {RD.cfgEndedAtPickup = Just earlyEndPolicy}
+
+-- Driver ended 100 m from pickup after a minute, far from the drop.
+endedAtPickupInput :: RD.RecomputeInput
+endedAtPickupInput =
+  baseInput
+    { RD.traveledDistance = 150,
+      RD.actualDuration = Just 60,
+      RD.pickupDropOutsideOfThreshold = True,
+      RD.dropOutsideOfThreshold = True,
+      RD.earlyEndFacts = pickupFacts,
+      RD.cfg = earlyEndCfg
+    }
+
+pickupFacts :: RD.EarlyEndFacts
+pickupFacts = baseFacts {RD.eeTraveledDistance = 150, RD.eeDistanceFromPickup = 100, RD.eeTripDuration = Just 60, RD.eeDropOutsideOfThreshold = True}
 
 summary :: RD.RecomputeDecision -> (RD.RecomputeReason, RD.DistanceSource, RD.PricingSource, Maybe Meters)
 summary d = (RD.reason d, RD.distanceSource d, RD.pricingSource d, RD.predictedChargeableDistance d)
@@ -140,10 +183,18 @@ tests =
         [ testCase "shorter ride bills actual on latest pricing" $
             summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 8000})
               @?= (RD.OutsideThresholdShorterActual, RD.UseActual, RD.LatestPolicy, Just 8000),
-          testCase "sub-band shortfall keeps the estimate (same bands gate both directions)" $
+          testCase "sub-band shortfall keeps the estimate" $
             -- 500m short of a 10km estimate misses the 1km/10% band -> no downward recompute
             summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 9500})
               @?= (RD.OutsideThresholdSmallShortfallEstimate, RD.UseEstimate, RD.LatestPolicy, Just 10000),
+          testCase "stricter downward bands keep the estimate on a shortfall the upward bands would pass" $
+            -- 2km short: clears the upward 1km/10% band, misses a 3km downward band
+            summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 8000, RD.cfg = baseCfg {RD.cfgDownwardRecomputeThresholds = Just [band {minThresholdDistance = 3000}]}})
+              @?= (RD.OutsideThresholdSmallShortfallEstimate, RD.UseEstimate, RD.LatestPolicy, Just 10000),
+          testCase "downward bands never gate an overage" $
+            -- 2km over: the upward band passes; the strict downward band is not consulted
+            summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 12000, RD.cfg = baseCfg {RD.cfgDownwardRecomputeThresholds = Just [band {minThresholdDistance = 3000}]}})
+              @?= (RD.OutsideThresholdLargeOverageActual, RD.UseActual, RD.LatestPolicy, Just 12000),
           testCase "shorter OTP ride keeps estimate when downward recompute disabled" $
             summary
               ( decide
@@ -267,14 +318,35 @@ tests =
           testCase "overage beyond the window bills actual minus the window, clamped at the estimate" $ do
             -- est 1800s, actual 2500s, default 300s window: billed 2200s, so
             -- the charged overage is 400s, not the raw 700s
-            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands (Just 1800) (Just 2500)
+            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands Nothing (Just 1800) (Just 2500)
               @?= Just 2200
-            RD.forgivenessAdjustedDuration [TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}] (Just 1800) (Just 1900)
+            RD.forgivenessAdjustedDuration [TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}] Nothing (Just 1800) (Just 1900)
               @?= Just 1800 -- inside the window: clamped to the estimate
-            RD.forgivenessAdjustedDuration [] (Just 1800) (Just 2500)
+            RD.forgivenessAdjustedDuration [] Nothing (Just 1800) (Just 2500)
               @?= Nothing -- no bands: billed duration untouched
-            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands (Just 1800) (Just 1700)
+            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands Nothing (Just 1800) (Just 1700)
               @?= Nothing, -- underrun: forgiveness never fires
+          testCase "overage after forgiveness is capped at the max" $ do
+            let window600 = [TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}]
+            -- est 1800s, actual 9000s, 600s window: 6600s overage, capped at 3600s
+            RD.forgivenessAdjustedDuration window600 (Just 3600) (Just 1800) (Just 9000)
+              @?= Just 5400
+            -- overage under the cap is billed as is
+            RD.forgivenessAdjustedDuration window600 (Just 3600) (Just 1800) (Just 3000)
+              @?= Just 2400
+            -- no band: the cap still applies to the raw overage
+            RD.forgivenessAdjustedDuration [] (Just 3600) (Just 1800) (Just 9000)
+              @?= Just 5400,
+          testCase "a distance floor still gets forgiveness and the cap" $ do
+            -- disableDownwardRecompute floors the distance; time overage is
+            -- still forgiven (no band here) and capped at 3600s
+            let d = decide baseInput {RD.actualDuration = Just 9000, RD.productFlags = cityFlags {RD.disableDownwardRecompute = True}, RD.cfg = baseCfg {RD.cfgMaxChargeableOverageSeconds = Just 3600}}
+            RD.durationSource d @?= RD.UseForgivenessAdjustedDuration
+            RD.modifiers d @?= [RD.DurationForgivenessDeducted, RD.DurationOverageCapped],
+          testCase "capped overage is flagged on the decision" $ do
+            let d = decide baseInput {RD.actualDuration = Just 9000, RD.cfg = baseCfg {RD.cfgMaxChargeableOverageSeconds = Just 3600}}
+            RD.durationSource d @?= RD.UseForgivenessAdjustedDuration
+            RD.modifiers d @?= [RD.DurationForgivenessDeducted, RD.DurationOverageCapped],
           testCase "extra-time gating pins estimate-billed rides to estimated duration" $ do
             let d =
                   decide
@@ -332,5 +404,29 @@ tests =
             let rec = RD.mkShadowRecordText (decide baseInput) 12000
             assertBool "predictedDistance present" ("\"predictedDistance\":12000" `T.isInfixOf` rec)
             assertBool "billedDistance present" ("\"billedDistance\":12000" `T.isInfixOf` rec)
+        ],
+      testGroup
+        "ended at pickup"
+        [ testCase "ended at pickup bills actual distance, ladder pricing kept" $
+            summary (decide endedAtPickupInput)
+              @?= (RD.EndedAtPickup, RD.UseActual, RD.LatestPolicy, Just 150),
+          testCase "ended at pickup returns the components not to bill" $
+            RD.detectEndedAtPickup earlyEndCfg pickupFacts
+              @?= Just [DFP.StopChargeComponent, DFP.WaitingCharge],
+          testCase "duration over the threshold is a normal ride" $
+            RD.reason (decide endedAtPickupInput {RD.earlyEndFacts = pickupFacts {RD.eeTripDuration = Just 600}})
+              @?= RD.OutsideThresholdShorterActual,
+          testCase "driving out and back to pickup is a normal ride" $
+            RD.detectEndedAtPickup earlyEndCfg pickupFacts {RD.eeTraveledDistance = 5000}
+              @?= Nothing,
+          testCase "distance calculation failed is a normal ride" $
+            RD.detectEndedAtPickup earlyEndCfg pickupFacts {RD.eeDistanceCalculationFailed = True}
+              @?= Nothing,
+          testCase "ending at the booked drop is a normal ride" $
+            RD.detectEndedAtPickup earlyEndCfg pickupFacts {RD.eeDropOutsideOfThreshold = False}
+              @?= Nothing,
+          testCase "cron job ignores ended at pickup" $
+            RD.reason (decide endedAtPickupInput {RD.requestSource = RD.CronJobSource})
+              @?= RD.CronJobEstimate
         ]
     ]

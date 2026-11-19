@@ -170,7 +170,18 @@ data RecomputePolicy = RecomputePolicy
     recomputeCongestionOnEndRide :: Maybe Bool,
     -- | On distance-calc failure with no detected toll, charge the estimated
     -- toll (was enableEstimatedTollFallback). Default off (rider-favoring).
-    estimatedTollFallback :: Maybe Bool
+    estimatedTollFallback :: Maybe Bool,
+    -- | Driver ended the ride without really moving from pickup (fare
+    -- dispute etc.): the notAllowedComponents are not billed, on the actual
+    -- distance/duration. Default off.
+    endedAtPickup :: Maybe EarlyEndPolicy
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data EarlyEndPolicy = EarlyEndPolicy
+  { distanceThresholdMeters :: Meters,
+    durationThresholdSeconds :: Seconds,
+    notAllowedComponents :: [FP.FareChargeComponent]
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
@@ -197,7 +208,8 @@ data UpwardRecomputePolicy = UpwardRecomputePolicy
 data DownwardRecomputePolicy = DownwardRecomputePolicy
   { allowForChangedDestination :: Maybe Bool,
     forgivenessMeters :: Maybe HighPrecMeters,
-    passThroughMinEstimateMeters :: Maybe Meters
+    passThroughMinEstimateMeters :: Maybe Meters,
+    bands :: Maybe [RecomputeBand]
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
@@ -227,7 +239,11 @@ data TimeRecomputePolicy = TimeRecomputePolicy
     -- bill below the estimated duration. Default OFF (shorter rides outside
     -- the threshold bill their actual duration). Same perMinRateSections
     -- binding as 'floorAtEstimateWithinThreshold'.
-    floorAtEstimateOutsideThreshold :: Maybe Bool
+    floorAtEstimateOutsideThreshold :: Maybe Bool,
+    -- | Most overage (beyond the estimated duration, after forgiveness) that
+    -- can be billed, e.g. 3600 bills at most 1 hour of extra time. Applies
+    -- with or without a forgiveness window. Default: no cap.
+    maxChargeableOverageSeconds :: Maybe Seconds
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
