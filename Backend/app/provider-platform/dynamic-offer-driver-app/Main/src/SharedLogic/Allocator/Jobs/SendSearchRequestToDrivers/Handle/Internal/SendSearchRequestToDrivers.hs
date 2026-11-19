@@ -643,7 +643,8 @@ addLanguageToDictionary ::
   ( TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    C.MonadCatch m
   ) =>
   DTR.TransporterConfig ->
   DSR.SearchRequest ->
@@ -657,8 +658,12 @@ addLanguageToDictionary transporterConfig searchReq dict dPoolRes = do
       if isJust $ M.lookup language dict
         then return dict
         else do
-          translatedSearchReq <- translateSearchReq searchReq language
-          pure $ M.insert language translatedSearchReq dict
+          result :: Either SomeException DSR.SearchRequest <- C.try $ translateSearchReq searchReq language
+          case result of
+            Right translatedSearchReq -> pure $ M.insert language translatedSearchReq dict
+            Left err -> do
+              logWarning $ "Translation to " <> show language <> " failed for searchReq " <> searchReq.id.getId <> ", sending the untranslated request: " <> show err
+              pure $ M.insert language searchReq dict
     else return dict
 
 -- | Before broadcast, try to silently direct-assign one AutoAssign#<tier>-tagged driver nearest-first; on success returns [], else the batch unchanged.
