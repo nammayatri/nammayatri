@@ -281,6 +281,7 @@ tests =
           chatChannelId = Nothing,
           cabsComing = 0,
           boardDeadlineSec = Nothing,
+          boardPromptSec = Nothing,
           cancelReason = Nothing,
           preferredCab = Nothing,
           preferredCabLost = False,

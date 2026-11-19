@@ -7,6 +7,7 @@ module SharedLogic.SharedCab.Notify
     notifyAssigned,
     notifyArriving,
     notifyApproach,
+    notifyBoardPrompt,
     notifyReassigned,
     reassignReasonFor,
     notifyBoardAny,
@@ -38,6 +39,7 @@ data SharedCabNotificationType
   | SHARED_CAB_FINDING_TIMEOUT
   | SHARED_CAB_ON_THE_WAY
   | SHARED_CAB_ARRIVING_SOON
+  | SHARED_CAB_BOARD_PROMPT
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 data ReassignReason = SEAT_LOST | TIMEOUT | CAB_PULLED
@@ -108,6 +110,9 @@ notifyAssigned plate = send SHARED_CAB_ASSIGNED Nothing Nothing (Just plate) []
 notifyArriving :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> Int -> DFTB.FRFSTicketBooking -> m ()
 notifyArriving plate deadlineSec = send SHARED_CAB_ARRIVING Nothing Nothing (Just plate) [("boardDeadlineSec", show deadlineSec), ("vehicleLast4", T.takeEnd 4 plate)]
 
+notifyBoardPrompt :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> Int -> DFTB.FRFSTicketBooking -> m ()
+notifyBoardPrompt plate answerSec = send SHARED_CAB_BOARD_PROMPT Nothing Nothing (Just plate) [("answerSec", show answerSec), ("vehicleLast4", T.takeEnd 4 plate)]
+
 -- | The tick's approach pushes between assigned and arrived.
 notifyApproach :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> ApproachPush -> DFTB.FRFSTicketBooking -> m ()
 notifyApproach plate p = send key Nothing Nothing (Just plate) [("vehicleLast4", T.takeEnd 4 plate)]
@@ -134,6 +139,7 @@ reassignReasonFor = \case
   DriverDeclined -> Nothing
   OfferTimeout -> Nothing
   RiderSkipped _ -> Nothing
+  BoardUnanswered -> Nothing
 
 notifyBoardAny :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => DFTB.FRFSTicketBooking -> m ()
 notifyBoardAny = send SHARED_CAB_BOARD_ANY Nothing Nothing Nothing []
