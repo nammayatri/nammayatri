@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride.Common
     mkLocationFromLocationMapping,
     calculateLocations,
     makeStop,
+    getWaitingChargeInfo,
   )
 where
 
