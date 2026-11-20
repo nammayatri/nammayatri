@@ -396,6 +396,7 @@ library
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverAcceptOffer
+      Domain.Action.UI.DriverAccountHealth
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverCommunication
@@ -681,6 +682,7 @@ library
       SharedLogic.BehaviourManagement.Packs
       SharedLogic.BehaviourManagement.PickupStall
       SharedLogic.BehaviourManagement.PickupStallState
+      SharedLogic.BehaviourManagement.RulebookSpec
       SharedLogic.BehaviourManagement.RunRules
       SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BetterDriverSearch
@@ -1375,6 +1377,7 @@ library
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
       API.Action.UI.Dispatcher
+      API.Action.UI.DriverAccountHealth
       API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverCommunication
       API.Action.UI.DriverDocument
@@ -1586,6 +1589,7 @@ library
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
       API.Types.UI.Dispatcher
+      API.Types.UI.DriverAccountHealth
       API.Types.UI.DriverAreaPreference
       API.Types.UI.DriverCommunication
       API.Types.UI.DriverFyEarnings
@@ -2706,6 +2710,7 @@ test-suite driver-app-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      AccountHealthTests
       SharedCabProxyTests
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
