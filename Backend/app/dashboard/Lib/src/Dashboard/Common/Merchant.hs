@@ -755,7 +755,8 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    poolingMode :: Maybe SLT.PoolingMode
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -775,6 +776,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "render" form
       <*> parseMaybeInput "paymentModes" form
       <*> parseMaybeInput "fareSettlementType" form
+      <*> parseMaybeInput "poolingMode" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -798,7 +800,8 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    poolingMode :: Maybe SLT.PoolingMode
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -817,7 +820,8 @@ data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     feeItems :: Maybe [GIT.GateFeeItem],
-    minBalanceRequired :: Maybe HighPrecMoney
+    minBalanceRequired :: Maybe HighPrecMoney,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -838,6 +842,7 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
       <*> parseMaybeInput "walkDescription" form
       <*> parseMaybeJsonInput "feeItems" form
       <*> parseMaybeInput "minBalanceRequired" form
+      <*> parseMaybeInput "maxRideSkipsBeforeQueueRemoval" form
 
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
@@ -853,7 +858,8 @@ data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     feeItems :: Maybe [GIT.GateFeeItem],
-    minBalanceRequired :: Maybe HighPrecMoney
+    minBalanceRequired :: Maybe HighPrecMoney,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

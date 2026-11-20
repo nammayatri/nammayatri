@@ -64,6 +64,14 @@ data FareSettlementType
 
 $(mkBeamInstancesForEnum ''FareSettlementType)
 
+data PoolingMode
+  = RadiusPooling
+  | QueuePooling
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable PoolingMode
+
+$(mkBeamInstancesForEnum ''PoolingMode)
+
 edcCollectsParking :: Maybe FareSettlementType -> Bool
 edcCollectsParking = (`elem` [Just ParkingOnly, Just CommissionAndParking])
 
@@ -111,6 +119,7 @@ data SpecialLocation = SpecialLocation
     paymentModes :: Maybe [PaymentMode],
     fareSettlementType :: Maybe FareSettlementType,
     boothSpecificFleet :: Maybe Text,
+    poolingMode :: Maybe PoolingMode,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

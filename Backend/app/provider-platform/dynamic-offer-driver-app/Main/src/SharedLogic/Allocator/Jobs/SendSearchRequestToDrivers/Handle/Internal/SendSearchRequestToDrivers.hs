@@ -246,9 +246,10 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
   -- block driver dispatch or add latency to the allocator.
   when (isJust searchReq.pickupZoneGateId) $
     fork "specialZoneQueueSkipForTimedOutDrivers" $ do
-      let timedOutQueueDrivers = filter (.pickupZone) unrespondedSRFDs
+      skipCheckAt <- getCurrentTime
+      let (_, timedOutQueueDrivers) = QSRD.partitionRespondable skipCheckAt (filter (.pickupZone) unrespondedSRFDs)
       forM_ timedOutQueueDrivers $ \srfd ->
-        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
+        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show srfd.vehicleVariant) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
   let dispatchDriverIds = map (\dp -> dp.driverPoolResult.driverId.getId) dispatchPool
       reOfferedSRFDs = filter (\srfd -> srfd.driverId.getId `elem` dispatchDriverIds) unrespondedSRFDs
   unless (null reOfferedSRFDs) $
