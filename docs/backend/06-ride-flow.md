@@ -119,6 +119,7 @@ times while the ride is `INPROGRESS`.
 | API + snapshot + BAP push | driver-app | `Domain/Action/UI/Ride/CollectPayment.hs` |
 | Fare (end-ride computation, read-only) | driver-app | `Domain/Action/UI/Ride/EndRide.hs` (`previewRideFare`, `FareComputeMode`) |
 | Manual toll in preview | driver-app | `SharedLogic/ManualTollCharge.hs` (`resolveManualTollChargeForPreview`) |
+| Tolls crossed so far (mid-ride) | driver-app | `SharedLogic/GpsDetectedTolls.hs`, written by `Lib/LocationUpdates.hs` (`updateTollRouteDeviation`) |
 | on_update `RIDE_FARE_UPDATED` | driver-app | `SharedLogic/CallBAP.hs` (`sendRideFareUpdatedToBAP`), `Beckn/ACL/Common/Order.hs` |
 | BAP stores snapshot | rider-app | `Domain/Action/Beckn/OnUpdate.hs` (`OUValidatedRideFareUpdatedReq`) |
 | Rider fare push | rider-app | `Tools/Notifications.hs` (`notifyOnRideFareUpdated`), merchant PN `RIDE_FARE_UPDATED` |
@@ -126,16 +127,29 @@ times while the ride is `INPROGRESS`.
 
 - The fare comes from the same code path end ride uses, in `PreviewMode`: nothing on the fare path is
   written (no ride stamps, no extra-km budget, no metrics), the location tracking service is not told
-  the ride ended, and snap-to-road/toll tracking is not finalised. Distance and tolls are the ones
-  tracked so far.
-- The result is stored as a snapshot in `ride.collected*` on both sides. **End ride never reads it**:
-  it always recomputes, and `ride.fare` stays the billed value.
+  the ride ended, and snap-to-road/toll tracking is not finalised.
+- Distance: while the driver stays on the planned route, the GPS points are only buffered and the ride's
+  distance stays 0 until end ride. When end ride would snap the points (called away from the drop, an
+  estimated toll, or a deviation), the preview bills the distance driven so far from the buffered points
+  (no snap-to-road call); otherwise it bills the estimate, as end ride does from the cached quote route.
+  With no GPS points since the trip start, end ride's snap fails and it bills the approximate maps route,
+  so the preview takes that same failed-distance branch.
+- Tolls: while the driver stays on the planned route, the ride's toll fields stay empty until end ride
+  runs the final detection. The per-batch toll-route check records each toll crossed on the driven
+  route (`SharedLogic/GpsDetectedTolls.hs`), and the preview bills those. Each crossing counts, so a
+  toll crossed twice bills twice, capped per toll by `maxTollCountInRide`, as at end ride. A toll not
+  crossed yet is not billed, even if it is in the estimate.
+- The result is stored as a snapshot in `ride.collected*` on both sides (fare, distance and time). The
+  driver side does not store the breakup. **End ride never reads it**: it always recomputes, and
+  `ride.fare` stays the billed value.
 - Rider side: the BAP stores the quote breakup in `fare_breakup_info` (entity type `COLLECTED_FARE`,
   keyed by ride id; each newer snapshot replaces the row). `GET /rideBooking/{id}` and
   `GET /rideBooking/fareBreakup` return it as `collectedFareBreakup` while the ride is in progress, and `[]`
   after; `fareBreakup` then has the final breakup. The BAP also sends the `RIDE_FARE_UPDATED` push, whose
   text comes from `merchant_push_notification` with placeholders `{#fare#}` (rounded, no currency),
   `{#currency#}` and `{#driverName#}`. No row for the city means no push.
+- Shared-route runs are rejected with `COLLECT_PAYMENT_NOT_APPLICABLE_FOR_SHARED_ROUTE` (400): each
+  passenger pays their own fixed ticket fare, and the run has no BAP booking to sync to.
 - `RIDE_FARE_UPDATED` is a custom on-us event, sent only to value-add NPs. The BAP ignores it for a ride
   that is no longer in progress, and ignores an older snapshot than the one it has.
 

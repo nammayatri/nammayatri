@@ -197,12 +197,12 @@ data ScheduledAcceptanceMode
   | AssignedByFleetOwner
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)

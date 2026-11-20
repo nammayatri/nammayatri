@@ -62,6 +62,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.GpsDetectedTolls as GpsDetectedTolls
 import SharedLogic.Ride
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -258,13 +259,21 @@ updateTollRouteDeviation _ _ Nothing _ _ = do
   return (False, False)
 updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints mbPreviousRouteSegment = do
   let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
-  isTollPresentOnCurrentRoute <-
-    isJust
-      <$> TollsDetector.getTollInfoOnRoute
-        merchantOpCityId.getId
-        (Just $ TollsDetector.TollTracking TollsDetector.TollTrackingDeviation driverId.getId)
-        mbPreviousRouteSegment
-        batchWaypoints
+  mbTollInfoOnCurrentRoute <-
+    TollsDetector.getTollInfoOnRoute
+      merchantOpCityId.getId
+      (Just $ TollsDetector.TollTracking TollsDetector.TollTrackingDeviation driverId.getId)
+      mbPreviousRouteSegment
+      batchWaypoints
+  let isTollPresentOnCurrentRoute = isJust mbTollInfoOnCurrentRoute
+  -- Collect payment: keep the tolls found on the driven route, not just the flag. Mid-ride the
+  -- ride's own toll fields stay empty until end ride, so this is what lets the collect-payment
+  -- preview bill a toll the driver has already crossed. End ride does not read it.
+  -- Failures are swallowed: an exception here would abort the batch and flag the ride's distance
+  -- calculation as failed, which changes what end ride bills. Not forked, since it read-modify-writes.
+  whenJust mbTollInfoOnCurrentRoute $ \tollInfo ->
+    withTryCatch "recordGpsDetectedTolls" (GpsDetectedTolls.recordGpsDetectedTolls merchantOpCityId ride.id tollInfo)
+      >>= either (\e -> logError $ "recordGpsDetectedTolls failed for ride " <> ride.id.getId <> ": " <> show e) pure
   when (isTollPresentOnCurrentRoute && not driverDeviatedToTollRoute) $ do
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)

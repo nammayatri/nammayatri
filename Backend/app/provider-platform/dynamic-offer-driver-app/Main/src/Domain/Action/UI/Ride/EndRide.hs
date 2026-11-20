@@ -114,6 +114,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.GpsDetectedTolls as GpsDetectedTolls
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
@@ -737,8 +738,11 @@ buildTollInput thresholdConfig ride distanceCalculationFailed pickupDropOutsideO
 --
 -- Moved verbatim out of 'endRideHandler'. The ride passed in must be the latest one:
 --   * end ride: re-read after 'finalDistanceCalculation' flushed the last location points;
---   * preview:  the ride as it stands mid-trip (distance and tolls are updated batch by batch
---               while the ride is in progress, so it lags only by the last unsnapped batch).
+--   * preview:  the ride as it stands mid-trip. While the driver stays on the planned route the
+--               GPS points are only buffered, not snapped, so the ride's distance is 0 and its toll
+--               fields are empty until end ride. The preview fills both in the way end ride would
+--               (see below): the distance driven so far from the buffered points, and the tolls
+--               crossed so far from 'SharedLogic.GpsDetectedTolls'.
 --
 -- The manual-toll step is passed in because the callers treat an unconfirmed declaration
 -- differently: end ride throws (the driver must wait or re-declare), a preview must never
@@ -758,16 +762,63 @@ computeTrackedDistanceFare ::
 computeTrackedDistanceFare mode handle@ServiceHandle {..} booking updRide tripEndPoint thresholdConfig pickupDropOutsideOfThreshold resolveManualToll = do
   let rideId = updRide.id
       shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
-  distanceCalculationFailed <- withTimeAPI (fareComputeApiLabel mode) "isDistanceCalculationFailed" $ isDistanceCalculationFailed updRide.driverId
+  distanceCalculationFailedSoFar <- withTimeAPI (fareComputeApiLabel mode) "isDistanceCalculationFailed" $ isDistanceCalculationFailed updRide.driverId
+
+  -- Preview only: mid-ride ride.traveledDistance stays 0 on a non-deviated ride, and called away
+  -- from the drop the preview is outside the pickup/drop threshold, so with downward recompute on it would bill ~0 m (the minimum fare). Whenever end
+  -- ride would snap the GPS points (its ending branch's snap condition), bill the distance driven
+  -- so far instead, as end ride would. Otherwise end ride bills the cached quote route, which the
+  -- distance branches already reproduce from the estimate, so nothing changes.
+  let endRideWouldSnapGps =
+        pickupDropOutsideOfThreshold
+          || isJust updRide.estimatedTollCharges
+          || updRide.driverDeviatedToTollRoute == Just True
+          || (updRide.driverDeviatedFromRoute == Just True && (RD.mkRecomputeConfig thresholdConfig).cfgRecomputeIfPickupDropNotOutsideOfThreshold)
+          || shouldRectifyDistantPointsSnapToRoadFailure
+  mbDrivenSoFar <-
+    if mode == PreviewMode && endRideWouldSnapGps && not distanceCalculationFailedSoFar
+      then do
+        drivenSoFar <- estimateDistanceDrivenSoFar booking updRide
+        logInfo $ "Collect payment: distance driven so far " <> show drivenSoFar.distance <> " (snapped " <> show updRide.traveledDistance <> ", gps points " <> show drivenSoFar.hasGpsPoints <> "), ride " <> rideId.getId
+        pure (Just drivenSoFar)
+      else pure Nothing
+  -- Preview only: with no GPS points since the start (GPS off, app in the background), end ride's
+  -- final snap fails, it marks the distance calculation failed and bills the approximate route
+  -- (maps route from trip start to the end point). Take that same branch instead of billing 0 m.
+  let previewHasNoGps = maybe False (not . (.hasGpsPoints)) mbDrivenSoFar
+      distanceCalculationFailed = distanceCalculationFailedSoFar || previewHasNoGps
 
   when distanceCalculationFailed $ do
     logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
+
+  -- Preview only: while the driver stays on the planned route, the ride's own toll fields stay
+  -- empty until end ride runs the final toll detection, so a toll already crossed would be left
+  -- out. Use the tolls the per-batch check has recorded on the driven route instead (see
+  -- SharedLogic.GpsDetectedTolls). End ride keeps using the ride's tolls from its final detection.
+  rideForTolls <-
+    if mode == PreviewMode && DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+      then do
+        mbGpsTolls <- GpsDetectedTolls.getGpsDetectedTolls updRide.id
+        -- The GPS record covers every batch; tolls already on the ride come only from batches
+        -- snapped mid-ride (deviated rides), so prefer the record when it has more crossings.
+        let rideCrossings = length (fromMaybe [] updRide.tollIds)
+            useGps gpsTolls = isNothing updRide.tollCharges || length gpsTolls.tollIds > rideCrossings
+        case mbGpsTolls of
+          Just gpsTolls | useGps gpsTolls -> do
+            logInfo $ "Collect payment: billing tolls crossed so far on the driven route: " <> show gpsTolls.tollNames
+            pure updRide {DRide.tollCharges = Just gpsTolls.tollCharges, DRide.tollNames = Just gpsTolls.tollNames, DRide.tollIds = Just gpsTolls.tollIds}
+          _ -> pure updRide
+      else pure updRide
+
+  let rideForDistance = case mbDrivenSoFar of
+        Just drivenSoFar | drivenSoFar.hasGpsPoints -> updRide {DRide.traveledDistance = drivenSoFar.distance}
+        _ -> updRide
 
   -- Toll reconciliation matrix lives in the pure, unit-tested
   -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
   -- extraction of the if-tree that used to be inline here); this input also feeds
   -- the manual-toll-charge signal below.
-  tollInput <- buildTollInput thresholdConfig updRide distanceCalculationFailed pickupDropOutsideOfThreshold
+  tollInput <- buildTollInput thresholdConfig rideForTolls distanceCalculationFailed pickupDropOutsideOfThreshold
 
   -- Log if we have validated toll but can't apply due to route deviation
   when (isJust tollInput.validatedPendingToll && pickupDropOutsideOfThreshold) $ do
@@ -794,7 +845,7 @@ computeTrackedDistanceFare mode handle@ServiceHandle {..} booking updRide tripEn
 
   -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-  let ride = updRide{DRide.tollCharges = tollCharges, DRide.tollNames = tollNames, DRide.tollIds = tollIds, DRide.tollConfidence = tollConfidence, DRide.distanceCalculationFailed = Just distanceCalculationFailed, DRide.rideTags = updRide.rideTags <> manualTollChargeTags}
+  let ride = rideForDistance{DRide.tollCharges = tollCharges, DRide.tollNames = tollNames, DRide.tollIds = tollIds, DRide.tollConfidence = tollConfidence, DRide.distanceCalculationFailed = Just distanceCalculationFailed, DRide.rideTags = updRide.rideTags <> manualTollChargeTags}
 
   (chargeableDistance, finalFare, mbUpdatedFareParams, mbRecalcFarePolicy, mbApproxUsed) <-
     if shouldRectifyDistantPointsSnapToRoadFailure
@@ -880,6 +931,29 @@ data RideFarePreview = RideFarePreview
     -- so the toll in 'fare' is the automatic one and may change at end ride.
     tollPendingConfirmation :: Bool
   }
+
+-- | Collect-payment preview: distance driven so far, as end ride would measure it when it snaps
+-- the GPS points, without calling snap-to-road. Batches already snapped mid-ride (deviated rides)
+-- are in ride.traveledDistance; the points still buffered for the next batch are added as a path
+-- from the last snapped point (or the trip start when nothing has been snapped). The points arrive
+-- every few seconds, so the straight-line path stays close to the road distance.
+data DrivenSoFar = DrivenSoFar
+  { distance :: HighPrecMeters,
+    -- | False when no GPS point has arrived since the trip start: end ride's final snap would fail.
+    hasGpsPoints :: Bool
+  }
+
+estimateDistanceDrivenSoFar :: (CacheFlow m r) => SRB.Booking -> DRide.Ride -> m DrivenSoFar
+estimateDistanceDrivenSoFar booking ride = do
+  bufferedPoints <- LocUpdInternal.getAllWaypointsImplementation ride.driverId
+  mbSnapState :: Maybe LocUpdInternal.SnapToRoadState <- Redis.safeGet (LocUpdInternal.onRideSnapToRoadStateKey ride.driverId)
+  let lastSnappedPoint = mbSnapState >>= (.distanceCalcReferencePoint)
+      tripStart = ride.tripStartPos <|> Just (getCoordinates booking.fromLocation)
+      startPoint = lastSnappedPoint <|> (if ride.traveledDistance > 0 then Nothing else tripStart)
+      path = maybeToList startPoint <> bufferedPoints
+      bufferedPathLength = sum (zipWith distanceBetweenInMeters path (drop 1 path))
+  -- Two points make the shortest path end ride can snap; anything less fails there.
+  pure DrivenSoFar {distance = ride.traveledDistance + bufferedPathLength, hasGpsPoints = ride.traveledDistance > 0 || length bufferedPoints >= 2}
 
 -- | Collect-payment preview: runs the end-ride fare computation on the ride as it stands, in
 -- 'PreviewMode'. Read-only: it does not end the ride on the location tracking service, does not
