@@ -6,7 +6,7 @@ import DBQuery.Types
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
-import Data.Text as T
+import Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import Database.PostgreSQL.Simple.Types (Query (..))
 import qualified EulerHS.Language as EL
@@ -33,23 +33,27 @@ runDeleteQuery deleteEntries dbDeleteObject = do
   Env {..} <- ask
   let (entryId, byteString) = deleteEntries
   let dbModel = dbDeleteObject.dbModel
-  let deleteQuery = getDeleteQueryForTable dbDeleteObject
-  case deleteQuery of
-    Just query -> do
-      result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
-      case result of
-        Left (QueryError errorMsg) -> do
-          EL.logError ("QUERY DELETE FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
-          EL.logError ("QUERY DELETE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
-          EL.logError ("QUERY DELETE FAILED : DB OBJECT" :: Text) (show dbDeleteObject)
-          void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbModel.getDBModel
+      tableSnake = textToSnakeCaseText dbModel.getDBModel
+  if tableSnake `elem` _dropTablesForDb || dbModel.getDBModel `elem` _dropTablesForDb
+    then return $ Right entryId
+    else do
+      let deleteQuery = getDeleteQueryForTable dbDeleteObject
+      case deleteQuery of
+        Just query -> do
+          result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
+          case result of
+            Left (QueryError errorMsg) -> do
+              EL.logError ("QUERY DELETE FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
+              EL.logError ("QUERY DELETE FAILED : BYTE STRING" :: Text) (TE.decodeUtf8 byteString)
+              EL.logError ("QUERY DELETE FAILED : DB OBJECT" :: Text) (show dbDeleteObject)
+              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbModel.getDBModel
+              return $ Left entryId
+            Right _ -> do
+              EL.logDebug ("QUERY DELETE SUCCESSFUL" :: Text) (" Delete successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              return $ Right entryId
+        Nothing -> do
+          EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
-        Right _ -> do
-          EL.logDebug ("QUERY DELETE SUCCESSFUL" :: Text) (" Delete successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
-          return $ Right entryId
-    Nothing -> do
-      EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
-      return $ Left entryId
 
 getDeleteQueryForTable :: DBDeleteObject -> Maybe Text
 getDeleteQueryForTable DBDeleteObject {dbModel, contents, mappings} = do
