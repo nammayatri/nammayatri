@@ -87,6 +87,12 @@ findAllByDriverIdList driverIds =
     then pure []
     else findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> driverIds)]
 
+findAllByDriverIdListFromDb :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverStats]
+findAllByDriverIdListFromDb driverIds =
+  if null driverIds
+    then pure []
+    else findAllWithDb [Se.Is BeamDS.driverId $ Se.In (getId <$> driverIds)]
+
 incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m Int
 incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   now <- getCurrentTime

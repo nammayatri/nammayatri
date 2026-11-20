@@ -190,7 +190,9 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
   (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion Nothing
   let customerTags = convertTags <$> sreq.customerNammaTags
-  let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist), ("searchRepeatType", toJSON searchRepeatType), ("searchRepeatCounter", toJSON searchRepeatCounter), ("customerTags", toJSON customerTags)]
+  now <- getCurrentTime
+  let timeToPickupSeconds = round (diffUTCTime sreq.startTime now) :: Int
+  let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist), ("searchRepeatType", toJSON searchRepeatType), ("searchRepeatCounter", toJSON searchRepeatCounter), ("customerTags", toJSON customerTags), ("timeToPickupSeconds", toJSON timeToPickupSeconds)]
   case dpc' of
     Just dpc -> do
       let config = Config dpc (Just otherDimensions)
