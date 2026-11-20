@@ -5,9 +5,9 @@
 module Main (main) where
 
 import CodecSpec (codecSpec)
-import GoldenReplay (copyChecks, fixtureGuards, goldenTests, rideTypeButtonLayoutChecks)
+import GoldenReplay (copyChecks, fixtureGuards, flexiFareChecks, goldenTests, rideTypeButtonLayoutChecks)
 import Kernel.Prelude
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
-main = defaultMain (testGroup "whatsapp-bot golden" (goldenTests ++ [copyChecks, fixtureGuards, codecSpec, rideTypeButtonLayoutChecks]))
+main = defaultMain (testGroup "whatsapp-bot golden" (goldenTests ++ [copyChecks, flexiFareChecks, fixtureGuards, codecSpec, rideTypeButtonLayoutChecks]))

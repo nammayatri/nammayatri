@@ -150,7 +150,7 @@
       ]
     },
     {
-      "note": "confirm → search → empty quotes (10 polls) → flexiNoAuto + [Try again], back to IDLE",
+      "note": "confirm → search → empty quotes (10 polls) → flexiNoAuto + [Try again], back to IDLE [2026-11-17 review: 'Finding an auto' + Cancel is sent at once again, before the search; the fare_policy fare line is a separate message sent only once a quote exists, so with no quotes the outbound is unchanged from before]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [

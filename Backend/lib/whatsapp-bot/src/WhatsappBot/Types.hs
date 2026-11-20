@@ -94,14 +94,28 @@ data BotEstimate = BotEstimate
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | A flexi/rental quote (@NYFlexiQuote@, @client.ts:134-139@). @quoteId@ is
--- what we confirm.
+-- what we confirm. @baseFare@ / @perKmFare@ are the fare policy's own rates,
+-- read from the quote's rate card (BASE_FARE / EXTRA_PER_KM_FARE) so the
+-- "Rs.X + Rs.Y/km" line follows fare_policy instead of a hand-typed copy.
 data BotQuote = BotQuote
   { quoteId :: Text,
     serviceTierName :: Maybe Text,
     estimatedFare :: Maybe Double,
-    vehicleVariant :: Maybe Text
+    vehicleVariant :: Maybe Text,
+    baseFare :: Maybe Double,
+    perKmFare :: Maybe Double
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Amount of the first rate-card item with this title, from a quote's
+-- @(title, amount)@ breakup. The BPP builds these from the quote's fare policy
+-- (@SharedLogic/FarePolicy.hs@ @mkAdditionalProgressiveBreakups@) and emits one
+-- @EXTRA_PER_KM_FARE@ per distinct rate, sorted by start distance, so the first
+-- is the rate right after the base distance: the one the "base + X/km" fare
+-- line shows. A slab (non-Progressive) policy has no such item, so the line is
+-- omitted there.
+rateCardAmount :: Text -> [(Text, Double)] -> Maybe Double
+rateCardAmount title items = snd <$> find ((== title) . fst) items
 
 -- | A saved rider location (@NYSavedLocation@, @client.ts:141-151@).
 data BotSavedLocation = BotSavedLocation
@@ -197,8 +211,6 @@ data MerchantCtx = MerchantCtx
     -- before "More" (see WhatsappBot.Flow.Booking.splitRideTypes). Nothing
     -- keeps the default nudge-toward-priority layout.
     maxDirectButtons :: Maybe Int,
-    flexiBaseFare :: Maybe Double,
-    flexiPerKm :: Maybe Double,
     flexiServiceArea :: Maybe Text,
     flexiServiceRadiusKm :: Maybe Double,
     flexiRentalDistanceM :: Int,

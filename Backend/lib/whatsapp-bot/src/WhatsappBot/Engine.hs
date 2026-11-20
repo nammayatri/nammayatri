@@ -152,7 +152,7 @@ runEngine env ev ctx = do
       | input == "more_ride_types" && ctx.state == Idle -> replyButtons env to s.rideTypePrompt (hiddenRideTypeButtons s env.cfg.merchant.maxDirectButtons env.cfg.merchant.rideTypesOrder)
       | input == "pickup_confirm" && isJust ctx.personId && isJust ctx.origin && ctx.state == ConfirmingPickup ->
         handlePickupConfirm env ev ctx -- :293-305
-      | input == "pickup_adjust" -> promptForPickup env ev ctx True -- :306-310
+      | input == "pickup_adjust" -> promptForPickup env ev ctx -- :306-310
       | input == "regular_book" && isJust ctx.personId && isJust ctx.regularEstimateId && ctx.state == ConfirmingRegularFare ->
         confirmRegularBooking env ev ctx -- :312-315
       | input == "regular_change_drop" && isJust ctx.personId -> promptForRegularDrop env ev ctx -- :316-319
@@ -176,7 +176,7 @@ stateSwitch env ev ctx input =
    in case ctx.state of
         Idle -> handleIdle env ev ctx input
         ChoosingLanguage -> handleChooseLanguage env ev ctx input
-        AwaitingPickup -> promptForPickup env ev ctx False
+        AwaitingPickup -> promptForPickup env ev ctx
         ConfirmingPickup -> sendPickupConfirm env ev ctx Nothing
         FlexiSearching -> reply env to s.flexiFinding
         AwaitingRegularDrop -> handleRegularDrop env ev ctx input
