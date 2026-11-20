@@ -17,3 +17,8 @@ ALTER TABLE atlas_driver_offer_bpp.faq ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN sub_category character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.faq ADD COLUMN display_order integer ;

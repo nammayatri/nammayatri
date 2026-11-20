@@ -16,15 +16,16 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Faq as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Faq.Faq -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Faq.Faq -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Faq.Faq] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Faq.Faq] -> m ()
 createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m [Domain.Types.Faq.Faq])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Kernel.External.Types.Language -> m [Domain.Types.Faq.Faq])
 findAllByMerchantOperatingCityIdAndLanguage merchantOperatingCityId language = do
   findAllWithKV
     [ Se.And
@@ -33,15 +34,16 @@ findAllByMerchantOperatingCityIdAndLanguage merchantOperatingCityId language = d
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Faq.Faq -> m (Maybe Domain.Types.Faq.Faq))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Faq.Faq -> m (Maybe Domain.Types.Faq.Faq)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Faq.Faq -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Faq.Faq -> m ()
 updateByPrimaryKey (Domain.Types.Faq.Faq {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.answer answer,
       Se.Set Beam.category category,
+      Se.Set Beam.displayOrder displayOrder,
       Se.Set Beam.faqGroupId faqGroupId,
       Se.Set Beam.language language,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -59,6 +61,7 @@ instance FromTType' Beam.Faq Domain.Types.Faq.Faq where
         Domain.Types.Faq.Faq
           { answer = answer,
             category = category,
+            displayOrder = displayOrder,
             faqGroupId = faqGroupId,
             id = Kernel.Types.Id.Id id,
             language = language,
@@ -75,6 +78,7 @@ instance ToTType' Beam.Faq Domain.Types.Faq.Faq where
     Beam.FaqT
       { Beam.answer = answer,
         Beam.category = category,
+        Beam.displayOrder = displayOrder,
         Beam.faqGroupId = faqGroupId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.language = language,

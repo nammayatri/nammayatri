@@ -33,7 +33,7 @@ getFaq (mbPersonId, _merchantId, merchantOpCityId) mbCategory = do
       then QFaq.findAllByMerchantOperatingCityIdAndLanguage merchantOpCityId ENGLISH
       else pure faqs
   let filteredFaqs = maybe faqsInLanguage (\category -> filter (\faq -> faq.category == Just category) faqsInLanguage) mbCategory
-  pure $ map toFaqAPIEntity (sortOn (.createdAt) filteredFaqs)
+  pure $ map toFaqAPIEntity (sortOn (\faq -> (isNothing faq.displayOrder, faq.displayOrder, faq.createdAt)) filteredFaqs)
 
 toFaqAPIEntity :: Domain.Types.Faq.Faq -> API.Types.UI.Faq.FaqAPIEntity
 toFaqAPIEntity faq =
@@ -41,6 +41,7 @@ toFaqAPIEntity faq =
     { faqGroupId = faq.faqGroupId,
       category = faq.category,
       subCategory = faq.subCategory,
+      displayOrder = faq.displayOrder,
       question = faq.question,
       answer = faq.answer
     }
