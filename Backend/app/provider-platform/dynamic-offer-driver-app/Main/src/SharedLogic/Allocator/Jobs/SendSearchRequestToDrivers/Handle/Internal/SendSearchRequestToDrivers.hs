@@ -19,6 +19,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
   )
 where
 
+import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Applicative ((<|>))
 import qualified Control.Monad.Catch as C
@@ -389,7 +390,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           mbCapConfig = Nothing,
           mbEstimateFareParams = Nothing,
           paymentChargeDetails = searchTry.paymentChargeDetails,
-          buyerOfferDiscount = searchTry.discountAmount,
+          buyerOfferDiscount = offerDiscountForEstimate tripQuoteDetail.estimateOrQuoteId searchTry.estimateOfferDiscounts,
           actualDistance = searchReq.estimatedDistance,
           estimatedDistance = searchReq.estimatedDistance,
           rideTime = searchReq.startTime,

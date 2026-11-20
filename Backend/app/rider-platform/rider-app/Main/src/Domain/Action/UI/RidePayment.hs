@@ -428,8 +428,10 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                         then do
                           QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
                           RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+                          SPayment.notifyBppPaymentStatus True rideId
                         else do
                           QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
+                          SPayment.notifyBppPaymentStatus False rideId
                           logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
                 QRide.updateTipByRideId (Just tipAmount) rideId
                 let tipFarePrice = mkPriceFromAPIEntity tipRequest.amount

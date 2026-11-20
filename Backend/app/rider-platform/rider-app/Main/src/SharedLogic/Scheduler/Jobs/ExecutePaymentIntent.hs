@@ -14,6 +14,7 @@
 
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
@@ -24,7 +25,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
@@ -56,7 +57,10 @@ executePaymentIntentJob ::
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult
@@ -127,7 +131,9 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False
             let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx fare.amount rideFareBreakups)
             case mbPaymentIntentResp of
-              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
+              Nothing -> do
+                SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
+                SPayment.notifyBppPaymentStatus True ride.id
               Just paymentIntentResp -> do
                 offerStatsInput <- buildOfferStatsInput person
                 paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
@@ -135,8 +141,10 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   then do
                     -- Apply offer stats after successful charge
                     QRide.markPaymentStatus DRide.Completed ride.id
+                    SPayment.notifyBppPaymentStatus True ride.id
                   else do
                     QRide.markPaymentStatus DRide.Failed ride.id
+                    SPayment.notifyBppPaymentStatus False ride.id
                     logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
 
             -- Handle tip payment orders (FALLBACK: check for pending tip ledger entries)

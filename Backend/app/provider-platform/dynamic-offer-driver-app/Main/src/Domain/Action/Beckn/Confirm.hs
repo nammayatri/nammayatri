@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount (EstimateOfferDiscount))
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
@@ -228,7 +229,7 @@ handler merchant req validatedQuote = do
                 customerExtraFee = Nothing,
                 negativeFareAdjustment = Nothing,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tripQuoteDetail.estimateOrQuoteId discount | Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 billingCategory = booking.billingCategory,
                 isRepeatSearch = False,

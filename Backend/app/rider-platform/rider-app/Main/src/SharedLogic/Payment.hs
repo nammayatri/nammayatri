@@ -2,8 +2,10 @@ module SharedLogic.Payment where
 
 import qualified API.Types.UI.RidePayment as APIRidePayment
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.ACL.Update as UpdateACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import BecknV2.OnDemand.Settlement (PaymentChargeDetails (..))
@@ -1505,7 +1507,10 @@ clearDuesForPerson ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasRequestId r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Person.Person ->
   Payment.PaymentMethodId ->
@@ -1614,6 +1619,7 @@ clearDuesForPerson person paymentMethodId = Redis.withWaitAndLockRedis ("ClearDu
                         CallBPPInternal.SettleCancellationLedger
                         ride.bppRideId.getId
                 _ -> logError $ "clearDuesForPerson: skipping cancellation ledger sync, missing merchant or mobile number for rideId: " <> rideId.getId
+            when (isNothing ride.cancellationChargesOnCancel) $ notifyBppPaymentStatus True rideId
             logInfo $
               "AUDIT: Debt settlement CAPTURED - order_id: " <> paymentIntentResp.orderId.getId
                 <> ", amount: "
@@ -1679,7 +1685,11 @@ capturePendingPaymentIfExists ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1716,9 +1726,11 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId
                   QRide.markPaymentStatus Ride.Completed ride.id
+                  notifyBppPaymentStatus True ride.id
                 else do
                   logError $ "Failed to capture payment for ride " <> ride.id.getId
                   QRide.markPaymentStatus Ride.Failed ride.id
+                  notifyBppPaymentStatus False ride.id
                   -- chargePaymentIntent already marked entries as DUE, now block
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
@@ -1773,3 +1785,42 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
             let mbProduct = Just (show booking.vehicleServiceTierType, discountApplicableFareAmountTaxIncl)
             DPayment.applyOfferWithoutPaymentService rideId.getId offerId rideOfferEntity.offerCode offerStatsInput (Just discountAmount) Nothing discountApplicableFareAmountTaxIncl currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall booking.createdAt mbProduct
   QRide.markPaymentStatus Ride.Completed rideId
+
+notifyBppPaymentStatus ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasShortDurationRetryCfg r c
+  ) =>
+  Bool ->
+  Id Ride.Ride ->
+  m ()
+notifyBppPaymentStatus isPaid rideId = void . withTryCatch "notifyBppPaymentStatus" $ do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (InvalidRequest "BPP booking ID not found")
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
+  messageId <- generateGUID
+  updateReq <-
+    UpdateACL.buildUpdateReq
+      UpdateACL.UpdateBuildReq
+        { bppBookingId = bppBookingId,
+          bppId = booking.providerId,
+          bppUrl = booking.providerUrl,
+          transactionId = booking.transactionId,
+          merchant = merchant,
+          messageId = messageId,
+          city = merchant.defaultCity,
+          details =
+            UpdateACL.UPaymentCompletedBuildReqDetails
+              UpdateACL.PaymentCompletedBuildReqDetails
+                { bppRideId = ride.bppRideId,
+                  paymentMethodInfo = DMPM.PaymentMethodInfo {paymentType = DMPM.ON_FULFILLMENT, paymentInstrument = DMPM.Card DMPM.DefaultCardType, collectedBy = DMPM.BAP},
+                  paymentStatus = if isPaid then Enums.PAID else Enums.NOT_PAID
+                }
+        }
+  void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl updateReq

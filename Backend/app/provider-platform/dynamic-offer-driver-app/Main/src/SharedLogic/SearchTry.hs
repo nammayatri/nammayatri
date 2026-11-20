@@ -14,7 +14,7 @@
 
 module SharedLogic.SearchTry where
 
-import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount, PaymentChargeDetails)
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -313,7 +313,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
             Nothing -> do
               let searchRepeatType = if isJust standInForBookingId then DST.BETTER_DRIVER_SEARCH else DST.INITIAL
               mbBatchingMode <- resolveBatchingMode serviceTier tripCategory searchRepeatType 0
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData searchBatchInput.paymentChargeDetails searchBatchInput.buyerOfferDiscount standInForBookingId
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData searchBatchInput.paymentChargeDetails searchBatchInput.estimateOfferDiscounts standInForBookingId
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -326,7 +326,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
               mbBatchingMode <- resolveBatchingMode serviceTier tripCategory searchRepeatType (oldSearchTry.searchRepeatCounter + 1)
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData searchBatchInput.paymentChargeDetails searchBatchInput.buyerOfferDiscount standInForBookingId
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData searchBatchInput.paymentChargeDetails searchBatchInput.estimateOfferDiscounts standInForBookingId
               -- A better-driver-search must never cancel the real, currently-assigned try -
               -- in practice this never fires for that case anyway, since the real try is
               -- already COMPLETED (not ACTIVE) by the time a rider can trigger one.
@@ -376,12 +376,12 @@ buildSearchTry ::
   Maybe BatchingMode ->
   [DAddOnConfig.AddOnData] ->
   Maybe PaymentChargeDetails ->
-  Maybe HighPrecMoney ->
+  [EstimateOfferDiscount] ->
   -- | Set only when searchRepeatType = BETTER_DRIVER_SEARCH: the booking this
   -- stand-by search is trying to find a better driver for.
   Maybe Text ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode addOnData mbPaymentChargeDetails mbBuyerOfferDiscount standInForBookingId = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode addOnData mbPaymentChargeDetails estimateOfferDiscounts standInForBookingId = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
@@ -419,7 +419,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         businessEmailDomain = businessEmailDomain,
         paymentInstrument = mbPaymentInstrument,
         paymentChargeDetails = mbPaymentChargeDetails,
-        discountAmount = mbBuyerOfferDiscount,
+        estimateOfferDiscounts = estimateOfferDiscounts,
         -- Cohort marker for the silent reallocation A/B: only a REALLOCATION try can sit inside the
         -- rider-side window, so every other repeat type stays Nothing rather than a misleading False.
         isSilentReallocation = if searchRepeatType == DST.REALLOCATION then Just (searchReq.isSilentReallocationEnabled == Just True) else Nothing,

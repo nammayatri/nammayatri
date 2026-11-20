@@ -445,7 +445,7 @@ buildFootnotes ::
   m [FareUIComponent]
 buildFootnotes lang booking ride estimatedFareParams finalFareParams mbFreeWaitingTime = do
   (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.RIDE_FOOTNOTES_DISPLAY ride.createdAt Nothing Nothing
-  if null logics
+  if null logics || ride.status == DRide.CANCELLED
     then pure []
     else do
       let waitingTimeSeconds = case (ride.tripStartTime, ride.driverArrivalTime) of

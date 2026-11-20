@@ -123,6 +123,7 @@ import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
+import SharedLogic.Finance.RideInvoice (markBookingInvoicesStatus)
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
@@ -681,7 +682,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         paymentChargeGross = fromMaybe 0 ride.paymentCharge
         (paymentChargeAmt, paymentChargeVatAmt) = splitGrossByTaxPct ((.tax) <$> (booking.paymentChargeDetails >>= (.chargeTax))) paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
-        driverBearsPayment = mbPaymentBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER]
         paymentChargeTaxRef = walletReferencePGPaymentChargesTax taxRegime
     let mkRideLineItems issuedToType =
           let -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
@@ -734,14 +734,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 [ if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge (fromMaybe 0 fareParams.paymentProcessingFee) else Nothing,
                   if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax (fromMaybe 0 fareParams.paymentProcessingFeeTax) else Nothing,
                   if issuedToType == CUSTOMER then mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount) else Nothing,
-                  mkAdjustment "Tip" Tip tipAmount,
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
-                  -- Supplier copy: a deduction, like commission above.
-                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge" PaymentCharge (negate paymentChargeAmt) else Nothing,
-                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge VAT" PaymentChargeTax (negate paymentChargeVatAmt) else Nothing
+                  mkAdjustment "Tip" Tip tipAmount
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         -- GST place of supply = the pickup State.
@@ -903,6 +896,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- A retry of a run that created the driver invoice but stopped before stamping it.
     whenJust existingDriverInvoice $ \inv ->
       when (isNothing inv.placeOfSupply) $ QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing inv.id
+    unless (maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod) $
+      markBookingInvoicesStatus FInvoice.Paid BeckInvoice.Ride booking.id
 
     let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
         existingCommissionInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Commission) existingRideInvoices

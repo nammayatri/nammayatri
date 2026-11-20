@@ -15,7 +15,7 @@
 module Domain.Action.UI.SearchRequestForDriver where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
-import BecknV2.OnDemand.Settlement (chargeOn)
+import BecknV2.OnDemand.Settlement (chargeOn, offerDiscountForEstimate)
 import Control.Applicative ((<|>))
 import Data.Aeson.TH
 import Domain.Types as DTC
@@ -155,7 +155,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       rawBaseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare
       duesTax = (.total) <$> searchRequest.customerCancellationDuesTaxBreakup
       componentTax = fromMaybe 0 govtCharges + maybe 0 (* Tax.taxRateOf tollTaxConfig) tollCharges + maybe 0 (* Tax.taxRateOf parkingTaxConfig) parkingCharge + fromMaybe 0 duesTax
-      driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 searchTry.discountAmount))
+      driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 (offerDiscountForEstimate (fromMaybe searchTry.estimateId nearbyReq.estimateId) searchTry.estimateOfferDiscounts)))
       netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax 0 rawBaseFare
       customerExtraFee = rideNet DFP.CustomerExtraFeeComponent <$> searchTry.customerExtraFee
       driverPickUpCharges' = rideNet DFP.DeadKmFareComponent <$> driverPickUpCharges
