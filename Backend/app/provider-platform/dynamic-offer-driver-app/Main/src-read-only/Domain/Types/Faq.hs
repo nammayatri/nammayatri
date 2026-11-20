@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data Faq = Faq
   { answer :: Kernel.Prelude.Text,
     category :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    displayOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     faqGroupId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Faq.Faq,
     language :: Kernel.External.Types.Language,
