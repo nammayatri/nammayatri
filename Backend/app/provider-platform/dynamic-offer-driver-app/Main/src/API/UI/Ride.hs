@@ -34,6 +34,7 @@ import Data.Text as Text
 import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
+import qualified Domain.Action.UI.Ride.CollectPayment as RideCollectPayment
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.EndRideRequirements as RideEndRequirements
@@ -132,6 +133,13 @@ type API =
                     :> "charge-approval"
                     :> ReqBody '[JSON] RideEndRequirements.RequestTollChargeApprovalReq
                     :> Post '[JSON] APISuccess
+                    -- Collect payment: fare the rider would pay if the ride ended now. Does NOT end the ride.
+                    -- POST, not GET: it stores a fare snapshot on the ride and notifies the rider app.
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "collectPayment"
+                    :> ReqBody '[JSON] RideCollectPayment.CollectPaymentReq
+                    :> Post '[JSON] RideCollectPayment.CollectPaymentResp
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "cancel"
@@ -227,6 +235,7 @@ handler =
              :<|> endRide
              :<|> endRideRequirements
              :<|> endRideChargeApproval
+             :<|> collectPayment
              :<|> cancelRide
              :<|> arrivedAtStop
              :<|> uploadOdometerReading
@@ -327,6 +336,11 @@ endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = wit
   let driverReq = RideEnd.DriverEndRideReq {..}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId rideMerchantOpCityId (Just rideId) False
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
+
+collectPayment :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> RideCollectPayment.CollectPaymentReq -> FlowHandler RideCollectPayment.CollectPaymentResp
+collectPayment (requestorId, merchantId, merchantOpCityId) rideId req =
+  withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $
+    RideCollectPayment.collectPayment (requestorId, merchantId, merchantOpCityId) rideId req
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
 cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do

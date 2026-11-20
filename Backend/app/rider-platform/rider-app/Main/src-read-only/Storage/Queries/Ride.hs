@@ -8,6 +8,7 @@ import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.Booking
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RideStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -70,6 +71,20 @@ updateCancellationFeeStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Ke
 updateCancellationFeeStatus cancellationFeeStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationFeeStatus cancellationFeeStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCollectedFare ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Types.Common.Price ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> (Domain.Types.RideStatus.RideStatus -> m ()))))
+updateCollectedFare collectedFare collectedFareAt collectedFareTollPendingConfirmation id status = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.collectedFare (Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount collectedFare),
+      Se.Set Beam.collectedFareAt collectedFareAt,
+      Se.Set Beam.collectedFareTollPendingConfirmation collectedFareTollPendingConfirmation,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.status $ Se.Eq status]]
 
 updateDestinationReachedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateDestinationReachedAt destinationReachedAt id = do

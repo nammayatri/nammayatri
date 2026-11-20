@@ -122,6 +122,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "DRIVER_NEAR_PICKUP" -> parseDriverNearPickupEvent order
+        "RIDE_FARE_UPDATED" -> parseRideFareUpdatedEvent order
         "RETURN_TRIP_STARTED" -> parseReturnTripStartedEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
@@ -266,6 +267,25 @@ parseDriverReachedDestinationEvent order = do
       DOnUpdate.DestinationReachedReq
         { bppRideId = Id bppRideId,
           ..
+        }
+
+-- | Collect payment (custom on-us event): the fare the rider would pay if the ride ended now. The fare is
+-- carried in quote.price exactly like RIDE_ENDED's final fare; the ride is still in progress.
+parseRideFareUpdatedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseRideFareUpdatedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideFareUpdated Event.")
+  currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in RideFareUpdated Event.")
+  fare' <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= decodeFromText & fromMaybeM (InvalidRequest "quote.price.value is not present in RideFareUpdated Event.")
+  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  computedAt :: UTCTime <- Utils.getTag Tag.FARE_COMPUTED_AT tagGroups >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "FARE_COMPUTED_AT tag is not present in RideFareUpdated Event.")
+  let tollPendingConfirmation = fromMaybe False $ Utils.getTag Tag.TOLL_PENDING_CONFIRMATION tagGroups >>= readMaybe . T.unpack
+  return $
+    DOnUpdate.OURideFareUpdatedReq $
+      DOnUpdate.RideFareUpdatedReq
+        { bppRideId = Id bppRideId,
+          fare = Utils.decimalValueToPrice currency (DecimalValue.DecimalValue fare'),
+          computedAt,
+          tollPendingConfirmation
         }
 
 parseDriverNearPickupEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq

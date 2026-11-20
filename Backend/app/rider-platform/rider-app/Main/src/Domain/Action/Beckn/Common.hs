@@ -504,6 +504,10 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isTierUpgrade = Just isTierUpgrade,
         assignedServiceTierName = assignedServiceTierName,
         rideTags = Nothing,
+        -- Collect-payment snapshot: set only by RIDE_FARE_UPDATED during the ride.
+        collectedFare = Nothing,
+        collectedFareAt = Nothing,
+        collectedFareTollPendingConfirmation = Nothing,
         ..
       }
 

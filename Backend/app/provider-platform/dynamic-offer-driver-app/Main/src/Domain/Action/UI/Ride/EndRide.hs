@@ -27,6 +27,12 @@ module Domain.Action.UI.Ride.EndRide
     dashboardEndRide,
     cronJobEndRide,
     isPickupDropOutsideOfThreshold,
+
+    -- * Fare computation shared with collect-payment
+    FareComputeMode (..),
+    RideFarePreview (..),
+    previewRideFare,
+    buildTollInput,
   )
 where
 
@@ -452,7 +458,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       case req of
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-          res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance True handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
+          res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance EndRideMode True handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
           (chargeableDistance, finalFare, mbUpdatedFareParams) <-
             case res of
               Left err -> do
@@ -462,14 +468,13 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
           pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing, Nothing)
         _ -> do
-          withFallback (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, rideOld, Nothing, Nothing, Nothing) $ do
+          withNoFareProductFallback (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, rideOld, Nothing, Nothing, Nothing) $ do
             if DTC.isOdometerReadingsRequired booking.tripCategory
               then do
                 case mbOdometer of
                   Just odometer -> do
-                    unless (odometer.value >= maybe 0 (.value) rideOld.startOdometerReading) $ throwError InvalidEndOdometerReading
-                    let odometerCalculatedDistance = Meters $ round (odometer.value - maybe 0 (.value) rideOld.startOdometerReading) * 1000
-                    (recalcDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance False handle booking rideOld odometerCalculatedDistance thresholdConfig False tripEndPoint
+                    odometerCalculatedDistance <- getOdometerDistance rideOld odometer
+                    (recalcDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance EndRideMode False handle booking rideOld odometerCalculatedDistance thresholdConfig False tripEndPoint
                     pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing, Nothing)
                   Nothing -> throwError $ OdometerReadingRequired (show booking.tripCategory)
               else do
@@ -485,103 +490,25 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId accTripEndPoints allTripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
                 updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-
-                distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
-
-                when distanceCalculationFailed $ do
-                  logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
-
-                -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
-                mbValidatedPendingToll <-
-                  TollsDetector.checkAndValidatePendingTolls
-                    TollsDetector.TollTrackingSnapToRoad
-                    updRide.driverId.getId
-                    updRide.estimatedTollCharges
-                    updRide.estimatedTollNames
-                    updRide.estimatedTollIds
-                    updRide.tollCharges
-                    updRide.tollIds
-
-                -- Log if we have validated toll but can't apply due to route deviation
-                when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
-                  logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
-
-                -- Toll reconciliation matrix lives in the pure, unit-tested
-                -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
-                -- extraction of the if-tree that used to be inline here); this input also feeds
-                -- the manual-toll-charge signal below.
-                let tollInput =
-                      TD.TollInput
-                        { distanceCalculationFailed = distanceCalculationFailed,
-                          numberOfSelfTuned = updRide.numberOfSelfTuned,
-                          pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-                          estimatedTollCharges = updRide.estimatedTollCharges,
-                          estimatedTollNames = updRide.estimatedTollNames,
-                          estimatedTollIds = updRide.estimatedTollIds,
-                          detectedTollCharges = updRide.tollCharges,
-                          detectedTollNames = updRide.tollNames,
-                          detectedTollIds = updRide.tollIds,
-                          driverDeviatedToTollRoute = updRide.driverDeviatedToTollRoute,
-                          validatedPendingToll = mbValidatedPendingToll,
-                          enableEstimatedTollFallback = (RD.mkRecomputeConfig thresholdConfig).cfgEstimatedTollFallback
-                        }
-                    tollBilling = TD.decideTollBilling tollInput
-                    manualTollChargeSignal = ManualTollCharge.ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TD.hasNoTollEvidence tollInput}
-                mbManualTollChargeResolution <- case req of
-                  DriverReq driverReq -> join <$> forM driverReq.manualTollCharge (ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier manualTollChargeSignal)
-                  _ -> pure Nothing
-                let (tollCharges, tollNames, tollIds, tollConfidence) = case mbManualTollChargeResolution of
-                      -- A driver-declared 0 means no toll was paid, so the estimated toll's name/id
-                      -- shouldn't linger on a ride the driver says had none.
-                      Just manualTollChargeResolution
-                        | manualTollChargeResolution.amount == 0 -> (Just 0, Nothing, Nothing, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
-                        | otherwise -> (Just manualTollChargeResolution.amount, updRide.estimatedTollNames, updRide.estimatedTollIds, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
-                      Nothing -> (tollBilling.tollCharges, tollBilling.tollNames, tollBilling.tollIds, tollBilling.tollConfidence)
-                    manualTollChargeTags =
-                      ( \manualTollChargeResolution ->
-                          ManualTollCharge.manualTollChargeTag manualTollChargeResolution.confirmedBy :
-                          case ManualTollCharge.manualTollChargeRejectionTag manualTollChargeResolution.rejectedAmounts of
-                            Just rejectionTag -> [rejectionTag]
-                            Nothing -> []
-                      )
-                        <$> mbManualTollChargeResolution
-
-                -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
-
-                let ride = updRide{DRide.tollCharges = tollCharges, DRide.tollNames = tollNames, DRide.tollIds = tollIds, DRide.tollConfidence = tollConfidence, DRide.distanceCalculationFailed = Just distanceCalculationFailed, DRide.rideTags = updRide.rideTags <> manualTollChargeTags}
-
-                (chargeableDistance, finalFare, mbUpdatedFareParams, mbApproxUsed) <-
-                  if shouldRectifyDistantPointsSnapToRoadFailure
-                    then do
-                      (d, f, p) <- recalculateFareForDistance False handle booking ride (fromMaybe (roundToIntegral ride.traveledDistance) (bool (Just $ roundToIntegral ride.traveledDistance) booking.estimatedDistance distanceCalculationFailed)) thresholdConfig False tripEndPoint
-                      pure (d, f, p, Nothing)
-                    else
-                      if distanceCalculationFailed
-                        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
-                        else do
-                          (d, f, p) <- calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
-                          pure (d, f, p, Nothing)
-                pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed, mbApproxUsed)
-    let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-    rawDiscountAmount <- CallBAPInternal.refreshOfferDiscount booking booking.discountAmount Nothing booking.fareParams baseFareParams
-    let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
-    -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
-    mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-    finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
+                -- Toll reconciliation + distance-branch selection, shared with the collect-payment preview.
+                -- End ride resolves the driver-declared manual toll (which throws while the rider's
+                -- approval is pending/rejected), so it never reports a pending confirmation.
+                let resolveManualToll signal = case req of
+                      DriverReq driverReq -> (,False) . join <$> forM driverReq.manualTollCharge (ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier signal)
+                      _ -> pure (Nothing, False)
+                fst <$> computeTrackedDistanceFare EndRideMode handle booking updRide tripEndPoint thresholdConfig pickupDropOutsideOfThreshold resolveManualToll
+    -- Discount, commission and payment charge on top of the computed fare (shared with the collect-payment preview).
+    FinalisedRideFare {baseFareParams, discountAmount, mbFarePolicy, commission = finalCommission, chargeRes, mbFareParamsToPersist} <-
+      finaliseRideFare booking finalFare mbUpdatedFareParams
     let finalCancellationDuesCommission = Fare.calculateCancellationDuesCommission booking.cancellationDuesCommission baseFareParams
     -- SHADOW MODE: the legacy ladder above did the billing; this evaluates the
     -- unified decision core on the same inputs, persists its reason on the
     -- ride, and logs/counts divergence. See RecomputeDecision module header.
     mbRecomputeDecision <- shadowRecomputeDecision req booking ride mbOdometer pickupDropOutsideOfThreshold distanceCalculationFailed mbShadowApprox chargeableDistance tripEndPoint thresholdConfig mbFarePolicy now
-    let appliedCharge = case mbUpdatedFareParams of
-          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeTax
-          Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeTax
-        chargeRes = Fare.finalisePaymentCharge booking.paymentChargeDetails finalFare appliedCharge discountAmount baseFareParams
-        finalFareWithPaymentCharge = chargeRes.adjustedFare
+    let finalFareWithPaymentCharge = chargeRes.adjustedFare
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
         rideFareParams = chargeRes.adjustedFareParams
-        mbFareParamsToPersist = chargeRes.adjustedFareParams <$ mbUpdatedFareParams
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
@@ -705,16 +632,274 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           calcPoints = True
         }
 
-    withFallback defaultVal action = do
-      res <- withTryCatch "withFallback:endRideHandler" action
-      case res of
-        Left someException ->
-          case fromException someException of
-            Just NoFareProduct -> return defaultVal
-            _ -> case fromException someException of
-              Just (manualTollChargeError :: ManualTollChargeError) -> throwError manualTollChargeError
-              Nothing -> throwError $ InternalError (Text.pack $ displayException someException)
-        Right resp -> return resp
+--------------------------------------------------------------------------------
+-- Fare computation shared by end ride and the collect-payment preview
+--
+-- End ride and collect-payment ("what would the rider pay if the ride ended
+-- here, now?") must bill exactly the same way, so both go through the helpers
+-- below. 'FareComputeMode' is the only difference: in 'PreviewMode' every write
+-- and every end-of-ride side effect along the fare path is skipped, so a preview
+-- leaves the ride, the driver's extra-km budget and the metrics untouched, and a
+-- later end ride computes exactly what it would have computed without a preview.
+--------------------------------------------------------------------------------
+
+-- | Why the fare is being computed.
+data FareComputeMode
+  = -- | The ride is ending: the computed fare is billed and its side effects are applied.
+    EndRideMode
+  | -- | Collect-payment preview while the ride is still in progress: read-only.
+    PreviewMode
+  deriving (Show, Eq)
+
+-- | Runs an action only when the fare is really being billed (end ride). Every
+-- write on the shared fare path is wrapped in this, which makes the list of
+-- things a preview skips greppable.
+whenEndRideMode :: Applicative m => FareComputeMode -> m () -> m ()
+whenEndRideMode mode = when (mode == EndRideMode)
+
+-- | Label for the API latency metrics of the shared fare path, so preview
+-- timings don't land in the end-ride buckets.
+fareComputeApiLabel :: FareComputeMode -> Text
+fareComputeApiLabel = \case
+  EndRideMode -> "endRide"
+  PreviewMode -> "collectPayment"
+
+-- | The fare computation result threaded through 'endRideHandler':
+-- (chargeableDistance, finalFare, mbUpdatedFareParams, ride with resolved tolls,
+--  pickupDropOutsideOfThreshold, distanceCalculationFailed, approx distance used on the failed-distance branch).
+-- mbUpdatedFareParams is Nothing when the fare was not recomputed (estimate billed as is).
+type FareComputation = (Meters, HighPrecMoney, Maybe FareParameters, DRide.Ride, Maybe Bool, Maybe Bool, Maybe Meters)
+
+-- | Distance travelled as per the odometer readings (in meters), validated against the start reading.
+getOdometerDistance :: (MonadThrow m, Log m) => DRide.Ride -> DRide.OdometerReading -> m Meters
+getOdometerDistance ride odometer = do
+  let startValue = maybe 0 (.value) ride.startOdometerReading
+  unless (odometer.value >= startValue) $ throwError InvalidEndOdometerReading
+  pure $ Meters $ round (odometer.value - startValue) * 1000
+
+-- | Builds the toll reconciliation input for a ride from its current detected/estimated tolls
+-- plus any validated pending toll (entry gate seen, exit gate not yet). Shared by end ride,
+-- the end-ride requirements check and the collect-payment preview, so all three take the
+-- same toll decision. Read-only.
+buildTollInput :: CacheFlow m r => DTConf.TransporterConfig -> DRide.Ride -> Bool -> Bool -> m TD.TollInput
+buildTollInput thresholdConfig ride distanceCalculationFailed pickupDropOutsideOfThreshold = do
+  -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
+  mbValidatedPendingToll <-
+    TollsDetector.checkAndValidatePendingTolls
+      TollsDetector.TollTrackingSnapToRoad
+      ride.driverId.getId
+      ride.estimatedTollCharges
+      ride.estimatedTollNames
+      ride.estimatedTollIds
+      ride.tollCharges
+      ride.tollIds
+  pure
+    TD.TollInput
+      { distanceCalculationFailed = distanceCalculationFailed,
+        numberOfSelfTuned = ride.numberOfSelfTuned,
+        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+        estimatedTollCharges = ride.estimatedTollCharges,
+        estimatedTollNames = ride.estimatedTollNames,
+        estimatedTollIds = ride.estimatedTollIds,
+        detectedTollCharges = ride.tollCharges,
+        detectedTollNames = ride.tollNames,
+        detectedTollIds = ride.tollIds,
+        driverDeviatedToTollRoute = ride.driverDeviatedToTollRoute,
+        validatedPendingToll = mbValidatedPendingToll,
+        enableEstimatedTollFallback = (RD.mkRecomputeConfig thresholdConfig).cfgEstimatedTollFallback
+      }
+
+-- | Bills a ride from its tracked (snap-to-road) distance: resolves the tolls, then picks the
+-- distance branch (rectification / failed distance calculation / correct distance calculation).
+--
+-- Moved verbatim out of 'endRideHandler'. The ride passed in must be the latest one:
+--   * end ride: re-read after 'finalDistanceCalculation' flushed the last location points;
+--   * preview:  the ride as it stands mid-trip (distance and tolls are updated batch by batch
+--               while the ride is in progress, so it lags only by the last unsnapped batch).
+--
+-- The manual-toll step is passed in because the callers treat an unconfirmed declaration
+-- differently: end ride throws (the driver must wait or re-declare), a preview must never
+-- throw and instead reports it. The resolver returns the resolution plus whether a manual
+-- toll confirmation is still pending; the latter is returned as the second component.
+computeTrackedDistanceFare ::
+  (MonadFlow m, EndRideFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  FareComputeMode ->
+  ServiceHandle m ->
+  SRB.Booking ->
+  DRide.Ride ->
+  LatLong ->
+  DTConf.TransporterConfig ->
+  Bool ->
+  (ManualTollCharge.ManualTollChargeSignal -> m (Maybe ManualTollCharge.ManualTollChargeResolution, Bool)) ->
+  m (FareComputation, Bool)
+computeTrackedDistanceFare mode handle@ServiceHandle {..} booking updRide tripEndPoint thresholdConfig pickupDropOutsideOfThreshold resolveManualToll = do
+  let rideId = updRide.id
+      shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
+  distanceCalculationFailed <- withTimeAPI (fareComputeApiLabel mode) "isDistanceCalculationFailed" $ isDistanceCalculationFailed updRide.driverId
+
+  when distanceCalculationFailed $ do
+    logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
+
+  -- Toll reconciliation matrix lives in the pure, unit-tested
+  -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
+  -- extraction of the if-tree that used to be inline here); this input also feeds
+  -- the manual-toll-charge signal below.
+  tollInput <- buildTollInput thresholdConfig updRide distanceCalculationFailed pickupDropOutsideOfThreshold
+
+  -- Log if we have validated toll but can't apply due to route deviation
+  when (isJust tollInput.validatedPendingToll && pickupDropOutsideOfThreshold) $ do
+    logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
+
+  let tollBilling = TD.decideTollBilling tollInput
+      manualTollChargeSignal = ManualTollCharge.ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TD.hasNoTollEvidence tollInput}
+  (mbManualTollChargeResolution, tollPendingConfirmation) <- resolveManualToll manualTollChargeSignal
+  let (tollCharges, tollNames, tollIds, tollConfidence) = case mbManualTollChargeResolution of
+        -- A driver-declared 0 means no toll was paid, so the estimated toll's name/id
+        -- shouldn't linger on a ride the driver says had none.
+        Just manualTollChargeResolution
+          | manualTollChargeResolution.amount == 0 -> (Just 0, Nothing, Nothing, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
+          | otherwise -> (Just manualTollChargeResolution.amount, updRide.estimatedTollNames, updRide.estimatedTollIds, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
+        Nothing -> (tollBilling.tollCharges, tollBilling.tollNames, tollBilling.tollIds, tollBilling.tollConfidence)
+      manualTollChargeTags =
+        ( \manualTollChargeResolution ->
+            ManualTollCharge.manualTollChargeTag manualTollChargeResolution.confirmedBy :
+            case ManualTollCharge.manualTollChargeRejectionTag manualTollChargeResolution.rejectedAmounts of
+              Just rejectionTag -> [rejectionTag]
+              Nothing -> []
+        )
+          <$> mbManualTollChargeResolution
+
+  -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
+
+  let ride = updRide{DRide.tollCharges = tollCharges, DRide.tollNames = tollNames, DRide.tollIds = tollIds, DRide.tollConfidence = tollConfidence, DRide.distanceCalculationFailed = Just distanceCalculationFailed, DRide.rideTags = updRide.rideTags <> manualTollChargeTags}
+
+  (chargeableDistance, finalFare, mbUpdatedFareParams, mbApproxUsed) <-
+    if shouldRectifyDistantPointsSnapToRoadFailure
+      then do
+        (d, f, p) <- recalculateFareForDistance mode False handle booking ride (fromMaybe (roundToIntegral ride.traveledDistance) (bool (Just $ roundToIntegral ride.traveledDistance) booking.estimatedDistance distanceCalculationFailed)) thresholdConfig False tripEndPoint
+        pure (d, f, p, Nothing)
+      else
+        if distanceCalculationFailed
+          then calculateFinalValuesForFailedDistanceCalculations mode handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
+          else do
+            (d, f, p) <- calculateFinalValuesForCorrectDistanceCalculations mode handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
+            pure (d, f, p, Nothing)
+  pure ((chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed, mbApproxUsed), tollPendingConfirmation)
+
+-- | What is billed on top of the computed fare: offer discount, commission and payment charge.
+data FinalisedRideFare = FinalisedRideFare
+  { -- | Recomputed fare params, or the booking's when the fare was not recomputed.
+    baseFareParams :: FareParameters,
+    discountAmount :: Maybe HighPrecMoney,
+    mbFarePolicy :: Maybe DFP.FullFarePolicy,
+    commission :: Maybe HighPrecMoney,
+    -- | adjustedFare is the fare the rider pays (ride.fare); adjustedFareParams is its breakup.
+    chargeRes :: Fare.PaymentChargeResult,
+    -- | Fare params to insert: only when they were recomputed (otherwise they are the booking's existing row).
+    mbFareParamsToPersist :: Maybe FareParameters
+  }
+
+-- | Moved verbatim out of 'endRideHandler'. Read-only (the offer discount refresh is a read on the BAP).
+finaliseRideFare ::
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  SRB.Booking ->
+  HighPrecMoney ->
+  Maybe FareParameters ->
+  m FinalisedRideFare
+finaliseRideFare booking finalFare mbUpdatedFareParams = do
+  let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+  rawDiscountAmount <- CallBAPInternal.refreshOfferDiscount booking booking.discountAmount Nothing booking.fareParams baseFareParams
+  let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
+  -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
+  mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  commission <- Fare.calculateCommission baseFareParams mbFarePolicy
+  let appliedCharge = case mbUpdatedFareParams of
+        Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeTax
+        Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeTax
+      chargeRes = Fare.finalisePaymentCharge booking.paymentChargeDetails finalFare appliedCharge discountAmount baseFareParams
+      mbFareParamsToPersist = chargeRes.adjustedFareParams <$ mbUpdatedFareParams
+  pure FinalisedRideFare {..}
+
+-- | When no fare product matches, bill the estimate (the given default) instead of failing.
+-- Manual-toll errors are re-thrown as is, since the driver has to act on them; anything else
+-- becomes an internal error. Moved out of 'endRideHandler'\'s where-clause unchanged.
+withNoFareProductFallback :: (MonadFlow m) => a -> m a -> m a
+withNoFareProductFallback defaultVal action = do
+  res <- withTryCatch "withFallback:endRideHandler" action
+  case res of
+    Left someException ->
+      case fromException someException of
+        Just NoFareProduct -> return defaultVal
+        _ -> case fromException someException of
+          Just (manualTollChargeError :: ManualTollChargeError) -> throwError manualTollChargeError
+          Nothing -> throwError $ InternalError (Text.pack $ displayException someException)
+    Right resp -> return resp
+
+--------------------------------------------------------------------------------
+-- Collect-payment preview
+--------------------------------------------------------------------------------
+
+-- | Fare the rider would pay if the ride ended at the given point now.
+data RideFarePreview = RideFarePreview
+  { -- | Same number end ride would store in ride.fare (payment charge included).
+    fare :: HighPrecMoney,
+    -- | Breakup behind 'fare'. Its id is the booking's fare params row when the fare was not recomputed.
+    fareParams :: FareParameters,
+    -- | Set only when the fare was recomputed, i.e. 'fareParams' is a new row the caller must insert.
+    mbFareParamsToPersist :: Maybe FareParameters,
+    chargeableDistance :: Meters,
+    tollCharges :: Maybe HighPrecMoney,
+    -- | Manual toll declaration is required for this ride but not yet confirmed by the rider,
+    -- so the toll in 'fare' is the automatic one and may change at end ride.
+    tollPendingConfirmation :: Bool
+  }
+
+-- | Collect-payment preview: runs the end-ride fare computation on the ride as it stands, in
+-- 'PreviewMode'. Read-only: it does not end the ride on the location tracking service, does not
+-- flush/finalise snap-to-road or toll tracking, and writes nothing (persisting the snapshot is
+-- the caller's job). The branches mirror 'endRideHandler' (driver request) one to one:
+--   odometer trips -> odometer distance; everything else -> 'computeTrackedDistanceFare'.
+previewRideFare ::
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceHandle m ->
+  SRB.Booking ->
+  DRide.Ride ->
+  LatLong ->
+  Maybe DRide.OdometerReading ->
+  m RideFarePreview
+previewRideFare handle@ServiceHandle {..} booking ride tripEndPoint mbOdometer = do
+  thresholdConfig <- findConfig (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (InternalError "TransportConfigNotFound")
+  let estimateFallback = ((fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, ride, Nothing, Nothing, Nothing), False)
+  ((chargeableDistance, finalFare, mbUpdatedFareParams, _billedRide, _, _, _), tollPendingConfirmation) <-
+    withNoFareProductFallback estimateFallback $
+      if DTC.isOdometerReadingsRequired booking.tripCategory
+        then do
+          odometer <- mbOdometer & fromMaybeM (OdometerReadingRequired (show booking.tripCategory))
+          odometerDistance <- getOdometerDistance ride odometer
+          (d, f, p) <- recalculateFareForDistance PreviewMode False handle booking ride odometerDistance thresholdConfig False tripEndPoint
+          pure ((d, f, p, ride, Nothing, Nothing, Nothing), False)
+        else do
+          pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig
+          computeTrackedDistanceFare
+            PreviewMode
+            handle
+            booking
+            ride
+            tripEndPoint
+            thresholdConfig
+            pickupDropOutsideOfThreshold
+            (ManualTollCharge.resolveManualTollChargeForPreview thresholdConfig ride booking.tripCategory booking.vehicleServiceTier)
+  FinalisedRideFare {chargeRes, mbFareParamsToPersist} <- finaliseRideFare booking finalFare mbUpdatedFareParams
+  pure
+    RideFarePreview
+      { fare = chargeRes.adjustedFare,
+        fareParams = chargeRes.adjustedFareParams,
+        mbFareParamsToPersist,
+        chargeableDistance,
+        -- Same as end ride's ride.tollCharges: the toll that actually went into the fare.
+        tollCharges = mbUpdatedFareParams >>= (.tollCharges),
+        tollPendingConfirmation
+      }
 
 -- | Shadow-mode evaluation of the pure recompute decision core. Read-only:
 -- never affects billing; any failure is swallowed after logging. Returns
@@ -832,8 +1017,8 @@ mkEarlyEndFacts booking ride tripEndPoint tripEndTime distanceCalculationFailed 
       eeDropOutsideOfThreshold = dropOutsideOfThreshold
     }
 
-recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => Bool -> ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
-recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
+recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => FareComputeMode -> Bool -> ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+recalculateFareForDistance mode useEstimatedDuration ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   tripEndTime <- getCurrentTime
   let merchantId = booking.providerId
       oldDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
@@ -841,7 +1026,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
   let measuredDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime tripEndTime startTime
       actualDuration = if useEstimatedDuration then booking.estimatedDuration <|> measuredDuration else measuredDuration
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
-  QRide.updatePassedThroughDestination ride.id passedThroughDrop
+  -- Preview only reads the flag; the ride is stamped once, at end ride.
+  whenEndRideMode mode $ QRide.updatePassedThroughDestination ride.id passedThroughDrop
   let rcfg = RD.mkRecomputeConfig thresholdConfig
   let notAllowedComponents =
         if useEstimatedDuration || DTC.isOdometerReadingsRequired booking.tripCategory
@@ -867,7 +1053,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
     if recomputeWithLatestPricing
       then getFarePolicyOnEndRide pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
       else getFarePolicyByEstOrQuoteId pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
-  QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
+  -- The fare policy the ride was finally billed with is recorded only when it is actually billed (end ride).
+  whenEndRideMode mode $ QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
   if farePolicy.disableRecompute == Just True && not endedAtPickup
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
@@ -1020,7 +1207,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
-      putDiffMetric merchantId fareDiff distanceDiff
+      -- Estimate-vs-final metric: a preview is not a final fare, so it must not skew it.
+      whenEndRideMode mode $ putDiffMetric merchantId fareDiff distanceDiff
       return (chargeableDistance, finalFare, Just fareParams)
 
 checkRecomputedFareCeiling :: (Log m, Monad m) => SRB.Booking -> FareParameters -> m HighPrecMoney
@@ -1114,8 +1302,8 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg sectionsBillCharg
       | otherwise = baseDuration
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
-calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => FareComputeMode -> ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+calculateFinalValuesForCorrectDistanceCalculations mode handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
       shouldRecompute = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (highPrecMetersToMeters distanceDiff)
@@ -1125,27 +1313,29 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       shortfallQualifies = RD.recomputeBandQualifies rcfg.cfgDownwardRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
       thresholdChecks = rcfg.cfgRecomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
-  fork "Send Extra Kms Limit Exceeded Overlay" $
-    when (rcfg.cfgNotifyDriverOnBudgetExceeded && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
+  -- The over-budget overlay is an end-ride outcome; a preview must not show it.
+  whenEndRideMode mode $
+    fork "Send Extra Kms Limit Exceeded Overlay" $
+      when (rcfg.cfgNotifyDriverOnBudgetExceeded && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + maxUpwardBuffer
   if not pickupDropOutsideOfThreshold
     then
       if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms
-        then recalculateFareForDistance False handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig False tripEndPoint
-        else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
+        then recalculateFareForDistance mode False handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig False tripEndPoint
+        else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
     else
       if distanceDiff < 0
         then
           if isDownwardRecomputeEnabledForRide booking thresholdConfig
             then
               if shortfallQualifies
-                then recalculateFareForDistance False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
-                else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
-            else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
+                then recalculateFareForDistance mode False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+                else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
+            else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
         else
           if upwardQualifies
-            then recalculateFareForDistance False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
-            else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
+            then recalculateFareForDistance mode False handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+            else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
   where
     rcfg = RD.mkRecomputeConfig thresholdConfig
     maxUpwardBuffer = case (booking.estimatedDistance, rcfg.cfgUpwardsRecomputeBufferPercentage) of
@@ -1163,9 +1353,14 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       prevWeeklyExtraKms <- fromIntegral <$> SWC.getCurrentWindowCount weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
       let dailyExtraKms = fromMaybe 0 prevDailyExtraKms + distanceDiff
           weeklyExtraKms = (prevWeeklyExtraKms :: HighPrecMeters) + distanceDiff
-      Redis.setExp dailyExtraKmsKey dailyExtraKms expirationPeriodForDay
-      SWC.incrementByValue (round distanceDiff) weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
-      QDI.updateDailyAndWeeklyExtraKms (Just dailyExtraKms) (Just weeklyExtraKms) ride.driverId
+      -- Preview evaluates the budget with this ride's extra km included (the same
+      -- post-increment values end ride compares against) but must not spend it:
+      -- otherwise every collect-payment call, and then end ride, would each add the
+      -- same extra km to the driver's daily/weekly budget.
+      whenEndRideMode mode $ do
+        Redis.setExp dailyExtraKmsKey dailyExtraKms expirationPeriodForDay
+        SWC.incrementByValue (round distanceDiff) weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
+        QDI.updateDailyAndWeeklyExtraKms (Just dailyExtraKms) (Just weeklyExtraKms) ride.driverId
       pure (Just dailyExtraKms, Just weeklyExtraKms)
 
     notifyDriverOnExtraKmsLimitExceed = do
@@ -1174,8 +1369,8 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       TN.sendOverlay booking.merchantOperatingCityId driver $ TN.mkOverlayReq overlay
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters, Maybe Meters)
-calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => FareComputeMode -> ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters, Maybe Meters)
+calculateFinalValuesForFailedDistanceCalculations mode handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
@@ -1183,7 +1378,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then do
-      (d, f, p) <- recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint -- TODO: Fix with rentals
+      (d, f, p) <- recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig False tripEndPoint -- TODO: Fix with rentals
       pure (d, f, p, Nothing)
     else do
       (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints (Just $ ride.id.getId <> LocUpd.approxRouteEntityIdSuffix) tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
@@ -1199,19 +1394,19 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             if isDownwardRecomputeEnabledForRide booking thresholdConfig
               then
                 if shortfallQualifies
-                  then recalculateFareForDistance False handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
-                  else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
-              else recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
+                  then recalculateFareForDistance mode False handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
+                  else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
+              else recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig False tripEndPoint
           else
             if not upwardQualifies
               then do
-                recalculateFareForDistance False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
+                recalculateFareForDistance mode False handle booking ride estimatedDistance thresholdConfig True tripEndPoint
               else do
                 if highPrecMetersToMeters distanceDiff < maxDistance
-                  then recalculateFareForDistance False handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
+                  then recalculateFareForDistance mode False handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
                   else do
                     logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
-                    recalculateFareForDistance False handle booking ride (estimatedDistance + maxDistance) thresholdConfig True tripEndPoint
+                    recalculateFareForDistance mode False handle booking ride (estimatedDistance + maxDistance) thresholdConfig True tripEndPoint
       -- threaded out so the shadow decision sees the same approximation the
       -- billing branch used (otherwise every failed-outside ride would be
       -- persisted as FailedOutsideUnknownApprox and never comparable)
