@@ -1,5 +1,5 @@
 module Lib.Finance.Storage.Queries.ReconciliationEntryExtra
-  ( findBySummaryIdsWithPagination,
+  ( findAllBySummaryIds,
     findBySpecAndSourceIds,
     findByNaturalKeys,
     findSourceDerivedByMatchKeys,
@@ -23,19 +23,18 @@ import Lib.Finance.Storage.Queries.ReconciliationEntry ()
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Sequelize as Se
 
-findBySummaryIdsWithPagination ::
+findAllBySummaryIds ::
   (BeamFlow m r) =>
   [Id DomainSummary.ReconciliationSummary] ->
-  Int -> -- limit
-  Int -> -- offset
   m [Domain.ReconciliationEntry]
-findBySummaryIdsWithPagination [] _ _ = pure []
-findBySummaryIdsWithPagination summaryIds limit offset =
-  findAllWithOptionsKV
-    [Se.Is Beam.summaryId $ Se.In (map getId summaryIds)]
-    (Se.Asc Beam.createdAt)
-    (Just limit)
-    (Just offset)
+findAllBySummaryIds [] = pure []
+findAllBySummaryIds summaryIds =
+  -- The KV read can return the same entry more than once for an IN over summary ids.
+  HM.elems . HM.fromListWith latest . map (\e -> (getId e.id, e))
+    <$> findAllWithKV [Se.Is Beam.summaryId $ Se.In (map getId summaryIds)]
+  where
+    latest :: Domain.ReconciliationEntry -> Domain.ReconciliationEntry -> Domain.ReconciliationEntry
+    latest a b = if a.updatedAt >= b.updatedAt then a else b
 
 -- | Bulk fetch entries for a (spec, sourceRecordId set). Used by the
 --   settlement-list dashboard endpoint to attach per-settlement recon
