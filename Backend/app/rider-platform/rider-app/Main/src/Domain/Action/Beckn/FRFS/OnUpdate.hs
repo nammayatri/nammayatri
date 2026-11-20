@@ -39,7 +39,8 @@ data DOnUpdate = DOnUpdate
     orderStatus :: Spec.OrderStatus,
     refundAmount :: Maybe HighPrecMoney,
     baseFare :: HighPrecMoney,
-    cancellationCharges :: Maybe HighPrecMoney
+    cancellationCharges :: Maybe HighPrecMoney,
+    isRefundAck :: Bool
   }
 
 validateRequest :: DOnUpdate -> Flow (Merchant, FTBooking.FRFSTicketBooking)
@@ -56,6 +57,7 @@ onUpdate merchant booking' dOnUpdate = do
   let refundAmount = fromMaybe dOnUpdate.baseFare dOnUpdate.refundAmount
   let cancellationCharges = fromMaybe 0 dOnUpdate.cancellationCharges
   case dOnUpdate.orderStatus of
+    _ | dOnUpdate.isRefundAck -> logInfo $ "FRFS on_update refund acknowledgement received for booking " <> booking.id.getId
     Spec.CANCELLED -> do
       (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
       FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters

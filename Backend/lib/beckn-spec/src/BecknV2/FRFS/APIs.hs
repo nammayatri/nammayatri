@@ -163,6 +163,14 @@ type OnCancelAPIBS =
 onCancelAPIBS :: Proxy OnCancelAPIBS
 onCancelAPIBS = Proxy
 
+type UpdateAPI =
+  "update"
+    :> ReqBody '[JSON] Spec.UpdateReq
+    :> Post '[JSON] Spec.AckResponse
+
+updateAPI :: Proxy UpdateAPI
+updateAPI = Proxy
+
 type OnUpdateAPI =
   "on_update"
     :> ReqBody '[JSON] Spec.OnUpdateReq
