@@ -26,11 +26,11 @@ data MerchantClientConfigT f = MerchantClientConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table MerchantClientConfigT where
-  data PrimaryKey MerchantClientConfigT f = MerchantClientConfigId (B.C f Domain.Types.MerchantClientConfig.ClientService) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = MerchantClientConfigId <$> serviceName <*> packageId
+  data PrimaryKey MerchantClientConfigT f = MerchantClientConfigId (B.C f Domain.Types.MerchantClientConfig.ClientService) (B.C f Kernel.Prelude.Text) (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType)) deriving (Generic, B.Beamable)
+  primaryKey = MerchantClientConfigId <$> serviceName <*> packageId <*> clientOS
 
 type MerchantClientConfig = MerchantClientConfigT Identity
 
-$(enableKVPG ''MerchantClientConfigT ['serviceName, 'packageId] [])
+$(enableKVPG ''MerchantClientConfigT ['serviceName, 'packageId, 'clientOS] [])
 
 $(mkTableInstances ''MerchantClientConfigT "merchant_client_config")
