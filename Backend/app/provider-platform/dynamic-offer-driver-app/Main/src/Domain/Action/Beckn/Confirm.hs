@@ -52,7 +52,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Allocator as Alloc
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (offerToPreviousDriver', sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -230,6 +230,7 @@ handler merchant req validatedQuote = do
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                offerToPreviousDriver = offerToPreviousDriver',
                 merchant,
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],

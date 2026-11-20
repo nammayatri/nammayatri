@@ -136,6 +136,11 @@ SearchRequest:
     # Window chosen by the config-pilot toss at search time. The driver-cancel path reads it from
     # here instead of tossing again, so the rider gets the same arm that was sent to the BPP.
     silentReallocationWindowSeconds: Maybe Seconds
+    # Set when this search reschedules an existing scheduled booking to a new pickup time.
+    # Select/confirm read it to skip the active-booking block for that one booking and to
+    # cancel it once the new ride is placed. Untyped: a typed Booking id would make
+    # Booking -> Quote -> SearchRequest -> Booking an import cycle.
+    rescheduledFromBookingId: Maybe Text
 
 
   default:

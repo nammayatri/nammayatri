@@ -102,6 +102,7 @@ import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Quote
+import qualified SharedLogic.Reschedule as SReschedule
 import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -303,7 +304,8 @@ getQuotes searchRequestId mbAllowMultiple mbPaymentInstrument = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   unless (mbAllowMultiple == Just True) $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-    whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
+    -- A reschedule search prices a replacement for that very booking; it is retired at select/confirm.
+    whenJust (mfilter (not . SReschedule.isRescheduleOf searchRequest) activeBooking) $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withWaitAndLockRedis lockKey 5 50000 $ do
@@ -331,7 +333,7 @@ getQuotesFromInMemory ::
 getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig = do
   withTimeAPI "rideSearch" "quotesActiveBooking" $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-    whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
+    whenJust (mfilter (not . SReschedule.isRescheduleOf searchRequest) activeBooking) $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   buildGetQuotesRes "rideSearch" searchRequest estimateList quoteList mbRiderConfig Nothing
 
 -- | The first argument is the metric's datastore label, which keeps the sync path and polling apart.

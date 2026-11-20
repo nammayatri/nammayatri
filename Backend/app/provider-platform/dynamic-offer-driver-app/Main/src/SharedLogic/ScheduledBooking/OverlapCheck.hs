@@ -109,12 +109,33 @@ mkCandidateFromBooking booking =
       candidateDrop = (\loc -> LatLong loc.lat loc.lon) <$> booking.toLocation
     }
 
+-- Rider reschedule head start: the hold on a booking for its previous driver.
+
+previousDriverHoldKey :: Text -> Text
+previousDriverHoldKey quoteId = "Driver:Reschedule:HeadStartHold:QuoteId-" <> quoteId
+
+-- | While the previous driver's head start runs (until the given end), the booking is his alone:
+-- other drivers neither see it on the scheduled-rides board nor can accept it. Kept with it: his
+-- booking being rescheduled, which must not count against him when he accepts.
+holdForPreviousDriver :: (MonadFlow m, CacheFlow m r) => Text -> (Id DP.Person, Id DRB.Booking) -> UTCTime -> m ()
+holdForPreviousDriver quoteId previousDriver windowEnd = do
+  now <- getCurrentTime
+  let ttl = ceiling (diffUTCTime windowEnd now) :: Int
+  when (ttl > 0) $ Redis.setExp (previousDriverHoldKey quoteId) previousDriver ttl
+
+-- | The previous driver holding this booking, and his booking being rescheduled.
+previousDriverHoldingBooking :: (MonadFlow m, CacheFlow m r) => Text -> m (Maybe (Id DP.Person, Id DRB.Booking))
+previousDriverHoldingBooking quoteId = Redis.safeGet (previousDriverHoldKey quoteId)
+
 -- | The single accept guard for a scheduled booking, whether taken from the board, from the broadcast, assigned by a
 -- fleet owner or handed to a shared-route run's bound vehicle: a cap on the driver's scheduled holds, then feasibility
 -- against the committed set. Fails closed when the maps call fails.
 ensureNoScheduledOverlap :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> TransporterConfig -> DRB.Booking -> m ()
 ensureNoScheduledOverlap merchantId driverId schedulingCfg booking = do
-  committed <- getDriverCommittedRides driverId
+  -- Rider reschedule: during his head start, the previous driver's booking being replaced is not his to keep.
+  mbHeadStart <- previousDriverHoldingBooking booking.quoteId
+  let releasedBookingIds = [rescheduledBookingId | Just (holder, rescheduledBookingId) <- [mbHeadStart], holder == driverId]
+  committed <- filter (\(_, committedBooking) -> committedBooking.id `notElem` releasedBookingIds) <$> getDriverCommittedRides driverId
   let activeHolds = countActiveHolds committed
   -- trigger on any commitment (hold or in-progress); cap counts holds only, in-progress enters feasibility as a predecessor
   unless (null committed) $ do

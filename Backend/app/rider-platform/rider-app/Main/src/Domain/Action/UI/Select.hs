@@ -307,6 +307,9 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       (keptPassengers, keptCheckInBags, keptCabinBags) = if isPassengerLuggageKept then (numberOfPassengers, numberOfCheckInBags, numberOfCabinBags) else (Nothing, Nothing, Nothing)
   when ((keptPassengers, keptCheckInBags, keptCabinBags) /= (searchRequest.numberOfPassengers, searchRequest.numberOfCheckInBags, searchRequest.numberOfCabinBags)) $
     QSearchRequest.updatePassengerLuggage keptPassengers keptCheckInBags keptCabinBags searchRequest.id
+  -- Rescheduling goes through static quotes only (confirm), where the old booking stays until its
+  -- replacement is confirmed; a driver-offer select would have to give the old booking up first.
+  when (isJust searchRequest.rescheduledFromBookingId) $ throwError RescheduleNotSupportedForTripType
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   -- Do this before anything is dispatched to the provider: from here on the address is

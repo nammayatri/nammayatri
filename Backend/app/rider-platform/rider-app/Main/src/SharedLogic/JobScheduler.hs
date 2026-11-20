@@ -86,6 +86,7 @@ data RiderJobType
   | SharedCabSessionExpiry
   | SharedCabDegradedSweep
   | SendRideInvoiceEmail
+  | RescheduleCancelBooking
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -106,6 +107,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
   restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
   restoreAnyJobInfo SBookingDepositExpiry jobData = AnyJobInfo <$> restoreJobInfo SBookingDepositExpiry jobData
+  restoreAnyJobInfo SRescheduleCancelBooking jobData = AnyJobInfo <$> restoreJobInfo SRescheduleCancelBooking jobData
   restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
   restoreAnyJobInfo SExecuteCashRideCashbackPayout jobData = AnyJobInfo <$> restoreJobInfo SExecuteCashRideCashbackPayout jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
@@ -339,6 +341,17 @@ newtype BookingDepositExpiryJobData = BookingDepositExpiryJobData
 instance JobInfoProcessor 'BookingDepositExpiry
 
 type instance JobContent 'BookingDepositExpiry = BookingDepositExpiryJobData
+
+-- | Rider reschedule: a booking the reschedule must cancel (the replaced booking, or a replacement
+-- that lost), retried until the cancel goes through.
+newtype RescheduleCancelBookingJobData = RescheduleCancelBookingJobData
+  { bookingId :: Id Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RescheduleCancelBooking
+
+type instance JobContent 'RescheduleCancelBooking = RescheduleCancelBookingJobData
 
 data ExecutePaymentIntentJobData = ExecutePaymentIntentJobData
   { rideId :: Id DRide.Ride,

@@ -291,6 +291,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
                 disabilityTag = Nothing,
                 driverDefaultExtraFee = Nothing,
                 driverIdForSearch = Nothing,
+                rescheduledFromBookingId = Nothing,
                 dynamicPricingLogicVersion = Nothing,
                 poolingLogicVersion = Nothing,
                 poolingConfigVersion = Nothing,

@@ -337,6 +337,7 @@ let RiderJobType =
       | SharedCabSessionExpiry
       | SharedCabDegradedSweep
       | SendRideInvoiceEmail
+      | RescheduleCancelBooking
       >
 
 let jobRetryOnExceptionMapx =
@@ -394,6 +395,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.SilentReallocationExpiry, mapValue = True }
       , { mapKey = RiderJobType.SendLegalPolicyNotification, mapValue = True }
       , { mapKey = RiderJobType.SendRideInvoiceEmail, mapValue = True }
+      , { mapKey = RiderJobType.RescheduleCancelBooking, mapValue = True }
       ]
 
 let cacConfig =

@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.DummySignatureAuth as DummySig
+import qualified SharedLogic.Reschedule as SReschedule
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
@@ -79,7 +80,13 @@ onConfirm authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subsc
               DOnConfirm.ValidatedRideAssigned rideAssignedReq -> rideAssignedReq.booking.tripCategory /= Just (OneWay MeterRide)
               _ -> True
           )
-          (Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $ DOnConfirm.onConfirm validatedReq)
+          ( Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $ do
+              DOnConfirm.onConfirm validatedReq
+              -- Reschedule: the replacement is confirmed; move the deposit and retire the old booking.
+              SReschedule.completeRescheduleOnConfirm $ case validatedReq of
+                DOnConfirm.ValidatedRideAssigned rideAssignedReq -> rideAssignedReq.booking
+                DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.booking
+          )
     pure Ack
   where
     runInForkWithCheck message checkShouldFork action = do

@@ -31,6 +31,7 @@ import qualified Domain.Action.UI.CancellationReasons as DCancellationReasons
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
@@ -43,6 +44,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Cancel as SharedCancel
+import SharedLogic.Reschedule (rescheduleCancellationReasonCode)
 import qualified SharedLogic.SilentReallocation as SilentRealloc
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
@@ -125,6 +127,11 @@ cancel ::
   FlowHandler APISuccess
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
+    -- RESCHEDULED marks the penalty-free cancel issued by the reschedule flow itself
+    -- (SharedLogic.Reschedule, which calls DCancel.cancel directly). A rider must not be
+    -- able to send it here and cancel any ride without its consequences.
+    when (req.reasonCode == SCR.CancellationReasonCode rescheduleCancellationReasonCode) $
+      Kernel.Utils.Common.throwError (InvalidRequest "Cancellation reason RESCHEDULED is reserved for rescheduling a ride")
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
     mbSilentCtx <- SilentRealloc.getSilentReallocation personId
     case mbSilentCtx of

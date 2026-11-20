@@ -81,6 +81,7 @@ buildSearchReqRaw messageId bapSubscriberId _bapSubscriberUrl req context actual
       routePoints_ = Beckn.OnDemand.Utils.Search.buildRoutePoints req
       multipleRoutes = Beckn.OnDemand.Utils.Search.buildMultipleRoutesTag req
       driverIdentifier = Beckn.OnDemand.Utils.Search.getDriverIdentifier req
+      rescheduledFromBookingId = Beckn.OnDemand.Utils.Search.getRescheduledFromBookingId req
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
       isReserveRide = getIsReserveRide req

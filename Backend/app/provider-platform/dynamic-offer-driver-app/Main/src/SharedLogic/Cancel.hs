@@ -52,7 +52,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (offerToPreviousDriver', sendSearchRequestToDrivers')
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
@@ -226,6 +226,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                offerToPreviousDriver = offerToPreviousDriver',
                 merchant,
                 searchReq,
                 tripQuoteDetails = tripQuoteDetails,
@@ -281,6 +282,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                offerToPreviousDriver = offerToPreviousDriver',
                 merchant,
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],

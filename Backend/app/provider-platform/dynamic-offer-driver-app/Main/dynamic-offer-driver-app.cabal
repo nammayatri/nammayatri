@@ -843,6 +843,7 @@ library
       SharedLogic.RCTransferNotice
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
+      SharedLogic.Reschedule.PreviousDriverHeadStart
       SharedLogic.Ride
       SharedLogic.RideEvents.DriverCoinsAndJourney
       SharedLogic.RideEvents.Publisher

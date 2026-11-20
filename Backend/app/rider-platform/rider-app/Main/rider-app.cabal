@@ -671,6 +671,7 @@ library
       SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.RenderInvoiceFromTemplate
+      SharedLogic.Reschedule
       SharedLogic.Ride
       SharedLogic.RideFeedback.Actions
       SharedLogic.RideFeedback.Types
@@ -699,6 +700,7 @@ library
       SharedLogic.Scheduler.Jobs.PayoutStatusCheck
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
+      SharedLogic.Scheduler.Jobs.RescheduleCancelBooking
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
