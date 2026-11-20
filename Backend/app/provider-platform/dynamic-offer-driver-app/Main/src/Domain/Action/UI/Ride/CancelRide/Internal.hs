@@ -70,6 +70,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, FinanceM, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), getEntriesByReference, includeEntryIds, invoice, settleEntry, transferPending, updateEntryStatus, voidEntry, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
