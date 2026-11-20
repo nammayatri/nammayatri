@@ -905,11 +905,6 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       mbMappingError <- City.validateAndAppendCityStdCodeMapping cityText stdCode
       whenJust mbMappingError $ \mappingError -> throwError $ InvalidRequest mappingError
 
-  -- Reject before any DB write if the requested exophone number is already in use by another operating city
-  existingExophones <- CQExophone.findAllByPhone req.exophone
-  unless (all (\e -> e.merchantOperatingCityId == newMerchantOperatingCityId) existingExophones) $
-    throwError $ InvalidRequest $ "Exophone number " <> req.exophone <> " is already in use by another operating city"
-
   finally
     ( do
         whenJust mbGeometry $ \geometry -> do
