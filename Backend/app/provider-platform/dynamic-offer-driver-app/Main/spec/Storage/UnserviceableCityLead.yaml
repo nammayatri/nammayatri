@@ -1,0 +1,45 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  VehicleCategory: Domain.Types.VehicleCategory
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
+
+UnserviceableCityLead:
+  tableName: unserviceable_city_lead
+
+  fields:
+    id: Id UnserviceableCityLead
+    merchantId: Id Merchant
+    name: Text
+    mobileNumber: EncryptedHashedField e Text
+    mobileCountryCode: Text
+    vehicleCategory: VehicleCategory
+    lat: Maybe Double
+    lon: Maybe Double
+    deviceToken: Maybe FCMRecipientToken
+
+  constraints:
+    id: PrimaryKey
+
+  beamFields:
+    mobileNumber:
+      mobileNumberEncrypted: Text
+      mobileNumberHash: DbHash
+
+  fromTType:
+    mobileNumber: EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash|E
+
+  toTType:
+    mobileNumberEncrypted: mobileNumber & unEncrypted . encrypted|E
+    mobileNumberHash: mobileNumber & hash|E
+
+  sqlType:
+    name: character varying(255)
+    deviceToken: character varying(255)
+    mobileNumberEncrypted: character varying(255)
+    mobileNumberHash: bytea
+    mobileCountryCode: character varying(8)
+    vehicleCategory: character varying(255)
+
+  excludedFields: [merchantOperatingCityId]
