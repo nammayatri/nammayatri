@@ -65,6 +65,7 @@ data DRatingReq = DRatingReq
     ratingValue :: Int,
     feedbackDetails :: [Maybe Text],
     shouldFavDriver :: Maybe Bool,
+    shouldBlacklistDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
     filePath :: Maybe Text,
     riderName :: Maybe Text
@@ -84,10 +85,37 @@ handler merchantId req ride = do
       isSafe = Just $ isNothing issueId
   mbBooking <- QRB.findById req.bookingId
   driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   case mbBooking of
     Just booking -> do
+      let isBlacklisting = req.shouldBlacklistDriver == Just True && transporterConfig.enableBlacklistDriverOnRating == Just True
+      whenJust (liftA3 (,,) req.shouldBlacklistDriver (getId <$> booking.riderId) req.riderPhoneNum) $ \(shouldBlacklistDriver', riderId, riderPhoneNum) -> do
+        when (shouldBlacklistDriver' && transporterConfig.enableBlacklistDriverOnRating == Just True) $ do
+          mbCorrelationRes <- RDC.findByRiderIdAndDriverId (Id riderId) ride.driverId
+          case mbCorrelationRes of
+            Just correlationRes -> do
+              when correlationRes.favourite $ do
+                RDC.updateFavouriteDriverForRider False (Id riderId) ride.driverId
+                SQD.decFavouriteRiderCount ride.driverId
+              RDC.updateBlackListedDriverForRider (Just True) (Id riderId) ride.driverId
+            Nothing -> do
+              now <- getCurrentTime
+              encPhoneNumber <- encrypt riderPhoneNum
+              let riderDriverCorr =
+                    RDCD.RiderDriverCorrelation
+                      { riderDetailId = Id riderId,
+                        driverId = ride.driverId,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = booking.merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now,
+                        favourite = False,
+                        blackListed = Just True,
+                        mobileNumber = encPhoneNumber
+                      }
+              RDC.create riderDriverCorr
       whenJust (liftA3 (,,) req.shouldFavDriver (getId <$> booking.riderId) req.riderPhoneNum) $ \(shouldFavDriver', riderId, riderPhoneNum) -> do
-        when shouldFavDriver' $ do
+        when (shouldFavDriver' && not isBlacklisting) $ do
           mbCorrelationRes <- RDC.findByRiderIdAndDriverId (Id riderId) ride.driverId
           case mbCorrelationRes of
             Just correlationRes -> do
@@ -130,7 +158,6 @@ handler merchantId req ride = do
 
   rating' <- B.runInReplica $ QRating.checkIfRatingExistsForDriver ride.driverId
   driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   -- backfilling rating for the old driver entries
   (ratingCount, ratingsSum) <- do
     if ((not $ null rating') && (isNothing driverStats.totalRatings) && (isNothing driverStats.totalRatingScore) && (isNothing driverStats.isValidRating))

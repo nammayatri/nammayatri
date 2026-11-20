@@ -1,17 +1,36 @@
 imports:
   Text: Data.Text
+  Ride: Domain.Types.Ride
 
 module: BlackListDriver
 types:
   BlackListDriverReq:
     blackListed: Bool
 
+  BlackListedDriverResp:
+    id: Text
+    driverName: Text
+    driverPhone: Maybe Text
+    driverRating: Maybe Double
+
 apis:
   - POST:
-      endpoint: /driver/blackList/{driverId}
+      endpoint: /driver/blackList/{rideId}
       params:
-        driverId: Text
+        rideId: Id Ride
       request:
         type: BlackListDriverReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /driver/blacklist
+      response:
+        type: "[BlackListedDriverResp]"
+
+  - POST:
+      endpoint: /driver/blacklist/{driverId}/unblock
+      params:
+        driverId: Text
       response:
         type: Kernel.Types.APISuccess.APISuccess
