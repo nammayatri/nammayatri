@@ -24,6 +24,11 @@ import qualified Domain.Types.DriverUdyam as Fields
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleFitnessCertificate as Fields
+import qualified Domain.Types.VehicleInsurance as Fields
+import qualified Domain.Types.VehicleNOC as Fields
+import qualified Domain.Types.VehiclePUC as Fields
+import qualified Domain.Types.VehiclePermit as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import EulerHS.Types (base64Decode, base64Encode)
 import Kernel.Prelude
@@ -40,6 +45,11 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverUdyam as QUdyam
 import qualified Storage.Queries.Image as ImageQuery
+import qualified Storage.Queries.VehicleFitnessCertificate as QFC
+import qualified Storage.Queries.VehicleInsurance as QVI
+import qualified Storage.Queries.VehicleNOC as QVNOC
+import qualified Storage.Queries.VehiclePUC as QVPUC
+import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 
@@ -173,4 +183,9 @@ documentRowStatus image = case image.imageType of
     front <- QAadhaarCard.findByFrontImageId (Just image.id)
     back <- QAadhaarCard.findByBackImageId (Just image.id)
     pure $ (.verificationStatus) <$> (front <|> back)
+  DVC.VehiclePermit -> fmap (.verificationStatus) <$> QVPermit.findByImageId image.id
+  DVC.VehicleFitnessCertificate -> fmap (.verificationStatus) <$> QFC.findByImageId image.id
+  DVC.VehicleInsurance -> fmap (.verificationStatus) <$> QVI.findByImageId image.id
+  DVC.VehiclePUC -> fmap (.verificationStatus) <$> QVPUC.findByImageId image.id
+  DVC.VehicleNOC -> fmap (.verificationStatus) <$> QVNOC.findByImageId image.id
   _ -> pure Nothing
