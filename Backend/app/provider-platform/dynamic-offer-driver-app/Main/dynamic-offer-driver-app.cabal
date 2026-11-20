@@ -809,6 +809,7 @@ library
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
+      SharedLogic.GpsDetectedTolls
       SharedLogic.Grid.GridDecision
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
