@@ -77,6 +77,7 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.MorthVerification as MorthQuery
 import qualified Storage.Queries.Person as Person
+import Text.Regex.Posix ((=~))
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -126,8 +127,14 @@ validateDriverDLReqRegexFlow now DriverDLReq {..} =
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
 isDLNumberFormatValid :: OnboardingFlow m r => DTC.TransporterConfig -> DTO.DocumentVerificationConfig -> Text -> m Bool
-isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLNumber =
-  validateByRegex "DL" transporterConfig documentVerificationConfig normalizedDLNumber (pure True)
+isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLNumber
+  | isLegacyDLNumber normalizedDLNumber = pure True
+  | otherwise = validateByRegex "DL" transporterConfig documentVerificationConfig normalizedDLNumber (pure True)
+
+-- | Older licences carry an RTO/serial/year number (e.g. @8/1234/2010@) instead of the current state-code format,
+-- which the configured regex rejects.
+isLegacyDLNumber :: Text -> Bool
+isLegacyDLNumber dlNumber = T.unpack dlNumber =~ ("^[0-9]{1,3}/[0-9]{1,6}/[0-9]{4}$" :: String)
 
 verifyDL ::
   OnboardingFlow m r =>
