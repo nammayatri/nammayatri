@@ -18,6 +18,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetConfig as Beam
+import qualified Storage.Queries.Transformers.FleetConfig
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FleetConfig.FleetConfig -> m ()
 create = createWithKV
@@ -47,6 +48,7 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.directlyStartFirstTripAssignment (Just directlyStartFirstTripAssignment),
       Se.Set Beam.endRideDistanceThreshold (Just endRideDistanceThreshold),
       Se.Set Beam.fleetPoolingPriority (Data.Aeson.toJSON <$> fleetPoolingPriority),
+      Se.Set Beam.preferencePolicy (Data.Aeson.toJSON <$> preferencePolicy),
       Se.Set Beam.rideEndApproval rideEndApproval,
       Se.Set Beam.unlinkDriverAndVehicleOnTripTermination (Just unlinkDriverAndVehicleOnTripTermination),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -70,6 +72,7 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             endRideDistanceThreshold = fromMaybe 100 endRideDistanceThreshold,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             fleetPoolingPriority = Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority,
+            preferencePolicy = Storage.Queries.Transformers.FleetConfig.decodePreferencePolicy =<< preferencePolicy,
             rideEndApproval = rideEndApproval,
             unlinkDriverAndVehicleOnTripTermination = fromMaybe True unlinkDriverAndVehicleOnTripTermination,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -91,6 +94,7 @@ instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
         Beam.endRideDistanceThreshold = Just endRideDistanceThreshold,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.fleetPoolingPriority = Data.Aeson.toJSON <$> fleetPoolingPriority,
+        Beam.preferencePolicy = Data.Aeson.toJSON <$> preferencePolicy,
         Beam.rideEndApproval = rideEndApproval,
         Beam.unlinkDriverAndVehicleOnTripTermination = Just unlinkDriverAndVehicleOnTripTermination,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

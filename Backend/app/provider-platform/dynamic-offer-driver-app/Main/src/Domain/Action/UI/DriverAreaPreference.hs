@@ -17,6 +17,7 @@ where
 import qualified API.Types.UI.DriverAreaPreference as APIT
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
+import qualified Domain.Types.DriverPreferencePolicy as DDPP
 import qualified Domain.Types.FleetConfig as Fields
 import qualified Domain.Types.GeohashArea as Fields
 import qualified Domain.Types.Merchant
@@ -31,6 +32,7 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.GeohashArea as CQGA
@@ -50,8 +52,12 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
-  pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
+  -- One fleet read: "ignore preferences", and the policy hiding AreaPreference (which also greys it out in the app).
+  fleetContext <- DPP.getDriverFleetContext personId merchantOpCityId
+  let fleetDisablesPreference = maybe False (.disableDriverAreaAndDistancePreference) (DPP.contextAutoAssign fleetContext)
+      hiddenByFleet = maybe False (DPP.isHidden DDPP.AreaPreference) (DPP.contextPolicy fleetContext)
+      res = buildInfoRes fleetDisablesPreference minCells person.driverTag
+  pure res{APIT.lockedByFleet = Just (fleetDisablesPreference || hiddenByFleet)}
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -38,10 +38,10 @@ import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.DriverPreferencePolicy.Context as Context
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -72,18 +72,14 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
 -- returns snapshot AutoAssign even outside the perk window so reconcile/apply can
 -- install tags at opt-in; silent-assign still gates on perksActive at dispatch.
 -- Lives in SharedLogic (not query Extra) to avoid PersonExtra ↔ FleetDriverAssociationExtra ↔ MgCampaign cycle.
+-- A thin wrapper over the shared resolver 'Context.resolveDriverFleetContext' (same lookup, same "throws on a read
+-- error" semantics).
 getDriverFleetAutoAssignConfig ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
-  mbInfo <- QDI.findById driverId
-  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo
-  case mgSource of
-    MgCampaign.CampaignMember {snapshot} -> pure $ MgCampaign.mgAutoAssignConfigFromSnapshot snapshot
-    MgCampaign.UseNoCampaign ->
-      QFDA.findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = (.autoAssignConfig) <$> Context.resolveDriverFleetContext driverId merchantOpCityId
 
 -- | Applies the driver's fleet settings to the driver and this vehicle, one after another on the same tags: auto-assign
 -- on the vehicle's auto-accept tiers when the fleet has it on by default (or 'forceAutoAssign', the fleet's per-driver
@@ -97,9 +93,9 @@ applyFleetSettings ::
   DV.Vehicle ->
   m ()
 applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
-  mbInfo <- QDI.findById driver.id
-  mgSource <- MgCampaign.resolveMgPerkSource driver.merchantOperatingCityId mbInfo
-  mbFleetAutoAssign <- getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
+  context <- Context.resolveDriverFleetContext driver.id driver.merchantOperatingCityId
+  let mgSource = context.mgPerkSource
+      mbFleetAutoAssign = context.autoAssignConfig
   -- Active IJ membership (incl. behaviour-only) owns the perk slot: do not force-install fleet AA.
   let allowForceFleet = case mgSource of
         MgCampaign.UseNoCampaign -> True

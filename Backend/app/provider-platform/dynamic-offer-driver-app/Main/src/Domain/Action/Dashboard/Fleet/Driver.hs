@@ -239,6 +239,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
@@ -5367,7 +5368,8 @@ getDriverFleetConfig merchantShortId opCity requestorId mbFleetOwnerId = do
         allowDriverToToggleAutoAssign = autoAssign.allowDriverToToggle,
         allowCancellationByDriver = maybe True (.allowCancellationByDriver) mbFleetConfig,
         ignoreDriverAreaAndDistancePreference = autoAssign.disableDriverAreaAndDistancePreference,
-        fleetPoolingPriority = mbFleetConfig >>= (.fleetPoolingPriority)
+        fleetPoolingPriority = mbFleetConfig >>= (.fleetPoolingPriority),
+        preferencePolicy = mbFleetConfig >>= (.preferencePolicy)
       }
 
 postDriverFleetConfigUpdate ::
@@ -5380,6 +5382,8 @@ postDriverFleetConfigUpdate ::
 postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId req = do
   (merchant, merchantOpCityId, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
   whenJust req.fleetPoolingPriority $ validatePoolingPrioritySpecialLocations merchantOpCityId
+  -- Omitted = keep the stored policy.
+  whenJust req.preferencePolicy DPP.validatePolicyConfig
   mbExisting <- QFC.findByPrimaryKey fleetOwner.id
   let current = fromMaybe defaultAutoAssignConfig (mbExisting >>= (.autoAssign))
       autoAssign =
@@ -5397,6 +5401,7 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
           { DFC.autoAssign = Just autoAssign,
             DFC.allowCancellationByDriver = fromMaybe existing.allowCancellationByDriver req.allowCancellationByDriver,
             DFC.fleetPoolingPriority = poolingPriority existing.fleetPoolingPriority,
+            DFC.preferencePolicy = req.preferencePolicy <|> existing.preferencePolicy,
             DFC.merchantId = existing.merchantId <|> Just merchant.id,
             DFC.merchantOperatingCityId = existing.merchantOperatingCityId <|> Just merchantOpCityId
           }
@@ -5416,6 +5421,7 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
             autoAssign = Just autoAssign,
             allowCancellationByDriver = fromMaybe True req.allowCancellationByDriver,
             fleetPoolingPriority = poolingPriority Nothing,
+            preferencePolicy = req.preferencePolicy,
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,

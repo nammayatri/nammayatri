@@ -11,12 +11,13 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -28,10 +29,12 @@ postDriverTagUpdate ::
     APIT.DriverTagUpdateReq ->
     Environment.Flow APIT.DriverTagRes
   )
-postDriverTagUpdate (mbPersonId, _, _) req = do
+postDriverTagUpdate (mbPersonId, _, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   tagName <- validateTagPart "tagName" req.tagName
   mbTagValue <- traverse (validateTagPart "tagValue") req.tagValue
+  -- The AutoAssign tag can't be written here while the driver's fleet locks ServiceTier.
+  DPP.getDriverPolicyFresh personId merchantOpCityId >>= flip whenJust (`DPP.validateTagWrite` tagName)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updatedTags = case req.action of
         APIT.ADD_TAG ->

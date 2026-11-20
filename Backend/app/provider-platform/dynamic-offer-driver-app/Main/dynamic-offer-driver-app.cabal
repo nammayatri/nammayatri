@@ -537,6 +537,7 @@ library
       Domain.Types.DocumentOnboardingStage
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
+      Domain.Types.DriverPreferencePolicy
       Domain.Types.DriverWallet
       Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
@@ -731,6 +732,8 @@ library
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverPreferencePolicy
+      SharedLogic.DriverPreferencePolicy.Context
       SharedLogic.DriverSupplyCounter
       SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
@@ -1211,6 +1214,7 @@ library
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FleetConfig
       Storage.Queries.Transformers.FleetOperatorDailyStats
       Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
