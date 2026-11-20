@@ -272,6 +272,7 @@ makeTaggedDriverPool ::
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
+  PoolType ->
   Maybe [LYT.TagNameValue] ->
   Maybe Int ->
   PoolBatchNum ->
@@ -279,14 +280,20 @@ makeTaggedDriverPool ::
   DST.SearchTry ->
   Maybe DRD.RiderDetails ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTry mbRiderDetails = do
+makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize isOnRidePool poolType customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTry mbRiderDetails = do
   localTime <- getLocalCurrentTime transporterCfg.timeDiffFromUtc
-  (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
+  let rankWithPoolingRules = case poolType of
+        SpecialZoneQueuePool -> False
+        _ -> True
+  (allLogics, mbVersion) <-
+    if rankWithPoolingRules
+      then getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
+      else pure ([], Nothing)
   updateVersionInSearchReq mbVersion
   -- A rollout toss happens here whenever mbPoolingLogicVersion is Nothing, so the version applied to
   -- this pool can differ from the one already pinned on the SearchRequest. That divergence used to be
   -- invisible and mislabelled scores with the wrong experiment arm; make it greppable.
-  when (isJust mbPoolingLogicVersion && mbVersion /= mbPoolingLogicVersion) $
+  when (rankWithPoolingRules && isJust mbPoolingLogicVersion && mbVersion /= mbPoolingLogicVersion) $
     logError $
       "POOLING version mismatch: ran " <> show mbVersion <> " but SearchRequest is pinned to "
         <> show mbPoolingLogicVersion
@@ -310,7 +317,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
     let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
     (countersMap, idleMap) <-
-      if driverAcceptanceScoresExcluded || not (fromMaybe True transporterCfg.enableDriverPoolEnrichment)
+      if not rankWithPoolingRules || driverAcceptanceScoresExcluded || not (fromMaybe True transporterCfg.enableDriverPoolEnrichment)
         then pure (Map.empty, Map.empty)
         else (,) <$> getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds <*> DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
     return $
@@ -328,8 +335,9 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         )
         onlyNewDriversWithCustomerInfo
   -- Rejects accumulated by the earlier batches of this search try, so the POOLING ruleset can
-  -- escalate (widen radius, grow the batch) instead of drip-feeding an unwilling pool.
-  cumulativeRejectCount <- getSearchTryRejectCount searchTry.id
+  -- escalate (widen radius, grow the batch) instead of drip-feeding an unwilling pool. Only an
+  -- input to that ruleset, so not read when it is skipped.
+  cumulativeRejectCount <- if rankWithPoolingRules then getSearchTryRejectCount searchTry.id else pure 0
   let taggedDriverPoolInput =
         TaggedDriverPoolInput
           { drivers = enrichedDrivers,
@@ -362,17 +370,21 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
             enrichedDrivers
         )
       <> "]"
-  resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput
+  rankedDrivers <-
+    case poolType of
+      SpecialZoneQueuePool -> pure enrichedDrivers
+      _ -> do
+        resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput
+        case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
+          A.Success sortedPoolData -> pure sortedPoolData.drivers
+          A.Error err -> do
+            logError $ "Error in parsing sortedPoolData - " <> show err
+            pure enrichedDrivers
   -- Stamp the version we actually ran onto every driver, after decoding, so it travels with the
   -- `score` that version produced. Callers must read the version from here rather than from
   -- SearchRequest.poolingLogicVersion: that field is a pre-pool snapshot and, when the version is
   -- chosen by rollout toss on this very call, it does not yet hold the version being applied.
-  sortedPool' <-
-    map (\d -> d {poolingLogicVersion = mbVersion}) <$> case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
-      A.Success sortedPoolData -> pure sortedPoolData.drivers
-      A.Error err -> do
-        logError $ "Error in parsing sortedPoolData - " <> show err
-        pure enrichedDrivers
+  let sortedPool' = map (\d -> d {poolingLogicVersion = mbVersion}) rankedDrivers
   -- Parallel-request admission, in two passes. `maxParallelSearchRequests` stays the absolute
   -- ceiling; `softMaxParallelSearchRequests` is only a preference, so we fill the batch from
   -- drivers below the soft cap first and dip into the soft..hard band solely when the batch

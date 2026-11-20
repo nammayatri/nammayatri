@@ -1143,11 +1143,18 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbTransporterConfig hasStops) farePolicy
       displayFareParamsBreakups = maybe [] (\(isValueAddNP, fareParams) -> mkFareParamsBreakups isValueAddNP highPrecMoneyToText mkRateCardFareParamsBreakupItem fareParams) mbFareParams
       filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
+      airportEntryFeeBreakups = maybe [] (mkAirportEntryFeeBreakup . snd) mbFareParams
       plannedTripBreakups = maybe [] (mkPlannedTripBreakups estimatedDistance mbTripDurationItem . snd) mbFareParams
-      combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> plannedTripBreakups
+      combainedParams = farePolicyBreakups <> airportEntryFeeBreakups <> filteredDisplayBreakups <> plannedTripBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]
   where
+    mkAirportEntryFeeBreakup :: Params.FareParameters -> [RateCardBreakupItem]
+    mkAirportEntryFeeBreakup fareParams =
+      if isNothing fareParams.airportEntryFee || SL.edcCollectsParking fareParams.fareSettlementType
+        then []
+        else [mkRateCardBreakupItem (show Tags.AIRPORT_ENTRY_FEE) (show (fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax))]
+
     findDup :: [RateCardBreakupItem] -> RateCardBreakupItem -> Bool
     findDup [] _ = False
     findDup (farePolicyCard : nextFarePolicy) fareParameter =

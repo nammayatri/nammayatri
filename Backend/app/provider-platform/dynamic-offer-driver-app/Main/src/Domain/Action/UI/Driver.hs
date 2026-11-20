@@ -2168,6 +2168,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
+            when sReqFD.pickupZone $
+              fork "specialZoneQueueSkipResetOnAccept" $
+                whenJust (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) $ \specialLocationId ->
+                  SpecialZoneDriverDemand.resetQueueSkipCount specialLocationId driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
             DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
