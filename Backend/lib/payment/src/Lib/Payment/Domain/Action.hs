@@ -2738,6 +2738,11 @@ mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..
 payoutCreateCallFailedCode :: Text
 payoutCreateCallFailedCode = "CREATE_CALL_FAILED"
 
+-- | Marker stored in payout_order.response_code when the payout interface reported that nothing was
+--   sent to the partner ('PayoutNotSent'): the order is closed as failed and needs no status check.
+payoutNotSentCode :: Text
+payoutNotSentCode = "NOT_SENT"
+
 -- | 'createPayoutService' for callers that cannot tell what a failed call did to the payout: when the
 --   partner call throws, the saved order is marked as such and its status check is scheduled, so the
 --   real outcome is settled even though no answer came back; the exception is then rethrown. (Bulk has
@@ -2762,15 +2767,28 @@ createPayoutServiceWithStatusCheck merchantId mbMerchantOpCityId personId mbEnti
   withTryCatch "createPayoutService" (createPayoutService merchantId mbMerchantOpCityId personId mbEntityIds mbEntityName city req call mbPGFeeConfig afterPayoutOrderCreated) >>= \case
     Right res -> pure res
     Left err -> do
-      when (req.payoutServiceFlow /= PT.BulkFlow) $
+      when (req.payoutServiceFlow /= PT.BulkFlow && not (isOrderIdTaken err)) $
         withTryCatch "createPayoutService:findOrder" (QPayoutOrder.findByOrderId req.orderId) >>= \case
-          Right (Just order) -> do
-            void $
-              withTryCatch "createPayoutService:markCallFailed" $
-                QPayoutOrder.updateBulkSettled order.status order.transferStatus order.settlementRef order.settlementRefType (Just payoutCreateCallFailedCode) (Just "Payout create call failed before an answer arrived") order.id
-            void $ withTryCatch "afterPayoutOrderCreated:callFailed" (afterPayoutOrderCreated order)
+          Right (Just order) -> case fromException err of
+            Just (PayoutNotSent notSentReason) -> markNotSent order notSentReason
+            _ -> markCallFailed order
           _ -> pure ()
       throwM err
+  where
+    isOrderIdTaken createErr = case fromException createErr of
+      Just (PayoutOrderAlreadyExists _) -> True
+      _ -> False
+
+    markNotSent savedOrder notSentReason =
+      void $
+        withTryCatch "createPayoutService:markNotSent" $
+          QPayoutOrder.updateBulkSettled Payout.FAILURE savedOrder.transferStatus savedOrder.settlementRef savedOrder.settlementRefType (Just payoutNotSentCode) (Just notSentReason) savedOrder.id
+
+    markCallFailed savedOrder = do
+      void $
+        withTryCatch "createPayoutService:markCallFailed" $
+          QPayoutOrder.updateBulkSettled savedOrder.status savedOrder.transferStatus savedOrder.settlementRef savedOrder.settlementRefType (Just payoutCreateCallFailedCode) (Just "Payout create call failed before an answer arrived") savedOrder.id
+      void $ withTryCatch "afterPayoutOrderCreated:callFailed" (afterPayoutOrderCreated savedOrder)
 
 createPayoutService ::
   ( EncFlow m r,
