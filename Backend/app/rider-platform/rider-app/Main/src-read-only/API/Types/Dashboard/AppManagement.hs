@@ -14,6 +14,7 @@ import qualified API.Types.Dashboard.AppManagement.PassOrganization
 import qualified API.Types.Dashboard.AppManagement.Passetto
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.SeatLayout
+import qualified API.Types.Dashboard.AppManagement.ShuttleInterest
 import qualified API.Types.Dashboard.AppManagement.StopRouteDetails
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
@@ -38,6 +39,7 @@ data AppManagementUserActionType
   | PASSETTO API.Types.Dashboard.AppManagement.Passetto.PassettoUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | SEAT_LAYOUT API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutUserActionType
+  | SHUTTLE_INTEREST API.Types.Dashboard.AppManagement.ShuttleInterest.ShuttleInterestUserActionType
   | STOP_ROUTE_DETAILS API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
@@ -59,6 +61,7 @@ instance Text.Show.Show AppManagementUserActionType where
     PASSETTO e -> "PASSETTO/" <> show e
     PAYMENT e -> "PAYMENT/" <> show e
     SEAT_LAYOUT e -> "SEAT_LAYOUT/" <> show e
+    SHUTTLE_INTEREST e -> "SHUTTLE_INTEREST/" <> show e
     STOP_ROUTE_DETAILS e -> "STOP_ROUTE_DETAILS/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
@@ -158,6 +161,15 @@ instance Text.Read.Read AppManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( SHUTTLE_INTEREST v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SHUTTLE_INTEREST/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( STOP_ROUTE_DETAILS v1,
                    r2
                  )
@@ -205,7 +217,6 @@ instance Text.Read.Read AppManagementUserActionType where
                ]
       )
     where
-      app_prec = 10
-      stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+      app_prec = 10; stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])

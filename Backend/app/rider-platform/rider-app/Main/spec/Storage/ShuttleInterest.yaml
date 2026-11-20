@@ -1,0 +1,102 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  UTCTime: Data.Time
+  DayOfWeek: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+
+# Corporate shuttle interest form: one row per employee (resubmitting replaces it). Collected before routes and stops are
+# fixed, so ops can plan them from real demand. Only employees with a verified work (business) email can submit.
+ShuttleInterest:
+  tableName: shuttle_interest
+
+  fields:
+    personId: Id Person
+    # domain of the verified work email, lower-case (e.g. juspay.in, nammayatri.in): tells the companies apart in the control centre
+    companyDomain: Text
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Text
+    dropLat: Double
+    dropLon: Double
+    dropAddress: Text
+    tripType: ShuttleTripType
+    # to-office leg: when the employee wants to be picked up (TO_OFFICE / ROUND_TRIP)
+    pickupTime: Maybe TimeOfDay
+    # to-home leg: when the employee wants to leave the office (TO_HOME / ROUND_TRIP)
+    dropTime: Maybe TimeOfDay
+    shiftStartTime: TimeOfDay
+    shiftEndTime: TimeOfDay
+    maxWalkingDistanceMeters: Int
+    daysOfWeek: "[DayOfWeek]"
+    # +- minutes the employee can shift pickup/drop time (15 or 30)
+    timeFlexibilityMinutes: Int
+    acPreference: Maybe ShuttleAcPreference
+    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    ShuttleTripType:
+      enum: "TO_OFFICE, TO_HOME, ROUND_TRIP"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ShuttleAcPreference:
+      enum: "AC_PREFERRED, NON_AC_PREFERRED, AC_ANY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ShuttleVehicleSizePreference:
+      enum: "CAB, TEMPO_TRAVELLER, MINI_BUS, BUS, SIZE_ANY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleTripType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleAcPreference>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleVehicleSizePreference>
+
+  beamType:
+    daysOfWeek: "[Text]"
+
+  toTType:
+    daysOfWeek: map show daysOfWeek|E
+
+  fromTType:
+    daysOfWeek: (read . Data.Text.unpack) <$> daysOfWeek|E
+
+  sqlType:
+    companyDomain: text
+    pickupAddress: text
+    dropAddress: text
+    tripType: text
+    pickupTime: time
+    dropTime: time
+    shiftStartTime: time
+    shiftEndTime: time
+    daysOfWeek: "text[]"
+    acPreference: text
+    vehicleSizePreference: text
+
+  constraints:
+    personId: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy:
+        field: updatedAt
+        order: desc
+
+    findAllByMerchantOperatingCityIdAndCompanyDomain:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, companyDomain]
+      orderBy:
+        field: updatedAt
+        order: desc
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE # brings the ToSchema DayOfWeek orphan into scope for the API types

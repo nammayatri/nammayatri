@@ -1,0 +1,39 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  DayOfWeek: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  ShuttleTripType: Domain.Types.ShuttleInterest
+  ShuttleAcPreference: Domain.Types.ShuttleInterest
+  ShuttleVehicleSizePreference: Domain.Types.ShuttleInterest
+
+module: ShuttleInterest
+
+types:
+  # Corporate shuttle interest form. The person and the company come from the auth token and the verified work email.
+  ShuttleInterestReq:
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Text
+    dropLat: Double
+    dropLon: Double
+    dropAddress: Text
+    tripType: ShuttleTripType
+    pickupTime: Maybe TimeOfDay # required for TO_OFFICE and ROUND_TRIP
+    dropTime: Maybe TimeOfDay # required for TO_HOME and ROUND_TRIP
+    shiftStartTime: TimeOfDay
+    shiftEndTime: TimeOfDay
+    maxWalkingDistanceMeters: Int
+    daysOfWeek: "[DayOfWeek]"
+    timeFlexibilityMinutes: Int # 15 or 30
+    acPreference: Maybe ShuttleAcPreference
+    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
+
+apis:
+  # POST /shuttle/interest  (creates the caller's interest, or replaces the one they already submitted)
+  - POST:
+      endpoint: /shuttle/interest
+      auth: TokenAuth
+      request:
+        type: ShuttleInterestReq
+      response:
+        type: APISuccess
