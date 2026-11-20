@@ -147,6 +147,7 @@ data WalletLedgerEntryItem = WalletLedgerEntryItem
     entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     isCredit :: Kernel.Prelude.Bool,
+    isDisplayOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReversal :: Kernel.Prelude.Bool,
     itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,
