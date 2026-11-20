@@ -153,6 +153,12 @@ getNumberOfLuggages req = do
   let tagValue = Utils.getTag Tag.NUMBER_OF_LUGGAGE tagGroups
   readMaybe . T.unpack =<< tagValue
 
+-- | Rider reschedule: the BPP booking id this search replaces (its driver gets a head start).
+getRescheduledFromBookingId :: Spec.SearchReqMessage -> Maybe Text
+getRescheduledFromBookingId req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  Utils.getTag Tag.RESCHEDULED_FROM_BOOKING_ID tagGroups
+
 getIsMultimodalSearch :: Spec.SearchReqMessage -> Maybe Bool
 getIsMultimodalSearch req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)

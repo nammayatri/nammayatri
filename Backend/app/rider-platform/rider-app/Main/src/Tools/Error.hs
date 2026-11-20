@@ -1745,3 +1745,52 @@ instance IsHTTPError PassengerLuggageError where
     TooMuchLuggage {} -> E400
 
 instance IsAPIError PassengerLuggageError
+
+data RescheduleError
+  = RescheduleBookingNotFound Text
+  | RescheduleNotOwnBooking
+  | RescheduleNotScheduledBooking
+  | RescheduleBookingNotActive Text
+  | RescheduleNotSupportedForTripType
+  | RescheduleNotAllowedInWindow
+  | RescheduleTimeTooSoon
+  | RescheduleTripMismatch Text
+  | RescheduleInProgress
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RescheduleError
+
+instance IsBaseError RescheduleError where
+  toMessage (RescheduleBookingNotFound bookingId) = Just $ "Booking to reschedule not found: " <> bookingId
+  toMessage RescheduleNotOwnBooking = Just "Booking to reschedule does not belong to this rider."
+  toMessage RescheduleNotScheduledBooking = Just "Only scheduled bookings can be rescheduled."
+  toMessage (RescheduleBookingNotActive status) = Just $ "Cannot reschedule a booking in status: " <> status
+  toMessage RescheduleNotSupportedForTripType = Just "Reschedule is supported only for rental, intercity and one-way rides."
+  toMessage RescheduleNotAllowedInWindow = Just "A driver is already assigned and the pickup is too close to reschedule."
+  toMessage RescheduleTimeTooSoon = Just "The new pickup time is too close to now for a scheduled ride."
+  toMessage (RescheduleTripMismatch what) = Just $ "Only the pickup time can be changed when rescheduling; " <> what <> " differs from the booking."
+  toMessage RescheduleInProgress = Just "A reschedule of this booking is already in progress."
+
+instance IsHTTPError RescheduleError where
+  toErrorCode = \case
+    RescheduleBookingNotFound _ -> "RESCHEDULE_BOOKING_NOT_FOUND"
+    RescheduleNotOwnBooking -> "RESCHEDULE_NOT_OWN_BOOKING"
+    RescheduleNotScheduledBooking -> "RESCHEDULE_NOT_SCHEDULED_BOOKING"
+    RescheduleBookingNotActive _ -> "RESCHEDULE_BOOKING_NOT_ACTIVE"
+    RescheduleNotSupportedForTripType -> "RESCHEDULE_NOT_SUPPORTED_FOR_TRIP_TYPE"
+    RescheduleNotAllowedInWindow -> "RESCHEDULE_NOT_ALLOWED_IN_WINDOW"
+    RescheduleTimeTooSoon -> "RESCHEDULE_TIME_TOO_SOON"
+    RescheduleTripMismatch _ -> "RESCHEDULE_TRIP_MISMATCH"
+    RescheduleInProgress -> "RESCHEDULE_IN_PROGRESS"
+  toHttpCode = \case
+    RescheduleBookingNotFound _ -> E400
+    RescheduleNotOwnBooking -> E400
+    RescheduleNotScheduledBooking -> E400
+    RescheduleBookingNotActive _ -> E400
+    RescheduleNotSupportedForTripType -> E400
+    RescheduleNotAllowedInWindow -> E400
+    RescheduleTimeTooSoon -> E400
+    RescheduleTripMismatch _ -> E400
+    RescheduleInProgress -> E409
+
+instance IsAPIError RescheduleError

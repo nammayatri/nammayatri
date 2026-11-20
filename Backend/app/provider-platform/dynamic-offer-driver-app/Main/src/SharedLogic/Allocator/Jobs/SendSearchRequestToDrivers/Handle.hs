@@ -62,7 +62,10 @@ data Handle m r = Handle
     notifyBapOnExpiry :: Bool,
     mbTopUpSize :: Maybe Int,
     popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
-    markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
+    markDriversAttempted :: [DriverPoolWithActualDistResult] -> m (),
+    -- | Rider reschedule: the previous driver's solo batch and how long others wait, given at
+    -- most once per search request (Nothing otherwise).
+    takePreviousDriverHeadStart :: GoHomeConfig -> m (Maybe ([DriverPoolWithActualDistResult], Seconds))
   }
 
 handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
@@ -127,17 +130,32 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
               cancelBookingIfApplies
               return (Complete, NormalPool, Nothing)
     else do
-      batchStartTime <- getCurrentTime
-      driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-      -- Pool computation can take seconds; an accept or customer cancel landing in that
-      -- window must not produce a batch of offers for a ride that is already gone.
+      mbHeadStart <- takePreviousDriverHeadStart goHomeCfg
+      case mbHeadStart of
+        Just (headStartBatch, window) | not (null headStartBatch) -> sendPreviousDriverHeadStart headStartBatch window
+        _ -> do
+          batchStartTime <- getCurrentTime
+          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
+          -- Pool computation can take seconds; an accept or customer cancel landing in that
+          -- window must not produce a batch of offers for a ride that is already gone.
+          isStillValid <- isSearchTryValid
+          if not isStillValid
+            then do
+              logInfo "Search try became invalid during pool computation; skipping dispatch."
+              return (Complete, driverPoolWithFlags.poolType, Nothing)
+            else do
+              if not $ null driverPoolWithFlags.driverPoolWithActualDistResult
+                then sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+                else logDriversExhausted -- ran out of drivers mid-search (empty pool before batch limit); mark for analytics
+              ReSchedule <$> getRescheduleTime batchStartTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
+  where
+    -- Only the previous driver now; the regular batches resume once the window has passed.
+    sendPreviousDriverHeadStart headStartBatch window = do
       isStillValid <- isSearchTryValid
       if not isStillValid
-        then do
-          logInfo "Search try became invalid during pool computation; skipping dispatch."
-          return (Complete, driverPoolWithFlags.poolType, Nothing)
+        then return (Complete, NormalPool, Nothing)
         else do
-          if not $ null driverPoolWithFlags.driverPoolWithActualDistResult
-            then sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-            else logDriversExhausted -- ran out of drivers mid-search (empty pool before batch limit); mark for analytics
-          ReSchedule <$> getRescheduleTime batchStartTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
+          logInfo $ "Rider reschedule: previous driver gets the ride alone for " <> show window
+          sendSearchRequestToDrivers headStartBatch [] goHomeCfg
+          now <- getCurrentTime
+          return (ReSchedule (addUTCTime (secondsToNominalDiffTime window) now), NormalPool, Just window)

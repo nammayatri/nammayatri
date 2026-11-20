@@ -1101,6 +1101,7 @@ TransporterConfig:
       scheduledRideVisibilityStages: Maybe [ScheduledRideVisibilityStage]
       enableScheduledRidePenaltyOrReward: Maybe Bool
       topDriversFirstAdvanceTime: Maybe Seconds
+      previousDriverPriorityWindow: Maybe Seconds # rider reschedule: how long the previous driver has the ride alone (default 60s)
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     ManualTollChargeConfig:
       tripCategories: Maybe [Text]

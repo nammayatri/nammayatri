@@ -96,6 +96,9 @@ SearchRequest:
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
     driverIdForSearch: Maybe (Id Person)
+    # Rider reschedule: the driver of the booking being rescheduled. The allocator offers him
+    # the ride alone first (scheduledRideConfig.previousDriverPriorityWindow), wherever he is.
+    preferredDriverId: Maybe (Id Person)
     configInExperimentVersions: "[ConfigVersionMap]"
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int

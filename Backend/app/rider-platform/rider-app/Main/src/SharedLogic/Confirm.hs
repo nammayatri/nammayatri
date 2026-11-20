@@ -76,6 +76,7 @@ import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Reschedule as SReschedule
 import qualified SharedLogic.Settlement as Settlement
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -226,9 +227,19 @@ confirm DConfirmReq {..} = do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     whenJust paymentMethodId $ \pmId ->
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
+      -- Rescheduling a static quote (rental / intercity): this confirm is the rider's accept, so it
+      -- gets the authoritative check. The old booking stays untouched until on_confirm, where its
+      -- deposit moves onto the new booking and it is cancelled. Dynamic offers were checked at
+      -- select and their old booking already retired; their (auto) confirm needs nothing here.
+  mbRescheduleSource <- case quote.quoteDetails of
+    DQuote.DriverOfferDetails _ -> pure Nothing
+    _ -> SReschedule.findActiveRescheduleSource searchRequest
+  whenJust mbRescheduleSource $ \oldBooking ->
+    SReschedule.validateRescheduleAccept merchant searchRequest oldBooking quote.vehicleServiceTierType quote.tripCategory
+  carryRescheduleDeposit <- maybe (pure False) SReschedule.hasDepositHoldToCarry mbRescheduleSource
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
-    Just booking | isNothing mbBetterDriverSwapDetails && not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm
+    Just booking | isNothing mbBetterDriverSwapDetails && not (isMeterRide quote.quoteDetails) && not (SReschedule.isRescheduleOf searchRequest booking) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm
     _ -> pure ()
 
   existingBookingForQuote <- QRideB.findByQuoteId (Just quote.id)
@@ -307,6 +318,8 @@ confirm DConfirmReq {..} = do
     QRideB.updateSupersededByBookingId swapDetails.oldBookingId (Just booking0.id)
   needsFeePayment <- case booking0.bookingDepositAmount of
     Nothing -> pure False
+    -- Reschedule: the old booking's deposit is moved onto this booking on on_confirm.
+    Just _ | carryRescheduleDeposit -> pure False
     Just fee -> do
       res <- withTryCatch "confirm:reserveBookingDeposit" $ BookingDeposit.reserveBookingDeposit booking0 fee
       case res of
@@ -637,6 +650,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- Both are filled in later, once a driver is assigned (eligibility roll / swap link).
           eligibleForBetterDriverSearch = Nothing,
           supersededByBookingId = Nothing,
+          rescheduledFromBookingId = searchRequest.rescheduledFromBookingId,
           betterDriverAbortRadiusMeters = Nothing,
           ..
         },

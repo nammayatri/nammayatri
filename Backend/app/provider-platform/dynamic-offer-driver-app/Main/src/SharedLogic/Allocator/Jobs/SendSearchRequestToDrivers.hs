@@ -490,6 +490,7 @@ sendSearchRequestToDriversWithMode dispatchMode mbTopUpSize driverPoolConfig sea
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo driverSearchBatchInput.riderDetails dispatchMode,
           popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.requestId searchTry.id,
+          takePreviousDriverHeadStart = UI.takePreviousDriverHeadStart driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo driverSearchBatchInput.riderDetails dispatchMode,
           markDriversAttempted = I.markDriversAttempted searchTry.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers dispatchMode driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig driverSearchBatchInput.riderDetails,
           logDriversExhausted = do

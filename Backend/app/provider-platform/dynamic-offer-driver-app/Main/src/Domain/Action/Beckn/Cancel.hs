@@ -104,6 +104,13 @@ newtype CancelSearchReq = CancelSearchReq
   }
   deriving (Show)
 
+-- | short_desc the rider app (BAP) sends when it cancels a booking because the rider
+-- rescheduled it to a new booking. Must match the BAP's SharedLogic.RescheduleReason.
+-- Read from the raw short_desc, not the resolved reason code, which an ONDC reason id
+-- can override.
+rescheduleCancellationReasonCode :: Text
+rescheduleCancellationReasonCode = "RESCHEDULED"
+
 cancel ::
   CancelRideReq ->
   DM.Merchant ->
@@ -161,11 +168,16 @@ cancel req merchant booking mbActiveSearchTry = do
     -- produce the driver-side consequences even when the booking reallocates.
     -- A find-another-driver swap skips all of it, including the soft-cancel fee reuse in the
     -- terminal consequences below.
+    --
+    -- A rider reschedule retires this booking in favour of a new one at another time: it carries
+    -- no consequences at all (no customer fee or deposit forfeit, no rate counters, no driver
+    -- money or coins) and never reallocates. The assigned driver is still told it is cancelled.
+    let isRescheduleCancel = req.cancellationReason == Just rescheduleCancellationReasonCode
     mbRideAndDriver <- forM mbRide $ \ride -> do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       pure (ride, driver)
     mbConsequenceCtx <-
-      if isFindAnotherDriver
+      if isFindAnotherDriver || isRescheduleCancel
         then pure Nothing
         else forM mbRideAndDriver $ \(ride, driver) -> do
           decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
@@ -185,19 +197,26 @@ cancel req merchant booking mbActiveSearchTry = do
     -- results in reallocation: a customer forced to cancel/reallocate because the driver
     -- never moved is exactly the case this must catch. Ordering: the fault verdict above
     -- already consumed the live journey, so flushing here is safe.
-    whenJust mbRide $ \ride ->
-      fork "record pickup stall on customer cancel" $ do
-        mbJourney <- PickupStall.getPickupJourney ride
-        PickupStall.flushPickupJourney ride Nothing
-        -- Behaviour Engine for scheduled rides is per-city opt-in; default = capture-only.
-        let scheduledBehaviourEngineOn = PickupStall.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
-        when (not isFindAnotherDriver && isNothing ride.pickupBehaviour && scheduledBehaviourEngineOn) $
-          whenJust mbJourney $ \journey ->
-            when (journey.behaviour `elem` [SRide.STALLED, SRide.MOVING_AWAY]) $
-              PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault
+    unless isRescheduleCancel $
+      whenJust mbRide $ \ride ->
+        fork "record pickup stall on customer cancel" $ do
+          mbJourney <- PickupStall.getPickupJourney ride
+          PickupStall.flushPickupJourney ride Nothing
+          -- Behaviour Engine for scheduled rides is per-city opt-in; default = capture-only.
+          let scheduledBehaviourEngineOn = PickupStall.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
+          when (not isFindAnotherDriver && isNothing ride.pickupBehaviour && scheduledBehaviourEngineOn) $
+            whenJust mbJourney $ \journey ->
+              when (journey.behaviour `elem` [SRide.STALLED, SRide.MOVING_AWAY]) $
+                PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault
 
     isReallocated <-
       case mbRideAndDriver of
+        Just (ride, driver)
+          | isRescheduleCancel -> do
+            -- Reschedule: the driver is told the ride is cancelled; the booking never reallocates.
+            fork "cancelRide - Notify driver (rescheduled)" $
+              Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
+            return False
         Just (ride, driver) -> do
           fork "cancelRide - Notify driver" $
             Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
@@ -211,7 +230,7 @@ cancel req merchant booking mbActiveSearchTry = do
         Nothing -> return False
 
     mbSwapCancelCtx <-
-      if isNothing mbRide
+      if isNothing mbRide && not isRescheduleCancel
         then FindAnotherDriver.swapCancelConsequences merchant booking transporterConfig bookingCR
         else pure Nothing
 

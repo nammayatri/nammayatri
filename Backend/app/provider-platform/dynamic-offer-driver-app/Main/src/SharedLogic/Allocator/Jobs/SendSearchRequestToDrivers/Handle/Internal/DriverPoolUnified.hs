@@ -90,7 +90,58 @@ getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails pay
   SDP.incrementBatchNumFor dispatchMode searchTry.id
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
-  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo mbRiderDetails dispatchMode
+  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo mbRiderDetails dispatchMode Nothing
+
+-- | Rider reschedule: once per search request, the driver of the rescheduled booking gets the
+-- ride alone before anyone else. Returns that batch (empty when he is no longer eligible) and how
+-- long everyone else must wait; Nothing when there is no head start to give (or it was given).
+takePreviousDriverHeadStart ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    LT.HasLocationService m r,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    Redis.HedisLTSFlowEnv r,
+    HasField "peerLTSHedisEnvs" r [(CloudType, Redis.HedisEnv)],
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r,
+    HasField "enableLtsPoolDataForPooling" r Bool
+  ) =>
+  DriverPoolConfig ->
+  DSR.SearchRequest ->
+  DST.SearchTry ->
+  [TripQuoteDetail] ->
+  Maybe DMPM.PaymentMethodInfo ->
+  Maybe DRD.RiderDetails ->
+  DispatchMode ->
+  GoHomeConfig ->
+  m (Maybe ([DriverPoolWithActualDistResult], Seconds))
+takePreviousDriverHeadStart driverPoolConfig searchReq searchTry tripQuoteDetails paymentMethodInfo mbRiderDetails dispatchMode goHomeConfig =
+  case searchReq.preferredDriverId of
+    Nothing -> pure Nothing
+    Just previousDriverId -> withLogTag "previousDriverHeadStart" $ do
+      now <- getCurrentTime
+      -- Claimed once per search request, so reallocation tries and later batches never repeat it.
+      let keyTtl = max 3600 (ceiling (diffUTCTime searchReq.startTime now)) + 86400
+      claimed <- Redis.setNxExpire (previousDriverHeadStartKey searchReq.id) keyTtl True
+      if not claimed
+        then pure Nothing
+        else do
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.merchantOperatingCityId.getId)
+          let window = fromMaybe (Seconds 60) transporterConfig.scheduledRideConfig.previousDriverPriorityWindow
+          batchNum <- SDP.getPoolBatchNumFor dispatchMode searchTry.id
+          cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+          merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
+          batch <- prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo mbRiderDetails dispatchMode (Just (cast previousDriverId))
+          logInfo $ "Previous driver " <> previousDriverId.getId <> " eligible for head start: " <> show (not $ null batch.driverPoolWithActualDistResult) <> ", window " <> show window
+          pure $ Just (batch.driverPoolWithActualDistResult, window)
+
+previousDriverHeadStartKey :: Id DSR.SearchRequest -> Text
+previousDriverHeadStartKey searchReqId = "Driver:Allocator:PreviousDriverHeadStart:SearchReqId-" <> searchReqId.getId
 
 assignTagsToDrivers :: [Id Driver] -> DriverPoolTags -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 assignTagsToDrivers driverIds driverTag =
@@ -143,8 +194,10 @@ prepareDriverPoolBatch ::
   Maybe DMPM.PaymentMethodInfo ->
   Maybe DRD.RiderDetails ->
   DispatchMode ->
+  -- | Rider reschedule head start: build the batch from just this driver (see 'takePreviousDriverHeadStart').
+  Maybe (Id Driver) ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo mbRiderDetails dispatchMode = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
+prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo mbRiderDetails dispatchMode mbHeadStartDriverId = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
@@ -194,32 +247,41 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- Blocklisted drivers are excluded at LTS-level inside calculateDriverPoolWithActualDist;
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
-      (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
-      when (dispatchMode == ScheduledTopDriversDispatch) $ reportTopDriversBatch transporterConfig allDriversNotOnRideBeforeTollFilter
-      (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
-      let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
-      (driverPoolNotOnRide, driverPoolOnRide) <- do
-        case batchNum of
-          -1 -> do
-            gateTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGateTags" $ assignDriverGateTags searchReq newFilteredDriversWithFavourites
-            goHomeTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGoHomeTags" $ assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
-            logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
-            withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig goHomeTaggedDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
-          _ -> do
-            allNearbyNonGoHomeDrivers <- withTimeAPI "driverPooling" "filterM getDriverGoHomeRequestInfo" $ excludeActiveGoHomeDrivers merchantOpCityId newFilteredDriversWithFavourites
-            logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
-            withTimeAPI "driverPooling" "calculateNormalBatch" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
-      cacheBatch driverPoolNotOnRide Nothing
-      cacheBatch driverPoolOnRide (Just True)
-      let (poolNotOnRide, poolOnRide) =
-            ( addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolNotOnRide,
-              addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch driverPoolOnRide
-            )
-      (poolWithSpecialZoneInfoNotOnRide, poolWithSpecialZoneInfoOnRide) <-
-        if isJust searchReq.specialLocationTag
-          then (,) <$> addSpecialZonePickupInfo poolNotOnRide <*> addSpecialZonePickupInfo poolOnRide
-          else pure (poolNotOnRide, poolOnRide)
-      pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide NormalPool Nothing poolWithSpecialZoneInfoOnRide
+      case mbHeadStartDriverId of
+        -- Rider reschedule: the previous driver alone, wherever he is (no radius or distance cut),
+        -- with every other eligibility check of the regular pool.
+        Just headStartDriverId -> do
+          (headStartPool, _) <- withTimeAPI "driverPooling" "calcDriverPoolHeadStart" $ calcDriverPool NormalPool transporterConfig blockListedDrivers [] airportEntryFee isAirportRequest [headStartDriverId]
+          let headStartBatch = bookAnyFilters transporterConfig headStartPool
+          cacheBatch headStartBatch Nothing
+          pure $ SDP.PrepareDriverPoolBatchEntity headStartBatch NormalPool Nothing []
+        Nothing -> do
+          (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest []
+          when (dispatchMode == ScheduledTopDriversDispatch) $ reportTopDriversBatch transporterConfig allDriversNotOnRideBeforeTollFilter
+          (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
+          let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
+          (driverPoolNotOnRide, driverPoolOnRide) <- do
+            case batchNum of
+              -1 -> do
+                gateTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGateTags" $ assignDriverGateTags searchReq newFilteredDriversWithFavourites
+                goHomeTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGoHomeTags" $ assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
+                logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
+                withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig goHomeTaggedDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
+              _ -> do
+                allNearbyNonGoHomeDrivers <- withTimeAPI "driverPooling" "filterM getDriverGoHomeRequestInfo" $ excludeActiveGoHomeDrivers merchantOpCityId newFilteredDriversWithFavourites
+                logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
+                withTimeAPI "driverPooling" "calculateNormalBatch" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
+          cacheBatch driverPoolNotOnRide Nothing
+          cacheBatch driverPoolOnRide (Just True)
+          let (poolNotOnRide, poolOnRide) =
+                ( addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolNotOnRide,
+                  addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch driverPoolOnRide
+                )
+          (poolWithSpecialZoneInfoNotOnRide, poolWithSpecialZoneInfoOnRide) <-
+            if isJust searchReq.specialLocationTag
+              then (,) <$> addSpecialZonePickupInfo poolNotOnRide <*> addSpecialZonePickupInfo poolOnRide
+              else pure (poolNotOnRide, poolOnRide)
+          pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide NormalPool Nothing poolWithSpecialZoneInfoOnRide
       where
         -- Logs the top-drivers batch: how many drivers passed the rules, and the rules in force.
         reportTopDriversBatch transporterConfig qualifiedDrivers = do
@@ -261,7 +323,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 pool
             Nothing -> pure ([], pool)
 
-        calcDriverPool poolType transporterConfig excludeDriverIds prevAttemptedDriverIds airportEntryFee isAirportRequest = do
+        calcDriverPool poolType transporterConfig excludeDriverIds prevAttemptedDriverIds airportEntryFee isAirportRequest forcedIds = do
           now <- getCurrentTime
           let serviceTiers = tripQuoteDetails <&> (.vehicleServiceTier)
               merchantId = searchReq.providerId
@@ -296,9 +358,11 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     prevAttemptedDriverIds = prevAttemptedDriverIds,
                     mbSearchTryId = Just searchTry.id.getId,
                     dedicatedDrivers = getDedicatedDrivers searchReq.customerNammaTags,
+                    forcedDriverIds = forcedIds,
                     ..
                   }
-          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum dispatchMode
+          -- A forced (head-start) driver is never filtered by the top-drivers round's rules.
+          calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum (if null forcedIds then dispatchMode else RegularDispatch)
 
         calculateNormalBatch mOCityId transporterConfig onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
           logDebug $ "calculateNormalBatch txnId " <> show txnId'
@@ -460,6 +524,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         mbSearchTryId = Just searchTry.id.getId,
                         -- The on-ride drivers passed in already come from the dedicated or normal pool.
                         dedicatedDrivers = noDedicatedDrivers,
+                        forcedDriverIds = [],
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq onRideDrivers poolType currentSearchInfo

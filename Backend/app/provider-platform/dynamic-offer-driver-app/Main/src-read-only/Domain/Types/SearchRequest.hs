@@ -79,6 +79,7 @@ data SearchRequest = SearchRequest
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     preferSafetyPlus :: Kernel.Prelude.Bool,
+    preferredDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),

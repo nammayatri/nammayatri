@@ -50,6 +50,7 @@ import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
 import Domain.Types.BapMetadata
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
@@ -66,6 +67,7 @@ import qualified Domain.Types.MerchantState as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
+import qualified Domain.Types.Ride as Fields
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.RiderPreferredOption as DRPO
@@ -134,11 +136,13 @@ import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
@@ -180,6 +184,8 @@ data DSearchReq = DSearchReq
     isDashboardRequest :: Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     driverIdentifier :: Maybe DRL.DriverIdentifier,
+    -- | Rider reschedule: the booking (of this BPP) this search replaces.
+    rescheduledFromBookingId :: Maybe Text,
     isMultimodalSearch :: Maybe Bool,
     isReserveRide :: Maybe Bool,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
@@ -239,6 +245,8 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     merchant :: DM.Merchant,
     isValueAddNP :: Bool,
     driverIdForSearch :: Maybe (Id DP.Person),
+    -- | Rider reschedule: the driver of the replaced booking, offered the ride first.
+    preferredDriverId :: Maybe (Id DP.Person),
     isMeterRideSearch :: Maybe Bool,
     numberOfLuggages :: Maybe Int,
     isReserveRide :: Maybe Bool,
@@ -401,7 +409,8 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             return Nothing
       else return Nothing
   let mbDriverInfo = driverIdForSearch
-  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation toLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq' <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation toLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area allFarePoliciesProduct.pickupArea allFarePoliciesProduct.dropArea mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  let searchReq = searchReq' {DSR.preferredDriverId = preferredDriverId}
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -775,6 +784,7 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         stops = stops',
         hasStops = Just . not $ null stops',
         driverIdForSearch = mbDriverInfo,
+        preferredDriverId = Nothing, -- set by 'handler' for a rider reschedule
         configInExperimentVersions = configVersionMap,
         parcelType = Nothing,
         parcelQuantity = Nothing,
@@ -1147,7 +1157,20 @@ validateRequest merchant sReq = do
     whenJust transporterConfig.maxNumberOfLuggages $ \maxN ->
       when (n > maxN) $ throwError (InvalidRequest $ "Number of luggages exceeds maximum allowed: " <> show maxN)
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
+  preferredDriverId <- maybe (pure Nothing) (getRescheduledBookingDriver sReq.bapId) $ bool Nothing sReq.rescheduledFromBookingId isValueAddNP
   return ValidatedDSearchReq {..}
+
+-- | Rider reschedule: the driver currently assigned to the booking being replaced, if any.
+-- Only a booking made through the same BAP counts; anything else is ignored, never an error,
+-- since the head start is a preference and must not fail the search.
+getRescheduledBookingDriver :: Text -> Text -> Flow (Maybe (Id DP.Person))
+getRescheduledBookingDriver bapId oldBookingId = do
+  mbOldBooking <- QRB.findById (Id oldBookingId)
+  case mfilter (\b -> b.bapId == bapId) mbOldBooking of
+    Nothing -> do
+      logWarning $ "Reschedule: booking " <> oldBookingId <> " not found for this BAP; no previous-driver head start"
+      pure Nothing
+    Just oldBooking -> fmap (.driverId) <$> QRide.findActiveByRBId oldBooking.id
 
 data IsIntercityReq = IsIntercityReq
   { pickupLatLong :: LatLong,

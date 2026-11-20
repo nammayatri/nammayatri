@@ -421,6 +421,7 @@ data BecknTag
   | NUMBER_OF_PASSENGERS
   | NUMBER_OF_CHECKIN_BAGS
   | NUMBER_OF_CABIN_BAGS
+  | RESCHEDULED_FROM_BOOKING_ID -- SEARCH_REQUEST_INFO: BPP booking id this search reschedules; its assigned driver gets a head start
   | -- ## Payment tags ##
     -- SETTLEMENT_TERMS
     SETTLEMENT_WINDOW
@@ -690,6 +691,7 @@ instance CompleteTag BecknTag where
     NUMBER_OF_PASSENGERS -> (Just "Passenger Count", Nothing)
     NUMBER_OF_CHECKIN_BAGS -> (Just "Check-in Bag Count", Nothing)
     NUMBER_OF_CABIN_BAGS -> (Just "Cabin Bag Count", Nothing)
+    RESCHEDULED_FROM_BOOKING_ID -> (Just "Rescheduled From Booking Id", Nothing)
     DISTANCE_INFO_IN_M -> (Just "Distance Information In Meters", Nothing)
     DURATION_INFO_IN_S -> (Just "Duration Information In Seconds", Nothing)
     RETURN_TIME -> (Just "Return time in UTC", Nothing)
@@ -760,6 +762,7 @@ instance CompleteTag BecknTag where
     NUMBER_OF_PASSENGERS -> SEARCH_REQUEST_INFO
     NUMBER_OF_CHECKIN_BAGS -> SEARCH_REQUEST_INFO
     NUMBER_OF_CABIN_BAGS -> SEARCH_REQUEST_INFO
+    RESCHEDULED_FROM_BOOKING_ID -> SEARCH_REQUEST_INFO
     DRIVER_IDENTITY -> DRIVER_IDENTIFIER
     BUYER_FINDER_FEES_PERCENTAGE -> BAP_TERMS
     SETTLEMENT_AMOUNT -> BPP_TERMS
