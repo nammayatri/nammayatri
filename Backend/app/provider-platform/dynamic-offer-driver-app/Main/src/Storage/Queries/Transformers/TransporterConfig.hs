@@ -46,7 +46,10 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
             enableFleetOperatorDashboardAnalytics = False,
             maxOnlineDurationDays = 10,
             onlineDurationCalculateFrom = Nothing,
-            useDbForEarningAndMetrics = False
+            onlineDurationClickhouseFrom = Nothing,
+            useDbForEarningAndMetrics = False,
+            lowSubscriptionBalanceThreshold = 400,
+            inactiveAvgLoginHoursPerDayThreshold = 6.0
           }
   parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def parseAnalyticsConfigWithDefault mbVal
 
