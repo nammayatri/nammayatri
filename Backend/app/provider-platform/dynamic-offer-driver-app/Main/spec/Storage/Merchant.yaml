@@ -2429,6 +2429,7 @@ MerchantClientConfig:
   constraints:
     packageId: PrimaryKey
     serviceName: PrimaryKey
+    clientOS: PrimaryKey
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
