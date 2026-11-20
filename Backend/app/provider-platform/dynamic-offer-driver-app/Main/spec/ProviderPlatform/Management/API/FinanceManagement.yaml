@@ -624,6 +624,7 @@ types:
     - message: Text
 
   ReconciliationSummary:
+    - totalRecords: Maybe Int
     - totalDiscrepancies: Int
     - matchedRecords: Int
     - matchRate: Text

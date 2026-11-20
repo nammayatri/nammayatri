@@ -36,7 +36,6 @@ import qualified Data.Aeson.Types as AT
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, partition)
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
@@ -82,7 +81,7 @@ import qualified Lib.Finance.Domain.Types.JournalEntryTransaction as Fields
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
-import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import qualified Lib.Finance.Domain.Types.ReconciliationSummary as Fields
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
@@ -765,7 +764,7 @@ getFinanceManagementFinanceReconciliation ::
   Flow API.ReconciliationRes
 getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbToDate domain source target = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let spec = ReconT.ReconciliationSpec {domain, source, target}
       limit = mkPageLimit mbLimit
@@ -775,43 +774,40 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
       adjustedFromDate = addUTCTime (- istOffset) <$> mbFromDate
       adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
 
-  summaries <- QReconSummaryExtra.findByDateRangeAndSpec domain source target adjustedFromDate adjustedToDate
-  -- One summary per hourly chunk (re-runs add duplicates), combined across the range.
-  let chunkSummaries = Map.elems $ Map.fromListWith preferredRun [(s.reconciliationDate, s) | s <- summaries]
-      summaryRes = combineSummaries chunkSummaries
+  summaries <-
+    filter (\s -> s.merchantOperatingCityId == merchantOpCityId.getId)
+      <$> QReconSummaryExtra.findByDateRangeAndSpec domain source target adjustedFromDate adjustedToDate
+  -- A recon run moves every entry it re-checks onto its own summary, so summed summary counts repeat
+  -- entries. The cards, the total and the pages are all cut from this one entry list instead.
+  entries <- sortOn (\e -> (e.createdAt, e.id.getId)) <$> QReconEntryExtra.findAllBySummaryIds (map (.id) summaries)
 
-  entries <- QReconEntryExtra.findBySummaryIdsWithPagination (map (.id) chunkSummaries) limit offset
-
-  let (matched, mismatched) = partition (\e -> e.reconStatus == ReconT.MATCHED) entries
+  let (matched, mismatched) = partition (\e -> e.reconStatus == ReconT.MATCHED) (take limit $ drop offset entries)
   pure
     API.ReconciliationRes
-      { summary = summaryRes,
+      { summary = summariseEntries entries,
         exceptions = map (toReconEntry spec) mismatched,
         completed = map (toReconEntry spec) matched
       }
   where
-    preferredRun :: ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
-    preferredRun a b = if runRank a >= runRank b then a else b
-      where
-        runRank s = (s.status == ReconSummary.COMPLETED, s.createdAt)
-
-    -- Match rate over decided entries, as the runner computes it per chunk.
-    combineSummaries :: [ReconSummary.ReconciliationSummary] -> API.ReconciliationSummary
-    combineSummaries ss =
-      let matched = sum (map (.matchedRecords) ss)
-          discrepancies = sum (map (.totalDiscrepancies) ss)
-          decided = matched + discrepancies
+    -- Same totals as the runner's buildSummary.
+    summariseEntries :: [ReconciliationEntry.ReconciliationEntry] -> API.ReconciliationSummary
+    summariseEntries es =
+      let matched = length (filter (\e -> e.reconStatus == ReconT.MATCHED) es)
+          decided = filter (\e -> e.reconStatus /= ReconT.AWAITING_SETTLEMENT) es
+          srcTotal = sum (map (.expectedAmount) es)
+          tgtTotal = sum (map (.actualAmount) es)
        in API.ReconciliationSummary
-            { totalDiscrepancies = discrepancies,
+            { totalRecords = Just (length es),
+              totalDiscrepancies = length decided - matched,
               matchedRecords = matched,
               matchRate =
-                if decided > 0
-                  then show ((fromIntegral matched * 100 / fromIntegral decided) :: Double) <> "%"
-                  else "0%",
-              sourceTotal = sum (map (.sourceTotal) ss),
-              targetTotal = sum (map (.targetTotal) ss),
-              varianceAmount = sum (map (.varianceAmount) ss),
-              disputeAmountTotal = sum (map (.disputeAmountTotal) ss)
+                if null decided
+                  then "0%"
+                  else show ((fromIntegral matched * 100 / fromIntegral (length decided)) :: Double) <> "%",
+              sourceTotal = srcTotal,
+              targetTotal = tgtTotal,
+              varianceAmount = srcTotal - tgtTotal,
+              disputeAmountTotal = sum (map (\e -> abs e.variance) decided)
             }
 
     toReconEntry :: ReconT.ReconciliationSpec -> ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
