@@ -29,6 +29,7 @@ imports:
   TicketPlaceDef: Domain.Types.EventManagement
   Rule: SharedLogic.TicketRule.Core
   ActionType: SharedLogic.TicketRule.Core
+  TicketPlaceGroup: Domain.Types.TicketPlaceGroup
 
 TicketPlace:
   tableName: ticket_place
@@ -68,10 +69,12 @@ TicketPlace:
     isClosed: Bool
     assignTicketToBpp: Bool
     enforcedAsSubPlace: Bool
+    geomGeoJson: Maybe Text
+    groupId: Maybe (Id TicketPlaceGroup)
 
   types:
     PlaceType:
-      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other"
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other,Parking"
     PlaceStatus:
       enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
     CustomTab:
@@ -171,6 +174,31 @@ TicketPlace:
       kvFunction: updateOneWithKV
       params: [recommend]
       where: id
+    findAllByGroupId:
+      kvFunction: findAllWithKV
+      where: groupId
+
+TicketPlaceGroup:
+  tableName: ticket_place_group
+
+  fields:
+    id: Id TicketPlaceGroup
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    geomGeoJson: Maybe Text
+    isActive: Bool
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
 
 TicketService:
   tableName: ticket_service
@@ -194,7 +222,12 @@ TicketService:
     maxSelection: Maybe Int
     note: Maybe Text
     priority: Maybe Int
+    bookingMode: BookingMode
+    maxDurationMinutes: Maybe Int
+    durationTariff: Maybe Value
   types:
+    BookingMode:
+      enum: "DayVisit,TimeWindow"
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay,ValidityDays Kernel.Prelude.Int"
     OperationalDate:
@@ -206,6 +239,7 @@ TicketService:
     serviceDetails: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
+    bookingMode: Maybe BookingMode
 
   beamFields:
     operationalDate:
@@ -216,17 +250,20 @@ TicketService:
     operationalDates: text[]
     serviceDetails: json
     rules: json
+    durationTariff: json
   fromTType:
     operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
     serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
+    bookingMode: fromMaybe Domain.Types.TicketService.DayVisit bookingMode|E
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
     operationalEndDate: operationalDate <&> (.eneDate)|E
     serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
+    bookingMode: Kernel.Prelude.Just bookingMode|E
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
@@ -234,6 +271,7 @@ TicketService:
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
     isClosed: "false"
+    bookingMode: "'DayVisit'"
 
   queries:
     findById:
@@ -716,10 +754,16 @@ TicketBookingService:
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     assignmentId: Maybe Text
+    startTime: Maybe UTCTime
+    vehicleNumber: Maybe Text
+    parentBookingServiceId: Maybe (Id TicketBookingService)
 
   constraints:
     shortId: SecondaryKey
     visitDate: "!SecondaryKey"
+    vehicleNumber: "!SecondaryKey"
+    ticketServiceId: "!SecondaryKey" # capacity check must see unpaid holds still in Redis
+    ticketBookingId: "!SecondaryKey" # payment status update must reach rows not yet drained
 
   beamType:
     vendorSplitDetails: Maybe Value

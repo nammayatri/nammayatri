@@ -1,0 +1,20 @@
+CREATE TABLE atlas_app.occupancy_alert ();
+
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN acknowledged_by text ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN category text NOT NULL default 'Unpaid';
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN detected_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN detection_source_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN external_alert_id text ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN grace_until timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN resolution text ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN resolved_at timestamp with time zone ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN status text NOT NULL default 'Pending';
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN ticket_place_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN unpaid_estimate integer NOT NULL default 1;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN violation_id character varying(36) ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.occupancy_alert ADD PRIMARY KEY ( id);

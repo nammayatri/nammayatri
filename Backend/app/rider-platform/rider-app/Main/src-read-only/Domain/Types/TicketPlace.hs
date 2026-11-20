@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.TicketPlaceGroup
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified SharedLogic.TicketRule.Core
@@ -22,6 +23,8 @@ data TicketPlace = TicketPlace
     enforcedAsSubPlace :: Kernel.Prelude.Bool,
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
+    geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    groupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup),
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     isClosed :: Kernel.Prelude.Bool,
@@ -74,6 +77,7 @@ data PlaceType
   | ReligiousSite
   | Boating
   | Other
+  | Parking
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Fee)

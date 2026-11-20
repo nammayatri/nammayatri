@@ -238,7 +238,10 @@ data TicketBookingServicePeopleCategoryCancelReq = TicketBookingServicePeopleCat
 data TicketBookingServicesReq = TicketBookingServicesReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     categories :: [TicketBookingCategoryReq],
-    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
+    durationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

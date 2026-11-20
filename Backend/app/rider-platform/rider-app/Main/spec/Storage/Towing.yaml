@@ -1,0 +1,195 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TicketPlace: Domain.Types.TicketPlace
+  VehicleViolation: Domain.Types.VehicleViolation
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  TowingStatus: Domain.Types.TowingRequest
+  TowingRequest: Domain.Types.TowingRequest
+  TowingVehicle: Domain.Types.TowingVehicle
+
+TowingRequest:
+  tableName: towing_request
+
+  fields:
+    id: Id TowingRequest
+    merchantOperatingCityId: Id MerchantOperatingCity
+    violationId: Id VehicleViolation
+    requestNumber: Text
+    agencyEntityId: Text # dashboard entity (towing agency)
+    agentId: Maybe Text # dashboard person (towing agent)
+    towingVehicleId: Maybe (Id TowingVehicle)
+    status: TowingStatus
+    priority: TowingPriority
+    vehicleNumber: Text
+    vehicleType: Maybe Text
+    ticketPlaceId: Maybe (Id TicketPlace)
+    pickupLat: Maybe Double
+    pickupLon: Maybe Double
+    pickupAddress: Maybe Text
+    dropLat: Maybe Double
+    dropLon: Maybe Double
+    dropAddress: Maybe Text
+    dropFacilityName: Maybe Text
+    notes: Maybe Text
+    towingFee: HighPrecMoney
+    parkingFine: HighPrecMoney
+    storageFeePerDay: HighPrecMoney
+    totalDaysInYard: Int
+    totalFee: HighPrecMoney
+    currency: Maybe Currency
+    paymentStatus: TowingPaymentStatus
+    paymentOrderId: Maybe (Id PaymentOrder)
+    paymentMethod: Maybe Text
+    paymentReceivedBy: Maybe Text
+    paymentReceivedAt: Maybe UTCTime
+    receiptNumber: Maybe Text
+    releasedToName: Maybe Text
+    releasedToPhone: Maybe (EncryptedHashedField e Text)
+    releasedToIdType: Maybe Text
+    releasedToIdNumber: Maybe (EncryptedHashedField e Text)
+    releasedToRelation: Maybe Text
+    evidence: "[TowingEvidence]"
+    route: Maybe Value # GPS points saved once at the end; live GPS stays in Redis
+    cancelledReason: Maybe Text
+
+  types:
+    TowingStatus:
+      enum: "Pending,Accepted,AgentAssigned,EnRoutePickup,ArrivedPickup,VehicleLoaded,EnRouteDrop,ArrivedDrop,VehicleUnloaded,InYard,ReleaseRequested,ReleasePaymentPending,ReleasePaymentReceived,VehicleReleased,Completed,Cancelled"
+    TowingPriority:
+      enum: "Normal,Urgent"
+    TowingPaymentStatus:
+      enum: "Unpaid,Partial,Paid,Waived"
+    TowingEvidence:
+      stage: Text
+      mediaFileId: Id MediaFile
+      caption: Maybe Text
+      lat: Double
+      lon: Double
+      accuracyMeters: Maybe Double
+      deviceInfo: Maybe Text
+      capturedBy: Text
+      capturedByRole: Text
+      capturedAt: UTCTime
+      derive: "Eq"
+
+  beamFields:
+    releasedToPhone:
+      releasedToPhoneEncrypted: Maybe Text
+      releasedToPhoneHash: Maybe DbHash
+    releasedToIdNumber:
+      releasedToIdNumberEncrypted: Maybe Text
+      releasedToIdNumberHash: Maybe DbHash
+
+  beamType:
+    evidence: Value
+
+  sqlType:
+    evidence: json
+    route: json
+
+  fromTType:
+    releasedToPhone: EncryptedHashed <$> (Encrypted <$> releasedToPhoneEncrypted) <*> releasedToPhoneHash|E
+    releasedToIdNumber: EncryptedHashed <$> (Encrypted <$> releasedToIdNumberEncrypted) <*> releasedToIdNumberHash|E
+    evidence: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> x; Data.Aeson.Error _ -> []) evidence|E
+
+  toTType:
+    releasedToPhoneEncrypted: (releasedToPhone <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    releasedToPhoneHash: (releasedToPhone <&> Kernel.External.Encryption.hash)|E
+    releasedToIdNumberEncrypted: (releasedToIdNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)|E
+    releasedToIdNumberHash: (releasedToIdNumber <&> Kernel.External.Encryption.hash)|E
+    evidence: Data.Aeson.toJSON evidence|E
+
+  constraints:
+    id: PrimaryKey
+    violationId: "!SecondaryKey"
+    agencyEntityId: "!SecondaryKey"
+    vehicleNumber: "!SecondaryKey"
+
+  default:
+    status: "'Pending'"
+    priority: "'Normal'"
+    paymentStatus: "'Unpaid'"
+    towingFee: "0"
+    parkingFine: "0"
+    storageFeePerDay: "0"
+    totalDaysInYard: "0"
+    totalFee: "0"
+    evidence: "'[]'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByViolationId:
+      kvFunction: findAllWithKV
+      where: violationId
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+TowingAuditLog:
+  tableName: towing_audit_log
+
+  fields:
+    id: Id TowingAuditLog
+    merchantOperatingCityId: Id MerchantOperatingCity
+    towingRequestId: Id TowingRequest
+    action: Text
+    previousStatus: Maybe TowingStatus
+    newStatus: Maybe TowingStatus
+    performedBy: Text # dashboard person id
+    performedByName: Text # copied so the record survives account deletion
+    performedByRole: Text
+    ipAddress: Maybe Text
+    userAgent: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    metadata: Maybe Value
+
+  sqlType:
+    metadata: json
+
+  constraints:
+    id: PrimaryKey
+    towingRequestId: "!SecondaryKey"
+
+  # append-only: no update or delete queries
+  queries:
+    findAllByTowingRequestId:
+      kvFunction: findAllWithKV
+      where: towingRequestId
+
+TowingVehicle:
+  tableName: towing_vehicle
+
+  fields:
+    id: Id TowingVehicle
+    merchantOperatingCityId: Id MerchantOperatingCity
+    agencyEntityId: Text # dashboard entity (towing agency)
+    vehicleNumber: Text
+    vehicleType: Text
+    isActive: Bool
+
+  constraints:
+    id: PrimaryKey
+    agencyEntityId: "!SecondaryKey"
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByAgencyEntityId:
+      kvFunction: findAllWithKV
+      where: agencyEntityId

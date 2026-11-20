@@ -41,3 +41,34 @@ findByVisitDateAndStatusAndServiceIdAndBtype visitDate status (Id.Id ticketServi
           Se.Is BeamR.expiryDate $ Se.GreaterThanOrEq expiryDate
         ]
     ]
+
+-- | TimeWindow rows (not extensions) of a service that may hold capacity, by start date.
+findTimeWindowCandidatesByServiceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id.Id DTS.TicketService ->
+  [Data.Time.Calendar.Day] ->
+  m [DTBS.TicketBookingService]
+-- Null-checks are filtered here, not in the query: KV cannot look up a secondary key by Nothing.
+findTimeWindowCandidatesByServiceId (Id.Id ticketServiceId) visitDates =
+  filter (\r -> isNothing r.parentBookingServiceId && isJust r.startTime)
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is BeamR.visitDate $ Se.In (Just <$> visitDates),
+            Se.Is BeamR.ticketServiceId $ Se.Eq ticketServiceId,
+            Se.Is BeamR.status $ Se.In [DTBS.Pending, DTBS.Confirmed, DTBS.Verified]
+          ]
+      ]
+
+-- | Paid TimeWindow rows (not extensions) for a plate, in any place.
+findPaidTimeWindowByVehicleNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  m [DTBS.TicketBookingService]
+findPaidTimeWindowByVehicleNumber vehicleNumber =
+  filter (isNothing . (.parentBookingServiceId))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is BeamR.vehicleNumber $ Se.Eq (Just vehicleNumber),
+            Se.Is BeamR.status $ Se.In [DTBS.Confirmed, DTBS.Verified]
+          ]
+      ]

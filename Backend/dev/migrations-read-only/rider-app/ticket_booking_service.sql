@@ -42,3 +42,10 @@ ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN vendor_split_details jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN assignment_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN vehicle_number text ;
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN start_time timestamp with time zone ;
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN parent_booking_service_id character varying(36) ;

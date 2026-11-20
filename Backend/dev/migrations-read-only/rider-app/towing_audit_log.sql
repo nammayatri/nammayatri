@@ -1,0 +1,20 @@
+CREATE TABLE atlas_app.towing_audit_log ();
+
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN action text NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN ip_address text ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN lat double precision ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN lon double precision ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN metadata json ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN new_status text ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN performed_by text NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN performed_by_name text NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN performed_by_role text NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN previous_status text ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN towing_request_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN user_agent text ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.towing_audit_log ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.towing_audit_log ADD PRIMARY KEY ( id);

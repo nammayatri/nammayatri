@@ -16,10 +16,13 @@ import Tools.Beam.UtilsTH
 data TicketServiceT f = TicketServiceT
   { allowCancellation :: B.C f Kernel.Prelude.Bool,
     allowFutureBooking :: B.C f Kernel.Prelude.Bool,
+    bookingMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.TicketService.BookingMode),
     businessHours :: B.C f [Kernel.Prelude.Text],
+    durationTariff :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maxDurationMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxSelection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxVerification :: B.C f Kernel.Prelude.Int,
     note :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

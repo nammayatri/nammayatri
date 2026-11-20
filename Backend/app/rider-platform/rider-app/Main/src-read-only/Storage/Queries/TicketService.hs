@@ -47,9 +47,12 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
   updateWithKV
     [ Se.Set Beam.allowCancellation allowCancellation,
       Se.Set Beam.allowFutureBooking allowFutureBooking,
+      Se.Set Beam.bookingMode (Kernel.Prelude.Just bookingMode),
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.durationTariff durationTariff,
       Se.Set Beam.expiry expiry,
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
+      Se.Set Beam.maxDurationMinutes maxDurationMinutes,
       Se.Set Beam.maxSelection maxSelection,
       Se.Set Beam.maxVerification maxVerification,
       Se.Set Beam.note note,

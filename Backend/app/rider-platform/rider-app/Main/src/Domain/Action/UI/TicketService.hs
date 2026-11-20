@@ -6,6 +6,7 @@ import API.Types.UI.TicketService
 import qualified Crypto.Hash as Hash
 import qualified Dashboard.Common as Common
 import Data.Aeson (encode)
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Data.List (nub, partition)
@@ -63,6 +64,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.TicketRule.Apply as TicketRule
 import qualified SharedLogic.TicketRule.Core
 import SharedLogic.TicketUtils
+import qualified SharedLogic.TimeWindowBooking as TWB
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -304,30 +306,33 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
+  (timeWindowServiceIds, requestedUnitsCount) <- splitTimeWindowServices req
+
   -- Redis blocking starts here --
   -- setup if not done
-  let requestedUnitsCount = calculateTotalRequestedUnits req
   forM_ (fst <$> requestedUnitsCount) (\svcCategoryId -> setupBlockMechanismNx svcCategoryId req.visitDate)
 
   -- try blocking seats for all and release if failed
   res <- blockSeats personId_ req.visitDate requestedUnitsCount
   mbBlockExpiryTime <- case res of BlockFailed msg -> throwError (InvalidRequest msg); BlockSuccess expTime -> return expTime
 
-  ticketBookingId <- generateGUID
-  ticketBookingServicesWithPeopleTicketQuantity <- mapM (\service -> createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate service merchantId) req.services
-  let (ticketBookingServices, peopleTicketQuantityActions) = unzip ticketBookingServicesWithPeopleTicketQuantity
-  peopleTicketQuantityLists <- sequence peopleTicketQuantityActions
-  let peopleTicketQuantity = concat peopleTicketQuantityLists
-  amount <- withCurrencyCheckingList (ticketBookingServices <&> (.amount)) $ \mbCurrency as ->
-    mkPrice mbCurrency $ sum as
+  (ticketBooking, amount, vendorSplits) <- withTimeWindowLocks timeWindowServiceIds $ do
+    ticketBookingId <- generateGUID
+    ticketBookingServicesWithPeopleTicketQuantity <- mapM (\service -> createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate service merchantId) req.services
+    let (ticketBookingServices, peopleTicketQuantityActions) = unzip ticketBookingServicesWithPeopleTicketQuantity
+    peopleTicketQuantityLists <- sequence peopleTicketQuantityActions
+    let peopleTicketQuantity = concat peopleTicketQuantityLists
+    amount <- withCurrencyCheckingList (ticketBookingServices <&> (.amount)) $ \mbCurrency as ->
+      mkPrice mbCurrency $ sum as
 
-  let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
-      vendorSplits = accumulateVendorSplits (ticketBookingServices <&> (.vendorSplitDetails))
+    let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
+        vendorSplits = accumulateVendorSplits (ticketBookingServices <&> (.vendorSplitDetails))
 
-  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId placeId req.ticketSubPlaceId amount bookedSeats vendorSplits mbBlockExpiryTime (Just peopleTicketQuantity) req.visitDate (Just DTTB.ONLINE) merchantId Nothing
+    ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId placeId req.ticketSubPlaceId amount bookedSeats vendorSplits mbBlockExpiryTime (Just peopleTicketQuantity) req.visitDate (Just DTTB.ONLINE) merchantId Nothing
 
-  QTicketBookingService.createMany ticketBookingServices
-  QTB.create ticketBooking
+    QTicketBookingService.createMany ticketBookingServices
+    QTB.create ticketBooking
+    pure (ticketBooking, amount, vendorSplits)
 
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -378,6 +383,72 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
 
 -- Helper functions for ticket booking operations
 
+-- TimeWindow services skip the per-day seat pool; their capacity is checked against overlapping bookings in resolveTimeWindow.
+-- Returns the TimeWindow service ids (sorted, for lock order) and the day-pool units for the other services.
+splitTimeWindowServices :: API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow ([Kernel.Types.Id.Id Domain.Types.TicketService.TicketService], [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)])
+splitTimeWindowServices req = do
+  services <- forM req.services $ \s -> QTicketService.findById s.serviceId >>= fromMaybeM (TicketServiceNotFound s.serviceId.getId)
+  let timeWindowServiceIds = sort [s.id | s <- services, s.bookingMode == Domain.Types.TicketService.TimeWindow]
+      timeWindowCategoryIds = [c.categoryId | s <- req.services, s.serviceId `elem` timeWindowServiceIds, c <- s.categories]
+  pure (timeWindowServiceIds, filter ((`notElem` timeWindowCategoryIds) . fst) (calculateTotalRequestedUnits req))
+
+-- Serialises check-then-insert per TimeWindow service so two payers can't both take the last space.
+-- Ids are sorted by the caller so concurrent multi-service requests lock in the same order.
+withTimeWindowLocks :: [Kernel.Types.Id.Id Domain.Types.TicketService.TicketService] -> Environment.Flow a -> Environment.Flow a
+withTimeWindowLocks serviceIds action = foldr (\serviceId -> Redis.withWaitAndLockRedis ("TimeWindowBooking:Lock:" <> serviceId.getId) 10 50000) action serviceIds
+
+data TimeWindowBooking = TimeWindowBooking
+  { windowStart :: Kernel.Prelude.UTCTime,
+    windowEnd :: Kernel.Prelude.UTCTime,
+    windowPlate :: Text,
+    windowFee :: HighPrecMoney
+  }
+
+-- Booking rules for a TimeWindow (parking) service: start and duration, plate overlap, capacity, price.
+resolveTimeWindow ::
+  Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity ->
+  Data.Time.Calendar.Day ->
+  Domain.Types.TicketService.TicketService ->
+  API.Types.UI.TicketService.TicketBookingServicesReq ->
+  Kernel.Prelude.UTCTime ->
+  Environment.Flow TimeWindowBooking
+resolveTimeWindow merchantOperatingCityId visitDate ticketService req now = do
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  plate <- T.toUpper . T.strip <$> fromMaybeM (InvalidRequest "vehicleNumber is required") req.vehicleNumber
+  when (T.null plate) $ throwError $ InvalidRequest "vehicleNumber is required"
+  durationMinutes <- fromMaybeM (InvalidRequest "durationMinutes is required") req.durationMinutes
+  categoryId <- case req.categories of
+    [category] | [peopleCategory] <- category.peopleCategories, peopleCategory.numberOfUnits == 1 -> pure category.categoryId
+    _ -> throwError $ InvalidRequest "A time-window booking is for one vehicle: one category with one unit"
+  tariff <- case A.fromJSON <$> ticketService.durationTariff of
+    Just (A.Success t) -> pure t
+    Just (A.Error e) -> throwError $ InternalError $ "Invalid durationTariff on service " <> ticketService.id.getId <> ": " <> T.pack e
+    Nothing -> throwError $ InvalidRequest "No tariff set for this service"
+  let tz = riderConfig.timeDiffFromUtc
+      maxMinutes = TWB.effectiveMaxMinutes ticketService.maxDurationMinutes
+  start <- either (throwError . InvalidRequest) pure $ TWB.resolveBookingStart tz (TWB.advanceBookingMaxDays riderConfig.parkingConfig) now req.startTime
+  let end = addUTCTime (fromIntegral durationMinutes * 60) start
+  either (throwError . InvalidRequest) pure $ TWB.checkBookingWindow maxMinutes start end
+  unless (TWB.localDay tz start == visitDate) $ throwError $ InvalidRequest "visitDate must be the booking's start date"
+
+  let window r = (,) <$> r.startTime <*> r.expiryDate
+  plateBookings <- QTicketBookingService.findPaidTimeWindowByVehicleNumber plate
+  when (any (TWB.overlaps start end) (mapMaybe window plateBookings)) $
+    throwError $ InvalidRequest "This vehicle already has a booking for the selected time"
+
+  serviceCategory <- QSC.findById categoryId >>= fromMaybeM (ServiceCategoryNotFound categoryId.getId)
+  whenJust serviceCategory.availableSeats $ \capacity -> do
+    -- shortcut: an unpaid booking holds its space for 5 minutes only; a payment landing later still confirms, so a late payer can overbook. Re-check capacity on confirmation if that shows up.
+    let holdCutoff = addUTCTime (-300) now
+        holdsCapacity r = r.status /= DTB.Pending || r.createdAt > holdCutoff
+        lookbackDays = (maxMinutes + 1439) `div` 1440
+        startDates = [addDays (negate (fromIntegral lookbackDays)) visitDate .. TWB.localDay tz end]
+    candidates <- QTicketBookingService.findTimeWindowCandidatesByServiceId ticketService.id startDates
+    when (TWB.peakOverlap start end (mapMaybe window (filter holdsCapacity candidates)) >= capacity) $
+      throwError $ InvalidRequest "Zone is full for the selected time"
+
+  pure TimeWindowBooking {windowStart = start, windowEnd = end, windowPlate = plate, windowFee = TWB.calculateFee tz tariff start end}
+
 -- Accumulate vendor splits from multiple sources
 accumulateVendorSplits :: [Maybe [Payment.VendorSplitDetails]] -> Maybe [Payment.VendorSplitDetails]
 accumulateVendorSplits mbSplits = mbSplits & catMaybes & concat & Payment.groupSumVendorSplits & \l -> bool (pure l) (Nothing) (null l)
@@ -415,15 +486,16 @@ createTicketBookingPeopleCategory ::
   Data.Time.Calendar.Day ->
   API.Types.UI.TicketService.TicketBookingPeopleCategoryReq ->
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Maybe HighPrecMoney -> -- TimeWindow services: per-booking price from the duration tariff
   Environment.Flow (DTB.TicketBookingPeopleCategory, DTTB.PeopleTicketQuantity)
-createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq merchantId = do
+createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq merchantId mbUnitPrice = do
   id <- generateGUID
   let tPCatId = ticketServicePCReq.peopleCategoryId
   context <- TicketRule.getCurrentContext 330 (Just visitDate) Nothing
   tServicePCat' <- QPC.findServicePeopleCategoryById tPCatId visitDate >>= fromMaybeM (PeopleCategoryNotFound tPCatId.getId)
   let tServicePCat = TicketRule.processEntity context tServicePCat'
   let numberOfUnits = ticketServicePCReq.numberOfUnits
-      pricePerUnit = tServicePCat.pricePerUnit
+      pricePerUnit = maybe tServicePCat.pricePerUnit (mkPrice (Just tServicePCat.pricePerUnit.currency)) mbUnitPrice
   return $
     ( DTB.TicketBookingPeopleCategory
         { id,
@@ -516,8 +588,11 @@ createTicketBookingService merchantOperatingCityId ticketBookingId visitDate tic
       when (UTCTime visitDate (timeOfDayToTime closingTime) < now) $ throwError $ InvalidRequest "Booking is Closed Now"
     Nothing -> return ()
   when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
+  timeWindow <- case ticketService.bookingMode of
+    Domain.Types.TicketService.DayVisit -> pure Nothing
+    Domain.Types.TicketService.TimeWindow -> Just <$> resolveTimeWindow merchantOperatingCityId visitDate ticketService ticketServicesReq now
 
-  tBookingSCatsWithPeopleTicketQuantity <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour merchantId) categories
+  tBookingSCatsWithPeopleTicketQuantity <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour merchantId ((.windowFee) <$> timeWindow)) categories
   let (tBookingSCats, peopleTicketQuantityActions) = unzip tBookingSCatsWithPeopleTicketQuantity
   peopleTicketQuantityLists <- sequence peopleTicketQuantityActions
   let peopleTicketQuantity = concat peopleTicketQuantityLists
@@ -537,7 +612,7 @@ createTicketBookingService merchantOperatingCityId ticketBookingId visitDate tic
           bHourId = Just businessHour.id,
           status = DTB.Pending,
           verificationCount = 0,
-          expiryDate = Just expiry,
+          expiryDate = Just $ maybe expiry (.windowEnd) timeWindow,
           merchantId = Just merchantId,
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
@@ -546,7 +621,10 @@ createTicketBookingService merchantOperatingCityId ticketBookingId visitDate tic
           bookedSeats,
           cancelledSeats = Nothing,
           vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingSCats),
-          assignmentId = Nothing
+          assignmentId = Nothing,
+          startTime = (.windowStart) <$> timeWindow,
+          vehicleNumber = (.windowPlate) <$> timeWindow,
+          parentBookingServiceId = Nothing
         },
       pure peopleTicketQuantity
     )
@@ -558,9 +636,10 @@ createTicketBookingServiceCategory ::
   Data.Time.Calendar.Day ->
   Domain.Types.BusinessHour.BusinessHour ->
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Maybe HighPrecMoney ->
   API.Types.UI.TicketService.TicketBookingCategoryReq ->
   Environment.Flow (DTB.TicketBookingServiceCategory, Environment.Flow [DTTB.PeopleTicketQuantity])
-createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour merchantId ticketServiceCReq = do
+createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour merchantId mbUnitPrice ticketServiceCReq = do
   id <- generateGUID
   now <- getCurrentTime
   context <- TicketRule.getCurrentContext 330 (Just visitDate) Nothing
@@ -569,7 +648,7 @@ createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceI
   let serviceCatId = ticketServiceCReq.categoryId
   tBookingSC' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
   let tBookingSC = TicketRule.processEntity context tBookingSC'
-  tBookingPCatsWithPeopleTicketQuantity <- mapM (\pcReq -> createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate pcReq merchantId) ticketServiceCReq.peopleCategories
+  tBookingPCatsWithPeopleTicketQuantity <- mapM (\pcReq -> createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate pcReq merchantId mbUnitPrice) ticketServiceCReq.peopleCategories
   let (tBookingPCats, peopleTicketQuantityList) = unzip tBookingPCatsWithPeopleTicketQuantity
   (amount, bookedSeats) <- calculateAmountAndSeats tBookingPCats
   let groupedPeopleTicketQuantity = peopleTicketQuantityList
@@ -1446,7 +1525,7 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
   -- Setup seat management and block seats
-  let requestedUnitsCount = calculateTotalRequestedUnits req
+  (timeWindowServiceIds, requestedUnitsCount) <- splitTimeWindowServices req
   forM_ (fst <$> requestedUnitsCount) (\svcCategoryId -> setupBlockMechanismNx svcCategoryId req.visitDate)
 
   blockResult <- blockSeats personId req.visitDate requestedUnitsCount
@@ -1454,19 +1533,21 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
     BlockFailed msg -> throwError (InvalidRequest msg)
     BlockSuccess expTime -> return expTime
 
-  -- Create booking components
-  ticketBookingId <- generateGUID
-  (ticketBookingServices, peopleTicketQuantity) <- createBookingServices merchantOpCity.id ticketBookingId req merchantId
+  (ticketBooking, ticketBookingServices) <- withTimeWindowLocks timeWindowServiceIds $ do
+    -- Create booking components
+    ticketBookingId <- generateGUID
+    (ticketBookingServices, peopleTicketQuantity) <- createBookingServices merchantOpCity.id ticketBookingId req merchantId
 
-  -- Calculate totals
-  (amount, bookedSeats, vendorSplits) <- calculateBookingTotals ticketBookingServices
+    -- Calculate totals
+    (amount, bookedSeats, vendorSplits) <- calculateBookingTotals ticketBookingServices
 
-  -- Create the booking with CASH payment method and PENDING status (will be updated after seat locking)
-  ticketBooking <- createTicketBooking personId merchantOpCity.id ticketBookingId placeId req.ticketSubPlaceId amount bookedSeats vendorSplits mbBlockExpiryTime (Just peopleTicketQuantity) req.visitDate (Just DTTB.CASH) merchantId mbRequestorId
+    -- Create the booking with CASH payment method and PENDING status (will be updated after seat locking)
+    ticketBooking <- createTicketBooking personId merchantOpCity.id ticketBookingId placeId req.ticketSubPlaceId amount bookedSeats vendorSplits mbBlockExpiryTime (Just peopleTicketQuantity) req.visitDate (Just DTTB.CASH) merchantId mbRequestorId
 
-  -- Persist booking and services with PENDING status initially
-  QTicketBookingService.createMany ticketBookingServices
-  QTB.create ticketBooking
+    -- Persist booking and services with PENDING status initially
+    QTicketBookingService.createMany ticketBookingServices
+    QTB.create ticketBooking
+    pure (ticketBooking, ticketBookingServices)
 
   -- Handle BPP fleet assignment if required
   handleFleetAssignmentForCash placeId ticketBookingServices ticketBooking personId merchantId req

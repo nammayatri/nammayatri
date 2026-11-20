@@ -104,6 +104,9 @@ types:
     serviceId: Id TicketService
     businessHourId: Id BusinessHour
     categories: [TicketBookingCategoryReq]
+    startTime: Maybe UTCTime # TimeWindow services only; Nothing = now
+    durationMinutes: Maybe Int # TimeWindow services only
+    vehicleNumber: Maybe Text # TimeWindow services only
 
   TicketBookingCategoryReq:
     categoryId: Id ServiceCategory

@@ -328,7 +328,9 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.startDate = placeDetails.startDate,
         DTicketPlace.venue = placeDetails.venue,
         DTicketPlace.assignTicketToBpp = fromMaybe False placeDetails.assignTicketToBpp,
-        DTicketPlace.enforcedAsSubPlace = False
+        DTicketPlace.enforcedAsSubPlace = False,
+        DTicketPlace.geomGeoJson = Nothing,
+        DTicketPlace.groupId = Nothing
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService
@@ -376,7 +378,10 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
         DTicketService.rules = Nothing,
         DTicketService.isClosed = False,
         DTicketService.serviceDetails = serviceDetails.serviceDetails,
-        DTicketService.maxSelection = serviceDetails.maxSelection
+        DTicketService.maxSelection = serviceDetails.maxSelection,
+        DTicketService.bookingMode = DTicketService.DayVisit,
+        DTicketService.maxDurationMinutes = Nothing,
+        DTicketService.durationTariff = Nothing
       }
 
 updateBusinessHour :: DBusinessHour.BusinessHour -> BusinessHourDetails -> DBusinessHour.BusinessHour

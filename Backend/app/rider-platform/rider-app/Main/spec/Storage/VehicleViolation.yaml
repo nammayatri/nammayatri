@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  TicketPlace: Domain.Types.TicketPlace
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+
+VehicleViolation:
+  tableName: vehicle_violation
+
+  fields:
+    id: Id VehicleViolation
+    merchantOperatingCityId: Id MerchantOperatingCity
+    ticketPlaceId: Maybe (Id TicketPlace) # Nothing = reported outside any place
+    vehicleNumber: Text
+    violationType: ViolationType
+    status: ViolationStatus
+    fineAmount: Maybe HighPrecMoney
+    currency: Maybe Currency
+    mediaFileIds: "[Id MediaFile]"
+    lat: Maybe Double
+    lon: Maybe Double
+    reportedBy: Maybe Text # dashboard person id (staff / marshal)
+    reporterPersonId: Maybe (Id Person) # app user (citizen report)
+    approvedBy: Maybe Text # dashboard person id
+    approvedAt: Maybe UTCTime
+    rejectionReason: Maybe Text
+
+  types:
+    ViolationType:
+      enum: "Warning,Clamping,Towing"
+    ViolationStatus:
+      enum: "Pending,Approved,Rejected"
+
+  constraints:
+    id: PrimaryKey
+    vehicleNumber: "!SecondaryKey"
+
+  default:
+    status: "'Pending'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateApproval:
+      kvFunction: updateOneWithKV
+      params: [status, approvedBy, approvedAt, rejectionReason, updatedAt]
+      where: id
