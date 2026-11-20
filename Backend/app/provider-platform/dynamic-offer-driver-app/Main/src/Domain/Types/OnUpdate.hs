@@ -50,6 +50,7 @@ data OnUpdateBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
+  | RideFareUpdatedBuildReq DRideFareUpdatedReq
   | DriverNearPickupBuildReq DDriverNearPickupReq
   | ReturnTripStartedBuildReq DReturnTripStartedReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
@@ -146,6 +147,17 @@ data DAddBaggageReq = DAddBaggageReq
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE
   deriving (Show)
+
+-- | Collect-payment: the fare the rider would pay if the ride ended now. Sent while the ride is
+-- still in progress; the ride is not ended. The BAP shows it in place of the estimate.
+data DRideFareUpdatedReq = DRideFareUpdatedReq
+  { bookingDetails :: BookingDetails,
+    -- | Must equal the fare sent as quote.price (it is put on bookingDetails.ride.fare for the quote builder only, never persisted).
+    fareParams :: DFParams.FareParameters,
+    -- | When the fare was computed; the BAP drops an update older than the one it already has.
+    computedAt :: UTCTime,
+    tollPendingConfirmation :: Bool
+  }
 
 data DDriverReachedDestinationReq = DDriverReachedDestinationReq
   { bookingDetails :: BookingDetails,

@@ -85,6 +85,20 @@ updateCancellationQuoteIfCancelled cancellationFeeIfCancelled cancellationFeeTax
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCollectedFare ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> (Domain.Types.Ride.RideStatus -> m ()))))
+updateCollectedFare collectedFare collectedChargeableDistance collectedFareAt id status = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.collectedFare collectedFare,
+      Se.Set Beam.collectedChargeableDistance collectedChargeableDistance,
+      Se.Set Beam.collectedFareAt collectedFareAt,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.status $ Se.Eq status]]
+
 updateCommission :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

@@ -25,7 +25,9 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''FareBreakupEntity)
 
 data BookingFareBreakupRes = BookingFareBreakupRes
   { fareBreakup :: [FareBreakupAPIEntity],
-    estimatedFareBreakup :: [FareBreakupAPIEntity]
+    estimatedFareBreakup :: [FareBreakupAPIEntity],
+    -- | Collect payment: breakup of the mid-ride fare the driver asked for; [] unless the ride is in progress.
+    collectedFareBreakup :: [FareBreakupAPIEntity]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -51,10 +53,12 @@ getBookingFareBreakup _ entityId mbEntityType = do
       QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   mbRide <- QRide.findByRBId booking.id
   breakdown <- SFareBreakdown.buildFareBreakdown booking mbRide
+  collectedFareBreakups <- SFareBreakdown.getCollectedFareRows mbRide
   let fareBreakups = breakdown.finalRows
       estimatedFareBreakups = breakdown.estimateRows
   pure
     BookingFareBreakupRes
       { fareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
-        estimatedFareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups
+        estimatedFareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups,
+        collectedFareBreakup = mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) collectedFareBreakups
       }

@@ -3,6 +3,7 @@ module SharedLogic.FareBreakdown
     FareBreakdownItem (..),
     buildFareBreakdown,
     getRideFareRows,
+    getCollectedFareRows,
     withOfferTotals,
     mkFareBreakdown,
   )
@@ -16,6 +17,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -64,6 +66,19 @@ getRideFareRows breakdown ride =
   if not (null breakdown.finalRows) && all ((== DFareBreakup.RIDE) . (.entityType)) breakdown.finalRows
     then pure breakdown.finalRows
     else SFareBreakupInfo.getFareBreakupsWithFallback ride.id.getId DFareBreakup.RIDE (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE)
+
+-- | Collect payment: the breakup of the latest mid-ride fare snapshot (RIDE_FARE_UPDATED), only while the
+-- ride is in progress. Rides without a snapshot skip the read. After ride end this is [] and the final
+-- RIDE breakup (finalRows) is the one to show; the stored snapshot row is kept for disputes.
+getCollectedFareRows ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  Maybe DRide.Ride ->
+  m [DFareBreakup.FareBreakup]
+getCollectedFareRows = \case
+  Just ride
+    | ride.status == DRide.INPROGRESS && isJust ride.collectedFareAt ->
+      fromMaybe [] <$> SFareBreakupInfo.findFareBreakupsFromInfo ride.id.getId DFareBreakup.COLLECTED_FARE
+  _ -> pure []
 
 withOfferTotals ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

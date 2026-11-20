@@ -55,6 +55,9 @@ data Ride = Ride
     clientId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
+    collectedChargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    collectedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    collectedFareAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
@@ -194,12 +197,12 @@ data ScheduledAcceptanceMode
   | AssignedByFleetOwner
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))

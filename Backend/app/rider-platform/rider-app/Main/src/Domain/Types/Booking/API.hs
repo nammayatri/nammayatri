@@ -145,6 +145,9 @@ data BookingAPIEntity = BookingAPIEntity
     tripTerms :: [Text],
     estimatedFareBreakup :: [FareBreakupAPIEntity],
     fareBreakup :: [FareBreakupAPIEntity],
+    -- | Collect payment: breakup of the fare the driver asked for mid-ride (rideList's collectedFare).
+    -- Only while the ride is in progress; [] otherwise, fareBreakup has the final breakup after ride end.
+    collectedFareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: BookingAPIDetails,
     tripCategory :: Maybe TripCategory,
     vehicleCategory :: Maybe VehicleCategory.VehicleCategory,
@@ -428,6 +431,7 @@ makeBookingAPIEntity ::
   [DRide.Ride] ->
   [FareBreakup] ->
   [FareBreakup] ->
+  [FareBreakup] ->
   Maybe DExophone.Exophone ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
@@ -439,7 +443,7 @@ makeBookingAPIEntity ::
   [RideRefundInfo] ->
   Maybe RideCardInfo ->
   m BookingAPIEntity
-makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason refunds cardInfo = do
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups collectedFareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason refunds cardInfo = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   merchant <- CQM.findById booking.merchantId
   let isOnlinePayment = maybe False (.onlinePayment) merchant
@@ -479,6 +483,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         tripTerms = [],
         estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups,
         fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
+        collectedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) collectedFareBreakups,
         rideScheduledTime = booking.startTime,
         returnTime = booking.returnTime,
         bookingDetails,
@@ -779,6 +784,7 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   let mbActiveRide = (\r -> if r.status == DRide.CANCELLED then Nothing else Just r) =<< mbRide
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
   (fareBreakups, estimatedFareBreakups) <- if dontNeedFareBreakup then pure ([], []) else (\breakdown -> (breakdown.finalRows, breakdown.estimateRows)) <$> SFareBreakdown.buildFareBreakdown booking mbRide
+  collectedFareBreakups <- if dontNeedFareBreakup then pure [] else SFareBreakdown.getCollectedFareRows mbRide
   mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
@@ -802,7 +808,7 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
         refunds' <- if refundsEnabled then getOrderRefunds mbOrder else pure []
         cardInfo' <- getOrderCardInfo mbOrder
         pure (refunds', cardInfo')
-  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds cardInfo
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups collectedFareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds cardInfo
 
 makeRideRefundInfo :: DRefunds.Refunds -> RideRefundInfo
 makeRideRefundInfo DRefunds.Refunds {..} = RideRefundInfo {amount = refundAmount, reference = arn, ..}
@@ -968,6 +974,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) ride@DRide.Ride {..
         talkedWithDriver = fromMaybe False talkedWithDriver,
         isInsured = Just isInsured,
         tipAmount = mkPriceAPIEntity <$> tipAmount,
+        collectedFare = mkPriceAPIEntity <$> collectedFare,
         ..
       }
 

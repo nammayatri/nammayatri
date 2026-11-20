@@ -100,6 +100,7 @@ data BecknTagGroup
   | DEVICE_ID_INFO
   | DELIVERY
   | DRIVER_REACHED_DESTINATION_INFO
+  | RIDE_FARE_UPDATED_INFO
   | RETURN_TRIP_STARTED_INFO
   | ESTIMATED_END_TIME_RANGE
   | RIDE_DETAILS_INFO
@@ -149,6 +150,7 @@ instance CompleteTagGroup BecknTagGroup where
     FARE_PARAMETERS_IN_RATECARD_INFO -> (Just "Fare Parametes in RateCard information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
     DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
+    RIDE_FARE_UPDATED_INFO -> (Just "Ride Fare Updated Information", Nothing)
     RETURN_TRIP_STARTED_INFO -> (Just "Return Trip Started Information", Nothing)
     FEATURE_LIST -> (Just "Feature List", Nothing)
     DISABILITY_VIS -> (Just "Visual Disability Information", Nothing)
@@ -612,6 +614,8 @@ data BecknTag
   | INITIATED_AS
   | DRIVER_REACHED_DESTINATION
   | RETURN_TRIP_OTP
+  | FARE_COMPUTED_AT
+  | TOLL_PENDING_CONFIRMATION
   | RETURN_TRIP_STARTED_TIME
   | ESTIMATED_END_TIME_RANGE_START
   | ESTIMATED_END_TIME_RANGE_END
@@ -733,6 +737,8 @@ instance CompleteTag BecknTag where
     INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
     DRIVER_REACHED_DESTINATION -> (Just "Destination Reached Time", Nothing)
     RETURN_TRIP_OTP -> (Just "Return Trip OTP", Nothing)
+    FARE_COMPUTED_AT -> (Just "Time the mid-ride fare was computed", Nothing)
+    TOLL_PENDING_CONFIRMATION -> (Just "Toll in the mid-ride fare is not confirmed yet", Nothing)
     RETURN_TRIP_STARTED_TIME -> (Just "Return Trip Started Time", Nothing)
     DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
@@ -830,6 +836,8 @@ instance CompleteTag BecknTag where
     RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
     DRIVER_REACHED_DESTINATION -> DRIVER_REACHED_DESTINATION_INFO
     RETURN_TRIP_OTP -> DRIVER_REACHED_DESTINATION_INFO
+    FARE_COMPUTED_AT -> RIDE_FARE_UPDATED_INFO
+    TOLL_PENDING_CONFIRMATION -> RIDE_FARE_UPDATED_INFO
     RETURN_TRIP_STARTED_TIME -> RETURN_TRIP_STARTED_INFO
     DISTANCE_TO_NEAREST_DRIVER_METER -> GENERAL_INFO
     ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO

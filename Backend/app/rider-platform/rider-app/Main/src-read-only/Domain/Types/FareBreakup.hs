@@ -28,6 +28,7 @@ data FareBreakupEntityType
   | INITIAL_BOOKING
   | ESTIMATE
   | QUOTE
+  | COLLECTED_FARE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RefundFareComponent

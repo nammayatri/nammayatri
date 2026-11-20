@@ -376,3 +376,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_dues_commission 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_id text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN route_code text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN integrated_bpp_config_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_fare_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_fare double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_chargeable_distance integer ;

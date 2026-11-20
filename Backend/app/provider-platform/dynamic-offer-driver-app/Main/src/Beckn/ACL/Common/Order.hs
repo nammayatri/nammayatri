@@ -26,6 +26,7 @@ module Beckn.ACL.Common.Order
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
     tfReachedDestinationReqToOrder,
+    tfRideFareUpdatedReqToOrder,
     tfNearPickupReqToOrder,
     tfReturnTripStartedReqToOrder,
   )
@@ -426,6 +427,33 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
         orderPayments = Nothing,
         orderProvider = Nothing,
         orderQuote = Nothing,
+        orderTags = Nothing,
+        orderStatus = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
+
+-- | RIDE_FARE_UPDATED (collect payment). Carries the mid-ride fare the same way RIDE_ENDED carries the
+-- final one -- quote.price + quote.breakup built by the same 'UtilsOU.mkRideCompletedQuote' -- so the BAP
+-- parses both identically. No order status: the ride is still in progress.
+tfRideFareUpdatedReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DRideFareUpdatedReq -> m Spec.Order
+tfRideFareUpdatedReqToOrder OU.DRideFareUpdatedReq {..} = do
+  let BookingDetails {..} = bookingDetails
+      rideFareUpdatedTags = Utils.mkRideFareUpdatedTagGroup computedAt tollPendingConfirmation
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing rideFareUpdatedTags Nothing False False Nothing (Just $ show EventEnum.RIDE_FARE_UPDATED) isValueAddNP Nothing False 0
+  quote <- UtilsOU.mkRideCompletedQuote isValueAddNP ride fareParams
+  pure $
+    Spec.Order
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Just quote,
         orderTags = Nothing,
         orderStatus = Nothing,
         orderCreatedAt = Just booking.createdAt,

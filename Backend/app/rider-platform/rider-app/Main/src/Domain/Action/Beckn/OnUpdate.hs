@@ -42,6 +42,7 @@ module Domain.Action.Beckn.OnUpdate
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
     DriverNearPickupReq (..),
+    RideFareUpdatedReq (..),
     ReturnTripStartedReq (..),
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
@@ -61,6 +62,7 @@ module Domain.Action.Beckn.OnUpdate
     ValidatedTollCrossedEventReq (..),
     ValidatedDestinationReachedReq (..),
     ValidatedDriverNearPickupReq (..),
+    ValidatedRideFareUpdatedReq (..),
     ValidatedEditDestErrorReq (..),
     ValidatedReturnTripStartedReq (..),
     ValidatedEstimatedEndTimeRangeReq (..),
@@ -86,6 +88,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
 import qualified Domain.Types.Location as DL
 import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.LocationMapping as DLM
@@ -177,6 +180,7 @@ data OnUpdateReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
   | OUDriverNearPickupReq DriverNearPickupReq
+  | OURideFareUpdatedReq RideFareUpdatedReq
   | OUReturnTripStartedReq ReturnTripStartedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
@@ -206,6 +210,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
   | OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq
+  | OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq
   | OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
@@ -462,6 +467,26 @@ newtype DriverNearPickupReq = DriverNearPickupReq
 data ValidatedDriverNearPickupReq = ValidatedDriverNearPickupReq
   { booking :: DRB.Booking,
     ride :: DRide.Ride
+  }
+
+-- | Collect payment: fare the rider would pay if the ride ended at 'computedAt' (from the BPP's RIDE_FARE_UPDATED).
+data RideFareUpdatedReq = RideFareUpdatedReq
+  { bppRideId :: Id DRide.BPPRide,
+    fare :: Price,
+    computedAt :: UTCTime,
+    -- | The toll in 'fare' still awaits the rider's confirmation and may change at ride end.
+    tollPendingConfirmation :: Bool,
+    -- | The lines that add up to 'fare', as the driver sees them.
+    fareBreakups :: [Common.DFareBreakup]
+  }
+
+data ValidatedRideFareUpdatedReq = ValidatedRideFareUpdatedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    fare :: Price,
+    computedAt :: UTCTime,
+    tollPendingConfirmation :: Bool,
+    fareBreakups :: [Common.DFareBreakup]
   }
 
 data ReturnTripStartedReq = ReturnTripStartedReq
@@ -761,6 +786,31 @@ onUpdate = \case
     unless (isJust ride.driverArrivalTime) $ do
       QPFS.clearCache booking.riderId
       Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
+  OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq {..} ->
+    -- Two guards keep the final fare authoritative and the snapshot monotonic:
+    --   * only an in-progress ride: a RIDE_FARE_UPDATED that arrives after RIDE_ENDED must not show a
+    --     mid-ride fare on a completed ride (the update query is also conditional on INPROGRESS);
+    --   * only a newer snapshot: on_update calls can arrive out of order.
+    if ride.status /= DRide.INPROGRESS
+      then logInfo $ "Ignoring RIDE_FARE_UPDATED for ride not in progress: " <> ride.id.getId <> ", status: " <> show ride.status
+      else
+        if maybe False (>= computedAt) ride.collectedFareAt
+          then logInfo $ "Ignoring stale RIDE_FARE_UPDATED for ride: " <> ride.id.getId
+          else do
+            QRide.updateCollectedFare (Just fare) (Just computedAt) (Just tollPendingConfirmation) ride.id DRide.INPROGRESS
+            -- One fare_breakup_info row per ride: the upsert replaces the previous snapshot's lines, so only
+            -- the latest breakup is kept. It is served as the booking's collectedFareBreakup while the ride
+            -- is in progress; after ride end the RIDE breakup takes over and this row is left for disputes.
+            SFareBreakupInfo.upsertFareBreakupInfo
+              ride.id.getId
+              DFareBreakup.COLLECTED_FARE
+              (map (\fb -> DFareBreakupInfo.FareBreakupInfoItem {description = fb.description, amount = fb.amount.amount, currency = fb.amount.currency}) fareBreakups)
+              (Just booking.merchantId)
+              (Just booking.merchantOperatingCityId)
+            QPFS.clearCache booking.riderId
+            -- Push is config driven (merchant PN "RIDE_FARE_UPDATED" with a {#fare#} placeholder); no config
+            -- means no push, the app still shows the new fare on its next booking refresh.
+            TN.notifyOnRideFareUpdated booking ride fare
   OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq {..} -> do
     QRide.updateReturnStartedAt returnStartedAt ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
@@ -921,6 +971,12 @@ validateRequest = \case
     unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride has already started"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq {..}
+  OURideFareUpdatedReq RideFareUpdatedReq {..} -> do
+    -- Status is checked in the handler, not here: a late update for a completed ride is an expected
+    -- race (collect payment and end ride back to back), so it is ignored rather than failed.
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq {..}
   OUReturnTripStartedReq ReturnTripStartedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"

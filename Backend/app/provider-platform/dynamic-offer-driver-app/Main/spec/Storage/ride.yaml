@@ -179,6 +179,12 @@ Ride:
     cancellationReasonCode: Maybe CancellationReasonCode
     cancellationAdditionalInfo: Maybe Text
     bapSettled: Maybe Bool # online ride: False at creation, True once RSF settles its order (on_receiver_recon ACKed with 01 Paid); cash ride: always Nothing
+    # Collect-payment snapshot: the fare the rider would pay if the ride ended at the time of the
+    # driver's last collect-payment call. Informational only -- end ride always recomputes and never
+    # reads these; ride.fare / fareParametersId stay the billed values.
+    collectedFare: Maybe HighPrecMoney
+    collectedChargeableDistance: Maybe Meters
+    collectedFareAt: Maybe UTCTime
 
   sqlType:
     id: character(36)
@@ -452,6 +458,13 @@ Ride:
       kvFunction: updateOneWithKV
       params: [bapSettled]
       where: id
+    # Collect-payment snapshot. Conditional on status so a preview that finishes after end ride
+    # can't write onto a completed ride.
+    updateCollectedFare:
+      kvFunction: updateOneWithKV
+      params: [collectedFare, collectedChargeableDistance, collectedFareAt]
+      where:
+        and: [id, status]
 
   excludedDefaultQueries:
     - create

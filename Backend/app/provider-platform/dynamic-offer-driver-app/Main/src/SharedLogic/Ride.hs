@@ -781,7 +781,11 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         cancelledBy = Nothing,
         cancellationReasonCode = Nothing,
         cancellationAdditionalInfo = Nothing,
-        bapSettled = if isOnlinePayment then Just False else Nothing
+        bapSettled = if isOnlinePayment then Just False else Nothing,
+        -- Collect-payment snapshot: set only by the collect-payment API during the ride.
+        collectedFare = Nothing,
+        collectedChargeableDistance = Nothing,
+        collectedFareAt = Nothing
       }
 
 buildTrackingUrl :: (MonadReader r m, HasField "selfUIUrl" r BaseUrl) => Id DRide.Ride -> m BaseUrl
