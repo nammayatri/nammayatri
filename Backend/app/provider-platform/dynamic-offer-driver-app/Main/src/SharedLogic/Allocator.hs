@@ -1092,6 +1092,9 @@ type instance JobContent 'MaterialiseSharedRuns = MaterialiseSharedRunsJobData
 data PolicySource
   = -- | fleet_config.preference_policy of this fleet owner, applied to the fleet's active drivers.
     FleetPolicySource Text
+  | -- | An incentive-journey campaign's PreferencePolicy perk (cohort_journey_mapping id), applied to its current
+    -- members while it is in charge of them; with 'rescheduleAtNextWindow', again at every window start.
+    CampaignPolicySource Text
   deriving (Generic, Show, Eq)
 
 instance ToJSON PolicySource where
@@ -1105,13 +1108,16 @@ instance FromJSON PolicySource where
 --   'attemptCount': the app-level retry of a failed page (Nothing = first attempt; old payloads decode as Nothing).
 --   'rescheduleAtNextWindow': after the last page, queue the chain again (cursor reset) at the source's next window
 --   start (a source without windows, the fleet, never reschedules).
+--   'sourceVersion': the source's updatedAt when the chain was queued (campaign window chains); a run stops once the
+--   source has been saved since, because that save queued a newer chain (one live chain per source).
 data ApplyPreferencePolicyJobData = ApplyPreferencePolicyJobData
   { source :: PolicySource,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     afterDriverId :: Maybe (Id DP.Person),
     attemptCount :: Maybe Int,
-    rescheduleAtNextWindow :: Maybe Bool
+    rescheduleAtNextWindow :: Maybe Bool,
+    sourceVersion :: Maybe UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

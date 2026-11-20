@@ -47,6 +47,7 @@ import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Provider as LibProvider
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
 import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3 as DBulkAssign
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as Fields
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
@@ -59,6 +60,9 @@ import SharedLogic.Allocator
   ( AllocatorJobType (..),
     BulkUserCohortMappingUploadJobData (..),
   )
+import qualified SharedLogic.DriverPreferencePolicy as DPP
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
+import qualified SharedLogic.DriverPreferencePolicy.Campaign as PolicyCampaign
 import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.IncentiveJourney.CampaignControlsCache as CampaignControlsCache
@@ -192,10 +196,14 @@ mkHandle =
       loadJourneyMilestones = SLJourney.loadJourneyMilestones,
       syncCampaignMembership = Just $ \personId mbPayload -> do
         MgCampaignSync.syncCampaignMembership personId mbPayload
-        FDS.reconcileAutoAssignAfterMgSync personId (fmap (.snapshot) mbPayload),
+        FDS.reconcileAutoAssignAfterMgSync personId (fmap (.snapshot) mbPayload)
+        -- Driver preference policy: the locked values of whoever is in charge now (the campaign's perk, or the fleet's).
+        PolicyApply.forkApplyCurrentPolicy "campaign sync" (cast personId),
       clearCampaignMembership = Just $ \personId cjmId -> do
         matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
-        when matched $ FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
+        when matched $ do
+          FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
+          PolicyApply.forkApplyCurrentPolicy "campaign membership cleared" (cast personId)
     }
 
 getIncentiveJourneyList ::
@@ -296,16 +304,22 @@ postIncentiveJourneyCohortJourneyCreate ::
   Kernel.Types.Beckn.Context.City ->
   Common.CreateCohortJourneyMappingReq ->
   Environment.Flow Common.CreateCohortJourneyMappingRes
-postIncentiveJourneyCohortJourneyCreate merchantShortId =
-  LibProvider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId)
+postIncentiveJourneyCohortJourneyCreate merchantShortId opCity req = do
+  -- Driver preference policy perk (controlFeatures PreferencePolicy): 400 INVALID_PREFERENCE_POLICY before any write.
+  DPP.validateCampaignControlFeatures req.controlFeatures
+  res <- LibProvider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId) opCity req
+  schedulePreferencePolicyWindows (cast res.cohortJourneyMappingId)
+  pure res
 
 postIncentiveJourneyCohortJourneyRoll ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.RollCohortJourneyMappingReq ->
   Environment.Flow Common.RollCohortJourneyMappingRes
-postIncentiveJourneyCohortJourneyRoll merchantShortId =
-  LibProvider.postIncentiveJourneyCohortJourneyRoll mkHandle (ShortId merchantShortId.getShortId)
+postIncentiveJourneyCohortJourneyRoll merchantShortId opCity req = do
+  res <- LibProvider.postIncentiveJourneyCohortJourneyRoll mkHandle (ShortId merchantShortId.getShortId) opCity req
+  schedulePreferencePolicyWindows (cast res.cohortJourneyMappingId)
+  pure res
 
 putIncentiveJourneyCohortJourneyUpdate ::
   ShortId DM.Merchant ->
@@ -313,9 +327,20 @@ putIncentiveJourneyCohortJourneyUpdate ::
   Common.UpdateCohortJourneyMappingReq ->
   Environment.Flow APISuccess
 putIncentiveJourneyCohortJourneyUpdate merchantShortId opCity req = do
+  -- Omitted controlFeatures keep the stored ones (already checked); a sent list is checked before any write.
+  DPP.validateCampaignControlFeatures req.controlFeatures
   res <- LibProvider.putIncentiveJourneyCohortJourneyUpdate mkHandle (ShortId merchantShortId.getShortId) opCity req
   CampaignControlsCache.refreshCampaignControls (cast req.cohortJourneyMappingId)
+  schedulePreferencePolicyWindows (cast req.cohortJourneyMappingId)
   pure res
+
+-- | After a campaign save: a TimeBound PreferencePolicy perk is re-applied to the members at every window start
+-- (allocator job ApplyPreferencePolicy, CampaignPolicySource); this save's chain replaces any older one. A failure to
+-- queue is logged and does not fail the save.
+schedulePreferencePolicyWindows :: Id DCJM.CohortJourneyMapping -> Environment.Flow ()
+schedulePreferencePolicyWindows cjmId =
+  withTryCatch "schedulePreferencePolicyWindows" (PolicyCampaign.scheduleCampaignPolicyChain cjmId)
+    >>= either (\err -> logError $ "Preference policy window re-apply for campaign " <> cjmId.getId <> ": queueing failed: " <> show err) pure
 
 getIncentiveJourneyCohortJourneyList ::
   ShortId DM.Merchant ->

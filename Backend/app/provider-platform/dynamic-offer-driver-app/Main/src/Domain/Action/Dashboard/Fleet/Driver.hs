@@ -5451,7 +5451,8 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
           merchantOperatingCityId = merchantOpCityId,
           afterDriverId = Nothing,
           attemptCount = Nothing,
-          rescheduleAtNextWindow = Nothing
+          rescheduleAtNextWindow = Nothing,
+          sourceVersion = Nothing
         }
   pure Success
 

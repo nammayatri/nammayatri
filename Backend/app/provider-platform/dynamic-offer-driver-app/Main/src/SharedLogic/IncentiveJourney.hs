@@ -97,6 +97,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import qualified SharedLogic.DriverPool as DriverPool
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
 import qualified SharedLogic.Finance.PostActions as FinancePostActions
 import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified SharedLogic.FleetDriverSettings as FDS
@@ -354,7 +355,9 @@ mkDriverEvaluateHandle driverId merchantId merchantOpCityId transporterConfig ve
                   awarded,
         mbOnMgOptInCleared = Just $ \personId cjmId -> do
           matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
-          when matched $ FDS.onCampaignMembershipCleared (cast personId) (cast cjmId),
+          when matched $ do
+            FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
+            PolicyApply.forkApplyCurrentPolicy "campaign membership cleared" (cast personId),
         buildMetricContext = MetricBag.buildMetricContext
       }
 
@@ -623,7 +626,10 @@ forkEnsureAssignedCampaignTags ::
     HedisFlow m r,
     HedisLTSFlowEnv r,
     IJBeamFlow.BeamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    -- driver preference policy apply after a newly gained controls campaign (wallet check, RC reads)
+    BeamFlow m r,
+    EncFlow m r
   ) =>
   Id DP.Person ->
   m ()
@@ -641,7 +647,9 @@ forkEnsureAssignedCampaignTags driverId =
     -- Drop perks for expired/disabled UCMs still lingering on person tags.
     forM_ staleMemberships $ \m -> do
       matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId (Id m.cjmId)
-      when matched $ FDS.onCampaignMembershipCleared driverId (Id m.cjmId)
+      when matched $ do
+        FDS.onCampaignMembershipCleared driverId (Id m.cjmId)
+        PolicyApply.forkApplyCurrentPolicy "campaign membership cleared" driverId
     existingControlsCjmIds <-
       fmap catMaybes $
         forM memberships $ \m -> do
@@ -675,7 +683,9 @@ forkEnsureAssignedCampaignTags driverId =
                 then do
                   when (cjm.id.getId `elem` map (.cjmId) memberships) $ do
                     matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjm.id
-                    when matched $ FDS.onCampaignMembershipCleared driverId cjm.id
+                    when matched $ do
+                      FDS.onCampaignMembershipCleared driverId cjm.id
+                      PolicyApply.forkApplyCurrentPolicy "campaign membership cleared" driverId
                   pure Nothing
                 else do
                   milestones <- loadJourneyMilestones journey.id
@@ -711,6 +721,8 @@ forkEnsureAssignedCampaignTags driverId =
                 ((.snapshot) <$> find (\p -> p.membership.cjmId `elem` controlsIds) ps)
                   <|> ((.snapshot) <$> listToMaybe ps)
           FDS.reconcileAutoAssignAfterMgSync personId mbSnap
+          -- Driver preference policy: the newly gained campaign's locked values (its PreferencePolicy perk).
+          PolicyApply.forkApplyCurrentPolicy "campaign sync" driverId
 
 -- No assignment / bag / stats work here (that would hit the app pod). Consumer loads
 -- assignments and no-ops when empty — same isolation as ride-end → RIDE_EVENTS_CONSUMER.

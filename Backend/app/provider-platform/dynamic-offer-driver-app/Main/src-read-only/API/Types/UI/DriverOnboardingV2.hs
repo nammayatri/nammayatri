@@ -217,6 +217,7 @@ data DriverVehicleServiceTiers = DriverVehicleServiceTiers
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     intraCityLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lockMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tiers :: [DriverVehicleServiceTier]
   }
   deriving stock (Generic)

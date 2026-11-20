@@ -735,6 +735,7 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.DriverPreferencePolicy
       SharedLogic.DriverPreferencePolicy.Apply
+      SharedLogic.DriverPreferencePolicy.Campaign
       SharedLogic.DriverPreferencePolicy.Context
       SharedLogic.DriverSupplyCounter
       SharedLogic.DriverSupplyMetrics
@@ -2717,6 +2718,7 @@ test-suite driver-app-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      PreferencePolicyWindowTests
       SharedCabProxyTests
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

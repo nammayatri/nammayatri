@@ -30,12 +30,27 @@
 -- wrapper over 'tryDriverFleetContext') and 'SharedLogic.DriverPreferencePolicy', so neither imports the other
 -- through it.
 --
--- How to add a new source (e.g. campaign preference locks, a city policy):
+-- How to add a new source (e.g. a city policy):
 --
 --   1. Add a constructor to 'ControlSource' and decide its precedence in 'resolveDriverFleetContextWith'.
---   2. Give it its policy in 'sourcePolicy' and its auto-assign config in 'sourceAutoAssign'.
---   That is the whole change: every validator, GET flag and trigger already follows 'preferencePolicy' /
---   'controlSource'.
+--   2. Give it its policy in 'sourcePolicy' and its auto-assign config in 'sourceAutoAssign'. A policy kept as JSON
+--      elsewhere is decoded with 'decodePreferencePolicy' (tolerant: a bad entry drops only that entry).
+--   3. If the source can be saved with a policy, check it on save with 'SharedLogic.DriverPreferencePolicy.validatePolicyConfig'
+--      (400 INVALID_PREFERENCE_POLICY).
+--   4. If its policy should be APPLIED (v2), call 'SharedLogic.DriverPreferencePolicy.Apply.applyCurrentPolicyToDriver'
+--      where the source starts or changes for a driver. The fleet-only triggers (fleet policy job, join / vehicle,
+--      fleet auto-assign ON) skip drivers a campaign is in charge of; the wallet restore follows 'preferencePolicy'.
+--   5. To apply it to all its drivers at once (a save, or a time window opening), add a 'SharedLogic.Allocator.PolicySource'
+--      constructor and its 'PolicySourceOps' case in 'SharedLogic.Allocator.Jobs.PreferencePolicy.ApplyPreferencePolicy'
+--      (fresh policy read, members page, still-in-charge check through this resolver, optional next window), and queue
+--      the ApplyPreferencePolicy job where the policy is saved. The paging, retry, apply and logging are shared.
+--   Every validator and GET flag already follows 'preferencePolicy' / 'controlSource'.
+--
+-- The campaign source (v3) is that recipe: 'CampaignSource' wins over the fleet, its policy is the campaign's
+-- PreferencePolicy perk ('sourcePolicy'), it is validated on campaign create / update, applied on the campaign's
+-- membership sync (assign / opt-in / list ensure) and after a membership is cleared (the fleet's policy returns), and,
+-- for a TimeBound perk, re-applied to its members a little after each window opens (job source CampaignPolicySource,
+-- queued on campaign create / update / roll: 'SharedLogic.DriverPreferencePolicy.Campaign').
 module SharedLogic.DriverPreferencePolicy.Context
   ( DriverFleetContext (..),
     FleetLink (..),
@@ -46,6 +61,10 @@ module SharedLogic.DriverPreferencePolicy.Context
     failOpen,
     noDriverFleetContext,
     contextPolicy,
+    sourceName,
+    lockMessageFor,
+    contextLockMessage,
+    contextApplyPolicy,
     contextAutoAssign,
     isCampaignControlled,
   )
@@ -68,6 +87,7 @@ import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import Storage.Queries.Transformers.FleetConfig (decodePreferencePolicy)
 
 -- | The driver's active fleet association and that fleet's config.
 data FleetLink = FleetLink
@@ -92,12 +112,16 @@ data DriverFleetContext = DriverFleetContext
     -- 'MgCampaign.mgAutoAssignConfigFromSnapshot'; Nothing for a behaviour-only campaign) when a campaign is in charge,
     -- else the fleet's.
     autoAssignConfig :: Maybe DFC.AutoAssignConfig,
-    -- | The preference policy that applies to the driver ('sourcePolicy').
-    preferencePolicy :: Maybe DDPP.PreferencePolicy
+    -- | The preference policy that applies to the driver ('sourcePolicy'): validation and the GET lock flags.
+    preferencePolicy :: Maybe DDPP.PreferencePolicy,
+    -- | The policy whose locked values the apply paths write ('sourceApplyPolicy'): as 'preferencePolicy', except that a
+    -- campaign's perk counts whatever its enableIn window, so the values are in place when the window opens (as the
+    -- campaign's AutoAssign is installed at opt-in: 'MgCampaign.mgAutoAssignConfigFromSnapshot').
+    applyPolicy :: Maybe DDPP.PreferencePolicy
   }
 
 noDriverFleetContext :: DriverFleetContext
-noDriverFleetContext = DriverFleetContext Nothing MgCampaign.UseNoCampaign NoSource Nothing Nothing
+noDriverFleetContext = DriverFleetContext Nothing MgCampaign.UseNoCampaign NoSource Nothing Nothing Nothing
 
 -- | Where the fleet config is read from. 'Cached' is the ConfigPilot city cache (GET flags, dispatch, auto-assign).
 -- 'Fresh' reads fleet_config by the fleet owner id from the DB: the driver preference-CHANGE handlers use it, because
@@ -125,9 +149,10 @@ resolveDriverFleetContextWith configRead driverId merchantOpCityId = do
             mgPerkSource = mgSource,
             controlSource = source,
             autoAssignConfig = sourceAutoAssign source,
-            preferencePolicy = Nothing
+            preferencePolicy = Nothing,
+            applyPolicy = Nothing
           }
-  pure context {preferencePolicy = sourcePolicy context}
+  pure context {preferencePolicy = sourcePolicy context, applyPolicy = sourceApplyPolicy context}
 
 sourceAutoAssign :: ControlSource -> Maybe DFC.AutoAssignConfig
 sourceAutoAssign = \case
@@ -137,15 +162,24 @@ sourceAutoAssign = \case
 
 -- | The single switch for which preference policy applies.
 --
---   * A campaign in charge (including a behaviour-only one): no fleet policy. The fleet's locks are suppressed like
---     its other perks (auto-assign, cancel, pooling): no validation, no GET lock flags, no apply. Unassign the driver
---     from the campaign to bring the fleet's locks back.
+--   * A campaign in charge (including a behaviour-only one): the campaign's own PreferencePolicy perk
+--     (controlFeatures @{"feature":"PreferencePolicy","config":{"locked":[...],"hidden":[...]},"enableIn":...}@) while
+--     its enableIn window is open ('MgCampaign.mgPreferencePolicyValue': AllDay = while a member, TimeBound = inside the
+--     first milestone's timeBounds, the default), decoded with the same tolerant decoder as the fleet column. Else
+--     Nothing. The campaign wins: the fleet's locks are suppressed like its other perks (auto-assign, cancel, pooling)
+--     and never merged with the campaign's. Unassign the driver from the campaign to bring the fleet's locks back.
 --   * Otherwise the active fleet's policy.
 sourcePolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
 sourcePolicy context = case context.controlSource of
-  CampaignSource _ -> Nothing
+  CampaignSource _ -> MgCampaign.mgPreferencePolicyValue context.mgPerkSource >>= decodePreferencePolicy
   FleetSource link -> link.fleetConfig >>= (.preferencePolicy)
   NoSource -> Nothing
+
+-- | 'sourcePolicy' for the apply paths: a campaign's PreferencePolicy perk whatever its enableIn window.
+sourceApplyPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
+sourceApplyPolicy context = case context.controlSource of
+  CampaignSource snapshot -> snapshot.preferencePolicy >>= decodePreferencePolicy
+  _ -> sourcePolicy context
 
 readFleetLink :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigRead -> Id Person -> Id MerchantOperatingCity -> m (Maybe FleetLink)
 readFleetLink configRead driverId merchantOpCityId = do
@@ -194,6 +228,27 @@ failOpen driverId = \case
 
 contextPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
 contextPolicy = (.preferencePolicy)
+
+-- | Who manages a locked setting, in the driver-facing wording (the lock messages: 'lockMessageFor', and the 400s in
+-- 'SharedLogic.DriverPreferencePolicy'). A new source (city, ops) adds a case here. The error codes stay
+-- PREFERENCE_LOCKED_BY_FLEET / SERVICE_TIER_LOCKED_BY_FLEET for every source.
+sourceName :: ControlSource -> Text
+sourceName = \case
+  CampaignSource _ -> "campaign"
+  _ -> "fleet"
+
+-- | The GET responses' 'lockMessage' (set only when a lock flag in the response is true).
+lockMessageFor :: ControlSource -> Maybe Text
+lockMessageFor = \case
+  NoSource -> Nothing
+  source -> Just $ "Managed by your " <> sourceName source
+
+-- | 'lockMessageFor' the source in charge when @anyLocked@, else Nothing.
+contextLockMessage :: DriverFleetContext -> Bool -> Maybe Text
+contextLockMessage context anyLocked = if anyLocked then lockMessageFor context.controlSource else Nothing
+
+contextApplyPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
+contextApplyPolicy = (.applyPolicy)
 
 contextAutoAssign :: DriverFleetContext -> Maybe DFC.AutoAssignConfig
 contextAutoAssign = (.autoAssignConfig)

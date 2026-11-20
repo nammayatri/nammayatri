@@ -1692,14 +1692,15 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       _ -> pure (driverInfo.canDowngradeToSedan, driverInfo.canDowngradeToHatchback, driverInfo.canDowngradeToTaxi, driverInfo.canSwitchToRental, driverInfo.canSwitchToInterCity, driverInfo.canSwitchToIntraCity, driverInfo.availableUpiApps)
   -- Fleet preference locks (validation only), before any write. The switches are compared as this update would write them.
   whenJust (DPP.contextPolicy fleetContext) $ \policy -> do
-    DPP.validateToggle policy DDPP.Rental driverInfo.canSwitchToRental (Just canSwitchToRental)
-    DPP.validateToggle policy DDPP.InterCity driverInfo.canSwitchToInterCity (Just canSwitchToInterCity)
-    DPP.validateToggle policy DDPP.IntraCity driverInfo.canSwitchToIntraCity (Just canSwitchToIntraCity)
+    let source = fleetContext.controlSource
+    DPP.validateToggle source policy DDPP.Rental driverInfo.canSwitchToRental (Just canSwitchToRental)
+    DPP.validateToggle source policy DDPP.InterCity driverInfo.canSwitchToInterCity (Just canSwitchToInterCity)
+    DPP.validateToggle source policy DDPP.IntraCity driverInfo.canSwitchToIntraCity (Just canSwitchToIntraCity)
     whenJust mVehicle $ \vehicle ->
       when (DPP.isLocked DDPP.ServiceTier policy && legacyTierRebuildRequested) $ do
         driverTiers <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing Nothing personId merchantOpCityId
         now <- getCurrentTime
-        DPP.validateLegacyTierRebuild policy (DPP.protectedTiers now (fromMaybe [] person.driverTag) driverTiers)
+        DPP.validateLegacyTierRebuild source policy (DPP.protectedTiers now (fromMaybe [] person.driverTag) driverTiers)
   whenJust mVehicle $ \vehicle -> do
     when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
       let selectedServiceTiers =

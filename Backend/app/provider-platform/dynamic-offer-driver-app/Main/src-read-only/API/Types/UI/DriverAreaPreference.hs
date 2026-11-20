@@ -12,6 +12,7 @@ import Tools.Auth
 
 data AreaPreferenceInfoRes = AreaPreferenceInfoRes
   { enabled :: Kernel.Prelude.Bool,
+    lockMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minCells :: Kernel.Prelude.Int,
     radiusArea :: Kernel.Prelude.Maybe RadiusAreaSelection,

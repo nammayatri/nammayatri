@@ -28,6 +28,7 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStat
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as Fields
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
 import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
@@ -89,10 +90,14 @@ mkHandle =
       loadJourneyMilestones = SLJourney.loadJourneyMilestones,
       syncCampaignMembership = Just $ \personId mbPayload -> do
         MgCampaignSync.syncCampaignMembership personId mbPayload
-        FDS.reconcileAutoAssignAfterMgSync personId (fmap (.snapshot) mbPayload),
+        FDS.reconcileAutoAssignAfterMgSync personId (fmap (.snapshot) mbPayload)
+        -- Driver preference policy: the locked values of whoever is in charge now (the campaign's perk, or the fleet's).
+        PolicyApply.forkApplyCurrentPolicy "campaign sync" (cast personId),
       clearCampaignMembership = Just $ \personId cjmId -> do
         matched <- MgCampaignSync.clearMgOptedInOnDriverInfo personId cjmId
-        when matched $ FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
+        when matched $ do
+          FDS.onCampaignMembershipCleared (cast personId) (cast cjmId)
+          PolicyApply.forkApplyCurrentPolicy "campaign membership cleared" (cast personId)
     }
 
 getIncentiveJourneyList ::

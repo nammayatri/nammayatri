@@ -28,8 +28,14 @@
 --   Adding a source (e.g. a city or ops policy) = a 'PolicySource' constructor, its 'PolicySourceOps' case in
 --   'applyPreferencePolicyJob', and a createJobIn where that source's policy is saved.
 --
---   Sources: 'FleetPolicySource' (postDriverFleetConfigUpdate: fleet_config.preference_policy, the fleet's active
---   drivers; a driver a campaign is in charge of is skipped).
+--   Sources:
+--
+--   * 'FleetPolicySource' (postDriverFleetConfigUpdate): fleet_config.preference_policy on the fleet's active drivers;
+--     a driver a campaign is in charge of is skipped.
+--   * 'CampaignPolicySource' (campaign create / update / roll, 'Campaign.scheduleCampaignPolicyChain'): a campaign's
+--     TimeBound PreferencePolicy perk, re-applied to its members a little after each window opens (a member may have
+--     changed a locked preference outside the window), then queued again for the next window. One live chain per
+--     campaign ('sourceVersion'); see 'SharedLogic.DriverPreferencePolicy.Campaign'.
 module SharedLogic.Allocator.Jobs.PreferencePolicy.ApplyPreferencePolicy
   ( applyPreferencePolicyJob,
     pageSize,
@@ -48,12 +54,17 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
+import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as QUCMExtra
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), ApplyPreferencePolicyJobData (..), PolicySource (..))
 import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.DriverPreferencePolicy.Apply as Apply
+import qualified SharedLogic.DriverPreferencePolicy.Campaign as Campaign
+import qualified SharedLogic.IncentiveJourney.CampaignControlsCache as CampaignControlsCache
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -108,6 +119,7 @@ applyPreferencePolicyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
       -- The per-source interface: one case per 'PolicySource'.
       ops = case jobData.source of
         FleetPolicySource fleetOwnerId -> fleetOps fleetOwnerId
+        CampaignPolicySource cjmId -> campaignOps jobData (Id cjmId)
       attempt = fromMaybe 1 jobData.attemptCount
       pageName = "ApplyPreferencePolicy: " <> ops.label <> " page after " <> maybe "start" (.getId) jobData.afterDriverId
   withTryCatch "ApplyPreferencePolicy:page" (runPage ops jobData) >>= \case
@@ -208,4 +220,36 @@ fleetOps fleetOwnerId =
                 else Right driver
           _ -> pure $ Left ("no longer active in fleet " <> fleetOwnerId),
       nextWindowRun = pure Nothing
+    }
+
+-- | A campaign's TimeBound PreferencePolicy perk on its current members ('Campaign.campaignWindowPolicy' has the stop
+-- conditions; the mapping and controls are read fresh on every page). Members: the campaign's active
+-- user_cohort_mapping rows (opted in, for an OptIn campaign). A member is applied only when the resolver says this
+-- campaign is in charge of them with its preference perk active now and the policy in charge is this campaign's (the
+-- allocator's controls cache entry for the campaign is refreshed first, so the resolver sees the save).
+campaignOps :: PolicyJobFlow m r => ApplyPreferencePolicyJobData -> Id DCJM.CohortJourneyMapping -> PolicySourceOps m
+campaignOps jobData cjmId =
+  PolicySourceOps
+    { label = "campaign " <> cjmId.getId,
+      currentPolicy = do
+        CampaignControlsCache.refreshCampaignControls cjmId
+        Campaign.readCampaignPolicyState cjmId <&> \case
+          Nothing -> Left "not found"
+          Just st -> Campaign.campaignWindowPolicy jobData.sourceVersion st,
+      membersPage = \mbAfter limit ->
+        Campaign.readCampaignPolicyState cjmId >>= \case
+          Nothing -> pure []
+          Just st -> do
+            let optedInOnly = st.controls.campaignUserLinkType == Just DCJM.OptIn
+            map cast <$> QUCMExtra.findActiveUserIdsByCohortMappingIdAfter cjmId st.localNow optedInOnly (cast <$> mbAfter) limit,
+      stillInCharge = \policy driverId -> do
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        context <- DPP.tryDriverFleetContext DPP.Cached driverId driver.merchantOperatingCityId >>= either throwM pure
+        pure $
+          if
+              | not (DPP.isCampaignControlled context) -> Left "no campaign is in charge (membership tag missing or expired)"
+              | isNothing (MgCampaign.mgPreferencePolicyValue context.mgPerkSource) -> Left "the campaign's preference perk is not active now"
+              | DPP.contextPolicy context /= Just policy -> Left "another campaign's policy is in charge"
+              | otherwise -> Right driver,
+      nextWindowRun = (>>= Campaign.nextCampaignWindowRun) <$> Campaign.readCampaignPolicyState cjmId
     }

@@ -132,6 +132,7 @@ types:
     autoAcceptLockedByFleet: Maybe Bool
     acLockedByFleet: Maybe Bool
     intraCityLockedByFleet: Maybe Bool
+    lockMessage: Maybe Text
   AirConditionedTier:
       isWorking: Bool
       usageRestrictionType: AirConditionedRestrictionType

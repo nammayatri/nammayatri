@@ -10,13 +10,14 @@ module Lib.IncentiveJourney.Window
     mkPeakWindowKey,
     isJourneyWindowActive,
     isWithinTimeBound,
+    nextPeakStart,
     onlineMinuteCreditSegments,
   )
 where
 
-import Data.List (sortOn)
+import Data.List (nub, sort, sortOn)
 import qualified Data.Text as T
-import Data.Time (Day, DiffTime, TimeOfDay (..), UTCTime (UTCTime), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay, utctDayTime)
+import Data.Time (Day, DiffTime, TimeOfDay (..), UTCTime (UTCTime), addDays, addUTCTime, diffUTCTime, midnight, timeOfDayToTime, utctDay, utctDayTime)
 import Data.Time.Calendar.WeekDate (toWeekDate)
 import Kernel.Prelude
 import qualified Kernel.Types.TimeBound as TB
@@ -49,6 +50,28 @@ isWithinTimeBound localTime (Just tb) =
   case mkPeakWindowKey localTime tb of
     TimeBoundWindow _ -> True
     DayWindow -> False
+
+-- | When the next peak window OPENS strictly after @localTime@ (city-local wall clock, as everywhere here), for a job
+-- that must act when a window opens (driver preference locks re-applied at window start). Same peaks as
+-- 'isWithinTimeBound': weekday peaks repeat weekly (today .. the same weekday next week is searched), day peaks only on
+-- their listed days, and a peak crossing midnight is split within its day (@22:00-02:00@ = 00:00-02:00 and
+-- 22:00-23:59:59 of that day). A start that only continues a window is not an opening: one inside or touching another
+-- peak of the same day, and 00:00 when the day before has a peak running to 23:59:59. Nothing for Unbounded, or when
+-- no peak opens ahead. 'isWithinTimeBound' is exclusive at the start, so act a little after the returned time.
+nextPeakStart :: UTCTime -> TB.TimeBound -> Maybe UTCTime
+nextPeakStart _ TB.Unbounded = Nothing
+nextPeakStart localTime tb =
+  let today = utctDay localTime
+      candidateDays = case tb of
+        TB.BoundedByDay days -> sort (nub (filter (>= today) (map fst days)))
+        _ -> [today .. addDays 7 today]
+      dayEnd = TimeOfDay 23 59 59
+      opensOn day =
+        let peaks = peaksOnLocalDay tb day
+            continuesSameDay start = any (\(s, e) -> s < start && start <= e) peaks
+            continuesYesterday start = start == midnight && any (\(_, e) -> e >= dayEnd) (peaksOnLocalDay tb (addDays (-1) day))
+         in sort [UTCTime day (timeOfDayToTime start) | (start, _) <- peaks, not (continuesSameDay start), not (continuesYesterday start)]
+   in listToMaybe [t | day <- candidateDays, t <- opensOn day, t > localTime]
 
 -- | Split a closed online session [startLocal, endLocal] into (sampleLocalTime, minutes) credits.
 -- Unbounded / missing bounds: one segment per local calendar day (fixes midnight attribution).

@@ -129,6 +129,33 @@ findActiveByUserId userId now =
         ]
     ]
 
+-- | Current members of one campaign, a page at a time in user-id order after the cursor: enabled rows with validTill
+-- >= now (pass city-local now, as 'findActiveByUserId'), and for an OptIn campaign only rows opted in this period
+-- (the same gate as the assignment lookup). Uses the cohortMappingId index. Members that come only from a city
+-- auto-apply row have no user_cohort_mapping row and are not listed.
+findActiveUserIdsByCohortMappingIdAfter ::
+  (BeamFlow m r) =>
+  Id DCJM.CohortJourneyMapping ->
+  UTCTime ->
+  Bool ->
+  Maybe (Id Common.Person) ->
+  Int ->
+  m [Id Common.Person]
+findActiveUserIdsByCohortMappingIdAfter cohortMappingId now optedInOnly mbAfterUserId limit =
+  map (.userId)
+    <$> findAllWithOptionsKV
+      [ Se.And $
+          [ Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId),
+            Se.Is Beam.enabled $ Se.Eq True,
+            Se.Is Beam.validTill $ Se.GreaterThanOrEq now
+          ]
+            <> [Se.Is Beam.optedInAt $ Se.Not $ Se.Eq Nothing | optedInOnly]
+            <> [Se.Is Beam.userId $ Se.GreaterThan afterUserId.getId | Just afterUserId <- [mbAfterUserId]]
+      ]
+      (Se.Asc Beam.userId)
+      (Just limit)
+      Nothing
+
 insertUserCohortMappingIgnoringConflict ::
   (BeamFlow m r) =>
   Id Common.Person ->

@@ -10,6 +10,7 @@
 module SharedLogic.IncentiveJourney.CampaignControlsCache
   ( CampaignControls (..),
     getCampaignControls,
+    loadCampaignControlsFresh,
     refreshCampaignControls,
     mkBehaviorPeriodKey,
   )
@@ -53,7 +54,10 @@ data CampaignControls = CampaignControls
     autoAssign :: Maybe A.Value,
     autoAssignEnableIn :: Mg.ControlFeatureEnableIn,
     poolingPriority :: Maybe A.Value,
-    poolingEnableIn :: Mg.ControlFeatureEnableIn
+    poolingEnableIn :: Mg.ControlFeatureEnableIn,
+    -- | Raw PreferencePolicy perk config; the driver preference policy layer decodes it.
+    preferencePolicy :: Maybe A.Value,
+    preferencePolicyEnableIn :: Mg.ControlFeatureEnableIn
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
@@ -70,6 +74,10 @@ getCampaignControls ::
 getCampaignControls cjmId =
   IM.withInMemCache [cacheKey cjmId.getId] inMemTtlSeconds $
     loadFromDb cjmId
+
+-- | The controls from the DB, bypassing the cache (a job that must see a save made on another pod).
+loadCampaignControlsFresh :: BeamFlow m r => Id DCJM.CohortJourneyMapping -> m (Maybe CampaignControls)
+loadCampaignControlsFresh = loadFromDb
 
 refreshCampaignControls :: (CacheFlow m r, MonadFlow m) => Id DCJM.CohortJourneyMapping -> m ()
 refreshCampaignControls cjmId =
@@ -118,5 +126,7 @@ toControls cjm milestones journeyType =
           autoAssign = parsed.autoAssign,
           autoAssignEnableIn = parsed.autoAssignEnableIn,
           poolingPriority = parsed.poolingPriority,
-          poolingEnableIn = parsed.poolingEnableIn
+          poolingEnableIn = parsed.poolingEnableIn,
+          preferencePolicy = parsed.preferencePolicy,
+          preferencePolicyEnableIn = parsed.preferencePolicyEnableIn
         }

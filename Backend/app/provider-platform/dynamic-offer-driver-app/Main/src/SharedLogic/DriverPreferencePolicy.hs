@@ -34,6 +34,7 @@ module SharedLogic.DriverPreferencePolicy
     isLocked,
     isHidden,
     validatePolicyConfig,
+    validateCampaignControlFeatures,
     validateToggle,
     validateAirConditioned,
     TierChangeRequest (..),
@@ -44,8 +45,11 @@ module SharedLogic.DriverPreferencePolicy
   )
 where
 
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.List as DL
 import qualified Data.Text as T
+import qualified Data.Vector as V
 import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPreferencePolicy as DDPP
@@ -71,12 +75,13 @@ isLocked preference = isJust . lockFor preference
 isHidden :: DDPP.DriverPreference -> DDPP.PreferencePolicy -> Bool
 isHidden preference policy = preference `elem` policy.hidden
 
-throwLocked :: (MonadThrow m, Log m) => DDPP.DriverPreference -> m a
-throwLocked preference = do
-  logInfo $ "Rejecting driver change to fleet-locked preference " <> show preference
+-- | The lock rejection, worded for the source in charge ('sourceName'); the codes are the same for every source.
+throwLocked :: (MonadThrow m, Log m) => ControlSource -> DDPP.DriverPreference -> m a
+throwLocked source preference = do
+  logInfo $ "Rejecting driver change to locked preference " <> show preference <> " (Managed by your " <> sourceName source <> ")"
   throwError $ case preference of
-    DDPP.ServiceTier -> ServiceTierLockedByFleet
-    _ -> PreferenceLockedByFleet
+    DDPP.ServiceTier -> ServiceTierLockedByFleet $ "Your " <> sourceName source <> " manages this tier"
+    _ -> PreferenceLockedByFleet $ "Your " <> sourceName source <> " manages this setting"
 
 -------------------------------------------------------------------------------
 -- Config save (dashboard)
@@ -105,15 +110,35 @@ validatePolicyConfig policy = do
       DDPP.ServiceTier -> "AutoAssignTiers"
       _ -> "ToggleValue"
 
+-- | Campaign create / update (cohort journey mapping controlFeatures): checks the PreferencePolicy perk, if any, as
+-- the fleet config save does. Its config must parse as a policy (strict decode: an unknown preference or value tag is
+-- rejected here, unlike the tolerant read) and pass 'validatePolicyConfig'; at most one PreferencePolicy entry. Other
+-- features are the campaign library's business and are not looked at. 400 INVALID_PREFERENCE_POLICY.
+validateCampaignControlFeatures :: (MonadThrow m, Log m) => Maybe A.Value -> m ()
+validateCampaignControlFeatures mbControlFeatures = do
+  let entries = case mbControlFeatures of
+        Just (A.Array items) -> [o | A.Object o <- V.toList items, KM.lookup "feature" o == Just (A.String "PreferencePolicy")]
+        _ -> []
+  when (length entries > 1) $
+    throwError $ InvalidPreferencePolicy "PreferencePolicy can be listed only once in controlFeatures"
+  forM_ entries $ \entry -> case KM.lookup "config" entry of
+    Nothing -> throwError $ InvalidPreferencePolicy "PreferencePolicy needs a config {\"locked\": [...], \"hidden\": [...]}"
+    Just A.Null -> throwError $ InvalidPreferencePolicy "PreferencePolicy needs a config {\"locked\": [...], \"hidden\": [...]}"
+    Just config -> case A.fromJSON config of
+      A.Error err -> throwError $ InvalidPreferencePolicy $ "PreferencePolicy config does not parse: " <> T.pack err
+      A.Success policy -> validatePolicyConfig policy
+
 -------------------------------------------------------------------------------
 -- Driver request validation
 
+-- The validators take the source in charge (for the rejection wording) and its policy.
+
 -- | Toggle rule. With @ToggleValue v@: a change is allowed only toward @v@. Frozen (null, or a value of the wrong
 -- kind): no change. A field the driver didn't send (Nothing) is never a change.
-validateToggle :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> DDPP.DriverPreference -> Bool -> Maybe Bool -> m ()
-validateToggle policy preference stored mbRequested =
+validateToggle :: (MonadThrow m, Log m) => ControlSource -> DDPP.PreferencePolicy -> DDPP.DriverPreference -> Bool -> Maybe Bool -> m ()
+validateToggle source policy preference stored mbRequested =
   whenJust (lockFor preference policy) $ \lock -> whenJust mbRequested $ \requested ->
-    when (requested /= stored && Just requested /= lockedToggle lock) $ throwLocked preference
+    when (requested /= stored && Just requested /= lockedToggle lock) $ throwLocked source preference
   where
     lockedToggle lock = case lock.value of
       Just (DDPP.ToggleValue v) -> Just v
@@ -121,10 +146,10 @@ validateToggle policy preference stored mbRequested =
 
 -- | AC: the toggle rule, except that with @ToggleValue@ the driver may still turn AC off while an AC usage restriction
 -- from rider complaints is on them.
-validateAirConditioned :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> DI.DriverInformation -> Bool -> Maybe Bool -> m ()
-validateAirConditioned policy driverInfo stored mbRequested =
+validateAirConditioned :: (MonadThrow m, Log m) => ControlSource -> DDPP.PreferencePolicy -> DI.DriverInformation -> Bool -> Maybe Bool -> m ()
+validateAirConditioned source policy driverInfo stored mbRequested =
   unless (turningOffUnderRestriction && hasToggleValue) $
-    validateToggle policy DDPP.AirConditioned stored mbRequested
+    validateToggle source policy DDPP.AirConditioned stored mbRequested
   where
     turningOffUnderRestriction = mbRequested == Just False && driverInfo.acUsageRestrictionType /= DI.NoRestriction
     hasToggleValue = case lockFor DDPP.AirConditioned policy >>= (.value) of
@@ -153,8 +178,8 @@ protectedTiers now driverTags driverTiers =
 
 -- | ServiceTier lock. With @AutoAssignTiers@: a protected tier that is selected can't be turned off, and its
 -- auto-accept can't be turned off. Frozen: no change at all to a protected tier's selection or auto-accept.
-validateServiceTierChanges :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> [ServiceTierType] -> DV.Vehicle -> [TierChangeRequest] -> m ()
-validateServiceTierChanges policy protected vehicle requests =
+validateServiceTierChanges :: (MonadThrow m, Log m) => ControlSource -> DDPP.PreferencePolicy -> [ServiceTierType] -> DV.Vehicle -> [TierChangeRequest] -> m ()
+validateServiceTierChanges source policy protected vehicle requests =
   whenJust (lockFor DDPP.ServiceTier policy) $ \lock ->
     forM_ (filter ((`elem` protected) . (.tier)) requests) $ \request -> do
       let selectedNow = request.tier `elem` vehicle.selectedServiceTiers
@@ -162,15 +187,15 @@ validateServiceTierChanges policy protected vehicle requests =
           frozen = lock.value /= Just DDPP.AutoAssignTiers
           turnsOff = (selectedNow && not request.isSelected) || (autoAcceptNow && request.autoAccept == Just False)
           changes = request.isSelected /= selectedNow || maybe False (/= autoAcceptNow) request.autoAccept
-      when (turnsOff || (frozen && changes)) $ throwLocked DDPP.ServiceTier
+      when (turnsOff || (frozen && changes)) $ throwLocked source DDPP.ServiceTier
 
 -- | The legacy profile update rebuilds selectedServiceTiers from the downgrade switches: rejected outright while the
 -- fleet protects any tier of the driver.
-validateLegacyTierRebuild :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> [ServiceTierType] -> m ()
-validateLegacyTierRebuild policy protected =
-  when (isLocked DDPP.ServiceTier policy && not (null protected)) $ throwLocked DDPP.ServiceTier
+validateLegacyTierRebuild :: (MonadThrow m, Log m) => ControlSource -> DDPP.PreferencePolicy -> [ServiceTierType] -> m ()
+validateLegacyTierRebuild source policy protected =
+  when (isLocked DDPP.ServiceTier policy && not (null protected)) $ throwLocked source DDPP.ServiceTier
 
 -- | The generic tag endpoint can't write the AutoAssign tag while ServiceTier is locked.
-validateTagWrite :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> Text -> m ()
-validateTagWrite policy tagName =
-  when (tagName == FDS.autoAssignTagName && isLocked DDPP.ServiceTier policy) $ throwLocked DDPP.ServiceTier
+validateTagWrite :: (MonadThrow m, Log m) => ControlSource -> DDPP.PreferencePolicy -> Text -> m ()
+validateTagWrite source policy tagName =
+  when (tagName == FDS.autoAssignTagName && isLocked DDPP.ServiceTier policy) $ throwLocked source DDPP.ServiceTier

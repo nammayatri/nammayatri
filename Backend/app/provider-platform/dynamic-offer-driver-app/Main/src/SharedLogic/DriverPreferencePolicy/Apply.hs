@@ -20,6 +20,12 @@
 -- driver's auto-assign ON, and a posting to the driver's wallet (ServiceTier only, with a cheap exit when nothing is
 -- missing). It writes through the system writers and never goes through the v1 validators.
 --
+-- Whose policy: the shared resolver's ('SharedLogic.DriverPreferencePolicy.Context'). The fleet triggers skip a driver a
+-- campaign (MG) is in charge of; the campaign's own PreferencePolicy perk is applied by the campaign hooks
+-- ('forkApplyCurrentPolicy': membership sync on assign / opt-in / list ensure, and a membership clear, after which the
+-- fleet's policy returns; and, for a TimeBound perk, the ApplyPreferencePolicy job at every window start), and the
+-- wallet restore follows whoever is in charge.
+--
 -- Per lock that carries a value (a frozen lock, value null, applies nothing):
 --
 --   * AirConditioned @ToggleValue v@: sets the vehicle's AC (vehicle + RC, then the automated tier recompute, the writers
@@ -39,6 +45,8 @@ module SharedLogic.DriverPreferencePolicy.Apply
     applyPreferencePolicy,
     applyPreferencePolicyWithOutcome,
     applyFleetPolicyToDriver,
+    applyCurrentPolicyToDriver,
+    forkApplyCurrentPolicy,
     restoreServiceTierLockOnWalletPosting,
   )
 where
@@ -144,6 +152,33 @@ applyFleetPolicyToDriver driverId merchantOpCityId = do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       applyPreferencePolicy policy driver
 
+-- | Applies the policy of whoever is in charge of the driver now ('DPP.contextApplyPolicy': a campaign's PreferencePolicy
+-- perk, else the fleet's). The campaign hooks call it, forked, after the campaign's work: a membership sync (assign,
+-- opt-in, the list ensure that gains a controls campaign) and a membership clear (the fleet's policy, if any, returns).
+-- No-op when that source has no policy values. @reason@ only labels the log line.
+applyCurrentPolicyToDriver ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, EncFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, IJBeamFlow.BeamFlow m r) =>
+  Text ->
+  Id Person ->
+  m ()
+applyCurrentPolicyToDriver reason driverId =
+  QPerson.findById driverId >>= mapM_ \driver -> do
+    context <- DPP.getDriverFleetContext DPP.Cached driverId driver.merchantOperatingCityId
+    let source = if DPP.isCampaignControlled context then "campaign" else "fleet" :: Text
+    case find policyHasValues (DPP.contextApplyPolicy context) of
+      Nothing -> logDebug $ "Preference policy (" <> reason <> ") for driver " <> driverId.getId <> ": the " <> source <> " has no policy values, nothing to apply"
+      Just policy -> do
+        logInfo $ "Preference policy (" <> reason <> ") for driver " <> driverId.getId <> ": applying the " <> source <> "'s policy"
+        applyPreferencePolicy policy driver
+
+-- | 'applyCurrentPolicyToDriver' in its own fork, for the campaign hooks (after the campaign's own work).
+forkApplyCurrentPolicy ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, EncFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, IJBeamFlow.BeamFlow m r) =>
+  Text ->
+  Id Person ->
+  m ()
+forkApplyCurrentPolicy reason driverId = fork ("applyPreferencePolicy after " <> reason) $ applyCurrentPolicyToDriver reason driverId
+
 -- | After a posting to the driver's wallet (wallet gate on): re-applies the ServiceTier lock only, so a protected tier
 -- the wallet now covers comes back (one the wallet strip removed, or one skipped as wallet-short).
 --
@@ -168,9 +203,10 @@ restoreServiceTierLockOnWalletPosting driverId merchantOpCityId = do
         if null (missingAutoAssignTiers liveTags cityTiers vehicle)
           then logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": no protected tier missing, fast path (no lock, no wallet read)"
           else do
-            -- The policy of the source in charge ('DPP.contextPolicy'): a campaign in charge has none in v2.
+            -- The policy of the source in charge ('DPP.contextApplyPolicy'): the campaign's PreferencePolicy perk when a
+            -- campaign is in charge (none: nothing to restore), else the fleet's.
             context <- DPP.getDriverFleetContext DPP.Cached driverId merchantOpCityId
-            let mbPolicy = DPP.contextPolicy context
+            let mbPolicy = DPP.contextApplyPolicy context
             when (isNothing mbPolicy && DPP.isCampaignControlled context) $
               logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": a campaign is in charge, no policy to restore"
             when (maybe False locksAutoAssignTiers mbPolicy) $

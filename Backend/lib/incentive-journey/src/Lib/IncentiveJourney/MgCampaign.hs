@@ -65,7 +65,11 @@ data ParsedControlFeatures = ParsedControlFeatures
     autoAssign :: Maybe Value,
     autoAssignEnableIn :: ControlFeatureEnableIn,
     poolingPriority :: Maybe Value,
-    poolingEnableIn :: ControlFeatureEnableIn
+    poolingEnableIn :: ControlFeatureEnableIn,
+    -- | PreferencePolicy perk: the raw policy JSON (@{"locked": [...], "hidden": [...]}@). Decoded by the driver app
+    -- (its preference-policy types live there), not here.
+    preferencePolicy :: Maybe Value,
+    preferencePolicyEnableIn :: ControlFeatureEnableIn
   }
   deriving (Generic, Show, Eq)
 
@@ -77,7 +81,9 @@ defaultParsedControlFeatures =
       autoAssign = Nothing,
       autoAssignEnableIn = TimeBound,
       poolingPriority = Nothing,
-      poolingEnableIn = TimeBound
+      poolingEnableIn = TimeBound,
+      preferencePolicy = Nothing,
+      preferencePolicyEnableIn = TimeBound
     }
 
 data MgCampaignSnapshot = MgCampaignSnapshot
@@ -94,7 +100,10 @@ data MgCampaignSnapshot = MgCampaignSnapshot
     autoAssign :: Maybe Value,
     autoAssignEnableIn :: ControlFeatureEnableIn,
     poolingPriority :: Maybe Value,
-    poolingEnableIn :: ControlFeatureEnableIn
+    poolingEnableIn :: ControlFeatureEnableIn,
+    -- | Raw PreferencePolicy perk config (see 'ParsedControlFeatures').
+    preferencePolicy :: Maybe Value,
+    preferencePolicyEnableIn :: ControlFeatureEnableIn
   }
   deriving (Generic, Show, Eq)
 
@@ -111,7 +120,9 @@ instance ToJSON MgCampaignSnapshot where
         "autoAssign" A..= autoAssign,
         "autoAssignEnableIn" A..= autoAssignEnableIn,
         "poolingPriority" A..= poolingPriority,
-        "poolingEnableIn" A..= poolingEnableIn
+        "poolingEnableIn" A..= poolingEnableIn,
+        "preferencePolicy" A..= preferencePolicy,
+        "preferencePolicyEnableIn" A..= preferencePolicyEnableIn
       ]
 
 instance FromJSON MgCampaignSnapshot where
@@ -127,8 +138,12 @@ instance FromJSON MgCampaignSnapshot where
     autoAssignEnableIn <- o A..:? "autoAssignEnableIn" A..!= TimeBound
     poolingPriority <- o A..:? "poolingPriority"
     poolingEnableIn <- o A..:? "poolingEnableIn" A..!= TimeBound
+    preferencePolicy <- o A..:? "preferencePolicy"
+    preferencePolicyEnableIn <- o A..:? "preferencePolicyEnableIn" A..!= TimeBound
     pure MgCampaignSnapshot {..}
 
+-- | Any non-empty controlFeatures list is a real control feature and occupies the perk slot: CanDxCancelBooking,
+-- AutoAssign, PoolingPriority and PreferencePolicy (a locks-only campaign too).
 valueHasControlFeatures :: Maybe Value -> Bool
 valueHasControlFeatures = \case
   Just (A.Array xs) -> not (V.null xs)
@@ -159,7 +174,9 @@ mkSnapshotFromCjm journeyIdText cjm mbTimeBounds optedIn validTill =
           autoAssign = parsed.autoAssign,
           autoAssignEnableIn = parsed.autoAssignEnableIn,
           poolingPriority = parsed.poolingPriority,
-          poolingEnableIn = parsed.poolingEnableIn
+          poolingEnableIn = parsed.poolingEnableIn,
+          preferencePolicy = parsed.preferencePolicy,
+          preferencePolicyEnableIn = parsed.preferencePolicyEnableIn
         }
 
 parseEnableIn :: Maybe Value -> ControlFeatureEnableIn
@@ -206,6 +223,11 @@ parseControlFeatures = \case
                 "PoolingPriority" ->
                   acc{poolingPriority = config <|> acc.poolingPriority,
                       poolingEnableIn = enableIn
+                     }
+                -- {"feature":"PreferencePolicy","config":{"locked":[...],"hidden":[...]},"enableIn":"AllDay"|"TimeBound"}
+                "PreferencePolicy" ->
+                  acc{preferencePolicy = config <|> acc.preferencePolicy,
+                      preferencePolicyEnableIn = enableIn
                      }
                 _ -> acc
         _ -> acc
