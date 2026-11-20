@@ -453,6 +453,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
             ..
           }
 
@@ -513,7 +514,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             defaultMaxDriverThreshold = mbGate >>= (.defaultMaxDriverThreshold),
             defaultDemandThreshold = mbGate >>= (.defaultDemandThreshold),
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
-            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            maxRideSkipsBeforeQueueRemoval = reqT.maxRideSkipsBeforeQueueRemoval <|> (mbGate >>= (.maxRideSkipsBeforeQueueRemoval)),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
@@ -1941,7 +1942,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
-                boothSpecificFleet = Nothing
+                boothSpecificFleet = Nothing,
+                poolingMode = Nothing
               }
           gateInfo =
             DGI.GateInfo

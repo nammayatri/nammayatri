@@ -56,6 +56,7 @@ data SpecialLocationFull = SpecialLocationFull
     render :: Maybe D.RenderType,
     paymentModes :: Maybe [D.PaymentMode],
     fareSettlementType :: Maybe D.FareSettlementType,
+    poolingMode :: Maybe D.PoolingMode,
     pickupPriority :: Maybe Int,
     dropPriority :: Maybe Int
   }

@@ -241,12 +241,13 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
     if isJust searchReq.pickupZoneGateId || not (null prevBatchDrivers)
       then filter (isNothing . (.response)) <$> QSRD.findAllActiveBySTId searchTry.id Active
       else pure []
+  now <- getCurrentTime
   -- Handle queue skip for timed-out special zone drivers before marking them inactive.
   -- Forked because it's independent of the search-batch flow — failures must not
   -- block driver dispatch or add latency to the allocator.
   when (isJust searchReq.pickupZoneGateId) $
     fork "specialZoneQueueSkipForTimedOutDrivers" $ do
-      let timedOutQueueDrivers = filter (.pickupZone) unrespondedSRFDs
+      let (_, timedOutQueueDrivers) = QSRD.partitionRespondable now (filter (.pickupZone) unrespondedSRFDs)
       forM_ timedOutQueueDrivers $ \srfd ->
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
   let dispatchDriverIds = map (\dp -> dp.driverPoolResult.driverId.getId) dispatchPool
@@ -257,7 +258,6 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
       forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) reOfferedSRFDs) $ \(serviceTier, expiredCount) ->
         TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
       -- only a still-respondable card is actually pulled off the driver's screen
-      now <- getCurrentTime
       let (pulledSRFDs, expiredSRFDs) = QSRD.partitionRespondable now reOfferedSRFDs
       QSRD.setInactiveAndPulledByIds pulledSRFDs
       QSRD.setInactiveByIds expiredSRFDs
