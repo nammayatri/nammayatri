@@ -1,0 +1,99 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module API.Types.Dashboard.AppManagement.Endpoints.ShuttleInterest where
+
+import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
+import qualified Data.Time
+import qualified Data.Time.Calendar
+import qualified Data.Time.LocalTime
+import qualified "this" Domain.Types.Person
+import qualified "this" Domain.Types.ShuttleInterest
+import EulerHS.Prelude hiding (id, state)
+import qualified EulerHS.Types
+import qualified Kernel.Prelude
+import Kernel.Types.Common
+import qualified Kernel.Types.Id
+import Servant
+import Servant.Client
+
+data ShuttleInterestItem = ShuttleInterestItem
+  { acPreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference,
+    companyDomain :: Kernel.Prelude.Text,
+    createdAt :: Data.Time.UTCTime,
+    daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
+    dropAddress :: Kernel.Prelude.Text,
+    dropLat :: Kernel.Prelude.Double,
+    dropLon :: Kernel.Prelude.Double,
+    dropTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
+    employeeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    maxWalkingDistanceMeters :: Kernel.Prelude.Int,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    pickupAddress :: Kernel.Prelude.Text,
+    pickupLat :: Kernel.Prelude.Double,
+    pickupLon :: Kernel.Prelude.Double,
+    pickupTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
+    shiftEndTime :: Data.Time.LocalTime.TimeOfDay,
+    shiftStartTime :: Data.Time.LocalTime.TimeOfDay,
+    timeFlexibilityMinutes :: Kernel.Prelude.Int,
+    tripType :: Domain.Types.ShuttleInterest.ShuttleTripType,
+    updatedAt :: Data.Time.UTCTime,
+    vehicleSizePreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleVehicleSizePreference
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttleInterestListResp = ShuttleInterestListResp {interests :: [ShuttleInterestItem], limit :: Kernel.Prelude.Int, offset :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttleInterestMapPoint = ShuttleInterestMapPoint
+  { companyDomain :: Kernel.Prelude.Text,
+    dropLat :: Kernel.Prelude.Double,
+    dropLon :: Kernel.Prelude.Double,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    pickupLat :: Kernel.Prelude.Double,
+    pickupLon :: Kernel.Prelude.Double,
+    tripType :: Domain.Types.ShuttleInterest.ShuttleTripType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttleInterestMapResp = ShuttleInterestMapResp {points :: [ShuttleInterestMapPoint]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = "shuttleInterest" :> (GetShuttleInterestList :<|> GetShuttleInterestMapPoints)
+
+type GetShuttleInterestList =
+  "list"
+    :> ( QueryParam "companyDomain" Kernel.Prelude.Text
+           :> ( QueryParam "limit" Kernel.Prelude.Int
+                  :> ( QueryParam "offset" Kernel.Prelude.Int
+                         :> Get
+                              ('[JSON])
+                              ShuttleInterestListResp
+                     )
+              )
+       )
+
+type GetShuttleInterestMapPoints = "mapPoints" :> (QueryParam "companyDomain" Kernel.Prelude.Text :> Get ('[JSON]) ShuttleInterestMapResp)
+
+data ShuttleInterestAPIs = ShuttleInterestAPIs
+  { getShuttleInterestList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ShuttleInterestListResp))),
+    getShuttleInterestMapPoints :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttleInterestMapResp)
+  }
+
+mkShuttleInterestAPIs :: Client EulerHS.Types.EulerClient API -> ShuttleInterestAPIs
+mkShuttleInterestAPIs shuttleInterestClient = (ShuttleInterestAPIs {..})
+  where
+    getShuttleInterestList :<|> getShuttleInterestMapPoints = shuttleInterestClient
+
+data ShuttleInterestUserActionType
+  = GET_SHUTTLE_INTEREST_LIST
+  | GET_SHUTTLE_INTEREST_MAP_POINTS
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [(''ShuttleInterestUserActionType)])

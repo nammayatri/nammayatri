@@ -1,0 +1,25 @@
+CREATE TABLE atlas_app.shuttle_interest ();
+
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN ac_preference text ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN company_domain text NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN days_of_week text[] NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_address text NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_lat double precision NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_lon double precision NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_time time ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN max_walking_distance_meters integer NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_address text NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_lat double precision NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_lon double precision NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_time time ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN shift_end_time time NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN shift_start_time time NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN time_flexibility_minutes integer NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN trip_type text NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN vehicle_size_preference text ;
+ALTER TABLE atlas_app.shuttle_interest ADD PRIMARY KEY ( person_id);
