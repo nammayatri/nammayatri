@@ -9,6 +9,7 @@ types:
     faqGroupId: Text
     category: Maybe Text
     subCategory: Maybe Text
+    displayOrder: Maybe Int
     question: Text
     answer: Text
 
