@@ -95,6 +95,7 @@ import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.LiwipStore as LiwipStore
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
+import qualified API.UI.NavigationRoute as NavigationRoute
 import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
@@ -147,6 +148,7 @@ type API =
            :<|> DriverProfileSummary.API
            :<|> Transporter.API
            :<|> Route.API
+           :<|> NavigationRoute.API
            :<|> Maps.API
            :<|> Ride.API
            :<|> Call.API
@@ -244,6 +246,7 @@ handler =
     :<|> DriverProfileSummary.handler
     :<|> Transporter.handler
     :<|> Route.handler
+    :<|> NavigationRoute.handler
     :<|> Maps.handler
     :<|> Ride.handler
     :<|> Call.handler
