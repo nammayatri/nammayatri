@@ -274,6 +274,8 @@ data FareBreakUp = FareBreakUp
     tollFareTaxWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     discountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     discountTaxWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    freeWaitingTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
