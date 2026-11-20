@@ -111,6 +111,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.GpsDetectedTolls as GpsDetectedTolls
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
@@ -714,8 +715,10 @@ buildTollInput thresholdConfig ride distanceCalculationFailed pickupDropOutsideO
 --
 -- Moved verbatim out of 'endRideHandler'. The ride passed in must be the latest one:
 --   * end ride: re-read after 'finalDistanceCalculation' flushed the last location points;
---   * preview:  the ride as it stands mid-trip (distance and tolls are updated batch by batch
---               while the ride is in progress, so it lags only by the last unsnapped batch).
+--   * preview:  the ride as it stands mid-trip. While the driver stays on the planned route the
+--               GPS points are not snapped mid-ride, so the ride's distance is 0 and its toll
+--               fields are empty until end ride: the distance branches fall back to the estimate,
+--               and crossed tolls come from 'SharedLogic.GpsDetectedTolls' (see below).
 --
 -- The manual-toll step is passed in because the callers treat an unconfirmed declaration
 -- differently: end ride throws (the driver must wait or re-declare), a preview must never
@@ -740,11 +743,23 @@ computeTrackedDistanceFare mode handle@ServiceHandle {..} booking updRide tripEn
   when distanceCalculationFailed $ do
     logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
 
+  -- Preview only: while the driver stays on the planned route, the ride's own toll fields stay
+  -- empty until end ride runs the final toll detection, so a toll already crossed would be left
+  -- out. Use the tolls the per-batch check has recorded on the driven route instead (see
+  -- SharedLogic.GpsDetectedTolls). End ride keeps using the ride's tolls from its final detection.
+  rideForTolls <-
+    if mode == PreviewMode && isNothing updRide.tollCharges && DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+      then do
+        mbGpsTolls <- GpsDetectedTolls.getGpsDetectedTolls updRide.id
+        whenJust mbGpsTolls $ \gpsTolls -> logInfo $ "Collect payment: billing tolls crossed so far on the driven route: " <> show gpsTolls.tollNames
+        pure $ maybe updRide (\gpsTolls -> updRide {DRide.tollCharges = Just gpsTolls.tollCharges, DRide.tollNames = Just gpsTolls.tollNames, DRide.tollIds = Just gpsTolls.tollIds}) mbGpsTolls
+      else pure updRide
+
   -- Toll reconciliation matrix lives in the pure, unit-tested
   -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
   -- extraction of the if-tree that used to be inline here); this input also feeds
   -- the manual-toll-charge signal below.
-  tollInput <- buildTollInput thresholdConfig updRide distanceCalculationFailed pickupDropOutsideOfThreshold
+  tollInput <- buildTollInput thresholdConfig rideForTolls distanceCalculationFailed pickupDropOutsideOfThreshold
 
   -- Log if we have validated toll but can't apply due to route deviation
   when (isJust tollInput.validatedPendingToll && pickupDropOutsideOfThreshold) $ do

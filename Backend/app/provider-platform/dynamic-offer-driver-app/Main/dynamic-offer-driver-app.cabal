@@ -803,6 +803,7 @@ library
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
+      SharedLogic.GpsDetectedTolls
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
       SharedLogic.IntegratedBPPConfig
