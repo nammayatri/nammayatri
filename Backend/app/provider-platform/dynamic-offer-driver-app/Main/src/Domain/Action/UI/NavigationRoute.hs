@@ -17,8 +17,8 @@
 -- The existing @/route@, @/pickup/route@ and @/trip/route@ APIs convert OSRM's answer into
 -- 'Maps.GetRoutesResp', which keeps only the route points and totals: the turn type, direction,
 -- road names and per-step distances that navigation needs are dropped. This API calls this city's
--- OSRM server directly and returns OSRM's route response unchanged, so the app's navigation engine
--- gets every step.
+-- OSRM server directly and returns OSRM's route response as is (plus a @tollsAvoided@ flag), so the
+-- app's navigation engine gets every step.
 module Domain.Action.UI.NavigationRoute
   ( NavigationRouteReq (..),
     getNavigationRoute,
@@ -26,6 +26,8 @@ module Domain.Action.UI.NavigationRoute
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -42,6 +44,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.ExternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Servant hiding (throwError)
+import Servant.Client (ClientError (..), ResponseF (..))
 import qualified Tools.Maps as Maps
 
 -- | Route from the driver's position through the remaining stops; the last waypoint is the destination.
@@ -73,11 +76,16 @@ type OsrmNavigationRouteAPI =
     :> QueryParam "exclude" Text
     :> Get '[JSON] Value
 
--- | Returns this city's OSRM route for the request, unchanged.
+-- | Returns this city's OSRM route for the request, with one field added: @tollsAvoided@, true only
+-- when the route was computed with tolls excluded.
 --
 -- Rate limited per driver as a safety net: the app already asks at most once per reroute, and
--- reroutes are at least 8 s apart. When tolls are to be avoided but this OSRM profile has no toll
--- class (the request fails), the route is fetched again without the exclusion.
+-- reroutes are at least 8 s apart.
+--
+-- When tolls are to be avoided, the route is fetched again without the exclusion in two cases only:
+-- no toll-free route exists, or this city's OSRM profile has no toll class. The route then carries
+-- @tollsAvoided: false@, so the app can tell the driver it uses tolls instead of giving them a
+-- toll route silently. Any other failure (timeout, server error) is returned as is, without retry.
 getNavigationRoute ::
   ServiceFlow m r =>
   (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -97,12 +105,41 @@ getNavigationRoute (personId, _merchantId, merchantOpCityId) req = do
           "osrm-navigation-route"
           (Proxy @OsrmNavigationRouteAPI)
   firstTry <- callOsrm (if avoidTolls then Just "toll" else Nothing)
-  rsp <- case firstTry of
-    Left _ | avoidTolls -> callOsrm Nothing
-    _ -> pure firstTry
+  (rsp, tollsAvoided) <- case firstTry of
+    Left err
+      | avoidTolls,
+        Just reason <- tollFallbackReason err -> do
+        logInfo $ "Navigation route fetched without excluding tolls: " <> reason
+        (\r -> (r, False)) <$> callOsrm Nothing
+    _ -> pure (firstTry, avoidTolls)
   fork "Logging external API Call of OsrmNavigationRouteAPI OSRM" $
     ApiCallLogger.pushExternalApiCallDataToKafka "OsrmNavigationRouteAPI" "OSRM" (req.rideId <|> Just personId.getId) (Just merchantOpCityId.getId) (Just req) rsp
-  fromEitherM (FailedToCallOsrmRouteAPI . show) rsp
+  withTollsAvoided tollsAvoided <$> fromEitherM (FailedToCallOsrmRouteAPI . show) rsp
+
+-- | OSRM's error body, e.g. @{"code": "NoRoute", "message": "Impossible route between points"}@.
+data OsrmErrorBody = OsrmErrorBody Text (Maybe Text)
+
+instance A.FromJSON OsrmErrorBody where
+  parseJSON = A.withObject "OsrmErrorBody" $ \o -> OsrmErrorBody <$> o A..: "code" <*> o A..:? "message"
+
+-- | Why a route with tolls excluded failed, when fetching it again with tolls allowed is the right
+-- fallback; 'Nothing' for any other failure. OSRM answers every error with HTTP 400, so the body's
+-- code tells them apart: @NoRoute@ when no toll-free route exists, and @InvalidValue@ with an
+-- "Exclude flag combination is not supported." message when the profile has no toll class.
+tollFallbackReason :: ClientError -> Maybe Text
+tollFallbackReason = \case
+  FailureResponse _ Response {responseBody} -> case A.decode responseBody of
+    Just (OsrmErrorBody "NoRoute" _) -> Just "no toll-free route exists"
+    Just (OsrmErrorBody "InvalidValue" (Just message))
+      | "Exclude" `T.isInfixOf` message -> Just "this city's OSRM profile has no toll class"
+    _ -> Nothing
+  _ -> Nothing
+
+-- | Adds @tollsAvoided@ to OSRM's route response object.
+withTollsAvoided :: Bool -> Value -> Value
+withTollsAvoided avoided = \case
+  A.Object fields -> A.Object (KM.insert "tollsAvoided" (A.Bool avoided) fields)
+  other -> other
 
 -- | OSRM's @bearings@ value: the driver's heading (with a tolerance) for the origin, none for the waypoints.
 bearingsParam :: Int -> Double -> Text
