@@ -307,8 +307,11 @@ cannedEstimates =
 -- | The default flexi quote (mock-client.ts:158) -- also the value the gate knob
 -- yields once released, so a gated search proceeds exactly as unstalled.
 cannedFlexiQuotes :: [BotQuote]
-cannedFlexiQuotes =
-  [BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, baseFare = Nothing, perKmFare = Nothing, vehicleVariant = Just "AUTO_RICKSHAW"}]
+cannedFlexiQuotes = [cannedFlexiQuote]
+
+cannedFlexiQuote :: BotQuote
+cannedFlexiQuote =
+  BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, baseFare = Nothing, perKmFare = Nothing, vehicleVariant = Just "AUTO_RICKSHAW"}
 
 -- | The assigned driver as returned by getActiveBookings / the base for the
 -- getBookingDetails progression (mock-client.ts:173-214).
@@ -891,7 +894,7 @@ flexiFareChecks =
         assertEqual "missing" Nothing (rateCardAmount "EXTRA_PER_KM_FARE" (filter ((/= "EXTRA_PER_KM_FARE") . fst) farePolicyRateCard))
     ]
   where
-    quoteWith base perKm = (L.head cannedFlexiQuotes) {baseFare = base, perKmFare = perKm}
+    quoteWith base perKm = cannedFlexiQuote {baseFare = base, perKmFare = perKm}
     -- Shaped like a real Progressive policy's quoteFareBreakup (base 36 for the
     -- first 2 km, 28/km to 12 km, 18/km after), in the BPP's emission order.
     farePolicyRateCard =
