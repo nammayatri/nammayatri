@@ -760,21 +760,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) req@API.Ty
           mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
           pure $ maybe False (>= minBalance) mbBalance
 
--- | The (rental, intercity, intracity) switches a service-tier update ends up writing. At least one intercity/rental
--- non usage restricted service tier should be selected for getting respective rides, and intracity is forced on unless
--- the vehicle is a car with intercity or rental on.
-resultingTripTypeSwitches :: DI.DriverInformation -> [(VehicleServiceTier, Bool)] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> (Bool, Bool, Bool)
-resultingTripTypeSwitches driverInfo driverVehicleServiceTierTypes mbRental mbInterCity mbIntraCity =
-  (rental, interCity, intraCity)
-  where
-    eligible = [serviceTier | (serviceTier, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted]
-    interCity = any (\st -> fromMaybe driverInfo.canSwitchToInterCity mbInterCity && fromMaybe True st.isIntercityEnabled) eligible
-    rental = any (\st -> fromMaybe driverInfo.canSwitchToRental mbRental && fromMaybe True st.isRentalsEnabled) eligible
-    intraCity =
-      if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (interCity || rental)
-        then fromMaybe driverInfo.canSwitchToIntraCity mbIntraCity
-        else True
-
 -- | AC lock, stored value as the tier GET shows it (unknown counts as on).
 validateAirConditionedLock :: DDPP.PreferencePolicy -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Bool -> Environment.Flow ()
 validateAirConditionedLock policy personId mbRequested =

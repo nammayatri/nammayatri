@@ -21,6 +21,7 @@ import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson (object, withObject, (.!=), (.:), (.:?), (.=))
+import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.Map as M
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
@@ -133,6 +134,7 @@ data AllocatorJobType
   | WalletIntegrityCheck
   | ChargeWalletPenalty
   | MaterialiseSharedRuns
+  | ApplyPreferencePolicy
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -224,6 +226,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
   restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
   restoreAnyJobInfo SMaterialiseSharedRuns jobData = AnyJobInfo <$> restoreJobInfo SMaterialiseSharedRuns jobData
+  restoreAnyJobInfo SApplyPreferencePolicy jobData = AnyJobInfo <$> restoreJobInfo SApplyPreferencePolicy jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -1082,3 +1085,36 @@ data MaterialiseSharedRunsJobData = MaterialiseSharedRunsJobData
 instance JobInfoProcessor 'MaterialiseSharedRuns
 
 type instance JobContent 'MaterialiseSharedRuns = MaterialiseSharedRunsJobData
+
+-- | Whose preference policy an 'ApplyPreferencePolicy' run applies, and to whom (the job's per-source interface is in
+--   'SharedLogic.Allocator.Jobs.PreferencePolicy.ApplyPreferencePolicy'). JSON is always tag / contents (also while
+--   there is one constructor), so adding a source never changes the encoding of the others.
+data PolicySource
+  = -- | fleet_config.preference_policy of this fleet owner, applied to the fleet's active drivers.
+    FleetPolicySource Text
+  deriving (Generic, Show, Eq)
+
+instance ToJSON PolicySource where
+  toJSON = AesonTypes.genericToJSON AesonTypes.defaultOptions {AesonTypes.tagSingleConstructors = True}
+
+instance FromJSON PolicySource where
+  parseJSON = AesonTypes.genericParseJSON AesonTypes.defaultOptions {AesonTypes.tagSingleConstructors = True}
+
+-- | Applies a source's preference policy to the drivers it is in charge of, one page per run, in driver-id order after
+--   'afterDriverId'. Each run queues the next page, so a restart loses at most one page.
+--   'attemptCount': the app-level retry of a failed page (Nothing = first attempt; old payloads decode as Nothing).
+--   'rescheduleAtNextWindow': after the last page, queue the chain again (cursor reset) at the source's next window
+--   start (a source without windows, the fleet, never reschedules).
+data ApplyPreferencePolicyJobData = ApplyPreferencePolicyJobData
+  { source :: PolicySource,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    afterDriverId :: Maybe (Id DP.Person),
+    attemptCount :: Maybe Int,
+    rescheduleAtNextWindow :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ApplyPreferencePolicy
+
+type instance JobContent 'ApplyPreferencePolicy = ApplyPreferencePolicyJobData

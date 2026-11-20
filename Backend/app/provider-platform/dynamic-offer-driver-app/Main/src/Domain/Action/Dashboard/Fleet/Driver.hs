@@ -223,9 +223,11 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.Allocator (AllocatorJobType (..), ApplyPreferencePolicyJobData (..), PolicySource (..))
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
@@ -240,6 +242,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.DriverPreferencePolicy as DPP
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
@@ -3010,7 +3013,9 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig requestorA
     when (merchant.overwriteAssociation == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
     QFDV.createFleetDriverAssociationWithLTSSync person.id (Id fleetOwnerId) Nothing (Just person.merchantId) (Just person.merchantOperatingCityId)
-    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver person.id merchantOpCityId
+    fork "applyFleetSettings" $ do
+      FDS.applyFleetSettingsToDriver person.id merchantOpCityId
+      PolicyApply.applyFleetPolicyToDriver person.id merchantOpCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -4546,7 +4551,9 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DI.FLEET_DRIVER
         when (merchant.overwriteAssociation == Just True) $ do
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
-        fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOpCityId
+        fork "applyFleetSettings" $ do
+          FDS.applyFleetSettingsToDriver driverId merchantOpCityId
+          PolicyApply.applyFleetPolicyToDriver driverId merchantOpCityId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4608,7 +4615,10 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
       when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
-    when linkAsActive $ fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver personId moc.id
+    when linkAsActive $
+      fork "applyFleetSettings" $ do
+        FDS.applyFleetSettingsToDriver personId moc.id
+        PolicyApply.applyFleetPolicyToDriver personId moc.id
   fork "Fleet owner change notification" $
     SOnboardingComms.notifyOnFleetOwnerChange moc.id person newFleetOwner mbOldFleetOwner
   pure Success
@@ -5429,6 +5439,20 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
           }
   -- ConfigPilot caches each city's fleet configs (in-memory and Redis); a direct write must clear them.
   invalidateConfigInMem LYT.FleetConfig
+  -- A changed policy with values is applied to the fleet's active drivers in the background (allocator job, paged).
+  let oldPolicy = mbExisting >>= (.preferencePolicy)
+      newPolicy = req.preferencePolicy <|> oldPolicy
+  when (newPolicy /= oldPolicy && maybe False PolicyApply.policyHasValues newPolicy) $ do
+    logInfo $ "Fleet " <> fleetOwner.id.getId <> " saved a preference policy with values, queueing ApplyPreferencePolicy"
+    JC.createJobIn @_ @'ApplyPreferencePolicy (Just merchant.id) (Just merchantOpCityId) 0 $
+      ApplyPreferencePolicyJobData
+        { source = FleetPolicySource fleetOwner.id.getId,
+          merchantId = merchant.id,
+          merchantOperatingCityId = merchantOpCityId,
+          afterDriverId = Nothing,
+          attemptCount = Nothing,
+          rescheduleAtNextWindow = Nothing
+        }
   pure Success
 
 validatePoolingPrioritySpecialLocations :: Id DMOC.MerchantOperatingCity -> FleetPoolingPriority -> Flow ()
@@ -5492,6 +5516,12 @@ postDriverFleetDriverAutoAssign ::
 postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
   (_, _, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
   let personId = validatedDriver.id
+  -- A campaign member's auto-assign belongs to the campaign (incl. a behaviour-only one): the fleet can turn it neither
+  -- on nor off. Read error: throws, as the fleet auto-assign lookup always did.
+  driverContext <- DPP.resolveDriverFleetContext personId validatedDriver.merchantOperatingCityId
+  when (DPP.isCampaignControlled driverContext) $ do
+    logInfo $ "Fleet auto-assign " <> (if req.enable then "ON" else "OFF") <> " for driver " <> personId.getId <> " rejected: a campaign is in charge"
+    throwError FleetAutoAssignControlledByCampaign
   Redis.withWaitAndLockRedisWithTimeout (SVST.selectedServiceTiersLockKey personId) 5 10 50000 $ do
     driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
@@ -5501,4 +5531,9 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
         when (null tiers) $ throwError NoAutoAcceptTierForVehicle
         FDS.applyFleetSettings True cityTiers driver vehicle
       else FDS.removeAutoAssign tiers driver vehicle
+  -- Auto-assign ON also applies the fleet's preference policy (its ServiceTier lock now has an AutoAssign tag to protect).
+  -- After the locked section: the apply takes the same selectedServiceTiers lock.
+  when req.enable $
+    fork "applyPreferencePolicy on auto-assign ON" $
+      PolicyApply.applyFleetPolicyToDriver personId validatedDriver.merchantOperatingCityId
   pure Success

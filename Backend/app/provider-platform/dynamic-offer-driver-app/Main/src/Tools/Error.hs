@@ -600,6 +600,7 @@ data FleetDriverSettingsError
   | PreferenceLockedByFleet
   | ServiceTierLockedByFleet
   | InvalidPreferencePolicy Text
+  | FleetAutoAssignControlledByCampaign
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetDriverSettingsError
@@ -611,6 +612,7 @@ instance IsBaseError FleetDriverSettingsError where
     PreferenceLockedByFleet -> Just "Your fleet manages this setting"
     ServiceTierLockedByFleet -> Just "Your fleet manages this tier"
     InvalidPreferencePolicy reason -> Just reason
+    FleetAutoAssignControlledByCampaign -> Just "This driver is in a campaign; the campaign controls auto-assign"
 
 instance IsHTTPError FleetDriverSettingsError where
   toErrorCode = \case
@@ -619,12 +621,14 @@ instance IsHTTPError FleetDriverSettingsError where
     PreferenceLockedByFleet -> "PREFERENCE_LOCKED_BY_FLEET"
     ServiceTierLockedByFleet -> "SERVICE_TIER_LOCKED_BY_FLEET"
     InvalidPreferencePolicy _ -> "INVALID_PREFERENCE_POLICY"
+    FleetAutoAssignControlledByCampaign -> "FLEET_AUTO_ASSIGN_CONTROLLED_BY_CAMPAIGN"
   toHttpCode = \case
     AreaPreferenceDisabledByFleet -> E400
     NoAutoAcceptTierForVehicle -> E400
     PreferenceLockedByFleet -> E400
     ServiceTierLockedByFleet -> E400
     InvalidPreferencePolicy _ -> E400
+    FleetAutoAssignControlledByCampaign -> E400
 
 instance IsAPIError FleetDriverSettingsError
 

@@ -65,7 +65,6 @@ import qualified Domain.Types.FleetDriverAssociation as DFDA
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Person)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney.MgCampaign as Mg
@@ -116,14 +115,14 @@ data FleetConfigRead = Cached | Fresh
 -- | The lookup with the cached fleet config. Throws on a read error (as
 -- 'SharedLogic.FleetDriverSettings.getDriverFleetAutoAssignConfig' always did).
 resolveDriverFleetContext ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m DriverFleetContext
 resolveDriverFleetContext = resolveDriverFleetContextWith Cached
 
 resolveDriverFleetContextWith ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   FleetConfigRead ->
   Id Person ->
   Id MerchantOperatingCity ->
@@ -152,10 +151,17 @@ sourceAutoAssign = \case
   FleetSource link -> link.fleetConfig >>= (.autoAssign)
   NoSource -> Nothing
 
--- | The single switch for which preference policy applies. v1: the fleet's, whoever is in charge (a campaign member
--- in a fleet keeps the fleet's locks).
+-- | The single switch for which preference policy applies.
+--
+--   * A campaign in charge (including a behaviour-only one): no fleet policy. The fleet's locks are suppressed like
+--     its other perks (auto-assign, cancel, pooling): no validation, no GET lock flags, no apply. Unassign the driver
+--     from the campaign to bring the fleet's locks back.
+--   * Otherwise the active fleet's policy.
 sourcePolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
-sourcePolicy context = context.fleet >>= (.fleetConfig) >>= (.preferencePolicy)
+sourcePolicy context = case context.controlSource of
+  CampaignSource _ -> Nothing
+  FleetSource link -> link.fleetConfig >>= (.preferencePolicy)
+  NoSource -> Nothing
 
 readFleetLink :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigRead -> Id Person -> Id MerchantOperatingCity -> m (Maybe FleetLink)
 readFleetLink configRead driverId merchantOpCityId = do
@@ -178,7 +184,7 @@ readFleetLink configRead driverId merchantOpCityId = do
 -- | The lookup with its read error kept, for a caller that must not fail open on it (the cash-ride guard) but still
 -- wants the policy to ('failOpen').
 tryDriverFleetContext ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Either SomeException DriverFleetContext)
@@ -186,7 +192,7 @@ tryDriverFleetContext driverId merchantOpCityId = withTryCatch "getDriverFleetCo
 
 -- | 'tryDriverFleetContext' with the fleet config read fresh from the DB, for driver preference-change handlers.
 tryDriverFleetContextFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Either SomeException DriverFleetContext)
@@ -194,7 +200,7 @@ tryDriverFleetContextFresh driverId merchantOpCityId = withTryCatch "getDriverFl
 
 -- | Fails OPEN: a read error is logged and treated as "no source", so an outage never blocks drivers.
 getDriverFleetContext ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m DriverFleetContext
@@ -202,7 +208,7 @@ getDriverFleetContext driverId merchantOpCityId = tryDriverFleetContext driverId
 
 -- | 'getDriverFleetContext' with the fleet config read fresh from the DB, for driver preference-change handlers.
 getDriverFleetContextFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m DriverFleetContext
@@ -232,7 +238,7 @@ isCampaignControlled context = case context.controlSource of
 
 -- | For handlers that need only the policy.
 getDriverPolicy ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DDPP.PreferencePolicy)
@@ -240,7 +246,7 @@ getDriverPolicy driverId merchantOpCityId = contextPolicy <$> getDriverFleetCont
 
 -- | 'getDriverPolicy' with the fleet config read fresh from the DB, for driver preference-change handlers.
 getDriverPolicyFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DDPP.PreferencePolicy)

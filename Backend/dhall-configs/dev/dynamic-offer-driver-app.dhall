@@ -362,6 +362,7 @@ let AllocatorJobType =
       | WalletIntegrityCheck
       | ChargeWalletPenalty
       | MaterialiseSharedRuns
+      | ApplyPreferencePolicy
       >
 
 let jobRetryOnExceptionMapx =
@@ -382,6 +383,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.ProcessEndRideFinance, mapValue = True }
       , { mapKey = AllocatorJobType.WalletIntegrityCheck, mapValue = True }
       , { mapKey = AllocatorJobType.ChargeWalletPenalty, mapValue = True }
+      , { mapKey = AllocatorJobType.ApplyPreferencePolicy, mapValue = True }
       , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
         , mapValue = True
         }

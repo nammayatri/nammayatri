@@ -199,7 +199,8 @@ restoreFleetAutoAssignOrKeep driverId =
       Just _ -> rewriteAutoAssignFromCurrentConfig driverId
       Nothing -> pure ()
 
--- | The fleet's per-driver switch turned off: these tiers come off the AutoAssign tag and the vehicle's auto-accept tiers.
+-- | The fleet's per-driver switch turned off: the whole AutoAssign tag goes, and auto-accept comes off these tiers and
+-- every tier that was on the tag (also one of another vehicle, or one the wallet strip unselected).
 removeAutoAssign ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   [ServiceTierType] ->
@@ -208,13 +209,11 @@ removeAutoAssign ::
   m ()
 removeAutoAssign tiers driver vehicle = do
   let oldTags = fromMaybe [] driver.driverTag
-      remaining = filter (`notElem` map show tiers) (autoAssignedTiers oldTags)
-      newTags =
-        if null remaining
-          then Yudhishthira.removeTagName (Just oldTags) (LYT.TagNameValue autoAssignTagName)
-          else setTag autoAssignTagName (LYT.ArrayValue remaining) oldTags
+      tagTiers = autoAssignedTiers oldTags
+      newTags = Yudhishthira.removeTagName (Just oldTags) (LYT.TagNameValue autoAssignTagName)
+      offTier tier = tier `elem` tiers || show tier `elem` tagTiers
   when (newTags /= oldTags) $ QPerson.updateDriverTag (Just newTags) driver.id
-  updateAutoAcceptTiers vehicle (filter (`notElem` tiers) (fromMaybe [] vehicle.selectedAutoAcceptTiers))
+  updateAutoAcceptTiers vehicle (filter (not . offTier) (fromMaybe [] vehicle.selectedAutoAcceptTiers))
 
 setTag :: Text -> LYT.TagValue -> [LYT.TagNameValueExpiry] -> [LYT.TagNameValueExpiry]
 setTag name value tags =
