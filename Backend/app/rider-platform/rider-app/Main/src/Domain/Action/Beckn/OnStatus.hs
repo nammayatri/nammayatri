@@ -382,7 +382,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.MeterRideDetails _ -> True
         _ -> False
       enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
-  pure $ DRide.Ride {driverMobileNumber = Nothing, cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, ..}
+  pure $ DRide.Ride {driverMobileNumber = Nothing, cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, collectedFare = Nothing, collectedFareAt = Nothing, collectedFareTollPendingConfirmation = Nothing, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

@@ -27,7 +27,6 @@ where
 
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
-import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import qualified Domain.Action.UI.Ride.EndRide.TollDecision as TollDecision
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as Fields
@@ -51,7 +50,6 @@ import qualified Storage.CachedQueries.Merchant as QM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
-import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
 
 data ManualTollChargeRequirement = ManualTollChargeRequirement
@@ -131,31 +129,9 @@ getEndRideRequirements (driverId, _merchantId, merchantOpCityId) rideId mbTripEn
             Just tripEndPoint -> RideEnd.isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig
             Nothing -> pure False
           distanceCalculationFailed <- LocUpdInternal.isDistanceCalculationFailedImplementation ride.driverId
-          mbValidatedPendingToll <-
-            TollsDetector.checkAndValidatePendingTolls
-              TollsDetector.TollTrackingSnapToRoad
-              ride.driverId.getId
-              ride.estimatedTollCharges
-              ride.estimatedTollNames
-              ride.estimatedTollIds
-              ride.tollCharges
-              ride.tollIds
-          let tollInput =
-                TollDecision.TollInput
-                  { distanceCalculationFailed = distanceCalculationFailed,
-                    numberOfSelfTuned = ride.numberOfSelfTuned,
-                    detectedTollCharges = ride.tollCharges,
-                    detectedTollNames = ride.tollNames,
-                    detectedTollIds = ride.tollIds,
-                    estimatedTollCharges = ride.estimatedTollCharges,
-                    estimatedTollNames = ride.estimatedTollNames,
-                    estimatedTollIds = ride.estimatedTollIds,
-                    driverDeviatedToTollRoute = ride.driverDeviatedToTollRoute,
-                    pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-                    validatedPendingToll = mbValidatedPendingToll,
-                    enableEstimatedTollFallback = (RD.mkRecomputeConfig thresholdConfig).cfgEstimatedTollFallback
-                  }
-              tollBilling = TollDecision.decideTollBilling tollInput
+          -- Same toll input end ride and collect-payment build, so all three take the same toll decision.
+          tollInput <- RideEnd.buildTollInput thresholdConfig ride distanceCalculationFailed pickupDropOutsideOfThreshold
+          let tollBilling = TollDecision.decideTollBilling tollInput
               signal = ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TollDecision.hasNoTollEvidence tollInput}
           if shouldRequestManualTollCharge (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) signal
             then

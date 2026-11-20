@@ -45,7 +45,7 @@ FareBreakup:
       amountWithCurrency: PriceAPIEntity
       derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
     FareBreakupEntityType:
-      enum: "BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING, ESTIMATE, QUOTE"
+      enum: "BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING, ESTIMATE, QUOTE, COLLECTED_FARE"
     RefundFareComponent:
       enum: "RIDE_FARE, TOLL, PARKING, CANCELLATION_FEE"
       derive: "Bounded, Enum"

@@ -596,6 +596,9 @@ mkEntityType = \case
   DFareBreakup.INITIAL_BOOKING -> Common.INITIAL_BOOKING
   DFareBreakup.ESTIMATE -> Common.ESTIMATE
   DFareBreakup.QUOTE -> Common.QUOTE
+  -- Mid-ride collect-payment snapshot; these screens only read RIDE/BOOKING rows, so it never reaches here.
+  -- Mapped to RIDE (ride-level fare lines) rather than widening the dashboard/issue API enums.
+  DFareBreakup.COLLECTED_FARE -> Common.RIDE
 
 mkFareProductType :: DTB.BookingDetails -> FareProductType
 mkFareProductType bookingDetails = case bookingDetails of

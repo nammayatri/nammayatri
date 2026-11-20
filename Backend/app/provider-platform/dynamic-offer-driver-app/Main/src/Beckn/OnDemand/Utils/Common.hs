@@ -1493,6 +1493,13 @@ mkDriverReachedDestinationTagGroup isValueAddNP destinationArrivalTime returnOtp
       Tags.RETURN_TRIP_OTP ~=? returnOtp
     ]
 
+mkRideFareUpdatedTagGroup :: UTCTime -> Bool -> Maybe [Spec.TagGroup]
+mkRideFareUpdatedTagGroup computedAt tollPendingConfirmation =
+  Tags.buildTagGroups
+    [ Tags.FARE_COMPUTED_AT ~=? Just (T.pack $ show computedAt),
+      Tags.TOLL_PENDING_CONFIRMATION ~=? Just (T.pack $ show tollPendingConfirmation)
+    ]
+
 mkReturnTripStartedTimeTagGroup :: Maybe UTCTime -> Maybe [Spec.TagGroup]
 mkReturnTripStartedTimeTagGroup = Tags.mkSingleTagGroup Tags.RETURN_TRIP_STARTED_TIME
 

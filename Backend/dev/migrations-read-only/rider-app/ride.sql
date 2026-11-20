@@ -499,3 +499,10 @@ ALTER TABLE atlas_app.ride ADD COLUMN cancellation_payment_charge double precisi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN driver_call_identity text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare_toll_pending_confirmation boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare_at timestamp with time zone ;
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare numeric(30,2) ;

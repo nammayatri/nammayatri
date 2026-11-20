@@ -93,6 +93,12 @@ data RideAPIEntity = RideAPIEntity
     isInsured :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    -- | Collect payment: fare the rider would pay if the ride ended at collectedFareAt, shared by the
+    -- driver mid-ride. While the ride is in progress the app shows it instead of the estimate; after
+    -- the ride ends computedPriceWithCurrency (the final fare) is authoritative.
+    collectedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    collectedFareAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    collectedFareTollPendingConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
     refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
     cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus,

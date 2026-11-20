@@ -2631,6 +2631,26 @@ instance IsHTTPError ManualTollChargeError where
 
 instance IsAPIError ManualTollChargeError
 
+data CollectPaymentError
+  = -- | A shared-route run: each passenger pays their own fixed ticket fare, there is no single fare to collect.
+    CollectPaymentNotApplicableForSharedRoute
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CollectPaymentError
+
+instance IsBaseError CollectPaymentError where
+  toMessage = \case
+    CollectPaymentNotApplicableForSharedRoute -> Just "Payment can not be collected for a shared-route run: each passenger pays their own ticket fare."
+
+instance IsHTTPError CollectPaymentError where
+  toErrorCode = \case
+    CollectPaymentNotApplicableForSharedRoute -> "COLLECT_PAYMENT_NOT_APPLICABLE_FOR_SHARED_ROUTE"
+
+  toHttpCode = \case
+    CollectPaymentNotApplicableForSharedRoute -> E400
+
+instance IsAPIError CollectPaymentError
+
 data RideFeedbackError
   = RideFeedbackConfigNotFound Text
   | RideFeedbackConfigAlreadyExists Text

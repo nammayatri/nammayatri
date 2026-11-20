@@ -14,6 +14,7 @@
 
 module Main where
 
+import qualified CollectPaymentTollTests
 import qualified CsvSanitizationTests
 import qualified Dashboard (dashboardUnitTests)
 import qualified FareRecomputeDecisionTests
@@ -59,7 +60,8 @@ main = do
         testGroup
           "End Ride Fare Recompute"
           [ FareRecomputeDecisionTests.tests,
-            TollDecisionTests.tests
+            TollDecisionTests.tests,
+            CollectPaymentTollTests.tests
           ],
         testGroup
           "SharedCab Unit Tests"

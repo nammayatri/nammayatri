@@ -742,6 +742,34 @@ notifyOnRideStarted booking ride = do
 -- title = "Your {#serviceTierName#} ride has started!"
 -- body = "Your {#serviceTierName#} ride with {#driverName#} has started. Enjoy the ride!"
 
+-- | Collect payment: the driver asked for the fare mid-ride, tell the rider what to pay. The text comes from
+-- merchant PN "RIDE_FARE_UPDATED"; no row means no push. Template params:
+--   {#fare#}       amount rounded like the rest of the app, without currency (INR: whole rupees, e.g. "57")
+--   {#currency#}   e.g. "INR"
+--   {#driverName#}
+-- e.g. title = "Please pay your driver ₹{#fare#}", body = "You can view more details in the app"
+notifyOnRideFareUpdated ::
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+  SRB.Booking ->
+  SRide.Ride ->
+  Price.Price ->
+  m ()
+notifyOnRideFareUpdated booking ride fare = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let entity = Notification.Entity Notification.Product ride.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "RIDE_FARE_UPDATED" identity)
+    EmptyDynamicParam
+    entity
+    booking.tripCategory
+    [ ("fare", Price.showPriceWithRoundingWithoutCurrency fare),
+      ("currency", show fare.currency),
+      ("driverName", ride.driverName)
+    ]
+    (Just booking.configInExperimentVersions)
+    Nothing
+
 data RideCompleteParam = RideCompleteParam
   { driverName :: Text,
     fare :: Text

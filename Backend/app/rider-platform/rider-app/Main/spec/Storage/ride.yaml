@@ -156,6 +156,12 @@ Ride:
     enableOtpLessRide: Maybe Bool
     rideTags: Maybe [Text]
     driverCallIdentity: Maybe Text
+    # Collect-payment snapshot from the BPP (on_update RIDE_FARE_UPDATED): the fare the rider would pay if the
+    # ride ended at collectedFareAt. Shown instead of the estimate while the ride is in progress.
+    # Informational only -- fare/totalFare are set at ride end as before.
+    collectedFare: Maybe Price
+    collectedFareAt: Maybe UTCTime
+    collectedFareTollPendingConfirmation: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -188,6 +194,7 @@ Ride:
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
+    collectedFare: numeric(30,2)
     rideTags: "text[]"
 
   default:
@@ -230,6 +237,8 @@ Ride:
       estimatedEndTimeRangeEnd: Maybe UTCTime
     tipAmount:
       tipAmount: Maybe HighPrecMoney
+    collectedFare:
+      collectedFare: Maybe HighPrecMoney
 
   fromTType:
     cancellationPaymentChargeTaxBreakup: Kernel.Utils.JSON.valueToMaybe =<< cancellationPaymentChargeTaxBreakup|E
@@ -256,6 +265,7 @@ Ride:
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
     estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     tipAmount: fmap (Kernel.Types.Common.mkPrice currency) tipAmount|E
+    collectedFare: fmap (Kernel.Types.Common.mkPrice currency) collectedFare|E
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
     isSafetyPlus: Kernel.Prelude.fromMaybe False isSafetyPlus| E
     isPetRide: Kernel.Prelude.fromMaybe False isPetRide|E
@@ -294,6 +304,7 @@ Ride:
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap Domain.Types.Ride.start|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap Domain.Types.Ride.end|I
     tipAmount: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
+    collectedFare: Kernel.Prelude.fmap Kernel.Types.Price.getPriceAmount|I
     isSafetyPlus:  Kernel.Prelude.Just isSafetyPlus|E
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just isPetRide|E
@@ -314,6 +325,7 @@ Ride:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     tipAmount: Maybe HighPrecMoney
+    collectedFare: Maybe HighPrecMoney
     feedbackSkipped: Maybe Bool
     isSafetyPlus: Maybe Bool
     isInsured: Maybe Bool
@@ -335,6 +347,12 @@ Ride:
     findById:
       kvFunction: findOneWithKV
       where: id
+    # Collect-payment snapshot; conditional on status so it never lands on a completed ride.
+    updateCollectedFare:
+      kvFunction: updateOneWithKV
+      params: [collectedFare, collectedFareAt, collectedFareTollPendingConfirmation]
+      where:
+        and: [id, status]
     findByBPPRideId:
       kvFunction: findOneWithKV
       where: bppRideId
