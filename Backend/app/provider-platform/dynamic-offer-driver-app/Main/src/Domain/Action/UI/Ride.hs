@@ -287,7 +287,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
   rideRating <- runInReplica $ QR.findRatingForRide ride.id
   driverNumber <- RD.getDriverNumber rideDetail
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   resolvedCalling <- resolveCallingNumber booking ride (transporterConfig >>= DTC.driverCallingOption) (fromMaybe False (transporterConfig >>= DTC.forceDirectCalling)) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -429,7 +429,7 @@ otpRideCreate driver otpCode booking clientId = do
 
   driverNumber <- RD.getDriverNumber rideDetails
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId

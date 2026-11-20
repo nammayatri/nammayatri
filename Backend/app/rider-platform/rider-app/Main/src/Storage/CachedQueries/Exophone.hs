@@ -29,6 +29,8 @@ module Storage.CachedQueries.Exophone
   )
 where
 
+import Data.List (nub)
+import qualified Data.Text as T
 import Domain.Types.Exophone
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Call.Types (CallService)
@@ -44,25 +46,26 @@ findAllByMerchantOperatingCityId merchantOperatingCityId =
     Just a -> return a
     Nothing -> cacheExophones merchantOperatingCityId /=<< Queries.findAllByMerchantOperatingCityId merchantOperatingCityId
 
-findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone
+findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Exophone)
+findByPhone merchantOperatingCityId phone =
+  find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.merchantOperatingCityId == merchantOperatingCityId)
+    <$> findAllByPhone phone
 
-findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone) <$> findAllByPhone phone
+findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Exophone)
+findByPrimaryPhone merchantOperatingCityId phone =
+  find (\exophone -> exophone.primaryPhone == phone && exophone.merchantOperatingCityId == merchantOperatingCityId)
+    <$> findAllByPhone phone
 
 findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
 findAllByPhone phone =
-  Hedis.safeGet (makePhoneKey phone) >>= \case
+  Hedis.safeGet (makeAllByPhoneKey phone) >>= \case
+    Just exophones -> pure exophones
     Nothing -> do
       exophones <- Queries.findAllByPhone phone
-      case exophones of
-        exophone : _ -> cacheExophones exophone.merchantOperatingCityId exophones
-        _ -> pure ()
+      unless (null exophones) $ do
+        expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+        Hedis.setExp (makeAllByPhoneKey phone) exophones expTime
       pure exophones
-    Just merchantOperatingCityId ->
-      Hedis.safeGet (makeMerchantOperatingCityIdKey merchantOperatingCityId) >>= \case
-        Just a -> return a
-        Nothing -> cacheExophones merchantOperatingCityId /=<< Queries.findAllByPhone phone
 
 findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Exophone]
 findAllExophones = Queries.findAllExophones
@@ -80,6 +83,8 @@ clearCache merchantOperatingCityId exophones = Hedis.runInMultiCloudRedisWrite $
   forM_ exophones $ \exophone -> do
     Hedis.del (makePhoneKey exophone.primaryPhone)
     Hedis.del (makePhoneKey exophone.backupPhone)
+    Hedis.del (makeAllByPhoneKey exophone.primaryPhone)
+    Hedis.del (makeAllByPhoneKey exophone.backupPhone)
 
 clearCacheByService :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> CallService -> m ()
 clearCacheByService merchantOperatingCityId service =
@@ -110,6 +115,9 @@ makeMerchantOperatingCityIdKey merchantOperatingCityId = "CachedQueries:Exophone
 makePhoneKey :: Text -> Text
 makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 
+makeAllByPhoneKey :: Text -> Text
+makeAllByPhoneKey phone = "CachedQueries:Exophones:AllByPhone-" <> phone
+
 makeMerchantOperatingCityIdAndServiceKey :: Id DMOC.MerchantOperatingCity -> CallService -> Text
 makeMerchantOperatingCityIdAndServiceKey merchantOperatingCityId service = "CachedQueries:Exophones:MerchantOperatingCityId-" <> merchantOperatingCityId.getId <> ":CallService-" <> show service
 
@@ -119,8 +127,14 @@ create val = do
   clearCache val.merchantOperatingCityId [val]
   clearCacheByService val.merchantOperatingCityId val.callService
 
-updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
-updateAffectedPhones = Queries.updateAffectedPhones
+updateAffectedPhones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m ()
+updateAffectedPhones primaryPhones = do
+  Queries.updateAffectedPhones primaryPhones
+  let searchPhones = nub $ concatMap (\p -> catMaybes [Just p, T.stripPrefix "+91" p]) primaryPhones
+  affected <- concat <$> traverse Queries.findAllByPhone searchPhones
+  forM_ affected $ \eo -> do
+    clearCache eo.merchantOperatingCityId [eo]
+    clearCacheByService eo.merchantOperatingCityId eo.callService
 
 deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId merchantOperatingCityId = do
@@ -132,7 +146,8 @@ deleteByMerchantOperatingCityId merchantOperatingCityId = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 updateByPrimaryKey cfg = do
+  oldExophones <- Queries.findAllByMerchantOperatingCityId cfg.merchantOperatingCityId
   Queries.updateByPrimaryKey cfg
   exophones <- Queries.findAllByMerchantOperatingCityId cfg.merchantOperatingCityId
-  clearCache cfg.merchantOperatingCityId exophones
+  clearCache cfg.merchantOperatingCityId (oldExophones <> exophones)
   clearCacheByService cfg.merchantOperatingCityId cfg.callService

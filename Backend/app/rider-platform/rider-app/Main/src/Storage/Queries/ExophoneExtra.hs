@@ -45,6 +45,4 @@ findAllMerchantOperatingCityIdsByPhone :: (MonadFlow m, CacheFlow m r, EsqDBFlow
 findAllMerchantOperatingCityIdsByPhone phone = findAllWithKV [Se.Or [Se.Is Beam.primaryPhone $ Se.Eq phone, Se.Is Beam.backupPhone $ Se.Eq phone]] <&> (Domain.Types.Exophone.merchantOperatingCityId <$>)
 
 findAllByPhone :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Domain.Types.Exophone.Exophone]
-findAllByPhone phone = do
-  merchOpCityIds <- findAllMerchantOperatingCityIdsByPhone phone
-  findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.In $ Kernel.Types.Id.getId <$> merchOpCityIds]
+findAllByPhone phone = findAllWithKV [Se.Or [Se.Is Beam.primaryPhone $ Se.Eq phone, Se.Is Beam.backupPhone $ Se.Eq phone]]

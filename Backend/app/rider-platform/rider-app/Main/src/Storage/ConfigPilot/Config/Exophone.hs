@@ -34,11 +34,11 @@ instance ConfigDimensions ExophoneDimensions where
   getConfigType _ = ExophoneRider
   configDBFetch a =
     Just $ case a.phoneNumber of
-      Just pn -> filter (\e -> e.primaryPhone == pn) <$> QExophone.findAllByPhone pn
+      Just pn -> filter (\e -> e.primaryPhone == pn && e.merchantOperatingCityId == Id a.merchantOperatingCityId) <$> QExophone.findAllByPhone pn
       Nothing -> QExophone.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)
   getConfigList a =
     let fetch = case a.phoneNumber of
-          Just pn -> maybeToList <$> SQ.findByPrimaryPhone pn
+          Just pn -> maybeToList <$> SQ.findByPrimaryPhone (Id a.merchantOperatingCityId) pn
           Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)
      in LCP.resolveConfigList
           a
