@@ -39,8 +39,6 @@ data MetaBotCfg = MetaBotCfg
     -- real button ceiling), show them all directly with no "More" at all;
     -- otherwise show n directly and hide the rest.
     maxDirectButtons :: Maybe Int,
-    flexiBaseFare :: Maybe Double,
-    flexiPerKm :: Maybe Double,
     flexiServiceArea :: Maybe Text,
     flexiServiceRadiusKm :: Maybe Double,
     flexiRentalDistanceM :: Int,

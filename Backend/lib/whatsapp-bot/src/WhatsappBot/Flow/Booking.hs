@@ -42,6 +42,7 @@ module WhatsappBot.Flow.Booking
 
     -- * Flexi (metered, no destination)
     handleFlexiEndOtp,
+    flexiFareLine,
 
     -- * The menu row + merchant capabilities (booking-specific wire strings)
     menuRow,
@@ -110,7 +111,7 @@ promptForBookingEntry env ev ctx = do
         let rt = if regularOffered merchant then Regular else Flexi
             ctx1 = ctx {rideType = Just rt} :: FlowContext
         save env ev ctx1
-        promptForPickup env ev ctx1 False
+        promptForPickup env ev ctx1
 
 -- | Ask which ride type (@engine.ts:714-725@); the @ride_type:*@ intercept handles
 -- the taps, and the @more_ride_types@ intercept (Engine.hs) handles a tap on
@@ -141,7 +142,7 @@ handleRideType env ev ctx rt = case rt of
         Just ctx2 -> do
           let ctx3 = ctx2 {pendingAction = Nothing}
           save env ev ctx3
-          promptForPickup env ev ctx3 False
+          promptForPickup env ev ctx3
 
 -- ---------------------------------------------------------------------------
 -- Post-auth prefetch (engine.ts:615-682; D2/D3)
@@ -162,25 +163,20 @@ prefetchSavedLocations env auth ctx = do
 -- Pickup (engine.ts:923-1017, 1021-1038)
 -- ---------------------------------------------------------------------------
 
--- | Ask the rider to share their current location (@engine.ts:923-943@). The
--- metered fare line is Flexi-only and suppressed on a "Change location" re-prompt.
-promptForPickup :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Bool -> m ()
-promptForPickup env ev ctx suppressFare = do
-  let merchant = env.cfg.merchant
-      s = t env.cfg.translations ctx.language
-      to = ev.fromPhone
+-- | Ask the rider to share their current location (@engine.ts:923-943@). No fare
+-- line here: the rate now comes from the search's quote, which doesn't exist yet.
+promptForPickup :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
+promptForPickup env ev ctx = do
+  let s = t env.cfg.translations ctx.language
   save env ev ctx {state = AwaitingPickup}
-  let showFare = not suppressFare && ctx.rideType /= Just Regular
-      fareLine = if showFare then flexiFareLine env.cfg.translations merchant ctx.language else Nothing
-      body = maybe s.flexiSharePrompt (\f -> s.flexiSharePrompt <> "\n\n" <> f) fareLine
-  locationRequest env to body
+  locationRequest env ev.fromPhone s.flexiSharePrompt
 
 -- | The @__location_pin__@ intercept (@engine.ts:947-1017@). Only ever reached
 -- with an 'InLocationPin'; a missing pin falls back to re-prompting.
 handlePickup :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 handlePickup env ev ctx = case ev.kind of
   InLocationPin lat lon mName mAddr -> handlePickupPin env ev ctx lat lon mName mAddr
-  _ -> promptForPickup env ev ctx False
+  _ -> promptForPickup env ev ctx
 
 handlePickupPin :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Double -> Double -> Maybe Text -> Maybe Text -> m ()
 handlePickupPin env ev ctx lat lon mName mAddr = do
@@ -299,16 +295,16 @@ data PollOutcome
 -- behavior is identical (this is what makes @cancel-mid-search@ pass).
 startFlexiSearch :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 startFlexiSearch env ev ctx = do
-  let merchant = env.cfg.merchant
-      s = t env.cfg.translations ctx.language
+  let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
   case (ctx.personId, ctx.origin) of
     (Just pid, Just origin) -> do
       let auth = BotAuth pid
       save env ev ctx {state = FlexiSearching, cancelRequested = Just False}
-      let fareLine = flexiFareLine env.cfg.translations merchant ctx.language
-          findingBody = maybe s.flexiFinding (\f -> s.flexiFinding <> "\n" <> f) fareLine
-      replyButtons env to findingBody [btn s.flexiCancelSearch "cancel"]
+      -- Acknowledge at once, with the Cancel button, so the rider isn't left in
+      -- silence while quotes are polled. The fare follows as its own message
+      -- once a quote exists (see below).
+      replyButtons env to s.flexiFinding [btn s.flexiCancelSearch "cancel"]
       -- Reference time BEFORE the search (minus skew) so the booking clears listV2.
       flowStartedAt <- env.clock.now
       esid <- env.backend.searchFlexi auth origin
@@ -321,44 +317,56 @@ startFlexiSearch env ev ctx = do
             Right [] -> flexiNoAuto env ev ctx
             Right quotes@(q0 : _) -> do
               let chosen = fromMaybe q0 (find (\q -> q.vehicleVariant == Just "AUTO_RICKSHAW") quotes)
-              ebid <- env.backend.confirmQuote auth chosen.quoteId
-              case ebid of
-                Left _ -> flexiNoAuto env ev ctx
-                Right bookingId
-                  | T.null bookingId -> flexiNoAuto env ev ctx
-                  | otherwise -> do
-                    -- Re-read: a "Cancel search" tap can land during the blocking
-                    -- search/confirm above (engine.ts:1099-1103).
-                    afterConfirm <- fromMaybe initialContext <$> getCtx env ev
-                    if afterConfirm.cancelRequested == Just True || afterConfirm.state == Idle
-                      then pure ()
-                      else do
-                        let ac =
-                              afterConfirm
-                                { flexiBookingId = Just bookingId,
-                                  activeBookingId = Just bookingId,
-                                  selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
-                                  state = Tracking
-                                }
-                        save env ev ac
-                        registerRide' env ev bookingId ac "confirmed"
-                        outcome <- pollFlexiDriver env ev auth bookingId ctx.language 0
-                        case outcome of
-                          PollAborted -> pure ()
-                          PollNotFound -> flexiNoAuto env ev ctx
-                          PollFound b -> do
-                            -- Claim 'assigned' so the tracker doesn't also send
-                            -- this card (engine.ts:1153-1160).
-                            -- Bump only on a delivered card; a failed send releases the
-                            -- claim so the tracker retries it. Not bumping on a lost claim
-                            -- either: the tracker holding it advances the stage itself.
-                            won <- env.registry.claimStage bookingId "assigned"
-                            when won $ do
-                              delivered <- sendFlexiDriverCard env ev b
-                              if delivered
-                                then bumpStage env bookingId "assigned"
-                                else env.registry.releaseStage bookingId "assigned"
-    _ -> promptForPickup env ev ctx False
+              -- Re-read: a cancel can land during the search above. If the rider
+              -- already cancelled, or the conversation has moved on (main menu, a
+              -- new pickup), stop here: no fare message and no booking. Booking
+              -- anyway would leave a confirmed ride nobody cancels, since
+              -- handleCancel ran before the booking existed.
+              beforeConfirm <- fromMaybe initialContext <$> getCtx env ev
+              if beforeConfirm.cancelRequested == Just True || beforeConfirm.state /= FlexiSearching
+                then pure ()
+                else do
+                  -- Sent only now, once the quote exists: its rate card carries the
+                  -- fare policy's base fare and per-km rate.
+                  forM_ (flexiFareLine env.cfg.translations chosen ctx.language) (reply env to)
+                  ebid <- env.backend.confirmQuote auth chosen.quoteId
+                  case ebid of
+                    Left _ -> flexiNoAuto env ev ctx
+                    Right bookingId
+                      | T.null bookingId -> flexiNoAuto env ev ctx
+                      | otherwise -> do
+                        -- Re-read: a "Cancel search" tap can land during the blocking
+                        -- search/confirm above (engine.ts:1099-1103).
+                        afterConfirm <- fromMaybe initialContext <$> getCtx env ev
+                        if afterConfirm.cancelRequested == Just True || afterConfirm.state == Idle
+                          then pure ()
+                          else do
+                            let ac =
+                                  afterConfirm
+                                    { flexiBookingId = Just bookingId,
+                                      activeBookingId = Just bookingId,
+                                      selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
+                                      state = Tracking
+                                    }
+                            save env ev ac
+                            registerRide' env ev bookingId ac "confirmed"
+                            outcome <- pollFlexiDriver env ev auth bookingId ctx.language 0
+                            case outcome of
+                              PollAborted -> pure ()
+                              PollNotFound -> flexiNoAuto env ev ctx
+                              PollFound b -> do
+                                -- Claim 'assigned' so the tracker doesn't also send
+                                -- this card (engine.ts:1153-1160).
+                                -- Bump only on a delivered card; a failed send releases the
+                                -- claim so the tracker retries it. Not bumping on a lost claim
+                                -- either: the tracker holding it advances the stage itself.
+                                won <- env.registry.claimStage bookingId "assigned"
+                                when won $ do
+                                  delivered <- sendFlexiDriverCard env ev b
+                                  if delivered
+                                    then bumpStage env bookingId "assigned"
+                                    else env.registry.releaseStage bookingId "assigned"
+    _ -> promptForPickup env ev ctx
 
 -- | Poll @getFlexiQuotes@ up to @flexiQuotePollAttempts@ times (@engine.ts:1074-1078@).
 pollFlexiQuotes :: Monad m => BotEnv m -> BotAuth -> Text -> Int -> m (Either BotError [BotQuote])
@@ -747,9 +755,10 @@ applyNameOverride p mName mAddr = case mName <|> mAddr of
 emptyAddress :: BotAddress
 emptyAddress = BotAddress {area = Nothing, building = Nothing, city = Nothing, country = Nothing, state = Nothing, street = Nothing}
 
--- | The metered-tariff display line, or Nothing when unset (@engine.ts:571-579@).
-flexiFareLine :: Map.Map SupportedLanguage LanguageStrings -> MerchantCtx -> Maybe SupportedLanguage -> Maybe Text
-flexiFareLine translations merchant lang = case (merchant.flexiBaseFare, merchant.flexiPerKm) of
+-- | The tariff display line (@engine.ts:571-579@), from the quote's fare-policy
+-- rates; Nothing when the quote carries no rate card.
+flexiFareLine :: Map.Map SupportedLanguage LanguageStrings -> BotQuote -> Maybe SupportedLanguage -> Maybe Text
+flexiFareLine translations quote lang = case (quote.baseFare, quote.perKmFare) of
   (Just base, Just perKm) -> Just ((t translations lang).flexiFareRate (fmtNum base) (fmtNum perKm))
   _ -> Nothing
 

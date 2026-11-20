@@ -56,6 +56,7 @@
 module GoldenReplay
   ( goldenTests,
     copyChecks,
+    flexiFareChecks,
     fixtureGuards,
     rideTypeButtonLayoutChecks,
   )
@@ -81,7 +82,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
 import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
-import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
+import WhatsappBot.Flow.Booking (flexiFareLine, hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
@@ -306,7 +307,7 @@ cannedEstimates =
 -- yields once released, so a gated search proceeds exactly as unstalled.
 cannedFlexiQuotes :: [BotQuote]
 cannedFlexiQuotes =
-  [BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, vehicleVariant = Just "AUTO_RICKSHAW"}]
+  [BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, baseFare = Nothing, perKmFare = Nothing, vehicleVariant = Just "AUTO_RICKSHAW"}]
 
 -- | The assigned driver as returned by getActiveBookings / the base for the
 -- getBookingDetails progression (mock-client.ts:173-214).
@@ -585,8 +586,6 @@ fixtureMerchant pn
           phoneNumberId = pn,
           rideTypesOrder = [Flexi],
           maxDirectButtons = Nothing, -- unset by default; explicit override tested separately below
-          flexiBaseFare = Nothing, -- FLEXI_BASE_FARE unset in test/setup.ts
-          flexiPerKm = Nothing, -- FLEXI_PER_KM unset in test/setup.ts
           flexiServiceArea = Just "Tumkur",
           flexiServiceRadiusKm = Just 15,
           flexiRentalDistanceM = 10000,
@@ -866,6 +865,43 @@ fixtureGuards =
 -- English copy spot-checks -- guard the En table against wording drift
 -- (transcribed from ny-connectors/connectors/src/i18n/en.ts).
 -- ===========================================================================
+
+-- ===========================================================================
+-- Flexi fare line -- the rate shown to the rider comes from the quote's
+-- fare-policy rate card, not from merchant config. The golden fixtures can't
+-- see this (they drop message bodies and the canned quote has no rates).
+-- ===========================================================================
+
+flexiFareChecks :: TestTree
+flexiFareChecks =
+  testGroup
+    "flexi fare line from the quote's rate card"
+    [ testCase "shows the quote's base fare and per-km rate" $
+        assertEqual "fare line" (Just "Metered auto - from Rs.36 + Rs.28/km") (flexiFareLine staticTranslations (quoteWith (Just 36) (Just 28)) Nothing),
+      testCase "omitted when the quote has no per-km rate" $
+        assertEqual "fare line" Nothing (flexiFareLine staticTranslations (quoteWith (Just 36) Nothing) Nothing),
+      testCase "omitted when the quote has no base fare" $
+        assertEqual "fare line" Nothing (flexiFareLine staticTranslations (quoteWith Nothing (Just 28)) Nothing),
+      testCase "BASE_FARE is read from the rate card" $
+        assertEqual "base" (Just 36) (rateCardAmount "BASE_FARE" farePolicyRateCard),
+      testCase "EXTRA_PER_KM_FARE takes the first tier, the rate right after the base distance" $
+        assertEqual "per km" (Just 28) (rateCardAmount "EXTRA_PER_KM_FARE" farePolicyRateCard),
+      testCase "a title the policy doesn't emit (slab policy) gives Nothing" $
+        assertEqual "missing" Nothing (rateCardAmount "EXTRA_PER_KM_FARE" (filter ((/= "EXTRA_PER_KM_FARE") . fst) farePolicyRateCard))
+    ]
+  where
+    quoteWith base perKm = (L.head cannedFlexiQuotes) {baseFare = base, perKmFare = perKm}
+    -- Shaped like a real Progressive policy's quoteFareBreakup (base 36 for the
+    -- first 2 km, 28/km to 12 km, 18/km after), in the BPP's emission order.
+    farePolicyRateCard =
+      [ ("EXTRA_PER_KM_FARE", 28),
+        ("EXTRA_PER_KM_FARE", 18),
+        ("BASE_DISTANCE", 2000),
+        ("BASE_FARE", 36),
+        ("DEAD_KILOMETER_FARE", 10),
+        ("EXTRA_PER_KM_STEP_FARE_2000_12000", 28),
+        ("EXTRA_PER_KM_STEP_FARE_12000_Above", 18)
+      ]
 
 copyChecks :: TestTree
 copyChecks =

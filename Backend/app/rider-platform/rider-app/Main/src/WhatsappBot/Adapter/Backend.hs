@@ -532,8 +532,15 @@ toBotQuote qe =
     { quoteId = qe.id.getId,
       serviceTierName = qe.serviceTierName <|> Just (show qe.vehicleVariant),
       estimatedFare = Just (fromIntegral qe.estimatedTotalFare.getMoney),
-      vehicleVariant = Just (show qe.vehicleVariant)
+      vehicleVariant = Just (show qe.vehicleVariant),
+      baseFare = rateCardAmount "BASE_FARE" rateCard,
+      perKmFare = rateCardAmount "EXTRA_PER_KM_FARE" rateCard
     }
+  where
+    -- The BPP builds these items from the quote's fare policy; the rider app
+    -- stores them on the quote and returns them as quoteFareBreakup. See
+    -- 'rateCardAmount' for which item is picked.
+    rateCard = [(b.title, realToFrac b.priceWithCurrency.amount) | b <- qe.quoteFareBreakup]
 
 toBotBooking :: DBAPI.BookingAPIEntity -> BotBookingDetails
 toBotBooking e =
