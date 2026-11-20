@@ -46,6 +46,13 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+data StopInMemoryServer = StopInMemoryServer
+  { stopCode :: Text,
+    stopName :: Text,
+    stopPoint :: LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
 data RouteInfoNandi = RouteInfoNandi
   { id :: Text,
     shortName :: Maybe Text,

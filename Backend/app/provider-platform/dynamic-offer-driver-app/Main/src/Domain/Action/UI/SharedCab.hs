@@ -31,6 +31,9 @@ where
 
 import API.Types.UI.SharedCab
 import qualified Data.Aeson as DA
+import qualified Data.List as DL
+import Data.List.Split (chunksOf)
+import qualified Data.Text as T
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
@@ -44,14 +47,17 @@ import Domain.Types.SharedCabSession
 import qualified Domain.Types.Vehicle as DVehicle
 import qualified Domain.Types.VehicleTrip as DVT
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Maps.Types as Fields
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.GtfsDataServer.Domain.Types.RouteStopMapping as Fields
+import qualified Lib.GtfsDataServer.Types as Fields
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
@@ -61,6 +67,7 @@ import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified SharedLogic.SharedCab.Trip as Trip
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
@@ -189,24 +196,53 @@ routeData :: DriverAuthInfo -> Flow SharedCabRouteDataResp
 routeData (personId, _merchantId, merchantOpCityId) = do
   _ <- validateSharedCabDriver personId
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-  bap <- bapInternal
-  SharedCabBAP.getSharedCabRouteData bap.apiKey bap.url integratedBPPConfig.agencyKey
+  stopsFork <- awaitableFork "sharedCab:routeData:stops" $ OTPRest.getStopsByFeed integratedBPPConfig
+  versionFork <- awaitableFork "sharedCab:routeData:feedVersion" $ OTPRest.getFeedVersion integratedBPPConfig
+  feedRoutes <- OTPRest.getRoutesByFeed integratedBPPConfig
+  mappingResults <- fmap concat . forM (chunksOf routeStopsBatchSize feedRoutes) $ \batch -> do
+    routeForks <- forM batch $ \feedRoute -> (feedRoute,) <$> awaitableFork "sharedCab:routeData:routeStops" (OTPRest.getRouteStopMappingByRouteCode feedRoute.id integratedBPPConfig)
+    forM routeForks $ \(feedRoute, routeStopsFork) ->
+      L.await Nothing routeStopsFork >>= \case
+        Left err -> logError ("sharedCab routeData: route stops failed for " <> feedRoute.id <> ": " <> show err) >> pure Nothing
+        Right mappings -> pure (Just (feedRoute, DL.sortOn (.sequenceNum) mappings))
+  routesWithStops <- fromMaybeM (InternalError "sharedCab routeData: route stops unavailable") (sequence mappingResults)
+  feedStops <-
+    L.await Nothing stopsFork >>= \case
+      Left err -> logError ("sharedCab routeData: feed stops failed: " <> show err) >> throwError (InternalError "sharedCab routeData: feed stops unavailable")
+      Right stopList -> pure stopList
+  publicTransportVersion <- either (const Nothing) Just <$> L.await Nothing versionFork
+  let lastName = maybe "" (.stopName) . Kernel.Prelude.listToMaybe . reverse
+      toSessionStop mapping = SessionStop {code = mapping.stopCode, name = mapping.stopName, lat = mapping.stopPoint.lat, lon = mapping.stopPoint.lon}
+      toRoute (feedRoute, mappings) =
+        SharedCabRoute
+          { code = feedRoute.id,
+            name = fromMaybe "" feedRoute.longName,
+            direction = lastName mappings,
+            fromStop = maybe "" (.stopName) (Kernel.Prelude.listToMaybe mappings),
+            toStop = lastName mappings,
+            stops = map toSessionStop mappings,
+            shapePolyline = feedRoute.encodedPolyline
+          }
+      stopCodeOf feedStop = fromMaybe feedStop.stopCode (Kernel.Prelude.listToMaybe (reverse (T.splitOn ":" feedStop.stopCode)))
+      toStop feedStop = SharedCabStop {code = stopCodeOf feedStop, name = feedStop.stopName, lat = feedStop.stopPoint.lat, lon = feedStop.stopPoint.lon, address = Nothing}
+  pure
+    SharedCabRouteDataResp
+      { publicTransportVersion,
+        routes = map toRoute routesWithStops,
+        stops = map toStop feedStops
+      }
 
--- | Rider-app owns the feed, so a demand read with no routes fetches its version. A failure only leaves the app on its cached routes.
+routeStopsBatchSize :: Int
+routeStopsBatchSize = 10
+
 sharedCabFeedVersion :: Id MerchantOperatingCity -> Bool -> Flow (Maybe Text)
 sharedCabFeedVersion merchantOpCityId isSharedCab
   | not isSharedCab = pure Nothing
   | otherwise =
-    either (const Nothing) identity
+    either (const Nothing) Just
       <$> withTryCatch
         "sharedCabFeedVersion"
-        ( do
-            integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-            bap <- bapInternal
-            IM.withInMemCache ["SharedCabFeedVersion", integratedBPPConfig.agencyKey] 300 $
-              (.publicTransportVersion)
-                <$> SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = []}
-        )
+        (sharedCabBPPConfig merchantOpCityId >>= OTPRest.getFeedVersion)
 
 routesDemand :: DriverAuthInfo -> SharedCabDemandReq -> Flow SharedCabDemandResp
 routesDemand (personId, _merchantId, merchantOpCityId) req = do

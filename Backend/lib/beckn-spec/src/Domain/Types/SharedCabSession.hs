@@ -178,8 +178,18 @@ data SharedCabDemandResp = SharedCabDemandResp
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | The feed's routes for the driver app's local cache; nothing here changes between feed versions.
+data SharedCabStop = SharedCabStop
+  { code :: Text,
+    name :: Text,
+    lat :: Double,
+    lon :: Double,
+    address :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data SharedCabRouteDataResp = SharedCabRouteDataResp
   { publicTransportVersion :: Maybe Text,
-    routes :: [SharedCabRoute]
+    routes :: [SharedCabRoute],
+    stops :: [SharedCabStop]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

@@ -31,6 +31,30 @@ getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRoute
       logError $ "Route not found in OTPRest: " <> show routeId
       pure Nothing
 
+getRoutesByFeed ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [RouteInfoNandi]
+getRoutesByFeed integratedBPPConfig = IM.withInMemCache ["RoutesByFeed", integratedBPPConfig.id.getId] 300 $ do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
+
+getStopsByFeed ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [StopInMemoryServer]
+getStopsByFeed integratedBPPConfig = IM.withInMemCache ["StopsByFeed", integratedBPPConfig.id.getId] 300 $ do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getStopsByGtfsId baseUrl integratedBPPConfig.feedKey
+
+getFeedVersion ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m Text
+getFeedVersion integratedBPPConfig = IM.withInMemCache ["FeedVersion", integratedBPPConfig.feedKey] 300 $ do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getGtfsVersion baseUrl integratedBPPConfig.feedKey
+
 getRouteStopMappingByRouteCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
