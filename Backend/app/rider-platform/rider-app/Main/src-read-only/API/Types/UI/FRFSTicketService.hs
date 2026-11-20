@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.FRFSBookingGroup
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
@@ -80,6 +81,32 @@ data FRFSBookingFeedbackReq
   | BookingFeedback BookingFeedbackReq
   | BookingRating BookingRatingReq
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupCheckoutReq = FRFSBookingGroupCheckoutReq {slots :: [FRFSBookingGroupSlotReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupSlotReq = FRFSBookingGroupSlotReq
+  { crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
+    enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
+    purchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
+    quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    tripId :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupStatusAPIRes = FRFSBookingGroupStatusAPIRes
+  { bookingGroupId :: Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup,
+    bookings :: [FRFSTicketBookingStatusAPIRes],
+    failureReason :: Data.Maybe.Maybe Data.Text.Text,
+    status :: Domain.Types.FRFSBookingGroup.FRFSBookingGroupStatus,
+    totalPrice :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
@@ -200,6 +227,25 @@ data FRFSGtfsRouteStopAPI = FRFSGtfsRouteStopAPI {routeCode :: Data.Text.Text, s
 
 data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Maybe.Maybe Kernel.Prelude.Double, lon :: Data.Maybe.Maybe Kernel.Prelude.Double, name :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSNudgeAPI = FRFSNudgeAPI {fromStationCode :: Data.Text.Text, nudgeType :: FRFSNudgeType, timeWindowHint :: Data.Maybe.Maybe FRFSNudgeTimeWindow, toStationCode :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSNudgeTimeWindow
+  = MORNING
+  | AFTERNOON
+  | EVENING
+  | NIGHT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSNudgeType
+  = RETURN_TRIP
+  | REPEAT_TRIP
+  | BUY_PASS
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSPassInstantBookReq = FRFSPassInstantBookReq
@@ -341,6 +387,26 @@ data FRFSRefundAttemptAPI = FRFSRefundAttemptAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSRepeatSlotCandidate = FRFSRepeatSlotCandidate
+  { availableSeats :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    date :: Data.Text.Text,
+    eta :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    tripId :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRepeatSlotsRes = FRFSRepeatSlotsRes
+  { candidates :: [FRFSRepeatSlotCandidate],
+    originalBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    originalFromStationCode :: Data.Text.Text,
+    originalToStationCode :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRescheduleReq = FRFSRescheduleReq
   { fromStationCode :: Data.Maybe.Maybe Data.Text.Text,
     offered :: Data.Maybe.Maybe [FRFSRescheduleSeatReq],
@@ -421,6 +487,14 @@ data FRFSSearchAPIRes = FRFSSearchAPIRes {crisSdkToken :: Data.Maybe.Maybe Data.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSSearchGroupReq = FRFSSearchGroupReq {searches :: [FRFSSearchAPIReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSearchGroupRes = FRFSSearchGroupRes {results :: [FRFSSearchAPIRes]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSStationAPI = FRFSStationAPI
   { address :: Data.Maybe.Maybe Data.Text.Text,
     code :: Data.Text.Text,
@@ -466,10 +540,12 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     createdAt :: Kernel.Prelude.UTCTime,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    failureReason :: Data.Maybe.Maybe Data.Text.Text,
     googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    nudge :: Data.Maybe.Maybe FRFSNudgeAPI,
     overriddenTotalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     overrideType :: Data.Maybe.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,

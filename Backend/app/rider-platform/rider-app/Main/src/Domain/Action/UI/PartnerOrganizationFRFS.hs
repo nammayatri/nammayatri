@@ -796,7 +796,10 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             bppOrderId = booking.bppOrderId,
             txnId = Nothing,
             selectedQuoteCategories = [],
-            isSpotBooking = booking.isSpotBooking
+            isSpotBooking = booking.isSpotBooking,
+            -- Partner/white-label API surface, not the consumer app -- nothing renders this nudge here.
+            nudge = Nothing,
+            failureReason = booking.failureReason
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True
   let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token = regToken.token}
@@ -873,7 +876,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing Nothing Nothing False
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing Nothing Nothing Nothing False
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

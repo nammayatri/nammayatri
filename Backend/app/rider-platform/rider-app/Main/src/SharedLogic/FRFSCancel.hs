@@ -12,19 +12,25 @@ import qualified Domain.Types.FRFSTicketBookingPayment as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSCancelEffects as FRFSCancelEffects
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
@@ -54,6 +60,7 @@ handleCancelledStatus ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     CallFRFSBPP.BecknAPICallFlow m r,
     Metrics.HasBAPMetrics m r,
@@ -65,6 +72,7 @@ handleCancelledStatus ::
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
     HasLongDurationRetryCfg r c,
+    HasKafkaProducer r,
     Finance.HasActorInfo m r
   ) =>
   Merchant.Merchant ->
@@ -93,7 +101,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         -- The negative recon rows are written on refund success (SharedLogic.Payment.bookingsRefundStatusHandler),
         -- not here: at this point the refund has only been requested and may still fail.
         whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
+          void $ refundFRFSBooking booking paymentBooking.paymentOrderId refundAmount
       else do
         -- shared cab: the refund policy fixed these amounts in this request (no earlier soft cancel to agree with)
         if isSharedCabBooking booking
@@ -108,7 +116,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         -- shared cab, no refund: the payment stays charged; pending is what makes the payment service refund it
         unless (isSharedCabBooking booking && refundWithheld cancellationCharges refundAmount) $
           whenJust mbPaymentBooking $ \paymentBooking ->
-            void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+            void $ refundFRFSBooking booking paymentBooking.paymentOrderId refundAmount
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical
@@ -146,6 +154,44 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
       Left err -> logError $ "FRFS cancellation quota not recorded for bookingId-" <> booking.id.getId <> ": " <> show err
       Right () -> pure ()
   return (mRiderNumber, person.mobileCountryCode, fareParameters)
+
+-- | Refund one cancelled booking for its own amount, with the vendor's own split share clawed
+-- back too -- correct for both a standalone booking (refundAmount == the whole order) and one
+-- booking cancelled out of a multi-slot cart (refundAmount == just this one ticket's share).
+refundFRFSBooking ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Id DOrder.PaymentOrder ->
+  HighPrecMoney ->
+  m ()
+refundFRFSBooking booking paymentOrderId refundAmount = do
+  paymentOrder <- QPaymentOrder.findById paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
+  let paymentServiceType = fromMaybe DOrder.FRFSBooking paymentOrder.paymentServiceType
+  splitDetails <- FRFSUtils.buildFRFSBookingRefundSplit booking (abs refundAmount) paymentServiceType
+  void $
+    SPayment.makeRefundPaymentByServiceType
+      booking.merchantId
+      booking.merchantOperatingCityId
+      paymentServiceType
+      Nothing
+      DPayment.RefundPaymentServiceReq
+        { orderId = paymentOrderId,
+          merchantOpCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity booking.merchantOperatingCityId,
+          driverAccountId = Nothing,
+          email = Nothing,
+          amount = Just (abs refundAmount),
+          retryIfFailed = False,
+          refundsId = Nothing,
+          splitSettlementDetails = splitDetails
+        }
 
 -- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.
 -- Call this after handleCancelledStatus from a Flow context.

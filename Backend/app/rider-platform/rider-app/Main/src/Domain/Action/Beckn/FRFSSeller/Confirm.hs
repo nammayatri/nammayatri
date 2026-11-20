@@ -501,6 +501,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       bppPaymentId = Just paymentId',
       bppSubscriberId = becknConfig.subscriberId,
       bppSubscriberUrl = showBaseUrl becknConfig.subscriberUrl,
+      bookingGroupId = Nothing,
       busLocationData = [],
       cancellationCharges = Nothing,
       cashbackPayoutOrderId = Nothing,
