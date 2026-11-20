@@ -44,7 +44,8 @@ data PersonAPIEntity = PersonAPIEntity
     entityName :: Maybe Text,
     entityShortIds :: [ShortId DEntity.Entity],
     tokenNo :: Maybe Text,
-    twoFaExempt :: Bool
+    twoFaExempt :: Bool,
+    organizationId :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

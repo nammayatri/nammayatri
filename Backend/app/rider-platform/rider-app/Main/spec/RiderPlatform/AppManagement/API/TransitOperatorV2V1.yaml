@@ -1,0 +1,479 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+  APISuccess: Kernel.Types.APISuccess
+  Day: Data.Time
+  Schedule: Lib.BmsBackend.Transit.V1.Types
+  ScheduleList: Lib.BmsBackend.Transit.V1.Types
+  CreateScheduleReq: Lib.BmsBackend.Transit.V1.Types
+  UpdateScheduleReq: Lib.BmsBackend.Transit.V1.Types
+  ScheduleType: Lib.BmsBackend.Transit.V1.Types
+  ScheduleTypeItems: Lib.BmsBackend.Transit.V1.Types
+  ScheduleTrip: Lib.BmsBackend.Transit.V1.Types
+  ScheduleTripList: Lib.BmsBackend.Transit.V1.Types
+  CreateScheduleTripReq: Lib.BmsBackend.Transit.V1.Types
+  UpdateScheduleTripReq: Lib.BmsBackend.Transit.V1.Types
+  RepeatConfig: Lib.BmsBackend.Transit.V1.Types
+  SetRepeatConfigReq: Lib.BmsBackend.Transit.V1.Types
+  TripDetail: Lib.BmsBackend.Transit.V1.Types
+  TripDetailItems: Lib.BmsBackend.Transit.V1.Types
+  ReplaceTripDetailsReq: Lib.BmsBackend.Transit.V1.Types
+  UpdateTripDetailReq: Lib.BmsBackend.Transit.V1.Types
+  Waybill: Lib.BmsBackend.Transit.V1.Types
+  WaybillList: Lib.BmsBackend.Transit.V1.Types
+  CreateWaybillReq: Lib.BmsBackend.Transit.V1.Types
+  UpdateWaybillReq: Lib.BmsBackend.Transit.V1.Types
+  RepeatRangeReq: Lib.BmsBackend.Transit.V1.Types
+  RepeatWalkResponse: Lib.BmsBackend.Transit.V1.Types
+
+importPackageOverrides:
+  BecknV2.OnDemand.Enums: "beckn-spec"
+  Lib.BmsBackend.Transit.Common: "bms-backend"
+  Lib.BmsBackend.Transit.V1.Types: "bms-backend"
+
+module: TransitOperatorV2V1
+apiPrefix: transitOperatorV2
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /v1/schedules
+      name: TransitV1ListSchedules
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        search: Text
+        depotId: Text
+        routeId: Text
+        status: Text
+        limit: Int
+        offset: Int
+      response:
+        type: ScheduleList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v1/schedules
+      name: TransitV1CreateSchedule
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: CreateScheduleReq
+      response:
+        type: Schedule
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/schedules/{scheduleId}
+      name: TransitV1GetSchedule
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        scheduleId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: Schedule
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/schedules/{scheduleId}
+      name: TransitV1UpdateSchedule
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateScheduleReq
+      response:
+        type: Schedule
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /v1/schedules/{scheduleId}
+      name: TransitV1DeleteSchedule
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/scheduleTypes
+      name: TransitV1ListScheduleTypes
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: ScheduleTypeItems
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/scheduleTrips
+      name: TransitV1ListScheduleTrips
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        scheduleId: Text
+        depotId: Text
+        search: Text
+        repeatStatus: Text
+        limit: Int
+        offset: Int
+      response:
+        type: ScheduleTripList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v1/scheduleTrips
+      name: TransitV1CreateScheduleTrip
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: CreateScheduleTripReq
+      response:
+        type: ScheduleTrip
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}
+      name: TransitV1GetScheduleTrip
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: ScheduleTrip
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}
+      name: TransitV1UpdateScheduleTrip
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateScheduleTripReq
+      response:
+        type: ScheduleTrip
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}
+      name: TransitV1DeleteScheduleTrip
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}/repeat
+      name: TransitV1GetRepeatConfig
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: RepeatConfig
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}/repeat
+      name: TransitV1SetRepeatConfig
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: SetRepeatConfigReq
+      response:
+        type: RepeatConfig
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}/details
+      name: TransitV1ListTripDetails
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: TripDetailItems
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/scheduleTrips/{scheduleTripId}/details
+      name: TransitV1ReplaceTripDetails
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        scheduleTripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: ReplaceTripDetailsReq
+      response:
+        type: TripDetailItems
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/tripDetails/{tripDetailId}
+      name: TransitV1UpdateTripDetail
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        tripDetailId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateTripDetailReq
+      response:
+        type: TripDetail
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /v1/tripDetails/{tripDetailId}
+      name: TransitV1DeleteTripDetail
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        tripDetailId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/waybills
+      name: TransitV1ListWaybills
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        vehicleNo: Text
+        dutyDate: Day
+        dutyDateFrom: Day
+        dutyDateTo: Day
+        status: Text
+        waybillNo: Text
+        driverToken: Text
+        conductorToken: Text
+        depotId: Text
+        scheduleNo: Text
+        scheduleTripId: Text
+        search: Text
+        sort: Text
+        limit: Int
+        offset: Int
+      response:
+        type: WaybillList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v1/waybills
+      name: TransitV1CreateWaybill
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: CreateWaybillReq
+      response:
+        type: Waybill
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v1/waybills/{waybillId}
+      name: TransitV1GetWaybill
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        waybillId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: Waybill
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /v1/waybills/{waybillId}
+      name: TransitV1UpdateWaybill
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        waybillId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillReq
+      response:
+        type: Waybill
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /v1/waybills/{waybillId}
+      name: TransitV1DeleteWaybill
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.waybill.write
+      params:
+        waybillId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v1/waybillRepeats/preview
+      name: TransitV1PreviewWaybillRepeats
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.trip.execute
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: RepeatRangeReq
+      response:
+        type: RepeatWalkResponse
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v1/waybillRepeats/generate
+      name: TransitV1GenerateWaybillRepeats
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.trip.execute
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: RepeatRangeReq
+      response:
+        type: RepeatWalkResponse
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId

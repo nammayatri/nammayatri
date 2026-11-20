@@ -1,0 +1,304 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+  APISuccess: Kernel.Types.APISuccess
+  StickerDesignSummaryList: Lib.BmsBackend.Transit.Stickers.Types
+  StickerDesign: Lib.BmsBackend.Transit.Stickers.Types
+  StickerDesignCreate: Lib.BmsBackend.Transit.Stickers.Types
+  StickerDesignUpdate: Lib.BmsBackend.Transit.Stickers.Types
+  StickerPreviewReq: Lib.BmsBackend.Transit.Stickers.Types
+  StickerSigning: Lib.BmsBackend.Transit.Stickers.Types
+  FleetFileReq: Lib.BmsBackend.Transit.Stickers.Types
+  FleetFileRead: Lib.BmsBackend.Transit.Stickers.Types
+  StickerFile: Lib.BmsBackend.Transit.Stickers.Types
+  StickerGenerateReq: Lib.BmsBackend.Transit.Stickers.Types
+  StickerBatch: Lib.BmsBackend.Transit.Stickers.Types
+  StickerFont: Lib.BmsBackend.Transit.Stickers.Types
+  StickerFontUpload: Lib.BmsBackend.Transit.Stickers.Types
+
+importPackageOverrides:
+  BecknV2.OnDemand.Enums: "beckn-spec"
+  Lib.BmsBackend.Transit.Common: "bms-backend"
+  Lib.BmsBackend.Transit.Stickers.Types: "bms-backend"
+
+module: TransitOperatorV2Stickers
+apiPrefix: transitOperatorV2
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /stickerDesigns
+      name: TransitOperatorV2ListStickerDesigns
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - search: Text
+        - organizationId: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: StickerDesignSummaryList
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerDesigns
+      name: TransitOperatorV2CreateStickerDesign
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: StickerDesignCreate
+      response:
+        type: StickerDesign
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerDesigns/preview
+      name: TransitOperatorV2PreviewSticker
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: StickerPreviewReq
+      response:
+        type: StickerFile
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerDesigns/signing
+      name: TransitOperatorV2GetStickerSigning
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: StickerSigning
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerDesigns/fleetFile
+      name: TransitOperatorV2ReadStickerFleetFile
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: FleetFileReq
+      response:
+        type: FleetFileRead
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerDesigns/{designId}
+      name: TransitOperatorV2GetStickerDesign
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: StickerDesign
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - PUT:
+      endpoint: /stickerDesigns/{designId}
+      name: TransitOperatorV2UpdateStickerDesign
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: StickerDesignUpdate
+      response:
+        type: StickerDesign
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /stickerDesigns/{designId}
+      name: TransitOperatorV2DeleteStickerDesign
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerDesigns/{designId}/background
+      name: TransitOperatorV2GetStickerBackground
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: StickerFile
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerDesigns/{designId}/duplicate
+      name: TransitOperatorV2DuplicateStickerDesign
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: StickerDesign
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerDesigns/{designId}/generate
+      name: TransitOperatorV2GenerateStickers
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: StickerGenerateReq
+      response:
+        type: StickerFile
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerDesigns/{designId}/batches
+      name: TransitOperatorV2ListStickerBatches
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        designId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: "[StickerBatch]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerFonts
+      name: TransitOperatorV2ListStickerFonts
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      query:
+        - organizationId: Text
+      response:
+        type: "[StickerFont]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /stickerFonts
+      name: TransitOperatorV2UploadStickerFont
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      request:
+        type: StickerFontUpload
+      response:
+        type: StickerFont
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - DELETE:
+      endpoint: /stickerFonts/{fontId}
+      name: TransitOperatorV2DeleteStickerFont
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        fontId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /stickerFonts/{fontId}/file
+      name: TransitOperatorV2GetStickerFontFile
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        fontId: Text
+      mandatoryQuery:
+        - vehicleCategory: VehicleCategory
+      response:
+        type: StickerFile
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
