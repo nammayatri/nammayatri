@@ -891,7 +891,9 @@ flexiFareChecks =
         assertEqual "missing" Nothing (rateCardAmount "EXTRA_PER_KM_FARE" (filter ((/= "EXTRA_PER_KM_FARE") . fst) farePolicyRateCard))
     ]
   where
-    quoteWith base perKm = (L.head cannedFlexiQuotes) {baseFare = base, perKmFare = perKm}
+    quoteWith base perKm = case cannedFlexiQuotes of
+      (q : _) -> q {baseFare = base, perKmFare = perKm}
+      [] -> error "cannedFlexiQuotes is empty"
     -- Shaped like a real Progressive policy's quoteFareBreakup (base 36 for the
     -- first 2 km, 28/km to 12 km, 18/km after), in the BPP's emission order.
     farePolicyRateCard =
