@@ -16,6 +16,7 @@ module Domain.Action.UI.SearchRequestForDriver where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import BecknV2.OnDemand.Settlement (chargeOn, offerDiscountForEstimate)
+import qualified BecknV2.OnDemand.Settlement as Fields
 import Control.Applicative ((<|>))
 import Data.Aeson.TH
 import Domain.Types as DTC
