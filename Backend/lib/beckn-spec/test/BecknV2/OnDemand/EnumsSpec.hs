@@ -49,7 +49,8 @@ spec = describe "BecknV2.OnDemand.Enums" $ do
           RIDE_ARRIVED_PICKUP,
           SCHEDULED_RIDE_ASSIGNED,
           DRIVER_REACHED_DESTINATION,
-          DRIVER_NEAR_PICKUP
+          DRIVER_NEAR_PICKUP,
+          RIDE_FARE_UPDATED
         ]
 
   -- ================================================================

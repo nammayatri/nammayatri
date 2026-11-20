@@ -494,3 +494,10 @@ ALTER TABLE atlas_app.ride ALTER COLUMN driver_mobile_number DROP NOT NULL;
 
 ALTER TABLE atlas_app.ride ADD COLUMN cancellation_payment_charge_tax_breakup json ;
 ALTER TABLE atlas_app.ride ADD COLUMN cancellation_payment_charge double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare_toll_pending_confirmation boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare_at timestamp with time zone ;
+ALTER TABLE atlas_app.ride ADD COLUMN collected_fare numeric(30,2) ;

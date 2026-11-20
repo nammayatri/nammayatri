@@ -6,6 +6,7 @@ module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax
 import qualified Domain.Types.CancellationReason
+import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RiderDetails
@@ -84,6 +85,21 @@ updateCancellationQuoteIfCancelled cancellationFeeIfCancelled cancellationFeeTax
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCollectedFare ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters) -> (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> (Domain.Types.Ride.RideStatus -> m ())))))
+updateCollectedFare collectedFare collectedFareParametersId collectedChargeableDistance collectedFareAt id status = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.collectedFare collectedFare,
+      Se.Set Beam.collectedFareParametersId (Kernel.Types.Id.getId <$> collectedFareParametersId),
+      Se.Set Beam.collectedChargeableDistance collectedChargeableDistance,
+      Se.Set Beam.collectedFareAt collectedFareAt,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.status $ Se.Eq status]]
 
 updateCommission :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

@@ -23,6 +23,7 @@ module SharedLogic.CallBAP
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
     sendDestinationArrivalUpdateToBAP,
+    sendRideFareUpdatedToBAP,
     sendDriverNearPickupUpdateToBAP,
     sendReturnTripStartedUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
@@ -1669,6 +1670,50 @@ sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverReachedDestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverReachedDestBuildReq
   void $ callOnUpdateV2 driverReachedDestMsgV2 retryConfig merchant.id
+
+-- | Collect payment: tells the BAP the fare the rider would pay if the ride ended now (RIDE_FARE_UPDATED).
+-- Custom on-us event, so it is sent only to our own BAP (an external ONDC BAP would reject the unknown
+-- event). The ride is not ended; the fare is put on the ride copy only to build the quote.
+sendRideFareUpdatedToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  HighPrecMoney ->
+  Fare.FareParameters ->
+  UTCTime ->
+  Bool ->
+  m ()
+sendRideFareUpdatedToBAP booking ride' fare fareParams computedAt tollPendingConfirmation = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  if not isValueAddNP
+    then logTagInfo "on_update_req" $ "Skipping RIDE_FARE_UPDATED for non value-add NP " <> booking.bapId <> ", rideId: " <> ride'.id.getId
+    else do
+      merchant <-
+        CQM.findById booking.providerId
+          >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+      driver <- QPerson.findById ride'.driverId >>= fromMaybeM (PersonNotFound ride'.driverId.getId)
+      driverStats <- QDriverStats.findById ride'.driverId >>= fromMaybeM DriverInfoNotFound
+      vehicle <- QVeh.findById ride'.driverId >>= fromMaybeM (DriverWithoutVehicle ride'.driverId.getId)
+      let ride = ride' {SRide.fare = Just fare} -- quote.price is read from ride.fare; not persisted
+          riderPhone = Nothing
+          paymentMethodInfo = Nothing
+          paymentUrl = Nothing
+          bookingDetails = ACL.BookingDetails {..}
+          rideFareUpdatedBuildReq = ACL.RideFareUpdatedBuildReq ACL.DRideFareUpdatedReq {..}
+      retryConfig <- asks (.shortDurationRetryCfg)
+      rideFareUpdatedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideFareUpdatedBuildReq
+      void $ callOnUpdateV2 rideFareUpdatedMsgV2 retryConfig merchant.id
 
 sendDriverNearPickupUpdateToBAP ::
   ( CacheFlow m r,

@@ -883,6 +883,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) ride@DRide.Ride {..
         talkedWithDriver = fromMaybe False talkedWithDriver,
         isInsured = Just isInsured,
         tipAmount = mkPriceAPIEntity <$> tipAmount,
+        collectedFare = mkPriceAPIEntity <$> collectedFare,
         ..
       }
 

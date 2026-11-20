@@ -369,3 +369,11 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN bap_settled boolean ;
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_dues_commission_tax_breakup json ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_dues_commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_fare_parameters_id character(36) ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_fare_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_fare double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN collected_chargeable_distance integer ;
