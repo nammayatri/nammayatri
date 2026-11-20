@@ -9,7 +9,6 @@ module SharedLogic.SharedCab.RiderClient
     BAPBookingOperationReq (..),
     sessionProbeClient,
     BAPDemandReq (..),
-    getSharedCabRouteData,
     postSharedCabRoutesDemand,
     postRouteOperation,
     getSharedCabSession,
@@ -101,15 +100,6 @@ type InternalAPI api = "internal" :> "sharedCab" :> api
 
 type TokenHeader = Header "token" Text
 
-type RouteDataAPI =
-  InternalAPI
-    ( "routes"
-        :> "data"
-        :> QueryParam' '[Required, Strict] "agencyId" Text
-        :> TokenHeader
-        :> Get '[JSON] SharedCabRouteDataResp
-    )
-
 type DemandAPI = InternalAPI ("routes" :> "demand" :> TokenHeader :> ReqBody '[JSON] BAPDemandReq :> Post '[JSON] SharedCabDemandResp)
 
 type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
@@ -177,10 +167,6 @@ riderClientManagerKey = "shared-cab-rider-client"
 prepareRiderClientHttpManager :: HM.HashMap Text Http.ManagerSettings
 prepareRiderClientHttpManager =
   HM.singleton riderClientManagerKey $ Http.tlsManagerSettings {Http.managerResponseTimeout = Http.responseTimeoutMicro (riderClientTimeoutMs * 1000)}
-
-getSharedCabRouteData :: BAPFlow m r => Text -> BaseUrl -> Text -> m SharedCabRouteDataResp
-getSharedCabRouteData apiKey internalUrl agencyId = do
-  callRider internalUrl "GetSharedCabRouteData" (client (Proxy @RouteDataAPI) agencyId (Just apiKey)) (Proxy @RouteDataAPI)
 
 postSharedCabRoutesDemand :: BAPFlow m r => Text -> BaseUrl -> BAPDemandReq -> m SharedCabDemandResp
 postSharedCabRoutesDemand apiKey internalUrl req = do

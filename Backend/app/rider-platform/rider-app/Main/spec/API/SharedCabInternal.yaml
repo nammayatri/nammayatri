@@ -1,7 +1,6 @@
 imports:
   ServiceTierType: BecknV2.FRFS.Enums
   SelectRouteMode: SharedLogic.SharedCab.SessionState
-  SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
   SharedCabDemandResp: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -77,15 +76,6 @@ types:
     message: Text
 
 apis:
-  - GET:
-      endpoint: /sharedCab/routes/data
-      auth: NoAuth
-      headers:
-        token: Text
-      mandatoryQuery:
-        agencyId: Text
-      response:
-        type: SharedCabRouteDataResp
   - POST:
       endpoint: /sharedCab/routes/demand
       auth: NoAuth

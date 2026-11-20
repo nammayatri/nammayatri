@@ -1,6 +1,5 @@
 module Domain.Action.UI.SharedCabInternal
-  ( getSharedCabRoutesData,
-    postSharedCabRoutesDemand,
+  ( postSharedCabRoutesDemand,
     postSharedCabRouteOperations,
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
@@ -22,7 +21,6 @@ import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderConfig as DRC
-import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -83,11 +81,6 @@ getIntegratedBppConfigByAgency agencyId =
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
 
-feedRoutes :: DIBC.IntegratedBPPConfig -> Environment.Flow [(DRoute.Route, [DRSM.RouteStopMapping])]
-feedRoutes integratedBppConfig = do
-  routes <- OTPRest.getRoutesByGtfsIdWithPolyline integratedBppConfig
-  forM routes $ \route -> (route,) <$> routeStops integratedBppConfig route.code
-
 routeDirection :: [DRSM.RouteStopMapping] -> Text
 routeDirection = maybe "" (.stopName) . listToMaybe . reverse
 
@@ -96,24 +89,6 @@ feedVersion :: DIBC.IntegratedBPPConfig -> Environment.Flow (Maybe Text)
 feedVersion integratedBppConfig =
   IM.withInMemCache ["SharedCabFeedVersion", integratedBppConfig.feedKey] 300 $
     either (const Nothing) Just <$> withTryCatch "getGtfsVersion:sharedCab" (OTPRest.getGtfsVersion integratedBppConfig)
-
-getSharedCabRoutesData :: Text -> Maybe Text -> Environment.Flow View.SharedCabRouteDataResp
-getSharedCabRoutesData agencyId mbToken = do
-  checkToken mbToken
-  integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
-  routes <- feedRoutes integratedBppConfig
-  publicTransportVersion <- feedVersion integratedBppConfig
-  let toResp (route, stops) =
-        View.SharedCabRoute
-          { code = route.code,
-            name = route.longName,
-            direction = routeDirection stops,
-            fromStop = maybe "" (.stopName) (listToMaybe stops),
-            toStop = routeDirection stops,
-            stops = [View.sessionStopOf s.stopCode s.stopName s.stopPoint | s <- stops],
-            shapePolyline = route.polyline
-          }
-  pure View.SharedCabRouteDataResp {publicTransportVersion, routes = map toResp routes}
 
 postSharedCabRoutesDemand :: Maybe Text -> API.SharedCabDemandReq -> Environment.Flow View.SharedCabDemandResp
 postSharedCabRoutesDemand mbToken req = do
