@@ -58,6 +58,7 @@ buildFollower phoneNo person bookingId priority =
   Followers
     { bookingId,
       mobileNumber = fromMaybe "" phoneNo,
+      mobileCountryCode = person.mobileCountryCode,
       name = person.firstName,
       priority,
       personId = person.id
@@ -105,4 +106,4 @@ getFollowRideCustomerDetails (_, _) rideId = do
   booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   customerPhone <- mapM decrypt person.mobileNumber
-  return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, ..}
+  return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, customerPhoneCountryCode = person.mobileCountryCode, ..}

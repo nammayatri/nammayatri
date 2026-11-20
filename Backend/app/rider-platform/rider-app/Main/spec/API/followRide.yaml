@@ -12,6 +12,7 @@ types:
     name: Maybe Text
     bookingId: Id Booking
     mobileNumber: Text
+    mobileCountryCode: Maybe Text
     priority: Int
     personId: Id Person
 
@@ -25,6 +26,7 @@ types:
     bookingId: Id Booking
     customerName: Text
     customerPhone: Maybe Text
+    customerPhoneCountryCode: Maybe Text
 
   ContactsDetail:
     updateTime : UTCTime
