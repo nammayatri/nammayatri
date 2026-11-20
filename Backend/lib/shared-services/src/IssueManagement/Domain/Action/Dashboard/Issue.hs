@@ -399,10 +399,10 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- case issueReport.categoryId of
-        Nothing -> pure Nothing
+        Nothing -> pure issueReport.categoryName
         Just catId -> do
           fetchedCategory <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
-          pure $ Just fetchedCategory.category
+          pure $ Just (fromMaybe fetchedCategory.category issueReport.categoryName)
       -- Resolves to the real subcategory pick rather than whichever option
       -- was tapped last (see 'UIR.resolveSubCategoryOptionId') — kept
       -- consistent with the customer-facing view and the ticket sent to

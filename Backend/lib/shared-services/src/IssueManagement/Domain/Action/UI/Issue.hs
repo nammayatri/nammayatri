@@ -2117,7 +2117,7 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                         mediaFiles = if null mediaUrls then Nothing else Just mediaUrls,
                         subCategory = Nothing,
                         vehicleCategory = Nothing,
-                        category = (.category) <$> mbCategory
+                        category = issueReport.categoryName <|> ((.category) <$> mbCategory)
                       },
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket,
@@ -2181,7 +2181,7 @@ forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle mess
                         mediaFiles = if null mediaUrls then Nothing else Just mediaUrls,
                         subCategory = Nothing,
                         vehicleCategory = Nothing,
-                        category = (.category) <$> mbCategory
+                        category = issueReport.categoryName <|> ((.category) <$> mbCategory)
                       },
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket,

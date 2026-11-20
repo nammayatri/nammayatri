@@ -552,7 +552,9 @@ fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDa
       mbCategory <- maybe (pure Nothing) (`CQIC.findById` identifier) issue.categoryId
       defaultChannelId <- resolveDefaultChannelId issue
       let channelId = fromMaybe defaultChannelId (mbCategory >>= (.xyneChannelId))
-          subject = maybe issue.description (.category) mbCategory
+          -- Chat-flow reports carry only a categoryName (no categoryId); it wins
+          -- over the row's name, same as on the ticket itself.
+          subject = fromMaybe (maybe issue.description (.category) mbCategory) issue.categoryName
       chatMessages <- QCM.findChatMessagesAfter issue.id Nothing Nothing
       liveReqs <- forM chatMessages $ \chatMessage -> do
         item <- DUI.toChatMessageItem identifier chatMessage
