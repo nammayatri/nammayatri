@@ -52,6 +52,8 @@ module SharedLogic.FareCalculator
     entryFeeForGateId,
     parseCodeValue,
     ParsedCodeValue (..),
+    applyRideTaxWith,
+    rideTaxRate,
   )
 where
 
@@ -1185,7 +1187,10 @@ calculateFareParameters params = do
       pure $ applyPaymentChargeGrossUp prms.paymentChargeDetails prms.buyerOfferDiscount (applyRideTax transporterConfig prms.farePolicy fareWithAirport)
 
 applyRideTax :: DTC.TransporterConfig -> FullFarePolicy -> FareParameters -> FareParameters
-applyRideTax transporterConfig fp fareParams =
+applyRideTax transporterConfig fp = applyRideTaxWith transporterConfig fp.rideTaxConfig
+
+applyRideTaxWith :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> FareParameters -> FareParameters
+applyRideTaxWith transporterConfig policyRideTaxConfig fareParams =
   fareParams
     { govtCharges = (.total) <$> rideTax,
       rideTaxCgst = rideTax >>= (.cgst),
@@ -1197,11 +1202,17 @@ applyRideTax transporterConfig fp fareParams =
     (_, _, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
     cardCharges = fromMaybe 0 (fareParams.cardCharge >>= (.onFare)) + fromMaybe 0 (fareParams.cardCharge >>= (.fixed))
     taxableRideFare = max 0 (customerCancellationFareBasis fareParams (fareSum fareParams Nothing) - platformFee - cardCharges)
-    rideTax = Tax.taxOn taxRegime (rideTaxConfigFor transporterConfig fp) (Tax.Exclusive taxableRideFare)
+    rideTax = Tax.taxOn taxRegime (rideTaxConfigWith transporterConfig policyRideTaxConfig) (Tax.Exclusive taxableRideFare)
 
 rideTaxConfigFor :: DTC.TransporterConfig -> FullFarePolicy -> Maybe Tax.TaxConfig
-rideTaxConfigFor transporterConfig fp =
-  fp.rideTaxConfig <|> (if fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime == Tax.GST then gstTaxConfig transporterConfig.taxConfig.rideGst else Nothing)
+rideTaxConfigFor transporterConfig fp = rideTaxConfigWith transporterConfig fp.rideTaxConfig
+
+rideTaxConfigWith :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> Maybe Tax.TaxConfig
+rideTaxConfigWith transporterConfig policyRideTaxConfig =
+  policyRideTaxConfig <|> (if fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime == Tax.GST then gstTaxConfig transporterConfig.taxConfig.rideGst else Nothing)
+
+rideTaxRate :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> HighPrecMoney
+rideTaxRate transporterConfig = Tax.taxRateOf . rideTaxConfigWith transporterConfig
 
 gstTaxConfig :: DTC.GstBreakup -> Maybe Tax.TaxConfig
 gstTaxConfig gst = if totalPct > 0 then Just Tax.TaxConfig {tax = totalPct, cgst = asPct gst.cgstPercentage, sgst = asPct gst.sgstPercentage, igst = asPct gst.igstPercentage} else Nothing

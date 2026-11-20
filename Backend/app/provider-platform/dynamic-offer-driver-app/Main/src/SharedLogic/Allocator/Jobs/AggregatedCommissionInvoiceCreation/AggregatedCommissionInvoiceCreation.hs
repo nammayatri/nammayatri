@@ -49,6 +49,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import Tools.Encryption (decryptWithDefault)
 import Tools.Error
 import qualified Tools.Fields as Fields
 
@@ -68,6 +69,7 @@ runAggregatedCommissionInvoiceCreationJob ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
     Finance.HasActorInfo m r,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
@@ -162,20 +164,23 @@ data RecipientInfo = RecipientInfo
 
 -- | 'Nothing' when the recipient has been deleted — the chain must end cleanly, not crash.
 resolveRecipientInfo ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) =>
   BeckInvoice.IssuedToType ->
   Text ->
   m (Maybe RecipientInfo)
 resolveRecipientInfo BeckInvoice.FLEET_OWNER recipientId = do
   mbFoi <- QFOI.findByPrimaryKey (Id recipientId)
-  pure $
-    mbFoi <&> \f ->
+  forM mbFoi $ \f -> do
+    -- GSTIN/PAN live in the encrypted columns; the *Dec fields map to legacy plaintext columns, which are always written as NULL.
+    gstin <- decryptWithDefault f.gstNumber f.gstNumberDec
+    pan <- decryptWithDefault f.panNumber f.panNumberDec
+    pure
       RecipientInfo
         { riName = f.fleetName,
           riAddress = f.stripeAddress <&> Wallet.formatStripeAddress,
-          riGstin = f.gstNumberDec,
+          riGstin = gstin,
           riVatNumber = f.vatNumber,
-          riPanNumberDec = f.panNumberDec
+          riPanNumberDec = pan
         }
 resolveRecipientInfo BeckInvoice.DRIVER recipientId = do
   mbPerson <- QPerson.findById (Id recipientId)
