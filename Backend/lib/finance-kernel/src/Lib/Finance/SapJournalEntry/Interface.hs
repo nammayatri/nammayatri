@@ -35,6 +35,8 @@ data SapJournalEntryInput = SapJournalEntryInput
     periodStartTime :: UTCTime,
     periodEndTime :: UTCTime,
     rawResponse :: Maybe Text,
+    bapId :: Maybe Text,
+    bapName :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text
   }

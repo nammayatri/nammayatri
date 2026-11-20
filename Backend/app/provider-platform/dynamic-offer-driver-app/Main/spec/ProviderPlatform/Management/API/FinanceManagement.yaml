@@ -919,6 +919,8 @@ types:
     - glName: Maybe [Text]
     - sapMessage: Maybe Text
     - status: Text
+    - bapId: Maybe Text
+    - bapName: Maybe Text
     - merchantId: Text
     - merchantOperatingCityId: Text
     - createdAt: UTCTime

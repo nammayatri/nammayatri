@@ -601,7 +601,8 @@ validateTdsDeductionAdjustment ::
 validateTdsDeductionAdjustment transporterConfig personId req = do
   let tdsDeductionReferenceTypes =
         [ Wallet.walletReferenceTDSDeduction,
-          Wallet.walletReferenceTDSDeductionCancellation
+          Wallet.walletReferenceTDSDeductionCancellation,
+          Wallet.walletReferenceTDSDeductionThreshold
         ]
   validateReferenceType req tdsDeductionReferenceTypes
 
@@ -609,12 +610,15 @@ validateTdsDeductionAdjustment transporterConfig personId req = do
   unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
     throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
 
-  (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig personId person
-  unless (maybe False (> 0) mbEffectiveTdsRate) $
-    throwError (InvalidRequest "TDS rate is not configured for this person")
-
   validateWalletDebitAmountForPerson person req.amount.amount
-  assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate req.amount.amount
+
+  if req.referenceType == Wallet.walletReferenceTDSDeductionThreshold
+    then assertTdsThresholdDeduction transporterConfig personId person req.amount.amount
+    else do
+      (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig personId person
+      unless (maybe False (> 0) mbEffectiveTdsRate) $
+        throwError (InvalidRequest "TDS rate is not configured for this person")
+      assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate req.amount.amount
 
 assertTdsDeductionWithinThresholdCap ::
   DTC.TransporterConfig ->
@@ -645,6 +649,32 @@ assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffe
     throwError (InvalidRequest "No TDS deduction is due for this person")
   when (amount > maxTdsAmount) $
     throwError (InvalidRequest $ "Could not debit more than TDS deduction amount: " <> show maxTdsAmount)
+
+-- | Flat TDS deduction when FY earnings cross the 5L threshold.
+-- Validates that the threshold is crossed. Amount is not rate-capped —
+-- this is a manual admin deduction (maker-checker), capped only by wallet balance.
+assertTdsThresholdDeduction ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  DP.Person ->
+  HighPrecMoney ->
+  Flow ()
+assertTdsThresholdDeduction transporterConfig personId _person _amount = do
+  mbPanCard <- QPanCard.findByDriverId personId
+  let mbThresholdAmount = Wallet.selectTds mbPanCard transporterConfig.taxConfig >>= (.thresholdAmount)
+  thresholdAmount <- mbThresholdAmount & fromMaybeM (InvalidRequest "TDS threshold not configured for this merchant/driver cohort")
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+  cumulativeEarnings <-
+    Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey personId.getId) 10 1000 $
+      SDFE.getFyToDateNetEarnings personId (financialYearOf fyStartMonth (utctDay localNow))
+  when (cumulativeEarnings <= thresholdAmount) $
+    throwError $
+      InvalidRequest $
+        "TDS threshold not crossed yet: FY-to-date earnings "
+          <> show cumulativeEarnings
+          <> " <= "
+          <> show thresholdAmount
 
 resolveEffectiveTdsRate ::
   DTC.TransporterConfig ->
@@ -1210,8 +1240,11 @@ postTdsDeductionAdjustment transporterConfig checkerId adminCheckerName adjustme
         unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
           throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
         validateWalletDebitAmountForPerson person adjustmentRequest.amount
-        (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig adjustmentRequest.personId person
-        assertTdsDeductionWithinThresholdCap transporterConfig adjustmentRequest.personId mbPanCard mbEffectiveTdsRate adjustmentRequest.amount
+        if adjustmentRequest.referenceType == Wallet.walletReferenceTDSDeductionThreshold
+          then assertTdsThresholdDeduction transporterConfig adjustmentRequest.personId person adjustmentRequest.amount
+          else do
+            (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig adjustmentRequest.personId person
+            assertTdsDeductionWithinThresholdCap transporterConfig adjustmentRequest.personId mbPanCard mbEffectiveTdsRate adjustmentRequest.amount
     )
     transporterConfig
     checkerId

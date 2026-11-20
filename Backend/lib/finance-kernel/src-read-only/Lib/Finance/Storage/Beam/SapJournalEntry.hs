@@ -13,7 +13,9 @@ import qualified Lib.Finance.Domain.Types.SapJournalEntry
 import Tools.Beam.UtilsTH
 
 data SapJournalEntryT f = SapJournalEntryT
-  { batchId :: B.C f Kernel.Prelude.Text,
+  { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bapName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    batchId :: B.C f Kernel.Prelude.Text,
     belnr :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blart :: B.C f Kernel.Prelude.Text,
     bldat :: B.C f Kernel.Prelude.Text,

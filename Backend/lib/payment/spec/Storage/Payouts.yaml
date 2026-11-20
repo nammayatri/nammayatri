@@ -352,3 +352,57 @@ PayoutBatch:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
+
+PayoutLifecycleEvent:
+  tableName: payout_lifecycle_event
+  derives: "Generic, Show"
+
+  types:
+    PayoutLifecycleEventType:
+      enum: "INITIATED, SETTLED_AT_BANK, FAILED, REVERSED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PayoutLifecycleEvent
+    batchNo: Text
+    driverId: Text
+    eventType: PayoutLifecycleEventType
+    batchId: Id PayoutBatch
+    payoutOrderId: Id PayoutOrder
+    payoutRequestId: Maybe Text
+    amount: HighPrecMoney
+    currency: Currency
+    partnerCode: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+    payoutOrderId: "!SecondaryKey"
+
+  extraIndexes:
+    - columns: [payoutOrderId, eventType]
+      unique: true
+    - columns: [merchantOperatingCityId, eventType, createdAt]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPayoutOrderIdAndEventType:
+      kvFunction: findOneWithKV
+      where:
+        and: [payoutOrderId, eventType]
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+  - GENERATE_INDEXES
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

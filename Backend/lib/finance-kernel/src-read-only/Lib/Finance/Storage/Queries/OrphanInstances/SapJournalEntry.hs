@@ -17,7 +17,9 @@ instance FromTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntr
     pure $
       Just
         Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry
-          { batchId = batchId,
+          { bapId = bapId,
+            bapName = bapName,
+            batchId = batchId,
             belnr = belnr,
             blart = blart,
             bldat = bldat,
@@ -50,7 +52,9 @@ instance FromTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntr
 instance ToTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry where
   toTType' (Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry {..}) = do
     Beam.SapJournalEntryT
-      { Beam.batchId = batchId,
+      { Beam.bapId = bapId,
+        Beam.bapName = bapName,
+        Beam.batchId = batchId,
         Beam.belnr = belnr,
         Beam.blart = blart,
         Beam.bldat = bldat,

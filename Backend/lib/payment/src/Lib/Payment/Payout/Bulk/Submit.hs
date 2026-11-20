@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as Fields
+import qualified Lib.Payment.Payout.Bulk.Journal as Journal
 import Lib.Payment.Payout.Bulk.Schedule (firstCheckAt)
 import Lib.Payment.Payout.Bulk.Transaction (recordBulkTransactions)
 import Lib.Payment.Payout.Bulk.Types
@@ -44,7 +45,7 @@ markSubmitted ::
   Id DPayoutBatch.PayoutBatch ->
   Maybe Text ->
   m ()
-markSubmitted plan submittedAt batchId mbPartnerRef =
+markSubmitted plan submittedAt batchId mbPartnerRef = do
   QPayoutBatch.updateAfterSubmit
     DPayoutBatch.SUBMITTED
     mbPartnerRef
@@ -55,6 +56,15 @@ markSubmitted plan submittedAt batchId mbPartnerRef =
     Nothing -- accepted, so nothing to explain
     Nothing
     batchId
+  whenJust mbPartnerRef $ \_ -> do
+    result <- try @_ @SomeException $ do
+      mbBatch <- QPayoutBatch.findByPrimaryKey batchId
+      whenJust mbBatch $ \batch -> do
+        orders <- QPayoutOrder.findAllByBatchId (Just batchId)
+        Journal.recordInitiated batch orders
+    case result of
+      Right () -> pure ()
+      Left err -> logError $ "recordInitiated failed in markSubmitted: batchId=" <> batchId.getId <> " error=" <> show err
 
 -- | A batch we got no clear answer about. Holds stay, and it goes on the normal status-check plan
 --   so recovery and polling share one cadence, one call budget and one give-up rule.
