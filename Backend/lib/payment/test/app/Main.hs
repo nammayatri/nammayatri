@@ -5,7 +5,8 @@ import Kernel.Prelude
 import OfferCountersTests (offerCountersTests)
 import OfferFrequencyTests (offerFrequencyTests)
 import PayoutItemsTests (payoutItemsTests)
+import PayoutRejectionTests (payoutRejectionTests)
 import Test.Tasty
 
 main :: IO ()
-main = defaultMain $ testGroup "Tests" [testGroup "Unit tests" [offerFrequencyTests, offerCountersTests, bulkPayoutTests, payoutItemsTests]]
+main = defaultMain $ testGroup "Tests" [testGroup "Unit tests" [offerFrequencyTests, offerCountersTests, bulkPayoutTests, payoutItemsTests, payoutRejectionTests]]
