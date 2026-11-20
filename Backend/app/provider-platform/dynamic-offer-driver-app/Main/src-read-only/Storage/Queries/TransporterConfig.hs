@@ -453,6 +453,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.separateDriverVehicleEnablement separateDriverVehicleEnablement,
       Se.Set Beam.sharedCabDailyTripTarget sharedCabDailyTripTarget,
       Se.Set Beam.sharedCabTripEarningsTarget sharedCabTripEarningsTarget,
+      Se.Set Beam.sharedRunConfig (Kernel.Prelude.toJSON <$> sharedRunConfig),
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,

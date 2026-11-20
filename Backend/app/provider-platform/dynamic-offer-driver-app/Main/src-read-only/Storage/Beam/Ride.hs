@@ -82,6 +82,7 @@ data RideT f = RideT
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    integratedBppConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDriverSpecialLocWarrior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -115,6 +116,7 @@ data RideT f = RideT
     returnStartedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeDeviatedAtRideEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     scheduledAcceptanceMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode),
@@ -135,6 +137,7 @@ data RideT f = RideT
     tripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    tripId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tripStartLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripStartLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tripStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -154,6 +157,6 @@ instance B.Table RideT where
 
 type Ride = RideT Identity
 
-$(enableKVPG ''RideT ['id] [['bookingId], ['driverGoHomeRequestId], ['driverId], ['fleetOwnerId], ['shortId]])
+$(enableKVPG ''RideT ['id] [['bookingId], ['driverGoHomeRequestId], ['driverId], ['fleetOwnerId], ['shortId], ['tripId]])
 
 $(mkTableInstances ''RideT "ride")

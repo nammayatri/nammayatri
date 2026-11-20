@@ -54,7 +54,6 @@ imports:
   RecomputePolicy: Domain.Types.Extra.TransporterConfig
   FareBreakupNode: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
-  TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
@@ -66,6 +65,7 @@ imports:
   ChallanSearchService: Kernel.External.ChallanSearch.Types
   OnboardingAs: Domain.Types.DriverInformation
   MapProvider: Domain.Types.DriverInformation
+  SharedSupplyKnobs: Domain.Types.SharedRoute
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1620,6 +1620,10 @@ TransporterConfig:
     # Absent means the manual toll charge feature is off for this city; present is the single
     # switch that turns it on, folding what used to be a separate enabled-trip-categories check.
     manualTollChargeConfig: Maybe ManualTollChargeConfig
+    # Present when this city runs shared-route services (SharedRoute trip category) with its own drivers:
+    # fee basis, clash window, fallback and check-in windows, no-show wait. Absent means no runs are
+    # materialised here. Read through SharedLogic.SharedRun.Knobs, which also validates it.
+    sharedRunConfig: Maybe SharedSupplyKnobs
     rideEvidenceConfig: Maybe RideEvidenceConfig
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
@@ -1707,6 +1711,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
     manualTollChargeConfig: Maybe Value
+    sharedRunConfig: Maybe Value
     rideEvidenceConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
@@ -1814,6 +1819,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     manualTollChargeConfig: Kernel.Prelude.toJSON <$> manualTollChargeConfig|E
+    sharedRunConfig: Kernel.Prelude.toJSON <$> sharedRunConfig|E
     rideEvidenceConfig: Kernel.Prelude.toJSON <$> rideEvidenceConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     scheduledRideConfig: Just . Data.Aeson.toJSON|I
@@ -1934,6 +1940,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     manualTollChargeConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< manualTollChargeConfig|E
+    sharedRunConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< sharedRunConfig|E
     rideEvidenceConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rideEvidenceConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
@@ -2077,6 +2085,7 @@ TransporterConfig:
     demandHotspotsConfig: json
     fareRecomputePolicy: json
     manualTollChargeConfig: json
+    sharedRunConfig: json
     rideEvidenceConfig: json
     customerPayableFareBreakupSubItemsConfig: json
     issueBreachConfig: json

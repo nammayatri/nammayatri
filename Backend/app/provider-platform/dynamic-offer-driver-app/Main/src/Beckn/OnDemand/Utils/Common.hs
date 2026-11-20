@@ -943,6 +943,7 @@ tripCategoryToCategoryCode :: DT.TripCategory -> Text
 tripCategoryToCategoryCode = \case
   DT.Rental _ -> "ON_DEMAND_RENTAL"
   DT.IntercityRental _ _ -> "ON_DEMAND_RENTAL"
+  DT.SharedRoute _ -> "SHARED_ROUTE_TRIP"
   _ -> "ON_DEMAND_TRIP"
 
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]

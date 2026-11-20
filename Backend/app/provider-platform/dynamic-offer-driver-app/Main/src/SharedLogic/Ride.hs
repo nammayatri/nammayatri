@@ -667,6 +667,10 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         backendConfigVersion = driver.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         tripCategory = booking.tripCategory,
+        -- set by the shared-run materialiser on SharedRoute rides; on-demand rides have none
+        tripId = Nothing,
+        routeCode = Nothing,
+        integratedBppConfigId = Nothing,
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,

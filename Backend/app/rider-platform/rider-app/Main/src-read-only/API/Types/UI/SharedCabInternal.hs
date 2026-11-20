@@ -32,11 +32,19 @@ data SharedCabBookingOperation
   | DECLINE
   | CANCEL
   | BOARDED_WITHOUT_CODE
+  | BOARDED_WITH_OTP
+  | NO_SHOW
   | DROPPED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabBookingOperationReq = SharedCabBookingOperationReq {driverId :: Kernel.Prelude.Text, operation :: SharedCabBookingOperation, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
+data SharedCabBookingOperationReq = SharedCabBookingOperationReq
+  { driverId :: Kernel.Prelude.Text,
+    operation :: SharedCabBookingOperation,
+    otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

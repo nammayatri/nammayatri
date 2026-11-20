@@ -24,6 +24,7 @@ import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RouteDetailsAPI
 import qualified Domain.Types.Seat
 import qualified Domain.Types.SeatLayout
+import qualified Domain.Types.SharedRoute
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -573,10 +574,12 @@ data OperatorTripInfo = OperatorTripInfo
 data PassengerInfo = PassengerInfo
   { bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     checkedIn :: Kernel.Prelude.Bool,
+    hasOtp :: Kernel.Prelude.Bool,
     name :: Data.Text.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     phone :: Data.Text.Text,
-    quantity :: Kernel.Prelude.Int
+    quantity :: Kernel.Prelude.Int,
+    state :: Data.Maybe.Maybe Domain.Types.SharedRoute.SharedPassengerState
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

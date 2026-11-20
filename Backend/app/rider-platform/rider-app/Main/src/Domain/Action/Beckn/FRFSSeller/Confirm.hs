@@ -491,6 +491,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       rescheduleCount = Nothing,
       sharedCabNoShows = 0,
       vehicleTripId = Nothing,
+      rideId = Nothing,
       _type = journeyType.quoteType,
       bookingAuthCode = Nothing,
       bppBankAccountNumber = Just account.bankAccountNumber,

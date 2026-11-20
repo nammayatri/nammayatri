@@ -36,6 +36,7 @@ imports:
   FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
+  SharedPassengerState: Domain.Types.SharedRoute
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
   RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
   Seat: Domain.Types.Seat
@@ -507,6 +508,10 @@ types:
     bookingId: Id FRFSTicketBooking
     checkedIn: Bool
     quantity: Int
+    # True when the feed's boarding knob is OTP: the driver must collect this rider's code to board them.
+    hasOtp: Bool
+    # Where the passenger stands on this run; Nothing for an operator feed with no shared knobs.
+    state: Maybe SharedPassengerState
     derive: "Show"
 
   PassengerStopManifest:

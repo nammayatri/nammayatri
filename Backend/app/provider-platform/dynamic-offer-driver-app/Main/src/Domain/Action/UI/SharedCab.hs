@@ -24,6 +24,7 @@ module Domain.Action.UI.SharedCab
     sharedCabTripActive,
     sharedCabFeedVersion,
     BookingAction (..),
+    actionOtp,
     actionReason,
     bookingActionOf,
   )
@@ -313,27 +314,30 @@ sessionOperation auth@(personId, _merchantId, merchantOpCityId) req = do
           SharedCabBAP.checkInId = req.checkInId
         }
 
-data BookingAction = Cancel Text | BoardedWithoutCode | Dropped | Accept | Decline
+data BookingAction = Cancel Text | BoardedWithoutCode | BoardedWithOtp Text | NoShow | Dropped | Accept | Decline
   deriving (Show, Eq)
 
+-- | Nothing when the operation lacks what it carries: a cancel its reason, an OTP boarding its otp.
 bookingActionOf :: SharedCabBookingOperationReq -> Maybe BookingAction
 bookingActionOf req = case req.operation of
   ACCEPT -> Just Accept
   DECLINE -> Just Decline
   DROPPED -> Just Dropped
   BOARDED_WITHOUT_CODE -> Just BoardedWithoutCode
+  BOARDED_WITH_OTP -> BoardedWithOtp <$> req.otp
+  NO_SHOW -> Just NoShow
   CANCEL -> Cancel <$> req.reason
 
 bookingOperation :: DriverAuthInfo -> Text -> SharedCabBookingOperationReq -> Flow SharedCabSession
 bookingOperation auth@(personId, _merchantId, merchantOpCityId) bookingId req = do
-  action <- fromMaybeM (InvalidRequest "reason is required to cancel a booking") (bookingActionOf req)
+  action <- fromMaybeM (InvalidRequest "a cancel needs its reason and an OTP boarding needs the otp") (bookingActionOf req)
   vehicle <- validateSharedCabDriver personId
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
   session <-
     withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) (Just . Just) $
       SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId $
-        SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action}
+        SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action, otp = actionOtp action}
   -- the offer's answer goes into the driver's quote-response counters, like a ride request's
   whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
   pure session
@@ -347,6 +351,11 @@ offerResponse = \case
 actionReason :: BookingAction -> Maybe Text
 actionReason = \case
   Cancel reason -> Just reason
+  _ -> Nothing
+
+actionOtp :: BookingAction -> Maybe Text
+actionOtp = \case
+  BoardedWithOtp otp -> Just otp
   _ -> Nothing
 
 -- | Driver calls the rider of a shared-cab booking through Exotel, so each side sees only the ExoPhone. Same shape as

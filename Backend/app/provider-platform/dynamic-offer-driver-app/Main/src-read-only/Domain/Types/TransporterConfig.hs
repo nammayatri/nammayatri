@@ -15,6 +15,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.SharedRoute
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -354,6 +355,7 @@ data TransporterConfig = TransporterConfig
     separateDriverVehicleEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sharedCabDailyTripTarget :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabTripEarningsTarget :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sharedRunConfig :: Kernel.Prelude.Maybe Domain.Types.SharedRoute.SharedSupplyKnobs,
     showRoutePerRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
     specialDrivers :: [Kernel.Prelude.Text],

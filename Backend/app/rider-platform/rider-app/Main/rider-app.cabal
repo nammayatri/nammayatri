@@ -759,6 +759,8 @@ library
       SharedLogic.SharedCab.StopProgress.Rules
       SharedLogic.SharedCab.TripClient
       SharedLogic.SharedCab.WalkUp
+      SharedLogic.SharedRoute.Knobs
+      SharedLogic.SharedRoute.Passenger
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking

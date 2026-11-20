@@ -1356,6 +1356,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_rc_take
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN events_window_size integer NOT NULL default 100;
 
 
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_arrival boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_run_config json ;

@@ -4,9 +4,9 @@
 
 module Storage.Queries.MerchantPushNotification where
 
+import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification
-import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -44,7 +44,7 @@ findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
 findAllByMerchantOpCityIdAndMessageKeyAndTripCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification]))
 findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId key tripCategory = do
   findAllWithKV
     [ Se.And

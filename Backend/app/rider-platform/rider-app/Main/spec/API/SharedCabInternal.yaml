@@ -59,14 +59,18 @@ types:
     # the open check-in a STILL_ON_ROUTE answers
     checkInId: Maybe Text
 
+  # The driver's verbs on one passenger of their run, shared by every product on the shared-route spine.
+  # BOARDED_WITH_OTP carries the rider's per-booking code in `otp` and is accepted only where the feed's
+  # boarding knob is OTP; NO_SHOW is the driver giving up on a booked rider after the configured wait.
   SharedCabBookingOperation:
-    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"
+    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,BOARDED_WITH_OTP,NO_SHOW,DROPPED"
 
   SharedCabBookingOperationReq:
     operation: SharedCabBookingOperation
     driverId: Text
     vehicleNumber: Text
     reason: Maybe Text
+    otp: Maybe Text
 
   RiderCallNumberResp:
     riderNumber: Text

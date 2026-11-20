@@ -152,6 +152,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
     DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
     DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     DTC.OneWay DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer
+    -- a dropped run is not re-offered through the on-demand path; the shared-run fallback job
+    -- re-assigns it from the owned fleet or the curated board (module A)
+    DTC.SharedRoute _ -> cancelRideTransactionForNonReallocation Nothing Nothing
     _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateDynamicOffer = do

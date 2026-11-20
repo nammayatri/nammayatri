@@ -208,6 +208,9 @@ updateRefundCancellationChargesAndIsCancellableByBookingId refundAmount cancella
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateRideId rideId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.rideId rideId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus ->
@@ -326,6 +329,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.refundAmount refundAmount,
       Se.Set Beam.rescheduleCount rescheduleCount,
+      Se.Set Beam.rideId rideId,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeName routeName,

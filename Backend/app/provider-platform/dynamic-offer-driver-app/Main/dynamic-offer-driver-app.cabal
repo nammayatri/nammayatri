@@ -861,6 +861,7 @@ library
       SharedLogic.Settlement
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SharedCab.Trip
+      SharedLogic.SharedRun.Knobs
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand

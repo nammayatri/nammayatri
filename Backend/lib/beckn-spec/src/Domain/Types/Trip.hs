@@ -56,6 +56,7 @@ data TripCategory
   | Delivery OneWayMode
   | EasyBooking EasyBookingMode -- destination-less booking, regular (Progressive) fare policy; end-OTP requirement is hardcoded below, not configurable
   | IntercityRental RentalMode (Maybe Text) -- rental whose drop is in a different operating city; priced from a dedicated FareProduct row (not the same-city Rental one)
+  | SharedRoute SharedRouteMode -- one scheduled run of a fixed GTFS route (shuttle, shared cab, bus) driven by our driver; passengers hold FRFS tickets on the BAP, never a rider Booking. Only OnDemandStaticOffer is produced today: the run is created by the materialiser and goes to the scheduled board or a direct assignment.
   deriving stock (Eq, Ord, Generic)
 
 -- deriving anyclass (ToSchema)
@@ -163,6 +164,11 @@ instance ToJSON TripCategory where
         "contents" .= mode,
         "city" .= text
       ]
+  toJSON (SharedRoute mode) =
+    object
+      [ "tag" .= ("SharedRoute" :: Text),
+        "contents" .= mode
+      ]
 
 instance FromJSON TripCategory where
   -- dashboards and older fixtures may still send the Show-format string
@@ -181,6 +187,7 @@ instance FromJSON TripCategory where
       "Delivery" -> Delivery <$> v .: "contents"
       "EasyBooking" -> EasyBooking <$> v .: "contents"
       "IntercityRental" -> IntercityRental <$> v .: "contents" <*> v .:? "city"
+      "SharedRoute" -> SharedRoute <$> v .: "contents"
       _ -> fail $ "Unknown tag: " ++ tag
 
 instance ToSchema TripCategory where
@@ -189,6 +196,7 @@ instance ToSchema TripCategory where
     rentalModeSchema <- declareSchemaRef (Proxy :: Proxy RentalMode)
     rideShareModeSchema <- declareSchemaRef (Proxy :: Proxy RideShareMode)
     easyBookingModeSchema <- declareSchemaRef (Proxy :: Proxy EasyBookingMode)
+    sharedRouteModeSchema <- declareSchemaRef (Proxy :: Proxy SharedRouteMode)
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
 
     return $
@@ -204,7 +212,8 @@ instance ToSchema TripCategory where
                  tripCategorySchema oneWayModeSchema [] ["Ambulance"],
                  tripCategorySchema oneWayModeSchema [] ["Delivery"],
                  tripCategorySchema easyBookingModeSchema [] ["EasyBooking"],
-                 tripCategorySchema rentalModeSchema [("city", textSchema)] ["IntercityRental"]
+                 tripCategorySchema rentalModeSchema [("city", textSchema)] ["IntercityRental"],
+                 tripCategorySchema sharedRouteModeSchema [] ["SharedRoute"]
                ]
     where
       tripCategorySchema contentSchema otherSchemas enums =
@@ -244,6 +253,8 @@ type RideShareMode = TripMode
 
 type EasyBookingMode = TripMode
 
+type SharedRouteMode = TripMode
+
 data TripMode = RideOtp | OnDemandStaticOffer
   deriving stock (Eq, Show, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -282,6 +293,7 @@ instance Show TripCategory where
   show (EasyBooking s) = "EasyBooking_" <> show s
   show (IntercityRental s Nothing) = "IntercityRental_" <> show s
   show (IntercityRental s (Just city)) = "IntercityRental_" <> show s <> "_" <> T.unpack city
+  show (SharedRoute s) = "SharedRoute_" <> show s
 
 generateTripCategoryShowInstances :: [String]
 generateTripCategoryShowInstances =
@@ -294,6 +306,7 @@ generateTripCategoryShowInstances =
     ++ [show (Delivery mode) | mode <- oneWayModes]
     ++ [show (EasyBooking mode) | mode <- tripModes]
     ++ [show (IntercityRental mode Nothing) | mode <- tripModes]
+    ++ [show (SharedRoute mode) | mode <- tripModes]
   where
     oneWayModes = [OneWayRideOtp, OneWayOnDemandStaticOffer, OneWayOnDemandDynamicOffer]
     tripModes = [RideOtp, OnDemandStaticOffer]
@@ -382,6 +395,10 @@ instance Read TripCategory where
                  | r1 <- stripPrefix "IntercityRental_OnDemandStaticOffer_" r,
                    let v1 = T.pack r1
                ]
+            ++ [ (SharedRoute v1, r2)
+                 | r1 <- stripPrefix "SharedRoute_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -408,6 +425,8 @@ tripCategoryToPricingPolicy (Delivery OneWayOnDemandDynamicOffer) = EstimateBase
 tripCategoryToPricingPolicy (Rental _) = QuoteBased True
 tripCategoryToPricingPolicy (IntercityRental _ _) = QuoteBased True
 tripCategoryToPricingPolicy (EasyBooking _) = QuoteBased True
+-- a run's fare is the sum of its tickets, computed at run end; the quote is a placeholder
+tripCategoryToPricingPolicy (SharedRoute _) = QuoteBased False
 tripCategoryToPricingPolicy _ = QuoteBased False
 
 skipDriverPoolCheck :: TripCategory -> Bool
@@ -517,3 +536,10 @@ isTollExemptVehicleTier _ = False
 isDeliveryTrip :: TripCategory -> Bool
 isDeliveryTrip (Delivery _) = True
 isDeliveryTrip _ = False
+
+-- | A scheduled run of a fixed route. No rider Booking exists for it on the BAP; the passengers
+-- are FRFS ticket bookings that point at the run's ride id. Never reallocated by the on-demand
+-- path (see isReallocatableCategory): a dropped run is picked up by the shared-run fallback job.
+isSharedRouteTrip :: TripCategory -> Bool
+isSharedRouteTrip (SharedRoute _) = True
+isSharedRouteTrip _ = False

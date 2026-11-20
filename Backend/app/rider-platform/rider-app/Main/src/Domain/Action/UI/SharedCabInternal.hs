@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
+import qualified Domain.Types.SharedRoute as DSharedRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
@@ -54,6 +55,7 @@ import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified SharedLogic.SharedCab.StopProgress as StopProgress
+import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -254,10 +256,24 @@ postSharedCabBookingOperations bookingId mbToken req = do
     API.DECLINE -> Offer.declineOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
     API.CANCEL -> driverAction DriverCancel
     API.BOARDED_WITHOUT_CODE -> driverAction DriverBoarded
+    API.BOARDED_WITH_OTP -> boardWithOtp
+    API.NO_SHOW -> SharedRouteKnobs.notImplemented "NO_SHOW: the driver's wait at the stop and the no-show consequence (modules R and S)"
     API.DROPPED -> driverAction DriverDropped
   where
     driverAction action = runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= mkSessionResp
     owned = either throwError pure . ownedSession req.driverId . Just
+    -- The boarding knob decides what the driver's OTP means: under NO_CHECK it is a plain board, under OTP it must
+    -- match the booking's code (module S lands the hash and the compare), under anything else it is refused.
+    boardWithOtp = do
+      otp <- req.otp & fromMaybeM (InvalidRequest "otp is required to board with OTP")
+      booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
+      knobs <- SharedRouteKnobs.requireDemandKnobs integratedBppConfig
+      case SharedRouteKnobs.verifyBoarding knobs.boarding (SharedRouteKnobs.PresentedOtp otp) of
+        SharedRouteKnobs.Admit -> driverAction DriverBoarded
+        SharedRouteKnobs.RejectBoarding why -> throwError (InvalidRequest why)
+        SharedRouteKnobs.CheckOtp _ -> SharedRouteKnobs.notImplemented "OTP boarding: compare against the booking's OTP hash (module S)"
+        other -> SharedRouteKnobs.notImplemented ("boarding with an OTP under a knob that asks for " <> show other)
 
 sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow View.SessionRoute
 sessionRoute integratedBppConfig code = do

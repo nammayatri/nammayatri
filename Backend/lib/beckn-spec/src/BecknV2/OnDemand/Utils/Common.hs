@@ -217,6 +217,9 @@ tripCategoryToFulfillmentType = \case
   -- On-us encoding so the BAP's readMaybe @TripCategory fast-path decodes back to
   -- IntercityRental (not Rental) — otherwise same misidentification bug as EasyBooking.
   ri@(IntercityRental _ _) -> show ri
+  -- On-us only: a run is never searched over Beckn, but its ride updates still carry a
+  -- fulfillment type, and the BAP's readMaybe fast-path must decode it back unchanged.
+  sr@(SharedRoute _) -> show sr
   _ -> show Enums.DELIVERY
 
 -- | Map internal trip category to ONDC v2.1.0 category code
@@ -233,6 +236,7 @@ tripCategoryToCategoryCode = \case
   -- addition surfaced — new Beckn category code for the destination-less search.
   EasyBooking _ -> "ON_DEMAND_EASY_BOOKING"
   IntercityRental _ _ -> "ON_DEMAND_RENTAL"
+  SharedRoute _ -> "SHARED_ROUTE_TRIP"
 
 mkCategory :: TripCategory -> Spec.Category
 mkCategory tc =

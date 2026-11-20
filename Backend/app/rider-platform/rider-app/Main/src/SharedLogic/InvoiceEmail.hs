@@ -198,6 +198,7 @@ tripCategoryLabel = \case
   DTrip.Delivery _ -> "Delivery"
   DTrip.EasyBooking _ -> "EasyBooking"
   DTrip.IntercityRental _ _ -> "IntercityRental"
+  DTrip.SharedRoute _ -> "SharedRoute"
 
 buildPayment :: FEmail.InvoiceEmailConfig -> DBAPI.BookingAPIEntity -> Maybe Text -> Maybe FEmail.InvoiceEmailPayment
 buildPayment cfg booking stamp = case booking.paymentInstrument of

@@ -8,7 +8,7 @@ import "dynamic-offer-driver-app" API.Types.UI.SharedCab (SharedCabBookingOperat
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import Data.Time (UTCTime (..), fromGregorian)
 import "dynamic-offer-driver-app" Domain.Action.Internal.SharedCabCallNumber (callNumberAllowed)
-import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionReason, bookingActionOf, tripTargets)
+import "dynamic-offer-driver-app" Domain.Action.UI.SharedCab (BookingAction (..), actionOtp, actionReason, bookingActionOf, tripTargets)
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DCommon
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as SP
 import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
@@ -53,22 +53,30 @@ tests =
   testGroup
     "shared-cab driver proxy (cancel reason)"
     [ testCase "the app's body {operation, reason} decodes" $
-        decode "{\"operation\":\"CANCEL\",\"reason\":\"rider not at stop\"}" @?= Just (SharedCabBookingOperationReq {operation = CANCEL, reason = Just "rider not at stop"}),
+        decode "{\"operation\":\"CANCEL\",\"reason\":\"rider not at stop\"}" @?= Just (SharedCabBookingOperationReq {operation = CANCEL, reason = Just "rider not at stop", otp = Nothing}),
       testCase "a cancel carries its reason into the action" $
-        bookingActionOf (SharedCabBookingOperationReq {operation = CANCEL, reason = Just "cab breakdown"}) @?= Just (Cancel "cab breakdown"),
+        bookingActionOf (SharedCabBookingOperationReq {operation = CANCEL, reason = Just "cab breakdown", otp = Nothing}) @?= Just (Cancel "cab breakdown"),
       testCase "a cancel without a reason is refused" $
-        bookingActionOf (SharedCabBookingOperationReq {operation = CANCEL, reason = Nothing}) @?= Nothing,
+        bookingActionOf (SharedCabBookingOperationReq {operation = CANCEL, reason = Nothing, otp = Nothing}) @?= Nothing,
       testCase "the other operations need no reason" $
-        map (\op -> bookingActionOf (SharedCabBookingOperationReq {operation = op, reason = Nothing})) [ACCEPT, DECLINE, DROPPED, BOARDED_WITHOUT_CODE]
-          @?= map Just [Accept, Decline, Dropped, BoardedWithoutCode],
+        map (\op -> bookingActionOf (SharedCabBookingOperationReq {operation = op, reason = Nothing, otp = Nothing})) [ACCEPT, DECLINE, DROPPED, BOARDED_WITHOUT_CODE, NO_SHOW]
+          @?= map Just [Accept, Decline, Dropped, BoardedWithoutCode, NoShow],
+      testCase "an OTP boarding carries its otp into the action" $
+        bookingActionOf (SharedCabBookingOperationReq {operation = BOARDED_WITH_OTP, reason = Nothing, otp = Just "4821"}) @?= Just (BoardedWithOtp "4821"),
+      testCase "an OTP boarding without the otp is refused" $
+        bookingActionOf (SharedCabBookingOperationReq {operation = BOARDED_WITH_OTP, reason = Nothing, otp = Nothing}) @?= Nothing,
       testCase "the cancel action carries its reason on" $ actionReason (Cancel "cab breakdown") @?= Just "cab breakdown",
-      testCase "other actions carry none" $ map actionReason [BoardedWithoutCode, Dropped] @?= [Nothing, Nothing],
+      testCase "other actions carry none" $ map actionReason [BoardedWithoutCode, Dropped, BoardedWithOtp "4821", NoShow] @?= [Nothing, Nothing, Nothing, Nothing],
+      testCase "only the OTP boarding carries an otp on" $ map actionOtp [BoardedWithOtp "4821", BoardedWithoutCode, NoShow] @?= [Just "4821", Nothing, Nothing],
       testCase "the request to rider-app has the reason under \"reason\"" $
-        forwarded (BAPBookingOperationReq {operation = CANCEL, driverId = "d1", vehicleNumber = "ML05A9999", reason = Just "cab breakdown"})
-          @?= Just (object ["operation" .= ("CANCEL" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String)]),
+        forwarded (BAPBookingOperationReq {operation = CANCEL, driverId = "d1", vehicleNumber = "ML05A9999", reason = Just "cab breakdown", otp = Nothing})
+          @?= Just (object ["operation" .= ("CANCEL" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String), "otp" .= Null]),
       testCase "another action sends reason null (rider-app reads it as Nothing)" $
-        forwarded (BAPBookingOperationReq {operation = DROPPED, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing})
-          @?= Just (object ["operation" .= ("DROPPED" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null]),
+        forwarded (BAPBookingOperationReq {operation = DROPPED, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Nothing})
+          @?= Just (object ["operation" .= ("DROPPED" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= Null]),
+      testCase "the request to rider-app has the otp under \"otp\"" $
+        forwarded (BAPBookingOperationReq {operation = BOARDED_WITH_OTP, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Just "4821"})
+          @?= Just (object ["operation" .= ("BOARDED_WITH_OTP" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= ("4821" :: String)]),
       -- rider-app's SessionView sends all four; a missing one 500s the driver's session view
       testCase "every rider status rider-app sends decodes" $
         map decode ["\"AT_STOP\"", "\"MINUTES_AWAY\"", "\"ARRIVING\"", "\"BOARDED\""] @?= map Just [AT_STOP, MINUTES_AWAY, ARRIVING, BOARDED],

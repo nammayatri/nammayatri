@@ -179,6 +179,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             OneWay OneWayOnDemandStaticOffer -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId []
+            SharedRoute _ -> throwError $ InternalError $ "SharedRoute has no rider booking; passengers are FRFS tickets. bookingId:-" <> id
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
         Nothing ->
           case fareProductType of
@@ -224,6 +225,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
             OneWay OneWayOnDemandStaticOffer -> DRB.OneWayDetails <$> buildOneWayDetails toLocId stops
+            SharedRoute _ -> throwError $ InternalError $ "SharedRoute has no rider booking; passengers are FRFS tickets. bookingId:-" <> id
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
         Nothing ->
           case fareProductType of

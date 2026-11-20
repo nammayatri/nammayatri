@@ -54,6 +54,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteDetails as Fields
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.SharedRoute as DSharedRoute
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
@@ -127,6 +128,8 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified SharedLogic.SharedCab as SharedCab
+import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
+import qualified SharedLogic.SharedRoute.Passenger as SharedRoutePassenger
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -2104,6 +2107,9 @@ buildManifestForBookings ::
   Environment.Flow FRFSTripPassengerManifestResp
 buildManifestForBookings firstBooking bookings tripId routeId = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigById firstBooking.integratedBppConfigId
+  -- a shared-route feed (our own drivers) carries knobs; an operator feed does not and gets no passenger state
+  let mbSharedKnobs = SharedRouteKnobs.demandKnobsOf integratedBPPConfig
+      manifestHasOtp = maybe False ((== DSharedRoute.OTP) . (.boarding)) mbSharedKnobs
   let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
   schedule <- JMU.measureLatency (OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig) "getBusTripSchedule"
   scheduleDetail <-
@@ -2150,7 +2156,9 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
                   phone = mobileNumber,
                   bookingId = booking.id,
                   checkedIn = isCheckedIn,
-                  quantity = bookingQuantity
+                  quantity = bookingQuantity,
+                  hasOtp = manifestHasOtp,
+                  state = SharedRoutePassenger.passengerStateOf booking frfsTickets <$ mbSharedKnobs
                 }
         pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)
   let validPassengerData = catMaybes passengerData

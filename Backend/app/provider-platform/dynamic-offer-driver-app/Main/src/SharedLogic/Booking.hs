@@ -233,6 +233,7 @@ createTripType (Ambulance _) = "Ambulance"
 createTripType (Delivery _) = "Delivery"
 createTripType (EasyBooking _) = "EasyBooking"
 createTripType (IntercityRental _ _) = "IntercityRental"
+createTripType (SharedRoute _) = "SharedRoute"
 
 -- Generates Redis key for hash set storage of scheduled bookings.
 -- Format: "ScheduledBookings:cityId:YYYY-MM-DD"

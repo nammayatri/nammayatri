@@ -59,6 +59,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         OneWay OneWayOnDemandStaticOffer -> do
           distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
           getOneWayStaticQuoteDetails distanceToNearestDriver' staticQuoteId & fromMaybeM (InternalError "No static bpp quote details")
+        SharedRoute _ -> throwError $ InternalError "SharedRoute has no rider quote; passengers are FRFS tickets"
         _ -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
     -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     Nothing ->

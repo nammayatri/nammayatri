@@ -103,6 +103,7 @@ tripCategoryName = \case
   DTC.Delivery _ -> "Delivery"
   DTC.EasyBooking _ -> "EasyBooking"
   DTC.IntercityRental _ _ -> "IntercityRental"
+  DTC.SharedRoute _ -> "SharedRoute"
 
 isManualTollChargeEnabled :: DTConf.TransporterConfig -> DTC.TripCategory -> Bool
 isManualTollChargeEnabled transporterConfig tripCategory =

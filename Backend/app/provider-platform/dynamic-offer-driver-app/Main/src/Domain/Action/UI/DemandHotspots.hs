@@ -116,6 +116,7 @@ tripOptionFromCategories categories = case categories of
   Trip.Delivery _ : _ -> "Delivery"
   Trip.EasyBooking _ : _ -> "EasyBooking"
   Trip.IntercityRental _ _ : _ -> "IntercityRental"
+  Trip.SharedRoute _ : _ -> "SharedRoute"
   [] -> "Unknown"
 
 getDriverDemandHotspots ::

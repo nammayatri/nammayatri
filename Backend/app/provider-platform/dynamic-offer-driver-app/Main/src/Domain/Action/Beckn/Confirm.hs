@@ -390,6 +390,8 @@ validateRequest subscriber transporterId req now transporterConfig = do
     -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
     -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
     EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    -- runs are created by the shared-run materialiser, never confirmed over Beckn
+    SharedRoute _ -> throwError . InvalidRequest $ "SharedRoute bookings are not confirmed over Beckn: " <> show booking.tripCategory
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do

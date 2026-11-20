@@ -85,7 +85,8 @@ data BAPBookingOperationReq = BAPBookingOperationReq
   { operation :: SharedCabBookingOperation,
     driverId :: Text,
     vehicleNumber :: Text,
-    reason :: Maybe Text
+    reason :: Maybe Text,
+    otp :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)
