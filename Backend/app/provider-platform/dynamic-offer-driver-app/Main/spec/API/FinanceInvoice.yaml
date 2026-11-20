@@ -12,6 +12,7 @@ importPackageOverrides:
 module: FinanceInvoice
 types:
   FinanceInvoiceItem:
+    invoiceId: Text
     invoiceNumber: Text
     invoiceType: InvoiceType
     invoiceDate: UTCTime

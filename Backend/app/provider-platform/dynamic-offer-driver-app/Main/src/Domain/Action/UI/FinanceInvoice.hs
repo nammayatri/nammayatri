@@ -115,7 +115,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
 
       pure $
         API.FinanceInvoiceItem
-          { invoiceNumber = invoice.invoiceNumber,
+          { invoiceId = invoice.id.getId,
+            invoiceNumber = invoice.invoiceNumber,
             invoiceType = invoice.invoiceType,
             invoiceDate = invoice.issuedAt,
             taxAmount = taxAmount,

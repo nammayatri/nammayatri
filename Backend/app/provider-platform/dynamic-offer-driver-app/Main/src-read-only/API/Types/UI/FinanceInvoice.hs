@@ -20,6 +20,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
     igstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     igstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     invoiceDate :: Data.Time.UTCTime,
+    invoiceId :: Kernel.Prelude.Text,
     invoiceNumber :: Kernel.Prelude.Text,
     invoiceType :: Domain.Types.Invoice.InvoiceType,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
