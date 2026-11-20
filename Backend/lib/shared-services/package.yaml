@@ -120,6 +120,17 @@ dependencies:
   - external
   - singletons-th
   - mock-registry
+  - asn1-encoding
+  - asn1-types
+  - base64-bytestring
+  - cborg
+  - hourglass
+  - http-api-data
+  - memory
+  - pem
+  - x509
+  - x509-store
+  - x509-validation
 
 ghc-options:
   - -fwrite-ide-info
@@ -164,3 +175,21 @@ library:
     - location-updates
     - mock-registry
     - geojson
+
+tests:
+  shared-services-tests:
+    main: Main.hs
+    source-dirs: test/AppAttestation
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N"'
+      - -Wall
+      - -Werror
+      - -Wno-ambiguous-fields
+      - -Wno-incomplete-uni-patterns
+    dependencies:
+      - shared-services
+      - tasty
+      - tasty-hunit
+      - base16-bytestring

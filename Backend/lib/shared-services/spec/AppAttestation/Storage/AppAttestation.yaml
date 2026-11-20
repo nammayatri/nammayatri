@@ -1,0 +1,61 @@
+imports:
+  Merchant: AppAttestation.Domain.Types.Common
+  MerchantOperatingCity: AppAttestation.Domain.Types.Common
+  AppAttestEnvironment: AppAttestation.Domain.Types.Common
+  AppAttestKeyStatus: AppAttestation.Domain.Types.Common
+  UTCTime: Kernel.Prelude
+
+AppAttestKey:
+  tableName: app_attest_key
+  derives: "Generic,Show"
+
+  fields:
+    keyId: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    teamId: Text
+    bundleId: Text
+    environment: AppAttestEnvironment
+    publicKey: Text
+    signCount: Int
+    receipt: Maybe Text
+    status: AppAttestKeyStatus
+    useCount: Int
+    lastUsedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    keyId: PrimaryKey
+
+  sqlType:
+    signCount: bigint
+    useCount: bigint
+
+  default:
+    signCount: "0"
+    useCount: "0"
+    status: "'ACTIVE'"
+
+  queries:
+    findByKeyId:
+      kvFunction: findOneWithKV
+      where: keyId
+
+    updateUsage:
+      kvFunction: updateWithKV
+      params: [signCount, useCount, lastUsedAt]
+      where: keyId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: keyId
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  defaultQueryTypeConstraint: "(AppAttestation.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

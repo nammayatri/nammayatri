@@ -1,5 +1,6 @@
 module Domain.Types.Extra.MerchantServiceConfig where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
@@ -73,6 +74,8 @@ data ServiceName
   | EventTrackingService EventTracking.EventTrackingService
   | FleetEngineService FleetEngineProvider
   | PartnerSdkService PartnerSdkProvider
+  | AppAttestationService AppAttestation.AppAttestationProvider
+  | CaptchaService AppAttestation.CaptchaProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -108,6 +111,8 @@ instance Show ServiceName where
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show (AppAttestationService s) = "AppAttestation_" <> show s
+  show (CaptchaService s) = "Captcha_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -230,6 +235,14 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (AppAttestationService v1, r2)
+                 | r1 <- stripPrefix "AppAttestation_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (CaptchaService v1, r2)
+                 | r1 <- stripPrefix "Captcha_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -265,6 +278,8 @@ data ServiceConfigD (s :: UsageSafety)
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | AppAttestationServiceConfig !AppAttestation.PlayIntegrityConfig
+  | CaptchaServiceConfig !AppAttestation.CaptchaConfig
   deriving (Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -307,6 +322,8 @@ instance Show (ServiceConfigD 'Safe) where
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (AppAttestationServiceConfig cfg) = "AppAttestationServiceConfig " <> show cfg
+  show (CaptchaServiceConfig cfg) = "CaptchaServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
@@ -338,3 +355,5 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (AppAttestationServiceConfig cfg) = "AppAttestationServiceConfig " <> show cfg
+  show (CaptchaServiceConfig cfg) = "CaptchaServiceConfig " <> show cfg

@@ -1,5 +1,6 @@
 module Storage.Queries.MerchantServiceConfigExtra where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import qualified Data.Aeson as A
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -228,3 +229,5 @@ getServiceNameConfigJSON = \case
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
+  Domain.AppAttestationServiceConfig cfg -> (Domain.AppAttestationService AppAttestation.PlayIntegrity, toJSON cfg)
+  Domain.CaptchaServiceConfig cfg -> (Domain.CaptchaService AppAttestation.SiteVerify, toJSON cfg)

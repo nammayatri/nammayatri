@@ -4,6 +4,7 @@
 
 module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExport) where
 
+import qualified AppAttestation.Domain.Types.AppAttestationConfig
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
@@ -28,6 +29,7 @@ import qualified Tools.Beam.UtilsTH
 data RiderConfig = RiderConfig
   { allowMultipleOpenMeterRides :: Kernel.Prelude.Bool,
     alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
+    appAttestationConfig :: Kernel.Prelude.Maybe AppAttestation.Domain.Types.AppAttestationConfig.AppAttestationConfig,
     appUrl :: Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,

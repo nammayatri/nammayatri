@@ -237,7 +237,7 @@ postAuthEmailV2 mbXForwardedFor req = do
   checkSlidingWindowLimit ("SocialLogin:EmailAuthHits:" <> merchant.id.getId <> ":" <> show emailHash)
   SSL.findAccountByTrustedEmail merchant.id SP.DRIVER (Just req.email) >>= \case
     Just person -> do
-      authRes <- DR.auth False (emailAuthReq merchant req (fromMaybe req.email person.email)) Nothing Nothing Nothing Nothing Nothing Nothing Nothing mbXForwardedFor
+      authRes <- DR.auth False (emailAuthReq merchant req (fromMaybe req.email person.email)) Nothing Nothing Nothing Nothing Nothing Nothing Nothing mbXForwardedFor Nothing
       pure SL.EmailAuthV2Res {authId = authRes.authId.getId, attempts = authRes.attempts}
     Nothing -> do
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)

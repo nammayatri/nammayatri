@@ -224,6 +224,7 @@ library
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AlertIncident
+      Domain.Action.Dashboard.AppAttestation
       Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.EDCMachine
       Domain.Action.Dashboard.AppManagement.EventManagement
@@ -575,6 +576,7 @@ library
       Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
+      SharedLogic.AppAttestation
       SharedLogic.BehaviourManagement.CustomerCancellationRate
       SharedLogic.BetterRoutePoint
       SharedLogic.BetterRoutePointCache
@@ -773,6 +775,7 @@ library
       SharedLogic.TollUpsert
       SharedLogic.Type
       SharedLogic.Utils
+      Storage.Beam.AppAttestation
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.DashboardAlert
@@ -1074,6 +1077,7 @@ library
       API.Action.DashboardAuth.IssueManagement.IssueList
       API.Action.DashboardAuth.Management
       API.Action.DashboardAuth.Management.AlertIncident
+      API.Action.DashboardAuth.Management.AppAttestation
       API.Action.DashboardAuth.Management.Booking
       API.Action.DashboardAuth.Management.Customer
       API.Action.DashboardAuth.Management.FeedbackForm
@@ -1239,9 +1243,11 @@ library
       API.Types.Dashboard.RideBooking.Select
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.AlertIncident
+      API.Types.RiderPlatform.Management.AppAttestation
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer
       API.Types.RiderPlatform.Management.Endpoints.AlertIncident
+      API.Types.RiderPlatform.Management.Endpoints.AppAttestation
       API.Types.RiderPlatform.Management.Endpoints.Booking
       API.Types.RiderPlatform.Management.Endpoints.Customer
       API.Types.RiderPlatform.Management.Endpoints.FeedbackForm

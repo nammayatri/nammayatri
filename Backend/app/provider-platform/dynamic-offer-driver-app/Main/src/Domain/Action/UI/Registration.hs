@@ -23,6 +23,7 @@ module Domain.Action.UI.Registration
     MarketEventReq (..),
     auth,
     authWithOtp,
+    registerAppAttestKey,
     verify,
     resend,
     logout,
@@ -48,6 +49,7 @@ module Domain.Action.UI.Registration
   )
 where
 
+import qualified AppAttestation.KeyRegistry as Attestation
 import BecknV2.FRFS.Enums (VehicleCategory (BUS))
 import qualified Data.List as List
 import Data.Maybe (listToMaybe)
@@ -111,6 +113,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
+import qualified SharedLogic.AppAttestation as SAttestation
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
@@ -293,8 +296,9 @@ auth ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe SAttestation.AttestationHeaders ->
   Flow AuthRes
-auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor = do
+auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor mbAttestationHeaders = do
   case fromMaybe SP.MOBILENUMBER req'.identifierType of
     SP.GIMS_EMAIL_PASSWORD -> do
       email <- req'.email & fromMaybeM (InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth")
@@ -331,7 +335,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
       runGimsEmployeeLogin req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice gimsReq $
         \merchant _loginRole badgeToken -> QP.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
     _ -> do
-      authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor
+      authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor mbAttestationHeaders
       return $
         AuthRes
           { attempts = authRes.attempts,
@@ -418,6 +422,21 @@ castChannelToMedium SOTP.SMS = SR.SMS
 castChannelToMedium SOTP.EMAIL = SR.EMAIL
 castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
 
+-- | "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID, "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+legacyPartnerMerchantRemap :: Text -> Maybe Context.City -> (Text, Maybe Context.City)
+legacyPartnerMerchantRemap merchantId mbCity
+  | merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" = ("7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", Just (City.City "Kochi"))
+  | otherwise = (merchantId, mbCity)
+
+registerAppAttestKey :: Maybe Text -> Attestation.RegisterKeyReq -> Flow Attestation.RegisterKeyRes
+registerAppAttestKey mbXForwardedFor attestReq = do
+  let (merchantIdText, mbCity) = legacyPartnerMerchantRemap attestReq.merchantId attestReq.city
+  merchant <- QMerchant.findById (Id merchantIdText) >>= fromMaybeM (MerchantNotFound merchantIdText)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbCity
+  mbClientIP <- extractClientIP mbXForwardedFor
+  mbAttestationConfig <- SAttestation.findAttestationConfig merchantOpCityId
+  Attestation.registerKey (cast merchant.id) (cast merchantOpCityId) mbAttestationConfig mbClientIP attestReq
+
 authWithOtp ::
   Bool ->
   AuthReq ->
@@ -429,9 +448,11 @@ authWithOtp ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe SAttestation.AttestationHeaders ->
   Flow AuthWithOtpRes
-authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor = do
-  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just (City.City "Kochi")} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor mbAttestationHeaders = do
+  let (remappedMerchantId, remappedCity) = legacyPartnerMerchantRemap req'.merchantId req'.merchantOperatingCity
+      req = req' {merchantId = remappedMerchantId, merchantOperatingCity = remappedCity} :: AuthReq
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   runRequestValidation validateInitiateLoginReq req
@@ -449,28 +470,27 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     ipBlocked <- isIPBlocked merchantOpCityId.getId clientIP
     when ipBlocked $ throwError IpHitsLimitExceeded
 
-  (person, otpChannel) <-
+  let createDriver = createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard Nothing Nothing Nothing Nothing
+  (mbExistingPerson, createNewPerson, otpChannel, attestedRequest, identifierHash) <-
     case identifierType of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for mobileNumber auth")
         let otpChannel = fromMaybe SOTP.defaultOTPChannel req.otpChannel
+            attestedRequest = SAttestation.MobileAuthRequest req'.merchantId countryCode mobileNumber
         mobileNumberHash <- getDbHash mobileNumber
         if req.isOperatorReq == Just True
           then do
-            person <- findOrCreateOperatorPerson merchant merchantOpCityId req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice isDashboard
-            pure (person, otpChannel)
+            mbPerson <- QPExtra.findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash merchant.id operatorRoles
+            pure (mbPerson, findOrCreateOperatorPerson merchant merchantOpCityId req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice isDashboard, otpChannel, attestedRequest, mobileNumberHash)
           else do
-            person <-
-              QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-                >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard Nothing Nothing Nothing Nothing) return
-            pure (person, otpChannel)
+            mbPerson <- QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
+            pure (mbPerson, createDriver, otpChannel, attestedRequest, mobileNumberHash)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
-        person <-
-          QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard Nothing Nothing Nothing Nothing) return
-        pure (person, SOTP.EMAIL)
+        emailHash <- getDbHash email
+        mbPerson <- QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
+        pure (mbPerson, createDriver, SOTP.EMAIL, SAttestation.EmailAuthRequest req'.merchantId email, emailHash)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
@@ -478,50 +498,83 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   transporterConfig <-
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  whenJust mbClientIP $ \clientIP ->
-    fork "Driver Auth IP Fraud Check" $
-      checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
-  -- Below the IP counters, so requests rejected here still count towards the IP limit.
-  when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
-    whenJust req.mobileCountryCode $ validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes
+  let usesStaticOtp = case mbExistingPerson of
+        Just existingPerson -> isJust existingPerson.useFakeOtp
+        Nothing -> case identifierType of
+          SP.MOBILENUMBER -> maybe False (`elem` transporterConfig.fakeOtpMobileNumbers) req.mobileNumber
+          SP.EMAIL -> maybe False (`elem` transporterConfig.fakeOtpEmails) req.email
+          _ -> False
+  attestationVerdict <- case mbAttestationHeaders of
+    Just attestationHeaders
+      | not usesStaticOtp ->
+        SAttestation.runGate
+          merchantOpCityId
+          SAttestation.GateRequest
+            { service = SAttestation.driverAppService,
+              endpoint = SAttestation.AuthEndpoint,
+              canonicalRequest = attestedRequest,
+              headers = attestationHeaders,
+              userKind = maybe SAttestation.NewUser SAttestation.userKindOf mbExistingPerson,
+              usesWhatsappOtp = otpChannel == SOTP.WHATSAPP,
+              clientIp = mbClientIP,
+              identifierHash = Just identifierHash,
+              clientVersion = mbClientVersion,
+              deviceType = (.deviceType) <$> getDeviceFromText mbDevice,
+              device = mbDevice
+            }
+    _ -> pure SAttestation.Proceed
+  case attestationVerdict of
+    SAttestation.SilentlyDrop -> do
+      let scfg = sessionConfig smsCfg
+      authId <- generateGUID
+      SAttestation.markSilentlyDropped authId (cast merchantOpCityId) scfg.attempts
+      return $ AuthWithOtpRes {attempts = scfg.attempts, authId = Id authId, otpCode = ""}
+    SAttestation.Proceed -> do
+      person <- maybe createNewPerson return mbExistingPerson
+      whenJust mbClientIP $ \clientIP ->
+        fork "Driver Auth IP Fraud Check" $
+          checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
+      -- Below the IP counters, so requests rejected here still count towards the IP limit.
+      when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
+        whenJust req.mobileCountryCode $ validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes
 
-  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
-  -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
-  -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
-  unless (isJust person.useFakeOtp) $
-    whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
-      let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
-      mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
-      whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
-      updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
-  when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
-    whenJust req.email $ \email -> SSL.enforceEmailOtpLimit email transporterConfig
-  checkSlidingWindowLimit (authHitsCountKey person)
-  void $ cachePersonOTPChannel person.id otpChannel
-  let entityId = getId $ person.id
-      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-      scfg = sessionConfig smsCfg
-      mkId = getId merchantId
-      medium = castChannelToMedium otpChannel
-  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId medium SR.OTP
-  _ <- QR.create token
-  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
-  let otpCode = SR.authValueHash token
-  whenNothing_ useFakeOtpM $ do
-    SOTP.sendOTP
-      otpChannel
-      otpCode
-      person.id
-      person.merchantId
-      merchantOpCityId
-      transporterConfig
-      req.mobileCountryCode
-      req.mobileNumber
-      req.email
-      mbSenderHash
-  let attempts = SR.attempts token
-      authId = SR.id token
-  return $ AuthWithOtpRes {attempts, authId, otpCode}
+      -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+      -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
+      -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
+      unless (isJust person.useFakeOtp) $
+        whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
+          let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
+          mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+          whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+          updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+      when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
+        whenJust req.email $ \email -> SSL.enforceEmailOtpLimit email transporterConfig
+      checkSlidingWindowLimit (authHitsCountKey person)
+      void $ cachePersonOTPChannel person.id otpChannel
+      let entityId = getId $ person.id
+          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+          scfg = sessionConfig smsCfg
+          mkId = getId merchantId
+          medium = castChannelToMedium otpChannel
+      token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId medium SR.OTP
+      _ <- QR.create token
+      QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
+      let otpCode = SR.authValueHash token
+      whenNothing_ useFakeOtpM $ do
+        SOTP.sendOTP
+          otpChannel
+          otpCode
+          person.id
+          person.merchantId
+          merchantOpCityId
+          transporterConfig
+          req.mobileCountryCode
+          req.mobileNumber
+          req.email
+          mbSenderHash
+      let attempts = SR.attempts token
+          authId = SR.id token
+      return $ AuthWithOtpRes {attempts, authId, otpCode}
 
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
@@ -849,7 +902,13 @@ verify ::
   m AuthVerifyRes
 verify tokenId req mbXForwardedFor = do
   runRequestValidation validateAuthVerifyReq req
-  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
+  SR.RegistrationToken {..} <-
+    QR.findById tokenId >>= \case
+      Just foundToken -> pure foundToken
+      Nothing -> do
+        unlessM (SAttestation.isSilentlyDropped tokenId.getId) . throwError . TokenNotFound $ getId tokenId
+        checkSlidingWindowLimit (verifyHitsCountKey $ Id tokenId.getId)
+        throwError InvalidAuthData
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
@@ -916,10 +975,6 @@ callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   QP.updateWhatsappNotificationEnrollStatus (Just status) personId
 
-checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
-checkRegistrationTokenExists tokenId =
-  QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
-
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
@@ -930,46 +985,102 @@ resend ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    SAttestation.AttestationGateFlow m r
   ) =>
   Id SR.RegistrationToken ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe SAttestation.AttestationHeaders ->
   m ResendAuthRes
-resend tokenId mbSenderHash = do
-  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-  person <- checkPersonExists entityId
-  unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  let merchantOpCityId = Id merchantOperatingCityId
-  let otpCode = authValueHash
-  otpChannel <- getPersonOTPChannel person.id
-  mobileNumber <- mapM decrypt person.mobileNumber
-  let receiverEmail = person.email
+resend tokenId mbSenderHash mbXForwardedFor mbAttestationHeaders =
+  QR.findById tokenId >>= \case
+    Just regToken -> resendOtp regToken
+    Nothing ->
+      SAttestation.findSilentDrop tokenId.getId >>= \case
+        Nothing -> throwError . TokenNotFound $ getId tokenId
+        Just silentDrop -> do
+          unless (silentDrop.attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+          whenJust mbAttestationHeaders $ \attestationHeaders -> do
+            mbClientIP <- extractClientIP mbXForwardedFor
+            void $
+              SAttestation.runGate
+                (cast silentDrop.merchantOperatingCityId)
+                SAttestation.GateRequest
+                  { service = SAttestation.driverAppService,
+                    endpoint = SAttestation.ResendEndpoint,
+                    canonicalRequest = SAttestation.ResendRequest tokenId.getId,
+                    headers = attestationHeaders,
+                    userKind = SAttestation.NewUser,
+                    usesWhatsappOtp = False,
+                    clientIp = mbClientIP,
+                    identifierHash = Nothing,
+                    clientVersion = Nothing,
+                    deviceType = Nothing,
+                    device = Nothing
+                  }
+          SAttestation.useSilentDropAttempt silentDrop tokenId.getId
+          return $ AuthRes {authId = tokenId, attempts = silentDrop.attempts - 1, token = Nothing, person = Nothing}
+  where
+    resendOtp SR.RegistrationToken {..} = do
+      person <- checkPersonExists entityId
+      unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+      let merchantOpCityId = Id merchantOperatingCityId
+      let otpCode = authValueHash
+      otpChannel <- getPersonOTPChannel person.id
+      mobileNumber <- mapM decrypt person.mobileNumber
+      let receiverEmail = person.email
+      smsCfg <- asks (.smsCfg)
 
-  -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
-  unless (isJust person.useFakeOtp) $ do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    SOTP.sendOTP
-      otpChannel
-      otpCode
-      person.id
-      person.merchantId
-      merchantOpCityId
-      transporterConfig
-      person.mobileCountryCode
-      mobileNumber
-      receiverEmail
-      mbSenderHash
+      -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
+      unless (isJust person.useFakeOtp) $ do
+        attestationVerdict <- case mbAttestationHeaders of
+          Nothing -> pure SAttestation.Proceed
+          Just attestationHeaders -> do
+            mbClientIP <- extractClientIP mbXForwardedFor
+            identifierHash <- maybe (pure Nothing) (fmap Just . getDbHash) receiverEmail
+            SAttestation.runGate
+              merchantOpCityId
+              SAttestation.GateRequest
+                { service = SAttestation.driverAppService,
+                  endpoint = SAttestation.ResendEndpoint,
+                  canonicalRequest = SAttestation.ResendRequest tokenId.getId,
+                  headers = attestationHeaders,
+                  userKind = SAttestation.userKindOf person,
+                  usesWhatsappOtp = otpChannel == SOTP.WHATSAPP,
+                  clientIp = mbClientIP,
+                  identifierHash = ((.hash) <$> person.mobileNumber) <|> identifierHash,
+                  clientVersion = person.clientSdkVersion,
+                  deviceType = (.deviceType) <$> person.clientDevice,
+                  device = Nothing
+                }
+        when (attestationVerdict == SAttestation.Proceed) $ do
+          transporterConfig <-
+            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+              >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+          when (otpChannel == SOTP.SMS) $
+            whenJust person.mobileCountryCode $ validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes
+          when (isNothing (useFakeSms smsCfg)) $
+            SOTP.sendOTP
+              otpChannel
+              otpCode
+              person.id
+              person.merchantId
+              merchantOpCityId
+              transporterConfig
+              person.mobileCountryCode
+              mobileNumber
+              receiverEmail
+              mbSenderHash
 
-  void $ QR.updateAttempts (attempts - 1) id
-  return $
-    AuthRes
-      { authId = tokenId,
-        attempts = attempts - 1,
-        token = Nothing,
-        person = Nothing
-      }
+      void $ QR.updateAttempts (attempts - 1) id
+      return $
+        AuthRes
+          { authId = tokenId,
+            attempts = attempts - 1,
+            token = Nothing,
+            person = Nothing
+          }
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id SP.Person -> m ()
 cleanCachedTokens personId = do

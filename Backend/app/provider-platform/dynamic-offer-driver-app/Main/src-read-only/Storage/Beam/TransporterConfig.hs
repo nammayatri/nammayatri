@@ -54,6 +54,7 @@ data TransporterConfigT f = TransporterConfigT
     allowedPaymentInstrumentForPayout :: (B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument])),
     allowedReferralEntities :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     analyticsConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    appAttestationConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     areaPreferenceMinCells :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     arrivalTimeBufferOfVehicle :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     arrivedPickupThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),

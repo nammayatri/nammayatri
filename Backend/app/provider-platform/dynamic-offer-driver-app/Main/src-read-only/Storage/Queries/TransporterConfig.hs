@@ -4,6 +4,7 @@
 
 module Storage.Queries.TransporterConfig (module Storage.Queries.TransporterConfig, module ReExport) where
 
+import qualified AppAttestation.Domain.Types.AppAttestationConfig
 import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Extra.TransporterConfig
@@ -113,6 +114,17 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateAppAttestationConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe AppAttestation.Domain.Types.AppAttestationConfig.AppAttestationConfig -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateAppAttestationConfig appAttestationConfig merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.appAttestationConfig (Data.Aeson.toJSON <$> appAttestationConfig),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateCustomerPayableFareBreakupSubItemsConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode] ->
@@ -177,6 +189,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.allowedPaymentInstrumentForPayout allowedPaymentInstrumentForPayout,
       Se.Set Beam.allowedReferralEntities ((Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities))),
       Se.Set Beam.analyticsConfig ((Just . Data.Aeson.toJSON) analyticsConfig),
+      Se.Set Beam.appAttestationConfig (Data.Aeson.toJSON <$> appAttestationConfig),
       Se.Set Beam.areaPreferenceMinCells areaPreferenceMinCells,
       Se.Set Beam.arrivalTimeBufferOfVehicle (Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle),
       Se.Set Beam.arrivedPickupThreshold (Just arrivedPickupThreshold),

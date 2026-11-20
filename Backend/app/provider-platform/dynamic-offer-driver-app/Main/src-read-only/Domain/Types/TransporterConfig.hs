@@ -4,6 +4,7 @@
 
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
+import qualified AppAttestation.Domain.Types.AppAttestationConfig
 import qualified BecknV2.OnDemand.FareBreakup.Tax
 import Data.Aeson
 import qualified Domain.Types.Common
@@ -62,6 +63,7 @@ data TransporterConfig = TransporterConfig
     allowedPaymentInstrumentForPayout :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
     allowedReferralEntities :: [Domain.Types.Person.Role],
     analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,
+    appAttestationConfig :: Kernel.Prelude.Maybe AppAttestation.Domain.Types.AppAttestationConfig.AppAttestationConfig,
     areaPreferenceMinCells :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,

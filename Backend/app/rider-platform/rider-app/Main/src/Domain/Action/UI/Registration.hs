@@ -47,11 +47,13 @@ module Domain.Action.UI.Registration
     resendBusinessEmailVerification,
     cleanCachedTokens,
     extractClientIP,
+    registerAppAttestKey,
   )
 where
 
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
+import qualified AppAttestation.KeyRegistry as Attestation
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
@@ -115,6 +117,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.AppAttestation as SAttestation
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsVerifyReq (..))
 import qualified SharedLogic.External.Nandi.Types as Fields
@@ -333,7 +336,8 @@ auth ::
     ClickhouseFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    SAttestation.AttestationGateFlow m r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -344,8 +348,9 @@ auth ::
   Maybe Text ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe SAttestation.AttestationHeaders ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash mbIsDashboardRequest = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash mbIsDashboardRequest mbAttestationHeaders = do
   let reqWithNormalizedEmail = (req' :: AuthReq) {email = SSL.normalizeEmail <$> req'.email}
       req = if req'.merchantId.getShortId == "YATRI" then reqWithNormalizedEmail {merchantId = ShortId "NAMMA_YATRI"} else reqWithNormalizedEmail
   mbClientIP <- extractClientIP mbXForwardedFor
@@ -356,17 +361,9 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
   now <- getCurrentTime
-  merchantTemp <-
-    QMerchant.findByShortId req.merchantId
-      >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
-  merchant <-
-    if merchantTemp.shortId == merchantTemp.fallbackShortId
-      then return merchantTemp
-      else
-        QMerchant.findByShortId merchantTemp.fallbackShortId
-          >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
+  merchant <- findAuthMerchant req.merchantId
   cloudType <- Just <$> liftIO lookupCloudType
-  (person, otpChannel) <-
+  (mbExistingPerson, createNewPerson, otpChannel, attestedRequest, identifierHash) <-
     case identifierType of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
@@ -374,139 +371,217 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         let notificationToken = req.notificationToken
             otpChannel = fromMaybe SOTP.defaultOTPChannel req.otpChannel
         mobileNumberHash <- getDbHash mobileNumber
-        person <-
-          Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing) return
-        return (person, otpChannel)
+        mbPerson <- Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
+        return
+          ( mbPerson,
+            createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing,
+            otpChannel,
+            SAttestation.MobileAuthRequest req'.merchantId.getShortId countryCode mobileNumber,
+            mobileNumberHash
+          )
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
-        person <-
-          SSL.findPersonByEmail merchant.id email
-            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing) return
-        return (person, SOTP.EMAIL)
+        emailHash <- getDbHash email
+        mbPerson <- SSL.findPersonByEmail merchant.id email
+        return
+          ( mbPerson,
+            createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) cloudType merchant Nothing Nothing,
+            SOTP.EMAIL,
+            SAttestation.EmailAuthRequest req'.merchantId.getShortId (fromMaybe email req'.email),
+            emailHash
+          )
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
       _ -> throwError $ InvalidRequest "Conductor token auth is not supported"
 
-  when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
-  let merchantOperatingCityId = person.merchantOperatingCityId
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-  fork "Fraud Auth Check Processing" $ do
-    when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
-    whenJust mbClientIP $ \clientIP -> do
-      SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
-      (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
-      when isFraudDetected $ do
-        whenJust mbMerchantConfigId $ \mcId ->
-          SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
+  let usesStaticOtp = case mbExistingPerson of
+        Just existingPerson -> isJust existingPerson.useFakeOtp
+        Nothing -> maybe False (`elem` merchant.fakeOtpMobileNumbers) req.mobileNumber || maybe False (`elem` merchant.fakeOtpEmails) req.email
+  attestationVerdict <- case mbAttestationHeaders of
+    Just attestationHeaders | not usesStaticOtp -> do
+      merchantOperatingCityId <- maybe (defaultMerchantOperatingCityId merchant) (pure . (.merchantOperatingCityId)) mbExistingPerson
+      (,Just merchantOperatingCityId)
+        <$> SAttestation.runGate
+          merchantOperatingCityId
+          SAttestation.GateRequest
+            { service = SAttestation.riderAppService,
+              endpoint = SAttestation.AuthEndpoint,
+              canonicalRequest = attestedRequest,
+              headers = attestationHeaders,
+              userKind = maybe SAttestation.NewUser SAttestation.userKindOf mbExistingPerson,
+              usesWhatsappOtp = otpChannel == SOTP.WHATSAPP,
+              clientIp = mbClientIP,
+              identifierHash = Just identifierHash,
+              clientVersion = mbClientVersion,
+              deviceType = (.deviceType) <$> getDeviceFromText mbDevice,
+              device = mbDevice
+            }
+    _ -> pure (SAttestation.Proceed, Nothing)
+  case attestationVerdict of
+    (SAttestation.SilentlyDrop, Just attestationCityId) -> silentlyDroppedAuthRes attestationCityId
+    _ -> do
+      person <- maybe createNewPerson return mbExistingPerson
+      when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
+      let merchantOperatingCityId = person.merchantOperatingCityId
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      fork "Fraud Auth Check Processing" $ do
+        when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
+        whenJust mbClientIP $ \clientIP -> do
+          SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
+          (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
+          when isFraudDetected $ do
+            whenJust mbMerchantConfigId $ \mcId ->
+              SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
-  -- Below the IP counters, so requests rejected here still count towards the IP limit.
-  when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
-    whenJust req.mobileCountryCode $ validateSmsOtpCountryCode riderConfig.smsOtpAllowedCountryCodes
-  -- Cached only once the request is accepted, so a rejected attempt cannot change the channel a resend uses.
-  void $ cachePersonOTPChannel person.id otpChannel
+      -- Below the IP counters, so requests rejected here still count towards the IP limit.
+      when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
+        whenJust req.mobileCountryCode $ validateSmsOtpCountryCode riderConfig.smsOtpAllowedCountryCodes
+      -- Cached only once the request is accepted, so a rejected attempt cannot change the channel a resend uses.
+      void $ cachePersonOTPChannel person.id otpChannel
 
-  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
-  -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
-  -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
-  unless (isJust person.useFakeOtp) $
-    whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
-      -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
-      -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
-      case A.toJSON mobileNumberHash of
-        A.String phoneNumberHashText -> do
-          mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
-          whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
-          SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
-        _ -> pure ()
-  when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
-    whenJust req.email $ SSL.enforceEmailOtpLimit merchantConfigs
-  checkSlidingWindowLimit (authHitsCountKey person)
-  smsCfg <- asks (.smsCfg)
-  let entityId = getId $ person.id
-      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-      scfg = sessionConfig smsCfg
-  let mkId = getId $ merchant.id
+      -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+      -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
+      -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
+      unless (isJust person.useFakeOtp) $
+        whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
+          -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
+          -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
+          case A.toJSON mobileNumberHash of
+            A.String phoneNumberHashText -> do
+              mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
+              whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+              SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
+            _ -> pure ()
+      when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
+        whenJust req.email $ SSL.enforceEmailOtpLimit merchantConfigs
+      checkSlidingWindowLimit (authHitsCountKey person)
+      smsCfg <- asks (.smsCfg)
+      let entityId = getId $ person.id
+          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+          scfg = sessionConfig smsCfg
+      let mkId = getId $ merchant.id
 
-  (mbDepotCode, mbIsDepotAdmin) <-
-    if req.isOperatorReq == Just True
-      then do
-        mbDepotManager <- QDepotManager.findByPersonId person.id
-        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
-      else return (Nothing, Nothing)
+      (mbDepotCode, mbIsDepotAdmin) <-
+        if req.isOperatorReq == Just True
+          then do
+            mbDepotManager <- QDepotManager.findByPersonId person.id
+            return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
+          else return (Nothing, Nothing)
 
-  -- Check if we should reuse an existing token
-  mbReusableToken <-
-    if (fromMaybe False req.reuseToken) && (fromMaybe False req.isOperatorReq) && (mbDepotCode /= Nothing)
-      then findReusableToken person.id
-      else return Nothing
+      -- Check if we should reuse an existing token
+      mbReusableToken <-
+        if (fromMaybe False req.reuseToken) && (fromMaybe False req.isOperatorReq) && (mbDepotCode /= Nothing)
+          then findReusableToken person.id
+          else return Nothing
 
-  -- Create new registration token entry with same token value if reusing, otherwise new token
-  regToken <- case mbReusableToken of
-    Just existingToken -> do
-      -- Create new entry with same token value but new id, new OTP, reset attempts
-      otp <- maybe generateOTPCode return useFakeOtpM
-      rtid <- L.generateGUID
-      currentTime <- getCurrentTime
-      return $
-        SR.RegistrationToken
-          { id = Id rtid,
-            token = existingToken.token, -- Reuse same token value
-            attempts = scfg.attempts,
-            authMedium = castChannelToMedium otpChannel,
-            authType = SR.OTP,
-            authValueHash = otp,
-            verified = False,
-            authExpiry = scfg.authExpiry,
-            tokenExpiry = scfg.tokenExpiry,
-            entityId = entityId,
-            merchantId = mkId,
-            merchantOperatingCityId = person.merchantOperatingCityId.getId,
-            entityType = SR.USER,
-            createdAt = currentTime,
-            updatedAt = currentTime,
-            info = Nothing,
-            createdViaPartnerOrgId = Nothing
-          }
-    Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId person.merchantOperatingCityId.getId useFakeOtpM False
+      -- Create new registration token entry with same token value if reusing, otherwise new token
+      regToken <- case mbReusableToken of
+        Just existingToken -> do
+          -- Create new entry with same token value but new id, new OTP, reset attempts
+          otp <- maybe generateOTPCode return useFakeOtpM
+          rtid <- L.generateGUID
+          currentTime <- getCurrentTime
+          return $
+            SR.RegistrationToken
+              { id = Id rtid,
+                token = existingToken.token, -- Reuse same token value
+                attempts = scfg.attempts,
+                authMedium = castChannelToMedium otpChannel,
+                authType = SR.OTP,
+                authValueHash = otp,
+                verified = False,
+                authExpiry = scfg.authExpiry,
+                tokenExpiry = scfg.tokenExpiry,
+                entityId = entityId,
+                merchantId = mkId,
+                merchantOperatingCityId = person.merchantOperatingCityId.getId,
+                entityType = SR.USER,
+                createdAt = currentTime,
+                updatedAt = currentTime,
+                info = Nothing,
+                createdViaPartnerOrgId = Nothing
+              }
+        Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId person.merchantOperatingCityId.getId useFakeOtpM False
 
-  let isDashboardRequest = mbIsDashboardRequest == Just True
-      isDashboardEmailDirectAuth = isDashboardRequest && identifierType == SP.EMAIL
-  mbPersonEntity <- if isDashboardRequest then Just <$> buildPersonAPIEntity person else return Nothing
-  if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
-    then do
-      deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion cloudType
-      RegistrationToken.create regToken
-      if isDashboardEmailDirectAuth
+      let isDashboardRequest = mbIsDashboardRequest == Just True
+          isDashboardEmailDirectAuth = isDashboardRequest && identifierType == SP.EMAIL
+      mbPersonEntity <- if isDashboardRequest then Just <$> buildPersonAPIEntity person else return Nothing
+      if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
         then do
-          _ <- RegistrationToken.setDirectAuth regToken.id SR.EMAIL
-          personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll req.deviceToken
-          return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked mbDepotCode mbIsDepotAdmin
+          deploymentVersion <- asks (.version)
+          void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion cloudType
+          RegistrationToken.create regToken
+          if isDashboardEmailDirectAuth
+            then do
+              _ <- RegistrationToken.setDirectAuth regToken.id SR.EMAIL
+              personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll req.deviceToken
+              return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked mbDepotCode mbIsDepotAdmin
+            else do
+              when (isNothing useFakeOtpM) $ do
+                let otpCode = SR.authValueHash regToken
+                SOTP.sendOTP
+                  otpChannel
+                  otpCode
+                  person.id
+                  person.merchantId
+                  merchantOperatingCityId
+                  req.mobileCountryCode
+                  req.mobileNumber
+                  req.email
+                  riderConfig.emailOtpConfig
+                  riderConfig.smsOtpAllowedCountryCodes
+                  mbSenderHash
+              return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
         else do
-          when (isNothing useFakeOtpM) $ do
-            let otpCode = SR.authValueHash regToken
-            SOTP.sendOTP
-              otpChannel
-              otpCode
-              person.id
-              person.merchantId
-              merchantOperatingCityId
-              req.mobileCountryCode
-              req.mobileNumber
-              req.email
-              riderConfig.emailOtpConfig
-              riderConfig.smsOtpAllowedCountryCodes
-              mbSenderHash
+          logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
           return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
-    else do
-      logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-      return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
     castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
     castChannelToMedium SOTP.EMAIL = SR.EMAIL
+
+    silentlyDroppedAuthRes attestationCityId = do
+      scfg <- asks (sessionConfig . (.smsCfg))
+      authId <- L.generateGUID
+      SAttestation.markSilentlyDropped authId (cast attestationCityId) scfg.attempts
+      return $ AuthRes (Id authId) scfg.attempts SR.OTP Nothing Nothing False Nothing Nothing
+
+findAuthMerchant :: (CacheFlow m r, EsqDBFlow m r) => ShortId DMerchant.Merchant -> m DMerchant.Merchant
+findAuthMerchant merchantShortId = do
+  let shortId = if merchantShortId.getShortId == "YATRI" then ShortId "NAMMA_YATRI" else merchantShortId
+  merchantTemp <-
+    QMerchant.findByShortId shortId
+      >>= fromMaybeM (MerchantNotFound $ getShortId shortId)
+  if merchantTemp.shortId == merchantTemp.fallbackShortId
+    then return merchantTemp
+    else
+      QMerchant.findByShortId merchantTemp.fallbackShortId
+        >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
+
+registerAppAttestKey ::
+  (CacheFlow m r, EsqDBFlow m r, SAttestation.AttestationGateFlow m r) =>
+  Maybe Text ->
+  Attestation.RegisterKeyReq ->
+  m Attestation.RegisterKeyRes
+registerAppAttestKey mbXForwardedFor attestReq = do
+  merchant <- findAuthMerchant (ShortId attestReq.merchantId)
+  merchantOperatingCityId <-
+    case attestReq.city of
+      Nothing -> defaultMerchantOperatingCityId merchant
+      Just city -> CQMOC.findByMerchantIdAndCity merchant.id city >>= maybe (defaultMerchantOperatingCityId merchant) (pure . (.id))
+  mbClientIP <- extractClientIP mbXForwardedFor
+  mbAttestationConfig <- SAttestation.findAttestationConfig merchantOperatingCityId
+  Attestation.registerKey (cast merchant.id) (cast merchantOperatingCityId) mbAttestationConfig mbClientIP attestReq
+
+defaultMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => DMerchant.Merchant -> m (Id DMOC.MerchantOperatingCity)
+defaultMerchantOperatingCityId merchant =
+  CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+    >>= fmap (.id)
+      . fromMaybeM
+        ( MerchantOperatingCityNotFound $
+            "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+        )
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
@@ -995,7 +1070,13 @@ verify ::
   m AuthVerifyRes
 verify tokenId req mbClientId mbXForwardedFor = do
   runRequestValidation validateAuthVerifyReq req
-  regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
+  regToken@SR.RegistrationToken {..} <-
+    RegistrationToken.findById tokenId >>= \case
+      Just foundToken -> pure foundToken
+      Nothing -> do
+        unlessM (SAttestation.isSilentlyDropped tokenId.getId) . throwError . TokenNotFound $ getId tokenId
+        checkSlidingWindowLimit (verifyHitsCountKey $ cast tokenId)
+        throwError InvalidAuthData
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
@@ -1094,13 +1175,7 @@ createPerson ::
   m SP.Person
 createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant mbPartnerOrgId mbOperatorBadgeToken = do
   let currentCity = merchant.defaultCity
-  merchantOperatingCityId <-
-    CQMOC.findByMerchantIdAndCity merchant.id currentCity
-      >>= fmap (.id)
-        . fromMaybeM
-          ( MerchantOperatingCityNotFound $
-              "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
-          )
+  merchantOperatingCityId <- defaultMerchantOperatingCityId merchant
   person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbCloudType merchant currentCity merchantOperatingCityId mbPartnerOrgId mbOperatorBadgeToken
   createPersonStats <- makePersonStats person
   Person.create person
@@ -1193,38 +1268,93 @@ resend ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    SAttestation.AttestationGateFlow m r
   ) =>
   Id SR.RegistrationToken ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe SAttestation.AttestationHeaders ->
   m ResendAuthRes
-resend tokenId mbSenderHash = do
-  SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-  person <- checkPersonExists entityId
-  unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  let otpCode = authValueHash
-  otpChannel <- getPersonOTPChannel person.id
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
-  mobileNumber <- mapM decrypt person.mobileNumber
-  receiverEmail <- mapM decrypt person.email
+resend tokenId mbSenderHash mbXForwardedFor mbAttestationHeaders =
+  RegistrationToken.findById tokenId >>= \case
+    Just regToken -> resendOtp regToken
+    Nothing ->
+      SAttestation.findSilentDrop tokenId.getId >>= \case
+        Nothing -> throwError . TokenNotFound $ getId tokenId
+        Just silentDrop -> do
+          unless (silentDrop.attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+          whenJust mbAttestationHeaders $ \attestationHeaders -> do
+            mbClientIP <- extractClientIP mbXForwardedFor
+            void $
+              SAttestation.runGate
+                (cast silentDrop.merchantOperatingCityId)
+                SAttestation.GateRequest
+                  { service = SAttestation.riderAppService,
+                    endpoint = SAttestation.ResendEndpoint,
+                    canonicalRequest = SAttestation.ResendRequest tokenId.getId,
+                    headers = attestationHeaders,
+                    userKind = SAttestation.NewUser,
+                    usesWhatsappOtp = False,
+                    clientIp = mbClientIP,
+                    identifierHash = Nothing,
+                    clientVersion = Nothing,
+                    deviceType = Nothing,
+                    device = Nothing
+                  }
+          SAttestation.useSilentDropAttempt silentDrop tokenId.getId
+          return $ AuthRes tokenId (silentDrop.attempts - 1) SR.OTP Nothing Nothing False Nothing Nothing
+  where
+    resendOtp SR.RegistrationToken {..} = do
+      person <- checkPersonExists entityId
+      unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+      let otpCode = authValueHash
+      otpChannel <- getPersonOTPChannel person.id
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
+      mobileNumber <- mapM decrypt person.mobileNumber
+      receiverEmail <- mapM decrypt person.email
+      smsCfg <- asks (.smsCfg)
 
-  -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
-  unless (isJust person.useFakeOtp) $
-    SOTP.sendOTP
-      otpChannel
-      otpCode
-      person.id
-      person.merchantId
-      person.merchantOperatingCityId
-      person.mobileCountryCode
-      mobileNumber
-      receiverEmail
-      riderConfig.emailOtpConfig
-      riderConfig.smsOtpAllowedCountryCodes
-      mbSenderHash
+      -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
+      unless (isJust person.useFakeOtp) $ do
+        attestationVerdict <- case mbAttestationHeaders of
+          Nothing -> pure SAttestation.Proceed
+          Just attestationHeaders -> do
+            mbClientIP <- extractClientIP mbXForwardedFor
+            SAttestation.runGate
+              person.merchantOperatingCityId
+              SAttestation.GateRequest
+                { service = SAttestation.riderAppService,
+                  endpoint = SAttestation.ResendEndpoint,
+                  canonicalRequest = SAttestation.ResendRequest tokenId.getId,
+                  headers = attestationHeaders,
+                  userKind = SAttestation.userKindOf person,
+                  usesWhatsappOtp = otpChannel == SOTP.WHATSAPP,
+                  clientIp = mbClientIP,
+                  identifierHash = (.hash) <$> (person.mobileNumber <|> person.email),
+                  clientVersion = person.clientSdkVersion,
+                  deviceType = (.deviceType) <$> person.clientDevice,
+                  device = Nothing
+                }
+        when (attestationVerdict == SAttestation.Proceed) $ do
+          when (otpChannel == SOTP.SMS) $
+            whenJust person.mobileCountryCode $ validateSmsOtpCountryCode riderConfig.smsOtpAllowedCountryCodes
+          when (isNothing (useFakeSms smsCfg)) $
+            SOTP.sendOTP
+              otpChannel
+              otpCode
+              person.id
+              person.merchantId
+              person.merchantOperatingCityId
+              person.mobileCountryCode
+              mobileNumber
+              receiverEmail
+              riderConfig.emailOtpConfig
+              riderConfig.smsOtpAllowedCountryCodes
+              mbSenderHash
 
-  void $ RegistrationToken.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing Nothing
+      void $ RegistrationToken.updateAttempts (attempts - 1) id
+      return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing Nothing
 
 cleanCachedTokens :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do

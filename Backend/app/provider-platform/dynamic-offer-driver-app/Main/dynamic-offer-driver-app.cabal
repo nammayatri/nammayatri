@@ -259,6 +259,7 @@ library
       Domain.Action.Dashboard.Management.Communication
       Domain.Action.Dashboard.Management.DomainDiscountConfig
       Domain.Action.Dashboard.Management.Driver
+      Domain.Action.Dashboard.Management.DriverAppAttestation
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral
@@ -668,6 +669,7 @@ library
       SharedLogic.Allocator.Jobs.Webhook.Webhook
       SharedLogic.Analytics
       SharedLogic.AnalyticsExtra
+      SharedLogic.AppAttestation
       SharedLogic.Association.Change
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.AutoAcceptCancellation
@@ -884,6 +886,7 @@ library
       SharedLogic.VehicleServiceTier
       SharedLogic.VehicleServiceTierAreaRestriction
       SharedLogic.WMB
+      Storage.Beam.AppAttestation
       Storage.Beam.BecknRequest
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
@@ -1328,6 +1331,7 @@ library
       API.Action.DashboardAuth.Management.Communication
       API.Action.DashboardAuth.Management.DomainDiscountConfig
       API.Action.DashboardAuth.Management.Driver
+      API.Action.DashboardAuth.Management.DriverAppAttestation
       API.Action.DashboardAuth.Management.DriverCoins
       API.Action.DashboardAuth.Management.DriverGoHome
       API.Action.DashboardAuth.Management.DriverReferral
@@ -1499,6 +1503,7 @@ library
       API.Types.ProviderPlatform.Management.Communication
       API.Types.ProviderPlatform.Management.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Driver
+      API.Types.ProviderPlatform.Management.DriverAppAttestation
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
@@ -1511,6 +1516,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Communication
       API.Types.ProviderPlatform.Management.Endpoints.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
+      API.Types.ProviderPlatform.Management.Endpoints.DriverAppAttestation
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral

@@ -24,6 +24,10 @@ module API.UI.Registration
   )
 where
 
+import AppAttestation.API (WithAttestationHeaders, mkAttestationHeaders)
+import qualified AppAttestation.Challenge as Attestation
+import qualified AppAttestation.KeyRegistry as Attestation
+import AppAttestation.Types (AttestationHeaders)
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -52,7 +56,17 @@ type API =
            :> Header "x-device" Text
            :> Header "x-sender-hash" Text
            :> Header "x-forwarded-for" Text
-           :> Post '[JSON] DRegistration.AuthRes
+           :> WithAttestationHeaders (Post '[JSON] DRegistration.AuthRes)
+           :<|> "attestation"
+             :> ( "challenge"
+                    :> Header "x-forwarded-for" Text
+                    :> Get '[JSON] Attestation.Challenge
+                    :<|> "ios"
+                      :> "key"
+                      :> Header "x-forwarded-for" Text
+                      :> ReqBody '[JSON] Attestation.RegisterKeyReq
+                      :> Post '[JSON] Attestation.RegisterKeyRes
+                )
            :<|> "signature"
              :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
              :> Header "x-bundle-version" Version
@@ -70,8 +84,8 @@ type API =
            :<|> "otp"
              :> Capture "authId" (Id SR.RegistrationToken)
              :> Header "x-sender-hash" Text
-             :> "resend"
-             :> Post '[JSON] DRegistration.ResendAuthRes
+             :> Header "x-forwarded-for" Text
+             :> WithAttestationHeaders ("resend" :> Post '[JSON] DRegistration.ResendAuthRes)
            :<|> "generate-temp-app-code"
              :> TokenAuth
              :> Post '[JSON] DRegistration.TempCodeRes
@@ -90,6 +104,7 @@ type API =
 handler :: FlowServer API
 handler =
   auth
+    :<|> (attestationChallenge :<|> registerAppAttestKey)
     :<|> signatureAuth
     :<|> verify
     :<|> resend
@@ -98,10 +113,22 @@ handler =
     :<|> logout
     :<|> marketingEvents
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+type AttestationHeadersHandler res = Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler res
+
+withAttestationHeaders :: (AttestationHeaders -> FlowHandler res) -> AttestationHeadersHandler res
+withAttestationHeaders continueWith platform challengeId token keyId assertion clientError captchaToken =
+  continueWith $ mkAttestationHeaders platform challengeId token keyId assertion clientError captchaToken
+
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> AttestationHeadersHandler DRegistration.AuthRes
 auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor =
-  withFlowHandlerAPI $
-    DRegistration.auth False req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor
+  withAttestationHeaders $
+    withFlowHandlerAPI . DRegistration.auth False req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor . Just
+
+attestationChallenge :: Maybe Text -> FlowHandler Attestation.Challenge
+attestationChallenge mbXForwardedFor = withFlowHandlerAPI $ DRegistration.extractClientIP mbXForwardedFor >>= Attestation.createChallenge
+
+registerAppAttestKey :: Maybe Text -> Attestation.RegisterKeyReq -> FlowHandler Attestation.RegisterKeyRes
+registerAppAttestKey mbXForwardedFor = withFlowHandlerAPI . DRegistration.registerAppAttestKey mbXForwardedFor
 
 signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice =
@@ -110,8 +137,10 @@ signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClient
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> Maybe Text -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId req mbXForwardedFor = withFlowHandlerAPI $ DRegistration.verify tokenId req mbXForwardedFor
 
-resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
-resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
+resend :: Id SR.RegistrationToken -> Maybe Text -> Maybe Text -> AttestationHeadersHandler DRegistration.ResendAuthRes
+resend tokenId mbSenderHash mbXForwardedFor =
+  withAttestationHeaders $
+    withFlowHandlerAPI . DRegistration.resend tokenId mbSenderHash mbXForwardedFor . Just
 
 generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DRegistration.TempCodeRes
 generateTempAppCode (personId, _, _) =

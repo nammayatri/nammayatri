@@ -4,6 +4,7 @@
 
 module Storage.Queries.RiderConfig where
 
+import qualified AppAttestation.Domain.Types.AppAttestationConfig
 import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Extra.RiderPreferences
@@ -45,6 +46,18 @@ findExotelAppletMappingByMOCID ::
   m (Maybe Domain.Types.RiderConfig.RiderConfig)
 findExotelAppletMappingByMOCID merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateAppAttestationConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe AppAttestation.Domain.Types.AppAttestationConfig.AppAttestationConfig ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateAppAttestationConfig appAttestationConfig merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.appAttestationConfig (((appAttestationConfig >>= Just . Data.Aeson.toJSON))),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateCallingConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
@@ -69,6 +82,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.allowMultipleOpenMeterRides (Just allowMultipleOpenMeterRides),
       Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
+      Se.Set Beam.appAttestationConfig (((appAttestationConfig >>= Just . Data.Aeson.toJSON))),
       Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
@@ -308,6 +322,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Domain.Types.RiderConfig.RiderConfig
           { allowMultipleOpenMeterRides = fromMaybe False allowMultipleOpenMeterRides,
             alwaysAllowedNotificationCategories = (fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack))),
+            appAttestationConfig = appAttestationConfig >>= Kernel.Utils.JSON.valueToMaybe,
             appUrl = appUrl,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
@@ -544,6 +559,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     Beam.RiderConfigT
       { Beam.allowMultipleOpenMeterRides = Just allowMultipleOpenMeterRides,
         Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
+        Beam.appAttestationConfig = ((appAttestationConfig >>= Just . Data.Aeson.toJSON)),
         Beam.appUrl = appUrl,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,

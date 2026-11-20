@@ -1,5 +1,6 @@
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
@@ -107,6 +108,8 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.EventTrackingService EventTracking.Breeze -> Domain.EventTrackingServiceConfig . EventTrackingInterface.BreezeConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
+    Domain.AppAttestationService AppAttestation.PlayIntegrity -> Domain.AppAttestationServiceConfig <$> valueToMaybe configJSON
+    Domain.CaptchaService AppAttestation.SiteVerify -> Domain.CaptchaServiceConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -214,6 +217,8 @@ getServiceNameConfigJson = \case
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
+  Domain.AppAttestationServiceConfig cfg -> (Domain.AppAttestationService AppAttestation.PlayIntegrity, toJSON cfg)
+  Domain.CaptchaServiceConfig cfg -> (Domain.CaptchaService AppAttestation.SiteVerify, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case
