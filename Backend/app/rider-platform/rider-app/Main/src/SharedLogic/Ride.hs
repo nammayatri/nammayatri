@@ -17,6 +17,8 @@ import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RideStatus
 import qualified Domain.Types.RiderConfig as Fields
+import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.Trip as DTC
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -33,13 +35,15 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.EtaRoute as CQEtaRoute
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.StopInformation as QSI
+import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import Tools.Metrics (CoreMetrics)
@@ -49,7 +53,7 @@ data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
     lon :: Double,
     lastUpdate :: UTCTime,
-    pickupEtaInMinutes :: Maybe Int,
+    pickupEtaInMinutes :: Maybe Int, -- says pickup but can be on ride values as well
     pickupDist :: Meters
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -91,15 +95,15 @@ getDriverLoc rideId = do
               lastUpdate = trackingLoc.updatedAt
             }
 
-  (mbPickupEta, pickupDist) <- calculatePickupETA ride booking res.currPoint
+  (mbEta, distRemaining) <- calculateETA ride booking res.currPoint
 
   return $
     GetDriverLocResp
       { lat = res.currPoint.lat,
         lon = res.currPoint.lon,
         lastUpdate = res.lastUpdate,
-        pickupEtaInMinutes = mbPickupEta,
-        pickupDist = Meters $ round pickupDist
+        pickupEtaInMinutes = mbEta,
+        pickupDist = Meters $ round distRemaining
       }
 
 handleStaleRideOnTrackUrlError ::
@@ -159,10 +163,53 @@ callOnStatus mbSetSyncKey booking merchant city = do
     setSyncKey messageId
   void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq merchant.id
 
-maxPlausiblePickupSpeedInMPS :: Double
-maxPlausiblePickupSpeedInMPS = 27.8 -- 100 km/h
+etaRetryAfterFailureSeconds :: Seconds
+etaRetryAfterFailureSeconds = 10
 
-calculatePickupETA ::
+maxPlausibleSpeedInMPS :: Double
+maxPlausibleSpeedInMPS = 28 -- 100 km/h
+
+-- | The leg of the trip whose ETA the driver-location ping is currently reporting, and
+-- the point that leg ends at.
+data EtaLegTarget = EtaLegTarget
+  { leg :: CQEtaRoute.EtaLeg,
+    target :: MapSearch.LatLong
+  }
+
+isOnReturnLeg :: SRide.Ride -> DB.Booking -> Bool
+isOnReturnLeg ride booking =
+  isJust ride.returnStartedAt
+    && isJust booking.returnTime
+    && (case booking.tripCategory of Just (DTC.InterCity _ _) -> True; _ -> False)
+
+resolveLeg :: SRide.Ride -> DB.Booking -> Maybe EtaLegTarget
+resolveLeg ride booking =
+  case ride.status of
+    NEW ->
+      Just
+        EtaLegTarget
+          { leg = CQEtaRoute.PickupLeg,
+            target = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+          }
+    INPROGRESS
+      | isOnReturnLeg ride booking -> -- round trip case
+        Just
+          EtaLegTarget
+            { leg = CQEtaRoute.DropLeg,
+              target = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+            }
+      | otherwise -> do
+        dropLocation <- case ride.toLocation of
+          Just rideDropLocation -> Just rideDropLocation
+          Nothing -> TBooking.getToLocation booking.bookingDetails
+        Just
+          EtaLegTarget
+            { leg = CQEtaRoute.DropLeg,
+              target = MapSearch.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}
+            }
+    _ -> Nothing
+
+calculateETA ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
@@ -172,13 +219,13 @@ calculatePickupETA ::
   DB.Booking ->
   MapSearch.LatLong ->
   m (Maybe Int, Double)
-calculatePickupETA ride booking driverLocation = do
+calculateETA ride booking driverLocation = do
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   if fromMaybe False (mbRiderConfig >>= (.enableDynamicPickupEta))
-    then calculateDynamicPickupETA ride booking driverLocation (mbRiderConfig >>= (.pickupEtaRefreshIntervalSeconds))
+    then calculateDynamicETA ride booking driverLocation (mbRiderConfig >>= (.pickupEtaRefreshIntervalSeconds))
     else calculateFlatSpeedPickupETA ride booking driverLocation
 
--- Old func as is.
+-- Old func as is, save for the status guard hoisted to the top.
 calculateFlatSpeedPickupETA ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
@@ -192,16 +239,17 @@ calculateFlatSpeedPickupETA ::
 calculateFlatSpeedPickupETA ride booking driverLocation = do
   let mbEstimatedSpeed = ride.pickupSpeedInMPS
   let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-  mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
+      pickupLegTarget = EtaLegTarget {leg = CQEtaRoute.PickupLeg, target = pickupLocation}
+  mbCachedRoute <- CQEtaRoute.getRouteFromCache CQEtaRoute.PickupLeg ride.id
   routePoints <- case mbCachedRoute of
     Just cachedRoutePoints -> do
       return cachedRoutePoints
     Nothing -> do
       logInfo $ "No cached route found, fetching route as fallback for rideId: " <> ride.id.getId
-      fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
+      fetchedRoute <- fetchLegRoute ride booking driverLocation pickupLegTarget
       case fetchedRoute of
         Just route -> do
-          CQPickupRoute.cachePickupRoute ride.id route.points
+          CQEtaRoute.cacheRoute CQEtaRoute.PickupLeg ride.id route.points
           logInfo $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
           return route.points
         Nothing -> do
@@ -227,7 +275,7 @@ calculateFlatSpeedPickupETA ride booking driverLocation = do
       | otherwise -> return (Nothing, distanceToPickup)
 
 -- Will Use Disha instead of OSRM.
-calculateDynamicPickupETA ::
+calculateDynamicETA ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
@@ -238,58 +286,84 @@ calculateDynamicPickupETA ::
   MapSearch.LatLong ->
   Maybe Seconds ->
   m (Maybe Int, Double)
-calculateDynamicPickupETA ride booking driverLocation mbRefreshInterval = do
-  let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-      distanceAlong pts
-        | null pts = realToFrac $ getHighPrecMeters $ CD.distanceBetweenInMeters driverLocation pickupLocation
-        | otherwise = calculateDistanceAlongRoute driverLocation pickupLocation pts
-  mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
-  if ride.status /= NEW
-    then return (Nothing, distanceAlong (fromMaybe [] mbCachedRoute))
-    else do
-      mbBasis <- CQPickupRoute.getPickupEtaBasis ride.id
-      isThrottled <- not <$> CQPickupRoute.isPickupSpeedRefreshDue ride.id
-      let needsRoute
-            | isNothing mbCachedRoute = True
-            | otherwise = not isThrottled
+calculateDynamicETA ride booking driverLocation mbRefreshInterval = do
+  case resolveLeg ride booking of
+    Nothing -> return (Nothing, 0)
+    Just legTarget -> do
+      let distanceAlong pts
+            | null pts = realToFrac $ getHighPrecMeters $ CD.distanceBetweenInMeters driverLocation legTarget.target
+            | otherwise = calculateDistanceAlongRoute driverLocation legTarget.target pts
+      mbCachedRoute <- CQEtaRoute.getRouteFromCache legTarget.leg ride.id
+      mbCachedBasis <- CQEtaRoute.getEtaBasis legTarget.leg ride.id
+
+      let targetMoved = maybe False (CQEtaRoute.isBasisTargetStale legTarget.target) mbCachedBasis
+          mbBasis = if targetMoved then Nothing else mbCachedBasis
+          mbUsableRoute = if targetMoved then Nothing else mbCachedRoute
+      isThrottled <- not <$> CQEtaRoute.isRefreshDue legTarget.leg ride.id
+      -- A missing route must not bypass the throttle
+      let needsRoute = targetMoved || not isThrottled
       mbFetched <-
         if needsRoute
           then do
-            logInfo $ "Fetching pickup route for rideId: " <> ride.id.getId <> " (cachedRoute=" <> show (isJust mbCachedRoute) <> " basis=" <> show (isJust mbBasis) <> ")"
-            fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
-            CQPickupRoute.markPickupSpeedRefreshed ride.id mbRefreshInterval
+            logInfo $ "Fetching " <> show legTarget.leg <> " route for rideId: " <> ride.id.getId <> " (cachedRoute=" <> show (isJust mbUsableRoute) <> " basis=" <> show (isJust mbBasis) <> " targetMoved=" <> show targetMoved <> ")"
+            fetchedRoute <- fetchLegRoute ride booking driverLocation legTarget
+            let nextRefresh = case fetchedRoute of
+                  Just _ -> mbRefreshInterval
+                  Nothing -> if isJust mbBasis then mbRefreshInterval else Just etaRetryAfterFailureSeconds
+            CQEtaRoute.markRefreshed legTarget.leg ride.id nextRefresh
             case fetchedRoute of
               Just routeInfo -> do
-                unless (null routeInfo.points) $ CQPickupRoute.cachePickupRoute ride.id routeInfo.points
+                unless (null routeInfo.points) $ CQEtaRoute.cacheRoute legTarget.leg ride.id routeInfo.points
                 whenJust routeInfo.duration $ \duration -> do
                   now <- getCurrentTime
-                  CQPickupRoute.cachePickupEtaBasis ride.id duration now
-              Nothing -> logWarning $ "Failed to fetch pickup route, falling back for rideId: " <> ride.id.getId
+                  CQEtaRoute.cacheEtaBasis legTarget.leg ride.id duration now (Just legTarget.target)
+              Nothing -> logWarning $ "Failed to fetch " <> show legTarget.leg <> " route, falling back for rideId: " <> ride.id.getId
             return fetchedRoute
           else return Nothing
 
       let freshPoints = maybe [] (.points) mbFetched
-          routePoints = if null freshPoints then fromMaybe [] mbCachedRoute else freshPoints
+          routePoints = if null freshPoints then fromMaybe [] mbUsableRoute else freshPoints
       when (null routePoints) $
         logWarning $ "No cached route found, using straight-line distance for rideId: " <> ride.id.getId
-      let distanceToPickup = distanceAlong routePoints
+      let distanceRemaining = distanceAlong routePoints
 
       mbRemainingSeconds <-
         case mbFetched >>= (.duration) of
           Just freshDuration -> return $ Just (fromIntegral freshDuration :: Double) -- fetched just now
           Nothing -> case mbBasis of
             Nothing -> do
-              logInfo $ "Cannot calculate pickup ETA: no duration measured yet for rideId: " <> ride.id.getId
+              logInfo $ "Cannot calculate ETA: no duration measured yet for rideId: " <> ride.id.getId
               return Nothing
             Just basis -> do
               now <- getCurrentTime
               let remaining = fromIntegral basis.durationSeconds - realToFrac (diffUTCTime now basis.computedAt)
-              return $ Just $ max remaining (distanceToPickup / maxPlausiblePickupSpeedInMPS)
+              return $ Just $ max remaining (distanceRemaining / maxPlausibleSpeedInMPS)
       case mbRemainingSeconds of
-        Just remainingSeconds -> return (Just $ ceiling (remainingSeconds / 60), distanceToPickup)
-        _ -> return (Nothing, distanceToPickup)
+        Just remainingSeconds -> return (Just $ ceiling (remainingSeconds / 60), distanceRemaining)
+        _ -> return (Nothing, distanceRemaining)
 
-fetchPickupRoute ::
+legViaPoints ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    MonadFlow m
+  ) =>
+  SRide.Ride ->
+  DB.Booking ->
+  CQEtaRoute.EtaLeg ->
+  m [MapSearch.LatLong]
+legViaPoints ride booking = \case
+  CQEtaRoute.PickupLeg -> return $ maybe [] (\prevDropLoc -> [prevDropLoc]) ride.driversPreviousRideDropLoc
+  CQEtaRoute.DropLeg
+    -- On the way back the outbound stops are behind the driver
+    | isOnReturnLeg ride booking -> return []
+    | not (fromMaybe False ride.hasStops) || null ride.stops -> return []
+    | otherwise -> do
+      reachedStops <- B.runInReplica $ QSI.findAllByRideId ride.id
+      let reachedStopIds = map DSI.stopId reachedStops
+          pendingStops = filter (\stop -> stop.id `notElem` reachedStopIds) ride.stops
+      return $ map (\stop -> MapSearch.LatLong {lat = stop.lat, lon = stop.lon}) pendingStops
+
+fetchLegRoute ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
     MonadFlow m
@@ -297,24 +371,32 @@ fetchPickupRoute ::
   SRide.Ride ->
   DB.Booking ->
   MapSearch.LatLong ->
-  MapSearch.LatLong ->
+  EtaLegTarget ->
   m (Maybe Maps.RouteInfo)
-fetchPickupRoute ride booking driverLoc pickupLoc = do
-  let middleStops = maybe [] (\prevDropLoc -> [prevDropLoc]) ride.driversPreviousRideDropLoc
-      waypointsList = driverLoc : (middleStops <> [pickupLoc])
+fetchLegRoute ride booking driverLoc legTarget = do
+  viaPoints <- legViaPoints ride booking legTarget.leg
+  let waypointsList = driverLoc : (viaPoints <> [legTarget.target])
       waypoints = NE.fromList waypointsList
-      pickupRouteReq =
+  logInfo $ "Fetching " <> show legTarget.leg <> " route for rideId: " <> ride.id.getId <> " with waypoints: " <> show (length waypointsList) <> " points (driverLoc, " <> show (length viaPoints) <> " via points, target)"
+  routeResp <- try @_ @SomeException $ case legTarget.leg of
+    CQEtaRoute.PickupLeg ->
+      DRoute.getPickupRoutes (booking.riderId, booking.merchantId) (Just booking.riderId.getId) $
         DRoute.GetPickupRoutesReq
           { waypoints = waypoints,
             mode = Just Maps.CAR,
             calcPoints = True,
             rideId = Just ride.id
           }
-  logInfo $ "Fetching pickup route for rideId: " <> ride.id.getId <> " with waypoints: " <> show (length waypointsList) <> " points (driverLoc, " <> show (length middleStops) <> " middle stops, pickupLoc)"
-  routeResp <- try @_ @SomeException $ DRoute.getPickupRoutes (booking.riderId, booking.merchantId) (Just booking.riderId.getId) pickupRouteReq
+    CQEtaRoute.DropLeg ->
+      DRoute.getTripRoutes (booking.riderId, booking.merchantId) (Just booking.riderId.getId) $
+        MapSearch.GetRoutesReq
+          { waypoints = waypoints,
+            mode = Just Maps.CAR,
+            calcPoints = True
+          }
   case routeResp of
     Left err -> do
-      logError $ "Error fetching pickup route for rideId: " <> ride.id.getId <> ", error: " <> show err
+      logError $ "Error fetching " <> show legTarget.leg <> " route for rideId: " <> ride.id.getId <> ", error: " <> show err
       return Nothing
     Right routes -> do
       case routes of

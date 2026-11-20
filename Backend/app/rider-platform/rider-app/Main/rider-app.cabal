@@ -790,6 +790,7 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
+      Storage.CachedQueries.EtaRoute
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSCancellationConfig
@@ -826,7 +827,6 @@ library
       Storage.CachedQueries.PassType
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
-      Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.PolicyAndComplianceDocument
       Storage.CachedQueries.RideRelatedNotificationConfig
