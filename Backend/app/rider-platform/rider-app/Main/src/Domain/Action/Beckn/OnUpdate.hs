@@ -39,6 +39,7 @@ module Domain.Action.Beckn.OnUpdate
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
     DriverNearPickupReq (..),
+    RideFareUpdatedReq (..),
     ReturnTripStartedReq (..),
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
@@ -57,6 +58,7 @@ module Domain.Action.Beckn.OnUpdate
     ValidatedTollCrossedEventReq (..),
     ValidatedDestinationReachedReq (..),
     ValidatedDriverNearPickupReq (..),
+    ValidatedRideFareUpdatedReq (..),
     ValidatedEditDestErrorReq (..),
     ValidatedReturnTripStartedReq (..),
     ValidatedEstimatedEndTimeRangeReq (..),
@@ -164,6 +166,7 @@ data OnUpdateReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
   | OUDriverNearPickupReq DriverNearPickupReq
+  | OURideFareUpdatedReq RideFareUpdatedReq
   | OUReturnTripStartedReq ReturnTripStartedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
@@ -192,6 +195,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
   | OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq
+  | OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq
   | OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
@@ -428,6 +432,23 @@ newtype DriverNearPickupReq = DriverNearPickupReq
 data ValidatedDriverNearPickupReq = ValidatedDriverNearPickupReq
   { booking :: DRB.Booking,
     ride :: DRide.Ride
+  }
+
+-- | Collect payment: fare the rider would pay if the ride ended at 'computedAt' (from the BPP's RIDE_FARE_UPDATED).
+data RideFareUpdatedReq = RideFareUpdatedReq
+  { bppRideId :: Id DRide.BPPRide,
+    fare :: Price,
+    computedAt :: UTCTime,
+    -- | The toll in 'fare' still awaits the rider's confirmation and may change at ride end.
+    tollPendingConfirmation :: Bool
+  }
+
+data ValidatedRideFareUpdatedReq = ValidatedRideFareUpdatedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    fare :: Price,
+    computedAt :: UTCTime,
+    tollPendingConfirmation :: Bool
   }
 
 data ReturnTripStartedReq = ReturnTripStartedReq
@@ -723,6 +744,26 @@ onUpdate = \case
     unless (isJust ride.driverArrivalTime) $ do
       QPFS.clearCache booking.riderId
       Common.updateAndNotifyDriverArrivalStatus booking ride DRide.DRIVER_REACHED
+  OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq {..} ->
+    -- Two guards keep the final fare authoritative and the snapshot monotonic:
+    --   * only an in-progress ride: a RIDE_FARE_UPDATED that arrives after RIDE_ENDED must not show a
+    --     mid-ride fare on a completed ride (the update query is also conditional on INPROGRESS);
+    --   * only a newer snapshot: on_update calls can arrive out of order.
+    if ride.status /= DRide.INPROGRESS
+      then logInfo $ "Ignoring RIDE_FARE_UPDATED for ride not in progress: " <> ride.id.getId <> ", status: " <> show ride.status
+      else
+        if maybe False (>= computedAt) ride.collectedFareAt
+          then logInfo $ "Ignoring stale RIDE_FARE_UPDATED for ride: " <> ride.id.getId
+          else do
+            QRide.updateCollectedFare (Just fare) (Just computedAt) (Just tollPendingConfirmation) ride.id DRide.INPROGRESS
+            QPFS.clearCache booking.riderId
+            -- Push is config driven (merchant PN "RIDE_FARE_UPDATED"); no config means no push, the app
+            -- still shows the new fare on its next booking refresh.
+            person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+            mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "RIDE_FARE_UPDATED" Nothing Nothing person.language booking.configInExperimentVersions
+            whenJust mbMerchantPN $ \merchantPN -> do
+              let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+              TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
   OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq {..} -> do
     QRide.updateReturnStartedAt returnStartedAt ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
@@ -878,6 +919,12 @@ validateRequest = \case
     unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride has already started"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedDriverNearPickupReq ValidatedDriverNearPickupReq {..}
+  OURideFareUpdatedReq RideFareUpdatedReq {..} -> do
+    -- Status is checked in the handler, not here: a late update for a completed ride is an expected
+    -- race (collect payment and end ride back to back), so it is ignored rather than failed.
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedRideFareUpdatedReq ValidatedRideFareUpdatedReq {..}
   OUReturnTripStartedReq ReturnTripStartedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"

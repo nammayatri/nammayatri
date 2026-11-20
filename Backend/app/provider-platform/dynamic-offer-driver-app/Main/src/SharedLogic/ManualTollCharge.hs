@@ -28,6 +28,8 @@ module SharedLogic.ManualTollCharge
     effectiveApprovalStatus,
     clientVisibleApprovalStatus,
     resolveManualTollChargeForEndRide,
+    resolveManualTollChargeForPreview,
+    previewManualTollChargeResolution,
     manualTollChargeTag,
     manualTollChargeRejectionTag,
     manualTollChargeSendFailedTag,
@@ -74,6 +76,7 @@ data ManualTollChargeResolution = ManualTollChargeResolution
     confirmedBy :: ManualTollChargeConfirmedBy,
     rejectedAmounts :: [HighPrecMoney]
   }
+  deriving (Show, Eq)
 
 data TollChargeState = TollChargeState
   { status :: ManualTollChargeApprovalStatus,
@@ -227,6 +230,62 @@ resolveEligibleManualTollChargeForEndRide transporterConfig ride declaredAmount 
             TOLL_CHARGE_REJECTED_BY_CUSTOMER -> throwError TollChargeApprovalRejected
             _ -> throwError TollChargeApprovalRequired
           _ -> throwError TollChargeApprovalRequired
+
+-- | Collect-payment preview counterpart of 'resolveManualTollChargeForEndRide'. A preview has no
+-- driver-declared amount and must never throw, so it reads the toll request the driver may already
+-- have sent (via end-ride/charge-approval) and bills exactly what end ride would bill if the driver
+-- ended the ride now declaring that same amount:
+--
+--   not eligible for manual toll          -> (Nothing, False)  automatic toll decision, nothing pending
+--   rejection cap hit                     -> 0, Unsettled
+--   APPROVED / AUTO_APPROVED              -> the requested amount
+--   NOT_DELIVERED                         -> 0, NotDelivered
+--   no request / pending / rejected /
+--   unreadable record                     -> (Nothing, True)   automatic toll decision, confirmation pending
+--
+-- The second component tells the driver app the toll in the shown fare is not confirmed yet and can
+-- change at end ride. Read-only: the toll request state stays owned by charge-approval and end ride.
+resolveManualTollChargeForPreview ::
+  ( MonadFlow m,
+    CacheFlow m r
+  ) =>
+  DTConf.TransporterConfig ->
+  DRide.Ride ->
+  DTC.TripCategory ->
+  DTC.ServiceTierType ->
+  ManualTollChargeSignal ->
+  m (Maybe ManualTollChargeResolution, Bool)
+resolveManualTollChargeForPreview transporterConfig ride tripCategory vehicleServiceTier signal =
+  -- Same eligibility rule as end ride and the requirements endpoint.
+  if isManualTollChargeEnabled transporterConfig tripCategory
+    && not (DTC.isTollExemptVehicleTier vehicleServiceTier)
+    && shouldRequestManualTollCharge (DTC.isTollApplicableForTrip vehicleServiceTier tripCategory) signal
+    then do
+      -- A failed or corrupt read only means "not confirmed yet" for a preview; it is never deleted here.
+      mbRecord :: Maybe TollChargeState <-
+        either (const Nothing) identity <$> withTryCatch "readTollChargeStateForPreview" (Redis.get' (tollChargeStateKey ride.id) (pure ()))
+      now <- getCurrentTime
+      pure $ previewManualTollChargeResolution (maxApprovalAttempts transporterConfig) now mbRecord
+    else pure (Nothing, False)
+
+-- | Pure core of 'resolveManualTollChargeForPreview' for an eligible ride (unit-tested): what end ride
+-- would bill if the driver ended now declaring the amount of the stored request. Mirrors
+-- 'resolveEligibleManualTollChargeForEndRide', except every case that throws there reads as
+-- (Nothing, True) here: automatic toll, confirmation pending.
+previewManualTollChargeResolution :: Int -> UTCTime -> Maybe TollChargeState -> (Maybe ManualTollChargeResolution, Bool)
+previewManualTollChargeResolution maxAttempts now = \case
+  Nothing -> (Nothing, True)
+  Just record ->
+    let resolved amount confirmedBy = (Just ManualTollChargeResolution {amount, confirmedBy, rejectedAmounts = record.rejectedAmounts}, False)
+        status = effectiveApprovalStatus now record
+        attemptsExhausted = status == TOLL_CHARGE_REJECTED_BY_CUSTOMER && record.rejectionCount >= maxAttempts
+     in if attemptsExhausted
+          then resolved 0 ConfirmedByUnsettled
+          else case status of
+            TOLL_CHARGE_APPROVED_BY_CUSTOMER -> resolved record.amount ConfirmedByCustomer
+            TOLL_CHARGE_AUTO_APPROVED -> resolved record.amount ConfirmedByTimeout
+            TOLL_CHARGE_NOT_DELIVERED -> resolved 0 ConfirmedByNotDelivered
+            _ -> (Nothing, True)
 
 manualTollChargeTagPrefix :: Text
 manualTollChargeTagPrefix = "TollConfirmedBy#"
