@@ -154,6 +154,7 @@ library
       Beckn.ACL.FRFS.Search
       Beckn.ACL.FRFS.Select
       Beckn.ACL.FRFS.Status
+      Beckn.ACL.FRFS.Update
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.FRFSSeller.OnCancel
       Beckn.ACL.FRFSSeller.OnConfirm
@@ -622,6 +623,7 @@ library
       SharedLogic.FRFSPassInstantBook
       SharedLogic.FRFSPassOverride
       SharedLogic.FRFSPassTicketStatistics
+      SharedLogic.FRFSRefundUpdate
       SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
