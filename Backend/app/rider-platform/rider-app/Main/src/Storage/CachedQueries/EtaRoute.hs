@@ -22,6 +22,7 @@ module Storage.CachedQueries.EtaRoute
     markRefreshed,
     cacheEtaBasis,
     getEtaBasis,
+    invalidateEtaBasis,
     isBasisTargetStale,
   )
 where
@@ -100,6 +101,9 @@ cacheEtaBasis leg rideId durationSeconds computedAt target =
 
 getEtaBasis :: (CacheFlow m r) => EtaLeg -> Id Ride -> m (Maybe EtaBasis)
 getEtaBasis leg rideId = Hedis.safeGet (makeEtaBasisKey leg rideId)
+
+invalidateEtaBasis :: (CacheFlow m r) => EtaLeg -> Id Ride -> m ()
+invalidateEtaBasis leg rideId = Hedis.del (makeEtaBasisKey leg rideId)
 
 targetMovedThresholdInMeters :: Double
 targetMovedThresholdInMeters = 20

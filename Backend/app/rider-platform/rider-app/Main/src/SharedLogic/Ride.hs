@@ -299,6 +299,9 @@ calculateDynamicETA ride booking driverLocation mbRefreshInterval = do
       let targetMoved = maybe False (CQEtaRoute.isBasisTargetStale legTarget.target) mbCachedBasis
           mbBasis = if targetMoved then Nothing else mbCachedBasis
           mbUsableRoute = if targetMoved then Nothing else mbCachedRoute
+      when targetMoved $ do
+        CQEtaRoute.invalidateRouteCache legTarget.leg ride.id
+        CQEtaRoute.invalidateEtaBasis legTarget.leg ride.id
       isThrottled <- not <$> CQEtaRoute.isRefreshDue legTarget.leg ride.id
       -- A missing route must not bypass the throttle
       let needsRoute = targetMoved || not isThrottled
