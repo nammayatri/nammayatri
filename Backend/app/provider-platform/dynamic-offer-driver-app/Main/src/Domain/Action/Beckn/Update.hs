@@ -36,6 +36,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FarePolicy as DFP
+import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
@@ -60,6 +61,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.LocationUpdates (editDestinationSnapEntityIdSuffix)
 import Lib.LocationUpdates.Internal
 import qualified Lib.Types.SpecialLocation as SL
@@ -70,9 +72,9 @@ import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.RideInvoice (markBookingInvoicesStatus)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
-import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride
@@ -80,7 +82,6 @@ import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -96,6 +97,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Toll.SharedLogic.TollsDetector
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
@@ -170,18 +172,19 @@ handler (UPaymentCompletedReq req@PaymentCompletedReq {}) = do
   when (req.paymentMethodInfo.paymentInstrument `elem` [DMPM.Cash, DMPM.BoothOnline]) $
     throwError $ InvalidRequest "Payment completed update not available for cash"
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  paymentMethodId <- booking.paymentMethodId & fromMaybeM (InvalidRequest "Payment method not specified for this booking.")
-  paymentMethod <-
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo paymentMethod
-  unless (req.paymentMethodInfo == paymentMethodInfo) $
-    throwError (InvalidRequest $ "Invalid payment method info for this booking, should be: " <> show paymentMethodInfo <> ".")
   ride <-
     QRide.findById req.rideId
       >>= fromMaybeM (RideNotFound booking.id.getId)
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
+  ActorInfo.withRequestIdActorInfo $
+    markBookingInvoicesStatus
+      ( case req.paymentStatus of
+          PAID -> FInvoice.Paid
+          NOT_PAID -> FInvoice.Issued
+      )
+      BeckInvoice.Ride
+      booking.id
   logTagInfo "Payment completed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
 handler (UAddStopReq AddStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)

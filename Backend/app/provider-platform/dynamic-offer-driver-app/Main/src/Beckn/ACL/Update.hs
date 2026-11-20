@@ -157,8 +157,7 @@ mkPaymentMethodInfo Spec.Payment {..} = do
   collectedBy <- Common.castPaymentCollector (fromMaybe "" paymentCollectedBy)
   paymentType' <- Common.castPaymentType (fromMaybe "" paymentType)
   let paymentInstrument' = case Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT paymentTags of
-        Just "Cash" -> DMPM.Cash
-        Just _ -> DMPM.UPI
+        Just tagValue -> fromMaybe DMPM.UPI (Kernel.Prelude.readMaybe . toString $ tagValue)
         Nothing -> DMPM.Cash
   return $
     DMPM.PaymentMethodInfo

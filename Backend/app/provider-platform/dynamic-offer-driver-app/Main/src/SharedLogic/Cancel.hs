@@ -14,6 +14,7 @@
 
 module SharedLogic.Cancel where
 
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount (EstimateOfferDiscount))
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -223,7 +224,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tqd.estimateOrQuoteId discount | tqd <- tripQuoteDetails, Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False,
@@ -278,7 +279,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tripQuoteDetail.estimateOrQuoteId discount | Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False,

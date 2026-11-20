@@ -26,6 +26,7 @@ module SharedLogic.OneShotAssign
   )
 where
 
+import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride as DRideUI
@@ -113,7 +114,7 @@ oneShotAssign OneShotAssignReq {..} = do
               isInsured = Nothing,
               insuredAmount = Nothing,
               displayBookingId = Nothing,
-              discountAmount = searchTry.discountAmount,
+              discountAmount = offerDiscountForEstimate driverQuote.estimateId.getId searchTry.estimateOfferDiscounts,
               paymentChargeDetails = searchTry.paymentChargeDetails,
               initialStatus = DRB.TRIP_ASSIGNED,
               riderId = searchReq.riderId,

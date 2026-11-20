@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverAcceptOffer
   )
 where
 
+import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Person as SP
@@ -197,7 +198,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           mbCapConfig = Nothing,
           mbEstimateFareParams = Nothing,
           paymentChargeDetails = searchTry.paymentChargeDetails,
-          buyerOfferDiscount = searchTry.discountAmount,
+          buyerOfferDiscount = offerDiscountForEstimate estimateId searchTry.estimateOfferDiscounts,
           actualDistance = searchReq.estimatedDistance,
           rideTime = sReqFD.startTime,
           returnTime = searchReq.returnTime,

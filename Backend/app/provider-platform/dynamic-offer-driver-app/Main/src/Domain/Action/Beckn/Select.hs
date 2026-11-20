@@ -21,7 +21,7 @@ module Domain.Action.Beckn.Select
 where
 
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect as OSROnSelect
-import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount, PaymentChargeDetails)
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
@@ -95,7 +95,7 @@ data DSelectReq = DSelectReq
     negotiatedFare :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
     paymentChargeDetails :: Maybe PaymentChargeDetails,
-    offerDiscountAmount :: Maybe HighPrecMoney,
+    estimateOfferDiscounts :: [EstimateOfferDiscount],
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     -- | Customer display name from fulfillment.customer.person (value-add-NP BAPs
@@ -214,7 +214,7 @@ handler merchant sReq searchReq estimates addOnData = do
             customerExtraFee = sReq.customerExtraFee,
             negativeFareAdjustment = sReq.negativeFareAdjustment,
             paymentChargeDetails = sReq.paymentChargeDetails,
-            buyerOfferDiscount = sReq.offerDiscountAmount,
+            estimateOfferDiscounts = sReq.estimateOfferDiscounts,
             messageId = sReq.messageId,
             isRepeatSearch = False,
             billingCategory = sReq.billingCategory,

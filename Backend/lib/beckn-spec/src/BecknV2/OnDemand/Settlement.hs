@@ -2,6 +2,10 @@ module BecknV2.OnDemand.Settlement
   ( PaymentChargeDetails (..),
     paymentChargeDetailsTagList,
     paymentChargeDetailsFromTags,
+    EstimateOfferDiscount (..),
+    estimateOfferDiscountTagList,
+    estimateOfferDiscountFromTags,
+    offerDiscountForEstimate,
     chargeOn,
     riderGross,
     GrossMultiplier (..),
@@ -39,6 +43,24 @@ paymentChargeDetailsTagList = maybe [] $ \config ->
 paymentChargeDetailsFromTags :: Maybe [Spec.TagGroup] -> Maybe PaymentChargeDetails
 paymentChargeDetailsFromTags tagGroups =
   getTag Tags.PAYMENT_CHARGE_DETAILS tagGroups >>= A.decodeStrict . TE.encodeUtf8
+
+data EstimateOfferDiscount = EstimateOfferDiscount
+  { estimateId :: Text,
+    discountAmount :: HighPrecMoney
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+estimateOfferDiscountTagList :: [EstimateOfferDiscount] -> Tags.TagList
+estimateOfferDiscountTagList [] = []
+estimateOfferDiscountTagList discounts =
+  [Tags.ESTIMATE_OFFER_DISCOUNT Tags.~= TE.decodeUtf8 (BL.toStrict (A.encode discounts))]
+
+estimateOfferDiscountFromTags :: Maybe [Spec.TagGroup] -> [EstimateOfferDiscount]
+estimateOfferDiscountFromTags tagGroups =
+  fromMaybe [] $ getTag Tags.ESTIMATE_OFFER_DISCOUNT tagGroups >>= A.decodeStrict . TE.encodeUtf8
+
+offerDiscountForEstimate :: Text -> [EstimateOfferDiscount] -> Maybe HighPrecMoney
+offerDiscountForEstimate estimateId discounts = (.discountAmount) <$> find ((== estimateId) . (.estimateId)) discounts
 
 chargeOn :: PaymentChargeDetails -> HighPrecMoney -> Tax.TaxedAmount
 chargeOn config amount =

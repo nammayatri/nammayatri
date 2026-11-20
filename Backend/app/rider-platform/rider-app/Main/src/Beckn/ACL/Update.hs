@@ -27,7 +27,6 @@ module Beckn.ACL.Update
   )
 where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
@@ -69,7 +68,8 @@ data UpdateBuildReqDetails
 
 data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
   { bppRideId :: Id DRide.BPPRide,
-    paymentMethodInfo :: DMPM.PaymentMethodInfo
+    paymentMethodInfo :: DMPM.PaymentMethodInfo,
+    paymentStatus :: Enums.PaymentStatus
   }
 
 data EditLocationBuildReqDetails = EditLocationBuildReqDetails
@@ -147,12 +147,12 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
             orderPayments =
               Just
                 [ Spec.Payment
-                    { paymentCollectedBy = Just $ show $ Common.castDPaymentCollector details.paymentMethodInfo.collectedBy,
-                      paymentType = Just $ show $ Common.castDPaymentType details.paymentMethodInfo.paymentType,
-                      paymentStatus = Just "PAID",
+                    { paymentCollectedBy = Just $ show details.paymentMethodInfo.collectedBy,
+                      paymentType = Just "ON_FULFILLMENT",
+                      paymentStatus = Just $ show details.paymentStatus,
                       paymentId = Nothing,
                       paymentParams = Nothing,
-                      paymentTags = Nothing,
+                      paymentTags = Just [Tag.getFullTagGroup Tag.SETTLEMENT_TERMS [Tag.mkTag Tag.PAYMENT_INSTRUMENT (Just $ show details.paymentMethodInfo.paymentInstrument)]],
                       paymentTlMethod = Nothing
                     }
                 ],
