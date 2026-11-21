@@ -553,7 +553,7 @@ generateMonthBuckets startDay endDay =
    in step (sy, sm)
 
 referenceTypeToItemName :: Bool -> Text -> Text
-referenceTypeToItemName isVat ref
+referenceTypeToItemName isVat storedRef
   | ref == walletReferenceBaseRide = "Ride Earnings"
   | ref == walletReferenceTollCharges = "Toll Charges"
   | ref == walletReferenceParkingCharges = "Parking Charges"
@@ -597,7 +597,25 @@ referenceTypeToItemName isVat ref
   | ref == WalletSubscription.walletReferenceBehaviourPenalty = "Penalty"
   | otherwise = ref
   where
+    ref = Map.findWithDefault storedRef storedRef legacyReferenceTypes
     taxLabel = if isVat then "VAT" else "GST"
+
+legacyReferenceTypes :: Map.Map Text Text
+legacyReferenceTypes =
+  Map.fromList
+    [ ("GSTOnline", walletReferenceRideTax Tax.GST),
+      ("GSTCash", walletReferenceRideTax Tax.GST),
+      ("VATOnline", walletReferenceRideTax Tax.VAT),
+      ("VATCash", walletReferenceRideTax Tax.VAT),
+      ("TDSDeductionOnline", walletReferenceTDSDeduction),
+      ("TDSDeductionCash", walletReferenceTDSDeduction),
+      ("CommissionOnline", walletReferenceCommission),
+      ("CommissionCash", walletReferenceCommission),
+      ("CommissionVATOnline", walletReferenceCommissionTax Tax.VAT),
+      ("CommissionVATCash", walletReferenceCommissionTax Tax.VAT),
+      ("DiscountsOnline", walletReferenceDiscounts),
+      ("DiscountsCash", walletReferenceDiscounts)
+    ]
 
 isVatMerchant :: DTConf.TransporterConfig -> Bool
 isVatMerchant transporterConfig = transporterConfig.taxConfig.taxRegime == Just Tax.VAT
@@ -901,7 +919,13 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
   let payoutRequestIds = [refId | (refId, _, refEntries) <- groups, any isWalletPayoutEntry refEntries]
   payoutTransfers <- QTransferExtra.findByDirectionRefTypeAndRefIds DTransfer.OUTBOUND walletReferencePayout payoutRequestIds
   payoutRequests <- QPayoutRequestExtra.findByIds payoutRequestIds
+  let onlineBookingIds = [b.id.getId | b <- bookings, bookingIsOnline b == Just True]
+  onlineTaxEntries <-
+    if isVat || null onlineBookingIds
+      then pure []
+      else QLedgerEntry.findByReferenceTypesAndReferenceIds (Map.keys onlineTaxBaseReferenceTypes) onlineBookingIds
   let bookingById = Map.fromList [(b.id.getId, b) | b <- bookings]
+      onlineTaxLegsByBooking = Map.fromListWith (<>) [(e.referenceId, [e]) | e <- govtTaxLegs onlineTaxEntries]
       ridesByBookingId = Map.fromListWith (<>) [(r.bookingId.getId, [r]) | r <- rides]
       vehicleNumberByRideId = vehicleNumbersByRideId rideDetails
       driverNameById = Map.fromList [(d.id.getId, QRide.personFullName d) | d <- viewer : otherDrivers]
@@ -932,7 +956,10 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
                 date = latestAt,
                 netAmount = sum (map signedAmount refEntries),
                 groupData = (DriverWallet.RideWallet <$> mbRideInfo) <|> (DriverWallet.PayoutWallet <$> mbPayoutInfo),
-                entries = map (mkLedgerEntryItem isVat walletAccId) refEntries
+                entries =
+                  withOnlineTaxBreakup
+                    (sortOn (.timestamp) (Map.findWithDefault [] refId onlineTaxLegsByBooking))
+                    (map (mkLedgerEntryItem isVat walletAccId) refEntries)
               }
   pure (map mkGroup groups)
 
@@ -953,8 +980,11 @@ mkLedgerRideInfo driverNameById vehicleNumberByRideId booking ride =
       driverId = ride.driverId,
       driverName = Map.lookup ride.driverId.getId driverNameById,
       vehicleNumber = Map.lookup ride.id.getId vehicleNumberByRideId,
-      isOnline = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
+      isOnline = bookingIsOnline booking
     }
+
+bookingIsOnline :: DRB.Booking -> Maybe Bool
+bookingIsOnline booking = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
 
 mkLedgerEntryItem :: Bool -> Id Account -> FLedgerEntry.LedgerEntry -> DriverWallet.WalletLedgerEntryItem
 mkLedgerEntryItem isVat walletAccId e =
@@ -970,8 +1000,65 @@ mkLedgerEntryItem isVat walletAccId e =
       settlementStatus = e.settlementStatus,
       entityReferenceType = e.entityReferenceType,
       entityReferenceId = e.entityReferenceId,
-      reversalOf = e.reversalOf
+      reversalOf = e.reversalOf,
+      isDisplayOnly = Nothing
     }
+
+onlineTaxBaseReferenceTypes :: Map.Map Text Text
+onlineTaxBaseReferenceTypes =
+  Map.fromList
+    [ (walletReferenceRideTax Tax.GST, walletReferenceBaseRide),
+      ("GSTOnline", walletReferenceBaseRide),
+      (walletReferenceTollChargesTax Tax.GST, walletReferenceTollCharges),
+      (walletReferenceParkingChargesTax Tax.GST, walletReferenceParkingCharges),
+      (walletReferenceAirportEntryFeeChargesTax Tax.GST, walletReferenceAirportEntryFeeCharges)
+    ]
+
+govtTaxLegs :: [FLedgerEntry.LedgerEntry] -> [FLedgerEntry.LedgerEntry]
+govtTaxLegs taxEntries = filter isGovtLeg taxEntries
+  where
+    isGovtLeg e =
+      e.status == FLedgerEntry.SETTLED
+        && e.entryType /= FLedgerEntry.Reversal
+        && any (\prev -> prev.referenceId == e.referenceId && prev.referenceType == e.referenceType && prev.toAccountId == e.fromAccountId) taxEntries
+
+withOnlineTaxBreakup :: [FLedgerEntry.LedgerEntry] -> [DriverWallet.WalletLedgerEntryItem] -> [DriverWallet.WalletLedgerEntryItem]
+withOnlineTaxBreakup taxLegs items = case appliedLegs of
+  leg : _ | not (any (.isReversal) items) -> reverse throughLastGrossed <> [gstItem leg] <> reverse afterLastGrossed
+  _ -> items
+  where
+    taxByBase = Map.fromListWith (+) [(baseRef, leg.amount) | leg <- taxLegs, Just baseRef <- [Map.lookup leg.referenceType onlineTaxBaseReferenceTypes]]
+    (unmatchedTax, grossedItems) = mapAccumL grossUp taxByBase items
+    grossUp pendingTax item = case Map.lookup item.itemReference pendingTax of
+      Just tax
+        | item.isCredit && not item.isReversal ->
+          ( Map.delete item.itemReference pendingTax,
+            item
+              { DriverWallet.itemName = if item.itemReference == walletReferenceBaseRide then "Ride Fare" else item.itemName,
+                DriverWallet.itemValue = item.itemValue + tax,
+                DriverWallet.isDisplayOnly = Just True
+              } ::
+              DriverWallet.WalletLedgerEntryItem
+          )
+      _ -> (pendingTax, item)
+    appliedLegs = filter (\leg -> maybe False (`Map.notMember` unmatchedTax) (Map.lookup leg.referenceType onlineTaxBaseReferenceTypes)) taxLegs
+    (afterLastGrossed, throughLastGrossed) = break ((== Just True) . (.isDisplayOnly)) (reverse grossedItems)
+    gstItem leg =
+      DriverWallet.WalletLedgerEntryItem
+        { entryId = leg.id,
+          itemReference = leg.referenceType,
+          itemName = "GST",
+          itemValue = sum (map (.amount) appliedLegs),
+          isCredit = False,
+          isReversal = False,
+          date = leg.timestamp,
+          status = Just leg.status,
+          settlementStatus = leg.settlementStatus,
+          entityReferenceType = leg.entityReferenceType,
+          entityReferenceId = leg.entityReferenceId,
+          reversalOf = Nothing,
+          isDisplayOnly = Just True
+        }
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory
