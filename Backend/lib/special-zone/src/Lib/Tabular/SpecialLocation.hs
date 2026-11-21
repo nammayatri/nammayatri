@@ -55,6 +55,7 @@ mkPersist
       fareSettlementType Domain.FareSettlementType Maybe
       boothSpecificFleet Text Maybe
       geomGeoJson Text Maybe
+      queueGeomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary uuid

@@ -755,7 +755,9 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    -- | Optional KML for the queue polygon (LTS queue membership), when it should differ from the pricing polygon in @file@.
+    queueFile :: Maybe FilePath
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -764,6 +766,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
   fromMultipart form = do
     let eitherFile = lookupFile "file" form
         (fileField, contentType_) = getFileAndFileType eitherFile
+        (queueFileField, _) = getFileAndFileType (lookupFile "queueFile" form)
     ( UpsertSpecialLocationReq fileField contentType_
         <$> parseMaybeInput "locationName" form
       )
@@ -775,6 +778,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "render" form
       <*> parseMaybeInput "paymentModes" form
       <*> parseMaybeInput "fareSettlementType" form
+      <*> pure queueFileField
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -798,7 +802,9 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    -- | Queue polygon as GeoJSON. Omitted keeps the existing value.
+    queueGeom :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

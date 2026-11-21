@@ -44,6 +44,7 @@ mkPersist
       locationType Domain.SpecialLocationType
       geom Text Maybe
       geomGeoJson Text Maybe
+      queueGeomGeoJson Text Maybe
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe
       priority Int

@@ -22,6 +22,7 @@ module Domain.Action.DashboardAuth.Management.Merchant
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Dashboard.Common.Merchant
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Management.Merchant
@@ -37,6 +38,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import qualified Lib.GateInfo.Geometry as GGeom
+import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.SpecialLocation
 import "lib-dashboard" Storage.Beam.SchemaInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QDashboardMerchant
@@ -115,7 +117,15 @@ processMerchantCreateRequest merchantShortId opCity canCreateMerchant req@Dashbo
 postMerchantSpecialLocationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantSpecialLocationUpsert a5 a4 _a3 a2 req@Dashboard.Common.Merchant.UpsertSpecialLocationReq {..} = do
   geom <- maybe (pure Nothing) mkGeom req.file
-  Domain.Action.Dashboard.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, ..}
+  -- The domain call gets the pricing polygon as PostGIS hex, so check it against other zones'
+  -- queue bands here, while the KML can still be read as GeoJSON. A KML that doesn't convert
+  -- skips the check rather than failing an upload that worked before this check existed.
+  mbPricingGeoJson <- maybe (pure Nothing) GGeom.getGeoJsonFromKML req.file
+  whenJust mbPricingGeoJson $ \pricingGeoJson -> do
+    existingName <- maybe (pure Nothing) (fmap (fmap (.locationName)) . QSL.findById) a2
+    QSL.validatePricingGeomOutsideQueueBands a2 (fromMaybe "this location" $ req.locationName <|> existingName) pricingGeoJson
+  queueGeom <- forM req.queueFile $ \kmlFile -> GGeom.getGeoJsonFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert queue KML to GeoJSON.")
+  Domain.Action.Dashboard.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, queueGeom = queueGeom, ..}
 
 -- | @\/specialLocation\/{specialLocationId}\/gates\/upsert@: same optional KML.
 postMerchantSpecialLocationGatesUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

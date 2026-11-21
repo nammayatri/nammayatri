@@ -23,6 +23,7 @@ module Lib.GateInfo.Geometry
     parseGatePolygons,
     pointInRing,
     pointInPolygon,
+    polygonsOverlap,
     pointToSegmentMeters,
     minDistanceToPolygonEdges,
     isPointInOrNearGate,
@@ -107,6 +108,34 @@ pointInRing (LatLong y x) ring =
 pointInPolygon :: LatLong -> [[LatLong]] -> Bool
 pointInPolygon _ [] = False
 pointInPolygon p (outer : holes) = pointInRing p outer && not (any (pointInRing p) holes)
+
+-- | Whether two polygons share any area or boundary. Holes are ignored, so this errs on the
+--   side of reporting an overlap. Planar test in lon/lat, which is fine at city scale.
+--   Used at upload time only (O(edges A * edges B)); not for the hot path.
+polygonsOverlap :: [[LatLong]] -> [[LatLong]] -> Bool
+polygonsOverlap (a : _) (b : _) =
+  any (`pointInRing` b) a
+    || any (`pointInRing` a) b
+    || or [segmentsIntersect e f | e <- edges a, f <- edges b]
+  where
+    edges ring = zip ring (drop 1 ring)
+polygonsOverlap _ _ = False
+
+segmentsIntersect :: (LatLong, LatLong) -> (LatLong, LatLong) -> Bool
+segmentsIntersect (p1, p2) (p3, p4) =
+  let d1 = orient p3 p4 p1
+      d2 = orient p3 p4 p2
+      d3 = orient p1 p2 p3
+      d4 = orient p1 p2 p4
+   in ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
+        || (d1 == 0 && onSegment p3 p4 p1)
+        || (d2 == 0 && onSegment p3 p4 p2)
+        || (d3 == 0 && onSegment p1 p2 p3)
+        || (d4 == 0 && onSegment p1 p2 p4)
+  where
+    orient (LatLong ay ax) (LatLong by bx) (LatLong cy cx) = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+    onSegment (LatLong ay ax) (LatLong by bx) (LatLong cy cx) =
+      min ax bx <= cx && cx <= max ax bx && min ay by <= cy && cy <= max ay by
 
 -- | Approximate point-to-segment distance in meters using equirectangular projection.
 --   Fine for radii <<< Earth radius (we use ~150m here).
