@@ -68,10 +68,11 @@ TicketPlace:
     isClosed: Bool
     assignTicketToBpp: Bool
     enforcedAsSubPlace: Bool
+    geomGeoJson: Maybe Text # parking: the cluster's outline
 
   types:
     PlaceType:
-      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other"
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other,Parking"
     PlaceStatus:
       enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
     CustomTab:
@@ -194,7 +195,14 @@ TicketService:
     maxSelection: Maybe Int
     note: Maybe Text
     priority: Maybe Int
+    bookingMode: BookingMode
+    maxDurationMinutes: Maybe Int
+    lat: Maybe Double # parking: the zone's own location
+    lon: Maybe Double
+    geomGeoJson: Maybe Text
   types:
+    BookingMode:
+      enum: "DayVisit,TimeWindow"
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay,ValidityDays Kernel.Prelude.Int"
     OperationalDate:
@@ -206,6 +214,7 @@ TicketService:
     serviceDetails: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
+    bookingMode: Maybe BookingMode
 
   beamFields:
     operationalDate:
@@ -221,12 +230,14 @@ TicketService:
     serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
+    bookingMode: fromMaybe Domain.Types.TicketService.DayVisit bookingMode|E
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
     operationalEndDate: operationalDate <&> (.eneDate)|E
     serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
+    bookingMode: Kernel.Prelude.Just bookingMode|E
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
@@ -234,6 +245,7 @@ TicketService:
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
     isClosed: "false"
+    bookingMode: "'DayVisit'"
 
   queries:
     findById:
@@ -452,6 +464,7 @@ ServicePeopleCategory:
     rules: "Maybe [Rule]"
     isClosed: Bool
     iconUrl: Maybe Text
+    durationTariff: Maybe Value # TimeWindow (parking): the fee by duration; replaces pricePerUnit, and can be shared by several categories
   beamType:
     cancellationCharges: Maybe Value
     vendorSplitDetails: Maybe Value
@@ -464,6 +477,7 @@ ServicePeopleCategory:
     cancellationCharges: json
     vendorSplitDetails: json
     rules: json
+    durationTariff: json
   beamFields:
     pricePerUnit:
       currency: Maybe Currency
@@ -528,6 +542,7 @@ ServicePeopleCategory:
         - placeId
         - iconUrl
         - rules
+        - durationTariff
       where:
         and: [id, timeBounds]
     deleteByIdAndTimebounds:
@@ -716,10 +731,18 @@ TicketBookingService:
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     assignmentId: Maybe Text
+    startTime: Maybe UTCTime
+    vehicleNumber: Maybe Text
+    parentBookingServiceId: Maybe (Id TicketBookingService)
+    serviceCategoryId: Maybe (Id ServiceCategory) # TimeWindow: the vehicle type booked; capacity is counted per category
 
   constraints:
     shortId: SecondaryKey
     visitDate: "!SecondaryKey"
+    vehicleNumber: "!SecondaryKey"
+    ticketServiceId: "!SecondaryKey" # capacity check must see unpaid holds still in Redis
+    ticketBookingId: "!SecondaryKey" # payment status update must reach rows not yet drained
+    parentBookingServiceId: "!SecondaryKey" # extensions of a parking booking
 
   beamType:
     vendorSplitDetails: Maybe Value
@@ -775,6 +798,13 @@ TicketBookingService:
       kvFunction: updateOneWithKV
       params: [assignmentId, updatedAt]
       where: id
+    updateExpiryDateById:
+      kvFunction: updateOneWithKV
+      params: [expiryDate, updatedAt]
+      where: id
+    findAllByParentBookingServiceId:
+      kvFunction: findAllWithKV
+      where: parentBookingServiceId
 
   extraOperations:
   - EXTRA_QUERY_FILE

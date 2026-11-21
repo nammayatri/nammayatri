@@ -17,10 +17,15 @@ import qualified Tools.Beam.UtilsTH
 data TicketService = TicketService
   { allowCancellation :: Kernel.Prelude.Bool,
     allowFutureBooking :: Kernel.Prelude.Bool,
+    bookingMode :: Domain.Types.TicketService.BookingMode,
     businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
     expiry :: Domain.Types.TicketService.ExpiryType,
+    geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     isClosed :: Kernel.Prelude.Bool,
+    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    maxDurationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxSelection :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxVerification :: Kernel.Prelude.Int,
     note :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -40,8 +45,12 @@ data TicketService = TicketService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data BookingMode = DayVisit | TimeWindow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay | ValidityDays Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data OperationalDate = OperationalDate {eneDate :: Data.Time.Day, startDate :: Data.Time.Day} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingMode)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExpiryType)

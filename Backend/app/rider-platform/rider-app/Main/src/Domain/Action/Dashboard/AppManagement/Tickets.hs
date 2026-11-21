@@ -279,6 +279,7 @@ postTicketPlacesBook ::
   Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
 postTicketPlacesBook merchantShortId _opCity placeId _mbRequestorId req = do
   m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.rejectParkingPlace placeId
   Domain.Action.UI.TicketService.postTicketPlacesBook (Nothing, m.id) placeId req
 
 getTicketPlaces ::
@@ -351,6 +352,7 @@ postTicketPlacesDirectBook ::
   Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
 postTicketPlacesDirectBook merchantShortId _opCity placeId requestorId req = do
   m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.rejectParkingPlace placeId
   Domain.Action.UI.TicketService.postTicketPlacesDirectBook (Nothing, m.id) requestorId placeId req
 
 getTicketFleetVehiclesV2 ::

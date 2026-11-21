@@ -104,6 +104,10 @@ types:
     serviceId: Id TicketService
     businessHourId: Id BusinessHour
     categories: [TicketBookingCategoryReq]
+    startTime: Maybe UTCTime # TimeWindow services only; Nothing = now
+    durationMinutes: Maybe Int # TimeWindow services only
+    vehicleNumber: Maybe Text # TimeWindow services only
+    extendsBookingServiceId: Maybe (Id TicketBookingService) # TimeWindow: extends this paid booking; start = its current end
 
   TicketBookingCategoryReq:
     categoryId: Id ServiceCategory
@@ -242,6 +246,7 @@ types:
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
     categories: [TicketBookingCategoryDetails]
+    vehicleNumber: Maybe Text # parking: the marshal compares this with the parked car
 
   TicketVerificationStatus:
     enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking"

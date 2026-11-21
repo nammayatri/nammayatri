@@ -175,6 +175,8 @@ data RiderConfigT f = RiderConfigT
     nyRegularMinGapSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     offerListCacheVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    openMeterMaxIdleHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parkingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     passExpiryReminderBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderNextRunLocalTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),

@@ -3,6 +3,17 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
+  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
+  BusinessHour: Domain.Types.BusinessHour
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketBooking: Domain.Types.TicketBooking
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
 
 module: ParkingBooking
 types:
@@ -36,7 +47,56 @@ types:
     recordType: NewType
     customerId: Id Person
 
+  # Rider parking (TokenAuth). A cluster is a Parking ticket_place, a zone is one of its ticket_services,
+  # a vehicle type is one of the zone's service categories (capacity) with its people category (tariff).
+  ParkingZoneResp: # one zone; book it with POST /ticket/places/{placeId}/book
+    serviceId: Id TicketService
+    name: Text
+    placeId: Id TicketPlace # the cluster
+    clusterName: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    distanceMeters: Maybe Int
+    geomGeoJson: Maybe Text
+    businessHourId: Id BusinessHour
+    maxDurationMinutes: Maybe Int
+    vehicleTypes: "[ParkingVehicleTypeResp]"
+
+  ParkingVehicleTypeResp:
+    categoryId: Id ServiceCategory
+    name: Text
+    peopleCategoryId: Id ServicePeopleCategory
+    capacity: Maybe Int
+    freeSpaces: Maybe Int # free for the requested window, or right now when no window is given
+    durationTariff: Maybe Value
+
+  ParkingStayStatus:
+    enum: "Reserved,PendingPayment,Active,Ended"
+
+  ParkingStayResp:
+    bookingServiceId: Id TicketBookingService # the original booking; pass this to extend / stop
+    ticketBookingShortId: ShortId TicketBooking
+    placeId: Id TicketPlace # the cluster
+    placeName: Text
+    serviceId: Id TicketService # the zone
+    zoneName: Text
+    categoryId: Maybe (Id ServiceCategory) # the vehicle type
+    vehicleType: Maybe Text
+    vehicleNumber: Text
+    startTime: UTCTime
+    endTime: UTCTime # includes paid extensions
+    amount: HighPrecMoney # paid so far, extensions included
+    status: ParkingStayStatus
+
+  ParkingExtendReq:
+    durationMinutes: Int
+
+  ParkingStopResp:
+    finalAmount: HighPrecMoney # tariff for the time actually parked; no refund is issued
+    durationMinutes: Int
+
 apis:
+  # deprecated: partner booking, replaced by the rider APIs below
   - POST:
       endpoint: /multimodal/parking/book
       auth: NoAuth
@@ -46,6 +106,7 @@ apis:
         type: ParkingBookingReq
       response:
         type: ParkingBookingResponse
+  # deprecated
   - POST:
       endpoint: /multimodal/parking/marshal/create
       auth: NoAuth
@@ -56,3 +117,50 @@ apis:
       response:
         type: MarshalPersonResp
 
+  # Rider parking
+  # GET /parking/zones
+  - GET:
+      endpoint: /parking/zones
+      auth: TokenAuth
+      query:
+        lat: Double # lat and lon together: zones within radiusMeters, nearest first; neither: every open zone in the city, by name
+        lon: Double
+        radiusMeters: Int
+        startTime: UTCTime # with durationMinutes: free spaces for that window instead of now
+        durationMinutes: Int
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingZoneResp]"
+
+  # GET /parking/active
+  - GET:
+      endpoint: /parking/active
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingStayResp]"
+
+  # GET /parking/bookings: my upcoming, active, unpaid and recently ended stays
+  - GET:
+      endpoint: /parking/bookings
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingStayResp]"
+
+  # POST /parking/bookings/{bookingServiceId}/extend
+  - POST:
+      endpoint: /parking/bookings/{bookingServiceId}/extend
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      request:
+        type: API.Types.UI.ParkingBooking.ParkingExtendReq
+      response:
+        type: Kernel.External.Payment.Interface.Types.CreateOrderResp
+
+  # POST /parking/bookings/{bookingServiceId}/stop
+  - POST:
+      endpoint: /parking/bookings/{bookingServiceId}/stop
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      response:
+        type: API.Types.UI.ParkingBooking.ParkingStopResp

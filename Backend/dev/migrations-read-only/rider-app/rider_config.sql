@@ -964,3 +964,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN flow_status_feedback_window_sec in
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN parking_config json ;

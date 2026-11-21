@@ -22,6 +22,7 @@ data TicketPlace = TicketPlace
     enforcedAsSubPlace :: Kernel.Prelude.Bool,
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
+    geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     isClosed :: Kernel.Prelude.Bool,
@@ -74,6 +75,7 @@ data PlaceType
   | ReligiousSite
   | Boating
   | Other
+  | Parking
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Fee)

@@ -24,6 +24,7 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
         Domain.Types.ServicePeopleCategory.ServicePeopleCategory
           { cancellationCharges = getCancellationChargesFromTable cancellationCharges,
             description = description,
+            durationTariff = durationTariff,
             iconUrl = iconUrl,
             id = Kernel.Types.Id.Id id,
             isClosed = fromMaybe False isClosed,
@@ -45,6 +46,7 @@ instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.
     Beam.ServicePeopleCategoryT
       { Beam.cancellationCharges = convertCancellationChargesToTable cancellationCharges,
         Beam.description = description,
+        Beam.durationTariff = durationTariff,
         Beam.iconUrl = iconUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isClosed = Kernel.Prelude.Just isClosed,
