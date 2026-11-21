@@ -18,7 +18,7 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityId,
     findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOperatingCityIdAndMessageKey,
-    findByMerchantOperatingCityIdAndMessageKeyInRideFlow,
+    findByMerchantOperatingCityIdAndMessageKeyLanguage,
     clearCache,
     clearCacheById,
   )
@@ -26,6 +26,7 @@ where
 
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,26 +42,35 @@ findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperat
 findAllByMerchantOpCityId id mbConfigVersionMap =
   DynamicLogic.findAllConfigs (cast id) (LYT.RIDER_CONFIG LYT.MerchantMessage) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
 
+-- | The English row: what every sender that does not know its recipient's language reads.
 findByMerchantOperatingCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
-findByMerchantOperatingCityIdAndMessageKey id messageKey mbConfigVersionMap =
-  DynamicLogic.findOneConfigWithCacheKey
-    (cast id)
-    (LYT.RIDER_CONFIG LYT.MerchantMessage)
-    mbConfigVersionMap
-    Nothing
-    (Queries.findByMerchantOperatingCityIdAndMessageKey id messageKey)
-    (makeMerchantOperatingCityIdAndMessageKey id messageKey)
+findByMerchantOperatingCityIdAndMessageKey id messageKey = findByMerchantOperatingCityIdAndMessageKeyLanguage id messageKey Nothing
+
+-- | The recipient's language, then English. The cached list holds every language of the key, so
+-- a language with no row is a cached answer too; a key with no row at all is not kept, so a row
+-- added outside the dashboard is read on the next call.
+findByMerchantOperatingCityIdAndMessageKeyLanguage :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOperatingCityIdAndMessageKeyLanguage id messageKey mbLanguage mbConfigVersionMap = do
+  rows <-
+    DynamicLogic.findAllConfigsWithCacheKey
+      (cast id)
+      (LYT.RIDER_CONFIG LYT.MerchantMessage)
+      mbConfigVersionMap
+      Nothing
+      (Queries.findAllByMerchantOpCityIdAndMessageKey id messageKey)
+      (makeMerchantOperatingCityIdAndMessageKey id messageKey)
+  when (null rows) $ clearCache id messageKey
+  pure $ listToMaybe [mm | language <- languages, mm <- rows, mm.language == language]
+  where
+    preferred = fromMaybe ENGLISH mbLanguage
+    languages = if preferred == ENGLISH then [ENGLISH] else [preferred, ENGLISH]
 
 findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [MerchantMessage]
 findAllByMerchantOpCityIdInRideFlow id configVersionMap =
   findAllByMerchantOpCityId id (Just configVersionMap)
 
-findByMerchantOperatingCityIdAndMessageKeyInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
-findByMerchantOperatingCityIdAndMessageKeyInRideFlow id messageKey configVersionMap =
-  findByMerchantOperatingCityIdAndMessageKey id messageKey (Just configVersionMap)
-
 makeMerchantOperatingCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
-makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
+makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> ":AllLanguages"
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m ()
 clearCache merchantOperatingCityId messageKey =

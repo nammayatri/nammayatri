@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as Person
 import qualified Email.Flow as Email
 import Email.Types (EmailOTPConfig, EmailServiceConfig)
 import qualified EulerHS.Language as L
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -55,13 +56,14 @@ sendOTP ::
   Id Person.Person ->
   Id Merchant.Merchant ->
   Id MOC.MerchantOperatingCity ->
+  Maybe Language ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe EmailOTPConfig ->
   Maybe Text ->
   m ()
-sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountryCode mbMobileNumber mbEmail mbEmailOTPConfig mbSenderHash = do
+sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbLanguage mbCountryCode mbMobileNumber mbEmail mbEmailOTPConfig mbSenderHash = do
   smsCfg <- asks (.smsCfg)
   let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
 
@@ -72,7 +74,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountry
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
         buildSmsReq <-
-          MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
+          MessageBuilder.buildSendOTPMessage merchantOperatingCityId mbLanguage $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
@@ -84,7 +86,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountry
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for WHATSAPP OTP channel")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
-        mbWhatsappOtpMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_WHATSAPP_OTP Nothing
+        mbWhatsappOtpMessage <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_WHATSAPP_OTP mbLanguage Nothing
         void $ Whatsapp.whatsAppOptAPI merchantId merchantOperatingCityId (Whatsapp.OptApiReq {phoneNumber = phoneNumber, method = Whatsapp.OPT_IN})
         result <- Whatsapp.whatsAppOtpApi merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode ((.templateId) <$> mbWhatsappOtpMessage))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")

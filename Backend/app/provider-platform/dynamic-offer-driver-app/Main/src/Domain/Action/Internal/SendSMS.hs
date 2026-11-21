@@ -61,6 +61,6 @@ sendSMS apiKey merchantShortIdText city req = do
       generateOtp = generateOTPCode
       useFakeOtp = show <$> useFakeSms smsCfg
       sendSms msg phone sender templateId msgType =
-        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq msg phone sender templateId msgType) >>= Sms.checkSmsResult
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq (Sms.prebuiltSmsBody msg) phone sender templateId msgType) >>= Sms.checkSmsResult
 
   Shared.sendSMS lookupTemplate generateOtp useFakeOtp sendSms req

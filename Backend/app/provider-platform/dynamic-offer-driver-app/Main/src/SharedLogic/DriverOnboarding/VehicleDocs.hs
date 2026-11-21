@@ -26,7 +26,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (DocumentRejectReason, TranslationKey (..), VerificationMessage (..), documentRejectReasonText)
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleFitnessCertificate as VFC
@@ -44,10 +44,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -58,7 +57,6 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
 import qualified Storage.Queries.ReviewRequestExtra as QRRE
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
 import qualified Storage.Queries.VehicleInsurance as VIQuery
@@ -400,12 +398,13 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbProcessedDocumentId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo) mbCommonDoc
         case mbStatus of
           Just status -> do
-            mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
+            mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
+            mbShownReason <- translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbProcessedReason
             mbFinalMetadata <- withImageMetadataFallback entityImagesInfo (Just rcImagesInfo) docType mbImageId mbMetadata
-            return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = mbImageId2, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
+            return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbShownReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = mbImageId2, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs mbCommonDoc
-            mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+            mbMessage <- documentStatusMessage status mbReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
             mbFinalMetadata <- withImageMetadataFallback entityImagesInfo (Just rcImagesInfo) docType mbImageIdInProgress Nothing
             return $ DocumentStatusItem {documentType = docType, documentId = mbInProgressDocumentId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
 
@@ -542,7 +541,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                           else maybe (pure Nothing) (\owner -> QCommonDocExtra.findCurrentVersionByOwnerAndDocumentType owner docType) (QCommonDocExtra.mkCommonDocumentOwner mbPersonId mbRcId)
                       let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs mbCommonDoc
-                      mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+                      mbMessage <- documentStatusMessage status mbReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
                       mbMetadata <- if entityImagesInfo.enableDocumentMetadata && docType == DVC.VehicleRegistrationCertificate then mkInProgressMetadata verificationReqRecord else pure Nothing
                       mbFinalMetadata <- withImageMetadataFallback entityImagesInfo mbRcImagesInfo docType mbImageId mbMetadata
                       return $ DocumentStatusItem {documentType = docType, documentId = mbInProgressDocumentId <|> Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
@@ -686,7 +685,7 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
         let status = mapStatus vehicleRC.verificationStatus
             reason
               | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
-              | otherwise = vehicleRC.rejectReason
+              | otherwise = storedRejectReason vehicleRC.rejectReasonKey vehicleRC.rejectReason
             (s3, iid) = lookupImage vehicleRC.documentImageId
             iid2 = vehicleRC.documentImageId2 <&> (.getId)
         mbMetadata <- if enableMetadata then Just <$> mkRCMetadata vehicleRC else pure Nothing
@@ -705,7 +704,7 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
         mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehicleInsuranceMetadata vehicleRC mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, Nothing, mbMetadata, Nothing)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), storedRejectReason (mbDoc >>= (.rejectReasonKey)) (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, Nothing, mbMetadata, Nothing)
       DVC.VehiclePUC -> do
         mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
@@ -916,39 +915,57 @@ extractImageFailReason imageError =
     Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
 
-documentStatusMessage :: OnboardingFlow m r => ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> m (Maybe Text)
-documentStatusMessage status mbReason docType mbVerificationUrl language skipMessages
+-- | The reason whose key name a document row stores in @reject_reason_key@, if any.
+documentRejectReasonByKey :: Text -> Maybe DocumentRejectReason
+documentRejectReasonByKey name = find ((== name) . show . DocumentReason_Text) [minBound .. maxBound]
+
+-- | What a document row's reject reason reads as: the key name while the text is still that key's
+-- English sentence (our own code wrote both), else the text, which ops may have replaced since.
+storedRejectReason :: Maybe Text -> Maybe Text -> Maybe Text
+storedRejectReason (Just key) (Just text) | (documentRejectReasonText <$> documentRejectReasonByKey key) == Just text = Just key
+storedRejectReason _ mbText = mbText
+
+-- | A reason that is a key name becomes the row for the city and language, or the key's English
+-- sentence; any other text (typed by ops, returned by a verification provider) is shown as stored.
+translateRejectReason :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Language -> Maybe Text -> m (Maybe Text)
+translateRejectReason merchantOpCityId language = traverse $ \reason ->
+  case documentRejectReasonByKey reason of
+    Just keyed -> fromMaybe (documentRejectReasonText keyed) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (DocumentReason_Text keyed)
+    Nothing -> pure reason
+
+documentStatusMessage :: OnboardingFlow m r => ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Id DMOC.MerchantOperatingCity -> Language -> Bool -> m (Maybe Text)
+documentStatusMessage status mbReason docType mbVerificationUrl merchantOpCityId language skipMessages
   | skipMessages = pure Nothing
   | otherwise = do
     msg <- case (status, docType, mbVerificationUrl) of
-      (VALID, _, _) -> toVerificationMessage DocumentValid language
-      (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
-      (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
-      (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
-      (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
-      (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
-      (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
-      (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
+      (VALID, _, _) -> toVerificationMessage DocumentValid merchantOpCityId language
+      (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview merchantOpCityId language
+      (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput merchantOpCityId language
+      (PENDING, _, _) -> toVerificationMessage VerificationInProgress merchantOpCityId language
+      (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired merchantOpCityId language
+      (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied merchantOpCityId language
+      (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed merchantOpCityId language
+      (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound merchantOpCityId language
       (INVALID, DDVC.DriverLicense, _) -> do
-        msg <- toVerificationMessage DLInvalid language
+        msg <- toVerificationMessage DLInvalid merchantOpCityId language
         return $ fromMaybe msg mbReason
       (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
-        msg <- toVerificationMessage RCInvalid language
+        msg <- toVerificationMessage RCInvalid merchantOpCityId language
         return $ fromMaybe msg mbReason
       (INVALID, _, _) -> do
-        msg <- toVerificationMessage DocumentInvalid language
+        msg <- toVerificationMessage DocumentInvalid merchantOpCityId language
         return $ fromMaybe msg mbReason
-      (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
+      (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized merchantOpCityId language
       (FAILED, _, _) -> do
         case mbReason of
           Just res
-            | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-            | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
-            | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
-            | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-            | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-            | otherwise -> toVerificationMessage Other language
-          Nothing -> toVerificationMessage Other language
+            | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber merchantOpCityId language
+            | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress merchantOpCityId language
+            | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed merchantOpCityId language
+            | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber merchantOpCityId language
+            | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber merchantOpCityId language
+            | otherwise -> toVerificationMessage Other merchantOpCityId language
+          Nothing -> toVerificationMessage Other merchantOpCityId language
     pure $ Just msg
 
 mapStatus :: Documents.VerificationStatus -> ResponseStatus
@@ -960,36 +977,8 @@ mapStatus = \case
   Documents.UNAUTHORIZED -> UNAUTHORIZED
   Documents.PULL_REQUIRED -> PULL_REQUIRED
 
-data VerificationMessage
-  = InvalidDocumentNumber
-  | VerficationFailed
-  | NoDcoumentFound
-  | LimitExceed
-  | DLInvalid
-  | RCInvalid
-  | DocumentInvalid
-  | DocumentValid
-  | VerificationInProgress
-  | VerificationPendingOnUserInput
-  | UnderManualReview
-  | Unauthorized
-  | PullRequired
-  | ConsentDenied
-  | Other
-  | Reasons
-  deriving (Show, Eq, Ord)
-
-translateDynamicKey :: OnboardingFlow m r => Text -> Language -> m Text
-translateDynamicKey key lang = do
-  mTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (MTQuery.findByErrorAndLanguage key lang))
-  return $ fromMaybe key (mTranslation <&> (.message))
-
-toVerificationMessage :: OnboardingFlow m r => VerificationMessage -> Language -> m Text
-toVerificationMessage msg lang = do
-  errorTranslations <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = T.pack (show msg), language = Just lang}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang))
-  case errorTranslations of
-    Just errorTranslation -> return $ errorTranslation.message
-    Nothing -> return "Something went wrong"
+toVerificationMessage :: OnboardingFlow m r => VerificationMessage -> Id DMOC.MerchantOperatingCity -> Language -> m Text
+toVerificationMessage msg merchantOpCityId lang = fromMaybe "Something went wrong" <$> CQTranslations.findTextByKey (Just merchantOpCityId) lang (Verification_Message msg)
 
 mkInProgressMetadata :: OnboardingFlow m r => SDO.VerificationReqRecord -> m (Maybe DocumentMetadata)
 mkInProgressMetadata req = do

@@ -29,7 +29,8 @@ import qualified Domain.Types.Ride as DR
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.SMS as Reexport hiding
-  ( sendSMS,
+  ( SendSMSReq (..),
+    sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
 import Kernel.External.Types (ServiceFlow)
@@ -40,6 +41,7 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.MessageBuilder as Reexport (SendSMSReq (..), SmsBody, prebuiltSmsBody, smsBodyText)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -49,7 +51,7 @@ import Tools.Error
 import qualified Tools.Fields as Fields
 
 sendSMS :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
+sendSMS merchantId merchantOpCityId req = Sms.sendSMS handler (Sms.SendSMSReq (smsBodyText req.smsBody) req.phoneNumber req.sender req.templateId req.messageType)
   where
     handler = Sms.SmsHandler {..}
 
@@ -98,33 +100,33 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
             (mbSender, message, templateId, msgType) <-
-              MessageBuilder.buildBookingMessage merchantOpCityId $
+              MessageBuilder.buildBookingMessage merchantOpCityId driver.language $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
                   }
-            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
+            sendSMS merchantId merchantOpCityId (SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildEndRideMessage merchantOpCityId $
+            MessageBuilder.buildEndRideMessage merchantOpCityId driver.language $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ONBOARDING -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildOnboardingMessage merchantOpCityId $
+            MessageBuilder.buildOnboardingMessage merchantOpCityId driver.language $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
           (mbSender, message, templateId, msgType) <-
-            MessageBuilder.buildCollectCashMessage merchantOpCityId $
+            MessageBuilder.buildCollectCashMessage merchantOpCityId driver.language $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
     else do
       logInfo "Merchant not configured to send dashboard sms"

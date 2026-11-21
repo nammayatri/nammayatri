@@ -121,7 +121,7 @@ postUserLoginSendOtp merchantShortId opCity req = do
     let phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpHash = smsCfg.credConfig.otpHash
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildSendOTPMessage merchantOpCity.id $
+      MessageBuilder.buildSendOTPMessage merchantOpCity.id Nothing $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otp,
             hash = otpHash

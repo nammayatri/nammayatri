@@ -60,9 +60,9 @@ import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
@@ -72,7 +72,6 @@ import Storage.Queries.DriverPlan as SQPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
-import Storage.Queries.TranslationsExtra as SQT
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Encryption
 import Tools.Error
@@ -496,7 +495,7 @@ getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
     mapM
       ( \activeConfg -> do
           let id = Text.strip (activeConfg.eventName <> "_" <> (show activeConfg.eventFunction))
-          translation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = id, language = Just language}) (Just (SQT.findByErrorAndLanguage id language)) >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
+          translation <- CQTranslations.findByOpsKey (Just merchantOpCityId) language id >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
           case Text.splitOn " | " translation.message of
             [title, description] ->
               pure $

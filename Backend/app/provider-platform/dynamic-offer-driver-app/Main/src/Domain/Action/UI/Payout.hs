@@ -48,6 +48,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.SubscriptionConfig as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
@@ -371,11 +372,12 @@ defaultSettlementHooks :: (PayoutSettlementFlow m r) => SettlementHooks m
 defaultSettlementHooks =
   SettlementHooks
     { notifyWalletPayout = \person _payoutOrder updPayoutStatus amount -> do
-        let (notificationTitle, notificationMessage, notificationType) =
+        let (pushKey, defaultTitle, defaultMessage, notificationType) =
               if isPayoutOrderSuccess updPayoutStatus
-                then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
-                else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
-        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+                then (DriverPush_Payout_Completed, "Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                else (DriverPush_Payout_Failed, "Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+        content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount)] (defaultTitle, defaultMessage)
+        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType content person person.deviceToken
     }
 
 payoutSettlementActionWith ::
@@ -906,6 +908,7 @@ sendSpecialZonePayoutSms merchantOpCityId payoutRequest = do
         (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildDriverPayoutMessage
             merchantOpCityId
+            driver.language
             MessageBuilder.BuildDriverPayoutMessageReq
               { payoutAmount = show amountVal,
                 bookingId = mbDisplayBookingId

@@ -741,10 +741,11 @@ type GetgetknowYourDriverDetailsAPI =
     :> Capture "rideId" Text
     :> "knowYourDriver"
     :> QueryParam "isImages" Bool
+    :> QueryParam "language" Language
     :> Header "token" Text
     :> Get '[JSON] DriverProfileRes
 
-getknowYourDriverClient :: Text -> Maybe Bool -> Maybe Text -> EulerClient DriverProfileRes
+getknowYourDriverClient :: Text -> Maybe Bool -> Maybe Language -> Maybe Text -> EulerClient DriverProfileRes
 getknowYourDriverClient = client getKnowYourDriverApi
 
 getKnowYourDriverApi :: Proxy GetgetknowYourDriverDetailsAPI
@@ -760,20 +761,22 @@ getknowYourDriverDetails ::
   BaseUrl ->
   Text ->
   Maybe Bool ->
+  Maybe Language ->
   m DriverProfileRes
-getknowYourDriverDetails apiKey internalUrl bppRideId withImages = do
+getknowYourDriverDetails apiKey internalUrl bppRideId withImages language = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getknowYourDriverClient bppRideId withImages (Just apiKey)) "KnowYourDriver" getKnowYourDriverApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getknowYourDriverClient bppRideId withImages language (Just apiKey)) "KnowYourDriver" getKnowYourDriverApi
 
 type GetKnowYourFavDriverDetailsAPI =
   "internal"
     :> Capture "driverId" Text
     :> "knowYourFavDriver"
     :> QueryParam "isImages" Bool
+    :> QueryParam "language" Language
     :> Header "token" Text
     :> Get '[JSON] DriverProfileRes
 
-getKnowYourDriverClient :: Text -> Maybe Bool -> Maybe Text -> EulerClient DriverProfileRes
+getKnowYourDriverClient :: Text -> Maybe Bool -> Maybe Language -> Maybe Text -> EulerClient DriverProfileRes
 getKnowYourDriverClient = client getKnowYourFavDriverApi
 
 getKnowYourFavDriverApi :: Proxy GetKnowYourFavDriverDetailsAPI
@@ -789,10 +792,11 @@ getKnowYourFavDriverDetails ::
   BaseUrl ->
   Text ->
   Maybe Bool ->
+  Maybe Language ->
   m DriverProfileRes
-getKnowYourFavDriverDetails apiKey internalUrl bppRideId withImages = do
+getKnowYourFavDriverDetails apiKey internalUrl bppRideId withImages language = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId withImages (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId withImages language (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
 
 type GetDriverCoordinatesDetailsAPI =
   "internal"

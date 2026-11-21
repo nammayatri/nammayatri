@@ -128,10 +128,10 @@ findAllByImageId imageIds = findAllWithKV [Se.Or [Se.Is BeamDL.documentImageId1 
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
+  (Kernel.Types.Documents.VerificationStatus -> Text -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndRejectReason verificationStatus rejectReason rejectReasonKey (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDL.verificationStatus verificationStatus, Se.Set BeamDL.rejectReason (Just rejectReason), Se.Set BeamDL.updatedAt _now] [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId)]]
+  updateOneWithKV [Se.Set BeamDL.verificationStatus verificationStatus, Se.Set BeamDL.rejectReason (Just rejectReason), Se.Set BeamDL.rejectReasonKey rejectReasonKey, Se.Set BeamDL.updatedAt _now] [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId)]]
 
 -- | Update documentImageId1, verificationStatus, and rejectReason keyed on
 -- the DL's own id. Used in the reject path when the row's documentImageId1 is

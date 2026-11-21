@@ -668,7 +668,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         let goHomeReqId = finalUpdatedRide.driverGoHomeRequestId
         mbDriverPerson <- QP.findById finalUpdatedRide.driverId
         let endRideLanguage = fromMaybe KET.ENGLISH (mbDriverPerson >>= (.language))
-        endRideLabels <- DUIRideCommon.fetchEarningsLabels endRideLanguage
+        endRideLabels <- DUIRideCommon.fetchEarningsLabels finalUpdatedRide.merchantOperatingCityId endRideLanguage
         mbEndRideTransporterConfig <- findConfig (Just (TransactionId (Id booking.transactionId)))
         let endRideCalling =
               DUIRideCommon.ResolvedCalling

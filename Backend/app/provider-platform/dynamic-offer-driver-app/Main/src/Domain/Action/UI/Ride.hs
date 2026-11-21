@@ -238,7 +238,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive rideStatuses mbDay 
   transporterConfig <- case mocId of
     Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) Nothing
     Nothing -> pure Nothing
-  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
+  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverPerson.merchantOperatingCityId driverLanguage else pure Nothing
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
     (False, Just True) -> return []
@@ -272,7 +272,7 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   transporterConfig <- case mocId of
     Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) Nothing
     Nothing -> pure Nothing
-  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
+  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverPerson.merchantOperatingCityId driverLanguage else pure Nothing
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)

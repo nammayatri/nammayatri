@@ -118,6 +118,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
@@ -869,7 +870,8 @@ notifyDriverOnScheduledRideAssigned ::
   m ()
 notifyDriverOnScheduledRideAssigned booking ride driver = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+  content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned [("startTime", Notify.showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)] (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType content driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -1412,16 +1414,16 @@ sendUpdateEditDestErrToBAP ::
   ) =>
   DRB.Booking ->
   Text ->
-  Text ->
+  Enums.EditDestinationError ->
   Text ->
   m ()
-sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorCode errorMessage = do
+sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorReason errorMessage = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    let errorObject = DOU.DErrorObject {..}
+    let errorObject = DOU.DErrorObject {errorCode = show errorReason, errorMessage}
     retryConfig <- asks (.shortDurationRetryCfg)
     updateEditDestErrToBAP <- ACL.buildOnUpdateError merchant booking (Just bapBookingUpdateRequestId) errorObject
     void $ callOnUpdateV2 updateEditDestErrToBAP retryConfig merchant.id

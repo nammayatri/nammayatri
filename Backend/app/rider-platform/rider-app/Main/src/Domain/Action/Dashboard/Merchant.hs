@@ -107,6 +107,7 @@ import Kernel.External.Call (CallService (Exotel))
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Hedis as Redis
@@ -2404,31 +2405,40 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
-  mbExisting <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing
+  let language = fromMaybe ENGLISH req.language
+  mbExisting <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOpCity.id messageKey language
   now <- getCurrentTime
   case mbExisting of
     Nothing -> do
+      -- A new language row carries the link template and media of the key's English row unless the
+      -- request sets them; the builders read them from the row of the recipient's language.
+      mbEnglish <-
+        if language == ENGLISH || (isJust req.jsonData && isJust req.mediaUrl)
+          then pure Nothing
+          else QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOpCity.id messageKey ENGLISH
       parsedJsonData <-
         case req.jsonData of
-          Nothing -> pure def
+          Nothing -> pure $ maybe def (.jsonData) mbEnglish
           Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
       let merchantMessage =
             DMM.MerchantMessage
               { merchantId = merchant.id,
                 merchantOperatingCityId = merchantOpCity.id,
                 messageKey = messageKey,
+                language = language,
                 message = req.message,
                 templateId = req.templateId,
                 containsUrlButton = req.containsUrlButton,
                 jsonData = parsedJsonData,
                 messageType = req.messageType,
                 senderHeader = req.senderHeader,
-                mediaUrl = req.mediaUrl,
+                mediaUrl = req.mediaUrl <|> (mbEnglish >>= (.mediaUrl)),
                 createdAt = now,
                 updatedAt = now
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey
+      CQMM.clearCacheById merchantOpCity.id
     Just existing -> do
       parsedJsonData <-
         case req.jsonData of
@@ -2446,6 +2456,7 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
               }
       QMM.updateByPrimaryKey updated
       CQMM.clearCache merchantOpCity.id messageKey
+      CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 deleteMerchantMerchantMessage ::
@@ -2456,9 +2467,12 @@ deleteMerchantMerchantMessage ::
 deleteMerchantMerchantMessage merchantShortId city messageKeyText = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
-  _ <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  -- A row in any language: the delete removes the key in every language.
+  rows <- QMM.findAllByMerchantOpCityIdAndMessageKey merchantOpCity.id messageKey
+  when (null rows) $ throwError (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
   QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
   CQMM.clearCache merchantOpCity.id messageKey
+  CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 postMerchantCloudUpdate ::

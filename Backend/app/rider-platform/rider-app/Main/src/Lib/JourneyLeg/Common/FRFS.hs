@@ -491,6 +491,6 @@ cancelWithRefund mbRefund searchId cancellationType = do
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
     mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision booking
     mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False mbLiveDecision mbRefund booking
-    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
-      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
+    whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, mRiderLanguage, fareParameters, updatedBooking) -> do
+      FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking

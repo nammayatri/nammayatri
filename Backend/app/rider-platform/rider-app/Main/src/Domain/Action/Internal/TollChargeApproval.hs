@@ -27,6 +27,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRideStatus
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -114,7 +115,7 @@ requestTollChargeApproval apiKey bppBookingId req = do
     withTryCatch "dynamicNotifyPerson:tollChargeApproval" $
       Notify.dynamicNotifyPerson
         person
-        (Notify.createNotificationReq "TOLL_CHARGE_APPROVAL_REQUIRED" identity)
+        (Notify.createKeyedNotificationReq RiderPush_Ride_TollChargeApprovalRequired identity)
         approvalParam
         (Notification.Entity Notification.Product ride.id.getId approvalParam)
         Nothing

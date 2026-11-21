@@ -25,7 +25,7 @@ import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
@@ -65,7 +65,6 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
@@ -527,9 +526,20 @@ listOffersForPerson ::
   Person.Person ->
   Maybe HighPrecMoney ->
   m [OfferRespAPIEntity]
-listOffersForPerson merchantId person mbAmount = do
+listOffersForPerson = listOffersForPerson' Nothing
+
+-- | 'listOffersForPerson' with the offer texts in the given language rather than the person's:
+-- the dashboard passes its own user's.
+listOffersForPerson' ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Maybe Language ->
+  Id Merchant.Merchant ->
+  Person.Person ->
+  Maybe HighPrecMoney ->
+  m [OfferRespAPIEntity]
+listOffersForPerson' mbLanguage merchantId person mbAmount = do
   let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
-  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] [] Nothing Nothing Nothing
+  productOffers <- offerListWithBasket' mbLanguage merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] [] [] Nothing Nothing Nothing
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
@@ -570,6 +580,7 @@ listUsedOffersForPerson person merchantOperatingCityId = do
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": applied offers fall back to lifetime counts"
   let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = person.id.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
+      language = fromMaybe ENGLISH person.language
   now <- getCurrentTime
   fmap catMaybes $
     forM (mergeStatsByOffer statsRows) $ \stats -> do
@@ -578,7 +589,7 @@ listUsedOffersForPerson person merchantOperatingCityId = do
         uses <- case mbRider of
           Just rider -> Counters.countUses rider now offer.id offer.frequencyType
           Nothing -> pure stats.offerAppliedCount
-        pure $ mkUsedOfferAPIEntity stats offer uses
+        mkUsedOfferAPIEntity merchantOperatingCityId language stats offer uses
 
 -- Rows can be fragmented across several ids for one offer (see ddl-migration
 -- 1567); collapse them so an offer is listed once with its total.
@@ -599,23 +610,26 @@ mergeStatsByOffer = foldr insertMerged []
     addMoney Nothing Nothing = Nothing
     addMoney a b = Just (fromMaybe 0 a + fromMaybe 0 b)
 
-mkUsedOfferAPIEntity :: DOfferStats.OfferStats -> DOffer.Offer -> Int -> UsedOfferAPIEntity
-mkUsedOfferAPIEntity stats offer uses =
-  UsedOfferAPIEntity
-    { offerId = offer.id.getId,
-      offerCode = offer.offerCode,
-      offerTitle = offer.title,
-      offerDescription = offer.description,
-      offerType = Just offer.offerType,
-      appliedCount = uses,
-      totalAppliedCount = stats.offerAppliedCount,
-      maxApplyCount = offer.maxApplyCount,
-      frequencyType = offer.frequencyType,
-      isUsedUp = Counters.isUsedUp offer.maxApplyCount uses,
-      totalDiscountAmount = stats.totalDiscountAmount,
-      totalCashbackAmount = stats.totalCashbackAmount,
-      lastAppliedAt = stats.updatedAt
-    }
+mkUsedOfferAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Language -> DOfferStats.OfferStats -> DOffer.Offer -> Int -> m UsedOfferAPIEntity
+mkUsedOfferAPIEntity merchantOperatingCityId language stats offer uses = do
+  mbTitle <- CQTranslations.findTextByKey merchantOperatingCityId language (Offer_Title offer.id.getId)
+  mbDescription <- CQTranslations.findTextByKey merchantOperatingCityId language (Offer_Description offer.id.getId)
+  pure
+    UsedOfferAPIEntity
+      { offerId = offer.id.getId,
+        offerCode = offer.offerCode,
+        offerTitle = mbTitle <|> offer.title,
+        offerDescription = mbDescription <|> offer.description,
+        offerType = Just offer.offerType,
+        appliedCount = uses,
+        totalAppliedCount = stats.offerAppliedCount,
+        maxApplyCount = offer.maxApplyCount,
+        frequencyType = offer.frequencyType,
+        isUsedUp = Counters.isUsedUp offer.maxApplyCount uses,
+        totalDiscountAmount = stats.totalDiscountAmount,
+        totalCashbackAmount = stats.totalCashbackAmount,
+        lastAppliedAt = stats.updatedAt
+      }
 
 mkOfferRespAPIEntity ::
   (MonadFlow m) =>
@@ -646,9 +660,8 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         showMilestoneCard = uiConfigs >>= (.showMilestoneCard)
       }
 
--- | Replace each offer's display text (title/description/tnc) with the rider's
--- language translation from the shared `translations` table, keyed by OFFER_*.
--- Falls back to the offer's base text when no translation row exists.
+-- | Replace each offer's title, description and tnc with the Offer domain row for the rider's
+-- city and language ('Offer_Title', 'Offer_Description', 'Offer_Tnc'), else keep the offer's own text.
 translateOfferListResp ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -666,23 +679,17 @@ translateOffer ::
   Payment.OfferResp ->
   m Payment.OfferResp
 translateOffer merchantOperatingCityId language Payment.OfferResp {..} = do
-  mbTitle <- getTranslation "title"
-  mbDescription <- getTranslation "description"
-  mbTnc <- getTranslation "tnc"
+  mbTitle <- CQTranslations.findTextByKey merchantOperatingCityId language (Offer_Title offerId)
+  mbDescription <- CQTranslations.findTextByKey merchantOperatingCityId language (Offer_Description offerId)
+  mbTnc <- CQTranslations.findTextByKey merchantOperatingCityId language (Offer_Tnc offerId)
   let translatedDescription =
         Payment.OfferDescription
           { sponsoredBy = offerDescription.sponsoredBy,
-            title = maybe offerDescription.title (Just . (.message)) mbTitle,
-            description = maybe offerDescription.description (Just . (.message)) mbDescription,
-            tnc = maybe offerDescription.tnc (Just . (.message)) mbTnc
+            title = mbTitle <|> offerDescription.title,
+            description = mbDescription <|> offerDescription.description,
+            tnc = mbTnc <|> offerDescription.tnc
           }
   pure Payment.OfferResp {offerDescription = translatedDescription, ..}
-  where
-    getTranslation field =
-      getConfig (TranslationDimensions {merchantOperatingCityId = Just (getId merchantOperatingCityId), messageKey = mkOfferMessageKey offerId field, language = Just language}) (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache merchantOperatingCityId (mkOfferMessageKey offerId field) language))
-
-mkOfferMessageKey :: Text -> Text -> Text
-mkOfferMessageKey offerId field = "OFFER_" <> offerId <> "_" <> field
 
 mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do
@@ -728,7 +735,24 @@ offerListWithBasket ::
   Maybe DRB.Booking ->
   Maybe SSR.SearchRequest ->
   m [(Text, Payment.OfferListResp)]
-offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
+offerListWithBasket = offerListWithBasket' Nothing
+
+-- | 'offerListWithBasket' with the offer texts in the given language rather than the person's.
+offerListWithBasket' ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Maybe Language ->
+  Id Merchant.Merchant ->
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  DOrder.PaymentServiceType ->
+  [(Text, Price)] -> -- [(productId, price)]
+  [DEstimate.Estimate] -> -- matched to products by service tier
+  [DQuote.Quote] -> -- matched to products by service tier
+  Maybe DRide.Ride ->
+  Maybe DRB.Booking ->
+  Maybe SSR.SearchRequest ->
+  m [(Text, Payment.OfferListResp)]
+offerListWithBasket' mbLanguage merchantId personId merchantOperatingCityId paymentServiceType products estimates quotes mbRide mbBooking mbSearchReq = do
   -- Confirm also passes a search request, so a booking marks it as not being the quote flow.
   let isQuoteFlow = isJust mbSearchReq && isNothing mbBooking && isNothing (mbSearchReq >>= (.parentSearchRequestId))
   (person, personOfferStats, mbPersonStats) <- timeQuoteOfferStep isQuoteFlow "quotesOfferSetupReads" $ do
@@ -789,7 +813,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         offersByProduct <- timeQuoteOfferStep isQuoteFlow "quotesOfferEligibility" $ DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            language = fromMaybe ENGLISH person.language
+            language = fromMaybe ENGLISH (mbLanguage <|> person.language)
         fraudLogics <- if null offersByProduct then pure [] else getOffersFraudChecksLogics merchantOperatingCityId
         isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist fraudLogics person
         forM offersByProduct $ \(productId, offersForProduct) -> do

@@ -189,6 +189,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteTripStopMapping as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import qualified Domain.Types.TripAlertRequest as Fields
 import Domain.Types.TripTransaction
@@ -204,6 +205,7 @@ import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude hiding (toList)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -238,6 +240,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as SVehicleDocs
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -600,7 +603,9 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       DTA.AWAITING_APPROVAL -> WMB.updateAlertRequestStatus req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
+      DTA.REJECTED -> do
+        content <- Notification.buildMerchantPNContentWithFallback merchantOpCityId driver.language DriverPush_Driver_ApprovalRequestRejected [("requestType", requestType driverRequest)] ("Request Rejected!", message driverRequest)
+        Notification.requestRejectionNotification merchantOpCityId content driver driver.deviceToken driverRequest{DTR.status = DTA.REJECTED, DTR.reason = Just req.reason}
       DTA.ACCEPTED -> do
         case driverRequest.requestData of
           DTA.EndRide DTA.EndRideData {..} -> do
@@ -611,12 +616,12 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       _ -> pure ()
   pure Success
   where
-    notificationTitle = "Request Rejected!"
+    requestType req_ = show $ DTA.castAlertRequestDataToRequestType req_.requestData
     message req_ =
       cs $
         unwords
           [ "Sorry, your request for",
-            (show $ DTA.castAlertRequestDataToRequestType req_.requestData) <> " has been rejected",
+            requestType req_ <> " has been rejected",
             "Check the app for more details."
           ]
 
@@ -2925,7 +2930,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           (mbSender, message, templateId, messageType) <-
-            MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
+            MessageBuilder.buildFleetJoiningMessage merchantOpCityId person.language $
               MessageBuilder.BuildFleetJoiningMessageReq
                 { otp = otpCode,
                   fleetOwnerName = fleetOwnerName
@@ -2974,7 +2979,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         whenNothing_ useFakeOtpM $
           do
             (mbSender, message, templateId, messageType) <-
-              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
+              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId person.language $
                 MessageBuilder.BuildDownloadAppMessageReq
                   { fleetOwnerName = fleetOwner.firstName
                   }
@@ -4558,24 +4563,19 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
           ( \driverInfo ->
               DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
           )
-      pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
+      pure (DriverPush_Driver_FleetRequestApproved, \pn -> pn.body)
     _ -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
         QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
       SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig driverId
       pure
-        ( "FLEET_REQUEST_REJECTED",
+        ( DriverPush_Driver_FleetRequestRejected,
           \pn -> pn.body <> maybe "" (" " <>) req.reason
         )
 
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId pnType Nothing Nothing driver.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId pnType Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
-    let notification =
-          Notification.NotifReq
-            { title = merchantPN.title,
-              message = messageBuilder merchantPN,
-              entityId = driverId.getId
-            }
+    let notification = Notification.mkNotifReq driverId.getId (Notification.prebuiltPushContent merchantPN.title (messageBuilder merchantPN))
     Notification.notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken notification merchantPN.fcmNotificationType
   pure Success
 
@@ -5231,8 +5231,8 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
         statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
         pure $ mkStatusSummaryResponse statusCounts
 
-getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
-getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
+getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
+getDriverVehicleInfo merchantShortId opCity mbDashboardLanguage mbVehicleNo mbRcId = do
   when (isNothing mbVehicleNo && isNothing mbRcId) $ throwError (InvalidRequest "either vehicleNo or rcId is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -5278,6 +5278,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
       mbPerson <- B.runInReplica $ QPerson.findById dra.driverId
       DVehicle.mkAssociationInfo mbPerson Nothing dra.associatedTill dra.isRcActive
   let linkedDriverInfo = listToMaybe $ filter (.isActive) linkedDrivers <> linkedDrivers
+  rejectReason <- SVehicleDocs.translateRejectReason merchantOpCityId (fromMaybe ENGLISH mbDashboardLanguage) (SVehicleDocs.storedRejectReason vrc.rejectReasonKey vrc.rejectReason)
 
   pure $
     Common.VehicleInfo
@@ -5307,7 +5308,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
         Common.vehicleRatingRemark = vrc.vehicleRatingRemark,
         Common.vehicleModelYear = vrc.vehicleModelYear,
         Common.dateOfRegistration = vrc.dateOfRegistration,
-        Common.rejectReason = vrc.rejectReason,
+        Common.rejectReason = rejectReason,
         Common.approved = vrc.approved,
         Common.verified = vrc.verified,
         Common.reviewRequired = vrc.reviewRequired,

@@ -115,6 +115,66 @@
       });
     };
 
+    translation-keys-only = {
+      enable = true;
+      name = "translation-keys-only";
+      description = "User-visible text is read by a translation key through Storage.CachedQueries.Translations; the raw translations modules (queries, Beam, config-pilot config) may be imported only by that gateway, the dashboard translation editors and config tooling, and the typed push/SMS content escapes never take a string literal";
+      types = [ "file" ];
+      pass_filenames = true;
+      # Hand-written sources of the three apps that send user text; src-read-only is generated.
+      files = "Backend/app/(provider-platform|rider-platform|kafka-consumers)(/.*)?/src/.*\\.hs$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "translation-keys-only";
+        text = ''
+          # Haskell has no package-private module, so this is the fence around the raw translations query:
+          # the gateway (Storage.CachedQueries.Translations), the dashboard editors that write rows, config tooling, and the
+          # raw query module itself (Storage.Queries.TranslationsExtra).
+          bpp=Backend/app/provider-platform/dynamic-offer-driver-app/Main/src
+          bap=Backend/app/rider-platform/rider-app/Main/src
+          raw_import='^import[[:space:]]+(qualified[[:space:]]+)?("[^"]+"[[:space:]]+)?(qualified[[:space:]]+)?(Storage\.Queries\.Translations(Extra)?|Storage\.ConfigPilot\.Config\.Translation|Storage\.Beam\.Translations)([[:space:]]|$)'
+          # A string literal handed to the escape that bypasses PushContent / SmsBody construction from a row.
+          literal_escape='(prebuiltPushContent|prebuiltSmsBody)[[:space:]]*(\$[[:space:]]*)?\(?[[:space:]]*"|prebuiltPushContent[[:space:]]+[A-Za-z_][A-Za-z0-9_.'"'"']*[[:space:]]+\(?"'
+          allowed="
+          $bpp/Storage/CachedQueries/Translations.hs
+          $bpp/Storage/Queries/TranslationsExtra.hs
+          $bpp/Storage/ConfigPilot/Config/Translation.hs
+          $bpp/Tools/ConfigPilot.hs
+          $bpp/Domain/Action/Dashboard/Management/Translation.hs
+          $bpp/Domain/Action/Dashboard/Management/NammaTag.hs
+          $bpp/Domain/Action/Dashboard/Management/CoinsConfig.hs
+          $bap/Storage/CachedQueries/Translations.hs
+          $bap/Storage/Queries/TranslationsExtra.hs
+          $bap/Storage/ConfigPilot/Config/Translation.hs
+          $bap/Tools/ConfigPilot.hs
+          $bap/Domain/Action/Dashboard/Translation.hs
+          $bap/Domain/Action/Dashboard/NammaTag.hs
+          "
+          fail=0
+          for f in "$@"; do
+            # shellcheck disable=SC2086 # the allowlist is split on whitespace on purpose
+            if ! printf '%s\n' $allowed | grep -qxF -- "$f" && grep -nE -- "$raw_import" "$f"; then
+              echo "ERROR: $f imports the raw translations query outside the gateway (shown above)."
+              fail=1
+            fi
+            if grep -nE -- "$literal_escape" "$f"; then
+              echo "ERROR: $f passes a string literal to prebuiltPushContent / prebuiltSmsBody (shown above)."
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo
+            echo "User-visible text is read by key so the translations page can show and translate it:"
+            echo "  • add a constructor in Domain/Types/TranslationKeys.hs and read it with Storage.CachedQueries.Translations.findTextByKey"
+            echo "  • keys that ops type into config rows: Storage.CachedQueries.Translations.findByOpsKey"
+            echo "  • pushes take PushContent (buildMerchantPNContentWithFallback / pushContentOfRow) and SMS take SmsBody (the MessageBuilder build* functions);"
+            echo "    prebuiltPushContent / prebuiltSmsBody are only for text that is final already (typed by ops, sent by another service, never displayed)"
+            echo "Only a translations editor or config tool may touch the raw query; add its path to the allowlist in Backend/nix/pre-commit.nix."
+            exit 1
+          fi
+        '';
+      });
+    };
+
     pre-push-build = {
       enable = true;
       name = "pre-push-build";

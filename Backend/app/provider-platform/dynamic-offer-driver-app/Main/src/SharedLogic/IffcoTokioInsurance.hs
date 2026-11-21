@@ -188,7 +188,6 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
                   Notify.notifyDriver
                     merchantOpCityId
                     FCM.NEW_MESSAGE
-                    iffcoExtCfg.fcmNotificationTitle
-                    iffcoExtCfg.fcmNotificationMessage
+                    (Notify.prebuiltPushContent iffcoExtCfg.fcmNotificationTitle iffcoExtCfg.fcmNotificationMessage)
                     person
                     person.deviceToken

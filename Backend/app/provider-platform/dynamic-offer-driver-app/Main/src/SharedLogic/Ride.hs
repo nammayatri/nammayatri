@@ -35,6 +35,7 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
 import qualified Domain.Types.ServiceTierType as DST
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
@@ -270,8 +271,15 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
   if booking.isScheduled
-    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken
-    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+    then do
+      -- A booking with passenger or luggage counts gets the text that carries its group line.
+      let mbGroup = luggageGroup booking
+          pushKey = maybe DriverPush_Ride_ScheduledAssigned (const DriverPush_Ride_ScheduledAssignedWithGroup) mbGroup
+      content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language pushKey (templateParams transporterConfig.timeDiffFromUtc booking <> [("group", fromMaybe "" mbGroup)]) (notificationTitle, messageForScheduled transporterConfig.timeDiffFromUtc booking)
+      Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION content driver driver.deviceToken
+    else do
+      content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned (templateParams transporterConfig.timeDiffFromUtc booking) (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
+      Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType content driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -285,6 +293,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
+    templateParams timeDiffFromUtc uBooking = [("startTime", Notify.showLocalTime timeDiffFromUtc uBooking.startTime)]
+    luggageGroup uBooking = SPL.passengerLuggageSummary uBooking.numberOfPassengers uBooking.numberOfCheckInBags uBooking.numberOfCabinBags
 
     message timeDiffFromUtc uBooking =
       cs $
@@ -299,7 +309,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           ( [ "You have been assigned a scheduled ride for",
               cs (Notify.showLocalTime timeDiffFromUtc uBooking.startTime) <> "."
             ]
-              <> maybe [] (\group -> ["Group: " <> cs group <> "."]) (SPL.passengerLuggageSummary uBooking.numberOfPassengers uBooking.numberOfCheckInBags uBooking.numberOfCabinBags)
+              <> maybe [] (\group -> ["Group: " <> cs group <> "."]) (luggageGroup uBooking)
               <> ["Check the app for more details."]
           )
 

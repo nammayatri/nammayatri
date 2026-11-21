@@ -3,6 +3,7 @@
 -- the "emailDeliveryId" tag, so delivery and bounce events can later be matched back to the record.
 module SharedLogic.TdsDistribution.Delivery
   ( sendRecordCertificate,
+    certificateEmailText,
     TdsEmailSettings (..),
     getTdsEmailSettings,
     latestPdfFile,
@@ -17,12 +18,15 @@ import Data.List (sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Domain.Types.EmailDelivery as DED
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TDSDistributionBatch as DTB
 import qualified Domain.Types.TDSDistributionPdfFile as DTF
 import Domain.Types.TDSDistributionRecord
 import qualified Email.Flow as Email
 import Email.Types (EmailServiceConfig)
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -31,6 +35,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.EmailDelivery as EmailDelivery
 import qualified SharedLogic.TdsDistribution as STD
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.EmailDelivery as QEmailDelivery
 import qualified Storage.Queries.Person as QPerson
@@ -126,6 +131,7 @@ sendRecordCertificate settings mbOverrideEmail mbTriggeredBy autoRetry staleReco
     sendAttempt record pdfFile mbPerson email now = do
       -- Before anything is written, so a failure here leaves no attempt stuck in SENDING.
       downloadUrl <- S3.generateDownloadUrl (T.unpack pdfFile.s3FilePath) (Seconds 300)
+      (subject, body) <- certificateEmail record pdfFile.recipientType mbPerson
       deliveryId <- generateGUID
       QEmailDelivery.create
         DED.EmailDelivery
@@ -159,7 +165,6 @@ sendRecordCertificate settings mbOverrideEmail mbTriggeredBy autoRetry staleReco
                 updatedAt = now
               }
       QRecord.updateByPrimaryKey attempting
-      let (subject, body) = certificateEmail attempting pdfFile.recipientType (STD.personDisplayName <$> mbPerson)
       sendResult <-
         try @_ @SomeException $
           EmailDelivery.sendEmail
@@ -214,9 +219,23 @@ classifySendFailure err
   where
     lowered = T.toLower err
 
-certificateEmail :: TDSDistributionRecord -> Maybe DTF.TDSRecipientType -> Maybe Text -> (Text, Text)
-certificateEmail record mbRecipientType mbName = (subject, body)
+-- | The subject and body of a certificate email: the city's @TDS_CERTIFICATE_EMAIL@ row in the
+-- recipient's language, its title the subject and its message the body, @{#period#}@ and
+-- @{#name#}@ filled in on both, else the text the sender built (today's wording).
+certificateEmailText :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> Text -> Text -> (Text, Text) -> m (Text, Text)
+certificateEmailText cityId mbLanguage period name (subject, body) = do
+  mbRow <- CQMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory cityId DMM.TDS_CERTIFICATE_EMAIL mbLanguage Nothing Nothing
+  pure $ case mbRow of
+    Just row -> (maybe subject fill row.title, fill row.message)
+    Nothing -> (subject, body)
   where
+    fill = T.replace "{#period#}" period . T.replace "{#name#}" name
+
+certificateEmail :: (CacheFlow m r, EsqDBFlow m r) => TDSDistributionRecord -> Maybe DTF.TDSRecipientType -> Maybe DP.Person -> m (Text, Text)
+certificateEmail record mbRecipientType mbPerson =
+  certificateEmailText record.merchantOperatingCityId (mbPerson >>= (.language)) period greeting (subject, body)
+  where
+    mbName = STD.personDisplayName <$> mbPerson
     period = case record.financialYear of
       Just financialYear -> record.quarter <> " FY " <> financialYear
       Nothing -> record.quarter <> " AY " <> record.assessmentYear

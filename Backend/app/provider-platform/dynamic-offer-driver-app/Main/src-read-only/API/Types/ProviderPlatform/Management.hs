@@ -44,6 +44,7 @@ import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified API.Types.ProviderPlatform.Management.TdsDistribution
+import qualified API.Types.ProviderPlatform.Management.Translation
 import qualified API.Types.ProviderPlatform.Management.Vehicle
 import qualified API.Types.ProviderPlatform.Management.VehicleDetails
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
@@ -97,6 +98,7 @@ data ManagementUserActionType
   | SPECIAL_ZONE_QUEUE API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
   | TDS_DISTRIBUTION API.Types.ProviderPlatform.Management.TdsDistribution.TdsDistributionUserActionType
+  | TRANSLATION API.Types.ProviderPlatform.Management.Translation.TranslationUserActionType
   | VEHICLE API.Types.ProviderPlatform.Management.Vehicle.VehicleUserActionType
   | VEHICLE_DETAILS API.Types.ProviderPlatform.Management.VehicleDetails.VehicleDetailsUserActionType
   | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
@@ -147,6 +149,7 @@ instance Text.Show.Show ManagementUserActionType where
     SPECIAL_ZONE_QUEUE e -> "SPECIAL_ZONE_QUEUE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
     TDS_DISTRIBUTION e -> "TDS_DISTRIBUTION/" <> show e
+    TRANSLATION e -> "TRANSLATION/" <> show e
     VEHICLE e -> "VEHICLE/" <> show e
     VEHICLE_DETAILS e -> "VEHICLE_DETAILS/" <> show e
     VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
@@ -510,6 +513,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "TDS_DISTRIBUTION/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSLATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSLATION/" r,
                    ( v1,
                      r2
                      ) <-

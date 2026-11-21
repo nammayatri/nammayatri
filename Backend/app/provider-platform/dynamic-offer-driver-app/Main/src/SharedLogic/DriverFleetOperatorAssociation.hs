@@ -25,7 +25,6 @@ module SharedLogic.DriverFleetOperatorAssociation
 where
 
 import Data.List (nub)
-import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DriverInformation as DI
@@ -34,9 +33,9 @@ import qualified Domain.Types.DriverReferral as Fields
 import qualified Domain.Types.FleetOperatorAssociation as DFOA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Utils (defaultAssociationEnd)
@@ -159,11 +158,9 @@ endDriverAssociationsKeepingInviteFrom merchantOpCityId transporterConfig driver
       -- send notification to existing operator about driver unlink
       mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)
       whenJust mbExistingOperator $ \existingOperator -> do
-        mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId (show Notification.DRIVER_UNLINK_FROM_OPERATOR) Nothing Nothing existingOperator.language Nothing
+        mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Operator_DriverUnlinked Nothing Nothing existingOperator.language Nothing
         whenJust mbMerchantPN $ \merchantPN -> do
-          let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
-          let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
-          TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) Nothing ()
+          TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR (TN.pushContentOfRow merchantPN [("driverName", driverFullName), ("driverNo", driverMobile)]) (Id existingAssociation.operatorId) Nothing ()
 
   let isFromLinkingParty partyId = Just partyId == (getId <$> mbLinkingPartyId)
   pendingOperatorInvites <- QDOA.findAllByDriverId driver.id False
@@ -195,12 +192,9 @@ endFleetAssociations merchantOpCityId transporterConfig fleetOwner = do
     -- send notification to existing operator about fleet unlink
     mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)
     whenJust mbExistingOperator $ \existingOperator -> do
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId (show Notification.FLEET_UNLINK_FROM_OPERATOR) Nothing Nothing existingOperator.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Operator_FleetUnlinked Nothing Nothing existingOperator.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
-        let title = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.title
-        let body = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.body
-
-        TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) Nothing ()
+        TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR (TN.pushContentOfRow merchantPN [("fleetName", fleetOwnerFullName), ("fleetNo", fleetOwnerMobile)]) (Id existingAssociation.operatorId) Nothing ()
 
 makeFleetOperatorAssociation ::
   (MonadFlow m) =>
@@ -352,7 +346,7 @@ sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId coun
   smsCfg <- asks (.smsCfg)
   withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+      MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId person.language $
         MessageBuilder.BuildOperatorDeepLinkAuthMessage
           { operatorName = operator.firstName
           }

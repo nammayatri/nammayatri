@@ -16,8 +16,8 @@ module SharedLogic.DashboardAlert
   ( AlertActor (..),
     audiencesFor,
     withoutAdminAudience,
-    onboardingAlertKey,
     DashboardAlertFlow,
+    audienceLanguage,
     driverAlertHandle,
     notifyOnboardingChange,
     notifyAdminsRealtime,
@@ -43,6 +43,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.GRPC.Types as GRPCTypes
 import Kernel.External.Types (Language)
@@ -148,41 +149,10 @@ buildOnboardingContent entityType entityId action title body requestorId merchan
           ttlSeconds = Seconds 300
         }
 
-actionKey :: DOnboardingAlertAction.OnboardingAlertAction -> Text
-actionKey = \case
-  DOnboardingAlertAction.LinkVehicleAction -> "LINK_VEHICLE"
-  DOnboardingAlertAction.UnlinkVehicleAction -> "UNLINK_VEHICLE"
-  DOnboardingAlertAction.ActivateVehicleAction -> "ACTIVATE_VEHICLE"
-  DOnboardingAlertAction.DeactivateVehicleAction -> "DEACTIVATE_VEHICLE"
-  DOnboardingAlertAction.LinkToOperatorAction -> "LINK_TO_OPERATOR"
-  DOnboardingAlertAction.UnlinkFromOperatorAction -> "UNLINK_FROM_OPERATOR"
-  DOnboardingAlertAction.UnlinkFromFleetAction -> "UNLINK_FROM_FLEET"
-  DOnboardingAlertAction.AddAction -> "ADD"
-  DOnboardingAlertAction.DeleteAction -> "DELETE"
-  DOnboardingAlertAction.EnableAction -> "ENABLE"
-  DOnboardingAlertAction.DisableAction -> "DISABLE"
-  DOnboardingAlertAction.BlockAction -> "BLOCK"
-  DOnboardingAlertAction.UnblockAction -> "UNBLOCK"
-  DOnboardingAlertAction.ApproveAction -> "APPROVE"
-  DOnboardingAlertAction.RejectAction -> "REJECT"
-  DOnboardingAlertAction.SetOnboardingAsAction -> "SET_ONBOARDING_AS"
-  DOnboardingAlertAction.LinkToFleetAction -> "LINK_TO_FLEET"
-  DOnboardingAlertAction.ActivateToFleetAction -> "ACTIVATE_TO_FLEET"
-  DOnboardingAlertAction.DeactivateFromFleetAction -> "DEACTIVATE_FROM_FLEET"
-  DOnboardingAlertAction.ViewAction -> "VIEW"
-  DOnboardingAlertAction.ChangeFleetOwnerAction -> "CHANGE_FLEET_OWNER"
-  DOnboardingAlertAction.ExpireAction -> "EXPIRE"
-  DOnboardingAlertAction.UnlinkDocumentAction -> "UNLINK_DOCUMENT"
-  DOnboardingAlertAction.OnboardingFlagMutationAction -> "ONBOARDING_FLAG_MUTATION"
-  DOnboardingAlertAction.DocumentApprovalPendingAction -> "DOCUMENT_APPROVAL_PENDING"
-
-audienceKeySuffix :: DAA.Audience -> Text
-audienceKeySuffix = \case
-  DAA.AccessTypeAudience accessType -> show accessType
-  DAA.FleetOwnerAudience _ -> "FLEET_OWNER"
-
-onboardingAlertKey :: DOnboardingAlertAction.OnboardingAlertAction -> DAA.Audience -> Text
-onboardingAlertKey action audience = "ONBOARDING_ALERT_" <> actionKey action <> "_" <> audienceKeySuffix audience
+audienceAccessType :: DAA.Audience -> DAA.DashboardAccessType
+audienceAccessType = \case
+  DAA.AccessTypeAudience accessType -> accessType
+  DAA.FleetOwnerAudience _ -> DAA.FLEET_OWNER
 
 audienceLanguage :: DashboardAlertFlow m r => DAA.Audience -> m (Maybe Language)
 audienceLanguage = \case
@@ -203,10 +173,10 @@ notifyOnboardingChange ::
 notifyOnboardingChange audiences entityType entityId action dynamicParams requestorId merchantId merchantOpCityId =
   forM_ audiences $ \audience -> do
     mbLanguage <- audienceLanguage audience
-    mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (onboardingAlertKey action audience) dynamicParams
-    whenJust mbContent $ \(title, body) ->
+    mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (DriverPush_OnboardingAlert action (audienceAccessType audience)) dynamicParams
+    whenJust mbContent $ \content ->
       DAT.triggerRealtime driverAlertHandle [audience] $
-        buildOnboardingContent entityType entityId action title body requestorId merchantId merchantOpCityId
+        buildOnboardingContent entityType entityId action content.pushTitle content.pushBody requestorId merchantId merchantOpCityId
 
 notifyAdminsRealtime ::
   DashboardAlertFlow m r =>
@@ -236,12 +206,6 @@ notifyFleetOwnerRealtime fleetOwnerId = notifyOnboardingChange [DAA.FleetOwnerAu
 dashboardAudiences :: [DAA.Audience]
 dashboardAudiences = [DAA.AccessTypeAudience DAA.DASHBOARD_ADMIN, DAA.AccessTypeAudience DAA.DASHBOARD_USER]
 
-configRequestTypeKey :: DAlertType.AlertRequestType -> Text
-configRequestTypeKey = \case
-  DAlertType.FareConfigUpdate -> "FARE_CONFIG_UPDATE"
-  DAlertType.OperatingCityCreate -> "OPERATING_CITY_CREATE"
-  other -> show other
-
 mkConfigAlertData :: Text -> Text -> Text -> DAlertData.ConfigAlertData
 mkConfigAlertData entityId title body =
   DAlertData.ConfigAlertData
@@ -250,9 +214,6 @@ mkConfigAlertData entityId title body =
       title = title,
       body = body
     }
-
-configAlertKey :: DAlertType.AlertRequestType -> DAA.Audience -> Text
-configAlertKey requestType audience = "CONFIG_ALERT_" <> configRequestTypeKey requestType <> "_" <> audienceKeySuffix audience
 
 buildConfigContent ::
   Text ->
@@ -299,8 +260,8 @@ notifyDashboardConfigChange audiences entityId mkRequestData dynamicParams reque
   let requestType = DAlert.castAlertRequestDataToRequestType (mkRequestData (mkConfigAlertData entityId "" ""))
   forM_ audiences $ \audience -> do
     mbLanguage <- audienceLanguage audience
-    mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (configAlertKey requestType audience) dynamicParams
-    whenJust mbContent $ \(title, body) ->
+    mbContent <- TN.buildMerchantPNContent merchantOpCityId mbLanguage (DriverPush_ConfigAlert requestType (audienceAccessType audience)) dynamicParams
+    whenJust mbContent $ \content ->
       void $
         DAT.triggerPersist driverAlertHandle [audience] $
-          buildConfigContent entityId mkRequestData title body requestorId merchantId merchantOpCityId
+          buildConfigContent entityId mkRequestData content.pushTitle content.pushBody requestorId merchantId merchantOpCityId

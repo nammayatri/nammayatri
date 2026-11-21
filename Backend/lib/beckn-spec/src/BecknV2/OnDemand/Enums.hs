@@ -366,6 +366,16 @@ instance Read SafetyReasonCode where
     "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
     _ -> []
 
+-- | Why the provider refused a destination edit; sent as the on_update error code so the
+-- consumer side can word it for the rider.
+data EditDestinationError
+  = DRIVER_HAS_UPCOMING_RIDE
+  | DECLINED_BY_DRIVER
+  | UNANSWERED_BY_DRIVER
+  | NOT_POSSIBLE_NOW
+  | TOLL_NOT_ALLOWED
+  deriving (Show, Read, Eq, Ord, Generic, Bounded, Enum)
+
 data TLMethod
   = HttpGet
   | HttpPost

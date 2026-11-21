@@ -14,6 +14,7 @@ import qualified Domain.Types.PaymentChargeBearer
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
 import qualified EulerHS.Types
+import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
@@ -157,7 +158,8 @@ data UpsertRiderMerchantMessageReq = UpsertRiderMerchantMessageReq
     jsonData :: Kernel.Prelude.Maybe Data.Aeson.Value,
     messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    language :: Kernel.Prelude.Maybe Kernel.External.Types.Language
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -40,6 +40,7 @@ import qualified Domain.Types.DriverPlan as Fields
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import qualified Domain.Types.Mandate as DMandate
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -63,7 +64,7 @@ import qualified Storage.Queries.Mandate as QMandate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error (DriverError (WalletBalanceBelowMinimum), WalletBalanceBelowMinimumPayload (..), WalletBlockReason (..))
-import Tools.Notifications (sendNotificationToDriver)
+import Tools.Notifications (buildMerchantPNContentWithFallback, sendNotificationToDriver)
 
 data WalletFloor = WalletFloor
   { requiredBalance :: HighPrecMoney,
@@ -174,10 +175,9 @@ setOfflineIfBelowFloor transporterConfig person driverInfo floor' balance =
     now <- getCurrentTime
     DDriverMode.updateDriverModeAndFlowStatus person.id transporterConfig False (Just DCommon.OFFLINE) DDFS.OFFLINE driverInfo Nothing (Just now)
     logInfo $ "Wallet floor: driver " <> person.id.getId <> " set offline, balance " <> show balance <> " below " <> show floor'.requiredBalance
-    let title = "You're offline"
-        message = "Your wallet balance is below Rs." <> show floor'.requiredBalance <> ". Recharge your wallet to go online."
-    fork "wallet floor offline notification" $
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY title message person person.deviceToken
+    fork "wallet floor offline notification" $ do
+      content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Wallet_OfflineBelowFloor [("requiredBalance", show floor'.requiredBalance)] ("You're offline", "Your wallet balance is below Rs." <> show floor'.requiredBalance <> ". Recharge your wallet to go online.")
+      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content person person.deviceToken
 
 -- | Follow-up to a debit that may have crossed a threshold (nightly fee, dues migration, penalty):
 --   when the driver's wallet is at or below the trigger level ('autopayTriggerBalance'), schedule an
@@ -216,15 +216,19 @@ afterWalletDebit transporterConfig driver = do
       now <- getCurrentTime
       isFirstToday <- Redis.setNxExpire (lowBalanceNudgeKey driver.id now) (24 * 3600) True
       when isFirstToday $ do
-        let enforcedLine = case mbMinimum of
-              Just minBalance | minBalanceEnforced -> " Minimum Rs." <> show minBalance <> " needed to go online."
-              _ -> ""
-            rechargeHint = if walletSubscription then "Recharge your wallet or set up Autopay." else "Recharge your wallet."
-            message = case mbRecharge of
-              Just recharge -> "Your wallet balance is Rs." <> show balance <> ". Rs." <> show recharge.platformFee.fee <> " will be added by Autopay." <> enforcedLine
-              Nothing -> "Your wallet balance is Rs." <> show balance <> ". " <> rechargeHint <> enforcedLine
-        fork "wallet low balance nudge" $
-          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY "Low wallet balance" message driver driver.deviceToken
+        let enforcedMinimum = if minBalanceEnforced then mbMinimum else Nothing
+            enforcedLine = maybe "" (\minBalance -> " Minimum Rs." <> show minBalance <> " needed to go online.") enforcedMinimum
+            withMinimum plain withMinimumLine = if isJust enforcedMinimum then withMinimumLine else plain
+            -- One key per English wording, so each wording has its own translation.
+            (key, message) = case mbRecharge of
+              Just recharge -> (withMinimum DriverPush_Wallet_LowBalanceAutopay DriverPush_Wallet_LowBalanceAutopayMinimum, "Your wallet balance is Rs." <> show balance <> ". Rs." <> show recharge.platformFee.fee <> " will be added by Autopay." <> enforcedLine)
+              Nothing
+                | walletSubscription -> (withMinimum DriverPush_Wallet_LowBalanceSetupAutopay DriverPush_Wallet_LowBalanceSetupAutopayMinimum, "Your wallet balance is Rs." <> show balance <> ". Recharge your wallet or set up Autopay." <> enforcedLine)
+                | otherwise -> (withMinimum DriverPush_Wallet_LowBalance DriverPush_Wallet_LowBalanceMinimum, "Your wallet balance is Rs." <> show balance <> ". Recharge your wallet." <> enforcedLine)
+            templateParams = [("balance", show balance), ("rechargeAmount", maybe "" (show . (.platformFee.fee)) mbRecharge), ("minBalance", maybe "" show mbMinimum)]
+        fork "wallet low balance nudge" $ do
+          content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language key templateParams ("Low wallet balance", message)
+          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content driver driver.deviceToken
   where
     dwc = transporterConfig.driverWalletConfig
     lowBalanceNudgeKey driverId now = "WalletLowBalanceNudge:" <> driverId.getId <> ":" <> show (utctDay now)

@@ -470,10 +470,10 @@ countAllRCForFleet fleetOwnerId (Id merchantId') = do
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
+  (Documents.VerificationStatus -> Text -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndRejectReason verificationStatus rejectReason rejectReasonKey (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
+  updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.rejectReasonKey rejectReasonKey, Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
 
 findAllValidRcByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
 findAllValidRcByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchString mbSearchStringHash = do

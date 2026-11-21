@@ -88,7 +88,7 @@ toKernelLanguage = \case
 lookupKey :: Id DMOC.MerchantOperatingCity -> SupportedLanguage -> Text -> Flow (Maybe Text)
 lookupKey mocId lang key = do
   let wantLang = toKernelLanguage lang
-  mRow <- CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId key wantLang
+  mRow <- CQTranslations.findByOpsKeyInTable mocId wantLang key
   case mRow of
     Just row | row.language == wantLang -> pure (Just row.message)
     Just row -> do

@@ -262,6 +262,7 @@ library
       Domain.Types.SharedRoute
       Domain.Types.StationType
       Domain.Types.TrackingStatus
+      Domain.Types.TranslationKey
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant
