@@ -31,9 +31,12 @@ import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Domain.Action.Beckn.Search
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types as DT
@@ -762,7 +765,8 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
       Tags.IS_ALREADY_FAVOURITE ~=| (isAlreadyFav, show isAlreadyFav),
       Tags.FAVOURITE_COUNT ~= show favCount,
       Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus),
-      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated)
+      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated),
+      Tags.DRIVER_CALL_IDENTITY ~= T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 driver.id.getId))))
     ]
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]

@@ -39,11 +39,14 @@ module Domain.Action.UI.Call
 where
 
 import Data.Aeson (object, (.=))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Char (toUpper)
+import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HMS
 import Data.Map as DM
 import qualified Data.Maybe as DM
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time (timeToTimeOfDay, utctDayTime)
@@ -532,8 +535,12 @@ getCallTwillioAccessToken rideId entity deviceType = do
   entityId <- case entity of
     Domain.Action.UI.Call.CUSTOMER ->
       return booking.transactionId
-    Domain.Action.UI.Call.DRIVER ->
-      return ride.id.getId
+    Domain.Action.UI.Call.DRIVER -> do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+      return $
+        if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True
+          then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 ride.driverId.getId))))
+          else ride.id.getId
   getAccessToken entityId ride.merchantOperatingCityId
   where
     getAccessToken id cityId = do
@@ -562,7 +569,9 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      let dial = Dial (Just (T.unpack booking.transactionId))
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+      let riderCallIdentity = if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True then booking.riderCallIdentity else Nothing
+          dial = Dial (Just (T.unpack (fromMaybe booking.transactionId riderCallIdentity)))
       return $ Just dial
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp

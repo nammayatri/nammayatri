@@ -109,6 +109,7 @@ data Booking = Booking
     receiverDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    riderCallIdentity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

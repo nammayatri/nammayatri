@@ -34,12 +34,15 @@ module Domain.Action.UI.Call
 where
 
 import Data.Aeson (object, (.=))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Char as DC
+import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, nubBy)
 import qualified Data.Map as M
 import Data.Text hiding (elem, filter, find, map, null)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
@@ -609,7 +612,11 @@ getCallTwillioAccessToken rideId entity deviceType = do
   booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   entityId <- case entity of
     Domain.Action.UI.Call.CUSTOMER -> do
-      return booking.transactionId
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      return $
+        if (riderConfig >>= (.enablePersonCallIdentity)) == Just True
+          then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 booking.riderId.getId))))
+          else booking.transactionId
     Domain.Action.UI.Call.DRIVER -> do
       return ride.bppRideId.getId
   getAccessToken entityId (fromMaybe booking.merchantOperatingCityId ride.merchantOperatingCityId) (fromMaybe booking.merchantId ride.merchantId)
@@ -637,7 +644,9 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
   let say = Just "Please wait while we are making the call"
   dial <- case entity of
     Domain.Action.UI.Call.CUSTOMER -> do
-      let dial = Dial (Just (T.unpack ride.bppRideId.getId))
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      let driverCallIdentity = if (riderConfig >>= (.enablePersonCallIdentity)) == Just True then ride.driverCallIdentity else Nothing
+          dial = Dial (Just (T.unpack (fromMaybe ride.bppRideId.getId driverCallIdentity)))
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       let dial = Dial (Just (T.unpack booking.transactionId))

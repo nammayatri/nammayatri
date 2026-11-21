@@ -27,6 +27,10 @@ module SharedLogic.OneShotAssign
 where
 
 import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Digest.Pure.MD5 as MD5
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride as DRideUI
@@ -240,7 +244,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
               registeredAt = Just driver.createdAt,
               image = rideAssignedReq.image,
               isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
-              accountId = Nothing -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              accountId = Nothing, -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              callIdentity = Just (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 driver.id.getId)))))
             },
         vehicleDetails =
           CallBAPInternal.OneShotVehicleDetails

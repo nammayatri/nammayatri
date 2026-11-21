@@ -91,6 +91,7 @@ data DConfirmReq = DConfirmReq
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
     consentToShareMobileNumber :: Maybe Bool,
+    customerCallIdentity :: Maybe Text,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
@@ -140,6 +141,7 @@ handler merchant req validatedQuote = do
   unless isNewRider $ do
     QRD.updateNightSafetyChecks req.nightSafetyCheck storedRiderDetails.id
     whenJust req.consentToShareMobileNumber $ \consent -> QRD.updateConsentToShareMobileNumber (Just consent) storedRiderDetails.id
+  whenJust req.customerCallIdentity $ \callIdentity -> QRB.updateRiderCallIdentity (Just callIdentity) booking.id
   let riderDetails = storedRiderDetails {DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber}
 
   case validatedQuote of

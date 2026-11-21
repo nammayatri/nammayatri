@@ -210,6 +210,7 @@ data TransporterConfig = TransporterConfig
     enableMobilityBilling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOndcScheduledRideSupport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
+    enablePersonCallIdentity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePullPendingDocVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableScheduleReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

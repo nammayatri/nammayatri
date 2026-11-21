@@ -141,6 +141,7 @@ Booking:
     addOnData: "[AddOnData]"
     paymentChargeDetails: Maybe PaymentChargeDetails
     taxRates: Maybe DriverTaxRates
+    riderCallIdentity: Maybe Text
 
   excludedFields:
     - merchantId
@@ -306,6 +307,10 @@ Booking:
     updateTaxRates:
       kvFunction: updateOneWithKV
       params: [taxRates]
+      where: id
+    updateRiderCallIdentity:
+      kvFunction: updateOneWithKV
+      params: [riderCallIdentity]
       where: id
 
   constraints:
