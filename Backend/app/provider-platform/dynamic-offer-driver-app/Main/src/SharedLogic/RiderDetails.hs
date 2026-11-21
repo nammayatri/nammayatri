@@ -66,6 +66,7 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             disputeChancesUsed = 0,
             nightSafetyChecks = nightSafetyCheck,
             consentToShareMobileNumber = consentToShareMobileNumber,
+            callIdentity = Nothing,
             customerRating = Nothing,
             customerTotalRatings = Nothing,
             customerGender = Nothing,

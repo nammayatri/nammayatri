@@ -127,7 +127,7 @@ data Response = Response
   deriving stock (Generic, Show)
 
 newtype Dial = Dial
-  { client :: Maybe String
+  { clients :: [String]
   }
   deriving stock (Generic, Show)
 
@@ -529,25 +529,67 @@ getCallTwillioAccessToken ::
 getCallTwillioAccessToken rideId entity deviceType = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  entityId <- case entity of
-    Domain.Action.UI.Call.CUSTOMER ->
-      return booking.transactionId
-    Domain.Action.UI.Call.DRIVER ->
-      return ride.id.getId
-  getAccessToken entityId ride.merchantOperatingCityId
-  where
-    getAccessToken id cityId = do
-      twillioCallConfig :: TwillioCallCfg <- getCfg cityId
-      createJWT id twillioCallConfig deviceType
-    getCfg cityId = do
-      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = Nothing, serviceName = Just (DMSC.CallService Call.TwillioCall)}) Nothing >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
-      case merchantServConfig.serviceConfig of
-        DMSC.CallServiceConfig config ->
-          case config of
-            TwillioCallConfig cfg -> return cfg
-            _ -> throwError $ InternalError "Twillio configs not foung"
-        _ -> throwError $ InternalError "Twillio configs not foung"
+  identities <- getRideCallIdentities ride booking
+  let entityId = case entity of
+        Domain.Action.UI.Call.CUSTOMER -> preferredCallIdentity identities.riderCall
+        Domain.Action.UI.Call.DRIVER -> preferredCallIdentity identities.driverCall
+  twillioCallConfig <- getTwillioCallCfg ride.merchantOperatingCityId
+  createJWT entityId twillioCallConfig deviceType
 
+getTwillioCallCfg :: Id DMOC.MerchantOperatingCity -> Flow TwillioCallCfg
+getTwillioCallCfg cityId = do
+  merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = Nothing, serviceName = Just (DMSC.CallService Call.TwillioCall)}) Nothing >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+  case merchantServConfig.serviceConfig of
+    DMSC.CallServiceConfig config ->
+      case config of
+        TwillioCallConfig cfg -> return cfg
+        _ -> throwError $ InternalError "Twillio configs not foung"
+    _ -> throwError $ InternalError "Twillio configs not foung"
+
+-- | One side's Twilio identities for a ride: the per-person one (set only while the ride's city
+-- enables per-person call identities and the person has one) and the per-ride one.
+data PartyCallIdentities = PartyCallIdentities
+  { personIdentity :: Maybe Text,
+    rideIdentity :: Text
+  }
+
+data RideCallIdentities = RideCallIdentities
+  { riderCall :: PartyCallIdentities,
+    driverCall :: PartyCallIdentities
+  }
+
+-- | The rider's and driver's Twilio identities for a ride. Per-ride identities are the booking's
+-- transaction id (rider) and the ride id (driver); per-person ones come from the driver's person row
+-- and the identity the BAP sent at confirm (saved on rider details).
+getRideCallIdentities :: SRide.Ride -> DB.Booking -> Flow RideCallIdentities
+getRideCallIdentities ride booking = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+  let personCallEnabled = (transporterConfig >>= (.enablePersonCallIdentity)) == Just True
+  driverPersonIdentity <-
+    if personCallEnabled
+      then (.callIdentity) <$> (QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId))
+      else pure Nothing
+  riderPersonIdentity <-
+    if personCallEnabled
+      then (>>= (.callIdentity)) <$> maybe (pure Nothing) QRD.findById booking.riderId
+      else pure Nothing
+  pure
+    RideCallIdentities
+      { riderCall = PartyCallIdentities {personIdentity = riderPersonIdentity, rideIdentity = booking.transactionId},
+        driverCall = PartyCallIdentities {personIdentity = driverPersonIdentity, rideIdentity = ride.id.getId}
+      }
+
+-- | The identity a party registers with: per-person when available, otherwise per-ride.
+preferredCallIdentity :: PartyCallIdentities -> Text
+preferredCallIdentity party = fromMaybe party.rideIdentity party.personIdentity
+
+-- | Every identity a party's phone may be registered with. Dialling all of them rings the phone
+-- whichever one it registered with (an app version or registration from before per-person identities).
+allCallIdentities :: PartyCallIdentities -> [Text]
+allCallIdentities party = catMaybes [party.personIdentity] <> [party.rideIdentity]
+
+-- | TwiML Twilio fetches when an in-app call starts: rings the other side of the ride, on every
+-- identity their phone may be registered with.
 getCallTwillioConnectedEntityTwiml ::
   ( Id SRide.Ride ->
     EntityType ->
@@ -555,15 +597,13 @@ getCallTwillioConnectedEntityTwiml ::
   )
 getCallTwillioConnectedEntityTwiml rideId entity = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  let say = Just "Please wait while we are making the call"
-  dial <- case entity of
-    Domain.Action.UI.Call.CUSTOMER -> do
-      let dial = Dial (Just (T.unpack ride.id.getId))
-      return $ Just dial
-    Domain.Action.UI.Call.DRIVER -> do
-      booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      let dial = Dial (Just (T.unpack booking.transactionId))
-      return $ Just dial
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  identities <- getRideCallIdentities ride booking
+  let callee = case entity of
+        Domain.Action.UI.Call.CUSTOMER -> identities.driverCall
+        Domain.Action.UI.Call.DRIVER -> identities.riderCall
+      say = Just "Please wait while we are making the call"
+      dial = Just $ Dial (T.unpack <$> allCallIdentities callee)
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp
   return $ DTL.toStrict $ renderText def twimlResp
@@ -624,10 +664,7 @@ mkElement tagName = fmap (\tval -> NodeElement $ XML.Element (Name (capitalizeTe
 dialToXML :: Dial -> XML.Element
 dialToXML Dial {..} = XML.Element (Name "Dial" Nothing Nothing) mempty elements
   where
-    elements =
-      catMaybes
-        [ mkElement "client" client
-        ]
+    elements = Kernel.Prelude.mapMaybe (mkElement "client" . Just) clients
 
 -- Function to convert a Response data type to an XML Document
 responseToXML :: Response -> Document

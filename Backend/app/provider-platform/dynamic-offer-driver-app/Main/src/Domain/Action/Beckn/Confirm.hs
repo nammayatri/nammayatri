@@ -91,6 +91,8 @@ data DConfirmReq = DConfirmReq
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
     consentToShareMobileNumber :: Maybe Bool,
+    -- | Rider's per-person Twilio call identity, sent by value-add BAPs that enable it.
+    customerCallIdentity :: Maybe Text,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
@@ -140,7 +142,13 @@ handler merchant req validatedQuote = do
   unless isNewRider $ do
     QRD.updateNightSafetyChecks req.nightSafetyCheck storedRiderDetails.id
     whenJust req.consentToShareMobileNumber $ \consent -> QRD.updateConsentToShareMobileNumber (Just consent) storedRiderDetails.id
-  let riderDetails = storedRiderDetails {DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber}
+  whenJust req.customerCallIdentity $ \callIdentity ->
+    when (storedRiderDetails.callIdentity /= Just callIdentity) $ QRD.updateCallIdentity (Just callIdentity) storedRiderDetails.id
+  let riderDetails =
+        storedRiderDetails
+          { DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber,
+            DRD.callIdentity = maybe storedRiderDetails.callIdentity Just req.customerCallIdentity
+          }
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails

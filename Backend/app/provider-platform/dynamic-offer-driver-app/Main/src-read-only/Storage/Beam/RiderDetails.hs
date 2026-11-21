@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
   { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    callIdentity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationDueRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationDuesCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

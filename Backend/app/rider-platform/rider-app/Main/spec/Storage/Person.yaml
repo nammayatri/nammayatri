@@ -139,6 +139,7 @@ Person:
     clientId: Maybe Text
     acceptedPolicies: Maybe AcceptedPolicies
     commsConsent: Maybe Bool
+    callIdentity: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

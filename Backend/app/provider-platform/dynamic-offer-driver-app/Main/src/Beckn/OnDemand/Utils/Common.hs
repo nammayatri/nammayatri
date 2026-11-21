@@ -762,7 +762,8 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
       Tags.IS_ALREADY_FAVOURITE ~=| (isAlreadyFav, show isAlreadyFav),
       Tags.FAVOURITE_COUNT ~= show favCount,
       Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus),
-      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated)
+      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated),
+      Tags.DRIVER_CALL_IDENTITY ~=? driver.callIdentity
     ]
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]

@@ -240,7 +240,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
               registeredAt = Just driver.createdAt,
               image = rideAssignedReq.image,
               isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
-              accountId = Nothing -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              accountId = Nothing, -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              callIdentity = driver.callIdentity
             },
         vehicleDetails =
           CallBAPInternal.OneShotVehicleDetails
