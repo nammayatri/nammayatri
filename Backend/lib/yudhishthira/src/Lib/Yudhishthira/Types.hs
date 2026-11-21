@@ -451,6 +451,7 @@ isRiderOnlyConfigType = \case
   ExophoneRider -> True
   FRFSConfig -> True
   HotSpotConfig -> True
+  NavigationPointConfig -> True
   MerchantPaymentMethod -> True
   CancellationReason -> True
   IntegratedBPPConfig -> True

@@ -79,6 +79,7 @@ data ConfigType
   | DocumentVerificationStagesConfig
   | RideFeedbackConfig
   | FleetConfig
+  | NavigationPointConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 instance ToHttpApiData ConfigType where
