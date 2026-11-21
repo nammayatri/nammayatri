@@ -1,7 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
   VehicleViolation: Domain.Types.VehicleViolation
   MediaFile: IssueManagement.Domain.Types.MediaFile
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
@@ -29,7 +29,7 @@ TowingRequest:
     status: TowingStatus
     vehicleNumber: Text
     vehicleType: Maybe Text
-    ticketPlaceId: Maybe (Id TicketPlace)
+    ticketServiceId: Maybe (Id TicketService) # parking zone it was towed from
     pickupLat: Maybe Double
     pickupLon: Maybe Double
     notes: Maybe Text

@@ -24,7 +24,6 @@ data TicketPlaceT f = TicketPlaceT
     faqs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     gallery :: B.C f [Kernel.Prelude.Text],
     geomGeoJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    groupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

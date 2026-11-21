@@ -7,7 +7,6 @@ import Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketPlaceGroup
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified SharedLogic.TicketRule.Core
@@ -24,7 +23,6 @@ data TicketPlace = TicketPlace
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
     geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    groupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup),
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     isClosed :: Kernel.Prelude.Bool,

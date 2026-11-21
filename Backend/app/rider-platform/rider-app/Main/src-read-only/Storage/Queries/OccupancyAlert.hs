@@ -16,19 +16,18 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.OccupancyAlert as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.OccupancyAlert.OccupancyAlert -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.OccupancyAlert.OccupancyAlert -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.OccupancyAlert.OccupancyAlert] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OccupancyAlert.OccupancyAlert] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m (Maybe Domain.Types.OccupancyAlert.OccupancyAlert)
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m (Maybe Domain.Types.OccupancyAlert.OccupancyAlert))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateResolution ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Domain.Types.OccupancyAlert.AlertStatus ->
-  (Kernel.Prelude.Maybe Domain.Types.OccupancyAlert.AlertResolution -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m ())))))
+  (Domain.Types.OccupancyAlert.AlertStatus -> Kernel.Prelude.Maybe Domain.Types.OccupancyAlert.AlertResolution -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m ())
 updateResolution status resolution violationId acknowledgedBy resolvedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -41,10 +40,10 @@ updateResolution status resolution violationId acknowledgedBy resolvedAt id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m (Maybe Domain.Types.OccupancyAlert.OccupancyAlert)
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.OccupancyAlert.OccupancyAlert -> m (Maybe Domain.Types.OccupancyAlert.OccupancyAlert))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.OccupancyAlert.OccupancyAlert -> m ()
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.OccupancyAlert.OccupancyAlert -> m ())
 updateByPrimaryKey (Domain.Types.OccupancyAlert.OccupancyAlert {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -58,7 +57,7 @@ updateByPrimaryKey (Domain.Types.OccupancyAlert.OccupancyAlert {..}) = do
       Se.Set Beam.resolution resolution,
       Se.Set Beam.resolvedAt resolvedAt,
       Se.Set Beam.status status,
-      Se.Set Beam.ticketPlaceId (Kernel.Types.Id.getId ticketPlaceId),
+      Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
       Se.Set Beam.unpaidEstimate unpaidEstimate,
       Se.Set Beam.violationId (Kernel.Types.Id.getId <$> violationId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -82,7 +81,7 @@ instance FromTType' Beam.OccupancyAlert Domain.Types.OccupancyAlert.OccupancyAle
             resolution = resolution,
             resolvedAt = resolvedAt,
             status = status,
-            ticketPlaceId = Kernel.Types.Id.Id ticketPlaceId,
+            ticketServiceId = Kernel.Types.Id.Id ticketServiceId,
             unpaidEstimate = unpaidEstimate,
             violationId = Kernel.Types.Id.Id <$> violationId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -104,7 +103,7 @@ instance ToTType' Beam.OccupancyAlert Domain.Types.OccupancyAlert.OccupancyAlert
         Beam.resolution = resolution,
         Beam.resolvedAt = resolvedAt,
         Beam.status = status,
-        Beam.ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
+        Beam.ticketServiceId = Kernel.Types.Id.getId ticketServiceId,
         Beam.unpaidEstimate = unpaidEstimate,
         Beam.violationId = Kernel.Types.Id.getId <$> violationId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

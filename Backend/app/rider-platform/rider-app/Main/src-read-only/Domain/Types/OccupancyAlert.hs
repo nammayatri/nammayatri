@@ -7,7 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.DetectionSource
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.TicketService
 import qualified Domain.Types.VehicleViolation
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -25,7 +25,7 @@ data OccupancyAlert = OccupancyAlert
     resolution :: Kernel.Prelude.Maybe Domain.Types.OccupancyAlert.AlertResolution,
     resolvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.OccupancyAlert.AlertStatus,
-    ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     unpaidEstimate :: Kernel.Prelude.Int,
     violationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -34,31 +34,14 @@ data OccupancyAlert = OccupancyAlert
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data AlertCategory
-  = Unpaid
-  | WrongVehicleType
-  | Orientation
-  | VehicleType
-  | DoublePark
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AlertCategory = Unpaid | WrongVehicleType | Orientation | VehicleType | DoublePark deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data AlertResolution
-  = PaidLater
-  | VehicleLeft
-  | VerifiedViolation
-  | FalsePositive
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AlertResolution = PaidLater | VehicleLeft | VerifiedViolation | FalsePositive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data AlertStatus
-  = Pending
-  | Open
-  | Resolved
-  | Dismissed
-  | Escalated
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AlertStatus = Pending | Open | Resolved | Dismissed | Escalated deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AlertCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AlertCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AlertResolution))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AlertResolution)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AlertStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AlertStatus)

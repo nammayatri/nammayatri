@@ -6,7 +6,7 @@ module Domain.Types.TowingRequest where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.TicketService
 import qualified Domain.Types.TowingVehicle
 import qualified Domain.Types.VehicleViolation
 import qualified IssueManagement.Domain.Types.MediaFile
@@ -42,7 +42,7 @@ data TowingRequestE e = TowingRequest
     route :: Kernel.Prelude.Maybe Data.Aeson.Value,
     status :: Domain.Types.TowingRequest.TowingStatus,
     storageFeePerDay :: Kernel.Types.Common.HighPrecMoney,
-    ticketPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace),
+    ticketServiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService),
     totalFee :: Kernel.Types.Common.HighPrecMoney,
     towingFee :: Kernel.Types.Common.HighPrecMoney,
     towingVehicleId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle),
@@ -90,7 +90,7 @@ instance EncryptedItem TowingRequest where
           route = route entity,
           status = status entity,
           storageFeePerDay = storageFeePerDay entity,
-          ticketPlaceId = ticketPlaceId entity,
+          ticketServiceId = ticketServiceId entity,
           totalFee = totalFee entity,
           towingFee = towingFee entity,
           towingVehicleId = towingVehicleId entity,
@@ -130,7 +130,7 @@ instance EncryptedItem TowingRequest where
             route = route entity,
             status = status entity,
             storageFeePerDay = storageFeePerDay entity,
-            ticketPlaceId = ticketPlaceId entity,
+            ticketServiceId = ticketServiceId entity,
             totalFee = totalFee entity,
             towingFee = towingFee entity,
             towingVehicleId = towingVehicleId entity,

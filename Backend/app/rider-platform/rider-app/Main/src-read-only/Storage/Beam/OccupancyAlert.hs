@@ -12,23 +12,23 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data OccupancyAlertT f = OccupancyAlertT
-  { acknowledgedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    category :: (B.C f Domain.Types.OccupancyAlert.AlertCategory),
-    detectedAt :: (B.C f Kernel.Prelude.UTCTime),
-    detectionSourceId :: (B.C f Kernel.Prelude.Text),
-    externalAlertId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    graceUntil :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    resolution :: (B.C f (Kernel.Prelude.Maybe Domain.Types.OccupancyAlert.AlertResolution)),
-    resolvedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    status :: (B.C f Domain.Types.OccupancyAlert.AlertStatus),
-    ticketPlaceId :: (B.C f Kernel.Prelude.Text),
-    unpaidEstimate :: (B.C f Kernel.Prelude.Int),
-    violationId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { acknowledgedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    category :: B.C f Domain.Types.OccupancyAlert.AlertCategory,
+    detectedAt :: B.C f Kernel.Prelude.UTCTime,
+    detectionSourceId :: B.C f Kernel.Prelude.Text,
+    externalAlertId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    graceUntil :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    resolution :: B.C f (Kernel.Prelude.Maybe Domain.Types.OccupancyAlert.AlertResolution),
+    resolvedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    status :: B.C f Domain.Types.OccupancyAlert.AlertStatus,
+    ticketServiceId :: B.C f Kernel.Prelude.Text,
+    unpaidEstimate :: B.C f Kernel.Prelude.Int,
+    violationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table OccupancyAlertT where
 
 type OccupancyAlert = OccupancyAlertT Identity
 
-$(enableKVPG (''OccupancyAlertT) [('id)] [[('ticketPlaceId)]])
+$(enableKVPG ''OccupancyAlertT ['id] [['ticketServiceId]])
 
-$(mkTableInstances (''OccupancyAlertT) "occupancy_alert")
+$(mkTableInstances ''OccupancyAlertT "occupancy_alert")

@@ -28,6 +28,7 @@ data TicketBookingServiceT f = TicketBookingServiceT
     id :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     parentBookingServiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    serviceCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     status :: B.C f Domain.Types.TicketBookingService.ServiceStatus,

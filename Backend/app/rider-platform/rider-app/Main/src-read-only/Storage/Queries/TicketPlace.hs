@@ -7,7 +7,6 @@ module Storage.Queries.TicketPlace where
 import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketPlace
-import qualified Domain.Types.TicketPlaceGroup
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,11 +22,6 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketPlace.TicketPlace] -> m ())
 createMany = traverse_ create
-
-findAllByGroupId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup) -> m [Domain.Types.TicketPlace.TicketPlace])
-findAllByGroupId groupId = do findAllWithKV [Se.Is Beam.groupId $ Se.Eq (Kernel.Types.Id.getId <$> groupId)]
 
 findAllByTicketMerchantIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -76,7 +70,6 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
       Se.Set Beam.faqs (Data.Aeson.toJSON <$> faqs),
       Se.Set Beam.gallery gallery,
       Se.Set Beam.geomGeoJson geomGeoJson,
-      Se.Set Beam.groupId (Kernel.Types.Id.getId <$> groupId),
       Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.isRecurring (Kernel.Prelude.Just isRecurring),
@@ -121,7 +114,6 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             faqs = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs,
             gallery = gallery,
             geomGeoJson = geomGeoJson,
-            groupId = Kernel.Types.Id.Id <$> groupId,
             iconUrl = iconUrl,
             id = Kernel.Types.Id.Id id,
             isClosed = Kernel.Prelude.fromMaybe False isClosed,
@@ -165,7 +157,6 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.faqs = Data.Aeson.toJSON <$> faqs,
         Beam.gallery = gallery,
         Beam.geomGeoJson = geomGeoJson,
-        Beam.groupId = Kernel.Types.Id.getId <$> groupId,
         Beam.iconUrl = iconUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isClosed = Kernel.Prelude.Just isClosed,

@@ -24,7 +24,7 @@ data VehicleViolationT f = VehicleViolationT
     reportedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reporterPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.VehicleViolation.ViolationStatus,
-    ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketServiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleNumber :: B.C f Kernel.Prelude.Text,
     violationType :: B.C f Domain.Types.VehicleViolation.ViolationType,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

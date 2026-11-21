@@ -90,6 +90,7 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
       Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.parentBookingServiceId (Kernel.Types.Id.getId <$> parentBookingServiceId),
+      Se.Set Beam.serviceCategoryId (Kernel.Types.Id.getId <$> serviceCategoryId),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status status,

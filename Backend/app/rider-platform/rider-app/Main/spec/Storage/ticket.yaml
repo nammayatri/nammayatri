@@ -29,7 +29,6 @@ imports:
   TicketPlaceDef: Domain.Types.EventManagement
   Rule: SharedLogic.TicketRule.Core
   ActionType: SharedLogic.TicketRule.Core
-  TicketPlaceGroup: Domain.Types.TicketPlaceGroup
 
 TicketPlace:
   tableName: ticket_place
@@ -69,8 +68,7 @@ TicketPlace:
     isClosed: Bool
     assignTicketToBpp: Bool
     enforcedAsSubPlace: Bool
-    geomGeoJson: Maybe Text
-    groupId: Maybe (Id TicketPlaceGroup)
+    geomGeoJson: Maybe Text # parking: the cluster's outline
 
   types:
     PlaceType:
@@ -174,30 +172,6 @@ TicketPlace:
       kvFunction: updateOneWithKV
       params: [recommend]
       where: id
-    findAllByGroupId:
-      kvFunction: findAllWithKV
-      where: groupId
-
-TicketPlaceGroup:
-  tableName: ticket_place_group
-
-  fields:
-    id: Id TicketPlaceGroup
-    merchantOperatingCityId: Id MerchantOperatingCity
-    name: Text
-    geomGeoJson: Maybe Text
-    isActive: Bool # draft until set live; zones of an inactive group are hidden
-
-  default:
-    isActive: "false"
-
-  queries:
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-    findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
-      where: merchantOperatingCityId
 
 TicketService:
   tableName: ticket_service
@@ -223,7 +197,9 @@ TicketService:
     priority: Maybe Int
     bookingMode: BookingMode
     maxDurationMinutes: Maybe Int
-    durationTariff: Maybe Value
+    lat: Maybe Double # parking: the zone's own location
+    lon: Maybe Double
+    geomGeoJson: Maybe Text
   types:
     BookingMode:
       enum: "DayVisit,TimeWindow"
@@ -249,7 +225,6 @@ TicketService:
     operationalDates: text[]
     serviceDetails: json
     rules: json
-    durationTariff: json
   fromTType:
     operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
     serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
@@ -489,6 +464,7 @@ ServicePeopleCategory:
     rules: "Maybe [Rule]"
     isClosed: Bool
     iconUrl: Maybe Text
+    durationTariff: Maybe Value # TimeWindow (parking): the fee by duration; replaces pricePerUnit, and can be shared by several categories
   beamType:
     cancellationCharges: Maybe Value
     vendorSplitDetails: Maybe Value
@@ -501,6 +477,7 @@ ServicePeopleCategory:
     cancellationCharges: json
     vendorSplitDetails: json
     rules: json
+    durationTariff: json
   beamFields:
     pricePerUnit:
       currency: Maybe Currency
@@ -565,6 +542,7 @@ ServicePeopleCategory:
         - placeId
         - iconUrl
         - rules
+        - durationTariff
       where:
         and: [id, timeBounds]
     deleteByIdAndTimebounds:
@@ -756,6 +734,7 @@ TicketBookingService:
     startTime: Maybe UTCTime
     vehicleNumber: Maybe Text
     parentBookingServiceId: Maybe (Id TicketBookingService)
+    serviceCategoryId: Maybe (Id ServiceCategory) # TimeWindow: the vehicle type booked; capacity is counted per category
 
   constraints:
     shortId: SecondaryKey

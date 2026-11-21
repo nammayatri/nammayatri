@@ -41,7 +41,7 @@ data TowingRequestT f = TowingRequestT
     route :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     status :: B.C f Domain.Types.TowingRequest.TowingStatus,
     storageFeePerDay :: B.C f Kernel.Types.Common.HighPrecMoney,
-    ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketServiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     towingFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     towingVehicleId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

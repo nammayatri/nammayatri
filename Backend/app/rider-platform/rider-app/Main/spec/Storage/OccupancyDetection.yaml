@@ -1,8 +1,8 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  TicketPlace: Domain.Types.TicketPlace
   TicketService: Domain.Types.TicketService
+  ServiceCategory: Domain.Types.ServiceCategory
   VehicleViolation: Domain.Types.VehicleViolation
   UTCTime: Kernel.Prelude
   Value: Data.Aeson
@@ -37,8 +37,8 @@ DetectionSource:
       enum: "Availability,Session"
     DetectionMapping:
       externalId: Text # camera vendor's area id; zone occupancy = sum of its mapped areas
-      ticketPlaceId: Id TicketPlace
-      ticketServiceId: Maybe (Id TicketService) # vehicle-type slice; Nothing = whole place
+      ticketServiceId: Id TicketService # the parking zone
+      serviceCategoryId: Maybe (Id ServiceCategory) # vehicle-type slice; Nothing = whole zone
       derive: "Eq"
 
   beamType:
@@ -84,7 +84,7 @@ OccupancyAlert:
     id: Id OccupancyAlert
     merchantOperatingCityId: Id MerchantOperatingCity
     detectionSourceId: Id DetectionSource
-    ticketPlaceId: Id TicketPlace
+    ticketServiceId: Id TicketService # the parking zone
     category: AlertCategory
     externalAlertId: Maybe Text
     status: AlertStatus
@@ -106,7 +106,7 @@ OccupancyAlert:
 
   constraints:
     id: PrimaryKey
-    ticketPlaceId: "!SecondaryKey"
+    ticketServiceId: "!SecondaryKey"
 
   default:
     category: "'Unpaid'"

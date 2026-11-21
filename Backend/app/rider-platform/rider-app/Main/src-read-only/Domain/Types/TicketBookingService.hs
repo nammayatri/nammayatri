@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketService
 import Kernel.Prelude
@@ -28,6 +29,7 @@ data TicketBookingService = TicketBookingService
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     parentBookingServiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService),
+    serviceCategoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory),
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.TicketBookingService.ServiceStatus,

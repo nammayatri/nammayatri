@@ -6,7 +6,7 @@ module Domain.Types.DetectionSource where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.TicketService
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,24 +34,17 @@ data DetectionSource = DetectionSource
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data DetectionAuthMode
-  = Hmac
-  | Bearer
-  | Custom
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DetectionAuthMode = Hmac | Bearer | Custom deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DetectionMapping = DetectionMapping
   { externalId :: Kernel.Prelude.Text,
-    ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
-    ticketServiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
+    serviceCategoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory),
+    ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data OccupancyMode
-  = Availability
-  | Session
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OccupancyMode = Availability | Session deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DetectionAuthMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DetectionAuthMode)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OccupancyMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OccupancyMode)

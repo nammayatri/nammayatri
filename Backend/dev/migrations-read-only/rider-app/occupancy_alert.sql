@@ -11,7 +11,7 @@ ALTER TABLE atlas_app.occupancy_alert ADD COLUMN merchant_operating_city_id char
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN resolution text ;
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN resolved_at timestamp with time zone ;
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN status text NOT NULL default 'Pending';
-ALTER TABLE atlas_app.occupancy_alert ADD COLUMN ticket_place_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.occupancy_alert ADD COLUMN ticket_service_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN unpaid_estimate integer NOT NULL default 1;
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN violation_id character varying(36) ;
 ALTER TABLE atlas_app.occupancy_alert ADD COLUMN merchant_id character varying(36) ;

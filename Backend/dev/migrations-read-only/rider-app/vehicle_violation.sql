@@ -11,7 +11,7 @@ ALTER TABLE atlas_app.vehicle_violation ADD COLUMN merchant_operating_city_id ch
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN reported_by text ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN reporter_person_id character varying(36) ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN status text NOT NULL default 'Pending';
-ALTER TABLE atlas_app.vehicle_violation ADD COLUMN ticket_place_id character varying(36) ;
+ALTER TABLE atlas_app.vehicle_violation ADD COLUMN ticket_service_id character varying(36) ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN vehicle_number text NOT NULL;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN violation_type text NOT NULL;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN merchant_id character varying(36) ;

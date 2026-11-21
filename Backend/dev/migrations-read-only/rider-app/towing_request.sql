@@ -26,7 +26,7 @@ ALTER TABLE atlas_app.towing_request ADD COLUMN request_number text NOT NULL;
 ALTER TABLE atlas_app.towing_request ADD COLUMN route json ;
 ALTER TABLE atlas_app.towing_request ADD COLUMN status text NOT NULL default 'Pending';
 ALTER TABLE atlas_app.towing_request ADD COLUMN storage_fee_per_day double precision NOT NULL default 0;
-ALTER TABLE atlas_app.towing_request ADD COLUMN ticket_place_id character varying(36) ;
+ALTER TABLE atlas_app.towing_request ADD COLUMN ticket_service_id character varying(36) ;
 ALTER TABLE atlas_app.towing_request ADD COLUMN total_fee double precision NOT NULL default 0;
 ALTER TABLE atlas_app.towing_request ADD COLUMN towing_fee double precision NOT NULL default 0;
 ALTER TABLE atlas_app.towing_request ADD COLUMN towing_vehicle_id character varying(36) ;

@@ -47,25 +47,27 @@ types:
     recordType: NewType
     customerId: Id Person
 
-  # Rider parking (TokenAuth)
-  ParkingZoneResp:
-    placeId: Id TicketPlace
+  # Rider parking (TokenAuth). A cluster is a Parking ticket_place, a zone is one of its ticket_services,
+  # a vehicle type is one of the zone's service categories (capacity) with its people category (tariff).
+  ParkingZoneResp: # one zone; book it with POST /ticket/places/{placeId}/book
+    serviceId: Id TicketService
     name: Text
+    placeId: Id TicketPlace # the cluster
+    clusterName: Text
     lat: Maybe Double
     lon: Maybe Double
     distanceMeters: Maybe Int
     geomGeoJson: Maybe Text
-    services: "[ParkingZoneServiceResp]"
-
-  ParkingZoneServiceResp: # one per vehicle type; ids are what /ticket/places/{placeId}/book needs
-    serviceId: Id TicketService
-    name: Text
     businessHourId: Id BusinessHour
+    maxDurationMinutes: Maybe Int
+    vehicleTypes: "[ParkingVehicleTypeResp]"
+
+  ParkingVehicleTypeResp:
     categoryId: Id ServiceCategory
+    name: Text
     peopleCategoryId: Id ServicePeopleCategory
     capacity: Maybe Int
     freeSpaces: Maybe Int # free for the requested window, or right now when no window is given
-    maxDurationMinutes: Maybe Int
     durationTariff: Maybe Value
 
   ParkingStayStatus:
@@ -74,9 +76,12 @@ types:
   ParkingStayResp:
     bookingServiceId: Id TicketBookingService # the original booking; pass this to extend / stop
     ticketBookingShortId: ShortId TicketBooking
-    placeId: Id TicketPlace
+    placeId: Id TicketPlace # the cluster
     placeName: Text
-    serviceId: Id TicketService
+    serviceId: Id TicketService # the zone
+    zoneName: Text
+    categoryId: Maybe (Id ServiceCategory) # the vehicle type
+    vehicleType: Maybe Text
     vehicleNumber: Text
     startTime: UTCTime
     endTime: UTCTime # includes paid extensions
@@ -117,10 +122,9 @@ apis:
   - GET:
       endpoint: /parking/zones
       auth: TokenAuth
-      mandatoryQuery:
-        lat: Double
-        lon: Double
       query:
+        lat: Double # lat and lon together: zones within radiusMeters, nearest first; neither: every open zone in the city, by name
+        lon: Double
         radiusMeters: Int
         startTime: UTCTime # with durationMinutes: free spaces for that window instead of now
         durationMinutes: Int

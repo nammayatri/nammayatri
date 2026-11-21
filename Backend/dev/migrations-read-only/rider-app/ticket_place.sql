@@ -104,5 +104,4 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN enforced_as_sub_place boolean  def
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.ticket_place ADD COLUMN group_id character varying(36) ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN geom_geo_json text ;

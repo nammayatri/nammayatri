@@ -4,6 +4,7 @@ import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (concatMapM)
+import qualified Data.Aeson as A
 import Data.List (nubBy)
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -27,6 +28,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.TimeWindowBooking as TWB
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.Person as QP
@@ -174,7 +176,8 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
         customTabs = ticketPlace.customTabs,
         recommend = Just ticketPlace.recommend,
         enforcedAsSubPlace = Just ticketPlace.enforcedAsSubPlace,
-        merchantOperatingCityId = Just ticketPlace.merchantOperatingCityId.getId
+        merchantOperatingCityId = Just ticketPlace.merchantOperatingCityId.getId,
+        geomGeoJson = ticketPlace.geomGeoJson
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -195,7 +198,13 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
           subPlaceId = svc.subPlaceId,
           maxSelection = svc.maxSelection,
           note = svc.note,
-          priority = svc.priority
+          priority = svc.priority,
+          bookingMode = Just svc.bookingMode,
+          maxDurationMinutes = svc.maxDurationMinutes,
+          lat = svc.lat,
+          lon = svc.lon,
+          geomGeoJson = svc.geomGeoJson,
+          isClosed = Just svc.isClosed
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -234,7 +243,8 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
           timeBounds = spc.timeBounds,
           vendorSplitDetails = spc.vendorSplitDetails,
           rules = spc.rules,
-          iconUrl = spc.iconUrl
+          iconUrl = spc.iconUrl,
+          durationTariff = spc.durationTariff
         }
 
     toSpecialOccasionDetails :: DSpecialOccasion.SpecialOccasion -> SpecialOccasionDetails
@@ -284,7 +294,8 @@ updateTicketPlace existingPlace placeDetails = do
       DTicketPlace.pricingOnwards = placeDetails.pricingOnwards,
       DTicketPlace.customTabs = placeDetails.customTabs <|> existingPlace.customTabs,
       DTicketPlace.recommend = fromMaybe existingPlace.recommend placeDetails.recommend,
-      DTicketPlace.enforcedAsSubPlace = fromMaybe existingPlace.enforcedAsSubPlace placeDetails.enforcedAsSubPlace
+      DTicketPlace.enforcedAsSubPlace = fromMaybe existingPlace.enforcedAsSubPlace placeDetails.enforcedAsSubPlace,
+      DTicketPlace.geomGeoJson = placeDetails.geomGeoJson <|> existingPlace.geomGeoJson
     }
 
 createTicketPlace :: TicketPlaceDashboardDetails -> Maybe Text -> Id Merchant.Merchant -> Id MOCity.MerchantOperatingCity -> Environment.Flow DTicketPlace.TicketPlace
@@ -329,8 +340,7 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.venue = placeDetails.venue,
         DTicketPlace.assignTicketToBpp = fromMaybe False placeDetails.assignTicketToBpp,
         DTicketPlace.enforcedAsSubPlace = False,
-        DTicketPlace.geomGeoJson = Nothing,
-        DTicketPlace.groupId = Nothing
+        DTicketPlace.geomGeoJson = placeDetails.geomGeoJson
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService
@@ -349,7 +359,13 @@ updateTicketService existingService serviceDetails = do
       DTicketService.serviceDetails = serviceDetails.serviceDetails,
       DTicketService.maxSelection = serviceDetails.maxSelection,
       DTicketService.note = serviceDetails.note,
-      DTicketService.priority = serviceDetails.priority
+      DTicketService.priority = serviceDetails.priority,
+      DTicketService.bookingMode = fromMaybe existingService.bookingMode serviceDetails.bookingMode,
+      DTicketService.maxDurationMinutes = serviceDetails.maxDurationMinutes <|> existingService.maxDurationMinutes,
+      DTicketService.lat = serviceDetails.lat <|> existingService.lat,
+      DTicketService.lon = serviceDetails.lon <|> existingService.lon,
+      DTicketService.geomGeoJson = serviceDetails.geomGeoJson <|> existingService.geomGeoJson,
+      DTicketService.isClosed = fromMaybe existingService.isClosed serviceDetails.isClosed
     }
 
 createTicketService :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketServiceDetails -> Id DTicketPlace.TicketPlace -> Flow DTicketService.TicketService
@@ -376,12 +392,14 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
         DTicketService.note = Nothing,
         DTicketService.priority = Nothing,
         DTicketService.rules = Nothing,
-        DTicketService.isClosed = False,
+        DTicketService.isClosed = fromMaybe False serviceDetails.isClosed,
         DTicketService.serviceDetails = serviceDetails.serviceDetails,
         DTicketService.maxSelection = serviceDetails.maxSelection,
-        DTicketService.bookingMode = DTicketService.DayVisit,
-        DTicketService.maxDurationMinutes = Nothing,
-        DTicketService.durationTariff = Nothing
+        DTicketService.bookingMode = fromMaybe DTicketService.DayVisit serviceDetails.bookingMode,
+        DTicketService.maxDurationMinutes = serviceDetails.maxDurationMinutes,
+        DTicketService.lat = serviceDetails.lat,
+        DTicketService.lon = serviceDetails.lon,
+        DTicketService.geomGeoJson = serviceDetails.geomGeoJson
       }
 
 updateBusinessHour :: DBusinessHour.BusinessHour -> BusinessHourDetails -> DBusinessHour.BusinessHour
@@ -458,7 +476,8 @@ updateServicePeopleCategory existingSPC spcDetails = do
       DServicePeopleCategory.timeBounds = spcDetails.timeBounds,
       DServicePeopleCategory.vendorSplitDetails = spcDetails.vendorSplitDetails,
       DServicePeopleCategory.rules = spcDetails.rules,
-      DServicePeopleCategory.iconUrl = spcDetails.iconUrl
+      DServicePeopleCategory.iconUrl = spcDetails.iconUrl,
+      DServicePeopleCategory.durationTariff = spcDetails.durationTariff <|> existingSPC.durationTariff
     }
 
 createServicePeopleCategory :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> ServicePeopleCategoryDetails -> Id DTicketPlace.TicketPlace -> Environment.Flow DServicePeopleCategory.ServicePeopleCategory
@@ -481,7 +500,8 @@ createServicePeopleCategory (merchantId, merchantOpCityId) spcDetails placeId = 
         DServicePeopleCategory.cancellationCharges = Nothing,
         DServicePeopleCategory.rules = Nothing,
         DServicePeopleCategory.isClosed = False,
-        DServicePeopleCategory.iconUrl = Nothing
+        DServicePeopleCategory.iconUrl = Nothing,
+        DServicePeopleCategory.durationTariff = spcDetails.durationTariff
       }
 
 updateSpecialOccasion :: DSpecialOccasion.SpecialOccasion -> SpecialOccasionDetails -> DSpecialOccasion.SpecialOccasion
@@ -516,6 +536,17 @@ createSpecialOccasion (merchantId, merchantOpCityId) soDetails placeId = do
         DSpecialOccasion.updatedAt = now
       }
 
+-- | A TimeWindow (parking) zone needs a positive max duration if set; its vehicle types' tariffs are checked per people category.
+validateParkingService :: DTicketService.TicketService -> Environment.Flow ()
+validateParkingService svc = when (svc.bookingMode == DTicketService.TimeWindow) $ do
+  whenJust svc.maxDurationMinutes $ \m -> unless (m > 0) $ throwError $ InvalidRequest "maxDurationMinutes must be positive"
+
+-- | A duration tariff, when given, must be one the booking flow can read.
+validateDurationTariff :: ServicePeopleCategoryDetails -> Environment.Flow ()
+validateDurationTariff spc = case (A.fromJSON <$> spc.durationTariff :: Maybe (A.Result TWB.DurationTariff)) of
+  Just (A.Error e) -> throwError $ InvalidRequest $ "Invalid durationTariff for " <> spc.name <> ": " <> T.pack e
+  _ -> pure ()
+
 postUpsertTicketPlaceDashboardDetails :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketPlaceDashboardDetails -> Maybe Text -> Maybe MO.RequestorRole -> Environment.Flow ()
 postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetails requestorId requestorRole = do
   when (T.null placeDetails.name) $ throwError $ InvalidRequest "Ticket place name cannot be empty"
@@ -545,10 +576,12 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
       Just existingService -> do
         -- Update existing service
         let updatedService = updateTicketService existingService serviceDetails
+        validateParkingService updatedService
         QTicketService.updateByPrimaryKey updatedService
       Nothing -> do
         -- Create new service
         newService <- createTicketService (merchantId, merchantOpCityId) serviceDetails ticketPlace.id
+        validateParkingService newService
         QTicketService.create newService
 
   -- Update or create business hours
@@ -599,6 +632,7 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
       QServicePeopleCategory.deleteByIdAndTimebounds spc.id spc.timeBounds
 
   forM_ placeDetails.servicePeopleCategories $ \spcDetails -> do
+    validateDurationTariff spcDetails
     mbExistingSPC <- QServicePeopleCategory.findByIdAndTimebounds spcDetails.id spcDetails.timeBounds
     case mbExistingSPC of
       Just existingSPC -> do

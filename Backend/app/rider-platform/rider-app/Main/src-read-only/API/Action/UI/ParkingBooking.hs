@@ -50,17 +50,17 @@ type API =
            "durationMinutes"
            Kernel.Prelude.Int
       :> QueryParam
+           "lat"
+           Kernel.Prelude.Double
+      :> QueryParam
+           "lon"
+           Kernel.Prelude.Double
+      :> QueryParam
            "radiusMeters"
            Kernel.Prelude.Int
       :> QueryParam
            "startTime"
            Kernel.Prelude.UTCTime
-      :> MandatoryQueryParam
-           "lat"
-           Kernel.Prelude.Double
-      :> MandatoryQueryParam
-           "lon"
-           Kernel.Prelude.Double
       :> Get
            '[JSON]
            [API.Types.UI.ParkingBooking.ParkingZoneResp]
@@ -115,10 +115,10 @@ getParkingZones ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Double ->
-    Kernel.Prelude.Double ->
     Environment.FlowHandler [API.Types.UI.ParkingBooking.ParkingZoneResp]
   )
 getParkingZones a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.ParkingBooking.getParkingZones (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1

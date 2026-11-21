@@ -233,6 +233,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
+      Domain.Action.Dashboard.AppManagement.Parking
       Domain.Action.Dashboard.AppManagement.Pass
       Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
@@ -1045,6 +1046,7 @@ library
       API.Action.DashboardAuth.AppManagement.FRFSTicketService
       API.Action.DashboardAuth.AppManagement.FrfsTripOperations
       API.Action.DashboardAuth.AppManagement.MerchantOnboarding
+      API.Action.DashboardAuth.AppManagement.Parking
       API.Action.DashboardAuth.AppManagement.Pass
       API.Action.DashboardAuth.AppManagement.Passetto
       API.Action.DashboardAuth.AppManagement.PassOrganization
@@ -1172,6 +1174,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.FrfsTripOperations
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Endpoints.Parking
       API.Types.Dashboard.AppManagement.Endpoints.Pass
       API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
@@ -1186,6 +1189,7 @@ library
       API.Types.Dashboard.AppManagement.FRFSTicketService
       API.Types.Dashboard.AppManagement.FrfsTripOperations
       API.Types.Dashboard.AppManagement.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Parking
       API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
@@ -1500,7 +1504,6 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketMerchantDetails
       Domain.Types.TicketPlace
-      Domain.Types.TicketPlaceGroup
       Domain.Types.TicketService
       Domain.Types.TicketSubPlace
       Domain.Types.TowingAuditLog
@@ -1684,7 +1687,6 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketMerchantDetails
       Storage.Beam.TicketPlace
-      Storage.Beam.TicketPlaceGroup
       Storage.Beam.TicketService
       Storage.Beam.TicketSubPlace
       Storage.Beam.TowingAuditLog
@@ -1954,7 +1956,6 @@ library
       Storage.Queries.TicketBookingServiceCategory
       Storage.Queries.TicketMerchantDetails
       Storage.Queries.TicketPlace
-      Storage.Queries.TicketPlaceGroup
       Storage.Queries.TicketService
       Storage.Queries.TicketSubPlace
       Storage.Queries.TowingAuditLog

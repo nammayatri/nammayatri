@@ -570,8 +570,7 @@ applyDraftChanges draftChange = do
             venue = ticketDef.basicInformation.venue,
             assignTicketToBpp = ticketDef.basicInformation.assignTicketToBpp,
             enforcedAsSubPlace = ticketDef.basicInformation.enforcedAsSubPlace,
-            geomGeoJson = existingTicketPlace >>= (.geomGeoJson),
-            groupId = existingTicketPlace >>= (.groupId)
+            geomGeoJson = existingTicketPlace >>= (.geomGeoJson)
           }
   case existingTicketPlace of
     Just extTP -> do
@@ -621,7 +620,8 @@ applyDraftChanges draftChange = do
                 updatedAt = now,
                 rules = spcDef.rules,
                 isClosed = fromMaybe (fromMaybe False (existingSPC <&> (.isClosed))) spcDef.isClosed,
-                iconUrl = spcDef.iconUrl
+                iconUrl = spcDef.iconUrl,
+                durationTariff = existingSPC >>= (.durationTariff)
               }
       case existingSPC of
         Just _ -> QServicePeopleCategory.updateByPrimaryKey servicePC
@@ -723,7 +723,9 @@ applyDraftChanges draftChange = do
                 priority = existingService >>= (.priority),
                 bookingMode = maybe DTicketService.DayVisit (.bookingMode) existingService,
                 maxDurationMinutes = existingService >>= (.maxDurationMinutes),
-                durationTariff = existingService >>= (.durationTariff)
+                lat = existingService >>= (.lat),
+                lon = existingService >>= (.lon),
+                geomGeoJson = existingService >>= (.geomGeoJson)
               }
       case existingService of
         Just _ -> QTicketService.updateByPrimaryKey updatedService

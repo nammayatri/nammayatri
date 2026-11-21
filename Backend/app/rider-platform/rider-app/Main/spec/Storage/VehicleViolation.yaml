@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
-  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
   MediaFile: IssueManagement.Domain.Types.MediaFile
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -14,7 +14,7 @@ VehicleViolation:
   fields:
     id: Id VehicleViolation
     merchantOperatingCityId: Id MerchantOperatingCity
-    ticketPlaceId: Maybe (Id TicketPlace) # Nothing = reported outside any place
+    ticketServiceId: Maybe (Id TicketService) # parking zone; Nothing = reported outside any zone
     vehicleNumber: Text
     violationType: ViolationType
     status: ViolationStatus

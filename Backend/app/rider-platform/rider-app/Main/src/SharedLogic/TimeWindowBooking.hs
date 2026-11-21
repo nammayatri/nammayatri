@@ -22,7 +22,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney (..), Seconds (..))
 
--- | Stored in ticket_service.duration_tariff as {"tariffType": ..., "rules": ...};
+-- | Stored in service_people_category.duration_tariff as {"tariffType": ..., "rules": ...};
 -- "rules" is ParkWise's tariff_rules.rules_json unchanged.
 data DurationTariff
   = FlatTariff Double

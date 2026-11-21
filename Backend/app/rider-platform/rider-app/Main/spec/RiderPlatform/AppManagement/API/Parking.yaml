@@ -1,0 +1,189 @@
+imports:
+  Text: Data.Text
+  Day: Data.Time
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
+  TicketBookingService: Domain.Types.TicketBookingService
+  PaymentMethod: Domain.Types.TicketBooking
+  BusinessHour: Domain.Types.BusinessHour
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  TicketServiceVerificationReq: API.Types.UI.TicketService
+  TicketServiceVerificationResp: API.Types.UI.TicketService
+  DirectTicketBookingReq: API.Types.UI.TicketService
+  DirectTicketBookingResp: API.Types.UI.TicketService
+
+importPackageOverrides:
+  Domain.Types.TicketPlace: "rider-app"
+  Domain.Types.TicketService: "rider-app"
+  Domain.Types.TicketBookingService: "rider-app"
+  Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.BusinessHour: "rider-app"
+  Domain.Types.ServiceCategory: "rider-app"
+  Domain.Types.ServicePeopleCategory: "rider-app"
+  API.Types.UI.TicketService: "rider-app"
+
+module: Parking
+apiPrefix: parking
+
+# Operator APIs for parking. A cluster is a Parking ticket_place; its zones are its ticket_services; a zone's vehicle types are
+# its service categories (capacity) and their people categories (duration tariff). Clusters and zones are created and edited
+# with the existing /ticketdashboard/ticketplace/update.
+#
+# Scoping: everything under /clusters/{clusterId}/ uses capabilities with resource_type TICKET_PLACE, bound to the path segment
+# after "clusters" (dev/seed-migrations/dashboard/0020-parking-roles.sql). The dashboard gate checks clusterId against the
+# caller's person_resource_access rows (no rows = whole city); handlers check the zone is in that cluster.
+types:
+  ParkingClusterResp:
+    id: Id TicketPlace
+    name: Text
+    geomGeoJson: Maybe Text
+    isActive: Bool # place status Active: riders see and book its open zones
+    zoneIds: "[Id TicketService]"
+
+  ParkingClusterStatusReq:
+    isActive: Bool # true: Active (live); false: Unpublished (draft, staff only)
+    derive: "'HideSecrets"
+
+  ParkingOccupancyResp:
+    serviceId: Id TicketService # the zone
+    name: Text
+    vehicleTypes: "[ParkingVehicleTypeOccupancy]"
+    stays: "[ParkingOperatorStay]" # parked right now
+
+  ParkingVehicleTypeOccupancy:
+    categoryId: Id ServiceCategory
+    name: Text
+    capacity: Maybe Int
+    occupiedNow: Int # paid stays covering now
+    heldUnpaid: Int # unpaid bookings still inside their 5-minute hold
+    businessHourId: Id BusinessHour # with categoryId and peopleCategoryId: what a cashBook request needs
+    peopleCategoryId: Id ServicePeopleCategory
+
+  ParkingOperatorStay:
+    bookingServiceId: Id TicketBookingService # the original booking
+    categoryId: Maybe (Id ServiceCategory)
+    vehicleNumber: Text
+    startTime: UTCTime
+    endTime: UTCTime # includes paid extensions
+    amountPaid: HighPrecMoney
+    paymentMethod: Maybe PaymentMethod
+    verificationCount: Int
+
+  ParkingZoneRevenue:
+    serviceId: Id TicketService # the zone
+    name: Text
+    placeId: Id TicketPlace # its cluster
+    paidBookings: Int # original bookings
+    paidExtensions: Int
+    onlineAmount: HighPrecMoney
+    cashAmount: HighPrecMoney
+    totalAmount: HighPrecMoney
+
+apis:
+  # city level
+  - GET:
+      endpoint: /clusters
+      name: ListParkingClusters
+      auth: ApiAuthV2
+      response:
+        type: "[ParkingClusterResp]"
+      migrate:
+        capability: city-operations.parking.read
+
+  - GET:
+      endpoint: /revenue
+      name: GetParkingCityRevenue
+      auth: ApiAuthV2
+      mandatoryQuery:
+        from: Day # visit dates, city-local, inclusive; at most 31 days
+        to: Day
+      response:
+        type: "[ParkingZoneRevenue]"
+      migrate:
+        capability: city-operations.parking.read
+
+  # one cluster (area manager, marshal)
+  - GET:
+      endpoint: /clusters/{clusterId}
+      name: GetParkingCluster
+      auth: ApiAuthV2
+      params:
+        clusterId: Id TicketPlace
+      response:
+        type: ParkingClusterResp
+      migrate:
+        capability: city-operations.parking_cluster.read
+
+  - POST:
+      endpoint: /clusters/{clusterId}/status
+      name: SetParkingClusterStatus
+      auth: ApiAuthV2
+      params:
+        clusterId: Id TicketPlace
+      request:
+        type: ParkingClusterStatusReq
+      response:
+        type: ParkingClusterResp
+      migrate:
+        capability: city-operations.parking_cluster.write
+
+  - GET:
+      endpoint: /clusters/{clusterId}/zones/{zoneId}/occupancy
+      name: GetParkingOccupancy
+      auth: ApiAuthV2
+      params:
+        clusterId: Id TicketPlace
+        zoneId: Id TicketService
+      response:
+        type: ParkingOccupancyResp
+      migrate:
+        capability: city-operations.parking_cluster.read
+
+  - GET:
+      endpoint: /clusters/{clusterId}/revenue
+      name: GetParkingClusterRevenue
+      auth: ApiAuthV2
+      params:
+        clusterId: Id TicketPlace
+      mandatoryQuery:
+        from: Day
+        to: Day
+      response:
+        type: "[ParkingZoneRevenue]"
+      migrate:
+        capability: city-operations.parking_revenue.read
+
+  # marshal actions in a zone of the cluster
+  - POST:
+      endpoint: /clusters/{clusterId}/zones/{zoneId}/verify/{ticketServiceShortId}
+      name: VerifyParkingTicket
+      auth: ApiAuthV2
+      auditRequestBody: false
+      params:
+        clusterId: Id TicketPlace
+        zoneId: Id TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      request:
+        type: TicketServiceVerificationReq
+      response:
+        type: TicketServiceVerificationResp
+      migrate:
+        capability: city-operations.parking_marshal.execute
+
+  - POST:
+      endpoint: /clusters/{clusterId}/zones/{zoneId}/cashBook
+      name: CashBookParking
+      auth: ApiAuthV2
+      auditRequestBody: false
+      params:
+        clusterId: Id TicketPlace
+        zoneId: Id TicketService
+      request:
+        type: DirectTicketBookingReq
+      response:
+        type: DirectTicketBookingResp
+      migrate:
+        capability: city-operations.parking_marshal.execute

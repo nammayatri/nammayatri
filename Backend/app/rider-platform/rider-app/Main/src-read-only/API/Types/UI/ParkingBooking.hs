@@ -64,6 +64,7 @@ data ParkingExtendReq = ParkingExtendReq {durationMinutes :: Kernel.Prelude.Int}
 data ParkingStayResp = ParkingStayResp
   { amount :: Kernel.Types.Common.HighPrecMoney,
     bookingServiceId :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
+    categoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory),
     endTime :: Kernel.Prelude.UTCTime,
     placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     placeName :: Data.Text.Text,
@@ -71,7 +72,9 @@ data ParkingStayResp = ParkingStayResp
     startTime :: Kernel.Prelude.UTCTime,
     status :: ParkingStayStatus,
     ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
-    vehicleNumber :: Data.Text.Text
+    vehicleNumber :: Data.Text.Text,
+    vehicleType :: Kernel.Prelude.Maybe Data.Text.Text,
+    zoneName :: Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -88,28 +91,29 @@ data ParkingStopResp = ParkingStopResp {durationMinutes :: Kernel.Prelude.Int, f
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ParkingZoneResp = ParkingZoneResp
-  { distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    geomGeoJson :: Kernel.Prelude.Maybe Data.Text.Text,
-    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+data ParkingVehicleTypeResp = ParkingVehicleTypeResp
+  { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+    durationTariff :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    freeSpaces :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Data.Text.Text,
-    placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
-    services :: [ParkingZoneServiceResp]
+    peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ParkingZoneServiceResp = ParkingZoneServiceResp
+data ParkingZoneResp = ParkingZoneResp
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
-    capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
-    durationTariff :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    freeSpaces :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    clusterName :: Data.Text.Text,
+    distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    geomGeoJson :: Kernel.Prelude.Maybe Data.Text.Text,
+    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     maxDurationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Data.Text.Text,
-    peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
-    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
+    placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    vehicleTypes :: [ParkingVehicleTypeResp]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
