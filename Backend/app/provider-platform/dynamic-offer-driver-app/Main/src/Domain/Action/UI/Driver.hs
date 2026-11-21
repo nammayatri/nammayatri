@@ -2036,8 +2036,25 @@ getNearbySearchRequests ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->
   m GetNearbySearchRequestsRes
-getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
-  nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
+getNearbySearchRequests ctx@(driverId, _, _) searchTryIdReq = do
+  mbCachedEntity <- maybe (pure Nothing) (USRD.getSentEntity driverId) searchTryIdReq
+  maybe (getNearbySearchRequestsFromDb ctx searchTryIdReq) (pure . GetNearbySearchRequestsRes . pure) mbCachedEntity
+
+getNearbySearchRequestsFromDb ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe (Id DST.SearchTry) ->
+  m GetNearbySearchRequestsRes
+getNearbySearchRequestsFromDb (driverId, _, merchantOpCityId) searchTryIdReq = do
+  nearbyReqs <- case searchTryIdReq of
+    Just stid -> maybeToList <$> QSRD.findByDriverAndSearchTryId driverId stid
+    Nothing -> runInReplica $ QSRD.findByDriver driverId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
@@ -2054,7 +2071,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       if searchTry.status /= DST.ACTIVE
         then pure Nothing
-        else Just <$> (USRD.getSentEntity nearbyReq >>= maybe (buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry) pure)
+        else Just <$> (USRD.getSentEntity nearbyReq.driverId nearbyReq.searchTryId >>= maybe (buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry) pure)
     buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       (estimate :: Maybe Estimate) <- runInReplica $ QEst.findById (Id searchTry.estimateId)
