@@ -42,6 +42,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Ride.Common as DRideCommon
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.Types as DTC
@@ -55,6 +56,7 @@ import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Feedback as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
@@ -103,6 +105,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkFleetDriverAndDriverOper
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -1199,16 +1202,21 @@ fareBreakUp merchantShortId opCity reqRideId = do
   actualFareBreakUp <- case ride.fareParametersId of
     Just fareParamsId -> runInReplica $ SQFP.findById fareParamsId
     Nothing -> pure Nothing
+  -- The policy the ride was priced with, as snapshotted at quote time. It is cached, not
+  -- stored, so both fields are absent once that snapshot has expired.
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  mbRideDetails <- runInReplica $ QRideDetails.findById rideId
+  let mbWaitingChargeInfo = mbFarePolicy >>= DRideCommon.getWaitingChargeInfo booking.estimatedDistance (mbRideDetails >>= (.vehicleAge))
   return
     Common.FareBreakUpRes
-      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.discountAmount booking.fareParams,
+      { estimatedFareBreakUp = Just $ buildFareBreakUp mbWaitingChargeInfo booking.discountAmount booking.fareParams,
         actualFareBreakUp = case actualFareBreakUp of
-          Just fareParams -> Just $ buildFareBreakUp ride.discountAmount fareParams
+          Just fareParams -> Just $ buildFareBreakUp mbWaitingChargeInfo ride.discountAmount fareParams
           Nothing -> Nothing
       }
 
-buildFareBreakUp :: Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
-buildFareBreakUp mbDiscount DFP.FareParameters {..} = do
+buildFareBreakUp :: Maybe DFPC.WaitingChargeInfo -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
+buildFareBreakUp mbWaitingChargeInfo mbDiscount DFP.FareParameters {..} = do
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
       driverSelectedFare = roundToIntegral <$> driverSelectedFare,
@@ -1235,6 +1243,13 @@ buildFareBreakUp mbDiscount DFP.FareParameters {..} = do
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
       negotiatedFareDeltaWithCurrency = flip PriceAPIEntity currency <$> negotiatedFareDelta,
+      -- How the waiting charge is priced. The rate is absent for a flat (constant) waiting
+      -- charge, which has no per-minute rate.
+      waitingChargePerMin =
+        mbWaitingChargeInfo >>= \info -> case info.waitingCharge of
+          DFPC.PerMinuteWaitingCharge rate -> Just rate
+          DFPC.ConstantWaitingCharge _ -> Nothing,
+      freeWaitingTimeInMinutes = mbWaitingChargeInfo <&> (.freeWaitingTime.getMinutes),
       ..
     }
 

@@ -723,6 +723,8 @@ types:
     - tollFareTaxWithCurrency: Maybe PriceAPIEntity
     - discountWithCurrency: Maybe PriceAPIEntity
     - negotiatedFareDeltaWithCurrency: Maybe PriceAPIEntity
+    - waitingChargePerMin: Maybe HighPrecMoney
+    - freeWaitingTimeInMinutes: Maybe Int
     - updatedAt: UTCTime
   FareParametersDetails:
     - enum: "ProgressiveDetails FParamsProgressiveDetails, SlabDetails FParamsSlabDetails, RentalDetails FParamsRentalDetails, InterCityDetails FParamsInterCityDetails, AmbulanceDetails FParamsAmbulanceDetails"
