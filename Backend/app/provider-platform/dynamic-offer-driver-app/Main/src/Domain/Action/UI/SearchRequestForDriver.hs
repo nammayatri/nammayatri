@@ -28,6 +28,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
@@ -253,11 +254,11 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
     deriveIsPaymentOnline :: Maybe DMPM.PaymentInstrument -> Maybe Bool
     deriveIsPaymentOnline = fmap (\case DMPM.Cash -> False; _ -> True)
 
-mkSentEntityKey :: Id SearchRequestForDriver -> Text
-mkSentEntityKey sReqFDId = "SRFD:SentEntity:" <> sReqFDId.getId
+mkSentEntityKey :: Id DPerson.Person -> Id DST.SearchTry -> Text
+mkSentEntityKey driverId searchTryId = "SRFD:SentEntity:" <> driverId.getId <> ":" <> searchTryId.getId
 
-getSentEntity :: Redis.HedisFlow m r => SearchRequestForDriver -> m (Maybe SearchRequestForDriverAPIEntity)
-getSentEntity sReqFD = Redis.withCrossAppRedis $ Redis.safeGet (mkSentEntityKey sReqFD.id)
+getSentEntity :: Redis.HedisFlow m r => Id DPerson.Person -> Id DST.SearchTry -> m (Maybe SearchRequestForDriverAPIEntity)
+getSentEntity driverId searchTryId = Redis.withCrossAppRedis $ Redis.safeGet (mkSentEntityKey driverId searchTryId)
 
 extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe HighPrecMoney
 extractDriverPickupCharges farePolicyDetails =
