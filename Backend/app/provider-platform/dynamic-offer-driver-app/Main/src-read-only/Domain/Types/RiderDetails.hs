@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderDetailsE e = RiderDetails
   { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    callIdentity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationDueRides :: Kernel.Prelude.Int,
     cancellationDues :: Kernel.Types.Common.HighPrecMoney,
     cancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -69,6 +70,7 @@ instance EncryptedItem RiderDetails where
     pure
       RiderDetails
         { bapId = bapId entity,
+          callIdentity = callIdentity entity,
           cancellationDueRides = cancellationDueRides entity,
           cancellationDues = cancellationDues entity,
           cancellationDuesCommission = cancellationDuesCommission entity,
@@ -113,6 +115,7 @@ instance EncryptedItem RiderDetails where
     pure
       ( RiderDetails
           { bapId = bapId entity,
+            callIdentity = callIdentity entity,
             cancellationDueRides = cancellationDueRides entity,
             cancellationDues = cancellationDues entity,
             cancellationDuesCommission = cancellationDuesCommission entity,

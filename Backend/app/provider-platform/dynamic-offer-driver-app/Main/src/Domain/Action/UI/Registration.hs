@@ -744,7 +744,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         reactBundleVersion = mbReactBundleVersion,
         cloudType = mbCloudType,
         operatorBadgeToken = Nothing,
-        acceptedPolicies = Nothing
+        acceptedPolicies = Nothing,
+        callIdentity = Nothing
       }
 
 makeSession ::

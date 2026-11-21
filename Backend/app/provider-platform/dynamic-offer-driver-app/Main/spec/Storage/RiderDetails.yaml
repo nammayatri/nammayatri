@@ -59,6 +59,7 @@ RiderDetails:
     customerRating: Maybe Centesimal
     customerTotalRatings: Maybe Int
     customerGender: Maybe Gender
+    callIdentity: Maybe Text
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -152,6 +153,11 @@ RiderDetails:
     updateConsentToShareMobileNumber:
       kvFunction: updateOneWithKV
       params: [consentToShareMobileNumber]
+      where: id
+
+    updateCallIdentity:
+      kvFunction: updateOneWithKV
+      params: [callIdentity]
       where: id
 
     updateCancellationDues:

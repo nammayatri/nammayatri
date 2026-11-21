@@ -375,6 +375,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                 RiderDetails.cancellationDueRides = bppTxn.riderDetailsCancellationDueRides,
                 RiderDetails.riderFlaggedForDriverIncentives = False,
                 RiderDetails.consentToShareMobileNumber = Nothing,
+                RiderDetails.callIdentity = Nothing,
                 RiderDetails.customerRating = Nothing,
                 RiderDetails.customerTotalRatings = Nothing,
                 RiderDetails.customerGender = Nothing

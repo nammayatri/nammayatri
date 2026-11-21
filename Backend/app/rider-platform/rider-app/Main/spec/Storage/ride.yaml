@@ -155,6 +155,7 @@ Ride:
     assignedServiceTierName: Maybe Text
     enableOtpLessRide: Maybe Bool
     rideTags: Maybe [Text]
+    driverCallIdentity: Maybe Text
 
   sqlType:
     allowedEditLocationAttempts: int

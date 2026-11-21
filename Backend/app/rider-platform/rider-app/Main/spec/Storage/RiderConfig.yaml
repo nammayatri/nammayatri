@@ -405,6 +405,7 @@ RiderConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     manualChargeApprovalMinCustomerVersion: Maybe Text
+    enablePersonCallIdentity: Maybe Bool # When True, Twilio in-app calls use the per-person call identity (person.call_identity) and the TwiML endpoint checks the caller and whether calling is still allowed. Nothing = per-ride identities, no checks
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

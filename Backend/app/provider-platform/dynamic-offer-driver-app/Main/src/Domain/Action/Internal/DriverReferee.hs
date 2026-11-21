@@ -166,6 +166,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             otpCode = Just otp,
             nightSafetyChecks = True,
             consentToShareMobileNumber = Nothing,
+            callIdentity = Nothing,
             customerRating = Nothing,
             customerTotalRatings = Nothing,
             customerGender = Nothing,

@@ -38,6 +38,7 @@ data PersonT f = PersonT
     businessEmailEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessEmailHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessProfileVerified :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    callIdentity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

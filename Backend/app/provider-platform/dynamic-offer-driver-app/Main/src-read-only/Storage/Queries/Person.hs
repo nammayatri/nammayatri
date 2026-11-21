@@ -117,6 +117,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.alternateMobileNumberHash (alternateMobileNumber <&> Kernel.External.Encryption.hash),
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
+      Se.Set Beam.callIdentity callIdentity,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= Kernel.Types.Version.deviceManufacturer),

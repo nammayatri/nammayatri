@@ -247,7 +247,8 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
                   operatorBadgeToken = Nothing,
                   clientId = Nothing,
                   acceptedPolicies = Nothing,
-                  commsConsent = Nothing
+                  commsConsent = Nothing,
+                  callIdentity = Nothing
                 }
         QPerson.create person
         return $ API.Types.UI.ParkingBooking.MarshalPersonResp {customerId = person.id}

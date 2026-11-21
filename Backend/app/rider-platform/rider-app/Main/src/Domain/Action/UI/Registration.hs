@@ -895,7 +895,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         operatorBadgeToken = mbOperatorBadgeToken,
         clientId = Nothing,
         acceptedPolicies = Nothing,
-        commsConsent = Nothing
+        commsConsent = Nothing,
+        callIdentity = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

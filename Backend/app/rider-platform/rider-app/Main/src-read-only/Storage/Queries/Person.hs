@@ -210,6 +210,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.businessEmailEncrypted (businessEmail <&> unEncrypted . Kernel.External.Encryption.encrypted),
       Se.Set Beam.businessEmailHash (businessEmail <&> Kernel.External.Encryption.hash),
       Se.Set Beam.businessProfileVerified businessProfileVerified,
+      Se.Set Beam.callIdentity callIdentity,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= Kernel.Types.Version.deviceManufacturer),

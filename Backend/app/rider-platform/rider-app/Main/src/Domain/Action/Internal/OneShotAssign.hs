@@ -98,7 +98,9 @@ data OneShotDriverDetails = OneShotDriverDetails
     registeredAt :: Maybe UTCTime,
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
-    accountId :: Maybe Text
+    accountId :: Maybe Text,
+    -- | Driver's per-person Twilio call identity; absent from BPPs that predate it.
+    callIdentity :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -324,7 +326,8 @@ processAssignment req = do
                 isBetterDriverSwap = isJust req.oldBppBookingId,
                 isTierUpgrade = req.isTierUpgrade,
                 assignedServiceTierName = req.assignedServiceTierName,
-                betterDriverAbortRadiusMeters = req.betterDriverAbortRadiusMeters
+                betterDriverAbortRadiusMeters = req.betterDriverAbortRadiusMeters,
+                driverCallIdentity = req.driverDetails.callIdentity
               },
           isDriverBirthDay = req.driverDetails.isDriverBirthDay,
           isFreeRide = req.isFreeRide,

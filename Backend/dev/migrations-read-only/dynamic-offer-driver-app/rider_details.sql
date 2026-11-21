@@ -90,3 +90,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN customer_gender char
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_tax_breakup json ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_commission_tax_breakup json ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN call_identity text ;

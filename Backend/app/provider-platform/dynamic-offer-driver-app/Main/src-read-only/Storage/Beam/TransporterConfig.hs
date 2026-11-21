@@ -202,6 +202,7 @@ data TransporterConfigT f = TransporterConfigT
     enableMobilityBilling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOndcScheduledRideSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enablePersonCallIdentity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePullPendingDocVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableScheduleReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

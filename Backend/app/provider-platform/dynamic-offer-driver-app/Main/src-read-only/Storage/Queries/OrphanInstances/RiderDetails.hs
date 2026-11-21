@@ -21,6 +21,7 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
       Just
         Domain.Types.RiderDetails.RiderDetails
           { bapId = bapId,
+            callIdentity = callIdentity,
             cancellationDueRides = fromMaybe 0 cancellationDueRides,
             cancellationDues = cancellationDues,
             cancellationDuesCommission = cancellationDuesCommission,
@@ -65,6 +66,7 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
   toTType' (Domain.Types.RiderDetails.RiderDetails {..}) = do
     Beam.RiderDetailsT
       { Beam.bapId = bapId,
+        Beam.callIdentity = callIdentity,
         Beam.cancellationDueRides = Kernel.Prelude.Just cancellationDueRides,
         Beam.cancellationDues = cancellationDues,
         Beam.cancellationDuesCommission = cancellationDuesCommission,

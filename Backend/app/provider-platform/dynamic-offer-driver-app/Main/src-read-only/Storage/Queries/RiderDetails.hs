@@ -19,21 +19,25 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as Beam
 import Storage.Queries.RiderDetailsExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderDetails.RiderDetails -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RiderDetails.RiderDetails -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderDetails.RiderDetails] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RiderDetails.RiderDetails] -> m ()
 createMany = traverse_ create
 
-findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.RiderDetails.RiderDetails])
+findAllReferredByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.RiderDetails.RiderDetails]
 findAllReferredByDriverId referredByDriver = do findAllWithDb [Se.Is Beam.referredByDriver $ Se.Eq (Kernel.Types.Id.getId <$> referredByDriver)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCallIdentity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateCallIdentity callIdentity id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.callIdentity callIdentity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationDues ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Types.Common.HighPrecMoney ->
+  (Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ()))))
 updateCancellationDues cancellationDues cancellationDuesTaxBreakup cancellationDuesCommission cancellationDuesCommissionTaxBreakup id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -45,14 +49,15 @@ updateCancellationDues cancellationDues cancellationDuesTaxBreakup cancellationD
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateConsentToShareMobileNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateConsentToShareMobileNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateConsentToShareMobileNumber consentToShareMobileNumber id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCustomerProfile ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.Person.Gender -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Domain.Types.Person.Gender -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())))
 updateCustomerProfile customerRating customerTotalRatings customerGender id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -63,72 +68,78 @@ updateCustomerProfile customerRating customerTotalRatings customerGender id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateDisputeChancesUsed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateDisputeChancesUsed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Int -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateDisputeChancesUsed disputeChancesUsed id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDisputeChancesUsedAndCancellationDues ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Int ->
+  (Kernel.Types.Common.HighPrecMoney -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ()))
 updateDisputeChancesUsedAndCancellationDues disputeChancesUsed cancellationDues id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateFirstRideIdAndFlagReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ()))
 updateFirstRideIdAndFlagReason firstRideId payoutFlagReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.firstRideId firstRideId, Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateFlagReasonAndIsDeviceIdExists ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ()))
 updateFlagReasonAndIsDeviceIdExists payoutFlagReason isDeviceIdExists id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.isDeviceIdExists isDeviceIdExists, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateHasTakenValidRide ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Bool ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ()))
 updateHasTakenValidRide hasTakenValidRide hasTakenValidRideAt id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.hasTakenValidRide hasTakenValidRide, Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateIsDeviceIdExists :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateIsDeviceIdExists :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateIsDeviceIdExists isDeviceIdExists id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isDeviceIdExists isDeviceIdExists, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateIsFlagConfirmed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateIsFlagConfirmed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateIsFlagConfirmed isFlagConfirmed id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isFlagConfirmed isFlagConfirmed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateNightSafetyChecks nightSafetyChecks id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.nightSafetyChecks nightSafetyChecks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateOtpCode otpCode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePayoutFlagReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+  Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason ->
+  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updatePayoutFlagReason payoutFlagReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RiderDetails.RiderDetails -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RiderDetails.RiderDetails -> m ()
 updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bapId bapId,
+      Se.Set Beam.callIdentity callIdentity,
       Se.Set Beam.cancellationDueRides (Kernel.Prelude.Just cancellationDueRides),
       Se.Set Beam.cancellationDues cancellationDues,
       Se.Set Beam.cancellationDuesCommission cancellationDuesCommission,
