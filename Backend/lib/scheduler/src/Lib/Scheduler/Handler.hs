@@ -463,7 +463,8 @@ sweeperLoop hnd = do
         batch <- asks (.reclaimBatch)
         threshold <- asks (.deadConsumerThresholdSec)
         now <- getCurrentTimestamp
-        staleRaw <- Hedis.zRangeByScoreByCount registryKey 0 (now - fromIntegral threshold) 0 batch
+        -- Registry scores are epoch millis (heartbeatLoop writes getCurrentTimestamp), the threshold is in seconds.
+        staleRaw <- Hedis.zRangeByScoreByCount registryKey 0 (now - fromIntegral threshold * 1000) 0 batch
         let stale = filter (/= consumerName) [c | raw <- staleRaw, Just (c :: Text) <- [A.decode (BL.fromStrict raw)]]
         forM_ stale $ \c -> do
           reclaimIdlePending hnd True (Just c) 0
