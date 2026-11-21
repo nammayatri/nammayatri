@@ -20,12 +20,7 @@ import qualified Tools.Beam.UtilsTH
 data TowingRequestE e = TowingRequest
   { agencyEntityId :: Kernel.Prelude.Text,
     agentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    cancelledReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
-    dropAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    dropFacilityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    dropLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    dropLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     evidence :: [Domain.Types.TowingRequest.TowingEvidence],
     id :: Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -36,11 +31,8 @@ data TowingRequestE e = TowingRequest
     paymentReceivedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     paymentReceivedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentStatus :: Domain.Types.TowingRequest.TowingPaymentStatus,
-    pickupAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     pickupLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    priority :: Domain.Types.TowingRequest.TowingPriority,
-    receiptNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     releasedToIdNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     releasedToIdType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     releasedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -51,7 +43,6 @@ data TowingRequestE e = TowingRequest
     status :: Domain.Types.TowingRequest.TowingStatus,
     storageFeePerDay :: Kernel.Types.Common.HighPrecMoney,
     ticketPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace),
-    totalDaysInYard :: Kernel.Prelude.Int,
     totalFee :: Kernel.Types.Common.HighPrecMoney,
     towingFee :: Kernel.Types.Common.HighPrecMoney,
     towingVehicleId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle),
@@ -64,9 +55,9 @@ data TowingRequestE e = TowingRequest
   }
   deriving (Generic)
 
-type TowingRequest = TowingRequestE ('AsEncrypted)
+type TowingRequest = TowingRequestE 'AsEncrypted
 
-type DecryptedTowingRequest = TowingRequestE ('AsUnencrypted)
+type DecryptedTowingRequest = TowingRequestE 'AsUnencrypted
 
 instance EncryptedItem TowingRequest where
   type Unencrypted TowingRequest = (DecryptedTowingRequest, HashSalt)
@@ -77,12 +68,7 @@ instance EncryptedItem TowingRequest where
       TowingRequest
         { agencyEntityId = agencyEntityId entity,
           agentId = agentId entity,
-          cancelledReason = cancelledReason entity,
           currency = currency entity,
-          dropAddress = dropAddress entity,
-          dropFacilityName = dropFacilityName entity,
-          dropLat = dropLat entity,
-          dropLon = dropLon entity,
           evidence = evidence entity,
           id = id entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
@@ -93,11 +79,8 @@ instance EncryptedItem TowingRequest where
           paymentReceivedAt = paymentReceivedAt entity,
           paymentReceivedBy = paymentReceivedBy entity,
           paymentStatus = paymentStatus entity,
-          pickupAddress = pickupAddress entity,
           pickupLat = pickupLat entity,
           pickupLon = pickupLon entity,
-          priority = priority entity,
-          receiptNumber = receiptNumber entity,
           releasedToIdNumber = releasedToIdNumber_,
           releasedToIdType = releasedToIdType entity,
           releasedToName = releasedToName entity,
@@ -108,7 +91,6 @@ instance EncryptedItem TowingRequest where
           status = status entity,
           storageFeePerDay = storageFeePerDay entity,
           ticketPlaceId = ticketPlaceId entity,
-          totalDaysInYard = totalDaysInYard entity,
           totalFee = totalFee entity,
           towingFee = towingFee entity,
           towingVehicleId = towingVehicleId entity,
@@ -126,12 +108,7 @@ instance EncryptedItem TowingRequest where
       ( TowingRequest
           { agencyEntityId = agencyEntityId entity,
             agentId = agentId entity,
-            cancelledReason = cancelledReason entity,
             currency = currency entity,
-            dropAddress = dropAddress entity,
-            dropFacilityName = dropFacilityName entity,
-            dropLat = dropLat entity,
-            dropLon = dropLon entity,
             evidence = evidence entity,
             id = id entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
@@ -142,11 +119,8 @@ instance EncryptedItem TowingRequest where
             paymentReceivedAt = paymentReceivedAt entity,
             paymentReceivedBy = paymentReceivedBy entity,
             paymentStatus = paymentStatus entity,
-            pickupAddress = pickupAddress entity,
             pickupLat = pickupLat entity,
             pickupLon = pickupLon entity,
-            priority = priority entity,
-            receiptNumber = receiptNumber entity,
             releasedToIdNumber = releasedToIdNumber_,
             releasedToIdType = releasedToIdType entity,
             releasedToName = releasedToName entity,
@@ -157,7 +131,6 @@ instance EncryptedItem TowingRequest where
             status = status entity,
             storageFeePerDay = storageFeePerDay entity,
             ticketPlaceId = ticketPlaceId entity,
-            totalDaysInYard = totalDaysInYard entity,
             totalFee = totalFee entity,
             towingFee = towingFee entity,
             towingVehicleId = towingVehicleId entity,
@@ -190,17 +163,7 @@ data TowingEvidence = TowingEvidence
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data TowingPaymentStatus
-  = Unpaid
-  | Partial
-  | Paid
-  | Waived
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-data TowingPriority
-  = Normal
-  | Urgent
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data TowingPaymentStatus = Unpaid | Partial | Paid | Waived deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TowingStatus
   = Pending
@@ -221,8 +184,6 @@ data TowingStatus
   | Cancelled
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TowingPaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TowingPaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TowingPriority))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TowingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TowingStatus)

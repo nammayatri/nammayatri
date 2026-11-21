@@ -13,25 +13,23 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data VehicleViolationT f = VehicleViolationT
-  { approvedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    approvedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    fineAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    id :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    lon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    mediaFileIds :: (B.C f [Kernel.Prelude.Text]),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    rejectionReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reportedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reporterPersonId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    status :: (B.C f Domain.Types.VehicleViolation.ViolationStatus),
-    ticketPlaceId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    vehicleNumber :: (B.C f Kernel.Prelude.Text),
-    violationType :: (B.C f Domain.Types.VehicleViolation.ViolationType),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { approvedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    fineAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    mediaFileIds :: B.C f [Kernel.Prelude.Text],
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    reportedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reporterPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    status :: B.C f Domain.Types.VehicleViolation.ViolationStatus,
+    ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleNumber :: B.C f Kernel.Prelude.Text,
+    violationType :: B.C f Domain.Types.VehicleViolation.ViolationType,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +39,6 @@ instance B.Table VehicleViolationT where
 
 type VehicleViolation = VehicleViolationT Identity
 
-$(enableKVPG (''VehicleViolationT) [('id)] [[('vehicleNumber)]])
+$(enableKVPG ''VehicleViolationT ['id] [['vehicleNumber]])
 
-$(mkTableInstances (''VehicleViolationT) "vehicle_violation")
+$(mkTableInstances ''VehicleViolationT "vehicle_violation")

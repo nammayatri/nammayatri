@@ -11,15 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TowingVehicleT f = TowingVehicleT
-  { agencyEntityId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    vehicleNumber :: (B.C f Kernel.Prelude.Text),
-    vehicleType :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { agencyEntityId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    vehicleNumber :: B.C f Kernel.Prelude.Text,
+    vehicleType :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +28,6 @@ instance B.Table TowingVehicleT where
 
 type TowingVehicle = TowingVehicleT Identity
 
-$(enableKVPG (''TowingVehicleT) [('id)] [[('agencyEntityId)]])
+$(enableKVPG ''TowingVehicleT ['id] [['agencyEntityId]])
 
-$(mkTableInstances (''TowingVehicleT) "towing_vehicle")
+$(mkTableInstances ''TowingVehicleT "towing_vehicle")

@@ -3,6 +3,17 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
+  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
+  BusinessHour: Domain.Types.BusinessHour
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketBooking: Domain.Types.TicketBooking
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
 
 module: ParkingBooking
 types:
@@ -36,7 +47,51 @@ types:
     recordType: NewType
     customerId: Id Person
 
+  # Rider parking (TokenAuth)
+  ParkingZoneResp:
+    placeId: Id TicketPlace
+    name: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    distanceMeters: Maybe Int
+    geomGeoJson: Maybe Text
+    services: "[ParkingZoneServiceResp]"
+
+  ParkingZoneServiceResp: # one per vehicle type; ids are what /ticket/places/{placeId}/book needs
+    serviceId: Id TicketService
+    name: Text
+    businessHourId: Id BusinessHour
+    categoryId: Id ServiceCategory
+    peopleCategoryId: Id ServicePeopleCategory
+    capacity: Maybe Int
+    freeSpaces: Maybe Int # free for the requested window, or right now when no window is given
+    maxDurationMinutes: Maybe Int
+    durationTariff: Maybe Value
+
+  ParkingStayStatus:
+    enum: "Reserved,PendingPayment,Active,Ended"
+
+  ParkingStayResp:
+    bookingServiceId: Id TicketBookingService # the original booking; pass this to extend / stop
+    ticketBookingShortId: ShortId TicketBooking
+    placeId: Id TicketPlace
+    placeName: Text
+    serviceId: Id TicketService
+    vehicleNumber: Text
+    startTime: UTCTime
+    endTime: UTCTime # includes paid extensions
+    amount: HighPrecMoney # paid so far, extensions included
+    status: ParkingStayStatus
+
+  ParkingExtendReq:
+    durationMinutes: Int
+
+  ParkingStopResp:
+    finalAmount: HighPrecMoney # tariff for the time actually parked; no refund is issued
+    durationMinutes: Int
+
 apis:
+  # deprecated: partner booking, replaced by the rider APIs below
   - POST:
       endpoint: /multimodal/parking/book
       auth: NoAuth
@@ -46,6 +101,7 @@ apis:
         type: ParkingBookingReq
       response:
         type: ParkingBookingResponse
+  # deprecated
   - POST:
       endpoint: /multimodal/parking/marshal/create
       auth: NoAuth
@@ -56,3 +112,51 @@ apis:
       response:
         type: MarshalPersonResp
 
+  # Rider parking
+  # GET /parking/zones
+  - GET:
+      endpoint: /parking/zones
+      auth: TokenAuth
+      mandatoryQuery:
+        lat: Double
+        lon: Double
+      query:
+        radiusMeters: Int
+        startTime: UTCTime # with durationMinutes: free spaces for that window instead of now
+        durationMinutes: Int
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingZoneResp]"
+
+  # GET /parking/active
+  - GET:
+      endpoint: /parking/active
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingStayResp]"
+
+  # GET /parking/bookings: my upcoming, active, unpaid and recently ended stays
+  - GET:
+      endpoint: /parking/bookings
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.ParkingBooking.ParkingStayResp]"
+
+  # POST /parking/bookings/{bookingServiceId}/extend
+  - POST:
+      endpoint: /parking/bookings/{bookingServiceId}/extend
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      request:
+        type: API.Types.UI.ParkingBooking.ParkingExtendReq
+      response:
+        type: Kernel.External.Payment.Interface.Types.CreateOrderResp
+
+  # POST /parking/bookings/{bookingServiceId}/stop
+  - POST:
+      endpoint: /parking/bookings/{bookingServiceId}/stop
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      response:
+        type: API.Types.UI.ParkingBooking.ParkingStopResp

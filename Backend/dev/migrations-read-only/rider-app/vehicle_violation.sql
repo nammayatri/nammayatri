@@ -1,6 +1,5 @@
 CREATE TABLE atlas_app.vehicle_violation ();
 
-ALTER TABLE atlas_app.vehicle_violation ADD COLUMN approved_at timestamp with time zone ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN approved_by text ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN currency text ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN fine_amount double precision ;
@@ -9,7 +8,6 @@ ALTER TABLE atlas_app.vehicle_violation ADD COLUMN lat double precision ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN lon double precision ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN media_file_ids text[] NOT NULL;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.vehicle_violation ADD COLUMN rejection_reason text ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN reported_by text ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN reporter_person_id character varying(36) ;
 ALTER TABLE atlas_app.vehicle_violation ADD COLUMN status text NOT NULL default 'Pending';

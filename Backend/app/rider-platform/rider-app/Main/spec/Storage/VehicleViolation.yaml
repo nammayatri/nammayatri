@@ -26,8 +26,6 @@ VehicleViolation:
     reportedBy: Maybe Text # dashboard person id (staff / marshal)
     reporterPersonId: Maybe (Id Person) # app user (citizen report)
     approvedBy: Maybe Text # dashboard person id
-    approvedAt: Maybe UTCTime
-    rejectionReason: Maybe Text
 
   types:
     ViolationType:
@@ -48,5 +46,5 @@ VehicleViolation:
       where: id
     updateApproval:
       kvFunction: updateOneWithKV
-      params: [status, approvedBy, approvedAt, rejectionReason, updatedAt]
+      params: [status, approvedBy, updatedAt]
       where: id

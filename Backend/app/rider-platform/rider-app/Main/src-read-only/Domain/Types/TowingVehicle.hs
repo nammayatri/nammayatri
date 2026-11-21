@@ -13,7 +13,6 @@ import qualified Tools.Beam.UtilsTH
 data TowingVehicle = TowingVehicle
   { agencyEntityId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle,
-    isActive :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleType :: Kernel.Prelude.Text,

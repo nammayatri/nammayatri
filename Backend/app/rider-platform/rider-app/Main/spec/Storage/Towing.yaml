@@ -27,22 +27,15 @@ TowingRequest:
     agentId: Maybe Text # dashboard person (towing agent)
     towingVehicleId: Maybe (Id TowingVehicle)
     status: TowingStatus
-    priority: TowingPriority
     vehicleNumber: Text
     vehicleType: Maybe Text
     ticketPlaceId: Maybe (Id TicketPlace)
     pickupLat: Maybe Double
     pickupLon: Maybe Double
-    pickupAddress: Maybe Text
-    dropLat: Maybe Double
-    dropLon: Maybe Double
-    dropAddress: Maybe Text
-    dropFacilityName: Maybe Text
     notes: Maybe Text
     towingFee: HighPrecMoney
     parkingFine: HighPrecMoney
     storageFeePerDay: HighPrecMoney
-    totalDaysInYard: Int
     totalFee: HighPrecMoney
     currency: Maybe Currency
     paymentStatus: TowingPaymentStatus
@@ -50,7 +43,6 @@ TowingRequest:
     paymentMethod: Maybe Text
     paymentReceivedBy: Maybe Text
     paymentReceivedAt: Maybe UTCTime
-    receiptNumber: Maybe Text
     releasedToName: Maybe Text
     releasedToPhone: Maybe (EncryptedHashedField e Text)
     releasedToIdType: Maybe Text
@@ -58,13 +50,10 @@ TowingRequest:
     releasedToRelation: Maybe Text
     evidence: "[TowingEvidence]"
     route: Maybe Value # GPS points saved once at the end; live GPS stays in Redis
-    cancelledReason: Maybe Text
 
   types:
     TowingStatus:
       enum: "Pending,Accepted,AgentAssigned,EnRoutePickup,ArrivedPickup,VehicleLoaded,EnRouteDrop,ArrivedDrop,VehicleUnloaded,InYard,ReleaseRequested,ReleasePaymentPending,ReleasePaymentReceived,VehicleReleased,Completed,Cancelled"
-    TowingPriority:
-      enum: "Normal,Urgent"
     TowingPaymentStatus:
       enum: "Unpaid,Partial,Paid,Waived"
     TowingEvidence:
@@ -115,12 +104,10 @@ TowingRequest:
 
   default:
     status: "'Pending'"
-    priority: "'Normal'"
     paymentStatus: "'Unpaid'"
     towingFee: "0"
     parkingFine: "0"
     storageFeePerDay: "0"
-    totalDaysInYard: "0"
     totalFee: "0"
     evidence: "'[]'"
 
@@ -144,19 +131,12 @@ TowingAuditLog:
     merchantOperatingCityId: Id MerchantOperatingCity
     towingRequestId: Id TowingRequest
     action: Text
-    previousStatus: Maybe TowingStatus
     newStatus: Maybe TowingStatus
     performedBy: Text # dashboard person id
     performedByName: Text # copied so the record survives account deletion
-    performedByRole: Text
-    ipAddress: Maybe Text
-    userAgent: Maybe Text
     lat: Maybe Double
     lon: Maybe Double
-    metadata: Maybe Value
-
-  sqlType:
-    metadata: json
+    note: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -177,14 +157,10 @@ TowingVehicle:
     agencyEntityId: Text # dashboard entity (towing agency)
     vehicleNumber: Text
     vehicleType: Text
-    isActive: Bool
 
   constraints:
     id: PrimaryKey
     agencyEntityId: "!SecondaryKey"
-
-  default:
-    isActive: "true"
 
   queries:
     findById:

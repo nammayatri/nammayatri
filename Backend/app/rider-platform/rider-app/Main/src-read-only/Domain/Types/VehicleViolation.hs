@@ -15,8 +15,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data VehicleViolation = VehicleViolation
-  { approvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    approvedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { approvedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     fineAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation,
@@ -24,7 +23,6 @@ data VehicleViolation = VehicleViolation
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     mediaFileIds :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reportedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reporterPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     status :: Domain.Types.VehicleViolation.ViolationStatus,
@@ -37,18 +35,10 @@ data VehicleViolation = VehicleViolation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ViolationStatus
-  = Pending
-  | Approved
-  | Rejected
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ViolationStatus = Pending | Approved | Rejected deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ViolationType
-  = Warning
-  | Clamping
-  | Towing
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ViolationType = Warning | Clamping | Towing deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ViolationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ViolationStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ViolationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ViolationType)

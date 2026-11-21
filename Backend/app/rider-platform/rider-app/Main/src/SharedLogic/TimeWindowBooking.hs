@@ -119,8 +119,9 @@ effectiveMaxMinutes = \case
 advanceBookingMaxDays :: Maybe A.Value -> Int
 advanceBookingMaxDays mbCfg = max 0 . fromMaybe 0 $ mbCfg >>= A.parseMaybe (A.withObject "parkingConfig" (A..: "advanceBookingMaxDays"))
 
+-- | An empty window (a stopped booking that never started) overlaps nothing.
 overlaps :: UTCTime -> UTCTime -> (UTCTime, UTCTime) -> Bool
-overlaps start end (s, e) = s < end && e > start
+overlaps start end (s, e) = s < e && s < end && e > start
 
 -- | Most windows active at once inside [start, end). Concurrency only rises at a window's start,
 -- so checking at start and at each later window start is enough.

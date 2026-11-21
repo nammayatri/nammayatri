@@ -11,8 +11,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketPlaceGroup = TicketPlaceGroup
-  { description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup,
     isActive :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

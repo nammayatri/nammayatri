@@ -15,27 +15,26 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.TowingVehicle as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TowingVehicle.TowingVehicle -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TowingVehicle.TowingVehicle -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TowingVehicle.TowingVehicle] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TowingVehicle.TowingVehicle] -> m ())
 createMany = traverse_ create
 
-findAllByAgencyEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.TowingVehicle.TowingVehicle]
+findAllByAgencyEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.TowingVehicle.TowingVehicle])
 findAllByAgencyEntityId agencyEntityId = do findAllWithKV [Se.Is Beam.agencyEntityId $ Se.Eq agencyEntityId]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle -> m (Maybe Domain.Types.TowingVehicle.TowingVehicle)
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle -> m (Maybe Domain.Types.TowingVehicle.TowingVehicle))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle -> m (Maybe Domain.Types.TowingVehicle.TowingVehicle)
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TowingVehicle.TowingVehicle -> m (Maybe Domain.Types.TowingVehicle.TowingVehicle))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TowingVehicle.TowingVehicle -> m ()
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TowingVehicle.TowingVehicle -> m ())
 updateByPrimaryKey (Domain.Types.TowingVehicle.TowingVehicle {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.agencyEntityId agencyEntityId,
-      Se.Set Beam.isActive isActive,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,
@@ -51,7 +50,6 @@ instance FromTType' Beam.TowingVehicle Domain.Types.TowingVehicle.TowingVehicle 
         Domain.Types.TowingVehicle.TowingVehicle
           { agencyEntityId = agencyEntityId,
             id = Kernel.Types.Id.Id id,
-            isActive = isActive,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
@@ -65,7 +63,6 @@ instance ToTType' Beam.TowingVehicle Domain.Types.TowingVehicle.TowingVehicle wh
     Beam.TowingVehicleT
       { Beam.agencyEntityId = agencyEntityId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.isActive = isActive,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,

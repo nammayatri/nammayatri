@@ -17,36 +17,31 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.TowingRequest as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TowingRequest.TowingRequest -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TowingRequest.TowingRequest -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TowingRequest.TowingRequest] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TowingRequest.TowingRequest] -> m ())
 createMany = traverse_ create
 
-findAllByViolationId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation -> m [Domain.Types.TowingRequest.TowingRequest]
+findAllByViolationId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleViolation.VehicleViolation -> m [Domain.Types.TowingRequest.TowingRequest])
 findAllByViolationId violationId = do findAllWithKV [Se.Is Beam.violationId $ Se.Eq (Kernel.Types.Id.getId violationId)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m (Maybe Domain.Types.TowingRequest.TowingRequest)
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m (Maybe Domain.Types.TowingRequest.TowingRequest))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TowingRequest.TowingStatus -> (Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m ())
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TowingRequest.TowingStatus -> Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m (Maybe Domain.Types.TowingRequest.TowingRequest)
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TowingRequest.TowingRequest -> m (Maybe Domain.Types.TowingRequest.TowingRequest))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TowingRequest.TowingRequest -> m ()
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TowingRequest.TowingRequest -> m ())
 updateByPrimaryKey (Domain.Types.TowingRequest.TowingRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.agencyEntityId agencyEntityId,
       Se.Set Beam.agentId agentId,
-      Se.Set Beam.cancelledReason cancelledReason,
       Se.Set Beam.currency currency,
-      Se.Set Beam.dropAddress dropAddress,
-      Se.Set Beam.dropFacilityName dropFacilityName,
-      Se.Set Beam.dropLat dropLat,
-      Se.Set Beam.dropLon dropLon,
       Se.Set Beam.evidence (Data.Aeson.toJSON evidence),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.notes notes,
@@ -56,24 +51,20 @@ updateByPrimaryKey (Domain.Types.TowingRequest.TowingRequest {..}) = do
       Se.Set Beam.paymentReceivedAt paymentReceivedAt,
       Se.Set Beam.paymentReceivedBy paymentReceivedBy,
       Se.Set Beam.paymentStatus paymentStatus,
-      Se.Set Beam.pickupAddress pickupAddress,
       Se.Set Beam.pickupLat pickupLat,
       Se.Set Beam.pickupLon pickupLon,
-      Se.Set Beam.priority priority,
-      Se.Set Beam.receiptNumber receiptNumber,
-      Se.Set Beam.releasedToIdNumberEncrypted (((releasedToIdNumber <&> unEncrypted . Kernel.External.Encryption.encrypted))),
-      Se.Set Beam.releasedToIdNumberHash ((releasedToIdNumber <&> Kernel.External.Encryption.hash)),
+      Se.Set Beam.releasedToIdNumberEncrypted (releasedToIdNumber <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.releasedToIdNumberHash (releasedToIdNumber <&> Kernel.External.Encryption.hash),
       Se.Set Beam.releasedToIdType releasedToIdType,
       Se.Set Beam.releasedToName releasedToName,
-      Se.Set Beam.releasedToPhoneEncrypted (((releasedToPhone <&> unEncrypted . Kernel.External.Encryption.encrypted))),
-      Se.Set Beam.releasedToPhoneHash ((releasedToPhone <&> Kernel.External.Encryption.hash)),
+      Se.Set Beam.releasedToPhoneEncrypted (releasedToPhone <&> unEncrypted . Kernel.External.Encryption.encrypted),
+      Se.Set Beam.releasedToPhoneHash (releasedToPhone <&> Kernel.External.Encryption.hash),
       Se.Set Beam.releasedToRelation releasedToRelation,
       Se.Set Beam.requestNumber requestNumber,
       Se.Set Beam.route route,
       Se.Set Beam.status status,
       Se.Set Beam.storageFeePerDay storageFeePerDay,
       Se.Set Beam.ticketPlaceId (Kernel.Types.Id.getId <$> ticketPlaceId),
-      Se.Set Beam.totalDaysInYard totalDaysInYard,
       Se.Set Beam.totalFee totalFee,
       Se.Set Beam.towingFee towingFee,
       Se.Set Beam.towingVehicleId (Kernel.Types.Id.getId <$> towingVehicleId),
@@ -92,12 +83,7 @@ instance FromTType' Beam.TowingRequest Domain.Types.TowingRequest.TowingRequest 
         Domain.Types.TowingRequest.TowingRequest
           { agencyEntityId = agencyEntityId,
             agentId = agentId,
-            cancelledReason = cancelledReason,
             currency = currency,
-            dropAddress = dropAddress,
-            dropFacilityName = dropFacilityName,
-            dropLat = dropLat,
-            dropLon = dropLon,
             evidence = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> x; Data.Aeson.Error _ -> []) evidence,
             id = Kernel.Types.Id.Id id,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -108,11 +94,8 @@ instance FromTType' Beam.TowingRequest Domain.Types.TowingRequest.TowingRequest 
             paymentReceivedAt = paymentReceivedAt,
             paymentReceivedBy = paymentReceivedBy,
             paymentStatus = paymentStatus,
-            pickupAddress = pickupAddress,
             pickupLat = pickupLat,
             pickupLon = pickupLon,
-            priority = priority,
-            receiptNumber = receiptNumber,
             releasedToIdNumber = EncryptedHashed <$> (Encrypted <$> releasedToIdNumberEncrypted) <*> releasedToIdNumberHash,
             releasedToIdType = releasedToIdType,
             releasedToName = releasedToName,
@@ -123,7 +106,6 @@ instance FromTType' Beam.TowingRequest Domain.Types.TowingRequest.TowingRequest 
             status = status,
             storageFeePerDay = storageFeePerDay,
             ticketPlaceId = Kernel.Types.Id.Id <$> ticketPlaceId,
-            totalDaysInYard = totalDaysInYard,
             totalFee = totalFee,
             towingFee = towingFee,
             towingVehicleId = Kernel.Types.Id.Id <$> towingVehicleId,
@@ -140,12 +122,7 @@ instance ToTType' Beam.TowingRequest Domain.Types.TowingRequest.TowingRequest wh
     Beam.TowingRequestT
       { Beam.agencyEntityId = agencyEntityId,
         Beam.agentId = agentId,
-        Beam.cancelledReason = cancelledReason,
         Beam.currency = currency,
-        Beam.dropAddress = dropAddress,
-        Beam.dropFacilityName = dropFacilityName,
-        Beam.dropLat = dropLat,
-        Beam.dropLon = dropLon,
         Beam.evidence = Data.Aeson.toJSON evidence,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
@@ -156,24 +133,20 @@ instance ToTType' Beam.TowingRequest Domain.Types.TowingRequest.TowingRequest wh
         Beam.paymentReceivedAt = paymentReceivedAt,
         Beam.paymentReceivedBy = paymentReceivedBy,
         Beam.paymentStatus = paymentStatus,
-        Beam.pickupAddress = pickupAddress,
         Beam.pickupLat = pickupLat,
         Beam.pickupLon = pickupLon,
-        Beam.priority = priority,
-        Beam.receiptNumber = receiptNumber,
-        Beam.releasedToIdNumberEncrypted = ((releasedToIdNumber <&> unEncrypted . Kernel.External.Encryption.encrypted)),
-        Beam.releasedToIdNumberHash = (releasedToIdNumber <&> Kernel.External.Encryption.hash),
+        Beam.releasedToIdNumberEncrypted = releasedToIdNumber <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.releasedToIdNumberHash = releasedToIdNumber <&> Kernel.External.Encryption.hash,
         Beam.releasedToIdType = releasedToIdType,
         Beam.releasedToName = releasedToName,
-        Beam.releasedToPhoneEncrypted = ((releasedToPhone <&> unEncrypted . Kernel.External.Encryption.encrypted)),
-        Beam.releasedToPhoneHash = (releasedToPhone <&> Kernel.External.Encryption.hash),
+        Beam.releasedToPhoneEncrypted = releasedToPhone <&> unEncrypted . Kernel.External.Encryption.encrypted,
+        Beam.releasedToPhoneHash = releasedToPhone <&> Kernel.External.Encryption.hash,
         Beam.releasedToRelation = releasedToRelation,
         Beam.requestNumber = requestNumber,
         Beam.route = route,
         Beam.status = status,
         Beam.storageFeePerDay = storageFeePerDay,
         Beam.ticketPlaceId = Kernel.Types.Id.getId <$> ticketPlaceId,
-        Beam.totalDaysInYard = totalDaysInYard,
         Beam.totalFee = totalFee,
         Beam.towingFee = towingFee,
         Beam.towingVehicleId = Kernel.Types.Id.getId <$> towingVehicleId,

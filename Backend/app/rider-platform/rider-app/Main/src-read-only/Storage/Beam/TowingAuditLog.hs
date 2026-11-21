@@ -3,7 +3,6 @@
 
 module Storage.Beam.TowingAuditLog where
 
-import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.TowingRequest
@@ -13,23 +12,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TowingAuditLogT f = TowingAuditLogT
-  { action :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    ipAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    lat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    lon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    newStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.TowingRequest.TowingStatus)),
-    performedBy :: (B.C f Kernel.Prelude.Text),
-    performedByName :: (B.C f Kernel.Prelude.Text),
-    performedByRole :: (B.C f Kernel.Prelude.Text),
-    previousStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.TowingRequest.TowingStatus)),
-    towingRequestId :: (B.C f Kernel.Prelude.Text),
-    userAgent :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { action :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    newStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.TowingRequest.TowingStatus),
+    note :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    performedBy :: B.C f Kernel.Prelude.Text,
+    performedByName :: B.C f Kernel.Prelude.Text,
+    towingRequestId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +34,6 @@ instance B.Table TowingAuditLogT where
 
 type TowingAuditLog = TowingAuditLogT Identity
 
-$(enableKVPG (''TowingAuditLogT) [('id)] [[('towingRequestId)]])
+$(enableKVPG ''TowingAuditLogT ['id] [['towingRequestId]])
 
-$(mkTableInstances (''TowingAuditLogT) "towing_audit_log")
+$(mkTableInstances ''TowingAuditLogT "towing_audit_log")

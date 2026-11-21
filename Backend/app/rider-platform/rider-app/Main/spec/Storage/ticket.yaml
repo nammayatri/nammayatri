@@ -185,12 +185,11 @@ TicketPlaceGroup:
     id: Id TicketPlaceGroup
     merchantOperatingCityId: Id MerchantOperatingCity
     name: Text
-    description: Maybe Text
     geomGeoJson: Maybe Text
-    isActive: Bool
+    isActive: Bool # draft until set live; zones of an inactive group are hidden
 
   default:
-    isActive: "true"
+    isActive: "false"
 
   queries:
     findById:
@@ -764,6 +763,7 @@ TicketBookingService:
     vehicleNumber: "!SecondaryKey"
     ticketServiceId: "!SecondaryKey" # capacity check must see unpaid holds still in Redis
     ticketBookingId: "!SecondaryKey" # payment status update must reach rows not yet drained
+    parentBookingServiceId: "!SecondaryKey" # extensions of a parking booking
 
   beamType:
     vendorSplitDetails: Maybe Value
@@ -819,6 +819,13 @@ TicketBookingService:
       kvFunction: updateOneWithKV
       params: [assignmentId, updatedAt]
       where: id
+    updateExpiryDateById:
+      kvFunction: updateOneWithKV
+      params: [expiryDate, updatedAt]
+      where: id
+    findAllByParentBookingServiceId:
+      kvFunction: findAllWithKV
+      where: parentBookingServiceId
 
   extraOperations:
   - EXTRA_QUERY_FILE

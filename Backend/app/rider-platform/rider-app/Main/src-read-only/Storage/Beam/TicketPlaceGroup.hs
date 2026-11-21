@@ -11,15 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TicketPlaceGroupT f = TicketPlaceGroupT
-  { description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    geomGeoJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { geomGeoJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +28,6 @@ instance B.Table TicketPlaceGroupT where
 
 type TicketPlaceGroup = TicketPlaceGroupT Identity
 
-$(enableKVPG (''TicketPlaceGroupT) [('id)] [])
+$(enableKVPG ''TicketPlaceGroupT ['id] [])
 
-$(mkTableInstances (''TicketPlaceGroupT) "ticket_place_group")
+$(mkTableInstances ''TicketPlaceGroupT "ticket_place_group")

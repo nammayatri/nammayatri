@@ -58,7 +58,8 @@ tests =
       testCase "peak counts concurrent windows only" $
         peakOverlap (t "2026-01-01T06:00:00Z") (t "2026-01-01T09:00:00Z") [w "05:00" "06:30", w "06:30" "07:00", w "07:00" "08:00", w "08:30" "10:00", w "09:00" "10:00"] @?= 1,
       testCase "peak with nested windows" $
-        peakOverlap (t "2026-01-01T06:00:00Z") (t "2026-01-01T09:00:00Z") [w "05:00" "08:00", w "06:30" "07:30", w "07:00" "07:10"] @?= 3
+        peakOverlap (t "2026-01-01T06:00:00Z") (t "2026-01-01T09:00:00Z") [w "05:00" "08:00", w "06:30" "07:30", w "07:00" "07:10"] @?= 3,
+      testCase "empty window overlaps nothing" $ overlaps (t "2026-01-01T06:00:00Z") (t "2026-01-01T09:00:00Z") (w "07:00" "07:00") @?= False
     ]
   where
     now = t "2026-01-01T05:30:00Z" -- 11:00 IST

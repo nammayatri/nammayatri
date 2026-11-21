@@ -24,7 +24,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketPlace.TicketPlace] -> m ())
 createMany = traverse_ create
 
-findAllByGroupId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup) -> m [Domain.Types.TicketPlace.TicketPlace]
+findAllByGroupId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlaceGroup.TicketPlaceGroup) -> m [Domain.Types.TicketPlace.TicketPlace])
 findAllByGroupId groupId = do findAllWithKV [Se.Is Beam.groupId $ Se.Eq (Kernel.Types.Id.getId <$> groupId)]
 
 findAllByTicketMerchantIdAndStatus ::

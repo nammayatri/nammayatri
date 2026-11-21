@@ -239,6 +239,7 @@ data TicketBookingServicesReq = TicketBookingServicesReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     categories :: [TicketBookingCategoryReq],
     durationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    extendsBookingServiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService),
     serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
@@ -325,6 +326,7 @@ data TicketServiceVerificationResp = TicketServiceVerificationResp
     ticketServiceName :: Kernel.Prelude.Maybe Data.Text.Text,
     ticketServiceShortId :: Kernel.Prelude.Maybe Data.Text.Text,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
     verificationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
   }

@@ -27,6 +27,11 @@ createMany = traverse_ create
 findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m [Domain.Types.TicketBookingService.TicketBookingService])
 findAllByBookingId ticketBookingId = do findAllWithKV [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
+findAllByParentBookingServiceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService) -> m [Domain.Types.TicketBookingService.TicketBookingService])
+findAllByParentBookingServiceId parentBookingServiceId = do findAllWithKV [Se.Is Beam.parentBookingServiceId $ Se.Eq (Kernel.Types.Id.getId <$> parentBookingServiceId)]
+
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe Domain.Types.TicketBookingService.TicketBookingService))
@@ -46,6 +51,11 @@ updateAssignmentById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.P
 updateAssignmentById assignmentId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.assignmentId assignmentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExpiryDateById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
+updateExpiryDateById expiryDate id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.expiryDate expiryDate, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
