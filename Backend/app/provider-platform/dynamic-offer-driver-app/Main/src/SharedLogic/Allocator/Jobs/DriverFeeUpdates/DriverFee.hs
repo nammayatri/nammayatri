@@ -54,7 +54,6 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder as Fields
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -64,7 +63,6 @@ import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.ActiveDriversList as ADL
@@ -72,10 +70,12 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQP
@@ -95,10 +95,8 @@ import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::
   forall m r c.
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( WalletFloorOfflineFlow m r,
     EncFlow m r,
-    MonadFlow m,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasField "activeDriversListKeyShards" r Int,
@@ -107,12 +105,7 @@ calculateDriverFeeForDrivers ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r,
-    Redis.HedisFlow m r,
-    BeamFlow m r,
     Finance.HasActorInfo m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->

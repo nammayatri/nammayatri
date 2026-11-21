@@ -43,6 +43,7 @@ module SharedLogic.CancellationOrchestrator
     -- * Consequence executors
     applyImmediateConsequences,
     applyTerminalConsequences,
+    driverCancelMetricsWouldBump,
 
     -- * Charge computation (also used by soft-cancel + penalty previews)
     CancellationChargesOutcome (..),
@@ -109,6 +110,7 @@ import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -158,6 +160,20 @@ data ConsequenceCtx = ConsequenceCtx
     decision :: CancellationDecision
   }
   deriving (Generic)
+
+-- | Same flags as 'applyDriverCancellationRateCount': True when this cancel bumps the
+-- driver's sliding-window cancel rate and/or bt: RIDE_CANCELLATION ACTION_COUNT.
+-- Callers (IJ behavior tick) should publish only when this is True.
+driverCancelMetricsWouldBump :: ConsequenceCtx -> Bool
+driverCancelMetricsWouldBump ctx =
+  let row = ctx.decision.consequenceRow
+      countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
+      countsTowardCount =
+        maybe
+          (ctx.source == SBCR.ByDriver)
+          ((== CancellationFault.DriverAtFault) . (.atFault))
+          ctx.decision.faultVerdict
+   in countsTowardRate || countsTowardCount
 
 -- | Map the persisted cancellation source to the type the verdict rules / matrix / coin
 -- engine consume. This is the ONLY place this mapping lives — flows must never hardcode
@@ -233,8 +249,7 @@ applyImmediateConsequences ::
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
@@ -322,7 +337,11 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     -- (no verdict) it counts driver-initiated cancels.
     applyDriverCancellationRateCount driver = do
       let countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
-          countsTowardCount = maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict
+          countsTowardCount =
+            maybe
+              (ctx.source == SBCR.ByDriver)
+              ((== CancellationFault.DriverAtFault) . (.atFault))
+              ctx.decision.faultVerdict
       -- Gate on the fault verdict, not on who pressed cancel. A driver who stalls until the
       -- rider cancels is at fault just the same; those cancels already bumped the counters but
       -- never triggered an evaluation, so the driver was judged only on their next self-cancel.

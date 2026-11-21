@@ -7,26 +7,34 @@
 
 module Lib.IncentiveJourney.StreakEnd
   ( mkStreakCampaignKey,
+    mkStreakSliceCampaignKey,
     periodKeysForStreakEndEligibility,
     isLastPeriodInStreak,
     isLastMilestoneSatisfied,
     shouldAttemptStreakEnd,
     isStreakEndEligible,
+    isSliceStreakEligible,
+    canAttemptPeriodizedStreak,
+    isNetOffStreakReward,
     streakEndRewardSpec,
+    streakEndDispatchSpecAndPayout,
     hasStreakEndRewardConfigured,
   )
 where
 
+import Data.Aeson (Value)
 import Data.Ord (comparing)
-import Data.Time (utctDay)
+import Data.Time (Day, utctDay)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.IncentiveJourney.Convert as Convert
+import qualified Lib.IncentiveJourney.Deferred as Deferred
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import qualified Lib.IncentiveJourney.RewardMetadata as RM
 import qualified Lib.IncentiveJourney.Streak as Streak
 import qualified Lib.IncentiveJourney.Types as IJ
 
@@ -50,6 +58,11 @@ mkStreakCampaignKey journey cjm =
         <> show (utctDay endDate)
         <> ":"
         <> cjm.id.getId
+
+-- | Idempotency key for one periodDays slice (Coins/Cash/NetOff). Distinct per sliceStart.
+mkStreakSliceCampaignKey :: DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Day -> Text
+mkStreakSliceCampaignKey journey cjm sliceStart =
+  mkStreakCampaignKey journey cjm <> ":slice:" <> show sliceStart
 
 periodKeysForStreakEndEligibility :: DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> [Text]
 periodKeysForStreakEndEligibility journey cjm
@@ -98,9 +111,14 @@ isLastMilestoneSatisfied milestones periodKey allStats =
       let lastMilestone = maximumBy (comparing (.order)) milestones
        in hasSatisfied lastMilestone.id periodKey allStats
 
+-- | Streak-end payout is NetOff (periodized or classic): lenient row gate.
+isNetOffStreakReward :: DCJM.CohortJourneyMapping -> Bool
+isNetOffStreakReward cjm = cjm.streakEndRewardType == Just Common.NetOffEarnings
+
 -- | Cheap gate before loading multi-period stats (ride-end path):
 -- last period + last milestone done. Waive of any in-between milestone still
 -- reaches full eligibility once every period key's milestones are satisfied.
+-- NetOff streak: last period alone (InProgress / missing days still OK for payout).
 shouldAttemptStreakEnd ::
   DIJ.IncentiveJourney ->
   DCJM.CohortJourneyMapping ->
@@ -111,9 +129,11 @@ shouldAttemptStreakEnd ::
 shouldAttemptStreakEnd journey cjm currentPeriodKey milestones currentPeriodStats
   | not (hasStreakEndRewardConfigured cjm) = False
   | not (isLastPeriodInStreak journey cjm currentPeriodKey) = False
+  | isNetOffStreakReward cjm = True
   | otherwise = isLastMilestoneSatisfied milestones currentPeriodKey currentPeriodStats
 
 -- | Full eligibility: every milestone satisfied for every period key in the streak.
+-- NetOff: last-period gate only — payout sums whatever period rows exist (see computeNetOffStreakPayout).
 isStreakEndEligible ::
   DIJ.IncentiveJourney ->
   DCJM.CohortJourneyMapping ->
@@ -123,15 +143,42 @@ isStreakEndEligible ::
   Bool
 isStreakEndEligible journey cjm currentPeriodKey milestones allStats
   | not (shouldAttemptStreakEnd journey cjm currentPeriodKey milestones allStats) = False
+  | isNetOffStreakReward cjm = True
   | otherwise =
     let periodKeys = periodKeysForStreakEndEligibility journey cjm
-     in not (null milestones)
-          && not (null periodKeys)
-          && all
-            ( \periodKey ->
-                all (\m -> hasSatisfied m.id periodKey allStats) milestones
-            )
-            periodKeys
+     in isSliceStreakEligible milestones periodKeys allStats
+
+-- | Slice eligibility: every milestone has a terminal/satisfied stats row for every
+-- period key in the slice (missing or InProgress → not eligible).
+-- Use canAttemptPeriodizedStreak for NetOff (InProgress OK; missing days skipped in payout).
+isSliceStreakEligible ::
+  [DIJM.IncentiveJourneyMilestone] ->
+  [Text] ->
+  [DIJS.IncentiveJourneyStats] ->
+  Bool
+isSliceStreakEligible milestones periodKeys allStats =
+  not (null milestones)
+    && not (null periodKeys)
+    && all
+      ( \periodKey ->
+          all (\m -> hasSatisfied m.id periodKey allStats) milestones
+      )
+      periodKeys
+
+-- | Periodized award gate. Non-NetOff: all milestones terminal for every slice day.
+-- NetOff: slice may pay from any existing rows (InProgress included); days with no
+-- stats row are omitted from the sum (same as daily NetOff settle on InProgress).
+canAttemptPeriodizedStreak ::
+  DCJM.CohortJourneyMapping ->
+  [DIJM.IncentiveJourneyMilestone] ->
+  [Text] ->
+  [DIJS.IncentiveJourneyStats] ->
+  Bool
+canAttemptPeriodizedStreak cjm milestones periodKeys allStats
+  | isNetOffStreakReward cjm =
+    not (null periodKeys)
+      && any (\row -> row.periodKey `elem` periodKeys) allStats
+  | otherwise = isSliceStreakEligible milestones periodKeys allStats
 
 streakEndRewardSpec :: DCJM.CohortJourneyMapping -> IJ.RewardSpec
 streakEndRewardSpec cjm =
@@ -148,3 +195,29 @@ streakEndRewardSpec cjm =
               cjm.streakEndRewardMetadata
           _ -> Nothing
     }
+
+-- | Spec + expected payout for dispatch. NetOff is converted to Cash (dispatcher skips
+-- raw NetOffEarnings). Coins/Cash/SWO keep configured values. Works for classic full-streak
+-- and periodized slices — pass the stats rows for the periods in scope.
+streakEndDispatchSpecAndPayout ::
+  DCJM.CohortJourneyMapping ->
+  RM.StreakRewardMeta ->
+  [(Text, Maybe Value)] -> -- (periodKey, currentMetrics) rows in scope
+  (Maybe Int, IJ.RewardSpec)
+streakEndDispatchSpecAndPayout cjm streakMeta periodMetrics =
+  case cjm.streakEndRewardType of
+    Just Common.NetOffEarnings ->
+      -- Per period: if (MG−earnings)>0 apply that row's %; else keep raw negative (no %).
+      -- Cash = max(0, sum). Same for classic full-streak and periodDays slices.
+      let payout =
+            Deferred.computeNetOffStreakPayout
+              streakMeta
+              cjm.streakEndRewardValue
+              periodMetrics
+          spec =
+            (streakEndRewardSpec cjm)
+              { IJ.rewardKind = IJ.Cash,
+                IJ.rewardValue = Just payout
+              }
+       in (Just payout, spec)
+    _ -> (cjm.streakEndRewardValue, streakEndRewardSpec cjm)

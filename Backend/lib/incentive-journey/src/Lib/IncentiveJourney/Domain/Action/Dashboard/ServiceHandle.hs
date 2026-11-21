@@ -13,6 +13,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Seconds)
 import Kernel.Types.Id
 import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.IncentiveJourney.CampaignSync as CampaignSync
 import qualified Lib.IncentiveJourney.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
@@ -42,7 +43,10 @@ data ServiceHandle m = ServiceHandle
     -- | Local UTC offset for day-bound history / UI local time (TransporterConfig / RiderConfig).
     getTimeDiffFromUtc :: Id Common.MerchantOperatingCity -> m Seconds,
     findPersonById :: Id Common.Person -> m (Maybe Common.PersonInfo),
+    -- | Eval / UI / slot checks: OptIn only after optedInAt.
     findAssignmentsByUserId :: Id Common.Person -> m [IJ.JourneyAssignment],
+    -- | Dashboard assignment list: includes pending OptIn invites (optedInAt null).
+    findDashboardAssignmentsByUserId :: Id Common.Person -> m [IJ.JourneyAssignment],
     findStatsHistoryByPersonId ::
       Id Common.Person ->
       UTCTime ->
@@ -67,6 +71,18 @@ data ServiceHandle m = ServiceHandle
           Id DIJM.IncentiveJourneyMilestone ->
           Text ->
           m ()
+        ),
+    -- | Provider dashboard: diagnose / catch-up streak-end or periodDays-slice reward.
+    inspectOrTriggerStreakEnd ::
+      Maybe
+        ( Id Common.Person ->
+          Id Common.Merchant ->
+          Id Common.MerchantOperatingCity ->
+          DIJ.IncentiveJourney ->
+          DCJM.CohortJourneyMapping ->
+          Text -> -- periodKey
+          Bool -> -- trigger
+          m IJ.StreakEndInspectResult
         ),
     waiveRiderMilestone ::
       Maybe
@@ -95,7 +111,12 @@ data ServiceHandle m = ServiceHandle
         ),
     -- | Special location id -> display name for UI (provider).
     findSpecialLocationNameById :: Maybe (Text -> m (Maybe Text)),
-    loadJourneyMilestones :: Id DIJ.IncentiveJourney -> m [DIJM.IncentiveJourneyMilestone]
+    loadJourneyMilestones :: Id DIJ.IncentiveJourney -> m [DIJM.IncentiveJourneyMilestone],
+    -- | Driver-app: sync IJCampaign person tag (+ AA reconcile). Rider leaves Nothing.
+    -- Nothing payload clears all IJCampaign tags.
+    syncCampaignMembership :: Maybe (Id Common.Person -> Maybe CampaignSync.CampaignHotPathSync -> m ()),
+    -- | Driver-app: remove one CJM from IJCampaign tag (+ AA reconcile). Rider leaves Nothing.
+    clearCampaignMembership :: Maybe (Id Common.Person -> Id DCJM.CohortJourneyMapping -> m ())
   }
 
 defaultBatchSize :: Int

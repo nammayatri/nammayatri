@@ -60,6 +60,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.FleetEngine as FleetEngine
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.OndcCancellationReason as SOCR
 import SharedLogic.Ride
@@ -171,6 +172,26 @@ cancel req merchant booking mbActiveSearchTry = do
           decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
           let consequenceCtx = Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCR.source, decision = decision}
           Orchestrator.applyImmediateConsequences consequenceCtx Nothing
+          -- Campaign cancellationRate = (dxCancel + dafCancel) / rrAccepted — one bump per event.
+          -- bumpCampaignBehaviorMetric already publishes a detailed BehaviourMetricTick
+          -- (metricName=dxCancel|dafCancel). Do not also publish bare RIDE_CANCELLATION —
+          -- that maps to dxCancel and would double-count / mis-attribute ByUser cancels.
+          -- ByDriver → dxCancel; ByUser → dafCancel (incl. driver-at-fault customer cancel).
+          -- Other sources that bump driver cancel metrics → dafCancel once.
+          let wouldBump = Orchestrator.driverCancelMetricsWouldBump consequenceCtx
+              bump metric action =
+                SLJourney.bumpCampaignBehaviorMetric
+                  ride.driverId
+                  merchant.id
+                  booking.merchantOperatingCityId
+                  transporterConfig.timeDiffFromUtc
+                  metric
+                  1
+                  action
+          case bookingCR.source of
+            DBCR.ByDriver -> when wouldBump $ bump "dxCancel" "RIDE_CANCELLATION"
+            DBCR.ByUser -> bump "dafCancel" "CUSTOMER_CANCELLATION"
+            _ -> when wouldBump $ bump "dafCancel" "RIDE_CANCELLATION"
           pure consequenceCtx
 
     whenJust mbRide $ \ride -> do

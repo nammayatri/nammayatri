@@ -8,9 +8,8 @@
 module SharedLogic.IncentiveJourney
   ( hasAssignedJourneys,
     findAssignmentsByUserId,
+    findDashboardAssignmentsByUserId,
     mkJourneyPeriodKey,
-    mkWeeklyPeriodKey,
-    mkMonthlyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     evaluateRiderJourney,
@@ -34,11 +33,20 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as 
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
 import Storage.Beam.IncentiveJourney ()
 
-hasAssignedJourneys :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m Bool
-hasAssignedJourneys personId = not . null <$> CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId)
+hasAssignedJourneys :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m Bool
+hasAssignedJourneys personId = not . null <$> findAssignmentsByUserId personId
 
-findAssignmentsByUserId :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
-findAssignmentsByUserId personId = CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId)
+-- | Uses UTC now as fallback when city offset is unavailable (rider list paths load config separately).
+findAssignmentsByUserId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
+findAssignmentsByUserId personId = do
+  now <- getCurrentTime
+  CQAssignment.findAssignmentsByUserId IJ.RiderActor (cast personId) now
+
+-- | Dashboard list: pending OptIn invites included (no optedInAt filter).
+findDashboardAssignmentsByUserId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m [IJ.JourneyAssignment]
+findDashboardAssignmentsByUserId personId = do
+  now <- getCurrentTime
+  CQAssignment.findMembershipsByUserId IJ.RiderActor (cast personId) now
 
 journeyTypeOrDefault :: Maybe DIJ.IncentiveJourneyType -> DIJ.IncentiveJourneyType
 journeyTypeOrDefault = IJ.journeyTypeOrDefault
@@ -46,14 +54,8 @@ journeyTypeOrDefault = IJ.journeyTypeOrDefault
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
 isJourneyWindowActive = IJ.isJourneyWindowActiveFor
 
-mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
+mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> UTCTime -> Text
 mkJourneyPeriodKey = IJ.mkJourneyPeriodKeyFor
-
-mkWeeklyPeriodKey :: UTCTime -> Text
-mkWeeklyPeriodKey = IJ.mkWeeklyPeriodKey
-
-mkMonthlyPeriodKey :: UTCTime -> Text
-mkMonthlyPeriodKey = IJ.mkMonthlyPeriodKey
 
 loadJourneyMilestones ::
   (Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -71,7 +73,10 @@ mkRiderHandle =
       loadMilestones = loadJourneyMilestones,
       dispatchReward = \_journey -> dispatchRiderReward,
       dispatchStreakEndReward = dispatchRiderStreakEndReward,
-      mbOnMilestoneCompleted = Nothing
+      mbOnMilestoneCompleted = Nothing,
+      mbOnMgOptInCleared = Nothing,
+      -- Rider: period ride counters only (Kafka ride path).
+      buildMetricContext = IJ.loadOrApplyRideDeltas
     }
 
 evaluateRiderJourney ::
@@ -102,16 +107,17 @@ evaluateRiderJourney personId merchantId merchantOpCityId timeDiffFromUtc mbPick
       }
 
 waiveRiderMilestone ::
-  (Log m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Seconds ->
   DIJ.IncentiveJourney ->
   Id DCJM.CohortJourneyMapping ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m ()
-waiveRiderMilestone personId merchantId merchantOpCityId journey cohortJourneyMappingId milestoneId periodKey =
+waiveRiderMilestone personId merchantId merchantOpCityId timeDiffFromUtc journey cohortJourneyMappingId milestoneId periodKey =
   void $
     IJ.waiveMilestoneForPeriod
       mkRiderHandle
@@ -119,6 +125,7 @@ waiveRiderMilestone personId merchantId merchantOpCityId journey cohortJourneyMa
       (cast merchantId)
       (cast merchantOpCityId)
       Nothing
+      timeDiffFromUtc
       journey
       cohortJourneyMappingId
       milestoneId
