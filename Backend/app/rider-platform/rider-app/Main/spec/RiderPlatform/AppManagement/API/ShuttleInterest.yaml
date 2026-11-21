@@ -1,0 +1,79 @@
+imports:
+  UTCTime: Data.Time
+  DayOfWeek: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  Person: Domain.Types.Person
+  ShuttleTripType: Domain.Types.ShuttleInterest
+  ShuttleAcPreference: Domain.Types.ShuttleInterest
+  ShuttleVehicleSizePreference: Domain.Types.ShuttleInterest
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.ShuttleInterest: "rider-app"
+
+module: ShuttleInterest
+
+# Control centre: corporate shuttle interest forms, as a table and as points for a map. Scoped to the dashboard's city.
+# companyDomain (e.g. juspay.in, nammayatri.in) tells the companies' employees apart; pass it to filter to one company.
+types:
+  ShuttleInterestItem:
+    personId: Id Person
+    employeeName: Maybe Text
+    companyDomain: Text
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Text
+    dropLat: Double
+    dropLon: Double
+    dropAddress: Text
+    tripType: ShuttleTripType
+    pickupTime: Maybe TimeOfDay
+    dropTime: Maybe TimeOfDay
+    shiftStartTime: TimeOfDay
+    shiftEndTime: TimeOfDay
+    maxWalkingDistanceMeters: Int
+    daysOfWeek: "[DayOfWeek]"
+    timeFlexibilityMinutes: Int
+    acPreference: Maybe ShuttleAcPreference
+    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  ShuttleInterestListResp:
+    interests: "[ShuttleInterestItem]"
+    limit: Int
+    offset: Int
+
+  ShuttleInterestMapPoint:
+    personId: Id Person
+    companyDomain: Text
+    tripType: ShuttleTripType
+    pickupLat: Double
+    pickupLon: Double
+    dropLat: Double
+    dropLon: Double
+
+  ShuttleInterestMapResp:
+    points: "[ShuttleInterestMapPoint]"
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      migrate:
+        capability: corporate-shuttle.interest.read
+      query:
+        - companyDomain: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: ShuttleInterestListResp
+  - GET:
+      endpoint: /mapPoints
+      auth: ApiAuthV2
+      migrate:
+        capability: corporate-shuttle.interest.read
+      query:
+        - companyDomain: Text
+      response:
+        type: ShuttleInterestMapResp
