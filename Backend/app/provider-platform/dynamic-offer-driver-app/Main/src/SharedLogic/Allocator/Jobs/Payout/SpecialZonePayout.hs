@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout where
+module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+  ( sendSpecialZonePayout,
+    executeSpecialZonePayout,
+  )
+where
 
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -35,12 +39,11 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
-import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPayout (dispatchPayoutToDriver)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride (getRcIdForRide)
-import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -131,43 +134,15 @@ executeSpecialZonePayout ::
   DPR.PayoutRequest ->
   m ExecutionResult
 executeSpecialZonePayout payoutRequest = do
-  let driverId = Id payoutRequest.beneficiaryId
   let merchantId = Id payoutRequest.merchantId
   let merchantOpCityId = Id payoutRequest.merchantOperatingCityId
-
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbRide <- QRide.findById (Id payoutRequest.entityId)
-
   whenJust mbRide $ \ride ->
     when (ride.status == Ride.INPROGRESS) $ do
       let cronJobReq = RideEnd.CronJobEndRideReq {point = Nothing, merchantId = merchantId}
       shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id) False
       void $ RideEnd.cronJobEndRide shandle ride.id cronJobReq
-
-  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  (ridePayoutFlow, _) <- TP.getPayoutServiceFlowForMerchant (.createPayoutOrder) TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService merchantOpCityId
-  if ridePayoutFlow == IPayout.BulkFlow
-    then do
-      -- Not supported on the bulk (HDFC CBX) rail: fail the request and give the vehicle balance
-      -- back, rather than leave the request stuck with the balance taken.
-      let reason = "Special-zone payouts are not supported on the bulk payout rail"
-      logError $ reason <> " | payoutRequest " <> payoutRequest.id.getId
-      PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just reason) payoutRequest
-      QPR.updateStatusWithReasonById DPR.AUTO_PAY_FAILED (Just reason) payoutRequest.id
-      SharedRide.safeRevertVehicleBalanceForPayout payoutRequest
-    else do
-      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
-      let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
-      mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
-      case mbPayoutOrder of
-        Just payoutOrder ->
-          logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
-        Nothing -> do
-          mbUpdatedPayoutReq <- QPR.findById payoutRequest.id
-          whenJust mbUpdatedPayoutReq $ \updatedPayoutReq ->
-            when (updatedPayoutReq.status `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
-              SharedRide.safeRevertVehicleBalanceForPayout updatedPayoutReq
-  pure Complete
+  dispatchPayoutToDriver payoutRequest
 
 -- ---------------------------------------------------------------------------
 -- Old flow: ScheduledPayout based (backward compat with prodHotPush-BPP)

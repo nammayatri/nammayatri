@@ -464,7 +464,8 @@ performSafetyCheck ride booking isOndcScheduledRideSupportEnabled = do
         & fromMaybeM (BookingFieldNotPresent "riderId")
     riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
     void $ QRide.updateSafetyAlertTriggered ride.id
-    when (riderDetails.nightSafetyChecks || isOndcScheduledRideSupportEnabled) $ do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-      BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle
+    when (riderDetails.nightSafetyChecks || isOndcScheduledRideSupportEnabled) $
+      unless (booking.bookingType == NudgeRide) $ do
+        driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+        BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle

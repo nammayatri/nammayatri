@@ -431,6 +431,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         ledgerWriteMode = Nothing,
         financeInvoiceId = Nothing,
         discountAmount = mbClampedDiscount,
+        bookingType = DRB.NormalBooking,
         ..
       }
 

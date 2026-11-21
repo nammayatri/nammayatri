@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
 import Storage.Queries.BookingExtra as ReExport
-import Storage.Queries.Transformers.Booking
 
 updateEstimatedDistanceAndFare ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

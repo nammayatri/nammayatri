@@ -270,6 +270,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
 
+  fork "endNudgeRideOnNewAssign" $
+    Redis.del ("nudgeRide:" <> driver.id.getId)
+
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
 

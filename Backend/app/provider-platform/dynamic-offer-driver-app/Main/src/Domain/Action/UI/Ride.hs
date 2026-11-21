@@ -682,7 +682,8 @@ arrivedAtDestination rideId pt = do
             pure (Just otp)
         else pure Nothing
     let updatedRide = ride {DRide.returnOtp = mbReturnOtp}
-    BP.sendDestinationArrivalUpdateToBAP booking updatedRide (Just now)
+    unless (booking.bookingType == DRB.NudgeRide) $
+      BP.sendDestinationArrivalUpdateToBAP booking updatedRide (Just now)
     QRide.updateDestinationArrival ride.id now
   pure Success
   where

@@ -1,5 +1,6 @@
 module Domain.Action.UI.DemandHotspots
   ( getDriverDemandHotspots,
+    postDriverDemandHotspot,
     tripOptionFromCategories,
     updateDemandHotspotsOnSearch,
     removeDemandHotspot,
@@ -12,6 +13,7 @@ import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub)
+import qualified Data.List.NonEmpty as NE
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
@@ -30,6 +32,7 @@ import Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.Error
+import Kernel.Types.APISuccess
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -39,8 +42,14 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.NudgeRide as NudgeRide
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Maps as TMaps
 
 -- What it is:
 -- Entire city is divided into geohashes. A search adds a member and a ride start
@@ -356,3 +365,162 @@ geohashCellWidthMeters precision = case precision of
   7 -> 153.0
   8 -> 38.0
   _ -> 1220.0 -- default to precision 6
+
+-- ===== Demand Nudge =====
+
+data NudgeCellCache = NudgeCellCache
+  { geohash :: Text,
+    centroid :: LatLong,
+    freshnessRatio :: Double,
+    recentDemand :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance Maps.HasCoordinates NudgeCellCache where
+  getCoordinates cell = cell.centroid
+
+mkNudgeCacheKey :: Text -> Text
+mkNudgeCacheKey opCityId = "DH:NK:cityId:" <> opCityId
+
+mkNudgeLockKey :: Text -> Text
+mkNudgeLockKey opCityId = "DH:NudgeLock:cityId:" <> opCityId
+
+postDriverDemandHotspot ::
+  ( Maybe (Id Person),
+    Id Merchant,
+    Id MerchantOperatingCity
+  ) ->
+  DemandNudgeReq ->
+  Flow APISuccess
+postDriverDemandHotspot (mbDriverId, merchantId, merchantOpCityId) req = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getCurrentTime
+  demandHotspotsExcluded <- CQLF.isFeatureExcluded DEMAND_HOTSPOTS
+  case transporterConfig.demandHotspotsConfig of
+    Just configs | configs.enableDemandHotspots && not demandHotspotsExcluded -> do
+      let ageSecs = realToFrac (T.diffUTCTime now req.timestamp) :: Double
+      unless (ageSecs > 120.0) $ do
+        driverId <- fromMaybeM (InvalidRequest "Driver not logged in") mbDriverId
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let driverLatLon = LatLong req.lat req.lon
+        fork "demandNudge" $ do
+          mbActiveNudgeRideId <- Redis.safeGet (NudgeRide.nudgeRideRedisKey driverId) :: Flow (Maybe Text)
+          unless (isJust mbActiveNudgeRideId) $ do
+            cells <- computeNudgeCache merchantOpCityId configs
+            unless (null cells) $ do
+              let total = length cells
+                  avgRecent = fromIntegral (sum (map (.recentDemand) cells)) / fromIntegral total :: Double
+                  aboveAvg = filter (\c -> fromIntegral c.recentDemand > avgRecent) cells
+                  candidates = if null aboveAvg then cells else aboveAvg
+                  haversineScore c =
+                    let distMeters = fromIntegral (highPrecMetersToMeters (distanceBetweenInMeters driverLatLon c.centroid)).getMeters :: Double
+                        distKm = max 0.001 (distMeters / 1000.0)
+                     in c.freshnessRatio * fromIntegral c.recentDemand / distKm
+                  top20 = take 20 $ sortBy (flip compare `on` haversineScore) candidates
+              mbWinner <- case NE.nonEmpty top20 of
+                Nothing -> pure Nothing
+                Just top20NE -> do
+                  eitherDistances <-
+                    withTryCatch "demandNudge:getDistances" $
+                      TMaps.getDistancesOSRMOnly
+                        merchantOpCityId
+                        Nothing
+                        Maps.GetDistancesReq
+                          { origins = NE.fromList [driverLatLon],
+                            destinations = top20NE,
+                            distanceUnit = Meter,
+                            sourceDestinationMapping = Nothing,
+                            travelMode = Just Maps.CAR
+                          }
+                  pure $ case eitherDistances of
+                    Right distances ->
+                      let finalScore dr =
+                            let travelMins = max 0.001 (fromIntegral dr.duration.getSeconds / 60.0 :: Double)
+                             in dr.destination.freshnessRatio * fromIntegral dr.destination.recentDemand / travelMins
+                       in Just (Kernel.Prelude.maximumBy (compare `on` finalScore) (NE.toList distances)).destination
+                    Left _ -> Just (NE.head top20NE)
+              whenJust mbWinner $ \winnerCell -> do
+                snappedLoc <- do
+                  eitherSnap <-
+                    withTryCatch "demandNudge:snapToRoad" $
+                      TMaps.snapToRoadOSRMOnly
+                        merchantOpCityId
+                        Nothing
+                        Maps.SnapToRoadReq
+                          { points = [winnerCell.centroid],
+                            distanceUnit = Meter,
+                            calculateDistanceFrom = Nothing
+                          }
+                  pure $ case eitherSnap of
+                    Right (_, Right snapResp) ->
+                      case snapResp.snappedPoints of
+                        h : _ -> h
+                        [] -> winnerCell.centroid
+                    _ -> winnerCell.centroid
+                mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId "DEMAND_NUDGE" (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
+                whenJust mbOverlay $ \overlay -> do
+                  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+                  vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+                  void $ NudgeRide.createNudgeBookingAndRide merchant driver vehicle merchantOpCityId driverLatLon snappedLoc overlay
+    _ -> pure ()
+  pure Success
+
+computeNudgeCache :: Id MerchantOperatingCity -> DemandHotspotsConfig -> Flow [NudgeCellCache]
+computeNudgeCache merchantOpCityId configs = do
+  let nudgeCacheKey = mkNudgeCacheKey merchantOpCityId.getId
+  cachedCells :: Maybe [NudgeCellCache] <- Redis.safeGet nudgeCacheKey
+  case cachedCells of
+    Just cells -> do
+      fork "nudgeCacheRefresh" $ do
+        expirySec <- Redis.ttl nudgeCacheKey
+        when (expirySec < 60) $
+          void $ buildNudgeCache nudgeCacheKey True
+      return cells
+    Nothing -> buildNudgeCache nudgeCacheKey False
+  where
+    buildNudgeCache nudgeCacheKey forceRebuild =
+      Redis.withWaitAndLockRedis (mkNudgeLockKey merchantOpCityId.getId) 10 10000 $ do
+        recheckCells :: Maybe [NudgeCellCache] <- if forceRebuild then return Nothing else Redis.safeGet nudgeCacheKey
+        case recheckCells of
+          Just cells -> return cells
+          Nothing -> do
+            now <- getCurrentTime
+            activeGeohashes <- Redis.sMembers (mkGeohashSetKey merchantOpCityId.getId)
+            let expiryTime = T.addUTCTime (- (60 * fromIntegral configs.analysisDurationMinutes)) now
+                recentStart = T.addUTCTime (-300) now
+                cacheTtlSecs = 5 * 60
+            cells <- catMaybes <$> mapM (processOneGeohash expiryTime recentStart) activeGeohashes
+            unless (null cells) $
+              Redis.setExp nudgeCacheKey cells cacheTtlSecs
+            return cells
+
+    processOneGeohash expiryTime recentStart geohash = do
+      let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId geohash
+      void $ Redis.zRemRangeByScore sortedSetKey 0 (utcToMilliseconds expiryTime)
+      totalDemand <- fmap integerToInt (Redis.zCard sortedSetKey)
+      if totalDemand == 0
+        then do
+          void $ Redis.srem (mkGeohashSetKey merchantOpCityId.getId) [geohash]
+          return Nothing
+        else do
+          recentDemandCount <- fmap integerToInt (Redis.zCount sortedSetKey (utcToMilliseconds recentStart) (1 / 0 :: Double))
+          let freshnessRatio = fromIntegral recentDemandCount / fromIntegral totalDemand :: Double
+          if freshnessRatio < 0.40
+            then return Nothing
+            else do
+              rawMembers <- Redis.zRange sortedSetKey 0 1000000
+              let members :: [HotspotObject] = mapMaybe (Ae.decode . cs) rawMembers
+              case members of
+                [] -> return Nothing
+                _ -> do
+                  let n = length members
+                      (sumLat, sumLon) = foldr' (\m (al, an) -> (al + m.hotspotLat, an + m.hotspotLon)) (0.0, 0.0) members
+                      centroid = LatLong (sumLat / fromIntegral n) (sumLon / fromIntegral n)
+                  return $
+                    Just
+                      NudgeCellCache
+                        { geohash = geohash,
+                          centroid = centroid,
+                          freshnessRatio = freshnessRatio,
+                          recentDemand = recentDemandCount
+                        }

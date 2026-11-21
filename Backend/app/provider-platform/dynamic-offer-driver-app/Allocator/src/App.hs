@@ -68,6 +68,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDri
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
+import SharedLogic.Allocator.Jobs.NudgeRide.CompleteStaleNudgeRide (completeStaleNudgeRideJob)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutStatusCheck)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
@@ -227,6 +228,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env processEndRideFinanceJob
           & putJobHandlerInListWrapper flowRt env walletIntegrityCheck
           & putJobHandlerInListWrapper flowRt env chargeWalletPenaltyJob
+          & putJobHandlerInListWrapper flowRt env completeStaleNudgeRideJob
     }
 
 runDriverOfferAllocator ::

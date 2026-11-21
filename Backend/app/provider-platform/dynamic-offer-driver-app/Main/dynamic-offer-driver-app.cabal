@@ -624,6 +624,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection
+      SharedLogic.Allocator.Jobs.NudgeRide.CompleteStaleNudgeRide
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
@@ -720,6 +721,7 @@ library
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverOnboardingDocumentVersion
       SharedLogic.DriverOnlineHoursCache
+      SharedLogic.DriverPayout
       SharedLogic.DriverPool
       SharedLogic.DriverPool.AreaPreference
       SharedLogic.DriverPool.AvailableForRides
@@ -815,6 +817,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
+      SharedLogic.NudgeRide
       SharedLogic.OndcCancellationReason
       SharedLogic.OneShotAssign
       SharedLogic.OTP

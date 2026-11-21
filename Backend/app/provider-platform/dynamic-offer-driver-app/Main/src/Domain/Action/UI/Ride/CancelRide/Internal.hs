@@ -217,6 +217,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
                 | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig driver
+            when (booking.bookingType == SRB.NudgeRide) $
+              Redis.del ("nudgeRide:" <> ride.driverId.getId)
             -- the decision above already consumed the live pickup journey; persist it on the ride
             fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):

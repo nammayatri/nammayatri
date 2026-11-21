@@ -67,6 +67,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Clickhouse.Config
@@ -88,20 +89,25 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
-import Lib.Scheduler.Environment (JobCreator)
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.DriverPayout (dispatchPayoutToDriver)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.NudgeRide as NudgeRide
 import qualified SharedLogic.ParkingFeeExemption as SPFE
-import SharedLogic.Ride (validateRideLocation)
+import SharedLogic.Ride (getPayoutDetailsForRide, validateRideLocation)
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -256,7 +262,9 @@ type EndRideFlow m r =
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    JobCreator r m,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "blackListedJobs" r [Text],
+    SchedulerFlow r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     Esq.EsqDBReplicaFlow m r,
@@ -640,8 +648,70 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    notifyCompleteToBAPFork <-
+      awaitableFork "endRide->notifyCompleteToBAP" $
+        withTimeAPI "endRide" "notifyCompleteToBAP" $
+          unless (booking.bookingType == SRB.NudgeRide) $
+            notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
+
+    when (booking.bookingType == SRB.NudgeRide) $
+      fork "nudgeRide payout" $ do
+        mbPayoutCfg <- Redis.safeGet (NudgeRide.nudgeRidePayoutCfgKey updRide.id)
+        whenJust (mbPayoutCfg :: Maybe NudgeRide.NudgePayoutConfig) $ \cfg -> do
+          let traveledKm = realToFrac updRide.traveledDistance.getHighPrecMeters / 1000.0 :: Double
+              intervals = floor (traveledKm / cfg.intervalDistanceKm) :: Int
+              rawAmt = fromIntegral intervals * cfg.payoutAmountPerInterval
+              payoutAmt = min booking.estimatedFare rawAmt
+          existingPayout <- QPR.findByEntity updRide.id.getId (Just DPayment.DEMAND_HOTSPOT_PAYOUT)
+          when (isNothing existingPayout && payoutAmt > 0) $ do
+            payoutRequestId <- Id <$> generateGUID
+            (payoutVpa, netPayoutAmount, mbAdjustVehicleBalance) <- getPayoutDetailsForRide updRide.id payoutAmt
+            mbDriverPerson <- QP.findById driverId
+            phoneNo <- mapM decrypt (mbDriverPerson >>= (.mobileNumber))
+            let payoutStatus =
+                  if isJust payoutVpa
+                    then DPR.INITIATED
+                    else DPR.CASH_PENDING
+                payoutRequest =
+                  DPR.PayoutRequest
+                    { id = payoutRequestId,
+                      batchId = Nothing,
+                      entityName = Just DPayment.DEMAND_HOTSPOT_PAYOUT,
+                      entityId = updRide.id.getId,
+                      entityRefId = Just booking.id.getId,
+                      beneficiaryId = driverId.getId,
+                      amount = Just netPayoutAmount,
+                      status = payoutStatus,
+                      retryCount = Nothing,
+                      failureReason = Nothing,
+                      payoutTransactionId = Nothing,
+                      cashMarkedById = Nothing,
+                      cashMarkedByName = Nothing,
+                      cashMarkedAt = Nothing,
+                      expectedCreditTime = if payoutStatus == DPR.INITIATED then Just now else Nothing,
+                      scheduledAt = if payoutStatus == DPR.INITIATED then Just now else Nothing,
+                      customerVpa = payoutVpa,
+                      bankName = Nothing,
+                      bankAccountLast4 = Nothing,
+                      customerPhone = phoneNo,
+                      customerEmail = mbDriverPerson >>= (.email),
+                      customerName = (.firstName) <$> mbDriverPerson,
+                      remark = Just "Payout for Demand Hotspot Ride",
+                      orderType = Just "FULFILL_ONLY",
+                      city = Nothing,
+                      createdAt = now,
+                      updatedAt = now,
+                      merchantId = booking.providerId.getId,
+                      merchantOperatingCityId = updRide.merchantOperatingCityId.getId,
+                      payoutFee = mbAdjustVehicleBalance,
+                      coverageFrom = Nothing,
+                      coverageTo = Nothing,
+                      payoutType = Nothing,
+                      ledgerEntryIds = Nothing
+                    }
+            PayoutRequest.createPayoutRequest payoutRequest
+            void $ dispatchPayoutToDriver payoutRequest
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 

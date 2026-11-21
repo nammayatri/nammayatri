@@ -132,6 +132,7 @@ data AllocatorJobType
   | ProcessEndRideFinance
   | WalletIntegrityCheck
   | ChargeWalletPenalty
+  | CompleteStaleNudgeRide
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -222,6 +223,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SProcessEndRideFinance jobData = AnyJobInfo <$> restoreJobInfo SProcessEndRideFinance jobData
   restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
   restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
+  restoreAnyJobInfo SCompleteStaleNudgeRide jobData = AnyJobInfo <$> restoreJobInfo SCompleteStaleNudgeRide jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -1065,3 +1067,13 @@ data ChargeWalletPenaltyJobData = ChargeWalletPenaltyJobData
 instance JobInfoProcessor 'ChargeWalletPenalty
 
 type instance JobContent 'ChargeWalletPenalty = ChargeWalletPenaltyJobData
+
+data CompleteStaleNudgeRideJobData = CompleteStaleNudgeRideJobData
+  { rideId :: Id DRide.Ride,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CompleteStaleNudgeRide
+
+type instance JobContent 'CompleteStaleNudgeRide = CompleteStaleNudgeRideJobData
