@@ -47,12 +47,12 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import qualified Lib.Finance.Core.Types as Finance
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
@@ -79,7 +79,8 @@ bulkUpdateByDriverId ::
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    CoinLedger.CoinFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -98,9 +99,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Coins value cannot be negative"}
     else do
       now <- getCurrentTime
-      uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-          status_ = if coinsValue > 0 then Remaining else Used
       driverExists <- Person.findById driverId
       if isNothing driverExists
         then do
@@ -109,25 +108,17 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
           QVeh.findById driverId >>= \case
             Just vehicle -> do
               Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
-              let driverCoinEvent =
-                    DTCC.CoinHistory
-                      { id = Id uuid,
-                        driverId = driverId.getId,
-                        merchantId = merchantId.getId,
-                        merchantOptCityId = merchantOpCityId.getId,
-                        eventFunction = eventFunction,
-                        coins = coinsValue,
-                        status = status_,
-                        createdAt = now,
-                        updatedAt = now,
-                        expirationAt = expiryTime,
-                        coinsUsed = 0,
-                        bulkUploadTitle = Just bulkUploadTitle,
-                        entityId = entityId,
-                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant,
-                        serviceTierType = Nothing
-                      }
-              CHistory.updateCoinEvent driverCoinEvent
+              CoinLedger.postCoinEvent
+                CoinLedger.CoinEvent
+                  { driverId = driverId,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOpCityId,
+                    eventFunction = eventFunction,
+                    coins = coinsValue,
+                    expiresAt = expiryTime,
+                    entityId = entityId,
+                    attrs = CoinLedger.CoinAttrs {bulkUploadTitle = Just bulkUploadTitle, vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant, serviceTierType = Nothing, earnedAt = Nothing}
+                  }
               Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
               pure Nothing
             Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
@@ -152,7 +143,8 @@ bulkUpdateByDriverIdV2 ::
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    CoinLedger.CoinFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -170,9 +162,7 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
       let coinsValue_ = amount.getHighPrecMoney / transporterConfig.coinConversionRate.getHighPrecMoney
           coinsValue = round coinsValue_
       now <- getCurrentTime
-      uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-          status_ = if coinsValue > 0 then Remaining else Used
       driverExists <- Person.findById driverId
       if isNothing driverExists
         then do
@@ -181,25 +171,17 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
           QVeh.findById driverId >>= \case
             Just vehicle -> do
               Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
-              let driverCoinEvent =
-                    DTCC.CoinHistory
-                      { id = Id uuid,
-                        driverId = driverId.getId,
-                        merchantId = merchantId.getId,
-                        merchantOptCityId = merchantOpCityId.getId,
-                        eventFunction = eventFunction,
-                        coins = coinsValue,
-                        status = status_,
-                        createdAt = now,
-                        updatedAt = now,
-                        expirationAt = expiryTime,
-                        coinsUsed = 0,
-                        bulkUploadTitle = Just bulkUploadTitle,
-                        entityId = entityId,
-                        vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant,
-                        serviceTierType = Nothing
-                      }
-              CHistory.updateCoinEvent driverCoinEvent
+              CoinLedger.postCoinEvent
+                CoinLedger.CoinEvent
+                  { driverId = driverId,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOpCityId,
+                    eventFunction = eventFunction,
+                    coins = coinsValue,
+                    expiresAt = expiryTime,
+                    entityId = entityId,
+                    attrs = CoinLedger.CoinAttrs {bulkUploadTitle = Just bulkUploadTitle, vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant, serviceTierType = Nothing, earnedAt = Nothing}
+                  }
               Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
               pure Nothing
             Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
@@ -218,7 +200,7 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
   let coinUsed_ = driver.usedCoins
       totalCoinsEarned_ = driver.totalEarnedCoins
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
-  coinEarnSummary <- B.runInReplica $ CHistory.totalCoinEarnHistory driverId mbLimit mbOffset
+  coinEarnSummary <- CoinLedger.coinHistoryPage driverId mbLimit mbOffset
   coinBurnSummary <- B.runInReplica $ PHistory.getPurchasedHistory driverId mbLimit mbOffset
   coinEarnHistory <- B.runInReplica $ mapM toEarnHistoryItem coinEarnSummary
   let coinBurnHistory = map toBurnHistoryItem coinBurnSummary

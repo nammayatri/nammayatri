@@ -34,6 +34,8 @@ data LedgerEntryInput = LedgerEntryInput
     metadata :: Maybe LedgerEntryMetadata,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
-    settlementStatus :: Maybe SettlementStatus
+    settlementStatus :: Maybe SettlementStatus,
+    -- | When the amount this entry credits lapses; Nothing = never (see "Lib.Finance.Lot").
+    expiresAt :: Maybe UTCTime
   }
   deriving (Eq, Show, Generic)

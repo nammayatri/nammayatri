@@ -37,12 +37,12 @@ import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, recordDocumentCompletion)
 import qualified Storage.CachedQueries.CoinsConfig as CQCC
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
-import qualified Storage.Queries.Coins.CoinHistory as SQCC
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.LmsCertificate as SQLC
@@ -114,7 +114,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
             case bonusCoinEventFunction of
               Nothing -> return Nothing
               Just functionName -> do
-                mbCoinHistory <- SQCC.getCoinsByEventFunction personId functionName (Just eModule.id.getId)
+                mbCoinHistory <- CoinLedger.getCoinsByEvent personId functionName (Just eModule.id.getId)
                 return $ maybe Nothing (\val -> Just val.coins) mbCoinHistory
           else do return Nothing
 
@@ -255,7 +255,7 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
             case question.quizCoinFunction of
               Nothing -> return Nothing
               Just functionName -> do
-                mbCoinHistory <- SQCC.getCoinsByEventFunction personId functionName (Just question.questionId.getId)
+                mbCoinHistory <- CoinLedger.getCoinsByEvent personId functionName (Just question.questionId.getId)
                 return $ maybe Nothing (\val -> Just val.coins) mbCoinHistory
           else do return Nothing
 
@@ -398,7 +398,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
     Nothing -> return Nothing
     Just questionMM -> case questionMM.quizCoinFunction of
       Nothing -> return Nothing
-      Just functionName -> SQCC.getCoinsByEventFunction personId functionName (Just req.questionId.getId)
+      Just functionName -> CoinLedger.getCoinsByEvent personId functionName (Just req.questionId.getId)
 
   isCoinsEarned <- do
     case mbCoinHistory of
@@ -668,7 +668,7 @@ getLmsGetBonusCoins (mbPersonId, _merchantId, merchantOpCityId) moduleId = do
       case moduleInfo.bonusCoinEventFunction of
         Nothing -> return API.Types.UI.LmsModule.BonusRes {coins = Nothing}
         Just functionName -> do
-          mbCoinHistory <- SQCC.getCoinsByEventFunction personId functionName (Just moduleInfo.id.getId)
+          mbCoinHistory <- CoinLedger.getCoinsByEvent personId functionName (Just moduleInfo.id.getId)
           let coinsVal = maybe 0 (\val -> val.coins) mbCoinHistory
           return API.Types.UI.LmsModule.BonusRes {coins = if coinsVal == 0 then Nothing else Just coinsVal}
     else do return $ API.Types.UI.LmsModule.BonusRes {coins = Nothing}

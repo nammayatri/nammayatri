@@ -99,3 +99,13 @@ CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_timestamp_to_account_id ON at
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN reversed_by character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN expires_at timestamp with time zone ;
+DROP INDEX IF EXISTS finance_ledger_entry_idx_to_account_id_timestamp;
+
+
+------- SQL updates -------
+

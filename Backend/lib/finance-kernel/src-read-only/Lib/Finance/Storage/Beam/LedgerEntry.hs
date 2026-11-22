@@ -23,6 +23,7 @@ data LedgerEntryT f = LedgerEntryT
     entityReferenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityReferenceType :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType),
     entryType :: B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType,
+    expiresAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromAccountId :: B.C f Kernel.Prelude.Text,
     fromEndingBalance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromStartingBalance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

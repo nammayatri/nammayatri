@@ -50,6 +50,7 @@ library
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.PayoutSettlement
       Lib.Finance.Ledger.Service
+      Lib.Finance.Lot
       Lib.Finance.Reconciliation.Job
       Lib.Finance.Reconciliation.Recipe
       Lib.Finance.Reconciliation.Runner

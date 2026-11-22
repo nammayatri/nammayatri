@@ -25,6 +25,7 @@ data LedgerEntry = LedgerEntry
     entityReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
+    expiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     fromEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStartingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -53,7 +54,7 @@ data LedgerEntry = LedgerEntry
   }
   deriving (Generic)
 
-data EntityReferenceType = RefundRequest | LedgerAdjustmentRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntityReferenceType = RefundRequest | LedgerAdjustmentRequest | ExpiringLot deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

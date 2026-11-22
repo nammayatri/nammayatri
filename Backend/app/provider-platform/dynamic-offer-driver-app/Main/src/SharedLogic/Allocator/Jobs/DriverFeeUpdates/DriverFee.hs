@@ -34,7 +34,6 @@ import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverPlan as DPlan
-import qualified Domain.Types.DriverStats as Fields
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate (..))
 import Domain.Types.Merchant
@@ -69,6 +68,7 @@ import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
@@ -85,7 +85,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan as QDPlan
-import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
@@ -155,7 +154,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
         let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
             isPlanToggleAllowedAtPlanLevel = mbPlan <&> (.subscribedFlagToggleAllowed)
-        mbDriverStat <- QDS.findById (cast driverFee.driverId)
         case mbPlan of
           Nothing -> pure ()
           Just plan -> do
@@ -163,8 +161,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage, waiveOffValidTill) = case mbDriverPlan of
                   Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0, Nothing) -- if there is no driverplan in that case we pass Nothing to avoid waiveoff in getFinalOrderAmount function
                   Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage, driverPlan.waiveOffValidTill)
-                coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
+            coinCashLeft <- if plan.eligibleForCoinDiscount then max 0.0 <$> CoinLedger.getCoinCashLeft (cast driverFee.driverId) else pure 0.0
             driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
             let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
 
@@ -211,7 +209,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             when (totalFee > 0) $ do
               if coinCashLeft >= totalFee
                 then do
-                  void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
+                  CoinLedger.debitCoinCash (cast driverFeeUpdateWithPlanAndOffer.driverId) totalFee "PlanFeeFromCoinCash" (Just driverFeeUpdateWithPlanAndOffer.id.getId)
                   setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
                   -- clear by coins and zero the cancellation in one write (it goes on a separate fee below)
                   QDF.updateStatusAndCancellationPenaltyByIds CLEARED_BY_YATRI_COINS 0 [driverFeeUpdateWithPlanAndOffer.id] now
@@ -221,7 +219,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   QINV.create invoice
                 else do
                   when (coinCashLeft > 0) $ do
-                    QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
+                    CoinLedger.debitCoinCash (cast driverFeeUpdateWithPlanAndOffer.driverId) coinCashLeft "PlanFeeFromCoinCash" (Just driverFeeUpdateWithPlanAndOffer.id.getId)
                     setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
                   driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer splitMandateId (Just coinCashLeft) subscriptionConfigs transporterConfig now
                   unless walletCity $ do

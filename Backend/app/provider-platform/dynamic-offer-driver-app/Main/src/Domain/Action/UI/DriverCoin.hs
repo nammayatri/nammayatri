@@ -56,6 +56,7 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
@@ -64,11 +65,10 @@ import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import Storage.Queries.DailyStatsExtra as DS
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import Storage.Queries.DriverPlan as SQPlan
+import qualified Storage.Queries.DriverPlan as SQPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
@@ -124,18 +124,18 @@ data CoinsUsageRes = CoinsUsageRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data RideStatusPastDaysRes = RideStatusPastDaysRes
-  { rideCountPopupValue :: Bool
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
+-- | Both fields are kept so existing apps keep working, but neither is read: the whole balance is used, and the
+--   city decides between coin cash and a cash payout.
 data ConvertCoinToCashReq = ConvertCoinToCashReq
   { coins :: Int,
     coinRedemptionType :: Maybe CoinRedemptionType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-type AccumulationResult = [(Text, Int, CoinStatus)]
+data RideStatusPastDaysRes = RideStatusPastDaysRes
+  { rideCountPopupValue :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype CoinInfoRes = CoinInfoRes [CoinInfo]
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -160,16 +160,16 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   let coinUsed_ = driver.usedCoins
       totalCoinsEarned_ = driver.totalEarnedCoins
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
-  coinSummary <- B.runInReplica $ CHistory.getCoinEventSummary driverId dateInIst timeDiffFromUtc
+  coinSummary <- CoinLedger.coinsOfDay driverId dateInIst timeDiffFromUtc
   let todayCoinSummary_ = sum $ map (.coins) coinSummary
-  lastDayHistory <- B.runInReplica $ CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
+  lastDayHistory <- CoinLedger.coinsOfPreviousDay driverId dateInIst timeDiffFromUtc
   let coinsEarnedPreviousDay_ = sum $ map (.coins) lastDayHistory
       coinTransactionHistory = map toTransactionHistoryItem coinSummary
       todayStart = UTCTime (utctDay dateInIst) 0
       coinsExpiredOnThatDay = sumExpiredCoinsOnThatDate coinSummary dateInIst todayStart
-  coinsExpiring <- B.runInReplica $ CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
-  let totalExpiringCoins = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) coinsExpiring
-      expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
+  localNow <- addUTCTime timeDiffFromUtc <$> getCurrentTime
+  totalExpiringCoins <- CoinLedger.countCoinsExpiringBetween driverId localNow (addUTCTime transporterConfig.coinExpireTime localNow)
+  let expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
   pure
     CoinTransactionRes
       { coinBalance = coinBalance_,
@@ -207,7 +207,8 @@ getCoinUsageSummary ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    CoinLedger.CoinFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Integer ->
@@ -231,7 +232,8 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset m
       delCoinAdjustedInSubscriptionByDriverIdKey driverId
       pure $ Just cashUsed
     Nothing -> pure Nothing
-  let coinConvertedTocashLeft = mbDriverStat <&> (.coinCovertedToCashLeft)
+  coinCashLeft <- CoinLedger.getCoinCashLeft driverId
+  let coinConvertedTocashLeft = Just coinCashLeft
       totalCoinConvertedToCash = mbDriverStat <&> (.totalCoinsConvertedCash)
   let currency = fromMaybe transporterConfig.currency (mbDriverStat <&> (.currency))
   pure
@@ -264,21 +266,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset m
             vpa = vpa
           }
 
-accumulateCoins :: Int -> [CoinHistory] -> AccumulationResult
-accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
-  where
-    takeCoinsRequired :: (Int, AccumulationResult) -> Bool -> [CoinHistory] -> AccumulationResult
-    takeCoinsRequired (_, result) True [] = result
-    takeCoinsRequired (_, result) False [] = result
-    takeCoinsRequired (toTake, result) _ (coinHis : coinHistories) = do
-      let availableCoins = coinHis.coins - coinHis.coinsUsed
-          coinsTaken = coinHis.coins
-          afterTaking = toTake - availableCoins
-          coinStatus = bool Remaining Used (afterTaking == 0)
-      if afterTaking > 0
-        then takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken, Used) : result) False coinHistories
-        else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
-
+-- | One conversion at a time per driver; a second tap while one runs is turned away.
 useCoinsHandler ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -288,28 +276,23 @@ useCoinsHandler ::
     PaymentBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    CoinLedger.CoinFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
   m APISuccess
-useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..} = do
-  isLocked <- withLockDriverId
-  if isLocked
-    then do
-      finally
-        (handler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..})
-        ( do
-            Redis.unlockRedis mkLockKey
-            logDebug $ "Coins Conversion for DriverId: " <> driverId.getId <> "Converted to Cash"
-        )
-    else throwError (InvalidRequest "Coins conversion already in progress, please wait")
+useCoinsHandler (driverId, merchantId, merchantOpCityId) req =
+  Redis.whenWithLockRedisAndReturnValue mkLockKey 30 (handler (driverId, merchantId, merchantOpCityId) req) >>= \case
+    Right res -> pure res
+    Left () -> throwError (InvalidRequest "Coins conversion already in progress, please wait")
   where
-    withLockDriverId = do
-      isLocked <- Redis.tryLockRedis mkLockKey 30
-      return isLocked
     mkLockKey = "ConvertCoinToCash:DriverId:" <> driverId.getId
 
+-- | The one way a driver uses coins. It takes the whole convertible balance (whole steps of
+--   @stepFunctionToConvertCoins@, earliest-expiring coins first) and does what the city says: a cash payout where
+--   @enableCoinsToDirectPayout@ is on, otherwise coin cash for the subscription (the nightly fee job uses it).
+--   Nothing in the request is read: not the amount, not the redemption type.
 handler ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -319,79 +302,85 @@ handler ::
     PaymentBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    CoinLedger.CoinFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
   m APISuccess
-handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
+handler (driverId, merchantId_, merchantOpCityId) _req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  noPlan <- noDriverPlan driverId
-  when (noPlan && coinRedemptionType /= Just DirectPayout) $
-    throwError $ NoPlanAgaintsDriver driverId.getId
+  let redemptionType = if fromMaybe False transporterConfig.enableCoinsToDirectPayout then DirectPayout else SubscriptionUse
+  when (redemptionType /= DirectPayout) $ do
+    mbDriverPlan <- SQPlan.findByDriverIdAndServiceName driverId DPlan.YATRI_SUBSCRIPTION
+    when (isNothing mbDriverPlan) $
+      throwError $ NoPlanAgaintsDriver driverId.getId
   now <- getCurrentTime
   uuid <- generateGUIDText
-  coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
-  let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
-      timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-  when (coins < stepFunctionToConvertCoins) $
-    throwError $ CoinConversionToCash driverId.getId coins stepFunctionToConvertCoins
-  when (coins `mod` stepFunctionToConvertCoins /= 0) $
-    throwError $ CoinUsedForConverting driverId.getId coins stepFunctionToConvertCoins
-  let istTime = addUTCTime timeDiffFromUtc now
-      currentDate = show $ utctDay istTime
-      calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
+  -- the ledger's own figure, not the cached daily balance
+  coinBalance <- CoinLedger.getSpendableCoins driverId transporterConfig.timeDiffFromUtc
+  let step = max 1 transporterConfig.stepFunctionToConvertCoins
+      coinsToConvert = (coinBalance `div` step) * step
+      calculatedAmount = fromIntegral coinsToConvert * transporterConfig.coinConversionRate
+  when (coinsToConvert < step) $
+    throwError $ CoinConversionToCash driverId.getId coinBalance step
   vehCategory <-
     QVeh.findById driverId
       >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
       <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  if coinBalance >= coins
-    then do
-      payoutOrderId <-
-        case coinRedemptionType of
-          Just DirectPayout -> redeemCoins driverId merchantId_ merchantOpCityId transporterConfig vehCategory driver calculatedAmount
-          _ -> do
-            void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
-            return Nothing
-      redemptionType <-
-        case coinRedemptionType of
-          Just DirectPayout -> pure DirectPayout
-          _ -> pure SubscriptionUse
-      let history =
-            PurchaseHistory
-              { id = Id uuid,
-                driverId = driverId.getId,
-                merchantId = merchantId_.getId,
-                merchantOptCityId = merchantOpCityId.getId,
-                numCoins = coins,
-                cash = calculatedAmount,
-                currency,
-                createdAt = now,
-                updatedAt = now,
-                title = "converted from coins",
-                vehicleCategory = Just vehCategory,
-                coinRedemptionType = redemptionType,
-                payoutOrderIdForDirectPayout = payoutOrderId
-              }
-
-      void $ PHistory.createPurchaseHistory history
-      -- Deduct Existing Coin Amount from the drivers coin history
-      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
-      let result = accumulateCoins coins histories
-      mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
-      void $ Person.updateUsedCoins (coins + driver.usedCoins) driverId
-      Coins.safeIncrBy (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins)) driverId transporterConfig.timeDiffFromUtc
-    else do
-      throwError $ InsufficientCoins driverId.getId coins
+  let takeCoins = do
+        spent <- CoinLedger.withCoinLock driverId $ CoinLedger.spendCoins driverId transporterConfig.timeDiffFromUtc coinsToConvert "CoinRedemption" uuid
+        unless spent $
+          throwError $ InsufficientCoins driverId.getId coinsToConvert
+      giveCoinsBack =
+        CoinLedger.postCoinEvent
+          CoinLedger.CoinEvent
+            { driverId = driverId,
+              merchantId = merchantId_,
+              merchantOperatingCityId = merchantOpCityId,
+              eventFunction = CoinsRedemptionRefund,
+              coins = coinsToConvert,
+              expiresAt = Nothing,
+              entityId = Just uuid,
+              attrs = CoinLedger.CoinAttrs {bulkUploadTitle = Nothing, vehicleCategory = Just vehCategory, serviceTierType = Nothing, earnedAt = Nothing}
+            }
+  payoutOrderId <-
+    case redemptionType of
+      DirectPayout -> redeemCoins driverId merchantId_ merchantOpCityId transporterConfig vehCategory driver calculatedAmount takeCoins giveCoinsBack
+      SubscriptionUse -> do
+        -- take the coins first, then give the coin cash: a failure in between costs the driver coins rather than
+        -- handing out cash that no coins paid for
+        takeCoins
+        CoinLedger.creditCoinCash driverId calculatedAmount "CoinCashRedemption" uuid
+        void $ QDS.addToTotalCoinsConvertedCash driverId calculatedAmount
+        pure Nothing
+  void $
+    PHistory.createPurchaseHistory
+      PurchaseHistory
+        { id = Id uuid,
+          driverId = driverId.getId,
+          merchantId = merchantId_.getId,
+          merchantOptCityId = merchantOpCityId.getId,
+          numCoins = coinsToConvert,
+          cash = calculatedAmount,
+          currency,
+          createdAt = now,
+          updatedAt = now,
+          title = "converted from coins",
+          vehicleCategory = Just vehCategory,
+          coinRedemptionType = redemptionType,
+          payoutOrderIdForDirectPayout = payoutOrderId
+        }
+  Coins.recordCoinsUsed driverId coinsToConvert transporterConfig.timeDiffFromUtc
   pure Success
-  where
-    noDriverPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
-    noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
 
+-- | Pays the coins out as cash. Everything that can be checked in advance (minimum amount, payout address,
+--   payout service) is checked first. @takeCoins@ then runs, just before the provider is called, and
+--   @giveCoinsBack@ runs if that call fails, so a provider outage never costs the driver their coins.
 redeemCoins ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -410,10 +399,10 @@ redeemCoins ::
   DVC.VehicleCategory ->
   SP.Person ->
   HighPrecMoney ->
+  m () ->
+  m () ->
   m (Maybe (Id DPO.PayoutOrder))
-redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount = do
-  unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
-    throwError $ InvalidRequest "Coins to direct payout is not enabled"
+redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount takeCoins giveCoinsBack = do
   payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehCategory, isPayoutEnabled = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
   case payoutConfig.coinRedemptionMinimumLimit of
     Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
@@ -430,7 +419,14 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
       entityName = DPayment.COINS_REDEMPTION
       createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
-  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
+  takeCoins
+  created <- withTryCatch "redeemCoins:createPayout" $ void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
+  case created of
+    Left err -> do
+      logError $ "Coin payout could not be created for driver " <> driverId.getId <> ", giving the coins back: " <> show err
+      giveCoinsBack
+      throwError $ InternalError "The payout could not be started. Your coins are unchanged, please try again later."
+    Right () -> pure ()
   void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
   pure $ Just $ Id uid
 

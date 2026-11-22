@@ -75,6 +75,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
@@ -1439,9 +1440,8 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
-  mbDriverStat <- QDS.findById (cast driverId)
+  coinCashLeft <- if plan.eligibleForCoinDiscount then Just . max 0.0 <$> CoinLedger.getCoinCashLeft driverId else pure Nothing
   let planFareBreakup = mkPlanFareBreakup currency offers.offerResp now
-      coinCashLeft = if plan.eligibleForCoinDiscount then Just $ max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else Nothing
       planChargeWithDiscount = find (\x -> x.component == "DISCOUNTED_FEE") planFareBreakup <&> (.amount)
       maxPlanCharge = find (\x -> x.component == "MAX_FEE_LIMIT") planFareBreakup <&> (.amount)
       coinDiscountUpto = min <$> coinCashLeft <*> minMaybe planChargeWithDiscount maxPlanCharge
