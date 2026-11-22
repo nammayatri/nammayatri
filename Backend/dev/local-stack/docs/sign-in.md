@@ -219,6 +219,25 @@ announced. The test suite now has a row like that.
 
 *It replaces `registration-notify.sh`, which did the registration half only.*
 
+## Algerian test numbers by SMS — 2026-11-22
+
+WhatsApp was banned by Meta and the office SIM had been silent since 15 Nov, so
+nobody could sign in with an Algerian number, the owner included. The guard
+already let an exempt number through where we never text (`SMS_BYPASS` skips
+both `COUNTRY_NOT_OPEN` and `SMS_NOT_AVAILABLE`, and the private
+`SMS_BYPASS_CODE` is what it types); only the app hid « Continuer avec SMS »
+for every +213 number. Two numbers were added on both sides:
+
+| Number | For | Guard | App |
+|---|---|---|---|
+| `+213 0555000197` | passenger | `SMS_BYPASS` (`+2130555000197`) | `DZ_TEST_NUMBERS` (`555000197`) |
+| `+213 0555000196` | driver | `SMS_BYPASS` (`+2130555000196`) | `DZ_TEST_NUMBERS` (`555000196`) |
+
+Any other Algerian number sees what it saw before. The new driver signs up
+like any driver (papers, car, the office's approval in the console, credit).
+Both are in `launch-cleanup-targets.sql`, and the launch runbook (3b) removes
+them from both lists.
+
 ## WhatsApp — the webhook, since 2026-09-27
 
 Movin's WhatsApp Business number is **+213 783 07 91 61** ("MovinApp", Cloud

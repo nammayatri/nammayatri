@@ -1,6 +1,6 @@
 -- The accounts the day-1 clean-up removes: the twelve simulated cars, the four
--- test passengers (two until 2026-11-18) and the review accounts, and NOBODY
--- else. Reads only.
+-- test passengers (two until 2026-11-18), the review accounts and the owner's
+-- two Algerian test accounts (2026-11-22), and NOBODY else. Reads only.
 --
 --   psql -At -F'|' -f launch-cleanup-targets.sql
 --
@@ -35,7 +35,14 @@ WITH wanted (side, cc, num) AS (VALUES
   ('rider',  '+213', '0555000199'), ('rider', '+213', '555000199'),
   -- The virtual passenger's second test passenger per country (2026-11-18).
   ('rider',  '+222', '22778898'),
-  ('rider',  '+213', '0555000198'), ('rider', '+213', '555000198')
+  ('rider',  '+213', '0555000198'), ('rider', '+213', '555000198'),
+  -- The owner's Algerian test accounts (2026-11-22, WhatsApp banned and the
+  -- office SIM silent): +213 0555000197 (passenger) and 0555000196 (driver),
+  -- in SMS_BYPASS and the app's DZ_TEST_NUMBERS. Either number on either side.
+  ('driver', '+213', '0555000197'), ('driver', '+213', '555000197'),
+  ('driver', '+213', '0555000196'), ('driver', '+213', '555000196'),
+  ('rider',  '+213', '0555000197'), ('rider', '+213', '555000197'),
+  ('rider',  '+213', '0555000196'), ('rider', '+213', '555000196')
 )
 SELECT 'driver', p.id::text, p.mobile_country_code, p.unencrypted_mobile_number, coalesce(p.first_name, '')
   FROM atlas_driver_offer_bpp.person p
