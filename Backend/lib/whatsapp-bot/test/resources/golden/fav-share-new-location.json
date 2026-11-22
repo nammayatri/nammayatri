@@ -1,0 +1,350 @@
+{
+  "scenario": "fav-share-new-location",
+  "description": "Favourites (hand-written, not from TS): regular rider taps Share new location in both lists; each tap gets the location request for that question (pickup, then drop), and the pins carry on as usual.",
+  "env": {
+    "merchant": "pn_reg",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919812345678"
+  },
+  "steps": [
+    {
+      "note": "tap ride type -> silent auth -> favourites list for pickup",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-share-new-location.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:regular",
+                          "title": "Ride with destination"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            "9812345678"
+          ],
+          "method": "authenticate"
+        },
+        {
+          "args": [],
+          "method": "getSavedLocations"
+        }
+      ]
+    },
+    {
+      "note": "Share new location in the pickup list -> pickup location request, no backend call",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-share-new-location.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "list_reply",
+                        "list_reply": {
+                          "id": "fav:share",
+                          "title": "Share new location"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919812345678",
+          "merchant": "REG"
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "pickup pin -> favourites list for the drop",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-share-new-location.3",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            13.34,
+            77.1
+          ],
+          "method": "checkServiceable"
+        },
+        {
+          "args": [
+            13.34,
+            77.1
+          ],
+          "method": "reverseGeocode"
+        }
+      ]
+    },
+    {
+      "note": "Share new location in the drop list -> drop location request, no backend call",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-share-new-location.4",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "list_reply",
+                        "list_reply": {
+                          "id": "fav:share",
+                          "title": "Share new location"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919812345678",
+          "merchant": "REG"
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "drop pin -> one-way search to the pin -> fare confirm",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-share-new-location.5",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.35,
+                        "longitude": 77.11
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "regular_book",
+            "regular_change_drop",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            13.35,
+            77.11
+          ],
+          "method": "reverseGeocode"
+        },
+        {
+          "args": [
+            {
+              "lat": 13.34,
+              "lon": 77.1,
+              "placeId": "mock-pin"
+            },
+            {
+              "lat": 13.35,
+              "lon": 77.11,
+              "placeId": "mock-pin"
+            }
+          ],
+          "method": "searchRide"
+        },
+        {
+          "args": [
+            "mock-search-1"
+          ],
+          "method": "getEstimates"
+        }
+      ]
+    }
+  ]
+}

@@ -446,6 +446,12 @@ mkBackend rb =
       cancelRide = \_a bid st -> do
         recordCall (rbCalls rb) "cancelRide" [String bid, String st]
         guard1 rb "cancelRide" (pure ()),
+      addSavedLocation = \_a loc -> do
+        recordCall (rbCalls rb) "addSavedLocation" [String loc.tag, toJSON loc.lat, toJSON loc.lon]
+        guard1 rb "addSavedLocation" (pure ()),
+      deleteSavedLocation = \_a tag -> do
+        recordCall (rbCalls rb) "deleteSavedLocation" [String tag]
+        guard1 rb "deleteSavedLocation" (pure ()),
       updateProfile = \_a upd -> do
         recordCall (rbCalls rb) "updateProfile" [toJSON upd]
         guard1 rb "updateProfile" (pure ())
@@ -471,6 +477,8 @@ mkSender outRef label =
         recordOut outRef (RecordedOut "buttons" to label (Just (map (\b -> b.btnId) btns)) Nothing) >> pure True,
       sendLocationRequest = \to _body ->
         recordOut outRef (RecordedOut "location_request" to label Nothing Nothing) >> pure True,
+      sendList = \to _body _label sections ->
+        recordOut outRef (RecordedOut "list" to label (Just [b.btnId | (_, rows) <- sections, b <- rows]) Nothing) >> pure True,
       sendVideo = \to lnk _cap ->
         recordOut outRef (RecordedOut "video" to label Nothing (Just lnk)) >> pure True
     }
@@ -848,6 +856,13 @@ fixtureGuards =
             "cancel-after-register.json",
             "cancel-mid-search.json",
             "driver-not-found.json",
+            "fav-add-from-list.json",
+            "fav-nudge-no-favourites.json",
+            "fav-pick-drop.json",
+            "fav-pick-pickup.json",
+            "fav-replace.json",
+            "fav-save-from-confirm.json",
+            "fav-share-new-location.json",
             "flexi-happy-path.json",
             "help-support-more.json",
             "language-switch.json",

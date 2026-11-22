@@ -56,6 +56,11 @@ data BackendHandle m = BackendHandle
     markRideAsSafe :: BotAuth -> Text -> m (Either BotError ()),
     -- | bookingId, ride status (drives reasonStage) -> ().
     cancelRide :: BotAuth -> Text -> Text -> m (Either BotError ()),
+    -- | Save a favourite place (the app's saved locations). Fails when the
+    -- rider already has one with the same tag.
+    addSavedLocation :: BotAuth -> BotSavedLocation -> m (Either BotError ()),
+    -- | Delete the rider's favourite with this tag.
+    deleteSavedLocation :: BotAuth -> Text -> m (Either BotError ()),
     updateProfile :: BotAuth -> BotProfileUpdate -> m (Either BotError ())
   }
 
@@ -67,6 +72,10 @@ data WaSender m = WaSender
   { sendText :: Text -> Text -> m Bool, -- to, body
     sendButtons :: Text -> Text -> [OutButton] -> m Bool, -- to, body, buttons
     sendLocationRequest :: Text -> Text -> m Bool, -- to, body
+
+    -- | A list message with titled sections: to, body, list-button label,
+    -- [(section title, rows)]. Rows over WhatsApp's 10 are the caller's bug.
+    sendList :: Text -> Text -> Text -> [(Text, [OutButton])] -> m Bool,
     sendVideo :: Text -> Text -> Maybe Text -> m Bool -- to, link, caption
   }
 

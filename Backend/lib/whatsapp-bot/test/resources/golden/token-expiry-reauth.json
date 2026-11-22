@@ -63,9 +63,15 @@
       },
       "expectOutbound": [
         {
-          "kind": "location_request",
+          "kind": "list",
           "to": "919361176218",
-          "merchant": "FLEXI"
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
         }
       ],
       "expectBackend": [
@@ -79,7 +85,8 @@
           "method": "getSavedLocations",
           "args": []
         }
-      ]
+      ],
+      "note": "[2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]"
     },
     {
       "inbound": {
@@ -129,7 +136,8 @@
           "merchant": "FLEXI",
           "buttons": [
             "pickup_confirm",
-            "pickup_adjust"
+            "pickup_adjust",
+            "fav:save"
           ]
         }
       ],
@@ -148,7 +156,8 @@
             77.1
           ]
         }
-      ]
+      ],
+      "note": "[2026-11-20 favourite places: the shared pin is not a favourite, so the confirm also offers fav:save]"
     },
     {
       "note": "confirm → search → confirmQuote throws 401 → OBSERVED: swallowed → flexiNoAuto + [Try again], IDLE (NOT sessionExpired, token NOT cleared)",

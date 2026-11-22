@@ -243,6 +243,14 @@ mkBackendHandle merchantId mocId _ctx =
               SosAPI.MarkAsSafeReq {contacts = Nothing, isEndLiveTracking = Nothing, isMock = Nothing, isRideEnded = Nothing},
       cancelRide = \auth bookingId _rideStatus ->
         runBot "cancelRide" $ cancelRideImpl merchantId (Id auth.personId) bookingId,
+      -- The app's own saved-places actions, so a favourite saved on WhatsApp
+      -- shows in the app and the reverse.
+      addSavedLocation = \auth loc ->
+        runBot "addSavedLocation" $
+          void $ DSavedReqLocation.createSavedReqLocation (Id auth.personId) (toCreateSavedReq loc),
+      deleteSavedLocation = \auth tag ->
+        runBot "deleteSavedLocation" $
+          void $ DSavedReqLocation.deleteSavedReqLocation (Id auth.personId) tag,
       updateProfile = \auth upd ->
         runBot "updateProfile" $
           void $
@@ -467,6 +475,27 @@ mkSearchLoc p =
             title = Nothing,
             extras = Nothing
           }
+    }
+
+toCreateSavedReq :: BotSavedLocation -> DSavedReqLocation.CreateSavedReqLocationReq
+toCreateSavedReq loc =
+  DSavedReqLocation.CreateSavedReqLocationReq
+    { lat = loc.lat,
+      lon = loc.lon,
+      street = Nothing,
+      door = Nothing,
+      city = loc.city,
+      state = loc.state,
+      country = loc.country,
+      building = loc.building,
+      areaCode = Nothing,
+      area = loc.area,
+      tag = loc.tag,
+      placeId = loc.placeId,
+      ward = Nothing,
+      isMoved = Nothing,
+      locationName = Nothing,
+      preferredServiceTierType = Nothing
     }
 
 toBotSavedLocation :: DSRL.SavedReqLocationAPIEntity -> BotSavedLocation
