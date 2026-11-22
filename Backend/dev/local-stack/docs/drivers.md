@@ -68,6 +68,33 @@ quietly keeping fictional cars alive next to real ones:
 ./drivers-keepalive.sh uninstall
 ```
 
+### « Aucun chauffeur » with a real driver online next to the passenger (2026-11-22)
+
+The owner's test: driver online, passenger 135 m away, four empty searches.
+How it was found, in order, read-only, in about ten minutes. Use it again:
+
+1. **Did the search reach the provider, and what did its pool say?** The
+   driver container's log, by transaction id: `calculateDriverPool took …`
+   then **`Search handler: driver pool []`**. (Don't judge by rows in
+   `atlas_driver_offer_bpp.search_request`: on 22 Nov its newest row was from
+   19 Nov 22:27 while that day's searches were plainly handled, not yet
+   explained. The gateway's `localhost:8000`
+   connection errors are a dead registry entry and are noise.)
+2. **Is the driver eligible?** The pool (`getNearestDrivers` at `03a7531`)
+   checks role, merchant, `active`, not `blocked`, the vehicle variant, the
+   PostGIS `point` within the radius, and `coordinates_calculated_at` newer
+   than `driverPositionInfoExpiry` (10 h). It never reads `verified` or
+   `enabled`. On top of that comes our `movin:unpaid` list in Redis.
+3. **When did the phone actually send?** The edge's access log, `POST
+   /ui/driver/location` and `setActivity`, with seconds. That settled it:
+   online at 17:16:55 and 17:23:06, **first position 17:24:52**, one second
+   after the last search, then 25 s of positions and silence.
+
+Cause: the driver app waited for Android's location service, which delivered
+late and then stopped. Fixed in the app the same day (`keepVisible`: the open
+app posts a position itself and restarts a silent service; the app repo's
+`docs/map-and-location.md`). Nothing on the server was wrong.
+
 Also worth knowing for anyone testing by hand: a rider only reaches drivers
 whose **vehicle matches the variant they picked**, and the seeded fleet is 9
 auto-rickshaws, 2 sedans, 1 hatchback and 1 SUV. "SUV" therefore reaches exactly
