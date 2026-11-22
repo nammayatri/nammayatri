@@ -108,7 +108,7 @@ codecSpec =
       -- correspondingly-shortened expected value. Deletion needs a behavioural
       -- oracle (a fixture that reads the field back), not a codec one.
       testCase "a v1 session blob still decodes (pinned old shape)" $
-        assertPinDecodesTo "pinned v1 FlowContext" pinnedV1PopulatedContext populatedContext,
+        assertPinDecodesTo "pinned v1 FlowContext" pinnedV1PopulatedContext v1PopulatedContext,
       testCase "a v1 fresh-session blob still decodes (pinned old shape)" $
         assertPinDecodesTo "pinned v1 initial FlowContext" pinnedV1InitialContext initialContext
     ]
@@ -140,7 +140,9 @@ allFlowStates =
     Tracking,
     ConfirmingSos,
     ConfirmingMarkSafe,
-    ChoosingLanguage
+    ChoosingLanguage,
+    AwaitingFavouritePin,
+    SavingFavourite
   ]
 
 -- | Total match over 'FlowState', so adding a constructor without adding it to
@@ -159,6 +161,8 @@ flowStateLabel = \case
   ConfirmingSos -> "ConfirmingSos"
   ConfirmingMarkSafe -> "ConfirmingMarkSafe"
   ChoosingLanguage -> "ChoosingLanguage"
+  AwaitingFavouritePin -> "AwaitingFavouritePin"
+  SavingFavourite -> "SavingFavourite"
 
 -- | EVERY field populated (no record update on 'initialContext', and no
 -- 'Nothing' anywhere), so a field that silently fails to encode or decode
@@ -182,8 +186,17 @@ populatedContext =
       rideType = Just Flexi,
       flexiBookingId = Just "booking-1",
       regularEstimateId = Just "est-1",
-      regularFare = Just 123.5
+      regularFare = Just 123.5,
+      favouriteDraft = Just (populatedPlace "place-favourite"),
+      favouriteName = Just "Gym",
+      favouriteReturn = Just ConfirmingPickup
     }
+
+-- | What the v1 pin must decode to: 'populatedContext' minus the favourite
+-- fields, which were added after that blob was recorded. An old session
+-- reading them back as Nothing is exactly the "old chats still load" property.
+v1PopulatedContext :: FlowContext
+v1PopulatedContext = populatedContext {favouriteDraft = Nothing, favouriteName = Nothing, favouriteReturn = Nothing}
 
 populatedPlace :: Text -> BotPlace
 populatedPlace pid =

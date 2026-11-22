@@ -51,6 +51,9 @@ mkWaSender cfg =
                  in sendSafe "sendList" $
                       Meta.sendInteractiveList cfg to Nothing body Nothing listLabel [(Just sectionTitle, rows)],
       sendLocationRequest = \to body -> sendSafe "sendLocationRequest" $ Meta.sendLocationRequest cfg to body,
+      sendList = \to body label sections ->
+        sendSafe "sendList" $
+          Meta.sendInteractiveList cfg to Nothing body Nothing label [(Just title, map (\b -> (b.btnId, b.btnTitle, b.btnDesc)) rows) | (title, rows) <- sections],
       sendVideo = \to link mCaption -> sendSafe "sendVideo" $ Meta.sendVideo cfg to (Left link) mCaption
     }
 

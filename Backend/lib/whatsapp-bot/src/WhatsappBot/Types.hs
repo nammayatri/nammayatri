@@ -32,6 +32,11 @@ data FlowState
   | ConfirmingSos
   | ConfirmingMarkSafe
   | ChoosingLanguage
+  | -- | Waiting for the pin of a place to save as a favourite ("Add a favourite").
+    AwaitingFavouritePin
+  | -- | Waiting for the name of the favourite being saved (or, with
+    -- 'favouriteName' set, for "replace the existing one?").
+    SavingFavourite
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Deferred action resumed after auth (@states.ts:34@).
@@ -254,7 +259,14 @@ data FlowContext = FlowContext
     rideType :: Maybe RideType,
     flexiBookingId :: Maybe Text,
     regularEstimateId :: Maybe Text,
-    regularFare :: Maybe Double
+    regularFare :: Maybe Double,
+    -- | The place being saved as a favourite.
+    favouriteDraft :: Maybe BotPlace,
+    -- | The name it is being saved under, set only while asking whether to
+    -- replace an existing favourite of that name.
+    favouriteName :: Maybe Text,
+    -- | Where the booking continues once the favourite is saved.
+    favouriteReturn :: Maybe FlowState
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -275,7 +287,10 @@ initialContext =
       rideType = Nothing,
       flexiBookingId = Nothing,
       regularEstimateId = Nothing,
-      regularFare = Nothing
+      regularFare = Nothing,
+      favouriteDraft = Nothing,
+      favouriteName = Nothing,
+      favouriteReturn = Nothing
     }
 
 -- | Session envelope (@session/manager.ts:6-14@). Timestamps as 'UTCTime';

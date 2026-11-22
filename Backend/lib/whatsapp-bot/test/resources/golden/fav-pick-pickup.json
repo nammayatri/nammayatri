@@ -1,0 +1,245 @@
+{
+  "scenario": "fav-pick-pickup",
+  "description": "Favourites (hand-written, not from TS): Quick Ride rider picks Home from the pickup list; no pin, no reverse-geocode, the search uses Home.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "tap Quick Ride -> silent auth -> favourites list (seeded Home, Work)",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-pick-pickup.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            "9361176218"
+          ],
+          "method": "authenticate"
+        },
+        {
+          "args": [],
+          "method": "getSavedLocations"
+        }
+      ]
+    },
+    {
+      "note": "pick Home -> geofence on Home's point -> saved-place confirm, no Save button",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-pick-pickup.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "list_reply",
+                        "list_reply": {
+                          "id": "fav:pick:Home",
+                          "title": "Home"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "pickup_confirm",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            13.341,
+            77.101
+          ],
+          "method": "checkServiceable"
+        }
+      ]
+    },
+    {
+      "note": "confirm -> search from Home (placeId mock-home) -> driver card",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-pick-pickup.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "pickup_confirm",
+                          "title": "Confirm pickup"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel"
+          ]
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel_confirm:mock-booking-001"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            {
+              "lat": 13.341,
+              "lon": 77.101,
+              "placeId": "mock-home"
+            }
+          ],
+          "method": "searchFlexi"
+        },
+        {
+          "args": [
+            "mock-flexi-search-1"
+          ],
+          "method": "getFlexiQuotes"
+        },
+        {
+          "args": [
+            "mock-flexi-quote-auto"
+          ],
+          "method": "confirmQuote"
+        },
+        {
+          "args": [
+            "mock-booking-001"
+          ],
+          "method": "getBookingDetails"
+        }
+      ]
+    }
+  ]
+}
