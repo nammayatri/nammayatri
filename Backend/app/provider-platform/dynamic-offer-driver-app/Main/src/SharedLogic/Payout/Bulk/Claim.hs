@@ -114,7 +114,7 @@ claimBeneficiary config payoutType transporterConfig payoutServiceName merchantI
                 mbExclusionReason = fresh.exclusionReason <|> candidate.exclusionReason
             case (mbExclusionReason, standing.mbBankAccount) of
               (Just reason, _) -> do
-                reqId <- Bulk.recordExclusion ctx.merchantId.getId ctx.mocId.getId DPayment.DRIVER_WALLET_TRANSACTION ctx.driverId.getId batch standing.payoutableBalance payoutType reason
+                reqId <- Bulk.recordExclusion ctx.merchantId.getId ctx.mocId.getId DPayment.DRIVER_WALLET_TRANSACTION ctx.driverId.getId batch standing.payoutableBalance payoutType standing.coverageFrom standing.cutoff reason
                 notifyExcludedBeneficiary candidate.beneficiary standing.payoutableBalance reason
                 decide (Bulk.Excluded reqId reason)
               (Nothing, Just bankAccount) ->
@@ -129,7 +129,7 @@ claimBeneficiary config payoutType transporterConfig payoutServiceName merchantI
                         ctx
                         standing.payoutableBalance
                         payoutType
-                        Nothing
+                        standing.coverageFrom
                         standing.cutoff
                         standing.redeemableEntryIds
                         standing.merchantTransferAmount

@@ -194,6 +194,7 @@ lookupPayoutEligibility merchantShortId opCity mbPersonId mbMobileNumber mbMobil
             redeemableEntryIds = map (.getId) redeemableIds,
             merchantTransferAmount = merchantTransferAmt,
             cutoff = pb.resolvedCutoff,
+            coverageFrom = pb.resolvedCoverageFrom,
             mbBankAccount = mbBankAccount
           }
       classifyReason = case classifyBulkCandidate rp.config rp.person snapshot of

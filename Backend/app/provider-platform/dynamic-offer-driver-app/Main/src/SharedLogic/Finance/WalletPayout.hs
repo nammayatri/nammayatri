@@ -91,6 +91,8 @@ data WalletPayoutPlan = WalletPayoutPlan
   { payoutableBalance :: HighPrecMoney,
     -- | Nothing = no redeemable cutoff configured for the class
     cutoff :: Maybe UTCTime,
+    -- | when the oldest entry being paid was written
+    coverageFrom :: Maybe UTCTime,
     redeemableEntryIds :: [Text],
     merchantTransferAmount :: HighPrecMoney
   }
@@ -234,15 +236,16 @@ findWalletPayoutAmount ctx params = do
           WalletPayoutPlan
             { payoutableBalance,
               cutoff = pb.resolvedCutoff,
+              coverageFrom = pb.resolvedCoverageFrom,
               redeemableEntryIds = map (.getId) eligibility.redeemableEntryIds,
               merchantTransferAmount = eligibility.merchantTransferAmount
             }
 
 -- | The initiate step of 'runWalletPayout' (instant payouts and the Juspay/Stripe sweep):
---   no batch, coverage up to the cutoff, and a per-order status check.
+--   no batch, coverage from the oldest entry paid up to the cutoff, and a per-order status check.
 initiateWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> PR.PayoutType -> WalletPayoutPlan -> m ()
 initiateWalletPayout ctx payoutType WalletPayoutPlan {..} =
-  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType Nothing cutoff redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
+  void $ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom cutoff redeemableEntryIds merchantTransferAmount Nothing Nothing afterPayoutOrderCreated
 
 -- | Payout route and decrypted phone, resolved before the wallet lock so they are not fetched while holding it.
 data PayoutPrefetch = PayoutPrefetch

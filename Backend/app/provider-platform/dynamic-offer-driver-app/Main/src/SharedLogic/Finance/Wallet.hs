@@ -1083,7 +1083,9 @@ data PayoutableBalance = PayoutableBalance
     -- | the class policy this was computed under (defaults when no account exists yet)
     classConfig :: ResolvedAccountConfig,
     -- | redeemable-cutoff instant per the class config; Nothing = everything redeemable
-    resolvedCutoff :: Maybe UTCTime
+    resolvedCutoff :: Maybe UTCTime,
+    -- | when the oldest redeemable entry was written; Nothing = no redeemable entries
+    resolvedCoverageFrom :: Maybe UTCTime
   }
 
 -- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift.
@@ -1110,7 +1112,8 @@ computePayoutableBalance counterparty ownerId = do
             mbAccountId = Nothing,
             eligibility = emptyWalletPayoutEligibility,
             classConfig = defaultAccountConfig,
-            resolvedCutoff = Nothing
+            resolvedCutoff = Nothing,
+            resolvedCoverageFrom = Nothing
           }
     Just walletAccount -> do
       breakdown <- FinanceBalance.getBalanceBreakdownWith alwaysRedeemableWalletRefs walletAccount [makeWalletOfferHoldsKey ownerId]
@@ -1125,7 +1128,8 @@ computePayoutableBalance counterparty ownerId = do
             mbAccountId = Just walletAccount.id,
             eligibility = eligibilityFromBreakdown walletAccount.id breakdown,
             classConfig = breakdown.config,
-            resolvedCutoff = breakdown.cutoffAt
+            resolvedCutoff = breakdown.cutoffAt,
+            resolvedCoverageFrom = minimumMay (map (.timestamp) breakdown.redeemableEntries)
           }
 
 walletPayoutLedgerRefs :: PayoutLedgerRefs

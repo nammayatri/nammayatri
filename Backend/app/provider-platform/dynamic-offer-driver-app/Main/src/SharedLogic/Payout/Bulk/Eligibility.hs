@@ -48,6 +48,8 @@ data PayoutSnapshot = PayoutSnapshot
     merchantTransferAmount :: HighPrecMoney,
     -- | Nothing = no redeemable cutoff configured for the class
     cutoff :: Maybe UTCTime,
+    -- | when the oldest redeemable entry was written
+    coverageFrom :: Maybe UTCTime,
     mbBankAccount :: Maybe DDBA.DriverBankAccount
   }
 
@@ -75,6 +77,7 @@ readPayoutSnapshot _transporterConfig person = do
         redeemableEntryIds = map (.getId) eligibility.redeemableEntryIds,
         merchantTransferAmount = eligibility.merchantTransferAmount,
         cutoff = pb.resolvedCutoff,
+        coverageFrom = pb.resolvedCoverageFrom,
         mbBankAccount = mbBankAccount
       }
 
