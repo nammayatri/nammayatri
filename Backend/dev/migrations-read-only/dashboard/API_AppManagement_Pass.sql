@@ -45,3 +45,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"TerminatePurchasedPassPayment","migration":"capability","param":"city-operations.pass.execute","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/TERMINATE_PURCHASED_PASS_PAYMENT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetPurchasedPassPaymentHistory","migration":"capability","param":"city-operations.pass.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PURCHASED_PASS_PAYMENT_HISTORY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetPassHistory","migration":"capability","param":"city-operations.pass.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_HISTORY' ) ON CONFLICT DO NOTHING;

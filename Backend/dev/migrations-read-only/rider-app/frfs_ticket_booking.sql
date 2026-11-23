@@ -276,3 +276,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ride_id character varying(3
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN settleable_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cancellation_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cancellation_operation_id text ;

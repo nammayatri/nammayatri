@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.AppManagement.Pass
     getPurchasedPassPaymentTrips,
     adjustPurchasedPassPaymentTrips,
     terminatePurchasedPassPayment,
+    getPurchasedPassPaymentHistory,
+    getPassHistory,
   )
 where
 
@@ -63,6 +65,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.EntityValueLog as SEntityValueLog
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Payment as SPayment
@@ -554,6 +557,39 @@ findPassCategoryInCity passCategoryId merchantOperatingCityId = do
   unless (category.merchantOperatingCityId == merchantOperatingCityId) $
     throwError (InvalidRequest $ "Pass category " <> passCategoryId.getId <> " does not belong to this city")
   pure category
+
+getPurchasedPassPaymentHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.EntityChangeLogEntry])
+getPurchasedPassPaymentHistory merchantShortId opCity purchasedPassPaymentId mbLimit mbOffset = do
+  merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
+  payment <- findPaymentInCity purchasedPassPaymentId merchantOperatingCity.id
+  entityHistory FRFSPassOverride.passPaymentEntityType payment.id.getId mbLimit mbOffset
+
+getPassHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.EntityChangeLogEntry])
+getPassHistory merchantShortId opCity passId mbLimit mbOffset = do
+  merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
+  passEntity <- QPass.findById passId >>= fromMaybeM (InvalidRequest $ "Pass not found: " <> passId.getId)
+  unless (passEntity.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass not found: " <> passId.getId)
+  entityHistory DPass.passEntityType passEntity.id.getId mbLimit mbOffset
+
+entityHistory :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.EntityChangeLogEntry]
+entityHistory entityType entityId mbLimit mbOffset = do
+  (limit, offset) <- SEntityValueLog.boundedPage mbLimit mbOffset
+  map toChangeLogEntry <$> QEntityValueLog.findAllByEntityTypeAndEntityIdPaged entityType entityId limit offset
+  where
+    toChangeLogEntry entry =
+      API.Types.Dashboard.AppManagement.Pass.EntityChangeLogEntry
+        { operationId = entry.operationId,
+          operationType = show entry.operationType,
+          status = show entry.status,
+          delta = entry.delta,
+          valueBefore = entry.valueBefore,
+          valueAfter = entry.valueAfter,
+          reason = entry.reason,
+          actorType = show entry.actorType,
+          actorId = entry.actorId,
+          createdAt = entry.createdAt
+        }
 
 findPaymentInCity :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow Domain.Types.PurchasedPassPayment.PurchasedPassPayment
 findPaymentInCity purchasedPassPaymentId merchantOperatingCityId = do
