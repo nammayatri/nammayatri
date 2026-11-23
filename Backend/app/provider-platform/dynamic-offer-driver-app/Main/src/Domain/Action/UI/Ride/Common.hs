@@ -629,8 +629,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       chargeInAppFee = customerBearsCharge || driverBearsCharge
       ridePaymentCharge = fromMaybe 0 ride.paymentCharge
       quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
-      componentTaxOf fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax])
-      airportEntryFeeWithTaxOf fp = fromMaybe 0 fp.airportEntryFee + fromMaybe 0 fp.airportEntryFeeTax
+      componentTaxOf fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax, if edcCollectsParking then Nothing else fp.airportEntryFeeTax])
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
@@ -648,10 +647,10 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       driverSelectedFareNet = netOf FarePolicyD.DriverSelectedFareComponent Nothing $ fromMaybe 0.0 estimatedFareParams.driverSelectedFare
       customerExtraFeeNet = netOf FarePolicyD.CustomerExtraFeeComponent Nothing <$> estimatedFareParams.customerExtraFee
       cancellationDuesNet = netTaxInclusive booking.paymentChargeDetails taxRegime estimatedFareParams.cancellationDuesTax booking.cancellationDuesCommission $ fromMaybe 0 estimatedFareParams.customerCancellationDues
-      estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (airportEntryFeeWithTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
+      estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
       estimatedBaseFare = estimatedBaseFareV2 - driverSelectedFareNet
       chargedFareParams = fromMaybe estimatedFareParams finalFareParams
-      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (airportEntryFeeWithTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
+      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
   mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then QCDD.findByRideId ride.id else pure Nothing
   let cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
       penalityChargeNet = netTaxInclusive Nothing taxRegime ride.cancellationFeeTaxIfCancelled Nothing <$> ride.cancellationFeeIfCancelled

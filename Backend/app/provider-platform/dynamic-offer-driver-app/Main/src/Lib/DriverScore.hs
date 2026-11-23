@@ -50,6 +50,7 @@ import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
@@ -325,11 +326,10 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
 
 rideNetEarnings :: Maybe FareParameters -> DR.Ride -> HighPrecMoney
 rideNetEarnings mbFareParams ride =
-  netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (maybe 0 componentTax mbFareParams) (maybe 0 airportEntryFeeWithTax mbFareParams) (fromMaybe 0 ride.fare - customerCharge)
+  netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (maybe 0 componentTax mbFareParams) (fromMaybe 0 ride.fare - customerCharge)
   where
     taxRegime = if maybe False (fromMaybe False . (.isVatTaxType)) mbFareParams then Tax.VAT else Tax.GST
-    componentTax fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax])
-    airportEntryFeeWithTax fp = fromMaybe 0 fp.airportEntryFee + fromMaybe 0 fp.airportEntryFeeTax
+    componentTax fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax, if SL.edcCollectsParking fp.fareSettlementType then Nothing else fp.airportEntryFeeTax])
     customerCharge = if (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) == Just PAYMENT_CUSTOMER then fromMaybe 0 ride.paymentCharge else 0
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
