@@ -951,14 +951,13 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                   else (decodedRouteStations, decodeFromText quote.stationsJson)
           -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
           -- alongside the Journey/JourneyLeg during the discovery flow (buildInterchangeJourney), so
-          -- here we simply read them back off the leg tied to this quote's search. Only the MULTIMODAL
-          -- platform builds interchange journeys, so we skip the lookup otherwise.
-          routeDetails <-
-            if integratedBppConfig.platformType == DIBC.MULTIMODAL
-              then do
-                mbLeg <- QJourneyLeg.findByLegSearchId (Just quote.searchId.getId)
-                pure $ (map mkRouteDetail . (.routeDetails)) <$> mbLeg
-              else pure Nothing
+          -- here we simply read them back off the leg tied to this search. Every quote here belongs to
+          -- searchId_, so reuse the leg fetched once above instead of looking it up again per quote.
+          -- Only the MULTIMODAL platform builds interchange journeys, so we skip it otherwise.
+          let routeDetails =
+                if integratedBppConfig.platformType == DIBC.MULTIMODAL
+                  then (map mkRouteDetail . (.routeDetails)) <$> mbJourneyLeg
+                  else Nothing
           let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
               categories = map mkCategoryInfoResponse quoteCategories
           singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
