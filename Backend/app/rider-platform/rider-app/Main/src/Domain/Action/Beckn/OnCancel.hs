@@ -98,7 +98,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   whenJust booking.bookingDepositAmount $ \_ ->
     void . withTryCatch "onCancel:reconcileDeposit" $ DPaymentAction.reconcileDepositPayment True booking
   abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking castedCancellationSource
-  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge (resolveBapCollectsFee riderConfig collectionMode) cancellationSettlement
+  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationReasonCode cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge (resolveBapCollectsFee riderConfig collectionMode) cancellationSettlement
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
   unless abandonedPayScreen $
     whenJust customerCancellationNotificationKey $ \pnKey ->
