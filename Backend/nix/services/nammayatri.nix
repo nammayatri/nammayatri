@@ -1218,8 +1218,6 @@ in
               environment = {
                 VITE_BAP_URL = "http://localhost:${toString ports.rider-app}";
                 VITE_BPP_URL = "http://localhost:${toString ports.dynamic-offer-driver-app}";
-                # The production build of this app needs more than node's default heap.
-                NODE_OPTIONS = "--max-old-space-size=8192";
               };
               command = pkgs.writeShellApplication {
                 name = "control-centre";
@@ -1239,7 +1237,10 @@ in
                     # vite build, not npm run build: the type check and lint
                     # scripts add minutes and nothing to serving the page.
                     # vite preview reuses server.proxy, so /api/... is unchanged.
-                    npx vite build
+                    # The production build needs more than node's default heap.
+                    # (Set here, not in environment: process-compose's env parser
+                    # rejects a value that itself contains '='.)
+                    NODE_OPTIONS=--max-old-space-size=8192 npx vite build
                     exec npx vite preview --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
                   fi
                   exec npm run dev -- --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
