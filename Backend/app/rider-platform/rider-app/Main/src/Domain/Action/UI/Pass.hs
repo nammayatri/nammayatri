@@ -29,6 +29,7 @@ module Domain.Action.UI.Pass
     deletePassCatalog,
     getPassCatalog,
     findMerchantOperatingCity,
+    passEntityType,
     isEnabledCategory,
     isEnabledPassType,
   )

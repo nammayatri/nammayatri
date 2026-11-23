@@ -1969,6 +1969,13 @@ notifyCancellationConsequence personId bookingId pnKey = do
               }
       notifyPerson person.merchantId person.merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData Nothing
 
+notifyFrfsTripCancelledByOperator :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id Person -> Text -> Text -> DMM.MessageKey -> Maybe Text -> Maybe Text -> m ()
+notifyFrfsTripCancelledByOperator personId bookingId pnKey whatsappKey mbFromStop mbToStop = do
+  pushResult <- withTryCatch "notifyFrfsTripCancelledByOperator:push" $ notifyCancellationConsequence personId bookingId pnKey
+  either (\err -> logError $ "FRFS operator cancel push failed for bookingId-" <> bookingId <> ": " <> show err) pure pushResult
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  sendWhatsAppTemplateIfOptedIn person whatsappKey [mbFromStop, mbToStop]
+
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
   case booking.tripCategory of

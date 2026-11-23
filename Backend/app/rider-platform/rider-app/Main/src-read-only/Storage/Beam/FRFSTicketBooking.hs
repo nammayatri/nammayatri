@@ -32,6 +32,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationOperationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cashbackPayoutOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cashbackStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

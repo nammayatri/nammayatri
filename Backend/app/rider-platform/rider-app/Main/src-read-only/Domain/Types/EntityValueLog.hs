@@ -32,7 +32,11 @@ data EntityValueLog = EntityValueLog
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OperationStatus = PENDING | APPLIED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OperationStatus
+  = PENDING
+  | APPLIED
+  | FAILED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data OperationType
   = TripCountAdjust
@@ -42,12 +46,13 @@ data OperationType
   | PassTripCountChange
   | PassBreakoffTripCountChange
   | PassMaxValidTripsChange
+  | TripCancel
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OperationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OperationStatus)
 
-$(mkHttpInstancesForEnum (''OperationStatus))
+$(mkHttpInstancesForEnum ''OperationStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OperationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OperationType)
 
-$(mkHttpInstancesForEnum (''OperationType))
+$(mkHttpInstancesForEnum ''OperationType)

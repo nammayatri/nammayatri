@@ -39,6 +39,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     bppSubscriberUrl :: Kernel.Prelude.Text,
     busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationOperationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashbackPayoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,

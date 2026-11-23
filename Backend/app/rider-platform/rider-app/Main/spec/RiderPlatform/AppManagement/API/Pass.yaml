@@ -246,6 +246,18 @@ types:
     refund: Maybe Bool
     derive: "'HideSecrets"
 
+  EntityChangeLogEntry:
+    operationId: Text
+    operationType: Text
+    status: Text
+    delta: Maybe Int
+    valueBefore: Maybe Text
+    valueAfter: Maybe Text
+    reason: Maybe Text
+    actorType: Text
+    actorId: Maybe Text
+    createdAt: UTCTime
+
 apis:
   - GET:
       endpoint: /customer/{customerId}/availablePasses
@@ -525,3 +537,31 @@ apis:
         type: PurchasedPassPaymentTripsResp
       migrate:
         capability: city-operations.pass.execute
+
+  - GET:
+      endpoint: /purchasedPassPayment/{purchasedPassPaymentId}/history
+      name: GetPurchasedPassPaymentHistory
+      auth: ApiAuthV2
+      params:
+        purchasedPassPaymentId: Id PurchasedPassPayment
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[EntityChangeLogEntry]"
+      migrate:
+        capability: city-operations.pass.read
+
+  - GET:
+      endpoint: /catalog/{passId}/history
+      name: GetPassHistory
+      auth: ApiAuthV2
+      params:
+        passId: Id Pass
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[EntityChangeLogEntry]"
+      migrate:
+        capability: city-operations.pass.read

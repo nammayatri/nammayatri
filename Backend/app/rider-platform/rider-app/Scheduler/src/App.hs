@@ -22,7 +22,7 @@ import Data.Singletons (SingI)
 import qualified Data.Text as T
 import qualified "rider-app" Domain.Types.BecknConfig as Fields
 import qualified "rider-app" Domain.Types.Merchant as Fields
-import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
+import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv, withRiderAppRedisKeys)
 import qualified Environment as Fields
 import "rider-app" Environment (AppCfg (..), buildAppEnv)
 import qualified "rider-app" Environment as Fields
@@ -64,6 +64,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
+import "rider-app" SharedLogic.Scheduler.Jobs.FRFSTripCancel
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -151,6 +152,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env updateCrisUtsDataJob
           & putJobHandlerInListWrapper flowRt env checkMultimodalConfirmFailJob
           & putJobHandlerInListWrapper flowRt env checkRefundStatusJob
+          & putJobHandlerInListWrapper flowRt (withRiderAppRedisKeys env) frfsTripCancelJob
           & putJobHandlerInListWrapper flowRt env payoutStatusCheckJob
           & putJobHandlerInListWrapper flowRt env crisReconJob
           & putJobHandlerInListWrapper flowRt env paymentOrderStatusCheckJob
