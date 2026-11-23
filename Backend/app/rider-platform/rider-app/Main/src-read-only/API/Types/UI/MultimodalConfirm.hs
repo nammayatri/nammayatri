@@ -4,6 +4,7 @@ module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
+import Data.Aeson
 import qualified Data.Aeson
 import qualified Data.Int
 import Data.OpenApi (ToSchema)
@@ -33,6 +34,7 @@ import qualified Kernel.External.Payment.Juspay.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types
 import qualified Lib.JourneyModule.Types
@@ -63,6 +65,10 @@ data AvailableRoute = AvailableRoute
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BlockedVehiclesResp = BlockedVehiclesResp {blockedVehicleNumbers :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BusTicketLegSummary = BusTicketLegSummary {order :: Kernel.Prelude.Int, routeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -257,6 +263,18 @@ data LiveVehicleInfo = LiveVehicleInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MetroTicketLegSummary = MetroTicketLegSummary {order :: Kernel.Prelude.Int, routes :: [MetroTicketRouteSummary]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MetroTicketRouteSummary = MetroTicketRouteSummary {lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text, lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalBookingListRes = MultimodalBookingListRes {live :: [JourneyInfoResp], nextCursor :: Kernel.Prelude.Maybe Kernel.Prelude.Text, past :: [PastTicketSummary], upcoming :: [JourneyInfoResp]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MultimodalCancelStatusResp = MultimodalCancelStatusResp
   { bookingStatus :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -314,6 +332,24 @@ data PassingVehicleInfo = PassingVehicleInfo
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     vehicleNumber :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PastTicketSummary = PastTicketSummary
+  { createdAt :: Kernel.Prelude.UTCTime,
+    farePaid :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    fromStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    journeyStatus :: Domain.Types.Journey.JourneyStatus,
+    legs :: [TicketLegSummary],
+    passApplied :: Kernel.Prelude.Bool,
+    paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
+    refunds :: [Lib.JourneyModule.Types.LegRefundInfo],
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    toStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validUntil :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -452,6 +488,10 @@ data StationAPIEntity = StationAPIEntity {stopCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SubwayTicketLegSummary = SubwayTicketLegSummary {order :: Kernel.Prelude.Int, serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType, trainNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SwitchFRFSTierReq = SwitchFRFSTierReq {quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -483,6 +523,25 @@ data SwitchRouteReq = SwitchRouteReq
 data SwitchTaxiReq = SwitchTaxiReq {estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TaxiTicketLegSummary = TaxiTicketLegSummary {order :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketLegSummary
+  = BusLeg BusTicketLegSummary
+  | MetroLeg MetroTicketLegSummary
+  | SubwayLeg SubwayTicketLegSummary
+  | WalkLeg WalkTicketLegSummary
+  | TaxiLeg TaxiTicketLegSummary
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketListScope
+  = CURRENT
+  | PAST
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data TowerInfo = TowerInfo
   { areaCode :: Kernel.Prelude.Int,
@@ -551,3 +610,9 @@ data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kerne
 data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalkTicketLegSummary = WalkTicketLegSummary {order :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''TicketListScope)

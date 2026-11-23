@@ -645,6 +645,10 @@ instance ToJSON UnifiedTicketQRV2 where
         "MTC" .= mtc
       ]
 
+data TicketListCursor
+  = UpcomingAfter UTCTime (Id DJ.Journey)
+  | PastAfter UTCTime (Id DJ.Journey)
+
 getTaxiVehiclePosition :: GetStateFlow m r c => Maybe DRide.Ride -> m (Maybe LatLong)
 getTaxiVehiclePosition mRide = do
   case mRide of

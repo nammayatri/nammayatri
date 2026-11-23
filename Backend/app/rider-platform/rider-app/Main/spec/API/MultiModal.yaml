@@ -56,6 +56,8 @@ imports:
   BusStopETA: Storage.CachedQueries.Merchant.MultiModalBus
   WaybillStatus: SharedLogic.External.Nandi.Types
   SharedCabLegStatus: SharedLogic.SharedCab.LegState
+  LegRefundInfo: Lib.JourneyModule.Types
+  Integer: EulerHS.Prelude
 
 module: MultimodalConfirm
 
@@ -104,6 +106,58 @@ types:
     boardingDistanceFromBusMeters: Maybe Double
     boardingConfirmationReason: Maybe Text
     derive: "Show"
+
+  TicketListScope:
+    enum: "CURRENT, PAST"
+    derive: "HttpInstance"
+
+  MultimodalBookingListRes:
+    live: "[JourneyInfoResp]"
+    upcoming: "[JourneyInfoResp]"
+    past: "[PastTicketSummary]"
+    nextCursor: Maybe Text
+
+  PastTicketSummary:
+    journeyId: Id Journey
+    journeyStatus: Domain.Types.Journey.JourneyStatus
+    startTime: Maybe UTCTime
+    createdAt: UTCTime
+    isSingleMode: Maybe Bool
+    validUntil: Maybe UTCTime
+    paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
+    fromStopName: Maybe Text
+    toStopName: Maybe Text
+    farePaid: Maybe PriceAPIEntity
+    passApplied: Bool
+    legs: "[TicketLegSummary]"
+    refunds: "[LegRefundInfo]"
+
+  TicketLegSummary:
+    enum: "BusLeg BusTicketLegSummary, MetroLeg MetroTicketLegSummary, SubwayLeg SubwayTicketLegSummary, WalkLeg WalkTicketLegSummary, TaxiLeg TaxiTicketLegSummary"
+
+  BusTicketLegSummary:
+    order: Int
+    routeName: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+
+  MetroTicketLegSummary:
+    order: Int
+    routes: "[MetroTicketRouteSummary]"
+
+  MetroTicketRouteSummary:
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+
+  SubwayTicketLegSummary:
+    order: Int
+    trainNumber: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+
+  WalkTicketLegSummary:
+    order: Int
+
+  TaxiTicketLegSummary:
+    order: Int
 
   LegStatus:
     legOrder: Int
@@ -532,6 +586,17 @@ apis:
         journeyId: Id Journey
       response:
         type: JourneyInfoResp
+  - GET:
+      endpoint: /multimodal/booking/list
+      auth: TokenAuth
+      query:
+        scope: TicketListScope
+        limit: Int
+        cursor: Text
+        fromDate: Integer
+        toDate: Integer
+      response:
+        type: MultimodalBookingListRes
   - GET:
       endpoint: /multimodal/{journeyId}/booking/paymentStatus
       auth: TokenAuth
