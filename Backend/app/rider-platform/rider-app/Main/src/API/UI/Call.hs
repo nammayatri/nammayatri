@@ -36,6 +36,7 @@ import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
@@ -132,7 +133,8 @@ type SDKBasedCallAPI =
   "call"
     :> "twillio"
     :> ( "accessToken"
-           :> MandatoryQueryParam "bapRideId" (Id SRide.Ride)
+           :> Header "token" RegToken
+           :> QueryParam "bapRideId" (Id SRide.Ride)
            :> MandatoryQueryParam "user" DCall.EntityType
            :> MandatoryQueryParam "deviceType" DeviceType
            :> Get '[JSON] Kernel.Prelude.Text
@@ -174,8 +176,14 @@ getCallStatus callStatusId (personId, _) = withFlowHandlerAPIPersonId personId .
 sdkBasedCallHandler :: FlowServer SDKBasedCallAPI
 sdkBasedCallHandler = getCallTwillioAccessToken :<|> getCallTwillioConnectedEntityTwiml
 
-getCallTwillioAccessToken :: Id SRide.Ride -> DCall.EntityType -> DeviceType -> FlowHandler Text
-getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.getCallTwillioAccessToken rideId entity deviceType
+-- | The login token is checked only when no ride id is given (registering outside a ride); with a
+-- ride id the endpoint behaves as before.
+getCallTwillioAccessToken :: Maybe RegToken -> Maybe (Id SRide.Ride) -> DCall.EntityType -> DeviceType -> FlowHandler Text
+getCallTwillioAccessToken mbToken mbRideId entity deviceType = withFlowHandlerAPI $ do
+  mbCaller <- case mbRideId of
+    Just _ -> pure Nothing
+    Nothing -> Just <$> (mbToken & fromMaybeM (InvalidRequest "token is required when bapRideId is not given") >>= verifyPerson)
+  DCall.getCallTwillioAccessToken mbRideId mbCaller entity deviceType
 
 getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler Text
 getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity

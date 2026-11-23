@@ -523,25 +523,35 @@ type CallBAPConstraints m r c =
     Hedis.HedisLTSFlowEnv r
   )
 
+-- | Twilio access token. With a ride id: that ride's party, as before. Without one: the verified
+-- caller's own per-person identity, for registering outside a ride (app open, logout).
 getCallTwillioAccessToken ::
-  ( Id SRide.Ride ->
+  ( Maybe (Id SRide.Ride) ->
+    Maybe (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
     EntityType ->
     DeviceType ->
     Flow Text
   )
-getCallTwillioAccessToken rideId entity deviceType = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  entityId <- case entity of
-    Domain.Action.UI.Call.CUSTOMER ->
-      return booking.transactionId
-    Domain.Action.UI.Call.DRIVER -> do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-      return $
-        if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True
-          then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 ride.driverId.getId))))
-          else ride.id.getId
-  getAccessToken entityId ride.merchantOperatingCityId
+getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
+  Just rideId -> do
+    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    entityId <- case entity of
+      Domain.Action.UI.Call.CUSTOMER ->
+        return booking.transactionId
+      Domain.Action.UI.Call.DRIVER -> do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+        return $
+          if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True
+            then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 ride.driverId.getId))))
+            else ride.id.getId
+    getAccessToken entityId ride.merchantOperatingCityId
+  Nothing -> do
+    (personId, _, cityId) <- mbCaller & fromMaybeM (InvalidRequest "token is required when bppRideId is not given")
+    unless (entity == Domain.Action.UI.Call.DRIVER) $ throwError (InvalidRequest "Only the DRIVER token can be issued without bppRideId")
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
+    unless ((transporterConfig >>= (.enablePersonCallIdentity)) == Just True) $ throwError (InvalidRequest "Per-person call identity is not enabled")
+    getAccessToken (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 personId.getId))))) cityId
   where
     getAccessToken id cityId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId
