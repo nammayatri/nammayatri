@@ -56,6 +56,7 @@ import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Action.UI.SharedCab as SharedCab
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.FarePolicy as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
@@ -100,6 +101,7 @@ import qualified SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssigned
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
@@ -401,7 +403,11 @@ otpRideCreate driver otpCode booking clientId = do
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   vehicleServiceTierItem <- getBookingVehicleServiceTierItem booking.vehicleServiceTier
-  let isSpotRide = isRideOtpTrip booking.tripCategory
+  -- Only a spot ride (an OTP quote derived by 'addSpotRidePolicies') gets the spot checks; a native
+  -- OTP ride keeps the normal ones. The quote's fare policy cached at search carries isDerived; a
+  -- missing cache entry is taken as a spot ride.
+  mbQuoteFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let isSpotRide = isRideOtpTrip booking.tripCategory && maybe True (\fp -> fp.isDerived == Just True) mbQuoteFarePolicy
   if isSpotRide
     then do
       let isVehicleVariantNotAllowedForSpotRide = case vehicleServiceTierItem.spotRideAllowedVariants of
