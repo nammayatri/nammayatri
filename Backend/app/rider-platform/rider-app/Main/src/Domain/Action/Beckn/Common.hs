@@ -749,8 +749,9 @@ rideAssignedReqHandler req = do
       -- rejects shorter trips, so they are never marked eligible.
       -- A swap does NOT re-roll - one search per original booking, so a rider cannot chain
       -- swaps and cancel a driver on each hop. To allow repeats later, drop this branch.
+      -- A scheduled booking is never eligible: its driver is not on the way at assignment time.
       eligibleForBetterDriverSearch <-
-        if isBetterDriverSwap
+        if isBetterDriverSwap || booking.isScheduled
           then pure False
           else do
             riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
