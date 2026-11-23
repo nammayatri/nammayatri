@@ -210,11 +210,13 @@ def devboxes(machines: list) -> list:
 
 
 def pick(machines: list) -> dict | None:
-    """The least-loaded (lowest RAM %) machine that has a route from here, or None.
+    """The least-loaded (lowest RAM %) machine that answers on its tailnet
+    address, or None.
 
-    A machine with no bestIp answered on neither address, so it is never picked
-    however idle it is."""
-    assignable = [m for m in machines if m.get("bestIp")]
+    Dev-boxes take SSH only on the tailnet (Tailscale SSH; port 22 is closed on
+    the office network), so a machine reachable only by its office address is
+    never picked however idle it is."""
+    assignable = [m for m in machines if m.get("bestIp") and m.get("route") == "overlay"]
     if not assignable:
         return None
     return min(assignable, key=lambda m: ram_pct(m.get("usage")))

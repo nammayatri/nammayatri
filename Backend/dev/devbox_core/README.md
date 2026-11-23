@@ -34,7 +34,7 @@ made by hand (no owner) is never taken over.
 ```
 DEVBOX_STAGE  {"stage": "sync", "state": "started"}
 DEVBOX_STAGE  {"stage": "sync", "state": "done", "ms": 82000}
-DEVBOX_RESULT {"devbox": …, "workspace": …, "backend_url": …, "office_url": …, "cc_url": …, "data": "master v14"}
+DEVBOX_RESULT {"devbox": …, "workspace": …, "backend_url": …, "cc_url": …, "grpc_address": …, "data": "master v14"}
 ```
 
 `backend_url` (and `rider_url` / `driver_url`) go through hopper's public
@@ -52,9 +52,13 @@ dev-box hopper does not list as public is never picked. `pick` chooses among
 the machines `hopper list --json` names with node type `dev-box` (hopper-agent
 installed with `--node-type dev-box`), so a dev-box without hopper-agent is
 never picked either. That needs the hopper CLI (with `list --json`) and
-`hopper up` on the machine running devbox_core. `office_url`
-(`http://<office ip>:8888/<name>`, every service) and `cc_url` only answer on
-the tailnet.
+`hopper up` on the machine running devbox_core.
+
+SSH (and the front desk's every-service routes, `http://<tailnet ip>:8888/<name>`)
+work only on the tailnet: a dev-box's firewall opens 22 and 8888 on
+`tailscale0` alone, and on the tailnet address Tailscale SSH answers, so
+Headscale's ACL decides who gets in and no SSH key is needed. A dev-box that
+does not answer on its tailnet address is never picked.
 
 Stages: `preparing`, `sync`, `build`, `start`, `data`, `cc`, `ready`.
 States: `started`, `done`, `skipped`, `failed` (with `error`).
@@ -63,7 +67,7 @@ States: `started`, `done`, `skipped`, `failed` (with `error`).
 
 | Variable | Used for |
 |---|---|
-| `DEVBOX_SSH_KEY_FILE` | private key for the dev-boxes (default: `~/.ssh/id_ed25519`, `id_rsa`, `id_ecdsa`) |
+| `DEVBOX_SSH_KEY_FILE` | optional private key, only for a machine without Tailscale SSH (default: `~/.ssh/id_ed25519`, `id_rsa`, `id_ecdsa` when present; ignored where Tailscale SSH answers) |
 | `HOPPER_GATEWAY_URL` | hopper's public gateway: the public URLs and the "is it public" check (default `https://service-discovery.devenv.movingtech.net`) |
 | `HOPPER_CLI` | the hopper CLI that lists the machines (`hopper list --json`; default `hopper` on `PATH`) |
 | `CONFIG_SYNC_CLOUDFRONT_URL` / `CONFIG_SYNC_PUBLIC_BUCKET_URL` | where published data versions live (read through the dev-box: the bucket only answers the office's whitelisted line) |
