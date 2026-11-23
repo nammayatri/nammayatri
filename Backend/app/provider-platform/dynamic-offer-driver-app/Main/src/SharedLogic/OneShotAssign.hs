@@ -278,7 +278,7 @@ buildAssignedDriverRideRes :: DPerson.Person -> DDI.DriverInformation -> Transpo
 buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride rideDetails = do
   let driverLanguage = fromMaybe KET.ENGLISH driver.language
   driverNumber <- RD.getDriverNumber rideDetails
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) BecknDomain.MOBILITY
   callingOption <- DRideUI.effectiveCallingOption transporterConfig
   resolvedCalling <- DRideUI.resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)

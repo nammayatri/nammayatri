@@ -412,12 +412,9 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
               "exophone.multi_city.unresolved callFrom=" <> callFrom
                 <> " candidates="
                 <> T.intercalate "," cityIds
-            -- Only pair the fallback exophone with a person from its own merchant; otherwise
-            -- downstream would use firstCandidate's merchantId against a person from a different
-            -- merchant's booking.
             pure (firstCandidate, firstForMerchant firstCandidate relevantPersons)
 
-    firstForMerchant eo = listToMaybe . filter (\p -> p.merchantId == eo.merchantId)
+    firstForMerchant eo = find (\p -> p.merchantId == eo.merchantId)
 
     firstMatching :: [Person] -> [Exophone] -> m (Maybe (Exophone, Maybe Person))
     firstMatching [] _ = pure Nothing
@@ -433,11 +430,6 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             Just hit -> pure (Just hit)
             Nothing -> firstMatching rest candidates
 
-    -- Prefer booking.merchantOperatingCityId == exophone.merchantOperatingCityId (direct city
-    -- match). Fall back to booking.primaryExophone == exophone.primaryPhone, but constrained to
-    -- the booking's own merchant — otherwise merchant A's booking could route through merchant
-    -- B's exophone row just because the phone number matches, and downstream would attribute
-    -- the call to the wrong merchant.
     candidateForBooking booking candidates =
       find (\eo -> eo.merchantOperatingCityId == booking.merchantOperatingCityId) candidates
         <|> find (\eo -> eo.merchantId == booking.merchantId && eo.primaryPhone == booking.primaryExophone) candidates
