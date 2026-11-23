@@ -112,10 +112,17 @@ def _grpc_address(t: ssh.Target, wdir: str) -> str:
     input): ride requests reach the driver app over this stream, and the app
     falls back to production gRPC without it. The tailnet address, not t.host,
     because t.host can be the office address and the phone is on the tailnet.
-    "" when the port is not known yet."""
+    "" when the port is not known yet.
+
+    DEVBOX_GRPC_PUBLIC_ADDRESS (e.g. service-discovery.devenv.movingtech.net:443)
+    gives the public relay instead, so the phone needs no Tailscale; the app uses
+    TLS for port 443. The relay must route gRPC to this workspace."""
     port = stack.ports(t, wdir).get("notification-service-grpc")
     if not port:
         return ""
+    public = os.environ.get("DEVBOX_GRPC_PUBLIC_ADDRESS", "").strip()
+    if public:
+        return public
     r = ssh.run(t, "tailscale ip -4 2>/dev/null | head -1")
     ip = r.stdout.strip() if r.returncode == 0 else ""
     return f"{ip or t.host}:{port}"
