@@ -3,6 +3,7 @@ imports:
   IncentiveJourneyMilestone: Dashboard.Common
   CohortDetails: Dashboard.Common
   CohortJourneyMapping: Dashboard.Common
+  AutoApplyCohortMapping: Dashboard.Common
   Person: Dashboard.Common
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceTierType: Domain.Types.ServiceTierType
@@ -106,6 +107,19 @@ apis:
       migrate:
         capability: system-config.coins.write
 
+  - GET:
+      endpoint: /cohort/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - cohortName: Text
+        - cohortCategory: Text
+      response:
+        type: CohortDetailsListRes
+      migrate:
+        capability: system-config.coins.read
+
   - POST:
       endpoint: /cohortJourney/create
       auth: ApiAuthV2
@@ -133,6 +147,7 @@ apis:
         - limit: Int
         - offset: Int
         - cohortName: Text
+        - cohortId: Id CohortDetails
         - cohortCategory: Text
         - isActive: Bool
         - journeyType: IncentiveJourneyType
@@ -150,6 +165,39 @@ apis:
         type: APISuccess
       migrate:
         capability: system-config.coins.write
+
+  - POST:
+      endpoint: /autoApplyCohort/create
+      auth: ApiAuthV2
+      request:
+        type: CreateAutoApplyCohortMappingReq
+      response:
+        type: CreateAutoApplyCohortMappingRes
+      migrate:
+        capability: system-config.coins.write
+
+  - PUT:
+      endpoint: /autoApplyCohort/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateAutoApplyCohortMappingReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - GET:
+      endpoint: /autoApplyCohort/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - vehicleCategory: VehicleCategory
+        - enabled: Bool
+      response:
+        type: AutoApplyCohortMappingListRes
+      migrate:
+        capability: system-config.coins.read
 
   - POST:
       endpoint: /unassign
@@ -179,6 +227,10 @@ types:
     - daysValidFor: Int
     - serviceName: Text
     - waiveOffMode: Text
+
+  CouponRewardConfig:
+    - offerCode: Text
+    - validityHours: Int
 
   IncentiveJourneyType:
     - enum: "Daily, Weekly, Monthly"
@@ -223,6 +275,7 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - couponReward: Maybe CouponRewardConfig
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
 
@@ -246,6 +299,7 @@ types:
     - rewardValue: Maybe Int
     - rewardExpirationAt: Maybe Int
     - subscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
+    - couponReward: Maybe CouponRewardConfig
     - timeBounds: Maybe TimeBound
     - createdAt: UTCTime
     - updatedAt: UTCTime
@@ -306,6 +360,18 @@ types:
 
   CreateCohortDetailsRes:
     - cohortId: Id CohortDetails
+
+  CohortDetailsListItem:
+    - cohortId: Id CohortDetails
+    - name: Text
+    - category: Text
+    - description: Maybe Text
+    - cohortRule: Maybe Value
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  CohortDetailsListRes:
+    - cohorts: "[CohortDetailsListItem]"
 
   CreateCohortJourneyMappingReq:
     - cohortId: Id CohortDetails
@@ -372,3 +438,45 @@ types:
     - personId: Id Person
     - cohortJourneyMappingId: Id CohortJourneyMapping
     - derive: "'HideSecrets"
+
+  CreateAutoApplyCohortMappingReq:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - vehicleCategory: Maybe VehicleCategory
+    - allowIfNoMapping: Bool
+    - enabled: Bool
+    - derive: "'HideSecrets"
+
+  CreateAutoApplyCohortMappingRes:
+    - autoApplyCohortMappingId: Id AutoApplyCohortMapping
+
+  UpdateAutoApplyCohortMappingReq:
+    - autoApplyCohortMappingId: Id AutoApplyCohortMapping
+    - vehicleCategory: Maybe VehicleCategory
+    # Just true stores vehicle category as null (every category in the city).
+    - allVehicleCategories: Maybe Bool
+    - allowIfNoMapping: Maybe Bool
+    - enabled: Maybe Bool
+    - derive: "'HideSecrets"
+
+  AutoApplyCohortMappingListItem:
+    - autoApplyCohortMappingId: Id AutoApplyCohortMapping
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - cohortId: Id CohortDetails
+    - cohortName: Text
+    - cohortCategory: Text
+    - cohortRule: Maybe Value
+    - journeyId: Id IncentiveJourney
+    - journeyName: Text
+    - journeyType: IncentiveJourneyType
+    # cohort_journey_mapping.enabled. `enabled` below is this auto-apply row.
+    - cohortMappingEnabled: Bool
+    - merchantId: Text
+    - merchantOperatingCityId: Text
+    - vehicleCategory: Maybe VehicleCategory
+    - allowIfNoMapping: Bool
+    - enabled: Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  AutoApplyCohortMappingListRes:
+    - mappings: "[AutoApplyCohortMappingListItem]"

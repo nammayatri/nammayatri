@@ -7,20 +7,27 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     getIncentiveJourneyPersonAssignments,
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyCohortCreate,
+    getIncentiveJourneyCohortList,
     postIncentiveJourneyCohortJourneyCreate,
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
+    postIncentiveJourneyAutoApplyCohortCreate,
+    putIncentiveJourneyAutoApplyCohortUpdate,
+    getIncentiveJourneyAutoApplyCohortList,
     postIncentiveJourneyUnassign,
   )
 where
 
 import qualified API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney as Common
 import qualified Dashboard.Common
+import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Fields
 import qualified Domain.Types.RiderConfig as Fields
+import qualified Domain.Types.VehicleCategory as DTV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess)
@@ -39,9 +46,12 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMappi
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra as QStats
+import qualified Lib.Payment.Domain.Types.Offer as Fields
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.IncentiveJourney ()
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -150,8 +160,21 @@ postIncentiveJourneyMilestoneCreate ::
   Kernel.Types.Beckn.Context.City ->
   Common.CreateIncentiveJourneyMilestoneReq ->
   Environment.Flow Common.CreateIncentiveJourneyMilestoneRes
-postIncentiveJourneyMilestoneCreate merchantShortId opCity =
-  LibRider.postIncentiveJourneyMilestoneCreate mkHandle (ShortId merchantShortId.getShortId) opCity
+postIncentiveJourneyMilestoneCreate merchantShortId opCity req = do
+  whenJust req.couponReward $ \couponReward -> do
+    merchant <- SMerchant.findMerchantByShortId merchantShortId
+    merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just opCity)
+    validateJourneyOfferCode merchantOpCityId couponReward.offerCode
+  LibRider.postIncentiveJourneyMilestoneCreate mkHandle (ShortId merchantShortId.getShortId) opCity req
+
+validateJourneyOfferCode :: Id DMOC.MerchantOperatingCity -> Text -> Environment.Flow ()
+validateJourneyOfferCode merchantOpCityId offerCode = do
+  now <- getCurrentTime
+  mbOffer <- QOffer.findByOfferCodeAndCity (T.strip offerCode) merchantOpCityId.getId
+  case mbOffer of
+    Just offer
+      | offer.isActive && maybe True (> now) offer.validTill -> pure ()
+    _ -> throwError (InvalidRequest $ "No active offer " <> offerCode <> " in this city")
 
 getIncentiveJourneyStatsHistory ::
   ShortId DM.Merchant ->
@@ -190,6 +213,17 @@ postIncentiveJourneyCohortCreate ::
 postIncentiveJourneyCohortCreate merchantShortId opCity =
   LibRider.postIncentiveJourneyCohortCreate mkHandle (ShortId merchantShortId.getShortId) opCity
 
+getIncentiveJourneyCohortList ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Environment.Flow Common.CohortDetailsListRes
+getIncentiveJourneyCohortList merchantShortId opCity =
+  LibRider.getIncentiveJourneyCohortList mkHandle (ShortId merchantShortId.getShortId) opCity
+
 postIncentiveJourneyCohortJourneyCreate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -212,6 +246,7 @@ getIncentiveJourneyCohortJourneyList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
+  Maybe (Id Dashboard.Common.CohortDetails) ->
   Maybe Text ->
   Maybe Bool ->
   Maybe Common.IncentiveJourneyType ->
@@ -226,6 +261,33 @@ postIncentiveJourneyAssign ::
   Environment.Flow APISuccess
 postIncentiveJourneyAssign merchantShortId opCity =
   LibRider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
+
+postIncentiveJourneyAutoApplyCohortCreate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.CreateAutoApplyCohortMappingReq ->
+  Environment.Flow Common.CreateAutoApplyCohortMappingRes
+postIncentiveJourneyAutoApplyCohortCreate merchantShortId opCity =
+  LibRider.postIncentiveJourneyAutoApplyCohortCreate mkHandle (ShortId merchantShortId.getShortId) opCity
+
+putIncentiveJourneyAutoApplyCohortUpdate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateAutoApplyCohortMappingReq ->
+  Environment.Flow APISuccess
+putIncentiveJourneyAutoApplyCohortUpdate merchantShortId opCity =
+  LibRider.putIncentiveJourneyAutoApplyCohortUpdate mkHandle (ShortId merchantShortId.getShortId) opCity
+
+getIncentiveJourneyAutoApplyCohortList ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
+  Environment.Flow Common.AutoApplyCohortMappingListRes
+getIncentiveJourneyAutoApplyCohortList merchantShortId opCity =
+  LibRider.getIncentiveJourneyAutoApplyCohortList mkHandle (ShortId merchantShortId.getShortId) opCity
 
 postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->

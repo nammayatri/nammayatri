@@ -10,6 +10,7 @@ import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Geohash as Geohash
+import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.Types.Booking as DRB
@@ -193,6 +194,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
               today <- utctDay <$> getCurrentTime
               mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
               mbPersonStats <- QPersonStats.findByPersonId personId
+              eligibilityTags <- offerEligibilityTags person.customerNammaTags
               let domainContext =
                     Just $
                       A.toJSON
@@ -207,7 +209,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             hasTakenValidRide = person.hasTakenValidRide,
                             totalRidesCount = person.totalRidesCount,
                             totalValidRidesCount = person.totalValidRidesCount,
-                            personTags = offerEligibilityTags person.customerNammaTags,
+                            personTags = eligibilityTags,
                             estimate = Nothing,
                             quote = Nothing
                           }
@@ -477,8 +479,34 @@ mkCumulativeOfferRespWithLogics logics merchantOperatingCityId offerListRes legI
 autoApplyOfferTagName :: Text
 autoApplyOfferTagName = "AutoApplyOffer"
 
-offerEligibilityTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
-offerEligibilityTags = maybe [] (map ((.getTagNameValue) . LYTUtils.removeTagExpiry))
+offerEligibilityTagName :: Text
+offerEligibilityTagName = "OFFER"
+
+addAutoApplyOfferTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Person.Person -> Text -> Int -> m ()
+addAutoApplyOfferTag person offerCode validityHours = do
+  now <- getCurrentTime
+  let tag = LYTUtils.mkTagNameValueExpiry (LYT.TagName autoApplyOfferTagName) (LYT.TextValue offerCode) (Just $ Hours validityHours) now
+      newTags = LYTUtils.removeTagNameValue person.customerNammaTags tag ++ [tag]
+  QPerson.updateCustomerTags (Just (nub newTags)) person.id
+
+grantOfferToPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Person.Person -> Text -> Int -> m ()
+grantOfferToPerson person offerCode validityHours = do
+  now <- getCurrentTime
+  let existingTags = fromMaybe [] person.customerNammaTags
+      grantedExpiry = addUTCTime (3600 * fromIntegral validityHours) now
+      mkTag tagName = LYTUtils.mkTagNameValueExpiry (LYT.TagName tagName) (LYT.TextValue offerCode) (Just $ Hours validityHours) now
+      outlastsGrant existingTag = maybe True (> grantedExpiry) (LYTUtils.parseTagExpiry existingTag)
+      alreadyHeldLonger tag = any (\existingTag -> LYTUtils.removeTagExpiry existingTag == LYTUtils.removeTagExpiry tag && outlastsGrant existingTag) existingTags
+      grantedTags = filter (not . alreadyHeldLonger) (map mkTag [offerEligibilityTagName, autoApplyOfferTagName])
+      grantedKeys = map LYTUtils.removeTagExpiry grantedTags
+      keptTags = filter (\existingTag -> LYTUtils.removeTagExpiry existingTag `notElem` grantedKeys) existingTags
+  unless (null grantedTags) $
+    QPerson.updateCustomerTags (Just (nub (keptTags ++ grantedTags))) person.id
+
+offerEligibilityTags :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
+offerEligibilityTags mbTags = do
+  validTags <- LYTUtils.filterExpiredTags (fromMaybe [] mbTags)
+  pure $ map ((.getTagNameValue) . LYTUtils.removeTagExpiry) validTags
 
 getAutoApplyOfferCodes :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
 getAutoApplyOfferCodes mbTags = do
@@ -765,6 +793,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           pure (mbRider, staticPersonOfferStats, deviceOfferStats, mbPersonDailyOfferStats)
         -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
         -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
+        eligibilityTags <- offerEligibilityTags person.customerNammaTags
         let domainContextFor productId =
               let mbEstimate = find (\e -> show e.vehicleServiceTierType == productId) estimates
                   mbQuote = find (\q -> show q.vehicleServiceTierType == productId) quotes
@@ -781,7 +810,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                           hasTakenValidRide = person.hasTakenValidRide,
                           totalRidesCount = person.totalRidesCount,
                           totalValidRidesCount = person.totalValidRidesCount,
-                          personTags = offerEligibilityTags person.customerNammaTags,
+                          personTags = eligibilityTags,
                           estimate = mkEstimateData <$> mbEstimate,
                           quote = mkQuoteData <$> mbQuote
                         }

@@ -22,6 +22,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 -- {"api":"PostIncentiveJourneyCohortCreate","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_COHORT_CREATE' ) ON CONFLICT DO NOTHING;
 
+-- {"api":"GetIncentiveJourneyCohortList","migration":"capability","param":"system-config.coins.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.read', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_COHORT_LIST' ) ON CONFLICT DO NOTHING;
+
 -- {"api":"PostIncentiveJourneyCohortJourneyCreate","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_COHORT_JOURNEY_CREATE' ) ON CONFLICT DO NOTHING;
 
@@ -33,6 +36,15 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostIncentiveJourneyAssign","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_ASSIGN' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostIncentiveJourneyAutoApplyCohortCreate","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_CREATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PutIncentiveJourneyAutoApplyCohortUpdate","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/PUT_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetIncentiveJourneyAutoApplyCohortList","migration":"capability","param":"system-config.coins.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.read', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_LIST' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"GetIncentiveJourneyList","migration":"capability","param":"system-config.coins.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.read', 'DASHBOARD', 'PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_LIST' ) ON CONFLICT DO NOTHING;

@@ -7,17 +7,23 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Rider
     getIncentiveJourneyPersonAssignments,
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyCohortCreate,
+    getIncentiveJourneyCohortList,
     postIncentiveJourneyCohortJourneyCreate,
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
+    postIncentiveJourneyAutoApplyCohortCreate,
+    putIncentiveJourneyAutoApplyCohortUpdate,
+    getIncentiveJourneyAutoApplyCohortList,
     postIncentiveJourneyUnassign,
   )
 where
 
 import qualified API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney as Common
 import qualified Dashboard.Common
+import qualified Data.Text as T
 import Data.Time (Day)
+import qualified Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, sortOn)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
@@ -28,6 +34,7 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Core as Core
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as DAuto
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
@@ -136,7 +143,7 @@ postIncentiveJourneyMilestoneCreate handle merchantShortId opCity req = do
             rewardType = toDomainRewardType req.rewardType,
             rewardValue = req.rewardValue,
             rewardExpirationAt = req.rewardExpirationAt,
-            rewardMetadata = Nothing,
+            rewardMetadata = IJ.encodeCouponMetadata . toCouponSpec <$> req.couponReward,
             timeBounds = req.timeBounds,
             createdAt = now,
             updatedAt = now,
@@ -237,7 +244,7 @@ postIncentiveJourneyCohortJourneyCreate handle merchantShortId opCity req = do
       maxWaiveOffCount = Just (fromMaybe 1 req.maxWaiveOffCount)
   whenJust maxWaiveOffCount $ \n ->
     when (n < 0) $ throwError (InvalidRequest "maxWaiveOffCount must be >= 0")
-  validateStreakEndRewardOnMapping (toDomainRewardType <$> req.streakEndRewardType) req.streakEndRewardValue
+  validateStreakEndRewardOnMapping (toDomainRewardType <$> req.streakEndRewardType)
   cjm <-
     QCJMExtra.createCohortJourneyMapping
       (ID.cast merchant.id)
@@ -281,7 +288,7 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
   case IJStreak.validateMappingStartDate journey.journeyType startDate of
     Left err -> throwError (InvalidRequest err)
     Right () -> pure ()
-  validateStreakEndRewardOnMapping streakEndRewardType streakEndRewardValue
+  validateStreakEndRewardOnMapping (toDomainRewardType <$> req.streakEndRewardType)
   void $
     QCJMExtra.updateCohortJourneyMappingFields
       cjm{DCJM.startDate = startDate,
@@ -304,11 +311,12 @@ getIncentiveJourneyCohortJourneyList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
+  Maybe (ID.Id Dashboard.Common.CohortDetails) ->
   Maybe Text ->
   Maybe Bool ->
   Maybe Common.IncentiveJourneyType ->
   m Common.CohortJourneyMappingListRes
-getIncentiveJourneyCohortJourneyList handle merchantShortId opCity mbLimit mbOffset mbCohortName mbCohortCategory mbIsActive mbJourneyType = do
+getIncentiveJourneyCohortJourneyList handle merchantShortId opCity mbLimit mbOffset mbCohortName mbCohortId mbCohortCategory mbIsActive mbJourneyType = do
   rows <-
     Core.listCohortJourneyRows
       handle
@@ -316,7 +324,7 @@ getIncentiveJourneyCohortJourneyList handle merchantShortId opCity mbLimit mbOff
       opCity
       mbLimit
       mbOffset
-      Nothing
+      (ID.cast @Dashboard.Common.CohortDetails @DCD.CohortDetails <$> mbCohortId)
       mbCohortName
       mbCohortCategory
       (toDomainJourneyType <$> mbJourneyType)
@@ -392,6 +400,108 @@ postIncentiveJourneyUnassign handle merchantShortId opCity req = do
 -- Helpers
 ---------------------------------------------------------------------------
 
+getIncentiveJourneyCohortList ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  m Common.CohortDetailsListRes
+getIncentiveJourneyCohortList _handle _merchantShortId _opCity mbLimit mbOffset mbCohortName mbCohortCategory = do
+  cohorts <- Core.listCohorts mbLimit mbOffset mbCohortName mbCohortCategory
+  pure Common.CohortDetailsListRes {cohorts = map toCohortListItem cohorts}
+
+toCohortListItem :: DCD.CohortDetails -> Common.CohortDetailsListItem
+toCohortListItem cohort =
+  Common.CohortDetailsListItem
+    { cohortId = ID.cast cohort.id,
+      name = cohort.name,
+      category = cohort.category,
+      description = cohort.description,
+      cohortRule = cohort.cohortRule,
+      createdAt = cohort.createdAt,
+      updatedAt = cohort.updatedAt
+    }
+
+postIncentiveJourneyAutoApplyCohortCreate ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.CreateAutoApplyCohortMappingReq ->
+  m Common.CreateAutoApplyCohortMappingRes
+postIncentiveJourneyAutoApplyCohortCreate handle merchantShortId opCity req = do
+  rowId <-
+    Core.createAutoApplyMapping
+      handle
+      merchantShortId
+      opCity
+      (ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId)
+      req.vehicleCategory
+      req.allowIfNoMapping
+      req.enabled
+  pure Common.CreateAutoApplyCohortMappingRes {autoApplyCohortMappingId = ID.cast rowId}
+
+putIncentiveJourneyAutoApplyCohortUpdate ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateAutoApplyCohortMappingReq ->
+  m APISuccess
+putIncentiveJourneyAutoApplyCohortUpdate handle merchantShortId opCity req = do
+  Core.updateAutoApplyMapping
+    handle
+    merchantShortId
+    opCity
+    (ID.cast @Dashboard.Common.AutoApplyCohortMapping @DAuto.AutoApplyCohortMapping req.autoApplyCohortMappingId)
+    req.vehicleCategory
+    req.allVehicleCategories
+    req.allowIfNoMapping
+    req.enabled
+  pure Success
+
+getIncentiveJourneyAutoApplyCohortList ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
+  m Common.AutoApplyCohortMappingListRes
+getIncentiveJourneyAutoApplyCohortList handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled = do
+  rows <- Core.listAutoApplyRows handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled
+  pure Common.AutoApplyCohortMappingListRes {mappings = map toAutoApplyListItem rows}
+
+toAutoApplyListItem ::
+  (DAuto.AutoApplyCohortMapping, DCJM.CohortJourneyMapping, DCD.CohortDetails, DIJ.IncentiveJourney) ->
+  Common.AutoApplyCohortMappingListItem
+toAutoApplyListItem (row, cjm, cohort, journey) =
+  Common.AutoApplyCohortMappingListItem
+    { autoApplyCohortMappingId = ID.cast row.id,
+      cohortJourneyMappingId = ID.cast row.cohortJourneyMappingId,
+      cohortId = ID.cast cohort.id,
+      cohortName = cohort.name,
+      cohortCategory = cohort.category,
+      cohortRule = cohort.cohortRule,
+      journeyId = ID.cast journey.id,
+      journeyName = journey.name,
+      journeyType = toApiJourneyType journey.journeyType,
+      cohortMappingEnabled = cjm.enabled,
+      merchantId = row.merchantId.getId,
+      merchantOperatingCityId = row.merchantOperatingCityId.getId,
+      vehicleCategory = row.vehicleCategory,
+      allowIfNoMapping = row.allowIfNoMapping,
+      enabled = row.enabled,
+      createdAt = row.createdAt,
+      updatedAt = row.updatedAt
+    }
+
 toJourneyListItem :: DIJ.IncentiveJourney -> Common.IncentiveJourneyListItem
 toJourneyListItem journey =
   Common.IncentiveJourneyListItem
@@ -422,6 +532,7 @@ toMilestoneListItem milestone =
       rewardValue = milestone.rewardValue,
       rewardExpirationAt = milestone.rewardExpirationAt,
       subscriptionWaiveOff = Nothing,
+      couponReward = toApiCouponReward <$> IJ.mkCouponSpec milestone.rewardMetadata,
       timeBounds = milestone.timeBounds,
       createdAt = milestone.createdAt,
       updatedAt = milestone.updatedAt
@@ -451,37 +562,36 @@ validateMilestoneCondition milestone =
 validateMilestoneReward :: BeamFlow m r => DIJM.IncentiveJourneyMilestone -> m ()
 validateMilestoneReward milestone =
   case milestone.rewardType of
-    DIJC.Coins ->
-      case milestone.rewardValue of
-        Just coins | coins > 0 -> pure ()
-        Just _ -> throwError (InvalidRequest "Coins milestone requires rewardValue > 0")
-        Nothing -> throwError (InvalidRequest "Coins milestone requires rewardValue > 0")
-    DIJC.Cash ->
-      throwError (InvalidRequest "Cash reward type is not supported")
-    DIJC.Coupons ->
-      throwError (InvalidRequest "Coupons reward type is not supported")
-    DIJC.WalletMoney ->
-      throwError (InvalidRequest "WalletMoney reward type is not supported")
-    DIJC.SubscriptionWaiveOff ->
-      throwError (InvalidRequest "SubscriptionWaiveOff reward type is not supported")
-    DIJC.PoolingPriority ->
-      throwError (InvalidRequest "PoolingPriority reward type is not supported")
     DIJC.NoReward -> pure ()
+    DIJC.Coupons ->
+      case IJ.mkCouponSpec milestone.rewardMetadata of
+        Just coupon
+          | not (T.null (T.strip coupon.offerCode)) && coupon.validityHours > 0 -> pure ()
+        _ -> throwError (InvalidRequest "Coupons milestone requires couponReward with an offerCode and validityHours > 0")
+    other -> throwError (InvalidRequest $ show other <> " reward type is not supported")
+
+toCouponSpec :: Common.CouponRewardConfig -> IJ.CouponSpec
+toCouponSpec couponConfig =
+  IJ.CouponSpec
+    { offerCode = T.strip couponConfig.offerCode,
+      validityHours = couponConfig.validityHours
+    }
+
+toApiCouponReward :: IJ.CouponSpec -> Common.CouponRewardConfig
+toApiCouponReward coupon =
+  Common.CouponRewardConfig
+    { offerCode = coupon.offerCode,
+      validityHours = coupon.validityHours
+    }
 
 validateStreakEndRewardOnMapping ::
   BeamFlow m r =>
   Maybe DIJC.MilestoneRewardType ->
-  Maybe Int ->
   m ()
-validateStreakEndRewardOnMapping mbRewardType mbRewardValue =
-  case mbRewardType of
-    Nothing -> pure ()
-    Just DIJC.Coins ->
-      case mbRewardValue of
-        Just coins | coins > 0 -> pure ()
-        _ -> throwError (InvalidRequest "Streak-end Coins reward requires streakEndRewardValue > 0")
-    Just DIJC.NoReward -> pure ()
-    Just other -> throwError (InvalidRequest $ show other <> " streak-end reward is not supported yet")
+validateStreakEndRewardOnMapping = \case
+  Nothing -> pure ()
+  Just DIJC.NoReward -> pure ()
+  Just other -> throwError (InvalidRequest $ show other <> " streak-end reward is not supported yet")
 
 toPersonAssignmentItem :: Core.AssignmentView -> Common.IncentiveJourneyPersonAssignmentItem
 toPersonAssignmentItem assignmentView =

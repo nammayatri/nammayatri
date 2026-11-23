@@ -146,5 +146,9 @@ streakEndRewardSpec cjm =
               cjm.streakEndRewardValue
               cjm.streakEndRewardExpirationAt
               cjm.streakEndRewardMetadata
+          _ -> Nothing,
+      coupon =
+        case cjm.streakEndRewardType of
+          Just Common.Coupons -> IJ.mkCouponSpec cjm.streakEndRewardMetadata
           _ -> Nothing
     }

@@ -89,6 +89,7 @@ newman run collections/IncentiveJourneyFlow/01-IncentiveJourneyRideProgressFlow.
 |------|----------------|
 | `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 2 is RideCompleted GTE 2 for 200 coins and completes on ride 2. A second cohort is auto-applied for `AUTO_CATEGORY` with no user mapping and completes on ride 1. Then waive earnings → streak-end cash ₹1 does not change coin balance → unassign both mappings, disable them, and disable auto-apply |
 | `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key |
+| `03-RiderIncentiveJourneyCouponFlow.json` | Rider journey with one Coupons milestone. One auto ride completes it, and the rider gets the offer tags. See *Rider coupon suite* below |
 
 ## Bulk assign suite
 
@@ -99,6 +100,44 @@ newman run collections/IncentiveJourneyFlow/01-IncentiveJourneyRideProgressFlow.
 3. Polls `GET .../assign/bulkFromS3/list` until that `runId` is `Succeeded` with `rowsInserted` 2.
 
 `scheduledAt` must be in the future or the scheduler rejects the job. The allocator has to be up to consume it. A row that already exists for the same driver and mapping is skipped, not re-enabled.
+
+## Rider coupon suite
+
+`03` tests the rider side of the incentive journey. Riders get only Coupons rewards. A Coupons milestone gives the rider two tags for the offer code: `OFFER#<code>` makes the rider eligible for an offer that targets tagged riders, and `AutoApplyOffer#<code>` pre-applies that offer.
+
+Rider dashboard calls go straight to rider-app, not to a dashboard server:
+
+```
+{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/incentiveJourney/...
+{{bap_dashboard_url}}/{{bap_short_id}}/{{dashboard_city}}/offer/...
+```
+
+`bap_dashboard_url` is `http://localhost:8017/bap`, the old rider dashboard address. The test dashboard proxy rewrites `/bap/<rest>` to `http://localhost:8013/direct-dashboard/<rest>`, the same way `baseURL_BPP_Dashboard_Internal` reaches the driver app. The header is `token: {{bap_dashboard_token}}`. The capability SQL that `./run-tests.sh incentive` already applies maps the 17 `RIDER_INCENTIVE_JOURNEY/*` endpoints. The offer endpoints have no capability.
+
+The suite assigns the rider with `POST .../assign`. It does not use the `autoApplyCohort` endpoints. Unassign is `POST .../unassign` with `personId`, not `DELETE`.
+
+Steps:
+
+1. The driver and the rider log in. The rider OTP step saves `rider_person_id`.
+2. `POST .../offer/create` makes a FLAT ₹10 discount offer with the rule `{"in": ["OFFER#<code>", {"var": "personTags"}]}`. `GET .../offer/list` saves its id. The list reads only Postgres, and a new offer reaches Postgres a few seconds after Redis. So the step polls the list every 2 seconds, 15 times at most.
+3. The dashboard creates a cohort and a Daily journey.
+4. Two milestone requests must fail with 400: a Coins milestone, and a Coupons milestone with an offer code that has no active offer in the city.
+5. The dashboard creates the real milestone: `RideCompleted` GTE 1, `rewardType` Coupons, `couponReward` with the offer code and `validityHours` 24. The milestone list must return the `couponReward`.
+6. The dashboard maps the cohort to the journey for the city and assigns the rider.
+7. Before the ride, `GET {{baseUrl_app}}/incentive/journey/list` must show the milestone with `couponOfferCode` and `currentValue` 0. `GET {{baseUrl_app}}/profile` must show neither tag.
+8. One auto ride runs from search to end, with the same steps as `01`.
+9. After the ride, the rider list must show the milestone as Completed or Rewarded with `currentValue` 1. The profile `customerTags` must have `OFFER` and `AutoApplyOffer`, both equal to the offer code. The rider history and the dashboard stats history must show the completed milestone.
+10. Cleanup unassigns the rider, disables the mapping, and toggles the offer off.
+
+The rider journey runs in the rider-app ride-end handler, not in a Kafka consumer. `ij_rider_eval_wait_ms` (default `5000`) is the wait before the first poll.
+
+The suite does not check that the next estimate applies the offer. Local Bangalore uses Juspay offers, not domain offers, so the targeted domain offer never reaches the estimate here. The local seed sets `useDomainOffers` only for Delhi, in `dev/feature-migrations/0002-delhi-offline-payment-cashback-offers.sql`.
+
+Run only this suite:
+
+```bash
+./run-tests.sh incentive-journey NY_Bangalore 03-RiderIncentiveJourneyCouponFlow
+```
 
 ## Milestone shape in this collection
 
