@@ -29,6 +29,22 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 
 
+def fits_on(route, at, day, wish, flex):
+    """A departure that runs on that day (any day when None) is at the stop within the rider's flexibility. Each day is
+    checked on its own: a rider can take 18:30 on some days and 18:45 on others."""
+    return any(
+        abs(naming.parse_hhmm(d["time"]) + route["offsets"][at] - wish) <= flex
+        for d in route["departures"]
+        if day is None or day in d["days"]
+    )
+
+
+def of_company(company, people):
+    """(the plan company's employees, how many rows belong to other companies)."""
+    mine = [p for p in people if p["company"] == company["companyName"]]
+    return mine, len(people) - len(mine)
+
+
 def evaluate(company, people):
     """[(person, leg, result)] where result has the nearest stop and the walk/time/days verdicts (or no route at all)."""
     stop_ids, route_stops = plans.resolve_stop_ids(company)
@@ -54,8 +70,7 @@ def evaluate(company, people):
                 continue
             route = best["route"]
             at = best["pos"] if leg == "TO_OFFICE" else 0  # TO_HOME is timed by when the shuttle leaves the office
-            times = [naming.parse_hhmm(d["time"]) + route["offsets"][at] for d in route["departures"] if set(person["days"]) <= set(d["days"])]
-            time_ok = wish is not None and any(abs(t - wish) <= person["flexMin"] for t in times)
+            time_ok = wish is not None and all(fits_on(route, at, day, wish, person["flexMin"]) for day in person["days"] or [None])
             results.append(
                 (
                     person,
@@ -130,7 +145,12 @@ def main(argv):
     if company["org"] != org:
         print(f"error: {path} is the plan of {company['org']}, not {org}", file=sys.stderr)
         return 1
-    people = interest_io.load(args.interests)
+    people, others = of_company(company, interest_io.load(args.interests))
+    if others:
+        print(f"note: left out {others} interest forms of other companies (the plan is {company['companyName']}'s)", file=sys.stderr)
+    if not people:
+        print(f"error: no interest forms of {company['companyName']} in {', '.join(args.interests)}", file=sys.stderr)
+        return 1
     results = evaluate(company, people)
 
     print(f"{company['companyName']}: {len(people)} employees, plan {path}")

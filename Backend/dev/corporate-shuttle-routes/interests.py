@@ -48,8 +48,6 @@ def load(paths):
             "officeLat": float(r["dropLat"]),
             "officeLon": float(r["dropLon"]),
             "officeAddress": r.get("dropAddress") or "",
-            # "HSR Layout, Bengaluru" -> "HSR Layout": names the stop at this employee's pickup point
-            "area": (r.get("pickupAddress") or "").split(",")[0].strip(),
             "toOffice": trip in ("TO_OFFICE", "ROUND_TRIP"),
             "toHome": trip in ("TO_HOME", "ROUND_TRIP"),
             "pickupMin": _minutes(r.get("pickupTime")),

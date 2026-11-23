@@ -11,3 +11,10 @@ ALTER TABLE atlas_app.shuttle_published_trip ADD COLUMN route_code text NOT NULL
 ALTER TABLE atlas_app.shuttle_published_trip ADD COLUMN trip_id text NOT NULL;
 ALTER TABLE atlas_app.shuttle_published_trip ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.shuttle_published_trip ADD PRIMARY KEY ( day, trip_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.shuttle_published_trip DROP CONSTRAINT shuttle_published_trip_pkey;
+ALTER TABLE atlas_app.shuttle_published_trip ADD PRIMARY KEY ( day, feed_key, trip_id);

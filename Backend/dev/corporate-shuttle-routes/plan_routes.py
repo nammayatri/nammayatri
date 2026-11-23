@@ -59,8 +59,23 @@ def fetch_interests(config):
         offset += 100
 
 
-def _key(direction, stops):
-    return (direction, tuple((s["lat"], s["lon"]) for s in stops))
+def _key(direction, route):
+    """Days merge into one route only when its stops and its stop timings are the same (a day planned without road data
+    has other timings, so its departures would not fit another day's offsets)."""
+    return (direction, tuple((s["lat"], s["lon"]) for s in route["stops"]), tuple(route["offsets"]))
+
+
+def org_codes(companies, config):
+    """{company: code}; stops when two companies would get the same code (their plans would overwrite each other)."""
+    codes = {c: org_code(c, config) for c in companies}
+    clashes = {}
+    for company, code in codes.items():
+        clashes.setdefault(code, []).append(company)
+    clashes = {code: names for code, names in clashes.items() if len(names) > 1}
+    if clashes:
+        lines = "; ".join(f"{code}: {', '.join(sorted(names))}" for code, names in sorted(clashes.items()))
+        raise SystemExit(f"error: companies share an org code ({lines}). Give each its own code under \"orgs\" in cities/<city>.json")
+    return codes
 
 
 def plan_company(people, company, office, org, args):
@@ -78,7 +93,7 @@ def plan_company(people, company, office, org, args):
                 why = "doorstep pickup (detour)" if r["kind"] == "DOORSTEP" else f"walks {r['walkM']} m (said {r['walkLimitM']} m) to {r['stop']}"
                 report.append(f"      {r['name'] or r['personId']}: {why}")
             for route in day_routes:
-                entry = merged.setdefault(_key(direction, route["stops"]), {**route, "direction": direction, "deps": {}, "riders": {}})
+                entry = merged.setdefault(_key(direction, route), {**route, "direction": direction, "deps": {}, "riders": {}})
                 for dep in route["departures"]:
                     entry["deps"].setdefault(dep, set()).add(day)
                     # how many of that day's riders this departure carries, for the published timetable
@@ -135,11 +150,12 @@ def main(argv):
     companies = sorted({p["company"] for p in people})
     out_dir = plans.plans_dir(city)
     os.makedirs(out_dir, exist_ok=True)
+    codes = org_codes(companies, config)  # all checked before any plan is written
     report = [f"{city}: {len(people)} interest forms, {len(companies)} companies (OSRM {planner.osrm.OSRM_URL})"]
     for company in companies:
         rows = [p for p in people if p["company"] == company]
         office = {"lat": geo.median([p["officeLat"] for p in rows]), "lon": geo.median([p["officeLon"] for p in rows])}
-        org = org_code(company, config)
+        org = codes[company]
         company_plan, lines = plan_company(rows, company, office, org, args)
         plans.check_plan(company_plan)  # the plan must be one build_feed.py accepts
         with open(os.path.join(out_dir, f"{org}.json"), "w") as f:

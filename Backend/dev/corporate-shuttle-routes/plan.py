@@ -25,6 +25,7 @@ A plan is plans/<city>/<ORG>.json, one per company:
 }
 """
 
+import datetime
 import json
 import os
 import re
@@ -81,6 +82,17 @@ def load_plan(path):
         return check_plan(raw)
     except (PlanError, ValueError) as e:
         raise PlanError(f"{path}: {e}") from None
+
+
+def _is_date(text):
+    """A real calendar date written YYYYMMDD (20270230 is not one)."""
+    if not DATE_RE.match(text):
+        return False
+    try:
+        datetime.datetime.strptime(text, "%Y%m%d")
+    except ValueError:
+        return False
+    return True
 
 
 def _number(value, what):
@@ -162,9 +174,13 @@ def check_route(org, r):
     shape = r.get("shape")
     if shape is not None and (not isinstance(shape, list) or len(shape) < 2 or any(not isinstance(p, list) or len(p) != 2 for p in shape)):
         raise PlanError(f"{where}: shape must be a list of [lat, lon] points")
+    for i, (lat, lon) in enumerate(shape or [], 1):
+        lat, lon = _number(lat, f"{where} shape point {i} lat"), _number(lon, f"{where} shape point {i} lon")
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise PlanError(f"{where}: shape point {i} has coordinates out of range ({lat}, {lon})")
     start, end = str(r.get("startDate", "")), str(r.get("endDate", ""))
-    if not (DATE_RE.match(start) and DATE_RE.match(end)) or end < start:
-        raise PlanError(f"{where}: startDate/endDate must be YYYYMMDD with endDate >= startDate")
+    if not (_is_date(start) and _is_date(end)) or end < start:
+        raise PlanError(f"{where}: startDate/endDate must be real YYYYMMDD dates with endDate >= startDate")
 
     fare = _number(r.get("fareInr"), f"{where} fareInr")
     if fare <= 0:

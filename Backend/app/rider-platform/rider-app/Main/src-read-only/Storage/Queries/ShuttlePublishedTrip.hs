@@ -4,6 +4,7 @@
 
 module Storage.Queries.ShuttlePublishedTrip where
 
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ShuttlePublishedTrip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -21,25 +22,36 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip] -> m ()
 createMany = traverse_ create
 
-findAllByFeedKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m [Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip]
-findAllByFeedKey feedKey = do findAllWithKV [Se.Is Beam.feedKey $ Se.Eq feedKey]
+findAllByFeedKeyAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip])
+findAllByFeedKeyAndMerchantOperatingCityId feedKey merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.feedKey $ Se.Eq feedKey,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip))
-findByPrimaryKey day tripId = do findOneWithKV [Se.And [Se.Is Beam.day $ Se.Eq day, Se.Is Beam.tripId $ Se.Eq tripId]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip)))
+findByPrimaryKey day feedKey tripId = do findOneWithKV [Se.And [Se.Is Beam.day $ Se.Eq day, Se.Is Beam.feedKey $ Se.Eq feedKey, Se.Is Beam.tripId $ Se.Eq tripId]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip -> m ()
 updateByPrimaryKey (Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.departure departure,
-      Se.Set Beam.feedKey feedKey,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.riders riders,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.day $ Se.Eq day, Se.Is Beam.tripId $ Se.Eq tripId]]
+    [Se.And [Se.Is Beam.day $ Se.Eq day, Se.Is Beam.feedKey $ Se.Eq feedKey, Se.Is Beam.tripId $ Se.Eq tripId]]
 
 instance FromTType' Beam.ShuttlePublishedTrip Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip where
   fromTType' (Beam.ShuttlePublishedTripT {..}) = do

@@ -174,7 +174,7 @@ getShuttleInterestPublishedRoutes merchantShortId opCity mbDay = do
     Just config -> do
       baseUrl <- MM.getOTPRestServiceReq config.merchantId config.merchantOperatingCityId
       routes <- OTPRest.getRoutesByGtfsId config
-      timetable <- QShuttlePublishedTrip.findAllByFeedKey config.feedKey
+      timetable <- QShuttlePublishedTrip.findAllByFeedKeyAndMerchantOperatingCityId config.feedKey merchantOperatingCity.id
       let day = mfilter (not . T.null) (T.toLower . T.strip <$> mbDay)
           rows = maybe timetable (\d -> filter (\t -> t.day == d) timetable) day
           byRoute = Map.fromListWith (<>) [(t.routeCode, [t]) | t <- rows]

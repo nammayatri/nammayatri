@@ -20,29 +20,38 @@ The org code inside every id keeps companies apart in the shared feed. It's all 
 
 ## From interest forms to a live route
 
-1. **Export the interest forms.** In the control centre, call the dashboard API
-   `GET /{merchant}/{city}/shuttleInterest/list?passOrganizationId=<company>&limit=100&offset=0`. Save the response as
-   `interests.json`. Save each further page (`offset=100`, …) as another file.
-2. **Draft the routes:**
+1. **Export the interest forms**, or let step 2 read them itself:
+   - `python3 plan_routes.py <city> --from-api` reads every form of the city from the local dashboard API
+     (`shuttleInterest/list`, page by page) and saves them as `out/<city>_interests.json`.
+   - Or save the responses of `GET /{merchant}/{city}/shuttleInterest/list?limit=100&offset=0` yourself, one file per
+     page (`offset=100`, …), and pass the files to step 2.
+2. **Plan the routes** for every company in the city:
    ```
-   python3 suggest_stops.py chennai ACME interests.json [page2.json ...] --start 20261201 --end 20271130 --fare 40
+   python3 plan_routes.py chennai --from-api [--start 20261201] [--end 20271130] [--fare 40] [--min-riders 2] [--max-stops 6]
+   python3 plan_routes.py chennai interests.json [page2.json ...]      # from saved exports instead
    ```
-   This writes `out/chennai_ACME_suggested.json`.
-   - **Stops**: placed so as many employees as possible can walk to one within their own walking distance.
-   - **Office**: added as the last stop (morning route) or the first stop (evening route).
+   This writes `plans/chennai/<ORG>.json` (one per company) and `out/chennai_plan_report.txt`.
+   - **Company codes**: from `"orgs"` in `cities/<city>.json`, else the company's initials. Two companies that would
+     share a code stop the run before any plan is written; give them their own codes under `"orgs"`.
+   - **Routes**: planned per company, direction (morning to the office, evening home) and day, as `planner.py`
+     describes. Days merge into one route only when its stops and timings are the same.
    - **Departures**: 15-minute slots that fit the most employees' times, within their flexibility.
-
-   The stop names are placeholders. Rename each one after a public landmark. Never use an employee's address.
-3. **Check the draft against the demand:**
+   - **Stop names**: the public road the stop is on (OSRM), else "Pickup point". An employee's address is never used.
+     Rename a stop after a public landmark if you like.
+3. **Check the plan against the demand:**
    ```
-   python3 demand_check.py chennai ACME interests.json --plan out/chennai_ACME_suggested.json
+   python3 demand_check.py chennai ACME interests.json      # checks plans/chennai/ACME.json; --plan <file> for another
    ```
-   - It prints how many employees are covered (walk, time and days), which stop each one uses, and why the rest aren't covered.
+   - Only that company's forms are counted; forms of other companies in the files are left out (and the count printed).
+   - It prints how many employees are covered (walk, time and days), which stop each one uses, and why the rest aren't
+     covered. Time is checked day by day: a departure that runs on that day must fit the employee's time.
    - It writes `out/chennai_ACME_demand.geojson`. Open it in https://geojson.io: green dots are covered employees, red
      dots aren't, the circles are their walking distances, and the lines are the routes.
    - Edit the plan and run the check again until the coverage is acceptable.
-4. **Save the plan** as `plans/<city>/<ORG>.json`. The format is described at the top of `plan.py`.
-5. **Build and validate the feed:**
+4. **Review the plans** in `plans/<city>/<ORG>.json`. The format is described at the top of `plan.py`.
+5. **Set the environment's ids.** The committed `cities/<city>.json` holds the local fixture's ids. Before building
+   for another environment, put that environment's ids in it, since step 6 writes them into the fare SQL.
+6. **Build and validate the feed:**
    ```
    python3 build_feed.py chennai
    python3 validate.py chennai     # inside the nix shell, gtfstidy also runs
@@ -55,13 +64,12 @@ The org code inside every id keeps companies apart in the shared feed. It's all 
      `Backend/dev/local-testing-data/shared-route-extra-setup.sql`
 
    Every company plan in `plans/<city>/` goes into the one city feed. A rebuild with no plan change gives a
-   byte-identical zip.
-6. **Release.** This is the same path as the shared cab's feed (`nandi/docs/RELEASE.md`):
+   byte-identical zip. If you change `cities/<city>.json` after this step, build and validate again.
+7. **Release.** This is the same path as the shared cab's feed (`nandi/docs/RELEASE.md`):
    1. Copy the zip into `nandi/assets/` as `chennai.corp_shuttle.gtfs.zip`.
    2. Run the Nandi job with `buildGimsData=true`. This builds the GTFS data image.
    3. Run the GIMS job on that data image, then release GIMS in system-control-centre.
-   4. Apply `chennai_fares.sql` on that environment's rider DB. First put the environment's own ids in
-      `cities/chennai.json`; the committed ids are the local fixture's.
+   4. Apply `out/chennai_fares.sql` (built in step 6 with this environment's ids) on that environment's rider DB.
 
    The route is live once GIMS serves the feed and the fares exist.
 
@@ -87,28 +95,21 @@ All of this runs against local services only.
 
    A rider with `@gmail.com` gets `COMPANY_NOT_ONBOARDED`. Removing `acme.example` from the company makes eligibility
    false again.
-4. **Routes from that data**: run steps 1–5 above.
+4. **Routes from that data**: run steps 1–6 above.
    - `examples/chennai_acme_interests.json` is a ready-made export of 12 test employees, if you want to try the tools
      without step 3.
    - `plans/chennai/ACME.json` is the fixture's route `CORP-ACME-1`.
-5. **Load the feed locally**, the way the shared cab does it (its local setup points the city at OTP on 8089 and GIMS on
-   8090):
-   1. Make a scratch directory containing:
-      - `out/chennai.corp_shuttle.gtfs/` (the flat feed)
-      - a copy of `nandi/assets/chennai.osm.pbf`
-      - copies of `nandi/otp-configs/*.json`, with only the chennai entry in `build-config.json`'s `osm` list
-   2. Run `java -Xmx4G -jar otp-2.5.0-shaded.jar --build --serve --port 8089 <dir>`.
-   3. Start GIMS on 8090 with its dev config, pointed at that OTP. It reads routes and stops from it at boot.
+5. **Publish locally**: `python3 publish_local.py chennai --start-gims`. It builds and validates the feed, runs Nandi's
+   GTFS preprocessor on it (used as it is), starts the local GIMS (built in `gtfs-inmemory-server-rust`) on 8090, and
+   applies the feed config, fares and published timetable to the local rider DB, then clears the related caches.
+   Restart rider-app afterwards, since it keeps GIMS answers in memory.
 6. **Check the routes and stops in GIMS:**
    - `curl localhost:8090/routes/corp_chennai` → `CORP-ACME-1`
    - `curl localhost:8090/route-stop-mapping/corp_chennai/route/CORP-ACME-1` → `CORP_ACME_S1` … `CORP_ACME_S5`, in order
-   - `curl localhost:8090/stops/corp_chennai` → the 5 stops
-7. **Check them through rider-app**, the way bus and shared cab read them:
-   1. Apply `out/chennai_fares.sql`, clear the Redis config caches, and restart rider-app.
-   2. `GET /frfs/route/CORP-ACME-1?vehicleType=BUS&integratedBppConfigId=5190da6e-3400-8d10-9f5a-62af9dbf7dff` → the route
-      and its stops.
-   3. `GET /frfs/stations?vehicleType=BUS&routeCode=CORP-ACME-1` → the 5 stops.
-   4. The fare from S1 to S5 is 40 INR.
+7. **Check them through rider-app**:
+   - Dashboard `GET /{merchant}/{city}/shuttleInterest/publishedRoutes?day=monday` → the routes, stops and that day's
+     departures and riders.
+   - The fare from S1 to S5 is 40 INR.
 
 ## Tests
 
@@ -125,11 +126,14 @@ python3 validate.py --selftest      # breaks each validation rule on purpose and
 | `plan.py` | loads and checks plans, numbers the stops, gives the fare of a stop pair |
 | `interests.py` | loads the dashboard's interest export |
 | `geo.py` | distances, draft driving times, walking circles |
-| `suggest_stops.py` | interest forms → draft plan |
+| `plan_routes.py` | interest forms → `plans/<city>/<ORG>.json` + planning report |
+| `planner.py` | one company's routes for one day and direction (stops, roads, departures) |
+| `osrm.py` | OSRM road snapping and routing |
 | `demand_check.py` | plan + interest forms → coverage report and GeoJSON map |
 | `build_feed.py` | plans → GTFS zip + fare SQL |
 | `validate.py` | rules on the built feed and fares; `--selftest` |
-| `cities/<city>.json` | the environment's ids for the fare SQL (local fixture ids in `chennai.json`) |
+| `publish_local.py` | local only: build, Nandi preprocess, local GIMS, local DB rows |
+| `cities/<city>.json` | the environment's ids and API/GIMS settings (local fixture ids committed) |
 | `plans/<city>/<ORG>.json` | one reviewed plan per company |
 | `examples/` | a synthetic interest export for trying the tools |
 | `out/` | generated, not committed |

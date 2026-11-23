@@ -125,7 +125,8 @@ def rule_trips(city, t):
     for r in t.get("routes", []):
         if r["route_type"] != "3":
             errors.append(f"route {r['route_id']} has route_type {r['route_type']} (must be 3, bus)")
-    by_trip = {}
+    # every declared trip, so one with no stop_times at all fails the minimum-stops check below
+    by_trip = {tr["trip_id"]: [] for tr in t.get("trips", [])}
     for st in t.get("stop_times", []):
         by_trip.setdefault(st["trip_id"], []).append(st)
     for tid, rows in sorted(by_trip.items()):
@@ -203,7 +204,8 @@ def rule_gtfstidy(flat_dir):
     with tempfile.TemporaryDirectory() as tmp:
         proc = subprocess.run([exe, "-o", os.path.join(tmp, "tidy"), flat_dir], capture_output=True, text=True)
     if proc.returncode != 0:
-        return [f"gtfstidy: {line}" for line in (proc.stderr or proc.stdout).strip().splitlines()[-10:]], None
+        lines = [f"gtfstidy: {line}" for line in (proc.stderr or proc.stdout or "").strip().splitlines()[-10:]]
+        return lines or [f"gtfstidy exited with code {proc.returncode} and printed nothing"], None
     return [], "gtfstidy: parsed with no errors"
 
 

@@ -13,13 +13,14 @@ module SharedLogic.CorporateMembership
 where
 
 import qualified Data.Char as Char
-import Data.List (nub)
+import Data.List (nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.PassOrganization as DPassOrganization
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DPerson
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
+import Kernel.Types.Id (getId)
 import Kernel.Utils.Common
 import qualified Storage.Queries.PassOrganization as QPassOrganization
 import Tools.Error
@@ -54,13 +55,16 @@ freeMailDomains =
   ]
 
 -- | Lower-case, strip, drop a leading @, dedupe, and reject anything that is not a plain company domain.
-normaliseEmailDomains :: MonadFlow m => [Text] -> m [Text]
+normaliseEmailDomains :: (MonadFlow m) => [Text] -> m [Text]
 normaliseEmailDomains domains = do
   let normalised = nub . filter (not . T.null) $ map (T.dropWhile (== '@') . T.toLower . T.strip) domains
   forM_ normalised $ \domain -> do
     unless (validDomain domain) $ throwError $ InvalidRequest $ "Invalid email domain: " <> domain
     when (domain `elem` freeMailDomains) $
-      throwError $ InvalidRequest $ "A public mail domain cannot identify a company: " <> domain
+      throwError $
+        InvalidRequest $
+          "A public mail domain cannot identify a company: "
+            <> domain
   pure normalised
   where
     validDomain d =
@@ -106,4 +110,17 @@ findOrgByDomain ::
   m (Maybe DPassOrganization.PassOrganization)
 findOrgByDomain person domain = do
   orgs <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum person.merchantOperatingCityId DPassType.RegularPass
-  pure $ find (\org -> domain `elem` org.emailDomains) orgs
+  -- one domain belongs to one company per city (the dashboard checks it under a lock); should two ever share it, the
+  -- oldest company is always the one chosen, and the clash is logged
+  case sortOn (\org -> (org.createdAt, getId org.id)) (filter (\org -> domain `elem` org.emailDomains) orgs) of
+    [] -> pure Nothing
+    matches@(oldest : _) -> do
+      when (length matches > 1) $
+        logError $
+          "Email domain "
+            <> domain
+            <> " is on more than one company in city "
+            <> getId person.merchantOperatingCityId
+            <> ": "
+            <> T.intercalate ", " (map (getId . (.id)) matches)
+      pure (Just oldest)

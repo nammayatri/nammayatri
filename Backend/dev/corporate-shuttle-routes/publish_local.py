@@ -149,7 +149,7 @@ def timetable_sql(city, c, company_plans):
                 for day in dep["days"]:
                     rows.append(f"  ({sql_text(trip)}, '{day}', {sql_text(feed)}, {sql_text(route['routeId'])}, {sql_text(dep['time'])}, {int(dep['riders'].get(day, 0))}, {m}, {moc})")
     sql = f"-- LOCAL ONLY, written by publish_local.py: the published timetable of {feed}\n"
-    sql += f"DELETE FROM atlas_app.shuttle_published_trip WHERE feed_key = {sql_text(feed)};\n"
+    sql += f"DELETE FROM atlas_app.shuttle_published_trip WHERE feed_key = {sql_text(feed)} AND merchant_operating_city_id = {moc};\n"
     if rows:
         sql += "INSERT INTO atlas_app.shuttle_published_trip (trip_id, day, feed_key, route_code, departure, riders, merchant_id, merchant_operating_city_id) VALUES\n"
         sql += ",\n".join(rows) + ";\n"

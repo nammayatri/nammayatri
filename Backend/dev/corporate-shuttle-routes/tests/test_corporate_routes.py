@@ -73,6 +73,9 @@ class PlanTest(unittest.TestCase):
             "zero fare": lambda r: r["routes"][0].update(fareInr=0),
             "bad org": lambda r: r.update(org="acme"),
             "end before start": lambda r: r["routes"][0].update(startDate="20271231", endDate="20270101"),
+            "no such date": lambda r: r["routes"][0].update(startDate="20270230", endDate="20271231"),
+            "shape latitude out of range": lambda r: r["routes"][0].update(shape=[[100, 80.2], [12.9, 80.3]]),
+            "shape point not a number": lambda r: r["routes"][0].update(shape=[["x", 80.2], [12.9, 80.3]]),
         }
         for name, mutate in cases.items():
             raw = self.raw()
@@ -141,6 +144,22 @@ class BuildTest(unittest.TestCase):
         self.assertTrue(validate.selftest())
 
 
+class ValidateTest(unittest.TestCase):
+    def test_a_trip_without_stop_times_fails(self):
+        t = {"routes": [], "trips": [{"trip_id": "CORP-ACME-1-0830"}, {"trip_id": "CORP-ACME-1-1800"}], "stop_times": [
+            {"trip_id": "CORP-ACME-1-0830", "stop_sequence": "1", "departure_time": "08:30:00"},
+            {"trip_id": "CORP-ACME-1-0830", "stop_sequence": "2", "departure_time": "08:40:00"},
+        ]}
+        self.assertIn("trip CORP-ACME-1-1800 has fewer than 2 stops", validate.rule_trips("chennai", t))
+
+    def test_gtfstidy_failing_silently_is_an_error(self):
+        from unittest import mock
+        silent = mock.Mock(returncode=-9, stdout="", stderr="")
+        with mock.patch.object(validate.shutil, "which", return_value="/bin/gtfstidy"), mock.patch.object(validate.subprocess, "run", return_value=silent):
+            errors, _ = validate.rule_gtfstidy("/tmp")
+        self.assertEqual(errors, ["gtfstidy exited with code -9 and printed nothing"])
+
+
 class DemandTest(unittest.TestCase):
     def test_check_against_the_example(self):
         people = interests.load([EXAMPLE_INTERESTS])
@@ -150,6 +169,24 @@ class DemandTest(unittest.TestCase):
         self.assertEqual(sum(demand_check.covered(r) for r in morning), 9)
         evening = [r for _, leg, r in results if leg == "TO_HOME"]
         self.assertTrue(all(r["noRoute"] for r in evening))  # the fixture plan has no TO_HOME route
+
+    def test_time_is_checked_day_by_day(self):
+        # 18:30 on Tuesday/Friday, 18:45 on the other weekdays: a Mon-Fri rider wanting 18:40 +-15 fits every day
+        route = {"offsets": [0, 10], "departures": [
+            {"time": "18:30", "days": ["tuesday", "friday"]},
+            {"time": "18:45", "days": ["monday", "wednesday", "thursday"]},
+        ]}
+        week = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+        self.assertTrue(all(demand_check.fits_on(route, 0, d, 18 * 60 + 40, 15) for d in week))
+        self.assertFalse(demand_check.fits_on(route, 0, "saturday", 18 * 60 + 40, 15))
+        self.assertFalse(demand_check.fits_on(route, 0, "tuesday", 18 * 60 + 40, 5))
+
+    def test_other_companies_are_left_out(self):
+        people = interests.load([EXAMPLE_INTERESTS])
+        other = dict(people[0], personId="someone-else", company="Other Co")
+        mine, others = demand_check.of_company(acme(), people + [other])
+        self.assertEqual(others, 1)
+        self.assertNotIn("someone-else", [p["personId"] for p in mine])
 
 
 
@@ -175,6 +212,31 @@ class PlannerTest(unittest.TestCase):
         import planner
         self.assertEqual(planner.pick_departures([(510, 15), (515, 15), (630, 15)], 2), [510, 630])
         self.assertEqual(planner.pick_departures([(512, 0)], 2), [512])
+        # 08:00 and 09:00, each +-30: the 08:30 slot inside both windows serves both riders with one departure
+        self.assertEqual(planner.pick_departures([(480, 30), (540, 30)], 2), [510])
+
+    def test_routes_keep_the_stop_limit(self):
+        import planner
+        people = self.people()
+        office = {"lat": 12.8251, "lon": 80.2182}
+        for max_stops in (1, 2, 3):
+            for direction in ("MORNING", "EVENING"):
+                routes = planner.plan_day(people, "ACME Corp", office, direction, "monday", 1, max_stops)
+                riding = planner.riders_for(people, direction, "monday")
+                placed = [r["personId"] for route in routes for r in route["riders"]]
+                self.assertEqual(sorted(placed), sorted(r["personId"] for r in riding), (direction, max_stops))
+                for route in routes:
+                    pickups = [s for s in route["stops"] if s["kind"] != "OFFICE"]
+                    self.assertLessEqual(len(pickups), max_stops, (direction, max_stops))
+
+    def test_stop_names_never_use_an_address(self):
+        import planner
+        people = self.people()
+        for p in people:
+            self.assertNotIn("area", p)
+        self.assertEqual(planner._label({"kind": "SHARED", "street": "Rajiv Gandhi Salai"}, "ACME Corp"), "Rajiv Gandhi Salai")
+        self.assertEqual(planner._label({"kind": "DOORSTEP", "street": ""}, "ACME Corp"), "Pickup point")
+        self.assertEqual(planner._label({"kind": "OFFICE"}, "ACME Corp"), "ACME Corp office")
 
     def test_plan_files_are_valid_and_merge_days(self):
         import argparse
@@ -195,6 +257,18 @@ class PlannerTest(unittest.TestCase):
         self.assertEqual(plan_routes.org_code("Namma Yatri", {}), "NY")
         self.assertEqual(plan_routes.org_code("Juspay", {"orgs": {}}), "JUSPAY")
         self.assertEqual(plan_routes.org_code("Juspay", {"orgs": {"Juspay": "JP"}}), "JP")
+
+    def test_clashing_org_codes_stop_the_run(self):
+        import plan_routes
+        with self.assertRaises(SystemExit):
+            plan_routes.org_codes(["acme.com", "acme.org"], {})
+        self.assertEqual(plan_routes.org_codes(["acme.com", "acme.org"], {"orgs": {"acme.org": "ACMEORG"}}), {"acme.com": "ACME", "acme.org": "ACMEORG"})
+
+    def test_days_merge_only_with_the_same_timings(self):
+        import plan_routes
+        stops = [{"lat": 12.9, "lon": 80.2}, {"lat": 12.8, "lon": 80.2}]
+        self.assertEqual(plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}), plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}))
+        self.assertNotEqual(plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}), plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 14]}))
 
 
 if __name__ == "__main__":

@@ -5,7 +5,8 @@ imports:
 
 # Corporate shuttle: which day each published trip runs, and how many employees it carries that day. Written by the publish
 # tool (Backend/dev/corporate-shuttle-routes) from the plan, next to the GTFS feed: GIMS serves the routes, stops and stop
-# times but not the trips' calendar, so the days are kept here. One row per trip and day.
+# times but not the trips' calendar, so the days are kept here. One row per feed, trip and day: trip ids follow the
+# naming convention inside one city's feed and need not be unique across feeds.
 ShuttlePublishedTrip:
   tableName: shuttle_published_trip
 
@@ -22,9 +23,9 @@ ShuttlePublishedTrip:
     updatedAt: UTCTime
 
   constraints:
+    feedKey: PrimaryKey
     tripId: PrimaryKey
     day: PrimaryKey
-    feedKey: SecondaryKey
 
   sqlType:
     tripId: text
@@ -34,8 +35,10 @@ ShuttlePublishedTrip:
     departure: text
 
   queries:
-    findAllByFeedKey:
+    # scoped to the city as well: a feed key is only meaningful inside one merchant operating city
+    findAllByFeedKeyAndMerchantOperatingCityId:
       kvFunction: findAllWithKV
-      where: feedKey
+      where:
+        and: [feedKey, merchantOperatingCityId]
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

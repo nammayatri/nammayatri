@@ -4,7 +4,8 @@
                 ROUND_TRIP (timed by drop time): a round-trip employee rides both ways, a one-way employee only theirs.
   shared stops  greedy cover over the employees' own pickup points: repeatedly take the point the most still-uncovered
                 employees can walk to within their own max walking distance, while it serves >= min_riders.
-  routes        stops swept by bearing around the office into routes of one side of town (<= max_stops, <= 70 degrees),
+  routes        stops swept by bearing around the office into routes of one side of town (<= max_stops, <= 70 degrees;
+                riders placed later never push a route past max_stops pickups: a full route gets no new stop),
                 picking up farthest first and ending at the office. Trips stay short: a route estimated over 30 minutes is
                 split into an express from its far stops and a route for its near stops.
   nobody missed in this order: a point a route passes within their walking distance; a meeting point several can walk
@@ -15,6 +16,7 @@
                 rules respected; legs without road data are straight-line estimates.
   departures    15-minute slots fitting the most riders within their own flexibility, plus a slot for anyone left.
   EVENING       the same layout reversed: from the office, then the drops.
+  stop names    the public road a stop is on (OSRM), else "Pickup point": never an employee's own address.
 
 Each route belongs to one company, as the naming convention (naming.py) has it: CORP-<ORG>-<n>.
 """
@@ -82,8 +84,12 @@ def _sweep(points, hub, max_stops):
     return groups
 
 
-def _stop(at, kind, rider_ids, area=""):
-    return {"lat": at["lat"], "lon": at["lon"], "kind": kind, "riders": list(rider_ids), "area": area}
+def _stop(at, kind, rider_ids):
+    return {"lat": at["lat"], "lon": at["lon"], "kind": kind, "riders": list(rider_ids)}
+
+
+def _pickups(route):
+    return sum(1 for s in route if s["kind"] != "OFFICE")
 
 
 def _make_route(pickups, office):
@@ -103,10 +109,13 @@ def _split_long(stops, office):
     return _split_long(_make_route(pickups[:half], office), office) + _split_long(_make_route(pickups[half:], office), office)
 
 
-def _insert_pickup(routes, stop):
-    """Add the pickup where it costs the least detour, if that stays <= MAX_DETOUR_M and the route <= MAX_ROUTE_MIN."""
+def _insert_pickup(routes, stop, max_stops):
+    """Add the pickup where it costs the least detour, if that stays <= MAX_DETOUR_M, the route <= MAX_ROUTE_MIN and the
+    route has room (< max_stops pickups)."""
     best = None
     for route in routes:
+        if _pickups(route) >= max_stops:
+            continue
         index, added = geo.cheapest_insertion(route, stop, 0, len(route) - 1)
         trial = route[:index] + [stop] + route[index:]
         if added <= MAX_DETOUR_M and _minutes(trial) <= MAX_ROUTE_MIN and (best is None or added < best[0]):
@@ -118,23 +127,31 @@ def _insert_pickup(routes, stop):
     return True
 
 
-def _place_on_route(routes, rider, any_distance=False):
+def _near_stop(route, point):
+    return next((s for s in route if s["kind"] != "OFFICE" and _d(s, point) <= MERGE_STOP_M), None)
+
+
+def _place_on_route(routes, rider, max_stops, any_distance=False):
     """Board the rider at a point a route passes: within their walk (ON_ROUTE), or with any_distance the nearest point
-    of the nearest route however far (WALK_TO_ROUTE). A stop close by is reused."""
+    of the nearest route however far (WALK_TO_ROUTE). A stop close by is reused; a new stop goes only on a route with
+    room (< max_stops pickups)."""
     best = None
     for route in routes:
+        full = _pickups(route) >= max_stops
         for i in range(len(route) - 1):
             point, meters = geo.project_onto_segment(rider["home"], route[i], route[i + 1])
+            if full and _near_stop(route, point) is None:
+                continue
             if (any_distance or meters <= rider["walkM"]) and (best is None or meters < best[0]):
                 best = (meters, route, i + 1, point)
     if not best:
         return False
     meters, route, index, point = best
-    near = next((s for s in route if s["kind"] != "OFFICE" and _d(s, point) <= MERGE_STOP_M), None)
+    near = _near_stop(route, point)
     if near:
         near["riders"].append(rider["personId"])
     elif meters <= rider["walkM"]:
-        route.insert(index, _stop(point, "ON_ROUTE", [rider["personId"]], rider["area"]))
+        route.insert(index, _stop(point, "ON_ROUTE", [rider["personId"]]))
     else:
         route.insert(index, _stop(point, "WALK_TO_ROUTE", [rider["personId"]]))
     return True
@@ -142,20 +159,20 @@ def _place_on_route(routes, rider, any_distance=False):
 
 def layout(riders, office, min_riders, max_stops):
     """Routes (stop lists in MORNING order: pickups, then the office) that carry every rider."""
-    homes = [{"at": r["home"], "area": r["area"]} for r in riders]
+    homes = [{"at": r["home"]} for r in riders]
     shared, left = _cover(homes, riders, min_riders)
     if not shared and riders:
         shared, left = _cover(homes, riders, 1)
     routes = []
     for group in _sweep([{**p["at"], "p": p} for p in shared], office, max_stops):
-        pickups = [_stop(g["p"]["at"], "SHARED", [r["personId"] for r in g["p"]["riders"]], g["p"]["area"]) for g in group]
+        pickups = [_stop(g["p"]["at"], "SHARED", [r["personId"] for r in g["p"]["riders"]]) for g in group]
         routes += _split_long(_make_route(pickups, office), office)
-    left = [r for r in left if not _place_on_route(routes, r)]
-    pairs = [{"at": {"lat": (a["home"]["lat"] + b["home"]["lat"]) / 2, "lon": (a["home"]["lon"] + b["home"]["lon"]) / 2}, "area": ""} for i, a in enumerate(left) for b in left[i + 1:]]
-    meeting, walkers = _cover([{"at": r["home"], "area": r["area"]} for r in left] + pairs, left, 2)
+    left = [r for r in left if not _place_on_route(routes, r, max_stops)]
+    pairs = [{"at": {"lat": (a["home"]["lat"] + b["home"]["lat"]) / 2, "lon": (a["home"]["lon"] + b["home"]["lon"]) / 2}} for i, a in enumerate(left) for b in left[i + 1:]]
+    meeting, walkers = _cover([{"at": r["home"]} for r in left] + pairs, left, 2)
     for m in meeting:
-        stop = _stop(m["at"], "MEETING_POINT", [r["personId"] for r in m["riders"]], m["area"])
-        if _insert_pickup(routes, stop):
+        stop = _stop(m["at"], "MEETING_POINT", [r["personId"] for r in m["riders"]])
+        if _insert_pickup(routes, stop, max_stops):
             continue
         own = _make_route([stop], office)
         if len(m["riders"]) >= min_riders and _minutes(own) <= MAX_ROUTE_MIN:
@@ -163,8 +180,9 @@ def layout(riders, office, min_riders, max_stops):
         else:
             walkers += m["riders"]
     for r in walkers:
-        doorstep = _stop(r["home"], "DOORSTEP", [r["personId"]], r["area"])
-        if not _insert_pickup(routes, doorstep) and not _place_on_route(routes, r, any_distance=True):
+        doorstep = _stop(r["home"], "DOORSTEP", [r["personId"]])
+        # a full route takes no new stop: the rider then gets a shuttle of their own, never dropped
+        if not _insert_pickup(routes, doorstep, max_stops) and not _place_on_route(routes, r, max_stops, any_distance=True):
             routes.append(_make_route([doorstep], office))
     return routes
 
@@ -194,16 +212,26 @@ def on_roads(stops):
     return snapped, legs, shape
 
 
+def _candidate_slots(wishes):
+    """Every 15-minute slot inside some rider's window (wish +- flexibility), plus each wish's nearest slot."""
+    slots = set()
+    for wish, flex in wishes:
+        slots.add(round(wish / SLOT_MIN) * SLOT_MIN)
+        first, last = -(-(wish - flex) // SLOT_MIN), (wish + flex) // SLOT_MIN
+        slots.update(k * SLOT_MIN for k in range(int(first), int(last) + 1))
+    return sorted(slots)
+
+
 def pick_departures(wishes, min_riders):
     """15-minute slots fitting the most wishes (within each rider's flexibility), then a slot for anyone left."""
     remaining, slots, floor = list(wishes), [], max(1, min_riders)
     while remaining:
-        candidates = sorted({round(w / SLOT_MIN) * SLOT_MIN for w, _ in remaining})
-        best, fit = None, []
-        for slot in candidates:
+        best, fit, cost = None, [], None
+        for slot in _candidate_slots(remaining):
             f = [x for x in remaining if abs(slot - x[0]) <= x[1]]
-            if len(f) > len(fit):
-                best, fit = slot, f
+            c = sum(abs(slot - x[0]) for x in f)  # among equal fits, the slot closest to what the riders asked for
+            if len(f) > len(fit) or (f and len(f) == len(fit) and c < cost):
+                best, fit, cost = slot, f, c
         if not fit:
             slots.append(round(remaining[0][0]))
             remaining = remaining[1:]
@@ -221,7 +249,8 @@ def _label(stop, company):
         return f"{company} office"
     if stop["kind"] == "WALK_TO_ROUTE":
         return f"Walk-up point, {stop['street']}" if stop.get("street") else "Walk-up point"
-    return stop["area"] or stop.get("street") or "Pickup point"
+    # the public road the stop is on; never the employee's address, which is not published
+    return stop.get("street") or "Pickup point"
 
 
 def plan_day(people, company, office, direction, day, min_riders=2, max_stops=6):

@@ -26,11 +26,11 @@ data ShuttlePublishedTripT f = ShuttlePublishedTripT
   deriving (Generic, B.Beamable)
 
 instance B.Table ShuttlePublishedTripT where
-  data PrimaryKey ShuttlePublishedTripT f = ShuttlePublishedTripId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = ShuttlePublishedTripId <$> day <*> tripId
+  data PrimaryKey ShuttlePublishedTripT f = ShuttlePublishedTripId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = ShuttlePublishedTripId <$> day <*> feedKey <*> tripId
 
 type ShuttlePublishedTrip = ShuttlePublishedTripT Identity
 
-$(enableKVPG (''ShuttlePublishedTripT) [('day), ('tripId)] [[('feedKey)]])
+$(enableKVPG (''ShuttlePublishedTripT) [('day), ('feedKey), ('tripId)] [])
 
 $(mkTableInstances (''ShuttlePublishedTripT) "shuttle_published_trip")
