@@ -94,6 +94,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import qualified SharedLogic.Finance.PostpaidFeeInvoice as PostpaidFeeInvoice
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -305,6 +306,8 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             QINV.create invoice
         )
         driverFees
+      cashCollectionId <- generateGUID
+      PostpaidFeeInvoice.createPostpaidFeeInvoice transporterConfig driver cashCollectionId Nothing PostpaidFeeInvoice.PostpaidCash driverFees
     fork "sending dashboard sms - collected cash" $ do
       Sms.sendDashboardSms merchantId merchantOpCityId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success

@@ -61,6 +61,8 @@ data LineItemDescription
   | WalletTopup
   | AirportCashRecharge
   | CashbackOffer
+  | GovernmentCharges
+  | RoundOff
   | OfferDiscount
   | RideFareRefund
   | RideFareRefundTax

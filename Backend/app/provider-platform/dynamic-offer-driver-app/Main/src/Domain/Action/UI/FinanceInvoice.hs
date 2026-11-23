@@ -111,7 +111,9 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
           pure $ (.planRideCredit) <$> mbSub
         _ -> pure Nothing
 
-      let taxAmount = invoice.totalAmount - invoice.subtotal
+      let taxAmount = case invoice.invoiceType of
+            SubscriptionFee -> maybe (invoice.totalAmount - invoice.subtotal) (.totalGstAmount) mbTaxTxn
+            _ -> invoice.totalAmount - invoice.subtotal
 
       pure $
         API.FinanceInvoiceItem

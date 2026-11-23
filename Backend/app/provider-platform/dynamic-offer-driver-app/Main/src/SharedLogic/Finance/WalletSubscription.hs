@@ -50,10 +50,12 @@ import Kernel.Utils.Common
 import Lib.Finance hiding (runFinance)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
+import qualified SharedLogic.Finance.PostpaidFeeInvoice as PostpaidFeeInvoice
 import SharedLogic.Finance.Wallet (buildDriverChargeCtx)
 import SharedLogic.Finance.WalletAccount (resolveWalletOwner)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
+import qualified Storage.Queries.Person as QPerson
 import Tools.Notifications (buildMerchantPNContentWithFallback, sendNotificationToDriver)
 
 data WalletDebitKind = DailySubscription | MigratedDues
@@ -134,13 +136,15 @@ walletDebitIncomplete fee = do
   pure $ (feeAmount > 0 && feeMissing) || (gstAmount > 0 && gstMissing) || (penaltyAmount > 0 && penaltyMissing)
 
 -- | Debit one fee (platform fee → SellerRevenue, GST → GovtIndirect, any folded penalty →
---   OwnerExpense), then mark it CLEARED (collected_by = WALLET). No invoice is written: the
---   ledger entries (reference = driver fee id) are the record of the payment. Migrated dues also
---   have their old invoices deactivated, which kills any open payment link.
+--   OwnerExpense), then mark it CLEARED (collected_by = WALLET). The ledger entries (reference =
+--   driver fee id) are the record of the payment; the postpaid tax invoice (SubscriptionFee, mode
+--   WALLET) is issued after, when the city has invoiceConfig.enablePostpaidFeeInvoice on. Migrated
+--   dues also have their old invoices deactivated, which kills any open payment link.
 debitDriverFeeFromWallet ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
+    EncFlow m r,
     BeamFlow m r,
     HasActorInfo m r,
     Redis.HedisFlow m r,
@@ -178,6 +182,15 @@ debitDriverFeeFromWallet transporterConfig kind fee = do
     -- A migrated due's old invoices are deactivated, which kills any open payment link for it.
     when (kind == MigratedDues) $
       QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [fee.id] Nothing
+  -- The debit is done by here: an error in the invoice step must not report the debit as failed.
+  when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enablePostpaidFeeInvoice))) $ do
+    invoiceRes <- withTryCatch "debitDriverFeeFromWallet:postpaidFeeInvoice" $ do
+      mbWalletOwner <- QPerson.findById (Id ownerId)
+      whenJust mbWalletOwner $ \walletOwner ->
+        PostpaidFeeInvoice.createPostpaidFeeInvoice transporterConfig walletOwner fee.id.getId Nothing PostpaidFeeInvoice.PostpaidWallet [fee]
+    case invoiceRes of
+      Left err -> logError $ "debitDriverFeeFromWallet: postpaid fee invoice failed for fee " <> fee.id.getId <> ": " <> show err
+      Right () -> pure ()
 
 debitBehaviourPenaltyFromWallet ::
   ( MonadFlow m,

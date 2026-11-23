@@ -114,6 +114,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
+import qualified SharedLogic.Finance.PostpaidFeeInvoice as PostpaidFeeInvoice
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.RideInvoice (resolveInvoiceIssuedToAddress)
@@ -678,6 +679,7 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
+      postpaidFeeInvoiceOn = serviceName == DP.YATRI_SUBSCRIPTION && fromMaybe False (transporterConfig.invoiceConfig >>= (.enablePostpaidFeeInvoice))
   outerLockRes <- Redis.whenWithLockRedisAndReturnValue (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((mbInvoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (mbInvoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
       maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (mbInvoice <&> (.driverFeeId))
@@ -701,9 +703,14 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
         forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
       SWalletSubscription.creditWalletForPaidDriverFees transporterConfig driver orderId.getId driverFees
-    case innerLockRes of
-      Left () -> logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
-      Right () -> pure ()
+      pure driverFees
+    feesForInvoice <- case innerLockRes of
+      Left () -> do
+        logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
+        pure []
+      Right feesInLock -> pure feesInLock
+    when postpaidFeeInvoiceOn $
+      PostpaidFeeInvoice.createPostpaidFeeInvoice transporterConfig driver orderId.getId (Just orderId.getId) PostpaidFeeInvoice.PostpaidOnline feesForInvoice
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
@@ -784,7 +791,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
         mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
         mbBuyerGstinRow <- QDG.findByDriverId person.id
-        gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        fleetGstin <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
+        let gstinOfParty = fleetGstin <|> buyerGstin
         let issuedByAddress = Just $ fromMaybe (show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country) merchantOperatingCity.address
             opCityAddress = fromMaybe (show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country) merchantOperatingCity.address
             issuedToAddress = Just $ resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress
@@ -810,7 +819,6 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
         -- GSTIN is encrypted on DriverGstin and must be decrypted.
         let sellerGstin = merchantOperatingCity.gstin <|> merchant.gstin
-        buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
         -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
         -- comparison (proper B2B path). Otherwise compare PoB vs driver/fleet
         -- addressState from local residence proof.

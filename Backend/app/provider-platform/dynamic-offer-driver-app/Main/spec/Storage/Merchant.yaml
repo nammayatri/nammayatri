@@ -1236,6 +1236,7 @@ TransporterConfig:
       enableB2CUnsignedQR: Maybe Bool # Nothing/False = no self-generated B2C QR (default); True = persist + render it on customer invoices. Keep off until payee UPI/bank details are sourced — the QR is not payable without them
       walletInvoiceSupplierName: Maybe Text # Supplier name on driver wallet invoices (wallet top-up, airport cash recharge)
       walletInvoiceSupplierAddress: Maybe Text # Supplier address on driver wallet invoices (wallet top-up, airport cash recharge)
+      enablePostpaidFeeInvoice: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

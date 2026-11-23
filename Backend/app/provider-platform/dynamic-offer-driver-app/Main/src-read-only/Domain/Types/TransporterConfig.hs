@@ -574,6 +574,7 @@ data InvoiceConfig = InvoiceConfig
     enableB2CUnsignedQR :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDriverInvoice :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableInvoicePdfS3Storage :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enablePostpaidFeeInvoice :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hsnSacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceAppName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
