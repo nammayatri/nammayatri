@@ -40,6 +40,7 @@ data OverrideBenefit = OverrideBenefit
     fixedSaving :: Maybe FixedSaving,
     unlimitedTripCount :: Maybe Bool,
     maximumTripCount :: Maybe Int,
+    breakoffTripCount :: Maybe Int,
     maxTicketQuantityPerOverride :: Maybe Int,
     enforceStopPair :: Maybe Bool,
     allowRoundTrip :: Maybe Bool,

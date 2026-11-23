@@ -206,17 +206,23 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
 
 data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     endDate :: Data.Time.Day,
+    frfsOverrideConfig :: Data.Maybe.Maybe FrfsOverrideConfigAPIEntity,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     passCode :: Data.Text.Text,
+    passId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
     passName :: Data.Maybe.Maybe Data.Text.Text,
     passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
     purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     refunds :: [RefundAPIEntity],
+    routePass :: Data.Maybe.Maybe RoutePassAPIEntity,
     startDate :: Data.Time.Day,
-    status :: Domain.Types.PurchasedPass.StatusType
+    status :: Domain.Types.PurchasedPass.StatusType,
+    unlimitedTripCount :: Kernel.Prelude.Bool,
+    validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

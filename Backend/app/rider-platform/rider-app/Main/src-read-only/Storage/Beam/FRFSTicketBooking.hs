@@ -98,6 +98,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     searchId :: B.C f Kernel.Prelude.Text,
     seatSelectionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType),
     serviceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
+    settleableAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     sharedCabNoShows :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,

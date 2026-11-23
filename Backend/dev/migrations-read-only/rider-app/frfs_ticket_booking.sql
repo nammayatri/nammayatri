@@ -271,3 +271,8 @@ CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_rider_id ON atlas_app.frfs_tic
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ride_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN settleable_amount double precision ;

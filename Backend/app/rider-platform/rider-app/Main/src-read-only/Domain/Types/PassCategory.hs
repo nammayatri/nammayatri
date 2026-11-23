@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PassCategory = PassCategory
   { description :: Kernel.Prelude.Text,
+    enable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

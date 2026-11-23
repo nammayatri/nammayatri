@@ -29,10 +29,11 @@ findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.E
 
 findByAgencyKeyAndPlatformType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+  Kernel.Prelude.Text ->
+  (Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findByAgencyKeyAndPlatformType agencyKey platformType = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey, Se.Is Beam.platformType $ Se.Eq platformType]]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
@@ -56,6 +57,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
       Se.Set Beam.ondcRegistryPublicKey ondcRegistryPublicKey,
       Se.Set Beam.operatorConfig (Data.Aeson.toJSON <$> operatorConfig),
       Se.Set Beam.passOverrideApplicable passOverrideApplicable,
+      Se.Set Beam.passTicketOverlapWarningTime passTicketOverlapWarningTime,
       Se.Set Beam.paymentGatewayReferenceId paymentGatewayReferenceId,
       Se.Set Beam.platformType platformType,
       Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),

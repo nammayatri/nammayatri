@@ -85,6 +85,7 @@ updateCatalogFields DPass.Pass {..} = do
       Se.Set Beam.minTripsAllowingOverlap minTripsAllowingOverlap,
       Se.Set Beam.name name,
       Se.Set Beam.order order,
+      Se.Set Beam.overrideBenefitConfigJson (toJSON <$> overrideBenefitConfigJson),
       Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
       Se.Set Beam.passTypeId (getId passTypeId),
       Se.Set Beam.pricingTiers pricingTiers,
