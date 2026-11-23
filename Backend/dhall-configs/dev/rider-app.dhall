@@ -337,6 +337,7 @@ let RiderJobType =
       | SharedCabSessionExpiry
       | SharedCabDegradedSweep
       | SendRideInvoiceEmail
+      | FRFSTripCancel
       >
 
 let jobRetryOnExceptionMapx =

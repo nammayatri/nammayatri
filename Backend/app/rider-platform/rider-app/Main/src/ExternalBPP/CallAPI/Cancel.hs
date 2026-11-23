@@ -37,8 +37,34 @@ import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 
-data CancellationInitiator = UserInitiated | Technical
+data CancellationInitiator = UserInitiated | Technical | OperatorInitiated Fields.OperatorCancellation
   deriving (Eq, Show)
+
+ensureCancellationAllowed ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  CancellationInitiator ->
+  MerchantOperatingCity ->
+  DBooking.FRFSTicketBooking ->
+  m (IntegratedBPPConfig, Fields.FRFSConfig)
+ensureCancellationAllowed initiator merchantOperatingCity booking = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  frfsConfig <-
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+  let (userCancellationAllowed, technicalCancellationAllowed) = SIBC.frfsCancellationFlags integratedBPPConfig
+      providerCancellationAllowed = case initiator of
+        UserInitiated -> userCancellationAllowed
+        Technical -> technicalCancellationAllowed
+        OperatorInitiated _ -> technicalCancellationAllowed
+  unless (frfsConfig.isCancellationAllowed && providerCancellationAllowed) $ throwError CancellationNotSupported
+  case (initiator, integratedBPPConfig.providerConfig) of
+    (OperatorInitiated _, ONDC _) -> throwError CancellationNotSupported
+    _ -> pure ()
+  let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
+  whenJust mbServiceTierType $ \serviceTierType -> do
+    mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
+    unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
+  pure (integratedBPPConfig, frfsConfig)
 
 -- Caller should handle sideEffectData and call cancelJourney based on the cancellationType
 cancel ::
@@ -78,22 +104,14 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
     booking <- QFRFSTicketBooking.findById inputBooking.id >>= fromMaybeM (InvalidRequest "Booking not found for cancellation")
     when (booking.status == DFRFSTicketBooking.RESCHEDULED) $
       throwError $ InvalidRequest "Booking was rescheduled; cancel the current booking instead"
-    integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-    frfsConfig <-
-      getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
-        >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-    let (userCancellationAllowed, technicalCancellationAllowed) = SIBC.frfsCancellationFlags integratedBPPConfig
-        providerCancellationAllowed = case initiator of
-          UserInitiated -> userCancellationAllowed
-          Technical -> technicalCancellationAllowed
-    unless (frfsConfig.isCancellationAllowed && providerCancellationAllowed) $ throwError CancellationNotSupported
-    let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
-    whenJust mbServiceTierType $ \serviceTierType -> do
-      mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
-      unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
+    (integratedBPPConfig, frfsConfig) <- ensureCancellationAllowed initiator merchantOperatingCity booking
     whenJust mbLiveDecision $ \decision ->
       unless decision.canCancel $
         throwError $ InvalidRequest (fromMaybe "Cancellation is not available for this trip" decision.cancelDenyReason)
+    case initiator of
+      OperatorInitiated _ ->
+        unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Operator cancellation during incorrect status: " <> show booking.status)
+      _ -> pure ()
     when (cancellationType == Spec.SOFT_CANCEL) $
       unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
     -- Must stay last of the gates, and enforceCap must stay False on the journey path or route edits
@@ -121,7 +139,10 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
       _ -> do
         -- a shared-cab cancel runs on the policy's decision, and never without one (no fall-through to the tier table)
         mbSharedCabRefund <- either (const $ throwError $ InternalError "Shared-cab cancel did not pass the refund policy") pure $ cancelRefund (isSharedCabBooking booking) (initiator == UserInitiated) mbDecision
-        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking mbSharedCabRefund
+        flowOnCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking mbSharedCabRefund
+        let onCancelReq = case initiator of
+              OperatorInitiated operatorCancellation -> flowOnCancelReq {Fields.operatorCancellation = Just operatorCancellation}
+              _ -> flowOnCancelReq
         mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
         let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
         return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData

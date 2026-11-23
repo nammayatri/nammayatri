@@ -19,6 +19,7 @@ module Environment
     Flow,
     buildHandlerEnv,
     releaseHandlerEnv,
+    withRiderAppRedisKeys,
   )
 where
 
@@ -37,6 +38,8 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, connectHedisClusterClouds, connectHedisStandaloneClouds, disconnectHedis)
+import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import qualified Kernel.Storage.Hedis.Config as HedisConfig
 import Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
@@ -217,6 +220,18 @@ releaseHandlerEnv HandlerEnv {..} = do
   maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
 
 type Flow = FlowR HandlerEnv
+
+withRiderAppRedisKeys :: HandlerEnv -> HandlerEnv
+withRiderAppRedisKeys env =
+  env{hedisEnv = withKeys riderAppPrefix env.hedisEnv,
+      hedisClusterEnv = withKeys riderAppPrefix env.hedisClusterEnv,
+      peerHedisClusterEnvs = map (second (withKeys riderAppPrefix)) env.peerHedisClusterEnvs,
+      hedisNonCriticalEnv = withKeys riderAppNonCriticalPrefix env.hedisNonCriticalEnv,
+      hedisNonCriticalClusterEnv = withKeys riderAppNonCriticalPrefix env.hedisNonCriticalClusterEnv
+     }
+  where
+    withKeys modifier hedis = hedis {HedisConfig.keyModifier = modifier}
+    riderAppNonCriticalPrefix = ("ab:n_c:" <>)
 
 instance AuthenticatingEntity HandlerEnv where
   getSigningKey = (.signingKey)

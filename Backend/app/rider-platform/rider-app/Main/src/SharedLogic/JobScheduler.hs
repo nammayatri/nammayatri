@@ -86,6 +86,7 @@ data RiderJobType
   | SharedCabSessionExpiry
   | SharedCabDegradedSweep
   | SendRideInvoiceEmail
+  | FRFSTripCancel
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -120,6 +121,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
   restoreAnyJobInfo SCheckMultimodalConfirmFail jobData = AnyJobInfo <$> restoreJobInfo SCheckMultimodalConfirmFail jobData
   restoreAnyJobInfo SCheckRefundStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckRefundStatus jobData
+  restoreAnyJobInfo SFRFSTripCancel jobData = AnyJobInfo <$> restoreJobInfo SFRFSTripCancel jobData
   restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
   restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
@@ -257,6 +259,15 @@ data CheckRefundStatusJobData = CheckRefundStatusJobData
 instance JobInfoProcessor 'CheckRefundStatus
 
 type instance JobContent 'CheckRefundStatus = CheckRefundStatusJobData
+
+newtype FRFSTripCancelJobData = FRFSTripCancelJobData
+  { entityValueLogId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FRFSTripCancel
+
+type instance JobContent 'FRFSTripCancel = FRFSTripCancelJobData
 
 instance JobInfoProcessor 'PayoutStatusCheck
 

@@ -16,8 +16,25 @@ data DOnCancel = DOnCancel
     baseFare :: HighPrecMoney,
     cancellationCharges :: Maybe HighPrecMoney,
     cancelledBy :: Maybe Text,
-    cancellationTime :: Maybe UTCTime
+    cancellationTime :: Maybe UTCTime,
+    operatorCancellation :: Maybe OperatorCancellation
   }
+
+data OperatorCancellation = OperatorCancellation
+  { reason :: Text,
+    operationId :: Text
+  }
+  deriving (Eq, Show)
+
+data CancelMode = RiderOrSystemCancel | ProviderCancel | OperatorCancel OperatorCancellation
+  deriving (Eq, Show)
 
 isCounterCancellation :: DOnCancel -> Bool
 isCounterCancellation dOnCancel = dOnCancel.cancelledBy == Just "PROVIDER"
+
+cancelModeOf :: DOnCancel -> CancelMode
+cancelModeOf dOnCancel = case dOnCancel.operatorCancellation of
+  Just operatorCancellation -> OperatorCancel operatorCancellation
+  Nothing
+    | isCounterCancellation dOnCancel -> ProviderCancel
+    | otherwise -> RiderOrSystemCancel

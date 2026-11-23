@@ -4,11 +4,12 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
+import Domain.Types.Beckn.FRFS.OnCancel (CancelMode (..), OperatorCancellation (..))
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as Fields
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
@@ -72,9 +73,10 @@ handleCancelledStatus ::
   HighPrecMoney ->
   HighPrecMoney ->
   Text ->
-  Bool ->
+  CancelMode ->
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
-handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
+handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId cancelMode = do
+  let isCounterCancellation = cancelMode == ProviderCancel
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbPaymentBooking <- QTBP.findTicketBookingPayment booking
   isFree <- FRFSUtils.noPaymentDue booking
@@ -84,24 +86,38 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
   unless (booking.status `elem` [DFRFSTicketBooking.CANCELLED, DFRFSTicketBooking.COUNTER_CANCELLED]) $ do
-    if isCounterCancellation
-      then do
+    case cancelMode of
+      OperatorCancel operatorCancellation -> do
+        void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just False) booking.id
+        whenJust mbPaymentBooking $ \paymentBooking ->
+          unless (paymentBooking.status `elem` refundStartedStatuses) $
+            void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        whenJust booking.overrideAppliedEntityId $ \entityId -> do
+          FRFSPassOverride.refundPassOverrideTrip booking (Id entityId) fareParameters.totalQuantity
+          creditOwed <- isJust <$> FRFSPassOverride.benefitForOverrideAppliedEntity (Just entityId)
+          released <- FRFSPassOverride.hasReleasedTrip booking.searchId
+          when (creditOwed && not released) $ throwError (InternalError $ "Pass trip credit failed for bookingId-" <> booking.id.getId)
+        markTicketsAndRecon DFRFSTicket.COUNTER_CANCELLED booking
+        void $ QTBooking.updateOperatorCancellationById False (Just operatorCancellation.reason) (Just operatorCancellation.operationId) booking.id
+        void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
+        void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.COUNTER_CANCELLED "operator_cancelled" booking
+        void . withTryCatch "frfsOperatorCancel:release" $
+          FRFSCancelEffects.releaseCancelledBooking False True booking (Just person) fareParameters.totalQuantity
+      ProviderCancel -> do
         void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.COUNTER_CANCELLED "counter_cancelled" booking
-        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
-        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
+        markTicketsAndRecon DFRFSTicket.COUNTER_CANCELLED booking
         void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just False) booking.id
         -- The negative recon rows are written on refund success (SharedLogic.Payment.bookingsRefundStatusHandler),
         -- not here: at this point the refund has only been requested and may still fail.
         whenJust mbPaymentBooking $ \paymentBooking ->
           void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
-      else do
+      RiderOrSystemCancel -> do
         -- shared cab: the refund policy fixed these amounts in this request (no earlier soft cancel to agree with)
         if isSharedCabBooking booking
           then void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
           else void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
         void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.CANCELLED "cancelled" booking
-        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
-        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
+        markTicketsAndRecon DFRFSTicket.CANCELLED booking
         void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
@@ -123,20 +139,21 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   -- the earlier attempt failed: TripReleased is TTL-bounded, so its absence means either "never
   -- refunded" or "refunded, marker long expired", and treating the second as the first credits twice.
   -- A counter-cancellation never credits the trip back: the rider travelled, so the trip was spent.
-  refundOwed <-
-    if booking.status == DFRFSTicketBooking.CANCELLED
-      then FRFSPassOverride.hasPendingTripRefund booking.searchId
-      else pure (not isCounterCancellation)
-  FRFSCancelEffects.releaseCancelledBooking
-    (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED])
-    True
-    booking
-    (Just person)
-    fareParameters.totalQuantity
+  unless (isOperatorCancel cancelMode) $ do
+    refundOwed <-
+      if booking.status == DFRFSTicketBooking.CANCELLED || (booking.status == DFRFSTicketBooking.COUNTER_CANCELLED && isJust booking.cancellationOperationId)
+        then FRFSPassOverride.hasPendingTripRefund booking.searchId
+        else pure (not isCounterCancellation)
+    FRFSCancelEffects.releaseCancelledBooking
+      (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED])
+      True
+      booking
+      (Just person)
+      fareParameters.totalQuantity
   -- NOTE: the counters are not idempotent -- a replayed cancel callback decrements the ticket count again
   -- and rewrites settlement. That is pre-existing behaviour, left exactly as it is on main.
   releaseSeatsIfHeld booking quoteCategories
-  unless isCounterCancellation $ do
+  when (cancelMode == RiderOrSystemCancel) $ do
     -- Must stay LAST and swallowed, or a Redis error here would abort before the seat release/counter above.
     -- Design notes: scripts/testing/cancel/DESIGN.md
     quotaResult <- try @_ @SomeException $ do
@@ -153,6 +170,19 @@ handleCancelledSideEffects :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text
 handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters = do
   sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters
   handleGoogleWalletStatusUpdate booking
+
+isOperatorCancel :: CancelMode -> Bool
+isOperatorCancel = \case
+  OperatorCancel _ -> True
+  _ -> False
+
+refundStartedStatuses :: [DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus]
+refundStartedStatuses = [DFRFSTicketBookingPayment.REFUND_INITIATED, DFRFSTicketBookingPayment.REFUNDED, DFRFSTicketBookingPayment.REFUND_FAILED]
+
+markTicketsAndRecon :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicket.FRFSTicketStatus -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
+markTicketsAndRecon status booking = do
+  void $ QTicket.updateAllStatusByBookingId status booking.id
+  void $ QFRFSRecon.updateStatusByTicketBookingId (Just status) booking.id
 
 releaseSeatsIfHeld :: (MonadFlow m, Redis.HedisFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> m ()
 releaseSeatsIfHeld booking quoteCategories = do

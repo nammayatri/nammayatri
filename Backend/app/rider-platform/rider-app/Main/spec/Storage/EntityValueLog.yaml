@@ -8,7 +8,7 @@ EntityValueLog:
 
   types:
     OperationType:
-      enum: "TripCountAdjust, PassTerminate, PassReschedule, PassPriceChange, PassTripCountChange, PassBreakoffTripCountChange, PassMaxValidTripsChange"
+      enum: "TripCountAdjust, PassTerminate, PassReschedule, PassPriceChange, PassTripCountChange, PassBreakoffTripCountChange, PassMaxValidTripsChange, TripCancel"
       derive: "HttpInstance"
     OperationStatus:
       enum: "PENDING, APPLIED, FAILED"
@@ -47,3 +47,4 @@ EntityValueLog:
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE
