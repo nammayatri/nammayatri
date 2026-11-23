@@ -152,6 +152,20 @@ updateOndcOnInitReceivedById ondcOnInitReceived ondcOnInitReceivedAt id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateOperatorCancellationById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Bool ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())))
+updateOperatorCancellationById customerCancelled cancellationReason cancellationOperationId id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.customerCancelled customerCancelled,
+      Se.Set Beam.cancellationReason cancellationReason,
+      Se.Set Beam.cancellationOperationId cancellationOperationId,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePassOverrideById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType ->
@@ -273,6 +287,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.cancellationCharges cancellationCharges,
+      Se.Set Beam.cancellationOperationId cancellationOperationId,
+      Se.Set Beam.cancellationReason cancellationReason,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),

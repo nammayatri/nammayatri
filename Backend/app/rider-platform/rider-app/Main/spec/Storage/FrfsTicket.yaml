@@ -486,6 +486,8 @@ FRFSTicketBooking:
     # is every CONFIRMED booking with this rideId. Replaces vehicleTripId once shared cab moves onto runs.
     rideId: Maybe Text
     sharedCabNoShows: Int
+    cancellationReason: Maybe Text
+    cancellationOperationId: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -658,6 +660,10 @@ FRFSTicketBooking:
     updateFailureReasonById:
       kvFunction: updateOneWithKV
       params: [failureReason]
+      where: id
+    updateOperatorCancellationById:
+      kvFunction: updateOneWithKV
+      params: [customerCancelled, cancellationReason, cancellationOperationId, updatedAt]
       where: id
     updateTotalPriceById:
       kvFunction: updateOneWithKV

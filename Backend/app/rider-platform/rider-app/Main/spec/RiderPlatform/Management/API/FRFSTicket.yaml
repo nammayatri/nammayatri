@@ -10,6 +10,7 @@ imports:
   IntegratedBPPConfig: Dashboard.Common
   FRFSTicketBooking: Dashboard.Common
   PlatformType: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
 
 module: FRFSTicket
 types:
@@ -107,6 +108,95 @@ types:
     recordType: NewType
     bookingIds: "[Id FRFSTicketBooking]"
     derive: "'HideSecrets"
+
+  TripCancelAction:
+    enum: "CANCEL,NOT_AFFECTED"
+
+  TripCancelPaymentMode:
+    enum: "ONLINE,PASS,PASS_PARTIAL,FREE"
+
+  TripCancelStop:
+    code: Text
+    name: Maybe Text
+    seq: Maybe Int
+
+  TripCancelBookingPreview:
+    bookingId: Id FRFSTicketBooking
+    riderId: Text
+    fromStop: TripCancelStop
+    toStop: TripCancelStop
+    quantity: Int
+    paymentMode: TripCancelPaymentMode
+    refundAmount: HighPrecMoney
+    passTripsCredited: Int
+    multimodalOrder: Bool
+    checkedIn: Bool
+    action: TripCancelAction
+
+  TripCancelStopBreakdown:
+    stop: TripCancelStop
+    bookings: Int
+    passengers: Int
+    refundAmount: HighPrecMoney
+    passTripsCredited: Int
+
+  TripCancelSummary:
+    totalBookings: Int
+    toCancel: Int
+    passengersToCancel: Int
+    totalRefundAmount: HighPrecMoney
+    passTripsCredited: Int
+    checkedInToCancel: Int
+    notAffected: Int
+
+  TripCancelOperation:
+    operationId: Text
+    tripId: Text
+    stopCode: Maybe Text
+    reason: Maybe Text
+    actorId: Maybe Text
+    status: Text
+    requested: Int
+    cancelled: Maybe Int
+    failed: Maybe Int
+    createdAt: UTCTime
+
+  TripCancelPreviewResp:
+    tripId: Text
+    cutoffStop: Maybe TripCancelStop
+    summary: TripCancelSummary
+    stopBreakdown: "[TripCancelStopBreakdown]"
+    bookings: "[TripCancelBookingPreview]"
+    cancellations: "[TripCancelOperation]"
+
+  TripCancelReq:
+    stopCode: Maybe Text
+    reason: Text
+    bookingIds: "[Id FRFSTicketBooking]"
+    derive: "'HideSecrets"
+
+  TripCancelResp:
+    accepted: Int
+
+  TripCancelBookingStatus:
+    bookingId: Id FRFSTicketBooking
+    bookingStatus: Text
+    refundStatus: Maybe Text
+    refundAmount: Maybe HighPrecMoney
+    passTripsCredited: Int
+    fromStop: TripCancelStop
+    toStop: TripCancelStop
+    quantity: Int
+
+  TripCancelStatusResp:
+    tripId: Text
+    cancellations: "[TripCancelOperation]"
+    cancelled: Int
+    refundPending: Int
+    refunded: Int
+    refundFailed: Int
+    stillPending: Int
+    bookings: "[TripCancelBookingStatus]"
 
   FRFSGtfsStopAPI:
     code: Text
@@ -234,6 +324,58 @@ apis:
         query:
           - requestorId: Text
         actorInfo: requestorId
+
+  - GET:
+      endpoint: /frfs/trip/{tripId}/cancel/preview
+      auth: ApiAuthV2
+      params:
+        tripId: Text
+      query:
+        stopCode: Text
+      response:
+        type: TripCancelPreviewResp
+      migrate:
+        capability: transit-operations.trip.execute
+
+  - POST:
+      endpoint: /frfs/trip/{tripId}/cancel
+      auth: ApiAuthV2
+      params:
+        tripId: Text
+      request:
+        type: TripCancelReq
+      response:
+        type: TripCancelResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+      migrate:
+        capability: transit-operations.trip.execute
+
+  - GET:
+      endpoint: /frfs/trip/cancellations
+      auth: ApiAuthV2
+      mandatoryQuery:
+        fromDate: UTCTime
+        toDate: UTCTime
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[TripCancelOperation]"
+      migrate:
+        capability: transit-operations.trip.execute
+
+  - GET:
+      endpoint: /frfs/trip/{tripId}/cancel/status
+      auth: ApiAuthV2
+      params:
+        tripId: Text
+      response:
+        type: TripCancelStatusResp
+      migrate:
+        capability: transit-operations.trip.execute
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

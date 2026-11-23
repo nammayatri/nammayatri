@@ -629,6 +629,7 @@ library
       SharedLogic.FRFSSeller.Common
       SharedLogic.FRFSSeller.QuoteStore
       SharedLogic.FRFSStatus
+      SharedLogic.FRFSTripCancel
       SharedLogic.FRFSUtils
       SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
@@ -897,6 +898,7 @@ library
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
       Storage.Queries.EDCMachineMappingExtra
+      Storage.Queries.EntityValueLogExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
       Storage.Queries.ExophoneExtra
@@ -1831,6 +1833,7 @@ library
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability
       Storage.Queries.OrphanInstances.EDCMachineMapping
+      Storage.Queries.OrphanInstances.EntityValueLog
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup

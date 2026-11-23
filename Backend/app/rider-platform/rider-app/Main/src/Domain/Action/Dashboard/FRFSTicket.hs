@@ -7,6 +7,10 @@ module Domain.Action.Dashboard.FRFSTicket
     getFRFSTicketFrfsRouteStations,
     postFRFSTicketFrfsStatusUpdate,
     getFRFSTicketFrfsGtfs,
+    getFRFSTicketFrfsTripCancelPreview,
+    postFRFSTicketFrfsTripCancel,
+    getFRFSTicketFrfsTripCancelStatus,
+    getFRFSTicketFrfsTripCancellations,
   )
 where
 
@@ -32,6 +36,7 @@ import qualified Domain.Types.FRFSRouteFareProduct as Fields
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.StopFare as Fields
 import qualified Environment
 import qualified EulerHS.Language as L
@@ -45,6 +50,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Logging (logError, logInfo)
+import qualified SharedLogic.FRFSTripCancel as FRFSTripCancel
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as CQFRFSGtfsStageFare
@@ -62,6 +68,31 @@ import qualified Tools.Fields as Fields
 postFRFSTicketFrfsStatusUpdate :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity _mbRequestorId req =
   InternalFRFS.frfsStatusUpdate $ InternalFRFS.FRFSStatusUpdateReq {bookingIds = map cast req.bookingIds}
+
+getFRFSTicketFrfsTripCancelPreview :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.TripCancelPreviewResp)
+getFRFSTicketFrfsTripCancelPreview merchantShortId opCity tripId mbStopCode = do
+  merchantOpCity <- resolveMerchantOpCity merchantShortId opCity
+  FRFSTripCancel.previewTripCancel merchantOpCity.id tripId mbStopCode
+
+postFRFSTicketFrfsTripCancel :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> API.Types.RiderPlatform.Management.FRFSTicket.TripCancelReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.TripCancelResp)
+postFRFSTicketFrfsTripCancel merchantShortId opCity tripId _mbRequestorId req = do
+  merchantOpCity <- resolveMerchantOpCity merchantShortId opCity
+  FRFSTripCancel.confirmTripCancel merchantOpCity.id tripId req
+
+getFRFSTicketFrfsTripCancelStatus :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.TripCancelStatusResp)
+getFRFSTicketFrfsTripCancelStatus merchantShortId opCity tripId = do
+  merchantOpCity <- resolveMerchantOpCity merchantShortId opCity
+  FRFSTripCancel.tripCancelStatus merchantOpCity.id tripId
+
+getFRFSTicketFrfsTripCancellations :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.TripCancelOperation])
+getFRFSTicketFrfsTripCancellations merchantShortId opCity mbLimit mbOffset fromDate toDate = do
+  merchantOpCity <- resolveMerchantOpCity merchantShortId opCity
+  FRFSTripCancel.listTripCancellations merchantOpCity.id fromDate toDate mbLimit mbOffset
+
+resolveMerchantOpCity :: ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow DMOC.MerchantOperatingCity
+resolveMerchantOpCity merchantShortId opCity = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
 gtfsDashboardWaitMaxSec :: Kernel.Prelude.Int
 gtfsDashboardWaitMaxSec = 10
