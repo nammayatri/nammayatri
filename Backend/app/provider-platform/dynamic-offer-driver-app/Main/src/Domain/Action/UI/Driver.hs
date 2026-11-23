@@ -317,6 +317,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Finance.PostpaidFeeInvoice as PostpaidFeeInvoice
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
@@ -3088,6 +3089,26 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> do
     let paidAt = maybe now minimum $ nonEmpty [inv.updatedAt | inv <- concat successfulInvoices, inv.driverFeeId == feeId]
     QDF.updateClearedStatusByIdsWithCollectedAt [feeId] paidAt now
+  -- Never fails clear-dues: the fees above are already CLEARED, so an error here would fail the
+  -- request and, on retry, the fees are no longer overdue and this path is never reached again.
+  unless (null allPaidFeeNotMarkedCleared || serviceName /= YATRI_SUBSCRIPTION) $ do
+    invoiceRes <- withTryCatch "clearDriverDues:postpaidFeeInvoice" $ do
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing
+      whenJust mbTransporterConfig $ \transporterConfig ->
+        when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enablePostpaidFeeInvoice))) $ do
+          person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+          -- Per order, so one order's failed read does not skip the invoices of the others.
+          forM_ (nub $ map (.id) (concat successfulInvoices)) $ \paidOrderId -> do
+            orderRes <- withTryCatch "clearDriverDues:postpaidFeeInvoice:order" $ do
+              orderInvoices <- runInMasterDbAndRedis (QINV.findById paidOrderId)
+              orderFees <- QDF.findAllByDriverFeeIds (nub $ map (.driverFeeId) orderInvoices)
+              PostpaidFeeInvoice.createPostpaidFeeInvoice transporterConfig person paidOrderId.getId (Just paidOrderId.getId) PostpaidFeeInvoice.PostpaidOnline orderFees
+            case orderRes of
+              Left err -> logError $ "clearDriverDues: postpaid fee invoice failed for order " <> paidOrderId.getId <> " driver " <> personId.getId <> ": " <> show err
+              Right () -> pure ()
+    case invoiceRes of
+      Left err -> logError $ "clearDriverDues: postpaid fee invoice step failed for driver " <> personId.getId <> ": " <> show err
+      Right () -> pure ()
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
   Redis.runInMasterCloudRedisCell $

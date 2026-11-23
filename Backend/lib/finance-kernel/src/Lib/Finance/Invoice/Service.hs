@@ -593,6 +593,7 @@ findByIssuedTo = QInvoice.findByIssuedTo
 invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> Subscription
+  SubscriptionFee -> Subscription
   Ride -> IndirectTax.RideFare
   RideCancellation -> Cancellation
   Commission -> BuyerCommission
@@ -604,6 +605,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
 invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> DirectTax.Subscription
+  SubscriptionFee -> DirectTax.Subscription
   Ride -> DirectTax.RideFare
   RideCancellation -> DirectTax.Cancellation
   Commission -> DirectTax.BuyerCommission
@@ -627,6 +629,7 @@ sacCodeForTransactionType = \case
 invoiceTypeToPurpose :: InvoiceType -> Text
 invoiceTypeToPurpose = \case
   SubscriptionPurchase -> purposeSubscription
+  SubscriptionFee -> purposeSubscription -- postpaid fees share the subscription invoice-number series
   Ride -> purposeRideFare
   RideCancellation -> purposeCancellation
   Commission -> purposeCommission

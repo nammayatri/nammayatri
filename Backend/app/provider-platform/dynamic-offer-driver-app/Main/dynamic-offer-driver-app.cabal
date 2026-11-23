@@ -769,6 +769,7 @@ library
       SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
+      SharedLogic.Finance.PostpaidFeeInvoice
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Rails
       SharedLogic.Finance.Reconciliation.EntitySync

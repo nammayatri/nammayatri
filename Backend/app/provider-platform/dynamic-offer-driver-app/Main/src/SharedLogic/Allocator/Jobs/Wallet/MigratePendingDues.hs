@@ -69,6 +69,7 @@ clearDuesMigrationRunning cityId = Redis.withCrossAppRedis $ Redis.del (duesMigr
 
 migratePendingDuesToWallet ::
   ( WalletFloorOfflineFlow m r,
+    EncFlow m r,
     Finance.HasActorInfo m r
   ) =>
   Job 'MigratePendingDuesToWallet ->
