@@ -1281,7 +1281,7 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
 
   return Success
   where
-    checkIfGenuineReq :: ServiceFlow m r => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
+    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
     checkIfGenuineReq aadhaarReq = do
       hvResp <- Verification.verifySdkResp merchantId merchantOperatingCityId (VI.VerifySdkDataReq aadhaarReq.transactionId)
       (respTxnId, respStatus, respUserDetails) <- CME.fromMaybeM (Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId (Just "Invalid data recieved while validating data.")) (return $ (,,) <$> hvResp.transactionId <*> hvResp.status <*> hvResp.userDetails)
@@ -2055,5 +2055,19 @@ postDriverRcTakeoverVerifyPhoto ::
   )
 postDriverRcTakeoverVerifyPhoto (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  isValid <- RCTakeover.verifyTakeoverPhoto (personId, merchantId, merchantOpCityId) req.rcNo req.image
-  pure $ API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp {result = if isValid then API.Types.UI.DriverOnboardingV2.VALID else API.Types.UI.DriverOnboardingV2.INVALID}
+  outcome <- RCTakeover.verifyTakeoverPhoto (personId, merchantId, merchantOpCityId) req.rcNo req.image
+  pure $
+    API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoResp
+      { result = if outcome.isValid then API.Types.UI.DriverOnboardingV2.VALID else API.Types.UI.DriverOnboardingV2.INVALID,
+        takeoverScore = outcome.takeoverScore,
+        inputs =
+          outcome.inputs <&> \i ->
+            API.Types.UI.DriverOnboardingV2.RCTakeoverPhotoScores
+              { plateVisible = i.plateVisible,
+                plateMatchesRc = i.plateMatchesRc,
+                isRealPhoto = i.isRealPhoto,
+                photoQuality = i.photoQuality
+              },
+        vehicleType = outcome.vehicleType,
+        reason = outcome.reason
+      }

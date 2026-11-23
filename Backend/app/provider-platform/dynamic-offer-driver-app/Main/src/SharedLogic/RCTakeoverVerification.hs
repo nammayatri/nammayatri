@@ -27,6 +27,7 @@ module SharedLogic.RCTakeoverVerification
   ( HolderSnapshot (..),
     StagedTakeoverVerification (..),
     TakeoverInputs (..),
+    TakeoverVerifyOutcome (..),
     verifyTakeoverPhoto,
     requireFreshTakeoverVerification,
     findStagedTakeoverVerification,
@@ -43,9 +44,12 @@ where
 
 import qualified Control.Monad.Catch as Catch
 import qualified Crypto.Hash as Hash
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import Data.Typeable (typeOf)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverRCAssociation as DRCA
@@ -58,22 +62,25 @@ import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleVariant as DV
+import qualified EulerHS.Types as ET
 import Kernel.External.Encryption
 import qualified Kernel.External.Grid.Error as GridError
-import qualified Kernel.External.Grid.Flow as Grid
 import qualified Kernel.External.Grid.Types as Grid
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions (..))
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Client as HTTP
-import Network.HTTP.Types (statusCode)
+import Network.HTTP.Types (http11, status200, statusCode)
+import Passetto.Client.Error (PassettoClientError (..))
+import Servant (Accept (..), Header, JSON, MimeUnrender (..), Post, ReqBody, (:>))
 import qualified Servant.Client as Servant
 import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -108,6 +115,16 @@ data TakeoverInputs = TakeoverInputs
     photoQuality :: Double
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+-- | What verify answers the driver app. Scores are Nothing when the check stopped before Grid answered.
+data TakeoverVerifyOutcome = TakeoverVerifyOutcome
+  { isValid :: Bool,
+    inputs :: Maybe TakeoverInputs,
+    takeoverScore :: Maybe Double,
+    vehicleType :: Maybe Text,
+    -- | Why it is INVALID.
+    reason :: Maybe Text
+  }
 
 -- | A VALID photo check, staged for one driver and one RC until it is used or expires.
 data StagedTakeoverVerification = StagedTakeoverVerification
@@ -240,16 +257,18 @@ rcLinkCheck transporterConfig driverId rc now =
 
 -- * Verify
 
--- | True for VALID. Precondition failures (RC not linked, no takeover situation, holder can't lose the RC
+-- | VALID or INVALID, with the scores and the reason (also stored on the driver's link to the RC). Precondition failures (RC not linked, no takeover situation, holder can't lose the RC
 --   now) are typed errors. A check that can't run (Grid or scoring not configured, Grid unreachable, 5xx,
---   rate-limited or rejecting the key) is RCTakeoverCheckUnavailable: retryable, no attempt charged, an
---   earlier VALID kept. Every other failure of the photo check is INVALID, and revokes an earlier VALID.
+--   rate-limited, out of budget or rejecting the key, or a failure we can't classify such as an apiKey that
+--   doesn't decrypt) is RCTakeoverCheckUnavailable: retryable, an earlier VALID kept, and the attempt
+--   refunded unless Grid may have run the model (a response timeout, a 5xx). Grid rejecting the request
+--   (another 4xx) or its answer not decoding is INVALID, and revokes an earlier VALID.
 verifyTakeoverPhoto ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasRequestId r, MonadReader r m) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
   Text ->
-  m Bool
+  m TakeoverVerifyOutcome
 verifyTakeoverPhoto (driverId, merchantId, merchantOpCityId) rcNo rawImage = do
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -276,15 +295,15 @@ verifyTakeoverPhoto (driverId, merchantId, merchantOpCityId) rcNo rawImage = do
   scoring <- maybe (checkUnavailable logCtx "takeoverScoring is not configured") pure transporterConfig.takeoverScoring
   rcNumber <- decrypt rc.certificateNumber
   -- the stored RC number, never client text, so nothing user-controlled reaches the prompt
-  verdict <- case Grid.normalizeIdentifier rcNumberBounds rcNumber of
+  (mbGridResp, verdict) <- case Grid.normalizeIdentifier rcNumberBounds rcNumber of
     -- A data gap, not the photo's fault: INVALID, but no Grid call and no attempt charged.
-    Nothing -> pure $ Left (Rejection "RC number does not normalize" Nothing Nothing)
+    Nothing -> pure (Nothing, Left (Rejection "RC number does not normalize" Nothing Nothing Nothing))
     Just plate -> do
       -- Charged only for a real photo check: precondition failures above must not burn the driver's attempts.
       checkSlidingWindowLimitWithOptions hitsKey verifyRateLimit
       -- Plain try, not withTryCatch: that logs the raw exception, whose servant request carries the Grid key.
       -- Async exceptions (request cancelled, thread killed) are rethrown, never turned into a verdict.
-      Catch.try @_ @SomeException (gridVerdict transporterConfig ctx (gridCfg, scoring, expected, plate) rawImage) >>= \case
+      Catch.try @_ @SomeException (gridVerdict transporterConfig ctx logCtx (gridCfg, scoring, expected, plate) rawImage) >>= \case
         Left err
           | isJust (fromException @SomeAsyncException err) -> Catch.throwM err
           | otherwise -> do
@@ -292,7 +311,7 @@ verifyTakeoverPhoto (driverId, merchantId, merchantOpCityId) rcNo rawImage = do
             case failure of
               UnavailableRefunded -> refundAttempt hitsKey >> checkUnavailable logCtx reason
               UnavailableCharged -> checkUnavailable logCtx reason
-              RequestRejected -> pure $ Left (Rejection reason Nothing Nothing)
+              RequestRejected -> pure (Nothing, Left (Rejection reason Nothing Nothing Nothing))
         Right res -> pure res
   let key = takeoverKey driverId rc.id
       logVerdict result reason inputs score =
@@ -301,39 +320,82 @@ verifyTakeoverPhoto (driverId, merchantId, merchantOpCityId) rcNo rawImage = do
             <> maybe "" (", reason=" <>) reason
             <> maybe "" ((", inputs=" <>) . show) inputs
             <> maybe "" ((", takeoverScore=" <>) . show) score
-  case verdict of
+  outcome <- case verdict of
     Right staged -> do
       logVerdict "VALID" Nothing (Just staged.inputs) (Just staged.takeoverScore)
       Redis.setExp key staged stagedTtlSeconds
-      pure True
+      pure $ TakeoverVerifyOutcome True (Just staged.inputs) (Just staged.takeoverScore) (Just staged.vehicleType) Nothing
     Left Rejection {..} -> do
       logVerdict "INVALID" (Just reason) rejectedInputs rejectedScore
       Redis.del key -- the latest attempt wins
-      pure False
+      pure $ TakeoverVerifyOutcome False rejectedInputs rejectedScore rejectedVehicleType (Just reason)
+  storeVerifyResponse ctx logCtx scoring mbGridResp outcome
+  pure outcome
+
+-- | Keeps the latest check on the driver's link to the RC, for debugging and calibration: the verdict, the
+--   scores and Grid's raw answers. Best effort: never fails the verify.
+storeVerifyResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StageContext -> Text -> DTC.TakeoverScoring -> Maybe Grid.GridDecisionResp -> TakeoverVerifyOutcome -> m ()
+storeVerifyResponse StageContext {..} logCtx scoring mbGridResp outcome = do
+  now <- getCurrentTime
+  let response =
+        A.object
+          [ "verificationId" A..= verificationId,
+            "verifiedAt" A..= now,
+            "result" A..= (if outcome.isValid then "VALID" else "INVALID" :: Text),
+            "reason" A..= outcome.reason,
+            "inputs" A..= outcome.inputs,
+            "takeoverScore" A..= outcome.takeoverScore,
+            "vehicleType" A..= outcome.vehicleType,
+            "scoring" A..= scoring,
+            "gridResponse" A..= mbGridResp
+          ]
+  withTryCatch "storeTakeoverVerifyResponse" (DAQuery.updateTakeoverVerifyResponse driverId rcId now response) >>= \case
+    Left err -> logError $ "RC takeover verify response not stored: " <> logCtx <> ", error=" <> show err
+    Right () -> pure ()
 
 -- | The photo part of the check: decode the image, ask Grid, judge the answers.
+--   Grid's answer comes back with the verdict, to be stored.
 gridVerdict ::
   (MonadFlow m, CoreMetrics m, EncFlow m r, HasRequestId r, MonadReader r m) =>
   DTC.TransporterConfig ->
   StageContext ->
+  Text ->
   (Grid.GridCfg, DTC.TakeoverScoring, Text, Text) ->
   Text ->
-  m (Either Rejection StagedTakeoverVerification)
-gridVerdict transporterConfig ctx (gridCfg, scoring, expected, plate) raw =
+  m (Maybe Grid.GridDecisionResp, Either Rejection StagedTakeoverVerification)
+gridVerdict transporterConfig ctx logCtx (gridCfg, scoring, expected, plate) raw =
   case decodeImage transporterConfig gridCfg raw of
-    Left rejection -> pure $ Left rejection
+    Left rejection -> pure (Nothing, Left rejection)
     Right image -> do
       let questions = takeoverQuestions plate
+      -- never the image itself
+      logInfo $
+        "RC takeover Grid request: "
+          <> logCtx
+          <> ", model="
+          <> gridCfg.model
+          <> ", questions="
+          <> T.intercalate "," (Grid.getQuestionKey <$> Grid.questionKeys questions)
+          <> ", imageSizeBytes="
+          <> show (base64DecodedSize image.base64Data)
+          <> ", imageSha256="
+          <> sha256Hex image.base64Data
+          -- which stored apiKey this pod uses (a cached old row vs the new one), never the key itself
+          <> ", apiKeyCiphertextSha256="
+          <> T.take 12 (sha256Hex (unEncrypted gridCfg.apiKey))
+          <> ", apiKeyCiphertextLength="
+          <> show (T.length (unEncrypted gridCfg.apiKey))
       resp <-
-        Grid.decide gridCfg $
+        decideLogged gridCfg $
           Grid.GridDecisionReq
             { model = gridCfg.model,
               state = "Live vehicle photo (attached image) uploaded by a driver in a ride-hailing app in India.",
               images = [image],
               questions
             }
+      logInfo $ "RC takeover Grid response: " <> logCtx <> ", response=" <> encodeToText resp
       verifiedAt <- getCurrentTime
-      pure $ judge ctx verifiedAt gridCfg scoring expected image questions resp
+      pure (Just resp, judge ctx verifiedAt gridCfg scoring expected image questions resp)
 
 data StageContext = StageContext
   { verificationId :: Text,
@@ -346,22 +408,24 @@ data StageContext = StageContext
 data Rejection = Rejection
   { reason :: Text,
     rejectedInputs :: Maybe TakeoverInputs,
-    rejectedScore :: Maybe Double
+    rejectedScore :: Maybe Double,
+    rejectedVehicleType :: Maybe Text
   }
 
 orReject :: Maybe a -> Text -> Either Rejection a
-orReject m reason = maybe (Left $ Rejection reason Nothing Nothing) Right m
+orReject m reason = maybe (Left $ Rejection reason Nothing Nothing Nothing) Right m
 
 -- | The check can't run: misconfiguration or a Grid outage, not the photo. Retryable for the driver and an
 --   earlier VALID stays. Logged as an error: with the gate on, a misconfigured city blocks every takeover.
-checkUnavailable :: MonadFlow m => Text -> Text -> m a
+checkUnavailable :: (MonadFlow m) => Text -> Text -> m a
 checkUnavailable logCtx reason = do
   logError $ "RC takeover photo check unavailable: " <> logCtx <> ", reason=" <> reason
   throwError RCTakeoverCheckUnavailable
 
 -- | What a failed Grid call means for the driver.
 data GridFailure
-  = -- | Grid did no paid work (unreachable, 408/502/503/504, 429, a rejected key): retryable, attempt refunded.
+  = -- | Grid did no paid work (unreachable, 408/502/503/504, 429, 402 out of budget, a rejected key), or the
+    --   call failed in a way we can't classify (e.g. the apiKey doesn't decrypt): retryable, attempt refunded.
     UnavailableRefunded
   | -- | Grid may have done paid work (a response timeout, another 5xx a bad image could cause): retryable,
     --   attempt still charged.
@@ -374,7 +438,7 @@ decodeImage transporterConfig gridCfg raw =
   -- 10 MB when the city sets no document size limit: plenty for a phone photo.
   let docLimitBytes = fromMaybe 10 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024
       maxBytes = maybe docLimitBytes (min docLimitBytes) gridCfg.maxImageBytes
-   in either (\err -> Left $ Rejection err Nothing Nothing) Right $ Grid.mkGridImageFromBase64 (Just maxBytes) raw
+   in either (\err -> Left $ Rejection err Nothing Nothing Nothing) Right $ Grid.mkGridImageFromBase64 (Just maxBytes) raw
 
 takeoverQuestions :: Text -> Grid.GridQuestions
 takeoverQuestions plate =
@@ -427,7 +491,7 @@ judge StageContext {..} verifiedAt gridCfg scoring expected image questions resp
   pq <- Grid.getPhotoQuality answers `orReject` "photo_quality answer missing or invalid"
   let inputs = TakeoverInputs {plateVisible = pv.pYes, plateMatchesRc = pm.pYes, isRealPhoto = real.pYes, photoQuality = pq.score / 3}
       reject :: Text -> Maybe Double -> Either Rejection a
-      reject reason score = Left $ Rejection reason (Just inputs) score
+      reject reason score = Left $ Rejection reason (Just inputs) score (Just vt.choice)
   score <- maybe (reject "takeoverScoring could not be applied" Nothing) Right $ combineTakeoverScore scoring inputs
   unless (vt.choice == expected) $ reject ("vehicle_type " <> vt.choice <> ", expected " <> expected) (Just score)
   unless (score >= scoring.takeoverScoreThreshold) $ reject "takeoverScore below threshold" (Just score)
@@ -526,26 +590,157 @@ requireFreshTakeoverVerification driverId rc = do
         rejectTakeover driverId rc "Vehicle status changed, new photo required to take over this RC" RCTakeoverVerificationStale
       pure staged
 
--- | What a failed Grid call means, with a loggable reason. Never `show` the exception itself:
---   ExternalAPICallError carries servant's ClientError, whose request includes the Authorization /
---   x-litellm-api-key header.
+-- | What a failed Grid call means, with a loggable reason. Never `show` an exception that carries the request:
+--   ExternalAPICallError (servant's ClientError), ClientError and HttpException include the Authorization /
+--   x-litellm-api-key header. Any other exception is logged by its type name only, never its text.
 describeGridFailure :: SomeException -> (GridFailure, Text)
 describeGridFailure err
   | Just (gridErr :: GridError.GridError) <- fromException err =
     (if GridError.isGridRetryable gridErr || gridErr == GridError.GridUnauthorized then UnavailableRefunded else RequestRejected, show gridErr)
   | Just (apiErr :: ExternalAPICallError) <- fromException err =
-    second ("ExternalAPICallError: " <>) $ case apiErr.clientError of
-      Servant.FailureResponse _ resp ->
-        let code = statusCode (Servant.responseStatusCode resp)
-         in (if code >= 500 then UnavailableCharged else RequestRejected, "status " <> show code)
-      Servant.DecodeFailure _ _ -> (RequestRejected, "decode failure")
-      Servant.UnsupportedContentType _ _ -> (RequestRejected, "unsupported content type")
-      Servant.InvalidContentTypeHeader _ -> (RequestRejected, "invalid content type header")
-      Servant.ConnectionError e
-        -- the request reached Grid, which may have run (and billed) the model
-        | Just (HTTP.HttpExceptionRequest _ HTTP.ResponseTimeout) <- fromException e -> (UnavailableCharged, "response timeout")
-        | otherwise -> (UnavailableRefunded, "connection error")
-  | otherwise = (RequestRejected, "unexpected error")
+    second ("ExternalAPICallError: " <>) (describeClientError apiErr.clientError)
+  -- These carry the request with its headers (x-litellm-api-key is not redacted): only the constructor name
+  | Just (httpErr :: HTTP.HttpException) <- fromException err =
+    ( case httpErr of
+        HTTP.HttpExceptionRequest _ HTTP.ResponseTimeout -> UnavailableCharged
+        _ -> UnavailableRefunded,
+      "HttpException: " <> case httpErr of
+        HTTP.HttpExceptionRequest _ content -> T.takeWhile (/= ' ') (show content)
+        HTTP.InvalidUrlException _ _ -> "invalid url"
+    )
+  | Just (clientErr :: Servant.ClientError) <- fromException err =
+    second ("ClientError: " <>) (describeClientError clientErr)
+  -- The apiKey didn't decrypt. Not the photo's fault: retryable, refunded. Passetto's own requests carry only
+  -- the ciphertext, but its Show includes the whole request, so log the parts that say why it failed.
+  | Just (passettoErr :: PassettoClientError) <- fromException err =
+    (UnavailableRefunded, "apiKey decrypt failed: " <> describePassettoFailure passettoErr)
+  -- Not the photo's fault, so not INVALID and not charged: the driver can retry once fixed. Only the type
+  -- name, since the text may carry a request with its headers.
+  | SomeException e <- err = (UnavailableRefunded, "unexpected error: " <> show (typeOf e))
+
+-- | A failed Grid HTTP call, the same however it was wrapped. Never the request: it carries the key header.
+describeClientError :: Servant.ClientError -> (GridFailure, Text)
+describeClientError = \case
+  Servant.FailureResponse _ resp ->
+    let code = statusCode (Servant.responseStatusCode resp)
+     in ( if
+              | code >= 500 -> UnavailableCharged
+              | code == 402 -> UnavailableRefunded -- out of budget (LiteLLM): Grid ran nothing
+              | otherwise -> RequestRejected,
+          "status " <> show code
+        )
+  Servant.DecodeFailure _ _ -> (RequestRejected, "decode failure")
+  Servant.UnsupportedContentType _ _ -> (RequestRejected, "unsupported content type")
+  Servant.InvalidContentTypeHeader _ -> (RequestRejected, "invalid content type header")
+  Servant.ConnectionError e
+    -- the request reached Grid, which may have run (and billed) the model
+    | Just (HTTP.HttpExceptionRequest _ HTTP.ResponseTimeout) <- fromException e -> (UnavailableCharged, "response timeout")
+    | otherwise -> (UnavailableRefunded, "connection error")
+
+-- | Why passetto couldn't decrypt the apiKey: its status and response body, or a JSON error (e.g. the key was
+--   stored encrypted as raw text, not a JSON string). Aeson errors can quote the input ("... at 'sk-...'"),
+--   which here is the decrypted key, so those are cut before the quote.
+describePassettoFailure :: PassettoClientError -> Text
+describePassettoFailure = \case
+  UnexpectedResponse msg -> "unexpected response: " <> withoutInput msg
+  PClientError clientErr -> case clientErr of
+    Servant.FailureResponse _ resp ->
+      "status "
+        <> show (statusCode (Servant.responseStatusCode resp))
+        <> ", body="
+        <> T.take 300 (decodeUtf8 (BS.toStrict (Servant.responseBody resp)))
+    Servant.DecodeFailure msg _ -> "response didn't decode: " <> withoutInput msg
+    Servant.UnsupportedContentType _ _ -> "unsupported content type"
+    Servant.InvalidContentTypeHeader _ -> "invalid content type header"
+    Servant.ConnectionError e
+      | Just (HTTP.HttpExceptionRequest _ content) <- fromException e -> "connection error: " <> T.takeWhile (/= ' ') (show content)
+      | otherwise -> "connection error: " <> show (typeOf e)
+  where
+    withoutInput = T.take 300 . fst . T.breakOn " at '"
+
+-- TEMP DEBUG (remove once the Grid key issue is found): `Grid.decide` with every step logged in full, the
+-- decrypted apiKey included. The image is logged as size and sha256 only. Same call, manager and error
+-- mapping as the kernel's.
+type GridDecisionRawAPI =
+  "v1"
+    :> "decisions"
+    :> Header "Authorization" Text
+    :> Header "x-litellm-api-key" Text
+    :> ReqBody '[JSON] Grid.GridDecisionReq
+    :> Post '[RawJSON] GridRawBody
+
+data RawJSON
+
+instance Accept RawJSON where
+  contentType _ = contentType (Proxy @JSON)
+  contentTypes _ = contentTypes (Proxy @JSON)
+
+newtype GridRawBody = GridRawBody LBS.ByteString
+
+instance MimeUnrender RawJSON GridRawBody where
+  mimeUnrender _ = Right . GridRawBody
+
+instance ToJSON GridRawBody where
+  toJSON (GridRawBody b) = toJSON (decodeUtf8 (BS.toStrict b) :: Text)
+
+decideLogged ::
+  (MonadFlow m, CoreMetrics m, EncFlow m r, HasRequestId r, MonadReader r m) =>
+  Grid.GridCfg ->
+  Grid.GridDecisionReq ->
+  m Grid.GridDecisionResp
+decideLogged cfg req = do
+  logInfo $ "TEMP DEBUG Grid apiKey ciphertext: " <> unEncrypted cfg.apiKey
+  apiKey <-
+    Catch.try (decrypt cfg.apiKey) >>= \case
+      Left (e :: SomeException) -> do
+        logError $ "TEMP DEBUG Grid apiKey decrypt failed: " <> show e
+        Catch.throwM e
+      Right k -> do
+        logInfo $ "TEMP DEBUG Grid apiKey decrypted: " <> k
+        pure k
+  let (bearer, litellmKey) = case fromMaybe Grid.AuthorizationBearer cfg.authHeader of
+        Grid.AuthorizationBearer -> (Just $ "Bearer " <> apiKey, Nothing)
+        Grid.XLiteLLMApiKey -> (Nothing, Just apiKey)
+  logInfo $
+    "TEMP DEBUG Grid request: POST "
+      <> T.pack (Servant.showBaseUrl cfg.url)
+      <> "/v1/decisions, Authorization="
+      <> show bearer
+      <> ", x-litellm-api-key="
+      <> show litellmKey
+      -- the image as size and hash only: megabytes per line get cut by log pipelines, and it shows the vehicle
+      <> ", body (images left out)="
+      <> encodeToText req {Grid.images = []}
+      <> ", images="
+      <> T.intercalate "," ((\img -> "sizeBytes=" <> show (base64DecodedSize img.base64Data) <> " sha256=" <> sha256Hex img.base64Data) <$> req.images)
+  res <-
+    callAPI'
+      (Just $ ET.ManagerSelector Grid.gridHttpManagerKey)
+      cfg.url
+      (ET.client (Proxy @GridDecisionRawAPI) bearer litellmKey req)
+      "GRID-DECISION-API"
+      (Proxy @GridDecisionRawAPI)
+  let apiError = throwError . ExternalAPICallError (Just "GRID_API_ERROR") cfg.url
+  case res of
+    Left clientErr@(Servant.FailureResponse _ resp) -> do
+      logError $
+        "TEMP DEBUG Grid raw response: status "
+          <> show (statusCode (Servant.responseStatusCode resp))
+          <> ", headers="
+          <> show (toList (Servant.responseHeaders resp))
+          <> ", body="
+          <> decodeUtf8 (BS.toStrict (Servant.responseBody resp))
+      maybe (apiError clientErr) (\(e :: GridError.GridError) -> throwError e) (fromResponse resp)
+    Left clientErr -> do
+      logError $ "TEMP DEBUG Grid call failed: " <> show clientErr
+      apiError clientErr
+    Right (GridRawBody body) -> do
+      logInfo $ "TEMP DEBUG Grid raw response: status 200, body=" <> decodeUtf8 (BS.toStrict body)
+      case A.eitherDecode body of
+        Right resp -> pure resp
+        Left msg ->
+          apiError . Servant.DecodeFailure (T.pack msg) $
+            Servant.Response {responseStatusCode = status200, responseHeaders = mempty, responseHttpVersion = http11, responseBody = body}
 
 -- | Runs the holder's unlink with the staged check marked as having unlinked them, so a retry after a later
 --   throw (in the unlink or in activateRC) knows the holder lost the RC here. If the unlink throws while the
