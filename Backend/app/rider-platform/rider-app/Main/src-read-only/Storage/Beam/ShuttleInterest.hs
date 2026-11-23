@@ -14,15 +14,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ShuttleInterestT f = ShuttleInterestT
-  { acPreference :: (B.C f (Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference)),
-    companyDomain :: (B.C f Kernel.Prelude.Text),
+  { companyDomain :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Data.Time.UTCTime),
     daysOfWeek :: (B.C f [Kernel.Prelude.Text]),
     dropAddress :: (B.C f Kernel.Prelude.Text),
     dropLat :: (B.C f Kernel.Prelude.Double),
     dropLon :: (B.C f Kernel.Prelude.Double),
     dropTime :: (B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay)),
-    maxWalkingDistanceMeters :: (B.C f Kernel.Prelude.Int),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     passOrganizationId :: (B.C f Kernel.Prelude.Text),
@@ -31,12 +29,8 @@ data ShuttleInterestT f = ShuttleInterestT
     pickupLat :: (B.C f Kernel.Prelude.Double),
     pickupLon :: (B.C f Kernel.Prelude.Double),
     pickupTime :: (B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay)),
-    shiftEndTime :: (B.C f Data.Time.LocalTime.TimeOfDay),
-    shiftStartTime :: (B.C f Data.Time.LocalTime.TimeOfDay),
-    timeFlexibilityMinutes :: (B.C f Kernel.Prelude.Int),
     tripType :: (B.C f Domain.Types.ShuttleInterest.ShuttleTripType),
-    updatedAt :: (B.C f Data.Time.UTCTime),
-    vehicleSizePreference :: (B.C f (Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleVehicleSizePreference))
+    updatedAt :: (B.C f Data.Time.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

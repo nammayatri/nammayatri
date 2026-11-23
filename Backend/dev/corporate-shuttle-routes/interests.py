@@ -52,8 +52,6 @@ def load(paths):
             "toHome": trip in ("TO_HOME", "ROUND_TRIP"),
             "pickupMin": _minutes(r.get("pickupTime")),
             "dropMin": _minutes(r.get("dropTime")),
-            "walkM": int(r.get("maxWalkingDistanceMeters") or 0),
-            "flexMin": int(r.get("timeFlexibilityMinutes") or 0),
             "days": [d for d in naming.DAYS if d in days],
         }
     return [people[k] for k in sorted(people)]

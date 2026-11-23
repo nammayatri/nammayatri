@@ -5,8 +5,6 @@ imports:
   Person: Domain.Types.Person
   PassOrganization: Domain.Types.PassOrganization
   ShuttleTripType: Domain.Types.ShuttleInterest
-  ShuttleAcPreference: Domain.Types.ShuttleInterest
-  ShuttleVehicleSizePreference: Domain.Types.ShuttleInterest
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
@@ -34,13 +32,7 @@ types:
     tripType: ShuttleTripType
     pickupTime: Maybe TimeOfDay
     dropTime: Maybe TimeOfDay
-    shiftStartTime: TimeOfDay
-    shiftEndTime: TimeOfDay
-    maxWalkingDistanceMeters: Int
     daysOfWeek: "[DayOfWeek]"
-    timeFlexibilityMinutes: Int
-    acPreference: Maybe ShuttleAcPreference
-    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
     createdAt: UTCTime
     updatedAt: UTCTime
 

@@ -3,8 +3,6 @@ imports:
   DayOfWeek: Data.Time.Calendar
   TimeOfDay: Data.Time.LocalTime
   ShuttleTripType: Domain.Types.ShuttleInterest
-  ShuttleAcPreference: Domain.Types.ShuttleInterest
-  ShuttleVehicleSizePreference: Domain.Types.ShuttleInterest
 
 module: ShuttleInterest
 
@@ -20,13 +18,7 @@ types:
     tripType: ShuttleTripType
     pickupTime: Maybe TimeOfDay # required for TO_OFFICE and ROUND_TRIP
     dropTime: Maybe TimeOfDay # required for TO_HOME and ROUND_TRIP
-    shiftStartTime: TimeOfDay
-    shiftEndTime: TimeOfDay
-    maxWalkingDistanceMeters: Int
     daysOfWeek: "[DayOfWeek]"
-    timeFlexibilityMinutes: Int # 15 or 30
-    acPreference: Maybe ShuttleAcPreference
-    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
 
   # Whether the caller can fill the form: their work email is verified and belongs to an onboarded company.
   ShuttleEligibilityResp:

@@ -137,13 +137,7 @@ mkItem employeeNames companyNames interest =
       ShuttleInterestAPI.tripType = interest.tripType,
       ShuttleInterestAPI.pickupTime = interest.pickupTime,
       ShuttleInterestAPI.dropTime = interest.dropTime,
-      ShuttleInterestAPI.shiftStartTime = interest.shiftStartTime,
-      ShuttleInterestAPI.shiftEndTime = interest.shiftEndTime,
-      ShuttleInterestAPI.maxWalkingDistanceMeters = interest.maxWalkingDistanceMeters,
       ShuttleInterestAPI.daysOfWeek = interest.daysOfWeek,
-      ShuttleInterestAPI.timeFlexibilityMinutes = interest.timeFlexibilityMinutes,
-      ShuttleInterestAPI.acPreference = interest.acPreference,
-      ShuttleInterestAPI.vehicleSizePreference = interest.vehicleSizePreference,
       ShuttleInterestAPI.createdAt = interest.createdAt,
       ShuttleInterestAPI.updatedAt = interest.updatedAt
     }

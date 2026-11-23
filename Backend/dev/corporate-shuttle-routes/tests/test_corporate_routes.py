@@ -16,13 +16,11 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
 import build_feed  # noqa: E402
-import demand_check  # noqa: E402
 import interests  # noqa: E402
 import naming  # noqa: E402
 import plan as plans  # noqa: E402
 import validate  # noqa: E402
 
-EXAMPLE_INTERESTS = os.path.join(ROOT, "examples", "chennai_acme_interests.json")
 ACME_PLAN = os.path.join(ROOT, "plans", "chennai", "ACME.json")
 
 
@@ -160,97 +158,66 @@ class ValidateTest(unittest.TestCase):
         self.assertEqual(errors, ["gtfstidy exited with code -9 and printed nothing"])
 
 
-class DemandTest(unittest.TestCase):
-    def test_check_against_the_example(self):
-        people = interests.load([EXAMPLE_INTERESTS])
-        results = demand_check.evaluate(acme(), people)
-        morning = [r for _, leg, r in results if leg == "TO_OFFICE"]
-        self.assertEqual(len(morning), 11)
-        self.assertEqual(sum(demand_check.covered(r) for r in morning), 9)
-        evening = [r for _, leg, r in results if leg == "TO_HOME"]
-        self.assertTrue(all(r["noRoute"] for r in evening))  # the fixture plan has no TO_HOME route
-
-    def test_time_is_checked_day_by_day(self):
-        # 18:30 on Tuesday/Friday, 18:45 on the other weekdays: a Mon-Fri rider wanting 18:40 +-15 fits every day
-        route = {"offsets": [0, 10], "departures": [
-            {"time": "18:30", "days": ["tuesday", "friday"]},
-            {"time": "18:45", "days": ["monday", "wednesday", "thursday"]},
-        ]}
-        week = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-        self.assertTrue(all(demand_check.fits_on(route, 0, d, 18 * 60 + 40, 15) for d in week))
-        self.assertFalse(demand_check.fits_on(route, 0, "saturday", 18 * 60 + 40, 15))
-        self.assertFalse(demand_check.fits_on(route, 0, "tuesday", 18 * 60 + 40, 5))
-
-    def test_other_companies_are_left_out(self):
-        people = interests.load([EXAMPLE_INTERESTS])
-        other = dict(people[0], personId="someone-else", company="Other Co")
-        mine, others = demand_check.of_company(acme(), people + [other])
-        self.assertEqual(others, 1)
-        self.assertNotIn("someone-else", [p["personId"] for p in mine])
-
-
-
 class PlannerTest(unittest.TestCase):
+    OFFICE = {"lat": 12.9279, "lon": 77.6271}
+
+    def person(self, pid, lat, lon, pickup="08:30", drop="18:30", days=("monday", "tuesday")):
+        row = {"personId": pid, "companyName": "ACME Corp", "pickupLat": lat, "pickupLon": lon, "dropLat": 12.9279, "dropLon": 77.6271,
+               "tripType": "ROUND_TRIP", "pickupTime": pickup + ":00", "dropTime": drop + ":00", "daysOfWeek": list(days)}
+        path = os.path.join(tempfile.mkdtemp(), "rows.json")
+        with open(path, "w") as f:
+            json.dump([row], f)
+        return interests.load([path])[0]
+
     def people(self):
-        return interests.load([EXAMPLE_INTERESTS])
+        # stop A (5 people within 500 m: 3 at 08:30, 2 at 09:30), stop B 1.5 km on (2 at 08:30, 3 at 09:30), stop C across town
+        a = [self.person(f"a{i}", 12.9600 + i * 0.0005, 77.6400, "08:30" if i < 3 else "09:30") for i in range(5)]
+        b = [self.person(f"b{i}", 12.9480 + i * 0.0005, 77.6380, "08:30" if i < 2 else "09:30") for i in range(5)]
+        c = [self.person(f"c{i}", 12.8900 + i * 0.0005, 77.5800) for i in range(2)]
+        return a + b + c
 
-    def test_every_rider_is_placed_on_a_short_route(self):
+    def test_nearby_stops_share_a_route_and_the_same_place_gets_a_shuttle_per_time(self):
+        import planner
+        routes = planner.plan_direction(self.people(), "ACME Corp", self.OFFICE, "MORNING")
+        self.assertEqual(len(routes), 2)
+        ab = next(r for r in routes if len(r["stops"]) == 3)
+        self.assertEqual([s["kind"] for s in ab["stops"]], ["SHARED", "SHARED", "OFFICE"])
+        self.assertEqual([len(ids) for _, ids in ab["trips"]["monday"]], [5, 5])
+        self.assertEqual(ab["trips"]["monday"][0][0], 8 * 60 + 30)  # at stop A, the first stop, at 08:30
+        self.assertEqual(ab["trips"]["monday"], ab["trips"]["tuesday"])
+        self.assertNotIn("wednesday", ab["trips"])
+
+    def test_evening_is_the_same_layout_reversed(self):
         import planner
         people = self.people()
-        office = {"lat": 12.8251, "lon": 80.2182}
-        for direction in ("MORNING", "EVENING"):
-            routes = planner.plan_day(people, "ACME Corp", office, direction, "monday")
-            riding = planner.riders_for(people, direction, "monday")
-            placed = [r["personId"] for route in routes for r in route["riders"]]
-            self.assertEqual(sorted(placed), sorted(r["personId"] for r in riding), direction)
-            for route in routes:
-                end = route["stops"][-1] if direction == "MORNING" else route["stops"][0]
-                self.assertEqual(end["kind"], "OFFICE")
-                self.assertTrue(all(b > a for a, b in zip(route["offsets"], route["offsets"][1:])))
+        morning = planner.plan_direction(people, "ACME Corp", self.OFFICE, "MORNING")
+        evening = planner.plan_direction(people, "ACME Corp", self.OFFICE, "EVENING")
+        self.assertEqual([[(s["lat"], s["lon"]) for s in r["stops"]][::-1] for r in morning], [[(s["lat"], s["lon"]) for s in r["stops"]] for r in evening])
+        self.assertTrue(all(r["stops"][0]["kind"] == "OFFICE" for r in evening))
 
-    def test_departures_fit_everyone(self):
+    def test_shuttles_keep_to_the_seats(self):
         import planner
-        self.assertEqual(planner.pick_departures([(510, 15), (515, 15), (630, 15)], 2), [510, 630])
-        self.assertEqual(planner.pick_departures([(512, 0)], 2), [512])
-        # 08:00 and 09:00, each +-30: the 08:30 slot inside both windows serves both riders with one departure
-        self.assertEqual(planner.pick_departures([(480, 30), (540, 30)], 2), [510])
-
-    def test_routes_keep_the_stop_limit(self):
-        import planner
-        people = self.people()
-        office = {"lat": 12.8251, "lon": 80.2182}
-        for max_stops in (1, 2, 3):
-            for direction in ("MORNING", "EVENING"):
-                routes = planner.plan_day(people, "ACME Corp", office, direction, "monday", 1, max_stops)
-                riding = planner.riders_for(people, direction, "monday")
-                placed = [r["personId"] for route in routes for r in route["riders"]]
-                self.assertEqual(sorted(placed), sorted(r["personId"] for r in riding), (direction, max_stops))
-                for route in routes:
-                    pickups = [s for s in route["stops"] if s["kind"] != "OFFICE"]
-                    self.assertLessEqual(len(pickups), max_stops, (direction, max_stops))
+        sizes = lambda wishes: [(t, len(ids)) for t, ids in planner.shuttles(wishes)]
+        self.assertEqual(sizes([(510, f"p{i}") for i in range(10)]), [(510, 5), (515, 5)])  # 10 at 08:30: two of 5
+        self.assertEqual(sizes([(510, "a"), (510, "b"), (510, "c"), (540, "d"), (540, "e")]), [(510, 5)])  # 3 + 2: one
+        self.assertEqual(sizes([(510, f"p{i}") for i in range(9)] + [(525, "x"), (525, "y")]), [(510, 5), (515, 6)])
+        self.assertEqual(sizes([(510, "a"), (600, "b")]), [(510, 1), (600, 1)])  # too far apart: light, still run
 
     def test_stop_names_never_use_an_address(self):
         import planner
-        people = self.people()
-        for p in people:
-            self.assertNotIn("area", p)
         self.assertEqual(planner._label({"kind": "SHARED", "street": "Rajiv Gandhi Salai"}, "ACME Corp"), "Rajiv Gandhi Salai")
-        self.assertEqual(planner._label({"kind": "DOORSTEP", "street": ""}, "ACME Corp"), "Pickup point")
+        self.assertEqual(planner._label({"kind": "SHARED", "street": ""}, "ACME Corp"), "Pickup point")
         self.assertEqual(planner._label({"kind": "OFFICE"}, "ACME Corp"), "ACME Corp office")
 
-    def test_plan_files_are_valid_and_merge_days(self):
-        import argparse
+    def test_plan_files_are_valid_and_carry_the_days(self):
         import plan_routes
-        people = self.people()
-        office = {"lat": 12.8251, "lon": 80.2182}
-        args = argparse.Namespace(min_riders=2, max_stops=6, start="20261201", end="20271130", fare=40)
-        company, report = plan_routes.plan_company(people, "ACME Corp", office, "ACME", args)
+        args = argparse.Namespace(start="20261201", end="20271130", fare=40)
+        company, report = plan_routes.plan_company(self.people(), "ACME Corp", self.OFFICE, "ACME", args)
         checked = plans.check_plan(company)
-        self.assertTrue(checked["routes"])
+        self.assertEqual(len(checked["routes"]), 4)  # 2 routes each way
         self.assertTrue(all(r["routeId"].startswith("CORP-ACME-") for r in checked["routes"]))
-        # weekday riders: their departures run on several days, as one route
-        self.assertTrue(any(len(d["days"]) > 1 for r in checked["routes"] for d in r["departures"]))
-        self.assertTrue(report)
+        self.assertTrue(all(d["days"] == ["monday", "tuesday"] for r in checked["routes"] for d in r["departures"]))
+        self.assertEqual(len(report), 4)
 
     def test_org_codes_follow_the_convention(self):
         import plan_routes
@@ -263,12 +230,6 @@ class PlannerTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             plan_routes.org_codes(["acme.com", "acme.org"], {})
         self.assertEqual(plan_routes.org_codes(["acme.com", "acme.org"], {"orgs": {"acme.org": "ACMEORG"}}), {"acme.com": "ACME", "acme.org": "ACMEORG"})
-
-    def test_days_merge_only_with_the_same_timings(self):
-        import plan_routes
-        stops = [{"lat": 12.9, "lon": 80.2}, {"lat": 12.8, "lon": 80.2}]
-        self.assertEqual(plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}), plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}))
-        self.assertNotEqual(plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 10]}), plan_routes._key("MORNING", {"stops": stops, "offsets": [0, 14]}))
 
 
 if __name__ == "__main__":

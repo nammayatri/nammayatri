@@ -20,8 +20,7 @@ import Servant
 import Servant.Client
 
 data ShuttleInterestItem = ShuttleInterestItem
-  { acPreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference,
-    companyDomain :: Kernel.Prelude.Text,
+  { companyDomain :: Kernel.Prelude.Text,
     companyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Data.Time.UTCTime,
     daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
@@ -30,19 +29,14 @@ data ShuttleInterestItem = ShuttleInterestItem
     dropLon :: Kernel.Prelude.Double,
     dropTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
     employeeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    maxWalkingDistanceMeters :: Kernel.Prelude.Int,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pickupAddress :: Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,
     pickupLon :: Kernel.Prelude.Double,
     pickupTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
-    shiftEndTime :: Data.Time.LocalTime.TimeOfDay,
-    shiftStartTime :: Data.Time.LocalTime.TimeOfDay,
-    timeFlexibilityMinutes :: Kernel.Prelude.Int,
     tripType :: Domain.Types.ShuttleInterest.ShuttleTripType,
-    updatedAt :: Data.Time.UTCTime,
-    vehicleSizePreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleVehicleSizePreference
+    updatedAt :: Data.Time.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

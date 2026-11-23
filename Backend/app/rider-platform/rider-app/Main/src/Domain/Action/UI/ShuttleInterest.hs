@@ -21,9 +21,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ShuttleInterest as QShuttleInterest
 import Tools.Error
 
-allowedTimeFlexibilityMinutes :: [Int]
-allowedTimeFlexibilityMinutes = [15, 30]
-
 -- | Submit the corporate shuttle interest form (page 2). Page 1 is the existing business-email OTP flow
 -- (/auth/business-email/send-verification and /verify); the form is accepted only after it, and only when the email's
 -- domain belongs to a company (SharedLogic.CorporateMembership). A second submission replaces the first (one row per person).
@@ -50,13 +47,7 @@ postShuttleInterest (mbPersonId, _) req = do
             -- a leg the employee did not ask for keeps no time
             DShuttleInterest.pickupTime = if needsPickupTime req.tripType then req.pickupTime else Nothing,
             DShuttleInterest.dropTime = if needsDropTime req.tripType then req.dropTime else Nothing,
-            DShuttleInterest.shiftStartTime = req.shiftStartTime,
-            DShuttleInterest.shiftEndTime = req.shiftEndTime,
-            DShuttleInterest.maxWalkingDistanceMeters = req.maxWalkingDistanceMeters,
             DShuttleInterest.daysOfWeek = nub req.daysOfWeek,
-            DShuttleInterest.timeFlexibilityMinutes = req.timeFlexibilityMinutes,
-            DShuttleInterest.acPreference = req.acPreference,
-            DShuttleInterest.vehicleSizePreference = req.vehicleSizePreference,
             DShuttleInterest.merchantId = person.merchantId,
             DShuttleInterest.merchantOperatingCityId = person.merchantOperatingCityId,
             DShuttleInterest.createdAt = maybe now (.createdAt) mbExisting,
@@ -106,8 +97,5 @@ validateRequest req = do
   when (needsDropTime req.tripType && isNothing req.dropTime) $
     throwError $ InvalidRequest "Drop time is required for this trip type"
   when (null req.daysOfWeek) $ throwError $ InvalidRequest "Select at least one day of the week"
-  unless (req.maxWalkingDistanceMeters > 0) $ throwError $ InvalidRequest "Walking distance must be greater than 0"
-  unless (req.timeFlexibilityMinutes `elem` allowedTimeFlexibilityMinutes) $
-    throwError $ InvalidRequest "Time flexibility must be 15 or 30 minutes"
   where
     validLatLon lat lon = lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180

@@ -24,22 +24,16 @@ data ShuttleEligibilityResp = ShuttleEligibilityResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ShuttleInterestReq = ShuttleInterestReq
-  { acPreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference,
-    daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
+  { daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
     dropAddress :: Kernel.Prelude.Text,
     dropLat :: Kernel.Prelude.Double,
     dropLon :: Kernel.Prelude.Double,
     dropTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
-    maxWalkingDistanceMeters :: Kernel.Prelude.Int,
     pickupAddress :: Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,
     pickupLon :: Kernel.Prelude.Double,
     pickupTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
-    shiftEndTime :: Data.Time.LocalTime.TimeOfDay,
-    shiftStartTime :: Data.Time.LocalTime.TimeOfDay,
-    timeFlexibilityMinutes :: Kernel.Prelude.Int,
-    tripType :: Domain.Types.ShuttleInterest.ShuttleTripType,
-    vehicleSizePreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleVehicleSizePreference
+    tripType :: Domain.Types.ShuttleInterest.ShuttleTripType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -3,13 +3,12 @@
 
   python3 plan_routes.py <city> --from-api                    # read the forms from the local dashboard API
   python3 plan_routes.py <city> interests.json [page2.json]   # or from saved shuttleInterest/list responses
-        [--start YYYYMMDD] [--end YYYYMMDD] [--fare 40] [--min-riders 2] [--max-stops 6]
+        [--start YYYYMMDD] [--end YYYYMMDD] [--fare 40]
 
-For each company, direction (MORNING to the office, EVENING home) and day of the week, planner.plan_day lays out routes
-that carry every rider along the roads (see planner.py). A route with the same stops on several days is one route: its
-departures carry the days they run. Writes plans/<city>/<ORG>.json, one per company, in the format build_feed.py reads
-(naming.py: CORP-<ORG>-<n>), and out/<city>_plan_report.txt with each day's coverage and the employees who need
-attention (a doorstep detour, or walking further than they said).
+For each company and direction (MORNING to the office, EVENING home), planner.plan_direction lays out routes that carry
+every rider along the roads, the same stops on every day, and each day's shuttles (see planner.py): a departure carries
+the days it runs and its riders per day. Writes plans/<city>/<ORG>.json, one per company, in the format build_feed.py
+reads (naming.py: CORP-<ORG>-<n>), and out/<city>_plan_report.txt with each route's stops and shuttles.
 
 Next: python3 build_feed.py <city> && python3 validate.py <city>, then publish (README.md).
 """
@@ -59,12 +58,6 @@ def fetch_interests(config):
         offset += 100
 
 
-def _key(direction, route):
-    """Days merge into one route only when its stops and its stop timings are the same (a day planned without road data
-    has other timings, so its departures would not fit another day's offsets)."""
-    return (direction, tuple((s["lat"], s["lon"]) for s in route["stops"]), tuple(route["offsets"]))
-
-
 def org_codes(companies, config):
     """{company: code}; stops when two companies would get the same code (their plans would overwrite each other)."""
     codes = {c: org_code(c, config) for c in companies}
@@ -78,47 +71,42 @@ def org_codes(companies, config):
     return codes
 
 
+def _hhmm(t):
+    return f"{t // 60:02d}:{t % 60:02d}"
+
+
 def plan_company(people, company, office, org, args):
-    """All of one company's routes across the week, merged by identical stops; plus the per-day report lines."""
-    merged, report = {}, []
+    """All of one company's routes: per direction one layout for the whole week, its departures carrying their days."""
+    planned = []
     for direction in DIRECTIONS:
-        for day in naming.DAYS:
-            day_routes = planner.plan_day(people, company, office, direction, day, args.min_riders, args.max_stops)
-            if not day_routes:
-                continue
-            riders = [r for route in day_routes for r in route["riders"]]
-            attention = [r for r in riders if r["kind"] in ("DOORSTEP", "WALK_TO_ROUTE")]
-            report.append(f"  {day:<9} {direction:<7} {len(riders)} riders on {len(day_routes)} routes, longest {max(r['offsets'][-1] for r in day_routes)} min")
-            for r in attention:
-                why = "doorstep pickup (detour)" if r["kind"] == "DOORSTEP" else f"walks {r['walkM']} m (said {r['walkLimitM']} m) to {r['stop']}"
-                report.append(f"      {r['name'] or r['personId']}: {why}")
-            for route in day_routes:
-                entry = merged.setdefault(_key(direction, route), {**route, "direction": direction, "deps": {}, "riders": {}})
-                for dep in route["departures"]:
-                    entry["deps"].setdefault(dep, set()).add(day)
-                    # how many of that day's riders this departure carries, for the published timetable
-                    entry["riders"].setdefault(dep, {})[day] = sum(1 for r in route["riders"] if r["departure"] == dep)
-    ordered = sorted(merged.values(), key=lambda r: (DIRECTIONS.index(r["direction"]), min(r["deps"])))
-    routes = []
-    for n, r in enumerate(ordered, 1):
-        days = sorted({d for ds in r["deps"].values() for d in ds}, key=naming.DAYS.index)
+        for route in planner.plan_direction(people, company, office, direction):
+            deps = {}
+            for day, trips in route["trips"].items():
+                for t, ids in trips:
+                    deps.setdefault(t, {})[day] = len(ids)
+            if deps:
+                planned.append({**route, "direction": direction, "deps": deps})
+    planned.sort(key=lambda r: (DIRECTIONS.index(r["direction"]), min(r["deps"])))
+    routes, report = [], []
+    for n, r in enumerate(planned, 1):
         names = [s["name"] for s in r["stops"]]
+        name = " → ".join(x for i, x in enumerate(names) if i == 0 or x != names[i - 1])
+        departures = [{"time": _hhmm(t), "days": [d for d in naming.DAYS if d in ds], "riders": {d: ds[d] for d in naming.DAYS if d in ds}} for t, ds in sorted(r["deps"].items())]
         routes.append({
             "n": n,
-            "name": " → ".join(x for i, x in enumerate(names) if i == 0 or x != names[i - 1]),
+            "name": name,
             "direction": "TO_OFFICE" if r["direction"] == "MORNING" else "TO_HOME",
             "stops": [{"name": s["name"], "lat": s["lat"], "lon": s["lon"]} for s in r["stops"]],
             "stopOffsetsMinutes": r["offsets"],
-            "departures": [
-                {"time": f"{t // 60:02d}:{t % 60:02d}", "days": sorted(ds, key=naming.DAYS.index), "riders": {d: r["riders"][t][d] for d in sorted(ds, key=naming.DAYS.index)}}
-                for t, ds in sorted(r["deps"].items())
-            ],
-            "serviceDays": days,
+            "departures": departures,
+            "serviceDays": [d for d in naming.DAYS if any(d in dep["days"] for dep in departures)],
             "startDate": args.start,
             "endDate": args.end,
             "fareInr": args.fare,
             "shape": r["shape"],
         })
+        shuttles = ", ".join(f"{d['time']} ({max(d['riders'].values())} riders{', light' if max(d['riders'].values()) < planner.MIN_LOAD else ''}, {len(d['days'])} days)" for d in departures)
+        report.append(f"  {naming.route_id(org, n)} {r['direction']:<7} {name}: {shuttles}")
     return {"org": org, "companyName": company, "routes": routes}, report
 
 
@@ -131,8 +119,6 @@ def main(argv):
     ap.add_argument("--start", default=today.strftime("%Y%m%d"))
     ap.add_argument("--end", default=(today + datetime.timedelta(days=365)).strftime("%Y%m%d"))
     ap.add_argument("--fare", type=float, default=40)
-    ap.add_argument("--min-riders", type=int, default=2)
-    ap.add_argument("--max-stops", type=int, default=6)
     args = ap.parse_args(argv[1:])
     city = naming.check_city(args.city)
     config = plans.load_city_config(city)

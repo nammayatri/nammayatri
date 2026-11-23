@@ -52,14 +52,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Type
 updateByPrimaryKey (Domain.Types.ShuttleInterest.ShuttleInterest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.acPreference acPreference,
-      Se.Set Beam.companyDomain companyDomain,
+    [ Se.Set Beam.companyDomain companyDomain,
       Se.Set Beam.daysOfWeek (map show daysOfWeek),
       Se.Set Beam.dropAddress dropAddress,
       Se.Set Beam.dropLat dropLat,
       Se.Set Beam.dropLon dropLon,
       Se.Set Beam.dropTime dropTime,
-      Se.Set Beam.maxWalkingDistanceMeters maxWalkingDistanceMeters,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
@@ -67,12 +65,8 @@ updateByPrimaryKey (Domain.Types.ShuttleInterest.ShuttleInterest {..}) = do
       Se.Set Beam.pickupLat pickupLat,
       Se.Set Beam.pickupLon pickupLon,
       Se.Set Beam.pickupTime pickupTime,
-      Se.Set Beam.shiftEndTime shiftEndTime,
-      Se.Set Beam.shiftStartTime shiftStartTime,
-      Se.Set Beam.timeFlexibilityMinutes timeFlexibilityMinutes,
       Se.Set Beam.tripType tripType,
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleSizePreference vehicleSizePreference
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
 
@@ -81,15 +75,13 @@ instance FromTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInt
     pure $
       Just
         Domain.Types.ShuttleInterest.ShuttleInterest
-          { acPreference = acPreference,
-            companyDomain = companyDomain,
+          { companyDomain = companyDomain,
             createdAt = createdAt,
             daysOfWeek = ((read . Data.Text.unpack) <$> daysOfWeek),
             dropAddress = dropAddress,
             dropLat = dropLat,
             dropLon = dropLon,
             dropTime = dropTime,
-            maxWalkingDistanceMeters = maxWalkingDistanceMeters,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             passOrganizationId = Kernel.Types.Id.Id passOrganizationId,
@@ -98,26 +90,20 @@ instance FromTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInt
             pickupLat = pickupLat,
             pickupLon = pickupLon,
             pickupTime = pickupTime,
-            shiftEndTime = shiftEndTime,
-            shiftStartTime = shiftStartTime,
-            timeFlexibilityMinutes = timeFlexibilityMinutes,
             tripType = tripType,
-            updatedAt = updatedAt,
-            vehicleSizePreference = vehicleSizePreference
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInterest where
   toTType' (Domain.Types.ShuttleInterest.ShuttleInterest {..}) = do
     Beam.ShuttleInterestT
-      { Beam.acPreference = acPreference,
-        Beam.companyDomain = companyDomain,
+      { Beam.companyDomain = companyDomain,
         Beam.createdAt = createdAt,
         Beam.daysOfWeek = map show daysOfWeek,
         Beam.dropAddress = dropAddress,
         Beam.dropLat = dropLat,
         Beam.dropLon = dropLon,
         Beam.dropTime = dropTime,
-        Beam.maxWalkingDistanceMeters = maxWalkingDistanceMeters,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.passOrganizationId = Kernel.Types.Id.getId passOrganizationId,
@@ -126,10 +112,6 @@ instance ToTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInter
         Beam.pickupLat = pickupLat,
         Beam.pickupLon = pickupLon,
         Beam.pickupTime = pickupTime,
-        Beam.shiftEndTime = shiftEndTime,
-        Beam.shiftStartTime = shiftStartTime,
-        Beam.timeFlexibilityMinutes = timeFlexibilityMinutes,
         Beam.tripType = tripType,
-        Beam.updatedAt = updatedAt,
-        Beam.vehicleSizePreference = vehicleSizePreference
+        Beam.updatedAt = updatedAt
       }

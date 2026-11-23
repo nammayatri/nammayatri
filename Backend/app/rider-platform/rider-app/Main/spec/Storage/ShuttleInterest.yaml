@@ -30,14 +30,7 @@ ShuttleInterest:
     pickupTime: Maybe TimeOfDay
     # to-home leg: when the employee wants to leave the office (TO_HOME / ROUND_TRIP)
     dropTime: Maybe TimeOfDay
-    shiftStartTime: TimeOfDay
-    shiftEndTime: TimeOfDay
-    maxWalkingDistanceMeters: Int
     daysOfWeek: "[DayOfWeek]"
-    # +- minutes the employee can shift pickup/drop time (15 or 30)
-    timeFlexibilityMinutes: Int
-    acPreference: Maybe ShuttleAcPreference
-    vehicleSizePreference: Maybe ShuttleVehicleSizePreference
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -47,17 +40,9 @@ ShuttleInterest:
     ShuttleTripType:
       enum: "TO_OFFICE, TO_HOME, ROUND_TRIP"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
-    ShuttleAcPreference:
-      enum: "AC_PREFERRED, NON_AC_PREFERRED, AC_ANY"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
-    ShuttleVehicleSizePreference:
-      enum: "CAB, TEMPO_TRAVELLER, MINI_BUS, BUS, SIZE_ANY"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleTripType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleAcPreference>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleVehicleSizePreference>
 
   beamType:
     daysOfWeek: "[Text]"
@@ -75,11 +60,7 @@ ShuttleInterest:
     tripType: text
     pickupTime: time
     dropTime: time
-    shiftStartTime: time
-    shiftEndTime: time
     daysOfWeek: "text[]"
-    acPreference: text
-    vehicleSizePreference: text
 
   constraints:
     personId: PrimaryKey
