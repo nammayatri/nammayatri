@@ -6,12 +6,12 @@ module Storage.Queries.ShuttleInterest where
 
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.ShuttleInterest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -30,15 +30,15 @@ findAllByMerchantOperatingCityId ::
   (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.ShuttleInterest.ShuttleInterest]))
 findAllByMerchantOperatingCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.updatedAt) limit offset
 
-findAllByMerchantOperatingCityIdAndCompanyDomain ::
+findAllByMerchantOperatingCityIdAndPassOrganizationId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Int ->
-  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Kernel.Prelude.Text -> m [Domain.Types.ShuttleInterest.ShuttleInterest])))
-findAllByMerchantOperatingCityIdAndCompanyDomain limit offset merchantOperatingCityId companyDomain = do
+  (Maybe Int -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m [Domain.Types.ShuttleInterest.ShuttleInterest])))
+findAllByMerchantOperatingCityIdAndPassOrganizationId limit offset merchantOperatingCityId passOrganizationId = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.companyDomain $ Se.Eq companyDomain
+          Se.Is Beam.passOrganizationId $ Se.Eq (Kernel.Types.Id.getId passOrganizationId)
         ]
     ]
     (Se.Desc Beam.updatedAt)
@@ -62,6 +62,7 @@ updateByPrimaryKey (Domain.Types.ShuttleInterest.ShuttleInterest {..}) = do
       Se.Set Beam.maxWalkingDistanceMeters maxWalkingDistanceMeters,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
       Se.Set Beam.pickupAddress pickupAddress,
       Se.Set Beam.pickupLat pickupLat,
       Se.Set Beam.pickupLon pickupLon,
@@ -91,6 +92,7 @@ instance FromTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInt
             maxWalkingDistanceMeters = maxWalkingDistanceMeters,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            passOrganizationId = Kernel.Types.Id.Id passOrganizationId,
             personId = Kernel.Types.Id.Id personId,
             pickupAddress = pickupAddress,
             pickupLat = pickupLat,
@@ -118,6 +120,7 @@ instance ToTType' Beam.ShuttleInterest Domain.Types.ShuttleInterest.ShuttleInter
         Beam.maxWalkingDistanceMeters = maxWalkingDistanceMeters,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.passOrganizationId = Kernel.Types.Id.getId passOrganizationId,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.pickupAddress = pickupAddress,
         Beam.pickupLat = pickupLat,

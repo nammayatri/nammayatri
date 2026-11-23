@@ -23,10 +23,22 @@ import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = TokenAuth :> ("shuttle" :> ("interest" :> (ReqBody ('[JSON]) API.Types.UI.ShuttleInterest.ShuttleInterestReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)))
+type API =
+  ( TokenAuth
+      :> ( "shuttle"
+             :> ( "interest"
+                    :> ( ReqBody ('[JSON]) API.Types.UI.ShuttleInterest.ShuttleInterestReq
+                           :> Post
+                                ('[JSON])
+                                Kernel.Types.APISuccess.APISuccess
+                       )
+                )
+         )
+  )
+    :<|> (TokenAuth :> ("shuttle" :> ("eligibility" :> Get ('[JSON]) API.Types.UI.ShuttleInterest.ShuttleEligibilityResp)))
 
 handler :: Environment.FlowServer API
-handler = postShuttleInterest
+handler = postShuttleInterest :<|> getShuttleEligibility
 
 postShuttleInterest ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -34,3 +46,10 @@ postShuttleInterest ::
   ) ->
   (API.Types.UI.ShuttleInterest.ShuttleInterestReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postShuttleInterest a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.ShuttleInterest.postShuttleInterest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getShuttleEligibility ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Environment.FlowHandler API.Types.UI.ShuttleInterest.ShuttleEligibilityResp
+getShuttleEligibility a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.ShuttleInterest.getShuttleEligibility (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

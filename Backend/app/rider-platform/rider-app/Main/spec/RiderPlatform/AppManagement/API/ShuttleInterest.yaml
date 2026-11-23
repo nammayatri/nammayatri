@@ -3,22 +3,27 @@ imports:
   DayOfWeek: Data.Time.Calendar
   TimeOfDay: Data.Time.LocalTime
   Person: Domain.Types.Person
+  PassOrganization: Domain.Types.PassOrganization
   ShuttleTripType: Domain.Types.ShuttleInterest
   ShuttleAcPreference: Domain.Types.ShuttleInterest
   ShuttleVehicleSizePreference: Domain.Types.ShuttleInterest
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
+  Domain.Types.PassOrganization: "rider-app"
   Domain.Types.ShuttleInterest: "rider-app"
 
 module: ShuttleInterest
 
 # Control centre: corporate shuttle interest forms, as a table and as points for a map. Scoped to the dashboard's city.
-# companyDomain (e.g. juspay.in, nammayatri.in) tells the companies' employees apart; pass it to filter to one company.
+# A company is a corporate pass organisation; pass its passOrganizationId (or one of its email domains as companyDomain,
+# e.g. acme.example) to filter to one company.
 types:
   ShuttleInterestItem:
     personId: Id Person
     employeeName: Maybe Text
+    passOrganizationId: Id PassOrganization
+    companyName: Maybe Text
     companyDomain: Text
     pickupLat: Double
     pickupLon: Double
@@ -46,6 +51,7 @@ types:
 
   ShuttleInterestMapPoint:
     personId: Id Person
+    passOrganizationId: Id PassOrganization
     companyDomain: Text
     tripType: ShuttleTripType
     pickupLat: Double
@@ -56,6 +62,36 @@ types:
   ShuttleInterestMapResp:
     points: "[ShuttleInterestMapPoint]"
 
+  # The city's published corporate shuttle routes, as GIMS serves them from the corp_<city> GTFS feed (the single source
+  # for routes): every route with its stops in order and its first trip's times.
+  ShuttlePublishedStop:
+    stopCode: Text
+    name: Text
+    lat: Double
+    lon: Double
+    sequence: Int
+    minutesFromStart: Maybe Int # from the route's first trip (GIMS example trip)
+
+  # A published trip on the day asked for (or on every day it runs, when no day is asked for).
+  ShuttlePublishedTripInfo:
+    tripId: Text
+    departure: Text # HH:MM from the route's first stop
+    days: "[Text]" # lower-case day names the trip runs (just the asked day when a day is asked for)
+    riders: Int # employees planned on it (on the asked day; else the most on any day)
+
+  ShuttlePublishedRoute:
+    routeCode: Text # CORP-<ORG>-<n>
+    shortName: Text
+    name: Text # the GTFS long name: the stops in order
+    tripCount: Maybe Int
+    firstDeparture: Maybe Text # HH:MM of the route's first trip
+    stops: "[ShuttlePublishedStop]"
+    trips: "[ShuttlePublishedTripInfo]" # its trips (on the asked day), from the published timetable
+
+  ShuttlePublishedRoutesResp:
+    feedKey: Maybe Text # corp_<city>, or none when the city has no published corporate feed
+    routes: "[ShuttlePublishedRoute]"
+
 apis:
   - GET:
       endpoint: /list
@@ -63,6 +99,7 @@ apis:
       migrate:
         capability: corporate-shuttle.interest.read
       query:
+        - passOrganizationId: Id PassOrganization
         - companyDomain: Text
         - limit: Int
         - offset: Int
@@ -74,6 +111,16 @@ apis:
       migrate:
         capability: corporate-shuttle.interest.read
       query:
+        - passOrganizationId: Id PassOrganization
         - companyDomain: Text
       response:
         type: ShuttleInterestMapResp
+  - GET:
+      endpoint: /publishedRoutes
+      auth: ApiAuthV2
+      migrate:
+        capability: corporate-shuttle.interest.read
+      query:
+        - day: Text # e.g. monday: only the routes with a trip that day, with that day's trips
+      response:
+        type: ShuttlePublishedRoutesResp

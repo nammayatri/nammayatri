@@ -1,0 +1,11 @@
+{
+  "_note": "LOCAL dev ids: the rider city and the corp_chennai rows that Backend/dev/local-testing-data/shared-route-extra-setup.sql creates (integratedBppConfigId = md5('e2e-corp-shuttle-ibc')::uuid, vehicleServiceTierId = md5('e2e-corp-tier')::uuid). Replace them with an environment's own ids before generating fares for it.",
+  "cityName": "Chennai",
+  "timezone": "Asia/Kolkata",
+  "merchantId": "4b17bd06-ae7e-48e9-85bf-282fb310209c",
+  "merchantOperatingCityId": "c7e3c3eb-cc15-46d4-ba04-5af55ac87874",
+  "integratedBppConfigId": "5190da6e-3400-8d10-9f5a-62af9dbf7dff",
+  "vehicleServiceTierId": "4caf3f94-0f93-7f16-ce14-7f7b6f753401",
+  "vehicleType": "BUS",
+  "idSeedPrefix": "e2e-corp"
+}

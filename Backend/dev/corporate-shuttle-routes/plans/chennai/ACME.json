@@ -1,0 +1,24 @@
+{
+  "org": "ACME",
+  "companyName": "ACME Corp",
+  "routes": [
+    {
+      "n": 1,
+      "name": "Thiruvanmiyur - ACME campus (OMR)",
+      "direction": "TO_OFFICE",
+      "stops": [
+        {"name": "Thiruvanmiyur", "lat": 12.983, "lon": 80.2594},
+        {"name": "Perungudi", "lat": 12.9654, "lon": 80.2461},
+        {"name": "Thoraipakkam", "lat": 12.9407, "lon": 80.2361},
+        {"name": "Sholinganallur", "lat": 12.901, "lon": 80.2279},
+        {"name": "ACME campus", "lat": 12.825, "lon": 80.218}
+      ],
+      "minutesBetweenStops": 10,
+      "departures": ["08:30", "18:00"],
+      "serviceDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "startDate": "20261201",
+      "endDate": "20271130",
+      "fareInr": 40
+    }
+  ]
+}

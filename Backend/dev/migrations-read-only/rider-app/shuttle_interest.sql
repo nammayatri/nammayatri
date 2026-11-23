@@ -11,6 +11,7 @@ ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_time time ;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN max_walking_distance_meters integer NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pass_organization_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN person_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_address text NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_lat double precision NOT NULL;

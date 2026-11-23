@@ -2,18 +2,22 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  PassOrganization: Domain.Types.PassOrganization
   UTCTime: Data.Time
   DayOfWeek: Data.Time.Calendar
   TimeOfDay: Data.Time.LocalTime
 
 # Corporate shuttle interest form: one row per employee (resubmitting replaces it). Collected before routes and stops are
-# fixed, so ops can plan them from real demand. Only employees with a verified work (business) email can submit.
+# fixed, so ops can plan them from real demand. Only employees whose verified work (business) email belongs to a company
+# (a corporate pass organisation, see SharedLogic.CorporateMembership) can submit.
 ShuttleInterest:
   tableName: shuttle_interest
 
   fields:
     personId: Id Person
-    # domain of the verified work email, lower-case (e.g. juspay.in, nammayatri.in): tells the companies apart in the control centre
+    # the employee's company: the corporate pass organisation that owns their work-email domain
+    passOrganizationId: Id PassOrganization
+    # domain of the verified work email, lower-case (e.g. acme.example), kept for display
     companyDomain: Text
     pickupLat: Double
     pickupLon: Double
@@ -79,6 +83,7 @@ ShuttleInterest:
 
   constraints:
     personId: PrimaryKey
+    passOrganizationId: SecondaryKey
 
   queries:
     findAllByMerchantOperatingCityId:
@@ -88,10 +93,10 @@ ShuttleInterest:
         field: updatedAt
         order: desc
 
-    findAllByMerchantOperatingCityIdAndCompanyDomain:
+    findAllByMerchantOperatingCityIdAndPassOrganizationId:
       kvFunction: findAllWithOptionsKV
       where:
-        and: [merchantOperatingCityId, companyDomain]
+        and: [merchantOperatingCityId, passOrganizationId]
       orderBy:
         field: updatedAt
         order: desc

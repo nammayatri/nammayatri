@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Data.Time
+
+# Corporate shuttle: which day each published trip runs, and how many employees it carries that day. Written by the publish
+# tool (Backend/dev/corporate-shuttle-routes) from the plan, next to the GTFS feed: GIMS serves the routes, stops and stop
+# times but not the trips' calendar, so the days are kept here. One row per trip and day.
+ShuttlePublishedTrip:
+  tableName: shuttle_published_trip
+
+  fields:
+    tripId: Text # <route>-<HHMM>, as in the GTFS feed
+    day: Text # lower-case day name, e.g. monday
+    feedKey: Text # corp_<city>
+    routeCode: Text # CORP-<ORG>-<n>
+    departure: Text # HH:MM from the route's first stop
+    riders: Int # employees planned on this trip that day
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    tripId: PrimaryKey
+    day: PrimaryKey
+    feedKey: SecondaryKey
+
+  sqlType:
+    tripId: text
+    day: text
+    feedKey: text
+    routeCode: text
+    departure: text
+
+  queries:
+    findAllByFeedKey:
+      kvFunction: findAllWithKV
+      where: feedKey
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

@@ -28,6 +28,13 @@
 -- 1. Feed config: integrated_bpp_config rows for the corporate feed (rider MULTIMODAL + APPLICATION, driver APPLICATION),
 --    with the demand knobs on the rider rows' DIRECT provider config.
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+-- Module C: the city's OTP and GIMS endpoints point at the local servers that serve the corp_chennai feed (OTP on 8089, GIMS on
+-- 8090), as shared-cab-extra-setup.sql does for its feed. The feed itself is built by Backend/dev/corporate-shuttle-routes.
+UPDATE atlas_app.merchant_service_config SET config_json = jsonb_set(config_json::jsonb,'{baseUrl}','"http://localhost:8089/otp/gtfs/v1/"')::json
+ WHERE service_name='MultiModal_OTPTransit' AND merchant_operating_city_id='c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
+UPDATE atlas_app.merchant_service_config SET config_json = jsonb_set(config_json::jsonb,'{baseUrl}','"http://localhost:8090"')::json
+ WHERE service_name='MultiModalStaticData_OTPTransit' AND merchant_operating_city_id='c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
+
 -- rider MULTIMODAL row, cloned from the imported Chennai bus DIRECT row so the OTP/GTFS endpoints and cipher key carry over
 INSERT INTO atlas_app.integrated_bpp_config (id, agency_key, domain, feed_key, merchant_id, merchant_operating_city_id, platform_type, config_json, vehicle_category, created_at, updated_at)
 SELECT md5('e2e-corp-shuttle-ibc')::uuid::text, 'corp_chennai', 'FRFS', 'corp_chennai', '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874', 'MULTIMODAL', config_json, 'BUS', now(), now()
@@ -95,9 +102,13 @@ ON CONFLICT DO NOTHING;
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 5. The company (rider side): one pass organization for ACME. pass_enum reuses RegularPass until module C decides whether a
---    corporate pass type is needed; the admin person is the first seeded rider of the city. Email domains land with module C.
+--    corporate pass type is needed; the admin person is the first seeded rider of the city. Email domains: set below (module C).
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 INSERT INTO atlas_app.pass_organization (id, name, pass_enum, person_id, merchant_id, merchant_operating_city_id, address, created_at, updated_at)
 SELECT md5('e2e-corp-org-acme')::uuid::text, 'ACME Corp', 'RegularPass', p.id, '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874', 'ACME campus, OMR, Chennai', now(), now()
 FROM atlas_app.person p WHERE p.merchant_operating_city_id = 'c7e3c3eb-cc15-46d4-ba04-5af55ac87874' ORDER BY p.created_at LIMIT 1
 ON CONFLICT DO NOTHING;
+
+-- Module C: ACME's work-email domain. A rider whose verified business email is @acme.example belongs to ACME
+-- (SharedLogic.CorporateMembership); the dashboard sets this through passOrganization/update's emailDomains.
+UPDATE atlas_app.pass_organization SET email_domains = '{acme.example}' WHERE id = md5('e2e-corp-org-acme')::uuid::text;

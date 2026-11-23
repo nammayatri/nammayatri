@@ -1,5 +1,6 @@
 module Domain.Action.UI.ShuttleInterest
   ( postShuttleInterest,
+    getShuttleEligibility,
   )
 where
 
@@ -7,14 +8,15 @@ import qualified API.Types.UI.ShuttleInterest as API
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.PassOrganization as DPassOrganization
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ShuttleInterest as DShuttleInterest
 import qualified Environment
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CorporateMembership as SCorporate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ShuttleInterest as QShuttleInterest
 import Tools.Error
@@ -23,22 +25,20 @@ allowedTimeFlexibilityMinutes :: [Int]
 allowedTimeFlexibilityMinutes = [15, 30]
 
 -- | Submit the corporate shuttle interest form (page 2). Page 1 is the existing business-email OTP flow
--- (/auth/business-email/send-verification and /verify); the form is accepted only after it. A second submission replaces
--- the first (one row per person).
+-- (/auth/business-email/send-verification and /verify); the form is accepted only after it, and only when the email's
+-- domain belongs to a company (SharedLogic.CorporateMembership). A second submission replaces the first (one row per person).
 postShuttleInterest :: (Maybe (Id DP.Person), Id DM.Merchant) -> API.ShuttleInterestReq -> Environment.Flow APISuccess
 postShuttleInterest (mbPersonId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  unless (person.businessProfileVerified == Just True) $
-    throwError $ InvalidRequest "Please verify your work email to continue"
-  businessEmail <- mapM decrypt person.businessEmail
-  companyDomain <- (businessEmail >>= emailDomain) & fromMaybeM (InvalidRequest "Please verify your work email to continue")
+  (company, companyDomain) <- SCorporate.requireCorporateOrg person
   validateRequest req
   now <- getCurrentTime
   mbExisting <- QShuttleInterest.findByPrimaryKey personId
   let interest =
         DShuttleInterest.ShuttleInterest
           { DShuttleInterest.personId = personId,
+            DShuttleInterest.passOrganizationId = company.id,
             DShuttleInterest.companyDomain = companyDomain,
             DShuttleInterest.pickupLat = req.pickupLat,
             DShuttleInterest.pickupLon = req.pickupLon,
@@ -67,11 +67,27 @@ postShuttleInterest (mbPersonId, _) req = do
     Nothing -> QShuttleInterest.create interest
   pure Success
 
--- | Lower-cased domain of an email, same parsing as the business-email domain in Domain.Action.UI.Search.
-emailDomain :: Text -> Maybe Text
-emailDomain email =
-  let domain = T.toLower . T.drop 1 . T.strip . snd $ T.breakOn "@" email
-   in if T.isInfixOf "@" email && not (T.null domain) then Just domain else Nothing
+-- | Between the work-email OTP and the form: whether the caller can fill it, and for which company. The company's
+-- address prefills the form's drop.
+getShuttleEligibility :: (Maybe (Id DP.Person), Id DM.Merchant) -> Environment.Flow API.ShuttleEligibilityResp
+getShuttleEligibility (mbPersonId, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbCompany <- fmap fst <$> SCorporate.findCorporateOrg person
+  hasSubmittedInterest <- isJust <$> QShuttleInterest.findByPrimaryKey personId
+  pure $ mkEligibility person mbCompany hasSubmittedInterest
+
+mkEligibility :: DP.Person -> Maybe DPassOrganization.PassOrganization -> Bool -> API.ShuttleEligibilityResp
+mkEligibility person mbCompany hasSubmittedInterest =
+  API.ShuttleEligibilityResp
+    { API.workEmailVerified = person.businessProfileVerified == Just True,
+      API.eligible = isJust mbCompany,
+      API.companyName = (.name) <$> mbCompany,
+      API.officeAddress = mbCompany >>= (.address),
+      API.officeLat = mbCompany >>= (.officeLat),
+      API.officeLon = mbCompany >>= (.officeLon),
+      API.hasSubmittedInterest = hasSubmittedInterest
+    }
 
 needsPickupTime :: DShuttleInterest.ShuttleTripType -> Bool
 needsPickupTime tripType = tripType /= DShuttleInterest.TO_HOME

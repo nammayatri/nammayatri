@@ -11,6 +11,18 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data ShuttleEligibilityResp = ShuttleEligibilityResp
+  { companyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    eligible :: Kernel.Prelude.Bool,
+    hasSubmittedInterest :: Kernel.Prelude.Bool,
+    officeAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    officeLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    officeLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    workEmailVerified :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ShuttleInterestReq = ShuttleInterestReq
   { acPreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference,
     daysOfWeek :: [Data.Time.Calendar.DayOfWeek],

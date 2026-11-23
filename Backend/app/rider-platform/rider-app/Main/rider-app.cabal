@@ -594,6 +594,7 @@ library
       SharedLogic.Cancel
       SharedLogic.CancellationFee
       SharedLogic.Confirm
+      SharedLogic.CorporateMembership
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
       SharedLogic.DriverNumber
@@ -1512,6 +1513,7 @@ library
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
       Domain.Types.ShuttleInterest
+      Domain.Types.ShuttlePublishedTrip
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1693,6 +1695,7 @@ library
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
       Storage.Beam.ShuttleInterest
+      Storage.Beam.ShuttlePublishedTrip
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1961,6 +1964,7 @@ library
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
       Storage.Queries.ShuttleInterest
+      Storage.Queries.ShuttlePublishedTrip
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation

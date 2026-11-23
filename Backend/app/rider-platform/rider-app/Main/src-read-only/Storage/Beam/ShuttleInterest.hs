@@ -25,6 +25,7 @@ data ShuttleInterestT f = ShuttleInterestT
     maxWalkingDistanceMeters :: (B.C f Kernel.Prelude.Int),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    passOrganizationId :: (B.C f Kernel.Prelude.Text),
     personId :: (B.C f Kernel.Prelude.Text),
     pickupAddress :: (B.C f Kernel.Prelude.Text),
     pickupLat :: (B.C f Kernel.Prelude.Double),
@@ -45,6 +46,6 @@ instance B.Table ShuttleInterestT where
 
 type ShuttleInterest = ShuttleInterestT Identity
 
-$(enableKVPG (''ShuttleInterestT) [('personId)] [])
+$(enableKVPG (''ShuttleInterestT) [('personId)] [[('passOrganizationId)]])
 
 $(mkTableInstances (''ShuttleInterestT) "shuttle_interest")

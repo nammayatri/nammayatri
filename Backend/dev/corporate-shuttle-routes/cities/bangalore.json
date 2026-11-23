@@ -1,0 +1,19 @@
+{
+  "_note": "LOCAL dev ids: the local Bangalore NAMMA_YATRI city and the corp_bangalore feed rows that publish_local.py creates (ids are md5 of their seeds, as Postgres md5(seed)::uuid). Replace them with an environment's own ids before generating fares for it.",
+  "cityName": "Bangalore",
+  "timezone": "Asia/Kolkata",
+  "merchantShortId": "NAMMA_YATRI",
+  "apiCity": "std:080",
+  "merchantId": "4b17bd06-ae7e-48e9-85bf-282fb310209c",
+  "merchantOperatingCityId": "36ebf5ac-7916-94c7-4286-3a28dd64cbcc",
+  "integratedBppConfigId": "f7ffd628-2b45-b387-fa3f-8a59cecf1924",
+  "applicationIntegratedBppConfigId": "4c049faa-8e51-52fd-99a3-62c13b81f6cc",
+  "vehicleServiceTierId": "41edefe4-02e8-c96a-e961-efce4b76a7a3",
+  "vehicleType": "BUS",
+  "idSeedPrefix": "local-corp-bangalore",
+  "gimsUrl": "http://localhost:8090",
+  "orgs": {
+    "Namma Yatri": "NY",
+    "Juspay": "JUSPAY"
+  }
+}

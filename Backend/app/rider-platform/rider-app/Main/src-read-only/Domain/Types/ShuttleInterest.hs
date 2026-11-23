@@ -11,6 +11,7 @@ import qualified Data.Time.LocalTime
 import Domain.Types.Extra.ShuttleInterest as ReExport
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.Person
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -29,6 +30,7 @@ data ShuttleInterest = ShuttleInterest
     maxWalkingDistanceMeters :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pickupAddress :: Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,

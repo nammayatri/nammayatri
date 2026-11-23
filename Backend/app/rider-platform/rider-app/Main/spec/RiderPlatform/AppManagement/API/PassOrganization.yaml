@@ -67,6 +67,11 @@ types:
     name: Text
     address: Maybe Text
     passEnum: PassEnum
+    # Corporate shuttle: the company's work-email domains (e.g. acme.example). Left out = keep the current ones; [] clears them.
+    emailDomains: "Maybe [Text]"
+    # Corporate shuttle: the office's location (both or neither). Left out = keep the current one.
+    officeLat: Maybe Double
+    officeLon: Maybe Double
     derive: "'HideSecrets"
 
   GetOrganizationResp:
@@ -74,6 +79,9 @@ types:
     name: Text
     address: Maybe Text
     depotId: Maybe Text
+    emailDomains: "[Text]"
+    officeLat: Maybe Double
+    officeLon: Maybe Double
 
   DepotAssign:
     id: Id PassOrganization

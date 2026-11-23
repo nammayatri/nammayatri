@@ -8,6 +8,7 @@ import qualified Data.Singletons.TH
 import qualified Data.Time
 import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
+import qualified "this" Domain.Types.PassOrganization
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.ShuttleInterest
 import EulerHS.Prelude hiding (id, state)
@@ -21,6 +22,7 @@ import Servant.Client
 data ShuttleInterestItem = ShuttleInterestItem
   { acPreference :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleAcPreference,
     companyDomain :: Kernel.Prelude.Text,
+    companyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Data.Time.UTCTime,
     daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
     dropAddress :: Kernel.Prelude.Text,
@@ -29,6 +31,7 @@ data ShuttleInterestItem = ShuttleInterestItem
     dropTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
     employeeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maxWalkingDistanceMeters :: Kernel.Prelude.Int,
+    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pickupAddress :: Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,
@@ -52,6 +55,7 @@ data ShuttleInterestMapPoint = ShuttleInterestMapPoint
   { companyDomain :: Kernel.Prelude.Text,
     dropLat :: Kernel.Prelude.Double,
     dropLon :: Kernel.Prelude.Double,
+    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pickupLat :: Kernel.Prelude.Double,
     pickupLon :: Kernel.Prelude.Double,
@@ -64,35 +68,82 @@ data ShuttleInterestMapResp = ShuttleInterestMapResp {points :: [ShuttleInterest
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = "shuttleInterest" :> (GetShuttleInterestList :<|> GetShuttleInterestMapPoints)
+data ShuttlePublishedRoute = ShuttlePublishedRoute
+  { firstDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    shortName :: Kernel.Prelude.Text,
+    stops :: [ShuttlePublishedStop],
+    tripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    trips :: [ShuttlePublishedTripInfo]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttlePublishedRoutesResp = ShuttlePublishedRoutesResp {feedKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text, routes :: [ShuttlePublishedRoute]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttlePublishedStop = ShuttlePublishedStop
+  { lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    minutesFromStart :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    name :: Kernel.Prelude.Text,
+    sequence :: Kernel.Prelude.Int,
+    stopCode :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShuttlePublishedTripInfo = ShuttlePublishedTripInfo {days :: [Kernel.Prelude.Text], departure :: Kernel.Prelude.Text, riders :: Kernel.Prelude.Int, tripId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = "shuttleInterest" :> (GetShuttleInterestList :<|> (GetShuttleInterestMapPoints :<|> GetShuttleInterestPublishedRoutes))
 
 type GetShuttleInterestList =
   "list"
-    :> ( QueryParam "companyDomain" Kernel.Prelude.Text
-           :> ( QueryParam "limit" Kernel.Prelude.Int
-                  :> ( QueryParam "offset" Kernel.Prelude.Int
-                         :> Get
-                              ('[JSON])
-                              ShuttleInterestListResp
+    :> ( QueryParam "passOrganizationId" (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization)
+           :> ( QueryParam
+                  "companyDomain"
+                  Kernel.Prelude.Text
+                  :> ( QueryParam "limit" Kernel.Prelude.Int
+                         :> ( QueryParam "offset" Kernel.Prelude.Int
+                                :> Get
+                                     ('[JSON])
+                                     ShuttleInterestListResp
+                            )
                      )
               )
        )
 
-type GetShuttleInterestMapPoints = "mapPoints" :> (QueryParam "companyDomain" Kernel.Prelude.Text :> Get ('[JSON]) ShuttleInterestMapResp)
+type GetShuttleInterestMapPoints =
+  "mapPoints"
+    :> ( QueryParam "passOrganizationId" (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization)
+           :> ( QueryParam
+                  "companyDomain"
+                  Kernel.Prelude.Text
+                  :> Get ('[JSON]) ShuttleInterestMapResp
+              )
+       )
+
+type GetShuttleInterestPublishedRoutes = "publishedRoutes" :> (QueryParam "day" Kernel.Prelude.Text :> Get ('[JSON]) ShuttlePublishedRoutesResp)
 
 data ShuttleInterestAPIs = ShuttleInterestAPIs
-  { getShuttleInterestList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ShuttleInterestListResp))),
-    getShuttleInterestMapPoints :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttleInterestMapResp)
+  { getShuttleInterestList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ShuttleInterestListResp)))),
+    getShuttleInterestMapPoints :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttleInterestMapResp)),
+    getShuttleInterestPublishedRoutes :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttlePublishedRoutesResp)
   }
 
 mkShuttleInterestAPIs :: Client EulerHS.Types.EulerClient API -> ShuttleInterestAPIs
 mkShuttleInterestAPIs shuttleInterestClient = (ShuttleInterestAPIs {..})
   where
-    getShuttleInterestList :<|> getShuttleInterestMapPoints = shuttleInterestClient
+    getShuttleInterestList :<|> getShuttleInterestMapPoints :<|> getShuttleInterestPublishedRoutes = shuttleInterestClient
 
 data ShuttleInterestUserActionType
   = GET_SHUTTLE_INTEREST_LIST
   | GET_SHUTTLE_INTEREST_MAP_POINTS
+  | GET_SHUTTLE_INTEREST_PUBLISHED_ROUTES
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

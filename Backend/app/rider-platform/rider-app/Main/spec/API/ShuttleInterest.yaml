@@ -28,6 +28,16 @@ types:
     acPreference: Maybe ShuttleAcPreference
     vehicleSizePreference: Maybe ShuttleVehicleSizePreference
 
+  # Whether the caller can fill the form: their work email is verified and belongs to an onboarded company.
+  ShuttleEligibilityResp:
+    workEmailVerified: Bool # the business email OTP is done
+    eligible: Bool # verified, and the email's domain belongs to a company
+    companyName: Maybe Text
+    officeAddress: Maybe Text # the company's address, to prefill the form's drop
+    officeLat: Maybe Double # the office's location: the form's drop
+    officeLon: Maybe Double
+    hasSubmittedInterest: Bool
+
 apis:
   # POST /shuttle/interest  (creates the caller's interest, or replaces the one they already submitted)
   - POST:
@@ -37,3 +47,10 @@ apis:
         type: ShuttleInterestReq
       response:
         type: APISuccess
+
+  # GET /shuttle/eligibility  (after the work-email OTP: which company the caller belongs to, before showing the form)
+  - GET:
+      endpoint: /shuttle/eligibility
+      auth: TokenAuth
+      response:
+        type: ShuttleEligibilityResp
