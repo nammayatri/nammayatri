@@ -57,7 +57,9 @@ data CampaignControls = CampaignControls
     poolingEnableIn :: Mg.ControlFeatureEnableIn,
     -- | Raw PreferencePolicy perk config; the driver preference policy layer decodes it.
     preferencePolicy :: Maybe A.Value,
-    preferencePolicyEnableIn :: Mg.ControlFeatureEnableIn
+    preferencePolicyEnableIn :: Mg.ControlFeatureEnableIn,
+    -- | ShowAssuredLabel switch (rider "Assured ride" label while the AutoAssign / PoolingPriority perk is active).
+    showAssuredLabel :: Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
@@ -128,5 +130,6 @@ toControls cjm milestones journeyType =
           poolingPriority = parsed.poolingPriority,
           poolingEnableIn = parsed.poolingEnableIn,
           preferencePolicy = parsed.preferencePolicy,
-          preferencePolicyEnableIn = parsed.preferencePolicyEnableIn
+          preferencePolicyEnableIn = parsed.preferencePolicyEnableIn,
+          showAssuredLabel = parsed.showAssuredLabel
         }

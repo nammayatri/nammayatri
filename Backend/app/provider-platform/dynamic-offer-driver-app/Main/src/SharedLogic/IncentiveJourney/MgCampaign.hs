@@ -22,6 +22,9 @@ module SharedLogic.IncentiveJourney.MgCampaign
     mgAutoAssignConfig,
     mgAutoAssignConfigFromSnapshot,
     mgPreferencePolicyValue,
+    isAssuredLabelActive,
+    assuredLabelFromTagsAt,
+    resolveMgAssuredLabel,
     -- Legacy alias used by older call sites during transition.
     syncMgCampaignSnapshot,
   )
@@ -345,7 +348,8 @@ resolveFromControls localTime membership optedIn = \case
                 poolingPriority = controls.poolingPriority,
                 poolingEnableIn = controls.poolingEnableIn,
                 preferencePolicy = controls.preferencePolicy,
-                preferencePolicyEnableIn = controls.preferencePolicyEnableIn
+                preferencePolicyEnableIn = controls.preferencePolicyEnableIn,
+                showAssuredLabel = controls.showAssuredLabel
               }
           -- Membership (fleet slot) once startDate <= now; enableIn gates each perk separately.
           membershipActive =
@@ -418,23 +422,62 @@ resolveMgPerkSource merchantOpCityId mbInfo = do
     Nothing -> pure UseNoCampaign
     Just info -> do
       mbPerson <- QPerson.findById info.driverId
-      transporterConfig <-
-        getOneConfig
-          (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
-          Nothing
-      now <- getCurrentTime
-      localTime <- case transporterConfig of
-        Just tc -> getLocalCurrentTime tc.timeDiffFromUtc
-        Nothing -> pure now
       case mbPerson >>= (.driverTag) of
-        Just tags -> do
-          -- Drop expired IJCampaign tags (Assigned must be written with UCM/streak expiry).
-          let memberships = membershipsFromTags (YUtils.filterExpiredTags' now tags)
-          sources <- forM memberships $ \membership -> do
-            mbControls <- getCampaignControls (Id membership.cjmId)
-            pure $ resolveFromControls localTime membership True mbControls
-          pure $ foldl' mergePerkSources UseNoCampaign sources
+        Just tags -> foldl' mergePerkSources UseNoCampaign <$> membershipPerkSources merchantOpCityId tags
         Nothing -> pure UseNoCampaign
+
+-- | One source per unexpired IJCampaign membership tag, before merging (city-local clock from the transporter config).
+-- 'resolveMgPerkSource' merges them; the assured label looks at each campaign on its own.
+membershipPerkSources ::
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  [LYT.TagNameValueExpiry] ->
+  m [MgPerkSource]
+membershipPerkSources merchantOpCityId tags = do
+  transporterConfig <-
+    getOneConfig
+      (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      Nothing
+  now <- getCurrentTime
+  localTime <- case transporterConfig of
+    Just tc -> getLocalCurrentTime tc.timeDiffFromUtc
+    Nothing -> pure now
+  -- Drop expired IJCampaign tags (Assigned must be written with UCM/streak expiry).
+  let memberships = membershipsFromTags (YUtils.filterExpiredTags' now tags)
+  forM memberships $ \membership -> do
+    mbControls <- getCampaignControls (Id membership.cjmId)
+    pure $ resolveFromControls localTime membership True mbControls
+
+-- | The rider "Assured ride" label for ONE campaign membership: the campaign has ShowAssuredLabel and its AutoAssign
+-- or PoolingPriority perk is active right now. Built on the same per-membership resolution as the perks
+-- ('resolveFromControls': campaign enabled, started, membership tag unexpired (OptIn tags exist only after opt-in),
+-- that perk's enableIn window open in city-local time), so the label cannot disagree with dispatch / pooling.
+isAssuredLabelActive :: MgPerkSource -> Bool
+isAssuredLabelActive = \case
+  UseNoCampaign -> False
+  CampaignMember {snapshot, autoAssignPerkActive, poolingPerkActive} ->
+    snapshot.showAssuredLabel
+      && ( (autoAssignPerkActive && isJust snapshot.autoAssign)
+             || (poolingPerkActive && isJust snapshot.poolingPriority)
+         )
+
+-- | Pure core of 'resolveMgAssuredLabel': @now@ (UTC, for tag expiry), @localTime@ (city-local wall clock, for windows),
+-- the person's tags and the campaign controls by cjm id. True when any membership shows the label.
+assuredLabelFromTagsAt :: UTCTime -> UTCTime -> [LYT.TagNameValueExpiry] -> (Text -> Maybe CampaignControls) -> Bool
+assuredLabelFromTagsAt now localTime tags controlsFor =
+  any
+    (\membership -> isAssuredLabelActive (resolveFromControls localTime membership True (controlsFor membership.cjmId)))
+    (membershipsFromTags (YUtils.filterExpiredTags' now tags))
+
+-- | Whether the rider should see the "Assured ride" label for this driver now (any of their campaign memberships).
+resolveMgAssuredLabel ::
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe [LYT.TagNameValueExpiry] ->
+  m Bool
+resolveMgAssuredLabel merchantOpCityId = \case
+  Nothing -> pure False
+  Just tags -> any isAssuredLabelActive <$> membershipPerkSources merchantOpCityId tags
 
 mgForbidsDriverCancellation :: MgPerkSource -> Maybe Bool
 mgForbidsDriverCancellation = \case

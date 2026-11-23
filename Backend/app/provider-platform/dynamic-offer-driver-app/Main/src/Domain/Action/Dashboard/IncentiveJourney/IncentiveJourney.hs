@@ -27,6 +27,7 @@ where
 import qualified API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney as Common
 import qualified AWS.S3 as S3
 import qualified Dashboard.Common
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time (Day)
@@ -49,6 +50,7 @@ import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle
 import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3 as DBulkAssign
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as Fields
+import qualified Lib.IncentiveJourney.MgCampaign as Mg
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
@@ -307,6 +309,7 @@ postIncentiveJourneyCohortJourneyCreate ::
 postIncentiveJourneyCohortJourneyCreate merchantShortId opCity req = do
   -- Driver preference policy perk (controlFeatures PreferencePolicy): 400 INVALID_PREFERENCE_POLICY before any write.
   DPP.validateCampaignControlFeatures req.controlFeatures
+  validateAssuredLabel req.controlFeatures
   res <- LibProvider.postIncentiveJourneyCohortJourneyCreate mkHandle (ShortId merchantShortId.getShortId) opCity req
   schedulePreferencePolicyWindows (cast res.cohortJourneyMappingId)
   pure res
@@ -329,10 +332,18 @@ putIncentiveJourneyCohortJourneyUpdate ::
 putIncentiveJourneyCohortJourneyUpdate merchantShortId opCity req = do
   -- Omitted controlFeatures keep the stored ones (already checked); a sent list is checked before any write.
   DPP.validateCampaignControlFeatures req.controlFeatures
+  validateAssuredLabel req.controlFeatures
   res <- LibProvider.putIncentiveJourneyCohortJourneyUpdate mkHandle (ShortId merchantShortId.getShortId) opCity req
   CampaignControlsCache.refreshCampaignControls (cast req.cohortJourneyMappingId)
   schedulePreferencePolicyWindows (cast req.cohortJourneyMappingId)
   pure res
+
+-- | ShowAssuredLabel only next to at least one real perk (AutoAssign / PoolingPriority / CanDxCancelBooking /
+-- PreferencePolicy): a label-only campaign would never show it and must not look like a perk campaign. 400.
+validateAssuredLabel :: Maybe A.Value -> Environment.Flow ()
+validateAssuredLabel mbControlFeatures =
+  when (Mg.assuredLabelWithoutPerk mbControlFeatures) $
+    throwError $ InvalidRequest "ShowAssuredLabel needs at least one perk in controlFeatures (AutoAssign, PoolingPriority, CanDxCancelBooking or PreferencePolicy)"
 
 -- | After a campaign save: a TimeBound PreferencePolicy perk is re-applied to the members at every window start
 -- (allocator job ApplyPreferencePolicy, CampaignPolicySource); this save's chain replaces any older one. A failure to
