@@ -211,14 +211,7 @@ postMerchantUpdate merchantShortId city req = do
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
 
-  mbAllExophones <- forM req.exoPhones $ \exophones -> do
-    allExophones <- CQExophone.findAllExophones
-    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantOperatingCityId /= merchantOperatingCity.id) allExophones
-    let reqPhones = getAllPhones $ toList exophones
-    let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
-    unless (null busyPhones) $ do
-      throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
-    pure allExophones
+  mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
   whenJust req.exoPhones \exophones -> do
@@ -233,8 +226,6 @@ postMerchantUpdate merchantShortId city req = do
     CQExophone.clearCache merchantOperatingCity.id oldExophones
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
-  where
-    getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
 
 buildExophone :: MonadGuid m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
 buildExophone merchantId merchantOperatingCityId now req = do

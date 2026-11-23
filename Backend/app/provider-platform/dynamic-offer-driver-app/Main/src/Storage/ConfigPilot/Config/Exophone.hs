@@ -36,7 +36,7 @@ instance ConfigDimensions ExophoneDimensions where
   configDBFetch a = Just (QExophone.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     let fetch = case a.phoneNumber of
-          Just pn -> maybeToList <$> SQ.findByPrimaryPhone pn
+          Just pn -> maybeToList <$> SQ.findByPrimaryPhone (Id a.merchantOperatingCityId) pn
           Nothing -> SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId)
      in LCP.resolveConfigList
           a
