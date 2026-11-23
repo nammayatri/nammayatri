@@ -1,8 +1,9 @@
 {
   "scenario": "fav-replace",
-  "description": "Favourites (hand-written, not from TS): saving under an existing name asks to replace; Yes deletes the old Home and saves the new one.",
+  "description": "Favourites (hand-written, not from TS): saving under an existing name asks to replace; Yes replaces the old Home with the new one in one backend call.",
   "env": {
     "merchant": "pn_flexi",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {
@@ -212,7 +213,7 @@
       "expectBackend": []
     },
     {
-      "note": "Home already exists -> replace prompt, nothing saved yet",
+      "note": "Home already exists -> replace prompt, nothing saved yet [review fix: the saved list is read again before checking the name]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -267,10 +268,15 @@
           ]
         }
       ],
-      "expectBackend": []
+      "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
     },
     {
-      "note": "Yes -> deleteSavedLocation Home, addSavedLocation Home -> back to the confirm",
+      "note": "Yes -> replaceSavedLocation Home (one call; the backend keeps the old Home if the new one can't be saved) -> back to the confirm",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -327,18 +333,12 @@
       ],
       "expectBackend": [
         {
-          "args": [
-            "Home"
-          ],
-          "method": "deleteSavedLocation"
-        },
-        {
+          "method": "replaceSavedLocation",
           "args": [
             "Home",
             13.34,
             77.1
-          ],
-          "method": "addSavedLocation"
+          ]
         }
       ]
     }

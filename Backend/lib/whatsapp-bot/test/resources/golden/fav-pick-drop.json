@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): regular rider shares a pickup pin, then picks Work as the drop from the list.",
   "env": {
     "merchant": "pn_reg",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {

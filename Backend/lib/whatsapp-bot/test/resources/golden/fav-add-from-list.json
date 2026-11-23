@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): Add a favourite from the list; Work exists, rider picks No and types Office; back to the list with Office.",
   "env": {
     "merchant": "pn_flexi",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {
@@ -200,7 +201,7 @@
       ]
     },
     {
-      "note": "Work already exists -> replace prompt",
+      "note": "Work already exists -> replace prompt [review fix: the saved list is read again before checking the name]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -255,7 +256,12 @@
           ]
         }
       ],
-      "expectBackend": []
+      "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
     },
     {
       "note": "No -> asks to type a name (text)",
@@ -312,7 +318,7 @@
       "expectBackend": []
     },
     {
-      "note": "type Office -> addSavedLocation Office -> pickup list again, now with Office",
+      "note": "type Office -> addSavedLocation Office -> pickup list again, now with Office [review fix: the saved list is read again before checking the name]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -367,6 +373,10 @@
         }
       ],
       "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        },
         {
           "args": [
             "Office",

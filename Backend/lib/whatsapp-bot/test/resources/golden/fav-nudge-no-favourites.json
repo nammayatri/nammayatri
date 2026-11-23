@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): a rider with no favourites gets the location request plus the Add a favourite message; adding Home turns the next prompt into the list.",
   "env": {
     "merchant": "pn_flexi",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {
@@ -208,7 +209,7 @@
       ]
     },
     {
-      "note": "Home -> addSavedLocation Home -> pickup question again, now as the list",
+      "note": "Home -> addSavedLocation Home -> pickup question again, now as the list [review fix: the saved list is read again before checking the name]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -265,6 +266,10 @@
         }
       ],
       "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        },
         {
           "args": [
             "Home",

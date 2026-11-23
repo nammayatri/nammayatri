@@ -21,6 +21,8 @@ extra-source-files:
     test/resources/golden/cancel-mid-search.json
     test/resources/golden/driver-not-found.json
     test/resources/golden/fav-add-from-list.json
+    test/resources/golden/fav-hi-then-quick-ride.json
+    test/resources/golden/fav-name-with-status-word.json
     test/resources/golden/fav-nudge-no-favourites.json
     test/resources/golden/fav-pick-drop.json
     test/resources/golden/fav-pick-pickup.json

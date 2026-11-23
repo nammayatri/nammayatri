@@ -2,7 +2,7 @@
 -- (Favourites / Share new location / Add a favourite) at pickup and drop, and
 -- riders with none get an "Add a favourite" nudge under the location request,
 -- and can save a place from the pickup confirmation (WhatsappBot.Flow.Favourites).
--- Same favourites as the Namma Yatri app (atlas_app.saved_req_location).
+-- Same favourites as the Namma Yatri app (atlas_app.saved_location).
 --
 -- Run BEFORE deploying the rider-app build that reads it: a key missing in every
 -- language fails the bot's translation load (WhatsappBot.Adapter.Translations).

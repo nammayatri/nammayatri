@@ -107,7 +107,11 @@ data Fixture = Fixture
 
 data FixtureEnv = FixtureEnv
   { merchant :: Text, -- phone_number_id, e.g. "pn_flexi"/"pn_reg"
-    systemTime :: UTCTime -- ISO-8601 seed for the virtual clock
+    systemTime :: UTCTime, -- ISO-8601 seed for the virtual clock
+    -- Turns on the merchant's favouritesEnabled. Absent = off, so every
+    -- fixture recorded before favourite places keeps its exact expectations;
+    -- only the fav-* scenarios set it.
+    favourites :: Maybe Bool
   }
   deriving (Generic, FromJSON)
 
@@ -449,9 +453,9 @@ mkBackend rb =
       addSavedLocation = \_a loc -> do
         recordCall (rbCalls rb) "addSavedLocation" [String loc.tag, toJSON loc.lat, toJSON loc.lon]
         guard1 rb "addSavedLocation" (pure ()),
-      deleteSavedLocation = \_a tag -> do
-        recordCall (rbCalls rb) "deleteSavedLocation" [String tag]
-        guard1 rb "deleteSavedLocation" (pure ()),
+      replaceSavedLocation = \_a loc -> do
+        recordCall (rbCalls rb) "replaceSavedLocation" [String loc.tag, toJSON loc.lat, toJSON loc.lon]
+        guard1 rb "replaceSavedLocation" (pure ()),
       updateProfile = \_a upd -> do
         recordCall (rbCalls rb) "updateProfile" [toJSON upd]
         guard1 rb "updateProfile" (pure ())
@@ -606,6 +610,7 @@ fixtureMerchant pn
           flexiSupportPhone = Just "+91 90000 12345",
           nyTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
           appDownloadUrl = "https://play.google.com/store/apps/details?id=in.juspay.nammayatri&hl=en_IN",
+          favouritesEnabled = False, -- per fixture: env.favourites (runFixture)
           cancelTriggers = ["cancel", "stop", "exit", "quit", "reset"],
           statusTriggers = ["status", "track", "where is my ride"],
           -- Unused by fixtureConfig below (it builds BotConfig directly,
@@ -805,7 +810,7 @@ runTrackerStep w i ts = do
 
 runFixture :: Fixture -> Assertion
 runFixture fx = do
-  let merchantCtx = fixtureMerchant fx.env.merchant
+  let merchantCtx = (fixtureMerchant fx.env.merchant) {favouritesEnabled = fromMaybe False fx.env.favourites}
       theKnobs = Map.fromList [(k.method, k.behavior) | k <- fromMaybe [] fx.knobs]
   w <- makeWorld merchantCtx theKnobs fx.env.systemTime
   mapM_ (\(i, s) -> runStep w merchantCtx i s) (zip [0 :: Int ..] fx.steps)
@@ -857,6 +862,8 @@ fixtureGuards =
             "cancel-mid-search.json",
             "driver-not-found.json",
             "fav-add-from-list.json",
+            "fav-hi-then-quick-ride.json",
+            "fav-name-with-status-word.json",
             "fav-nudge-no-favourites.json",
             "fav-pick-drop.json",
             "fav-pick-pickup.json",

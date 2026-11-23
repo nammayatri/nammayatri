@@ -59,8 +59,10 @@ data BackendHandle m = BackendHandle
     -- | Save a favourite place (the app's saved locations). Fails when the
     -- rider already has one with the same tag.
     addSavedLocation :: BotAuth -> BotSavedLocation -> m (Either BotError ()),
-    -- | Delete the rider's favourite with this tag.
-    deleteSavedLocation :: BotAuth -> Text -> m (Either BotError ()),
+    -- | Swap the rider's favourite with this place's tag for this place. On
+    -- failure the old favourite must still be there (the engine tells the
+    -- rider nothing changed).
+    replaceSavedLocation :: BotAuth -> BotSavedLocation -> m (Either BotError ()),
     updateProfile :: BotAuth -> BotProfileUpdate -> m (Either BotError ())
   }
 

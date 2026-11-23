@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): regular rider taps Share new location in both lists; each tap gets the location request for that question (pickup, then drop), and the pins carry on as usual.",
   "env": {
     "merchant": "pn_reg",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {

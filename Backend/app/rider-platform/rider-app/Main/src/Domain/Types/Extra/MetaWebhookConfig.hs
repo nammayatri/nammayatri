@@ -50,6 +50,10 @@ data MetaBotCfg = MetaBotCfg
     -- ride-completion message (WhatsappBot.Messages/Engine.hs) — same
     -- per-merchant pattern as nyTrackingUrl above.
     appDownloadUrl :: Text,
+    -- Favourite places on WhatsApp (saved-places list, "Save place", "Add a
+    -- favourite"). Optional: a row without the key decodes as Nothing = off,
+    -- so existing rows need no migration and each merchant opts in.
+    favouritesEnabled :: Maybe Bool,
     -- Trigger words checked against every inbound message, before anything
     -- else (WhatsappBot.Engine's intercept chain) — previously hardcoded in
     -- WhatsappBot.Ride. Per-merchant only; not per-language (still matched

@@ -11,7 +11,7 @@
   },
   "steps": [
     {
-      "note": "tap Quick Ride -> silent auth -> pickup request [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "tap Quick Ride -> silent auth -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -57,15 +57,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": [
@@ -82,7 +76,7 @@
       ]
     },
     {
-      "note": "share pickup pin -> confirm prompt [2026-11-20 favourite places: the shared pin is not a favourite, so the confirm also offers fav:save]",
+      "note": "share pickup pin -> confirm prompt",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -130,8 +124,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "pickup_confirm",
-            "pickup_adjust",
-            "fav:save"
+            "pickup_adjust"
           ]
         }
       ],
@@ -153,7 +146,7 @@
       ]
     },
     {
-      "note": "pickup_adjust -> bare location request again (suppressFare) [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "pickup_adjust -> bare location request again (suppressFare)",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -199,21 +192,15 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": []
     },
     {
-      "note": "share a different pin -> reverseGeocode again -> confirm prompt [2026-11-20 favourite places: the shared pin is not a favourite, so the confirm also offers fav:save]",
+      "note": "share a different pin -> reverseGeocode again -> confirm prompt",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -261,8 +248,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "pickup_confirm",
-            "pickup_adjust",
-            "fav:save"
+            "pickup_adjust"
           ]
         }
       ],

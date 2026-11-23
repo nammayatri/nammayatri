@@ -11,7 +11,7 @@
   },
   "steps": [
     {
-      "note": "tap ride type -> silent auth -> pickup request [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "tap ride type -> silent auth -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -57,15 +57,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "REG"
         }
       ],
       "expectBackend": [
@@ -82,7 +76,7 @@
       ]
     },
     {
-      "note": "pickup pin -> confirm [2026-10-29 message cuts: regular skips the pickup confirm and asks for the drop; the pickup_confirm step is removed] [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "pickup pin -> confirm [2026-10-29 message cuts: regular skips the pickup confirm and asks for the drop; the pickup_confirm step is removed]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -125,15 +119,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "REG"
         }
       ],
       "expectBackend": [
@@ -303,7 +291,7 @@
       ]
     },
     {
-      "note": "regular_change_drop -> re-prompt for drop [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "regular_change_drop -> re-prompt for drop",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -349,15 +337,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "REG"
         }
       ],
       "expectBackend": []
