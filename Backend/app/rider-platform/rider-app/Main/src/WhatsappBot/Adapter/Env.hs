@@ -66,11 +66,13 @@ parseRideType t = case T.toLower (T.strip t) of
 -- the single enablement + priority source: membership is "is it offered",
 -- position is display priority (see 'WhatsappBot.Flow.Booking.rideTypeButtons').
 -- Unrecognized entries are silently dropped, not an error.
-mkMerchantCtx :: Text -> DMWC.MetaBotCfg -> MerchantCtx
-mkMerchantCtx pnId c =
+-- The phone country code / length come from the row's own columns (India
+-- defaults when unset), the rest from its bot_config JSON.
+mkMerchantCtx :: DMWC.MetaWebhookConfig -> MerchantCtx
+mkMerchantCtx row =
   MerchantCtx
     { merchantLabel = c.merchantLabel,
-      phoneNumberId = pnId,
+      phoneNumberId = row.phoneNumberId,
       rideTypesOrder = mapMaybe parseRideType c.rideTypesOrder,
       maxDirectButtons = c.maxDirectButtons,
       flexiServiceArea = c.flexiServiceArea,
@@ -79,9 +81,11 @@ mkMerchantCtx pnId c =
       flexiRentalDurationS = c.flexiRentalDurationS,
       flexiIntroVideoUrl = c.flexiIntroVideoUrl,
       flexiSupportPhone = c.flexiSupportPhone,
-      nyTrackingUrl = c.nyTrackingUrl,
+      trackingUrl = fromMaybe "" c.trackingUrl,
       appDownloadUrl = c.appDownloadUrl,
       favouritesEnabled = fromMaybe False c.favouritesEnabled,
+      phoneCountryCode = fromMaybe "+91" row.phoneCountryCode,
+      phoneNumberLength = row.phoneNumberLength,
       cancelTriggers = c.cancelTriggers,
       statusTriggers = c.statusTriggers,
       flexiQuotePollAttempts = c.flexiQuotePollAttempts,
@@ -92,6 +96,8 @@ mkMerchantCtx pnId c =
       driverPollIntervalMs = c.driverPollIntervalMs,
       driverPollNotifyEvery = c.driverPollNotifyEvery
     }
+  where
+    c = row.botConfig
 
 -- | Resolve the DB row's typed merchantId/merchantOperatingCityId to rider-app
 -- ids + MerchantCtx. These are stored directly on MetaWebhookConfig (not
@@ -103,7 +109,7 @@ resolveMerchant :: DMWC.MetaWebhookConfig -> Flow (Id DM.Merchant, Id DMOC.Merch
 resolveMerchant cfg = do
   merchant <- QMerchant.findById cfg.merchantId >>= fromMaybeM (MerchantDoesNotExist cfg.merchantId.getId)
   moc <- CQMOC.findById cfg.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound cfg.merchantOperatingCityId.getId)
-  pure (merchant.id, moc.id, mkMerchantCtx cfg.phoneNumberId cfg.botConfig)
+  pure (merchant.id, moc.id, mkMerchantCtx cfg)
 
 mkClock :: Clock Flow
 mkClock = Clock {now = getCurrentTime, sleepMs = \n -> threadDelay (n * 1000)}

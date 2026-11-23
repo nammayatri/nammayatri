@@ -25,8 +25,10 @@ data MetaWebhookConfig = MetaWebhookConfig
     id :: Kernel.Types.Id.Id Domain.Types.MetaWebhookConfig.MetaWebhookConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    phoneCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNumberId :: Kernel.Prelude.Text,
+    phoneNumberLength :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     verifyToken :: Kernel.External.Encryption.EncryptedField 'Kernel.External.Encryption.AsEncrypted Kernel.Prelude.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, (Show), (ToJSON), (FromJSON))

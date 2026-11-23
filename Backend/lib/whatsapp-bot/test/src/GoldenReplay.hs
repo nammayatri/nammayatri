@@ -59,6 +59,7 @@ module GoldenReplay
     flexiFareChecks,
     fixtureGuards,
     rideTypeButtonLayoutChecks,
+    phoneChecks,
   )
 where
 
@@ -88,6 +89,7 @@ import WhatsappBot.I18n.En (en)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import qualified WhatsappBot.I18n.Types as Fields
 import WhatsappBot.Inbound (parseInbound)
+import WhatsappBot.Messages (formatDialable)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
 import WhatsappBot.Types
 
@@ -608,9 +610,11 @@ fixtureMerchant pn
           flexiRentalDurationS = 3600,
           flexiIntroVideoUrl = Just "https://videos.example/intro.mp4",
           flexiSupportPhone = Just "+91 90000 12345",
-          nyTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
+          trackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
           appDownloadUrl = "https://play.google.com/store/apps/details?id=in.juspay.nammayatri&hl=en_IN",
           favouritesEnabled = False, -- per fixture: env.favourites (runFixture)
+          phoneCountryCode = "+91", -- the meta_config column defaults: India
+          phoneNumberLength = Just 10,
           cancelTriggers = ["cancel", "stop", "exit", "quit", "reset"],
           statusTriggers = ["status", "track", "where is my ride"],
           -- Unused by fixtureConfig below (it builds BotConfig directly,
@@ -1001,3 +1005,29 @@ rideTypeButtonLayoutChecks =
       assertEqual "direct buttons" expectedDirect direct
       assertEqual "More button present iff something is hidden" (not (null expectedHidden)) hasMore
       assertEqual "hidden (More-revealed) buttons" expectedHidden hidden
+
+-- | The WhatsApp number's country (meta_config phone_country_code /
+-- phone_number_length): the sender's number -> the rider's login number, and
+-- a phone in a message -> a tap-to-dial number. India (the column defaults)
+-- must behave exactly as the original India-only rule.
+phoneChecks :: TestTree
+phoneChecks =
+  testGroup
+    "phone number per country"
+    [ testCase "India: 91 + 10 digits -> the 10 digits" $ assertEqual "" (Just "9361176218") (extract india "919361176218"),
+      testCase "India: 10 digits without the code -> as is" $ assertEqual "" (Just "9361176218") (extract india "9361176218"),
+      testCase "India: wrong length -> refused" $ assertEqual "" Nothing (extract india "91936117621"),
+      testCase "Finland: 358 + 9 digits -> the 9 digits" $ assertEqual "" (Just "401234567") (extract finland "358401234567"),
+      testCase "Finland: 358 + 10 digits -> the 10 digits (no length check)" $ assertEqual "" (Just "4012345678") (extract finland "3584012345678"),
+      testCase "Finland: a number from another country -> refused" $ assertEqual "" Nothing (extract finland "919361176218"),
+      testCase "Finland: only the code -> refused" $ assertEqual "" Nothing (extract finland "358"),
+      testCase "dial India: 10 digits -> +91" $ assertEqual "" (Just "+919361176218") (formatDialable india (Just "9361176218")),
+      testCase "dial India: 91 + 10 digits -> +" $ assertEqual "" (Just "+919361176218") (formatDialable india (Just "919361176218")),
+      testCase "dial India: leading 0 (masked exophone) -> as is" $ assertEqual "" (Just "08012345678") (formatDialable india (Just "08012345678")),
+      testCase "dial Finland: national number -> +358" $ assertEqual "" (Just "+358401234567") (formatDialable finland (Just "401234567")),
+      testCase "dial Finland: already with 358 -> +" $ assertEqual "" (Just "+358401234567") (formatDialable finland (Just "358401234567"))
+    ]
+  where
+    india = fixtureMerchant "pn_flexi"
+    finland = india {phoneCountryCode = "+358", phoneNumberLength = Nothing}
+    extract m from = extractPhone m InboundEvent {fromPhone = from, waId = Nothing, profileName = Nothing, messageId = "wamid.phone", kind = InText "hi"}

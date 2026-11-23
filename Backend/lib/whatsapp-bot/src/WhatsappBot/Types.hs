@@ -222,12 +222,19 @@ data MerchantCtx = MerchantCtx
     flexiRentalDurationS :: Int,
     flexiIntroVideoUrl :: Maybe Text,
     flexiSupportPhone :: Maybe Text,
-    nyTrackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
+    trackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
     appDownloadUrl :: Text, -- shown on the "Get the App" button's follow-up message (Engine.hs)
     -- Favourite places (Flow.Favourites): the saved-places list at pickup/drop,
     -- "Save place", and the "Add a favourite" nudge. Off keeps the plain
     -- location request exactly as before the feature.
     favouritesEnabled :: Bool,
+    -- The WhatsApp number's country (meta_config columns): the dialling code
+    -- with its "+" ("+91", "+358") and the national number length (Just 10
+    -- for India; Nothing = no length check, where mobile lengths vary, e.g.
+    -- Finland). Used to turn the sender's WhatsApp number into the rider's
+    -- login number, and to make phone numbers in messages tappable.
+    phoneCountryCode :: Text,
+    phoneNumberLength :: Maybe Int,
     -- Trigger words checked against every inbound message before anything
     -- else in Engine.hs's intercept chain — previously hardcoded in Ride.hs.
     cancelTriggers :: [Text],
