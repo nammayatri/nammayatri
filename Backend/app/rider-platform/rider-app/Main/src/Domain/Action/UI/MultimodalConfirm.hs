@@ -6,6 +6,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalInitiateSimpl,
     postMultimodalConfirm,
     getMultimodalBookingInfo,
+    getMultimodalBookingList,
     postMultimodalOrderSwitchTaxi,
     getMultimodalBookingPaymentStatus,
     postMultimodalSwitch,
@@ -72,6 +73,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -339,6 +341,138 @@ getMultimodalBookingInfo (mbPersonId, _) journeyId = do
   checkJourneyOwner mbPersonId journey
   legs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey legs
+
+getMultimodalBookingList ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Integer ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe ApiTypes.TicketListScope ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Integer ->
+    Environment.Flow ApiTypes.MultimodalBookingListRes
+  )
+getMultimodalBookingList (mbPersonId, _) mbCursor mbFromDate mbLimit mbScope mbToDate = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  now <- getCurrentTime
+  let mbFromTime = millisecondsToUTC <$> mbFromDate
+      mbToTime = millisecondsToUTC <$> mbToDate
+  mbCursorValue <- mapM decodeCursor mbCursor
+  let includeCurrent = mbScope /= Just ApiTypes.PAST
+      includePast = mbScope /= Just ApiTypes.CURRENT
+      limit = max 1 . min ticketListMaxRows $ fromMaybe 10 mbLimit
+  case (mbScope, mbCursorValue) of
+    (Just ApiTypes.CURRENT, Just (JMTypes.PastAfter _ _)) -> throwError $ InvalidRequest "Cursor does not belong to scope CURRENT"
+    (Just ApiTypes.PAST, Just (JMTypes.UpcomingAfter _ _)) -> throwError $ InvalidRequest "Cursor does not belong to scope PAST"
+    _ -> pure ()
+  liveJourneys <-
+    if includeCurrent && isNothing mbCursorValue
+      then sortOn (Down . tripSortKey) . nubBy sameJourney <$> QJourney.findLiveTicketsByRiderId personId now ticketListMaxRows
+      else pure []
+  (upcomingJourneys, hasMoreUpcoming) <-
+    case mbCursorValue of
+      Nothing | includeCurrent -> pageUpcoming personId mbFromTime mbToTime now limit Nothing
+      Just (JMTypes.UpcomingAfter afterTime afterId) -> pageUpcoming personId mbFromTime mbToTime now limit (Just (afterTime, afterId))
+      _ -> pure ([], False)
+  let remaining = limit - length upcomingJourneys
+      mbPastAfter = case mbCursorValue of
+        Just (JMTypes.PastAfter afterTime afterId) -> Just (afterTime, afterId)
+        _ -> Nothing
+  (pastJourneys, hasMorePast) <-
+    if includePast && not hasMoreUpcoming
+      then do
+        fetchedPast <- QJourney.findPastTicketsByRiderId personId now mbFromTime mbToTime mbPastAfter (remaining + 1)
+        pure (take remaining (sortOn pastSortKey (nubBy sameJourney fetchedPast)), length fetchedPast > remaining)
+      else pure ([], False)
+  liveFork <-
+    awaitableFork "getMultimodalBookingList->live" $
+      catMaybes <$> mapConcurrently buildCurrentJourney liveJourneys
+  upcomingFork <-
+    awaitableFork "getMultimodalBookingList->upcoming" $
+      catMaybes <$> mapConcurrently buildCurrentJourney upcomingJourneys
+  pastFork <-
+    awaitableFork "getMultimodalBookingList->past" $
+      mapMaybeM buildPastSummary pastJourneys
+  live <-
+    L.await Nothing liveFork >>= \case
+      Left err -> throwError $ InternalError $ "getMultimodalBookingList live fork failed: " <> show err
+      Right result -> pure result
+  upcoming <-
+    L.await Nothing upcomingFork >>= \case
+      Left err -> throwError $ InternalError $ "getMultimodalBookingList upcoming fork failed: " <> show err
+      Right result -> pure result
+  past <-
+    L.await Nothing pastFork >>= \case
+      Left err -> throwError $ InternalError $ "getMultimodalBookingList past fork failed: " <> show err
+      Right result -> pure result
+  let nextCursor
+        | hasMoreUpcoming = upcomingCursor
+        | hasMorePast = maybe upcomingCursor (\journey -> Just . encodeCursor $ JMTypes.PastAfter journey.createdAt journey.id) (lastMay pastJourneys)
+        | otherwise = Nothing
+      upcomingCursor = encodeCursor . uncurry JMTypes.UpcomingAfter . tripSortKey <$> lastMay upcomingJourneys
+  pure
+    ApiTypes.MultimodalBookingListRes
+      { live,
+        upcoming,
+        past,
+        nextCursor
+      }
+  where
+    pastSortKey journey = (Down journey.createdAt, Down journey.id)
+
+    sameJourney a b = a.id == b.id
+
+    tripSortKey journey = (fromMaybe journey.createdAt journey.startTime, journey.id)
+
+    encodeCursor cursor =
+      let stamp = T.pack . iso8601Show
+       in case cursor of
+            JMTypes.UpcomingAfter time journeyId -> "U|" <> stamp time <> "|" <> journeyId.getId
+            JMTypes.PastAfter time journeyId -> "P|" <> stamp time <> "|" <> journeyId.getId
+
+    decodeCursor cursor =
+      let parse mkCursor stamp journeyId = (\time -> mkCursor time (Id journeyId)) <$> iso8601ParseM (T.unpack stamp)
+       in maybe (throwError $ InvalidRequest "Invalid cursor") pure $ case T.splitOn "|" cursor of
+            ["U", stamp, journeyId] | not (T.null journeyId) -> parse JMTypes.UpcomingAfter stamp journeyId
+            ["P", stamp, journeyId] | not (T.null journeyId) -> parse JMTypes.PastAfter stamp journeyId
+            _ -> Nothing
+
+    pageUpcoming personId mbFromTime mbToTime now limit mbAfter = do
+      fetched <- QJourney.findUpcomingTicketsByRiderId personId now mbFromTime mbToTime mbAfter Nothing (limit + 1)
+      boundaryTies <- case drop (limit - 1) (sortOn tripSortKey fetched) of
+        boundary : next : _ | next.startTime == boundary.startTime -> QJourney.findUpcomingTicketsByRiderId personId now mbFromTime mbToTime mbAfter boundary.startTime limit
+        _ -> pure []
+      let candidates = sortOn tripSortKey (nubBy sameJourney (fetched <> boundaryTies))
+      pure (take limit candidates, length candidates > limit)
+
+    buildCurrentJourney journey =
+      withTryCatch "getAllLegsInfo:getMultimodalBookingList" (getAllLegsInfo journey.riderId journey.id)
+        >>= \case
+          Left err -> do
+            logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from ticket list : " <> show err
+            pure Nothing
+          Right [] -> do
+            logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from ticket list"
+            pure Nothing
+          Right legsInfo ->
+            withTryCatch "generateJourneyInfoResponse:getMultimodalBookingList" (generateJourneyInfoResponse journey legsInfo)
+              >>= \case
+                Left err -> do
+                  logError $ "Error generating journey info for journeyId: " <> show journey.id <> ", skipping from ticket list : " <> show err
+                  pure Nothing
+                Right journeyInfo -> pure (Just journeyInfo)
+
+    buildPastSummary journey =
+      withTryCatch "buildPastTicketSummary:getMultimodalBookingList" (buildPastTicketSummary journey)
+        >>= \case
+          Left err -> do
+            logError $ "Error building past journey for journeyId: " <> show journey.id <> ", skipping from ticket list : " <> show err
+            pure Nothing
+          Right mbSummary -> pure mbSummary
+
+ticketListMaxRows :: Int
+ticketListMaxRows = 100
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
