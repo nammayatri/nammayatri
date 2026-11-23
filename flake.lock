@@ -5172,11 +5172,11 @@
       "locked": {
         "narHash": "sha256-cyhgTR+py8e5RBTHM94ZAIxTe5V3fy8peba+4bp/IVQ=",
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone/southern-zone-240101.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone/southern-zone-240101.osm.pbf"
       }
     },
     "osrm-pbf-finland": {
@@ -5184,11 +5184,11 @@
       "locked": {
         "narHash": "sha256-r64dk41D2rGgLK3OffZtw9ZNrtuG8Ccfo+uUg8zq2sw=",
         "type": "file",
-        "url": "https://download.geofabrik.de/europe/finland-260101.osm.pbf"
+        "url": "https://download.geofabrik.de/europe/finland/finland-260101.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "https://download.geofabrik.de/europe/finland-260101.osm.pbf"
+        "url": "https://download.geofabrik.de/europe/finland/finland-260101.osm.pbf"
       }
     },
     "passetto": {
