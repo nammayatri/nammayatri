@@ -36,6 +36,7 @@ import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -525,6 +526,47 @@ getRideSpecialLocations booking ride = do
       specialLocationOf =<< ride.tripEndPos
     )
 
+getPickupEdits :: (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> m [Common.PickupEditInfo]
+getPickupEdits bookingId = do
+  pickupMappings <- sortOn (.createdAt) <$> QLM.findAllByEntityIdAndOrder bookingId.getId 0
+  pickupLocations <- forM pickupMappings $ \mapping -> (mapping.createdAt,) <$> QL.findById mapping.locationId
+  pure
+    [ Common.PickupEditInfo
+        { editedAt = editedAt,
+          previousPickupLocation = mkLocationAPIEntity <$> previousPickup,
+          newPickupLocation = mkLocationAPIEntity <$> newPickup
+        }
+      | ((_, previousPickup), (editedAt, newPickup)) <- zip pickupLocations (drop 1 pickupLocations)
+    ]
+
+getDestinationEdits :: (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Currency -> m [Common.DestinationEditInfo]
+getDestinationEdits bookingId currency = do
+  updateRequests <- runInReplica $ QBUR.findAllByBookingId Nothing Nothing bookingId
+  forM updateRequests $ \updateRequest -> do
+    previousDrop <- mkLocationFromLocationMapping updateRequest.id.getId 1
+    newDrop <- mkLocationFromLocationMapping updateRequest.id.getId 2
+    pure
+      Common.DestinationEditInfo
+        { bookingUpdateRequestId = updateRequest.id.getId,
+          status = T.pack (show updateRequest.status),
+          createdAt = updateRequest.createdAt,
+          validTill = updateRequest.validTill,
+          previousDropLocation = mkLocationAPIEntity <$> previousDrop,
+          newDropLocation = mkLocationAPIEntity <$> newDrop,
+          driverLocationAtEdit = KEMT.LatLong <$> updateRequest.currentPointLat <*> updateRequest.currentPointLon,
+          oldEstimatedDistance = highPrecMetersToMeters <$> updateRequest.oldEstimatedDistance,
+          estimatedDistance = highPrecMetersToMeters <$> updateRequest.estimatedDistance,
+          oldMaxEstimatedDistance = highPrecMetersToMeters <$> updateRequest.oldMaxEstimatedDistance,
+          maxEstimatedDistance = highPrecMetersToMeters <$> updateRequest.maxEstimatedDistance,
+          oldEstimatedFare = PriceAPIEntity updateRequest.oldEstimatedFare currency,
+          estimatedFare = PriceAPIEntity updateRequest.estimatedFare currency,
+          estimatedDuration = updateRequest.estimatedDuration,
+          snapToRoadFailed = updateRequest.snapToRoadFailed,
+          oldFareParamsId = updateRequest.oldFareParamsId.getId,
+          fareParamsId = updateRequest.fareParamsId.getId,
+          farePolicyId = updateRequest.farePolicyId.getId
+        }
+
 findSpecialLocationName :: [(SL.SpecialLocation, [[[KEMT.LatLong]]])] -> Id DMOC.MerchantOperatingCity -> KEMT.LatLong -> Maybe Text
 findSpecialLocationName specialLocations merchantOpCityId point =
   listToMaybe
@@ -843,6 +885,13 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
   mbSos <- if hasGroup Common.SAFETY then maybe (pure Nothing) QSafetySos.findById ride.sosId else pure Nothing
   (mbPlannedPickupSpecialLocation, mbPlannedDropSpecialLocation, mbActualPickupSpecialLocation, mbActualDropSpecialLocation) <-
     if hasGroup Common.SPECIAL_LOCATIONS then getRideSpecialLocations booking ride else pure (Nothing, Nothing, Nothing, Nothing)
+  (mbPickupEdits, mbDestinationEdits) <-
+    if booking.isPickupOrDestinationEdited == Just True
+      then do
+        pickupEdits <- getPickupEdits booking.id
+        destinationEdits <- getDestinationEdits booking.id ride.currency
+        pure (mfilter (not . null) (Just pickupEdits), mfilter (not . null) (Just destinationEdits))
+      else pure (Nothing, Nothing)
   let inGroup :: Common.RideDetailGroup -> Maybe a -> Maybe a
       inGroup group value = if hasGroup group then value else Nothing
 
@@ -962,7 +1011,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         recomputeReason = ride.recomputeReason,
         passedThroughDestination = ride.passedThroughDestination,
         finalFarePolicyId = (.getId) <$> ride.finalFarePolicyId,
-        estimatedStaticDuration = booking.estimatedStaticDuration
+        estimatedStaticDuration = booking.estimatedStaticDuration,
+        pickupEdits = mbPickupEdits,
+        destinationEdits = mbDestinationEdits
       }
 
 mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
