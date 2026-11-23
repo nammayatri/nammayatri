@@ -82,7 +82,7 @@ import WhatsappBot.Types
 -- this built a RentalSearchReq). Kept in the signature since MerchantCtx is
 -- the natural place for future flexi-specific config this handle might need.
 mkBackendHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> MerchantCtx -> BackendHandle Flow
-mkBackendHandle merchantId mocId _ctx =
+mkBackendHandle merchantId mocId ctx =
   BackendHandle
     { authenticate = \phone ->
         runBot "authenticate" $ do
@@ -91,8 +91,10 @@ mkBackendHandle merchantId mocId _ctx =
           -- function only ever returns a bare Id, so we ask again here rather
           -- than touch its signature (it has other callers, e.g. Select.hs).
           mobileDbHash <- getDbHash phone
-          mbExistingPerson <- Person.findByMobileNumberAndMerchantId "+91" mobileDbHash merchantId
-          personId <- Reg.createPersonWithPhoneNumber merchantId phone Nothing
+          -- The WhatsApp number's country code (meta_config column), not a
+          -- fixed "+91": the same code the person is created with below.
+          mbExistingPerson <- Person.findByMobileNumberAndMerchantId ctx.phoneCountryCode mobileDbHash merchantId
+          personId <- Reg.createPersonWithPhoneNumber merchantId phone (Just ctx.phoneCountryCode)
           pure
             AuthResult
               { auth = BotAuth {personId = personId.getId},

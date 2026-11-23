@@ -338,7 +338,7 @@ handleSupport env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       raw = fromMaybe "" env.cfg.merchant.flexiSupportPhone
-      dial = fromMaybe raw (formatDialable (Just raw))
+      dial = fromMaybe raw (formatDialable env.cfg.merchant (Just raw))
   row <- menuRow env ev s
   replyButtons env to (s.supportMessage dial) row
 
