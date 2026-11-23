@@ -42,9 +42,9 @@ driverPaymentChargeRate = \case
   Just details | details.bearer == PAYMENT_DRIVER, details.chargeType == PERCENTAGE -> details.chargeValue / 100 * (1 + Tax.taxRateOf details.chargeTax)
   _ -> 0
 
-netTotalTaxInclusive :: Tax.Regime -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe PaymentChargeBearer -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
-netTotalTaxInclusive taxRegime mbCommission mbPaymentCharge mbBearer componentTax airportEntryFeeWithTax total =
-  max 0 (total - fromMaybe 0 mbCommission - driverCharge - (if taxRegime == Tax.GST then componentTax else 0) - airportEntryFeeWithTax)
+netTotalTaxInclusive :: Tax.Regime -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe PaymentChargeBearer -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+netTotalTaxInclusive taxRegime mbCommission mbPaymentCharge mbBearer componentTax total =
+  max 0 (total - fromMaybe 0 mbCommission - driverCharge - (if taxRegime == Tax.GST then componentTax else 0))
   where
     driverCharge = if mbBearer == Just PAYMENT_DRIVER then fromMaybe 0 mbPaymentCharge else 0
 

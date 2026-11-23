@@ -160,7 +160,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       duesTax = (.total) <$> searchRequest.customerCancellationDuesTaxBreakup
       componentTax = fromMaybe 0 govtCharges + maybe 0 (* Tax.taxRateOf tollTaxConfig) tollCharges + maybe 0 (* Tax.taxRateOf parkingTaxConfig) parkingCharge + fromMaybe 0 duesTax
       driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 (offerDiscountForEstimate (fromMaybe searchTry.estimateId nearbyReq.estimateId) searchTry.estimateOfferDiscounts)))
-      netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax 0 rawBaseFare
+      netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax rawBaseFare
       customerExtraFee = rideNet DFP.CustomerExtraFeeComponent <$> searchTry.customerExtraFee
       driverPickUpCharges' = rideNet DFP.DeadKmFareComponent <$> driverPickUpCharges
       tollCharges' = netFare tollTaxConfig (Just DFP.TollChargesComponent) <$> tollCharges
