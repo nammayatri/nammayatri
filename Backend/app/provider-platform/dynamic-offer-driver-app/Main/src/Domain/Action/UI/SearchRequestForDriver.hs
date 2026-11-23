@@ -133,6 +133,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
     luggageCharges :: Maybe HighPrecMoney,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int,
     -- Only present when at least one of the driver's own preferences applied to this request.
     preferenceMatchScore :: Maybe Double
   }
@@ -244,6 +246,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
           driverCancellationNotAllowed = nearbyReq.driverCancellationNotAllowed,
           customerRating = mbRiderDetails >>= (.customerRating),
+          numberOfCheckInBags = searchRequest.numberOfCheckInBags,
+          numberOfCabinBags = searchRequest.numberOfCabinBags,
           ..
         }
   where
