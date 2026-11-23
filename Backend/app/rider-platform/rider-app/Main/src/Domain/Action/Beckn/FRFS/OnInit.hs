@@ -15,12 +15,13 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import Domain.Action.Beckn.FRFS.Common
+import qualified Domain.Types.FRFSBookingGroup as DFRFSBookingGroup
 import qualified Domain.Types.FRFSConfig as Fields
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
-import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -44,6 +45,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import qualified Storage.Queries.FRFSBookingGroup as QFRFSBookingGroup
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -126,22 +128,37 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   booking' <- if isFareChanged then dropPassOverrideOnFareChange booking else pure booking
-  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking'
+  (bookingPaymentGroup, allJourneyBookings) <- getBookingPaymentSiblings booking'
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
   payableBookings <- filterM (fmap not . noPaymentDue) allJourneyBookings
-  when (allLegsOnInitDone && not (null payableBookings)) $ do
-    Redis.withWaitAndLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 50000 $ do
+  -- A booking group's siblings are created one at a time as the checkout loop runs each slot's
+  -- confirm sequentially -- unlike a journey's legs, which all exist upfront before any leg
+  -- confirms. So "every sibling that currently exists is done" is not the same as "every slot in
+  -- the cart is done" until the sibling count actually reaches the group's declared slot count.
+  allSlotsCreated <- case bookingPaymentGroup of
+    BookingGroupPaymentGroup groupId -> do
+      group <- QFRFSBookingGroup.findById groupId >>= fromMaybeM (InternalError $ "FRFS booking group not found: " <> groupId.getId)
+      pure $ length allJourneyBookings >= DFRFSBookingGroup.totalSlots group
+    _ -> pure True
+  when (allLegsOnInitDone && allSlotsCreated && not (null payableBookings)) $ do
+    Redis.withWaitAndLockRedis (key (bookingPaymentGroupKey booking.id.getId bookingPaymentGroup)) 60 50000 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      skipCreateOrderCall <- maybe (pure False) journeySkipsCreateOrderCall mbJourneyId
-      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId skipCreateOrderCall
+      skipCreateOrderCall <- case bookingPaymentGroup of
+        JourneyPaymentGroup journeyId -> journeySkipsCreateOrderCall journeyId
+        _ -> pure False
+      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer bookingPaymentGroup skipCreateOrderCall
   where
-    key journeyId = "initJourney-" <> journeyId
+    key groupKey = "initJourney-" <> groupKey
+    bookingPaymentGroupKey bookingId = \case
+      JourneyPaymentGroup journeyId -> journeyId.getId
+      BookingGroupPaymentGroup groupId -> groupId.getId
+      NoPaymentGroup -> bookingId
 
     journeySkipsCreateOrderCall journeyId =
-      QJourney.findByPrimaryKey journeyId <&> maybe False (\journey -> fromMaybe False journey.skipCreateOrderCall)
+      QJourney.findByPrimaryKey journeyId <&> maybe False (fromMaybe False . DJourney.skipCreateOrderCall)
 
 dropPassOverrideOnFareChange ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -176,10 +193,10 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   [Payment.Basket] ->
   Maybe Bool ->
-  Maybe (Id DJ.Journey) ->
+  BookingPaymentGroup ->
   Bool ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId skipCreateOrderCall = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer bookingPaymentGroup skipCreateOrderCall = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   let isMockPayment = all (\booking -> fromMaybe False booking.isMockPayment) bookings
   mbPaymentOrder <-
@@ -206,10 +223,12 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       unless (booking.status == FTBooking.APPROVED) $
         Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show FTBooking.APPROVED) "on_init_order_created"
-      whenJust mbJourneyId $ \journeyId -> do
-        isTestTransaction <- asks (.isMetroTestTransaction)
-        let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
-        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
+      isTestTransaction <- asks (.isMetroTestTransaction)
+      let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
+      case bookingPaymentGroup of
+        JourneyPaymentGroup journeyId -> void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
+        BookingGroupPaymentGroup groupId -> void $ QFRFSBookingGroup.updatePaymentOrderShortIdById (Just $ ShortId updatedOrderShortId) groupId
+        NoPaymentGroup -> pure ()
     markBookingFailed :: FTBooking.FRFSTicketBooking -> m ()
     markBookingFailed booking = do
       -- on_init normally precedes the confirm, so nothing has been debited and the release below

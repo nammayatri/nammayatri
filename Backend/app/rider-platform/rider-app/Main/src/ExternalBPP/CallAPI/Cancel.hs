@@ -15,11 +15,12 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -47,6 +48,7 @@ cancel ::
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
@@ -59,6 +61,7 @@ cancel ::
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
+    HasKafkaProducer r,
     HasMasterCloudForwarder r
   ) =>
   Merchant ->

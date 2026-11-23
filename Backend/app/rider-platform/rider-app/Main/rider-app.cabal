@@ -619,6 +619,7 @@ library
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSLiveTrip
+      SharedLogic.FRFSNudge
       SharedLogic.FRFSPassConfirm
       SharedLogic.FRFSPassInstantBook
       SharedLogic.FRFSPassOverride
@@ -1399,6 +1400,7 @@ library
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
       Domain.Types.FeedbackForm
+      Domain.Types.FRFSBookingGroup
       Domain.Types.FRFSCancellationConfig
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
@@ -1580,6 +1582,7 @@ library
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
       Storage.Beam.FeedbackForm
+      Storage.Beam.FRFSBookingGroup
       Storage.Beam.FRFSCancellationConfig
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
@@ -1766,6 +1769,7 @@ library
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
       Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSBookingGroup
       Storage.Queries.FRFSCancellationConfig
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy

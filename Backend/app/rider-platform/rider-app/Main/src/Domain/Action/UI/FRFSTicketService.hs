@@ -17,10 +17,11 @@ import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text
 import qualified Data.Time as Time
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Person as Fields
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.FRFSBookingGroup as DFRFSBookingGroup
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as Fields
@@ -92,6 +93,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.Version (CloudType)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -146,6 +148,7 @@ import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicl
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSBookingGroup as QFRFSBookingGroup
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -653,6 +656,40 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbEnforceFRFSPass mbHasPasses mbI
           return Nothing
     return $ frfsSearchResponse {crisSdkToken = mbCrisSdkToken}
 
+-- | N independent searches (e.g. several departure times on one route), run concurrently, one
+-- result per input in the same order. Deliberately reuses postFrfsSearch wholesale per item
+-- instead of trying to split its context resolution (city/BPP-config/metro-hop/CRIS-token, all of
+-- which have grown well past the original search) out into a shared helper -- that resolution is
+-- itself cache-backed, so paying it once per item is cheap, and this way every item gets exactly
+-- postFrfsSearch's real behaviour instead of a second, divergent copy of it.
+postFrfsSearchGroup ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Maybe Context.City ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
+  Maybe [Spec.ServiceTierType] ->
+  Spec.VehicleCategory ->
+  API.Types.UI.FRFSTicketService.FRFSSearchGroupReq ->
+  Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchGroupRes
+postFrfsSearchGroup (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  when (null req.searches) $ throwError $ InvalidRequest "No searches provided"
+  merchantOperatingCityId <-
+    case mbCity of
+      Just city ->
+        CQMOC.findByMerchantIdAndCity merchantId city
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
+          >>= return . (.id)
+      Nothing ->
+        CQP.findCityInfoById personId
+          >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+          >>= return . (.merchantOperatingCityId)
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  let searchGroupMaxItems = fromMaybe 10 (mbRiderConfig >>= (.searchGroupMaxItems))
+  when (length req.searches > searchGroupMaxItems) $ throwError $ InvalidRequest ("Too many searches in one group, max allowed is " <> show searchGroupMaxItems)
+  -- No hasPasses/enforceFRFSPass query params on this endpoint (batch search has no pass-eligibility concept yet).
+  results <- mapConcurrently (postFrfsSearch (mbPersonId, merchantId) mbCity Nothing Nothing mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_) req.searches
+  pure API.Types.UI.FRFSTicketService.FRFSSearchGroupRes {results = results}
+
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   let platformType = fromMaybe DIBC.APPLICATION req.platformType
@@ -1012,6 +1049,39 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
       logInfo $ "getFrfsSearchQuote routeTiers=" <> show (Map.toList routeTierByRouteCode) <> " quotesAtRouteTier=" <> show (length matchingRouteTier)
       return $ matchingRouteTier <> otherTiers
 
+-- | Applies the seat-hold spam guard (one seat-booking confirm per rider per trip per window)
+-- only when this confirm will actually hold a seat -- manual seat selection or an auto-assign
+-- flow. Shared by the single-slot confirm path and the per-slot cart-checkout path so both stay
+-- protected against the same abuse (repeatedly hammering confirm to grab/release seats).
+applySeatBookingRateLimit ::
+  ( Hedis.HedisFlow m r,
+    CacheFlow m r,
+    DB.EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  DFRFSQuote.FRFSQuote ->
+  DIBC.IntegratedBPPConfig ->
+  [FRFSTicketService.FRFSCategorySelectionReq] ->
+  Maybe Text ->
+  m ()
+applySeatBookingRateLimit personId quote integratedBppConfig selectedQuoteCategories mbTripId = do
+  let hasNonEmptySeatIds =
+        any (maybe False (not . null) . (.seatIds)) selectedQuoteCategories
+  mbSeatSelectionType <- case quote.vehicleNumber of
+    Just vNo -> do
+      mbMapping <- CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
+      pure $ mbMapping >>= (.seatSelectionType)
+    Nothing -> pure Nothing
+  let hasAutoAssignFlow = quote.vehicleType == Spec.BUS && isJust mbTripId && mbSeatSelectionType == Just DVSLM.AUTO_ASSIGNED
+  when (hasNonEmptySeatIds || hasAutoAssignFlow) $
+    whenJust mbTripId $ \tripId ->
+      checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
+  where
+    rateLimitKey :: Text -> Text -> Text
+    rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
+
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =
   withTimeAPI "frfsConfirm" "quoteV2Confirm" $
@@ -1053,33 +1123,18 @@ postFrfsQuoteV2ConfirmWithTimeAPI (mbPersonId, merchantId) quoteId mbIsMockPayme
   -- the confirm's own owner check runs later; until then nothing is staged on another rider's search
   when (personId == quote.riderId) $ whenJust req.cabId $ SharedCab.stagePickedCab quote.searchId.getId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
-
-  -- Apply rate limit only when seats will actually be held (manual selection or auto-assign)
-  let hasNonEmptySeatIds =
-        any (maybe False (not . null) . (.seatIds)) selectedQuoteCategories
-  mbSeatSelectionType <- case quote.vehicleNumber of
-    Just vNo -> do
-      mbMapping <- CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
-      pure $ mbMapping >>= (.seatSelectionType)
-    Nothing -> pure Nothing
-  let hasAutoAssignFlow = quote.vehicleType == Spec.BUS && isJust req.tripId && mbSeatSelectionType == Just DVSLM.AUTO_ASSIGNED
-  when (hasNonEmptySeatIds || hasAutoAssignFlow) $
-    whenJust req.tripId $ \tripId ->
-      checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
+  applySeatBookingRateLimit personId quote integratedBppConfig selectedQuoteCategories req.tripId
 
   case integratedBppConfig.providerConfig of
     DIBC.ONDC _ | quote.vehicleType == Spec.BUS -> do
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId True
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId Nothing True
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatus (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId True
-  where
-    rateLimitKey :: Text -> Text -> Text
-    rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId Nothing True
 
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment =
@@ -1102,6 +1157,231 @@ checkRateLimitSeatBooking ::
 checkRateLimitSeatBooking hitsCountKey = do
   rateLimitOptions <- asks (.seatBookingConfirmAPIRateLimitOptions)
   checkSlidingWindowLimitWithOptions hitsCountKey rateLimitOptions
+
+-- | One slot's confirm attempt within a booking-group checkout, reduced to a plain result so the
+-- caller can decide what to do with a partial failure instead of the whole checkout throwing.
+-- Mirrors postFrfsQuoteV2ConfirmWithTimeAPI's non-ONDC path exactly (ONDC carts are out of scope).
+data SlotFailure = SlotFailure
+  { quoteId :: Kernel.Types.Id.Id DFRFSQuote.FRFSQuote,
+    errorMessage :: Text
+  }
+
+confirmSlot ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r, HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions]) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.Id DFRFSBookingGroup.FRFSBookingGroup ->
+  Maybe Bool ->
+  API.Types.UI.FRFSTicketService.FRFSBookingGroupSlotReq ->
+  m (Either SlotFailure DFRFSTicketBooking.FRFSTicketBooking)
+confirmSlot personId merchantId bookingGroupId mbIsMockPayment slotReq = do
+  eResult <- attempt
+  finalResult <- case eResult of
+    Right _ -> pure eResult
+    Left someEx
+      | isRetryableFailure someEx -> do
+        logWarning $ "confirmSlot: retrying after a likely-transient failure quoteId=" <> slotReq.quoteId.getId <> " err=" <> show someEx
+        Kernel.Prelude.threadDelay confirmSlotRetryDelayMicros
+        attempt
+      | otherwise -> pure eResult
+  pure $ case finalResult of
+    Right booking -> Right booking
+    Left someEx -> Left (SlotFailure {quoteId = slotReq.quoteId, errorMessage = Data.Text.pack (show someEx)})
+  where
+    confirmSlotRetryDelayMicros = 200000
+    attempt = withTryCatch "confirmSlot" $ do
+      selectedQuoteCategories <- case slotReq.offered of
+        Just categories@(_ : _) -> pure categories
+        _ -> throwError $ InvalidRequest ("No categories selected for quoteId=" <> slotReq.quoteId.getId)
+      quote <- B.runInReplica $ QFRFSQuote.findById slotReq.quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
+      applySeatBookingRateLimit personId quote integratedBppConfig selectedQuoteCategories slotReq.tripId
+      case integratedBppConfig.providerConfig of
+        DIBC.ONDC _ -> throwError $ InvalidRequest "Cart checkout does not support ONDC routes"
+        _ -> do
+          bookingStatus <-
+            postFrfsQuoteV2ConfirmUtil
+              (Just personId, merchantId)
+              quote
+              selectedQuoteCategories
+              slotReq.crisSdkResponse
+              (Just True)
+              slotReq.enableOffer
+              mbIsMockPayment
+              integratedBppConfig
+              slotReq.tripId
+              slotReq.isSpotBooking
+              Nothing
+              Nothing
+              slotReq.purchasedPassPaymentId
+              (Just bookingGroupId)
+              True
+          QFRFSTicketBooking.findById bookingStatus.bookingId >>= fromMaybeM (InvalidRequest "Booking not found after confirm")
+
+    isRetryableFailure someEx = case fromException someEx of
+      Just (HTTPException err) -> isInternalError (toHttpCode err)
+      Nothing -> True
+
+postFrfsBookingGroupCheckout ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["bookingGroupCheckoutAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r, Finance.HasActorInfo m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Maybe Bool ->
+  API.Types.UI.FRFSTicketService.FRFSBookingGroupCheckoutReq ->
+  m API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+postFrfsBookingGroupCheckout (mbPersonId, merchantId) mbIsMockPayment req = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  when (null req.slots) $ throwError $ InvalidRequest "No slots selected for checkout"
+  -- One heavy multi-slot checkout call counts as a single attempt against this rider's budget --
+  -- confirmSlot's own per-trip seat-hold guard (applySeatBookingRateLimit) still applies per slot.
+  checkRateLimitBookingGroupCheckout personId.getId
+  quotes <- mapM (\slotReq -> B.runInReplica $ QFRFSQuote.findById slotReq.quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")) req.slots
+  -- One FRFSSearch yields many FRFSQuote rows (one per fare/service-tier option), but
+  -- confirmAndUpsertBooking's idempotency check keys off searchId, not quoteId -- so two slots
+  -- resolving to the same searchId (a literal duplicate quoteId, or two different quoteIds from
+  -- the same search) silently collapse onto one booking on the second confirm instead of erroring.
+  -- That leaves totalSlots permanently unsatisfiable by the real sibling count, deadlocking the
+  -- group's payment order in onInit with no error surfaced. Reject it here instead.
+  when (length (nub (map (.searchId) quotes)) /= length quotes) $
+    throwError $ InvalidRequest "Cart cannot contain more than one slot from the same search"
+  now <- getCurrentTime
+  forM_ quotes $ \quote -> do
+    unless (quote.riderId == personId) $ throwError AccessDenied
+    unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
+  case (nub (map (.merchantId) quotes), nub (map (.merchantOperatingCityId) quotes)) of
+    ([groupMerchantId], [groupMerchantOperatingCityId]) -> do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = groupMerchantOperatingCityId.getId}) Nothing
+      let bookingGroupMaxSlots = fromMaybe 10 (mbRiderConfig >>= (.bookingGroupMaxSlots))
+      when (length req.slots > bookingGroupMaxSlots) $ throwError $ InvalidRequest ("Too many slots in one cart, max allowed is " <> show bookingGroupMaxSlots)
+      -- A retry of the same slots (e.g. after an earlier attempt partially succeeded -- bookings
+      -- created, then failed before returning) must not orphan those bookings under a group the
+      -- client was never told about. Reuse whichever group (if any, and if exactly one) an existing
+      -- booking for these searches is already tied to, instead of always minting a fresh one.
+      -- Primary, not replica: this is specifically checking whether an immediately-preceding retry
+      -- just created a booking moments ago -- a stale replica read here could miss it and mint a
+      -- duplicate group instead of reusing it, the exact bug this lookup exists to prevent.
+      existingBookings <- mapM (QFRFSTicketBooking.findBySearchId . (.searchId)) quotes
+      let existingGroupIds = nub $ mapMaybe (>>= (.bookingGroupId)) existingBookings
+      groupId <- case existingGroupIds of
+        [existingGroupId] -> do
+          -- totalSlots drives onInit's allSlotsCreated gate (which decides when the group's payment
+          -- order gets created) -- a retry that reuses this group but sends a different slot count
+          -- than the original attempt declared would either deadlock that gate forever (fewer
+          -- slots) or satisfy it prematurely (more slots), so reject the mismatch outright rather
+          -- than silently reconciling it.
+          existingGroup <- QFRFSBookingGroup.findById existingGroupId >>= fromMaybeM (InvalidRequest "Invalid booking group id")
+          unless (existingGroup.totalSlots == length req.slots) $
+            throwError $ InvalidRequest "Retry slot count does not match the original cart"
+          pure existingGroupId
+        _ -> do
+          newGroupId <- generateGUID
+          QFRFSBookingGroup.create
+            DFRFSBookingGroup.FRFSBookingGroup
+              { id = newGroupId,
+                riderId = personId,
+                merchantId = groupMerchantId,
+                merchantOperatingCityId = groupMerchantOperatingCityId,
+                status = DFRFSBookingGroup.NEW,
+                totalPrice = KUC.mkPrice Nothing 0,
+                totalSlots = length req.slots,
+                paymentOrderShortId = Nothing,
+                failureReason = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+          pure newGroupId
+      -- The actual per-slot confirm loop is heavy (one synchronous BPP init per slot) and must stay
+      -- sequential (see runBookingGroupConfirmLoop), so it runs in the background: this call validates
+      -- and returns immediately with status NEW, and the client learns the real outcome by polling
+      -- getFrfsBookingGroupStatus. Errors inside the fork are caught by withTryCatch and recorded on
+      -- the group/bookings as a real failureReason -- a poller must never just see a bare FAILED.
+      fork ("FRFSBookingGroupCheckout-" <> groupId.getId) $
+        void $ withTryCatch "FRFSBookingGroupCheckout:background" $ runBookingGroupConfirmLoop personId merchantId groupId mbIsMockPayment req.slots
+      currentGroup <- QFRFSBookingGroup.findById groupId >>= fromMaybeM (InvalidRequest "Invalid booking group id")
+      currentBookings <- QFRFSTicketBooking.findAllByBookingGroupId (Just groupId)
+      bookingStatuses <- mapM (\booking -> getFrfsBookingStatus (Just personId, merchantId) booking.id) currentBookings
+      pure $
+        API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+          { bookingGroupId = groupId,
+            status = currentGroup.status,
+            totalPrice = mkPriceAPIEntity currentGroup.totalPrice,
+            bookings = bookingStatuses,
+            failureReason = currentGroup.failureReason
+          }
+    _ -> throwError $ InvalidRequest "All slots in a cart must belong to the same merchant and operating city"
+
+-- | The actual multi-slot confirm loop, run in the background by postFrfsBookingGroupCheckout.
+-- Sequential by construction, not just for latency reasons: OnInit's allSlotsCreated gate
+-- (SharedLogic.FRFSStatus / Beckn.FRFS.OnInit) compares the sibling-booking count seen so far
+-- against this group's declared totalSlots to decide when to create the combined payment order.
+-- That only works because bookings appear one at a time -- switching this to mapConcurrently
+-- would let siblings race into existence together and could trip the gate prematurely.
+runBookingGroupConfirmLoop ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.Id DFRFSBookingGroup.FRFSBookingGroup ->
+  Maybe Bool ->
+  [API.Types.UI.FRFSTicketService.FRFSBookingGroupSlotReq] ->
+  m ()
+runBookingGroupConfirmLoop personId merchantId groupId mbIsMockPayment slots = do
+  results <- mapM (confirmSlot personId merchantId groupId mbIsMockPayment) slots
+  let failures = [f | Left f <- results]
+      bookings = [b | Right b <- results]
+  case (failures, bookings) of
+    ([], firstBooking : _) -> do
+      let totalAmount = Kernel.Prelude.foldl (\acc booking -> acc + booking.totalPrice.amount) 0 bookings
+          groupTotalPrice = KUC.mkPrice (Just firstBooking.totalPrice.currency) totalAmount
+      void $ QFRFSBookingGroup.updateTotalPriceAndStatusById groupTotalPrice DFRFSBookingGroup.CONFIRMED groupId
+    _ -> do
+      -- Ground truth, not `bookings` -- a slot can create a real row and then throw before
+      -- confirmSlot returns, which would make it invisible to the Right-only list above and
+      -- leave it behind holding a seat forever. The gate in OnInit.hs only ever creates the
+      -- combined payment order once every slot has succeeded, so every booking reachable here
+      -- is guaranteed pre-payment: no ticket issued, no pass trip spent, nothing to refund.
+      allGroupBookings <- QFRFSTicketBooking.findAllByBookingGroupId (Just groupId)
+      SeatBooking.releaseGroupHolds allGroupBookings
+      let reason = "Cart checkout failed for quoteIds=" <> Data.Text.intercalate "," (map (\f -> f.quoteId.getId) failures)
+      forM_ allGroupBookings $ \booking -> do
+        cancelFRFSTicketBooking booking
+        void $ QFRFSTicketBooking.updateFailureReasonById (Just reason) booking.id
+      void $ QFRFSBookingGroup.updateStatusAndFailureReasonById DFRFSBookingGroup.FAILED (Just reason) groupId
+      logError $ "FRFSBookingGroupCheckout:background " <> reason <> " groupId=" <> groupId.getId
+
+getFrfsBookingGroupStatus ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r, Finance.HasActorInfo m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id DFRFSBookingGroup.FRFSBookingGroup ->
+  m API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+getFrfsBookingGroupStatus (mbPersonId, merchantId) bookingGroupId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  bookingGroup <- QFRFSBookingGroup.findById bookingGroupId >>= fromMaybeM (InvalidRequest "Invalid booking group id")
+  unless (bookingGroup.riderId == personId) $ throwError AccessDenied
+  bookings <- QFRFSTicketBooking.findAllByBookingGroupId (Just bookingGroupId)
+  bookingStatuses <- mapM (\booking -> getFrfsBookingStatus (Just personId, merchantId) booking.id) bookings
+  pure $
+    API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+      { bookingGroupId,
+        status = bookingGroup.status,
+        totalPrice = mkPriceAPIEntity bookingGroup.totalPrice,
+        bookings = bookingStatuses,
+        failureReason = bookingGroup.failureReason
+      }
+
+-- | Guards the whole booking-group checkout call as one attempt, not once per slot inside it --
+-- this endpoint does a synchronous BPP init per slot in a loop, so it's far heavier per call than
+-- a single-slot confirm and deserves its own (tighter) budget independent of seat-hold status.
+checkRateLimitBookingGroupCheckout ::
+  ( Hedis.HedisFlow m r,
+    CacheFlow m r,
+    DB.EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["bookingGroupCheckoutAPIRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  Text ->
+  m ()
+checkRateLimitBookingGroupCheckout personId = do
+  rateLimitOptions <- asks (.bookingGroupCheckoutAPIRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("BAP:FRFS_BOOKING_GROUP_CHECKOUT_RATE_LIMIT:" <> personId) rateLimitOptions
 
 frfsOrderStatusHandler ::
   (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
@@ -1266,7 +1546,14 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       case mbPaymentBooking of
         Nothing -> do
           isFree <- FRFSUtils.noPaymentDue booking
-          if isFree then noPaymentRes else throwError $ InvalidRequest "Payment booking not found for approved TicketBookingId"
+          -- A cart slot cancelled by a sibling's failure (SharedLogic.FRFSSeatBooking /
+          -- Domain.Action.UI.FRFSTicketService.runBookingGroupConfirmLoop) never gets a payment
+          -- row -- the group's combined order is only created once every slot succeeds. That
+          -- booking is legitimately terminal, not a data-integrity problem, so report its real
+          -- state instead of throwing.
+          if isFree || booking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]
+            then noPaymentRes
+            else throwError $ InvalidRequest "Payment booking not found for approved TicketBookingId"
         Just paymentBooking -> withPaymentOrder paymentBooking
       where
         withPaymentOrder paymentBooking = do
@@ -1327,7 +1614,7 @@ getPaymentAttemptsForCustomer (mbPersonId, merchantId) mbLimit mbOffset = do
     )
     orders
 
-cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
+cancelFRFSTicketBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasBAPMetrics m r) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
 cancelFRFSTicketBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "cancelled_by_application" booking
@@ -1474,7 +1761,7 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
                 )
                 freshCategories
         -- Staging booking is created + confirmed; if confirmation fails the old booking is left untouched.
-        eStatusRes <- withTryCatch "FRFSReschedule:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) stagingQuote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) Nothing Nothing (Just (RescheduleCtx oldBooking.id (mbOldPayment <&> (.id)))) Nothing False)
+        eStatusRes <- withTryCatch "FRFSReschedule:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) stagingQuote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) Nothing Nothing (Just (RescheduleCtx oldBooking.id (mbOldPayment <&> (.id)))) Nothing Nothing False)
         statusRes <- case eStatusRes of
           Right r -> pure r
           Left err -> do
@@ -2060,6 +2347,138 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
             overrideSourceStopCode = Nothing,
             overrideDestinationStopCode = Nothing
           }
+
+-- | "Repeat this booking" candidates: starting the day after today-or-the-booking's-own-day
+-- (whichever is later), checks GIMS's own known schedule (including any already-generated
+-- upcoming duties, e.g. from repeater automation) for a real trip on the same route/stop-pair at
+-- roughly the original booking's time of day, within `repeatSlotLookaheadDays`. This never
+-- assumes a trip simply repeats -- a day with no real scheduled duty from GIMS yields no
+-- candidate for that day. The frontend resolves each day's real quote itself at checkout time.
+getFrfsBookingRepeatSlots ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
+  Environment.Flow API.Types.UI.FRFSTicketService.FRFSRepeatSlotsRes
+getFrfsBookingRepeatSlots (mbPersonId, merchantId) bookingId = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
+  unless (booking.riderId == personId && booking.merchantId == merchantId) $ throwError AccessDenied
+  -- Pure data endpoint: computes whatever repeat candidates exist for this booking's route/time,
+  -- regardless of the booking's own state. Whether to actually surface this to the rider
+  -- (cooldowns, etc.) is a caller-side/eligibility decision, not this endpoint's concern -- keeps
+  -- policy out of the data path.
+  candidates <- case (booking.vehicleType == Spec.BUS, booking.routeCode, booking.startTime) of
+    (True, Just routeCode, Just bookingStartTime) -> do
+      -- Bare schedule lookup only -- no live-vehicle GPS enrichment, no upcoming-buses Redis
+      -- cache, no seat-hold-reaper trigger (those are the "heavy" parts of the full route
+      -- serviceability API, all irrelevant to picking a candidate slot to repeat).
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
+      let mbDirectConfig = case integratedBPPConfig.providerConfig of
+            DIBC.DIRECT config -> Just config
+            _ -> Nothing
+      let toleranceSec = Kernel.Prelude.fromMaybe 1800 $ mbDirectConfig >>= (.repeatSlotTimeToleranceSec) <&> (.getSeconds)
+      let lookaheadDays = Kernel.Prelude.fromMaybe 5 $ mbDirectConfig >>= (.repeatSlotLookaheadDays)
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      let tzDiff = secondsToNominalDiffTime (maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig)
+      now <- getCurrentTime
+      busScheduleDetails <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
+      frfsTierMap <-
+        map (\t -> (t._type, t))
+          <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId booking.merchantOperatingCityId integratedBPPConfig.id
+      -- Real seat-layout map (same lookup buildRouteWithLiveVehicle does). GIMS mints a fresh
+      -- tripId per duty (never reuses one across days), so each entry's seat count is that
+      -- specific duty's own real, independent count -- a full entry here means that real duty is
+      -- actually full and correctly gets dropped below, same as the live route screen.
+      seatLayoutMappingsByVehicleNo <-
+        mapConcurrently
+          ( \vehicleNo -> do
+              mapping <- CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey
+              pure (vehicleNo, mapping)
+          )
+          (nub (map (.vehicle_no) busScheduleDetails))
+      schedules <-
+        JMRouteServiceability.getBusScheduleInfo
+          busScheduleDetails
+          integratedBPPConfig
+          routeCode
+          booking.fromStationCode
+          booking.toStationCode
+          frfsTierMap
+          (Map.fromList seatLayoutMappingsByVehicleNo)
+      -- Bus ETAs/schedules are keyed by the boarding platform's own stop code, which can differ
+      -- from a booking made against its parent/station code -- resolve to every code that stands
+      -- for this same boarding place before matching (see OTPRest.getEquivalentStopCodes).
+      equivalentFromStopCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBPPConfig
+      -- Window starts the day after whichever is later: today, or the booking's own day. A
+      -- today-or-past booking anchors at today (so the window is never stuck in the past); a
+      -- booking that's itself in the future anchors at its own day (so "repeat" only ever
+      -- suggests days strictly after the trip being repeated, never the trip's own day or earlier).
+      let todayLocal = Time.utctDay (Time.addUTCTime tzDiff now)
+          bookingDayLocal = Time.utctDay (Time.addUTCTime tzDiff bookingStartTime)
+          windowAnchor = max todayLocal bookingDayLocal
+          allowedDays = nextNDays lookaheadDays windowAnchor
+          realMatches = findRealDayCandidates tzDiff toleranceSec equivalentFromStopCodes bookingStartTime booking.serviceTierType allowedDays schedules
+      pure $
+        map
+          ( \(date, vehicleInfo, etaTime) ->
+              API.Types.UI.FRFSTicketService.FRFSRepeatSlotCandidate
+                { date = Data.Text.pack (Time.showGregorian date),
+                  tripId = vehicleInfo.tripId,
+                  routeCode = Just routeCode,
+                  serviceTierType = Just vehicleInfo.serviceTierType,
+                  eta = Just etaTime,
+                  availableSeats = vehicleInfo.availableSeats
+                }
+          )
+          realMatches
+    _ -> pure []
+  pure API.Types.UI.FRFSTicketService.FRFSRepeatSlotsRes {originalBookingId = bookingId, originalFromStationCode = booking.fromStationCode, originalToStationCode = booking.toStationCode, candidates}
+
+-- | Real schedule entries only -- no invented days, no broadcasting one match across days that
+-- the schedule lookup never actually reported. For each entry actually returned by the schedule
+-- lookup, keeps it only if: it's for one of the allowed (lookahead) days in the rider's own local
+-- calendar, its stop code is one of the equivalent codes for the original boarding place, it
+-- matches the service tier, and its time-of-day is within tolerance of the target. If a day has
+-- more than one matching trip, keeps only the closest one. Days with no real matching entry are
+-- simply absent from the result.
+findRealDayCandidates ::
+  NominalDiffTime -> -- rider's local UTC offset, for bucketing etaTime onto the rider's own day
+  Int -> -- tolerance in seconds (repeatSlotTimeToleranceSec)
+  [Text] -> -- fromStationCode and every other code equivalent to it (see getEquivalentStopCodes)
+  Time.UTCTime -> -- target time (the original booking's startTime)
+  Maybe Spec.ServiceTierType ->
+  [Time.Day] -> -- allowed candidate days
+  [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo] ->
+  [(Time.Day, API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo, Time.UTCTime)]
+findRealDayCandidates tzDiff toleranceSec fromStationCodes targetTime mbServiceTier allowedDays schedules =
+  Map.elems . Map.fromListWith closer . map (\(d, v, t, _) -> (d, (d, v, t))) . sortOn (\(_, _, _, diffSec) -> diffSec) $
+    [ (etaDay, vehicleInfo, etaTime, diffSec)
+      | vehicleInfo <- schedules,
+        maybe True (== vehicleInfo.serviceTierType) mbServiceTier,
+        Just etas <- [vehicleInfo.eta],
+        Just stopEta <- [find (\e -> e.stopCode `elem` fromStationCodes) etas],
+        let etaTime = posixSecondsToUTCTime (fromIntegral stopEta.arrivalTimeUnix),
+        let etaDay = Time.utctDay (Time.addUTCTime tzDiff etaTime),
+        etaDay `elem` allowedDays,
+        let diffSec = circularTimeOfDayDiffSec targetTime etaTime,
+        diffSec <= toleranceSec
+    ]
+  where
+    -- Map.fromListWith folds later duplicates into earlier ones (a `mappend` b); since the input is
+    -- sorted by diffSec ascending, the first entry per day is already the closest -- keep it.
+    closer _new old = old
+    circularTimeOfDayDiffSec :: Time.UTCTime -> Time.UTCTime -> Int
+    circularTimeOfDayDiffSec a b =
+      let secA = floor (Time.utctDayTime a) :: Int
+          secB = floor (Time.utctDayTime b) :: Int
+          raw = abs (secA - secB)
+       in min raw (86400 - raw)
+
+-- | The n days strictly after the given day (rolling window, weekends included -- config-driven
+-- via DIRECTConfig.repeatSlotLookaheadDays, not tied to the calendar week boundary).
+nextNDays :: Int -> Time.Day -> [Time.Day]
+nextNDays n day = [Time.addDays d day | d <- [1 .. fromIntegral n]]
 
 getFrfsActiveRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -2667,7 +3086,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
               | quoteCategory <- quoteCategories,
                 let isAdult = quoteCategory.category == ADULT
             ]
-      eConfirmRes <- withTryCatch "postFrfsPassInstantBook:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selections Nothing (Just True) Nothing Nothing integratedBPPConfig req.tripId Nothing req.vehicleNumber Nothing (Just req.purchasedPassPaymentId) True)
+      eConfirmRes <- withTryCatch "postFrfsPassInstantBook:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selections Nothing (Just True) Nothing Nothing integratedBPPConfig req.tripId Nothing req.vehicleNumber Nothing (Just req.purchasedPassPaymentId) Nothing True)
       confirmRes <- case eConfirmRes of
         Right res -> pure res
         Left err -> do

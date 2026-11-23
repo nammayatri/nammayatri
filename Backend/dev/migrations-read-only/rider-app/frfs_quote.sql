@@ -164,4 +164,4 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN offer_segment text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote ADD COLUMN IF NOT EXISTS route_group_key TEXT;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_group_key text ;

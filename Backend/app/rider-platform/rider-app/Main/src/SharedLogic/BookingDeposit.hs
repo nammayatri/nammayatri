@@ -591,7 +591,8 @@ executeDepositRefundGateway booking refundReq pair@(row, order) = do
             email = Nothing,
             amount = Just order.amount,
             retryIfFailed = False,
-            refundsId = refundReq.refundsId
+            refundsId = refundReq.refundsId,
+            splitSettlementDetails = Nothing
           }
   rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbResp <- SPayment.makeRefundPaymentByServiceType booking.merchantId booking.merchantOperatingCityId row.paymentServiceType rider.clientSdkVersion gwReq

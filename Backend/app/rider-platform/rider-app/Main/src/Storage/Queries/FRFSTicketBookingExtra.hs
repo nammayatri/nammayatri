@@ -284,3 +284,22 @@ findSharedCabPlatesUpdatedSince plates statuses since =
 findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id FRFSTicketBooking] -> m [FRFSTicketBooking]
 findAllByIds [] = pure []
 findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (getId <$> ids)]
+
+-- | CONFIRMED bookings for a rider on this exact route (same from/to station pair), up to `limit`
+-- rows. Used by shuttle-nudge eligibility to check whether a rider has repeated this route before.
+-- Beam's columns for this pair are fromStationId/toStationId -- fromStationCode/toStationCode is
+-- only the domain-level name (see the beamFields mapping in FrfsTicket.yaml).
+findAllConfirmedByRiderIdVehicleTypeAndRoute :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Spec.VehicleCategory -> Text -> Text -> Maybe Int -> m [FRFSTicketBooking]
+findAllConfirmedByRiderIdVehicleTypeAndRoute riderId vehicleType fromStationCode toStationCode limit = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.fromStationId $ Se.Eq fromStationCode,
+          Se.Is Beam.toStationId $ Se.Eq toStationCode
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    limit
+    Nothing
