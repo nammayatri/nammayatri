@@ -651,6 +651,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
+    when (booking.specialLocationTag == Just "SpecialZone_SureAirport_PriorityDrop") $
+      Redis.setExp (mkDriverAirportDropKey driverId.getId) True 1800
+
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 
     return updRide
@@ -1206,3 +1209,6 @@ isUnloadingTimeRequired str =
              DVST.DELIVERY_TRUCK_LARGE,
              DVST.DELIVERY_TRUCK_ULTRA_LARGE
            ]
+
+mkDriverAirportDropKey :: Text -> Text
+mkDriverAirportDropKey driverId = "Driver:AirportDrop:" <> driverId
