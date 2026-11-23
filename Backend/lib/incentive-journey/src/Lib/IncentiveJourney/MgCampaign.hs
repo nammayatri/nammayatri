@@ -196,17 +196,17 @@ parseControlFeatures = \case
                             Just (A.Bool b) -> b
                             _ -> acc.allowCancellationByDriver
                         _ -> acc.allowCancellationByDriver
-                   in acc{allowCancellationByDriver = allow,
-                          cancelEnableIn = enableIn
-                         }
+                   in acc
+                        & field' @"allowCancellationByDriver" .~ allow
+                        & field' @"cancelEnableIn" .~ enableIn
                 "AutoAssign" ->
-                  acc{autoAssign = config <|> acc.autoAssign,
-                      autoAssignEnableIn = enableIn
-                     }
+                  acc
+                    & field' @"autoAssign" .~ (config <|> acc.autoAssign)
+                    & field' @"autoAssignEnableIn" .~ enableIn
                 "PoolingPriority" ->
-                  acc{poolingPriority = config <|> acc.poolingPriority,
-                      poolingEnableIn = enableIn
-                     }
+                  acc
+                    & field' @"poolingPriority" .~ (config <|> acc.poolingPriority)
+                    & field' @"poolingEnableIn" .~ enableIn
                 _ -> acc
         _ -> acc
 

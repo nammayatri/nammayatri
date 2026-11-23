@@ -50,7 +50,7 @@ instance ToJSON BookingReallocationOrder where
 bookingCancelledOrderJSONOptions :: A.Options
 bookingCancelledOrderJSONOptions =
   defaultOptions
-    { fieldLabelModifier = \case
+    { A.fieldLabelModifier = \case
         "reallocation_reason" -> "./komn/reallocation_reason"
         a -> a
     }

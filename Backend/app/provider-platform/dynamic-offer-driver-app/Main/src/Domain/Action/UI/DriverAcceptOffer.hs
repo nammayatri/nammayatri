@@ -33,6 +33,7 @@ import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -189,9 +190,9 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           Nothing -> fleetForbidsDriverCancellation mbFleetConfig
   let farePolicy' =
         farePolicy
-          { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-            DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
-            DFarePolicy.driverCancellationNotAllowed = if mgOrFleetForbidsCancel then Just True else farePolicy.driverCancellationNotAllowed
+          { DFullFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+            DFullFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
+            DFullFarePolicy.driverCancellationNotAllowed = if mgOrFleetForbidsCancel then Just True else farePolicy.driverCancellationNotAllowed
           } ::
           DFarePolicy.FullFarePolicy
   -- Only look the RC up when the pickup zone has opted in, so ordinary rides pay nothing for this.

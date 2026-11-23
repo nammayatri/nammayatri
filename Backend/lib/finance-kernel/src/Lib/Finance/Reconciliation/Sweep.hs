@@ -28,7 +28,6 @@
   All writes go through the same 'upsertReconEntries' path the chunk
   runner uses, so identity and 'firstSeenAt' survive the re-check.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Reconciliation.Sweep
   ( SweepOutcome (..),

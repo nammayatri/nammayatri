@@ -49,6 +49,8 @@ import qualified WhatsappBot.I18n as Fields
 -- Instances only: LanguageStrings fields are dot-accessed via RDP (getField).
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Types
+import qualified WhatsappBot.Types as BotAddress (BotAddress (..))
+import qualified WhatsappBot.Types as BotPlace (BotPlace (..))
 import WhatsappBot.Util (isPinPlace, pinPlaceId, placeOrPin)
 
 -- | How the booking continues once a save finishes: a one-line notice
@@ -167,7 +169,7 @@ handleFavouritePin env ev ctx = do
       eplace <- env.backend.reverseGeocode (BotAuth pid) (LatLon lat lon)
       let place0 = placeOrPin lat lon eplace
           place = case mName <|> mAddr of
-            Just nm | isNothing place0.address.area -> place0 {address = (place0.address) {area = Just nm}}
+            Just nm | isNothing place0.address.area -> place0 {BotPlace.address = (place0.address) {BotAddress.area = Just nm}}
             _ -> place0
       startSavePlace env ev ctx place (fromMaybe AwaitingPickup ctx.favouriteReturn)
     _ -> locationRequest env to s.favAddPinPrompt

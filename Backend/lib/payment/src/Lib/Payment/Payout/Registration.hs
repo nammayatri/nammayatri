@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module Lib.Payment.Payout.Registration
   ( RegistrationResult (..),
     RegistrationStatusResult (..),

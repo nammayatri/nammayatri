@@ -70,7 +70,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       OverloadedRecordDot
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -86,9 +86,9 @@ library
     , time
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
 
 executable example-service-exe
   main-is: Main.hs
@@ -148,6 +148,6 @@ executable example-service-exe
     , time
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4

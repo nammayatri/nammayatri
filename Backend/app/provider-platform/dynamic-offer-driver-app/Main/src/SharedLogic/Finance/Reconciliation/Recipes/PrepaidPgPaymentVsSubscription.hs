@@ -13,7 +13,6 @@
 
   Ports doReconciliationPgPaymentVsSubscription.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription
   ( recipe,

@@ -55,6 +55,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified API.Types.UI.MultimodalConfirm as RouteWithLiveVehicle (RouteWithLiveVehicle (..))
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.Rating as Rating
 import BecknV2.FRFS.Enums
@@ -3038,8 +3039,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
             map
               ( \r ->
                   let (keptLive, keptScheduled) = fromMaybe ([], []) $ Map.lookup r.routeCode topByRoute
-                   in -- PassingRoutes shares liveVehicles/schedules, so the update needs the type spelled out.
-                      (r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled} :: API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
+                   in r {RouteWithLiveVehicle.liveVehicles = keptLive, RouteWithLiveVehicle.schedules = keptScheduled}
               )
               routes
 

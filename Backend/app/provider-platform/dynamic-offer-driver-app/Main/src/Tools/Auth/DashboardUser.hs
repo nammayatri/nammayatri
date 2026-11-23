@@ -57,6 +57,7 @@ import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Capability as DDashboardCapability
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
+import qualified "lib-dashboard" Domain.Types.Person.Type as DDashboardPersonE (PersonE (..))
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
 import Environment (Flow)
@@ -412,7 +413,7 @@ completeFleetOwnerRegistration fleetOwnerId mbNormalizedEmail firstName lastName
     when enabled $
       unless (fleetOwner.verified == Just True) $
         QDashboardPerson.updatePersonVerifiedStatus fleetOwner.id True
-    let updFleetOwner = fleetOwner {DDashboardPerson.firstName = firstName, DDashboardPerson.lastName = lastName, DDashboardPerson.email = maybe fleetOwner.email Just encEmail} :: DDashboardPerson.Person
+    let updFleetOwner = fleetOwner {DDashboardPersonE.firstName = firstName, DDashboardPersonE.lastName = lastName, DDashboardPersonE.email = maybe fleetOwner.email Just encEmail} :: DDashboardPerson.Person
     QDashboardPerson.updatePerson updFleetOwner.id updFleetOwner
     unless (Just fleetRole == updFleetOwner.dashboardAccessType) $
       QDashboardPerson.updatePersonRole updFleetOwner.id fleetOwnerRole

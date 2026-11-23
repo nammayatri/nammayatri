@@ -16,6 +16,7 @@ import Kernel.Prelude
 import Lib.IncentiveJourney.Condition
 import Lib.IncentiveJourney.Reward
 import Lib.IncentiveJourney.Types
+import qualified Lib.IncentiveJourney.Types as RewardDispatchCtx (RewardDispatchCtx (..))
 import qualified Lib.IncentiveJourney.Window as Window
 
 data MilestoneStore m = MilestoneStore
@@ -114,4 +115,4 @@ evaluateMilestonesInOrderWith localTime dispatch ctx deltas mbPickup mbDrop mbVe
               store.persistCompleted milestone currentValue awarded
               store.onCompleted milestone awarded
 
-    awardMilestone = dispatch ctx {milestoneId = milestone.milestoneId} milestone.rewardSpec
+    awardMilestone = dispatch ctx {RewardDispatchCtx.milestoneId = milestone.milestoneId} milestone.rewardSpec

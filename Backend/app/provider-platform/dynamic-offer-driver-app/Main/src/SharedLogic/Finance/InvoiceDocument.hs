@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 -- | Render a finance invoice to a PDF and store it in S3.
 --
 --   'renderInvoicePdfBase64' builds the invoice HTML context (same inputs as the

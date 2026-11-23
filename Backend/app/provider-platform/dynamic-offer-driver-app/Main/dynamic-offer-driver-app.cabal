@@ -2460,7 +2460,7 @@ library
       PackageImports
       TemplateHaskell
       OverloadedRecordDot
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -2568,9 +2568,9 @@ library
       cac_client
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
 
 executable dynamic-offer-driver-app-exe
   main-is: Main.hs
@@ -2712,9 +2712,9 @@ executable dynamic-offer-driver-app-exe
       cac_client
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
 
 test-suite driver-app-test
   type: exitcode-stdio-1.0
@@ -2761,7 +2761,7 @@ test-suite driver-app-test
       PackageImports
       TemplateHaskell
       OverloadedRecordDot
-  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
   extra-libraries:
       cac_client
   build-depends:

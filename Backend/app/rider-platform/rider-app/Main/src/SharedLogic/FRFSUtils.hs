@@ -99,6 +99,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrderRec (PaymentOrderE (..))
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as Fields
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
@@ -1360,7 +1361,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         -- what the buildPaymentOrder branch below also returns and what OnInit.markBookingApproved
         -- re-derives the stored one from.
         let withCallerShortId :: DOrder.PaymentOrder -> DOrder.PaymentOrder
-            withCallerShortId order = order {DOrder.shortId = ShortId orderShortId}
+            withCallerShortId order = order {PaymentOrderRec.shortId = ShortId orderShortId}
         mbOrder <- QPaymentOrder.findById orderId
         pure $ withCallerShortId <$> mbOrder
       else mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp

@@ -62,7 +62,7 @@ import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.OpenMeter as DOpenMeter
-import Domain.Action.UI.Person as SP
+import qualified Domain.Action.UI.Person as Person
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.DeletedPerson as Fields
 import qualified Domain.Types.Depot as DDepot
@@ -261,7 +261,7 @@ data AuthRes = AuthRes
     attempts :: Int,
     authType :: SR.LoginType,
     token :: Maybe Text,
-    person :: Maybe PersonAPIEntity,
+    person :: Maybe Person.PersonAPIEntity,
     isPersonBlocked :: Bool,
     depotCode :: Maybe (Id DDepot.Depot),
     isDepotAdmin :: Maybe Bool
@@ -289,7 +289,7 @@ validateAuthVerifyReq AuthVerifyReq {..} =
 
 data AuthVerifyRes = AuthVerifyRes
   { token :: Text,
-    person :: PersonAPIEntity
+    person :: Person.PersonAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -952,16 +952,16 @@ businessEmailSendHitsCountKey personId = "BAP:Registration:businessEmail:send:" 
 businessEmailVerifyHitsCountKey :: Id SP.Person -> Text
 businessEmailVerifyHitsCountKey personId = "BAP:Registration:businessEmail:verify:" <> getId personId <> ":hitsCount"
 
-buildPersonAPIEntity :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> m PersonAPIEntity
+buildPersonAPIEntity :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> m Person.PersonAPIEntity
 buildPersonAPIEntity person = do
   decPerson <- decrypt person
   customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
   let tag = customerDisability <&> (.tag)
   safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled person safetySettings
-  return $ SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
+  return $ Person.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m Person.PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id

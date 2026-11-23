@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 -- | Self-generated B2C dynamic QR payload (GST compliance, no IRN).
 --
 --   For a B2C invoice the driver/supplier is not GST-registered, so there is no

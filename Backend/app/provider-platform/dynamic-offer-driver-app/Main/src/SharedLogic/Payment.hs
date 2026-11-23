@@ -33,6 +33,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
+import qualified Kernel.External.Payment.Interface.Types as CreateOrderReq (CreateOrderReq (..))
 import Kernel.External.Payment.Juspay.Types.CreateOrder (clientId, payload)
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import Kernel.External.Types (ServiceFlow)
@@ -431,7 +432,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
   paymentServiceName <- TPayment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
   -- Build the offer basket (productId from merchant service config, quantity 1) instead of sending Nothing
   offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just paymentServiceName) createOrderReq.amount
-  let createOrderReqWithBasket = (createOrderReq :: Payment.CreateOrderReq) {Payment.basket = offerBasket}
+  let createOrderReqWithBasket = createOrderReq {CreateOrderReq.basket = offerBasket}
   entityName <- case paymentServiceType of
     DOrder.STCL -> pure DPayment.DRIVER_STCL
     _ -> throwError $ InternalError $ "Unhandled Payment Service Type, " <> show paymentServiceType

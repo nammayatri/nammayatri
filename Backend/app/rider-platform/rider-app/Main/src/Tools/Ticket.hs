@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Ticket.Interface.Types as UpdateTicketReq (UpdateTicketReq (..))
 import qualified Kernel.External.Ticket.Types as TicketTypes
 import qualified Kernel.External.Ticket.XyneSpaces.Config as Fields
 import Kernel.Types.Common
@@ -253,7 +254,7 @@ fanOutUpdates merchantId mocId secondaries mbAdditionalTicketId req =
         logError $ "fanOutUpdates: merchant configured with multiple secondary providers " <> show (svc : rest) <> "; only one is supported, using " <> show svc
       -- Retarget the update request at the secondary's own ticketId; the
       -- comment, status, media, etc. stay the same across providers.
-      let secondaryReq = (req :: Ticket.UpdateTicketReq) {Ticket.ticketId = additionalTicketId}
+      let secondaryReq = req {UpdateTicketReq.ticketId = additionalTicketId}
       result <- withTryCatch "updateTicket:secondary" (callUpdateTicket merchantId mocId svc secondaryReq)
       case result of
         Right _ -> logInfo $ "updateTicket:secondary success service=" <> show svc <> " ticketId=" <> additionalTicketId

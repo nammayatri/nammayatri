@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 -- | Prepaid (RideCredit) ledger flows.
 --
 -- Posting discipline: every full-amount leg goes through FinanceM verbs ('postLeg'),
@@ -84,6 +82,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Lib.Finance.FinanceM as FinanceCtx (FinanceCtx (..))
 import qualified Lib.Finance.FinanceM as FinanceM
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
@@ -480,7 +479,7 @@ mkPrepaidCtx counterpartyType ownerId currency merchantId merchantOperatingCityI
   buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId False
 
 withoutAttribution :: FinanceCtx -> FinanceCtx
-withoutAttribution ctx = (ctx :: FinanceCtx) {concernedIndividualId = Nothing}
+withoutAttribution ctx = ctx {FinanceCtx.concernedIndividualId = Nothing}
 
 -- | Post one leg through FinanceM, preserving this module's historical semantics: a
 --   failed leg is logged and skipped (Nothing), never aborting the surrounding flow.

@@ -53,6 +53,7 @@ import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping 
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as DLE
+import qualified Lib.Finance.FinanceM as FinanceCtx (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementInvoiceMapping as QTdsMap
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as QTdsReq
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
@@ -1024,8 +1025,8 @@ runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest = do
 --   leg once per reference + entity reference + accounts).
 withAdjustmentEntity :: DLA.LedgerAdjustmentRequest -> Finance.FinanceCtx -> Finance.FinanceCtx
 withAdjustmentEntity adjustmentRequest ctx =
-  ctx{Finance.entityReferenceId = Just adjustmentRequest.id.getId,
-      Finance.entityReferenceType = Just DLE.LedgerAdjustmentRequest
+  ctx{FinanceCtx.entityReferenceId = Just adjustmentRequest.id.getId,
+      FinanceCtx.entityReferenceType = Just DLE.LedgerAdjustmentRequest
      }
 
 -- | Common post shape for adjustments without a ride context: fetch the person,
@@ -1177,7 +1178,7 @@ postIncentiveAdjustment transporterConfig _checkerId _adminCheckerName adjustmen
   ctx <- buildRideAdjustmentCtx transporterConfig booking ride
   runLedgerAdjustment
     "incentive"
-    (ctx {Finance.referenceId = referenceId})
+    (ctx {FinanceCtx.referenceId = referenceId})
     Finance.OwnerExpense -- SellerAsset ??
     adjustmentRequest
 

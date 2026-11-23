@@ -93,7 +93,9 @@ import qualified Domain.Types.PaymentChargeBearer as PCB
 import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
+import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory (ServicePeopleCategory (..))
 import Domain.Types.TicketPlace hiding (Fee (..))
+import qualified Domain.Types.TicketPlace as DTicketPlace (TicketPlace (..))
 import Domain.Types.TicketService
 import qualified Domain.Types.ValueAddNP as DValueAddNP
 import qualified Domain.Types.WhiteListOrg as WLO
@@ -1402,11 +1404,11 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           case existingPlace of
             Just oldPlace -> do
               mapM_ (upsertService oldPlace.id.getId) serviceGroups
-              SQTP.updateByPrimaryKey place{id = oldPlace.id}
+              SQTP.updateByPrimaryKey place {DTicketPlace.id = oldPlace.id}
             Nothing -> do
               newPlaceId <- generateGUID
               mapM_ (upsertService newPlaceId) serviceGroups
-              SQTP.create place{id = Id newPlaceId}
+              SQTP.create place {DTicketPlace.id = Id newPlaceId}
 
         upsertService placeId (service, businessHourGroups) = do
           existingService <- SQTS.findByPlacesIdAndService placeId service.service
@@ -1455,10 +1457,10 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           case existingPeopleCategory of
             Nothing -> do
               newPeopleCategoryId <- generateGUID
-              SQSPC.create peopleCategory{id = newPeopleCategoryId}
+              SQSPC.create peopleCategory {DServicePeopleCategory.id = newPeopleCategoryId}
               return newPeopleCategoryId
             Just pc -> do
-              SQSPC.updateByPrimaryKey peopleCategory{id = pc.id}
+              SQSPC.updateByPrimaryKey peopleCategory {DServicePeopleCategory.id = pc.id}
               return pc.id
 
     makeTicketConfigs :: DMOC.MerchantOperatingCity -> Int -> TicketConfigCSVRow -> Flow (TicketPlace, TicketService, BusinessHour, ServiceCategory, ServicePeopleCategory)

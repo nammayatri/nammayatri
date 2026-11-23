@@ -39,6 +39,7 @@ where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
 import Data.Aeson (Options (..), defaultOptions)
+import qualified Data.Aeson as Aeson
 import qualified Data.Char as Char
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 import qualified Data.Text as T
@@ -53,7 +54,7 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Forkable, HasRequestId, HasShortDurationRetryCfg, MonadFlow)
-import SharedLogic.SharedCab.TripClient (DriverTrip (..))
+import qualified SharedLogic.SharedCab.TripClient as TripClient (DriverTrip (..))
 import Tools.Error (SharedCabSessionError (..))
 
 -- | How long a session lives without a write; a plate's bookings are written during its session.
@@ -101,7 +102,7 @@ data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)
 
 selectRouteModeOptions :: Options
-selectRouteModeOptions = defaultOptions {constructorTagModifier = \case c : cs -> Char.toLower c : cs; [] -> []}
+selectRouteModeOptions = defaultOptions {Aeson.constructorTagModifier = \case c : cs -> Char.toLower c : cs; [] -> []}
 
 instance ToJSON SelectRouteMode where
   toJSON = genericToJSON selectRouteModeOptions
@@ -259,7 +260,7 @@ defaultCapacity = 6
 -- | Flush recovery from driver-app's ACTIVE trip, under rider-app's config of its feed (merchant, city, config ids). Pause lived only in the lost session, so the
 -- run comes back ACTIVE (the expiry pass pauses a silent cab again). Walk-ups seed from the count the driver last set, capped at
 -- capacity, and the driver corrects them; the version restarts above any pre-flush counter.
-sessionFromTrip :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> DriverTrip -> UTCTime -> Session
+sessionFromTrip :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> TripClient.DriverTrip -> UTCTime -> Session
 sessionFromTrip merchantId merchantOperatingCityId integratedBppConfigId trip now =
   Session
     { driverId = trip.driverId,

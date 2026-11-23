@@ -86,6 +86,9 @@ import qualified WhatsappBot.Messages as Fields
 import WhatsappBot.Ride (BookingWindow (..), bumpStage, handleStatus, isValidBookingId, listedBookings, registerRide')
 import WhatsappBot.Types
 import WhatsappBot.Util (fmtInt, fmtNum, placeOrPin)
+import qualified WhatsappBot.Types as BotAddress (BotAddress (..))
+import qualified WhatsappBot.Types as BotPlace (BotPlace (..))
+import qualified WhatsappBot.Types as FlowContext (FlowContext (..))
 
 -- ---------------------------------------------------------------------------
 -- Booking entry (engine.ts:583-603, 714-725, 276-292)
@@ -99,7 +102,7 @@ promptForBookingEntry env ev ctx = do
       s = t env.cfg.translations ctx.language
   case ctx.pendingAction of
     Just PendingStatus -> do
-      let ctx1 = ctx {pendingAction = Nothing}
+      let ctx1 = ctx {FlowContext.pendingAction = Nothing}
       save env ev ctx1
       handleStatus env ev ctx1
     _
@@ -119,7 +122,7 @@ promptForBookingEntry env ev ctx = do
       | length merchant.rideTypesOrder > 1 -> sendRideTypePrompt env ev ctx
       | otherwise -> do
         let rt = if regularOffered merchant then Regular else Flexi
-            ctx1 = ctx {rideType = Just rt} :: FlowContext
+            ctx1 = ctx {FlowContext.rideType = Just rt} :: FlowContext
         save env ev ctx1
         promptForPickup env ev ctx1
 
@@ -132,7 +135,7 @@ sendRideTypePrompt env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       merchant = env.cfg.merchant
-  save env ev (ctx {rideType = Nothing} :: FlowContext)
+  save env ev (ctx {FlowContext.rideType = Nothing} :: FlowContext)
   replyButtons env to s.rideTypePrompt (rideTypeButtons s merchant.maxDirectButtons merchant.rideTypesOrder)
 
 -- | The @ride_type:(flexi|regular)@ intercept (@engine.ts:276-292@): record the
@@ -144,13 +147,13 @@ handleRideType env ev ctx rt = case rt of
   _ -> pure ()
   where
     go rideT = do
-      let ctx1 = ctx {rideType = Just rideT, pendingAction = Just PendingBook}
+      let ctx1 = ctx {FlowContext.rideType = Just rideT, FlowContext.pendingAction = Just PendingBook}
       save env ev ctx1
       mok <- ensureAuth env ev (prefetchSavedLocations env) ctx1
       case mok of
         Nothing -> pure ()
         Just ctx2 -> do
-          let ctx3 = ctx2 {pendingAction = Nothing}
+          let ctx3 = ctx2 {FlowContext.pendingAction = Nothing}
           save env ev ctx3
           promptForPickup env ev ctx3
 
@@ -166,7 +169,7 @@ prefetchSavedLocations :: Monad m => BotEnv m -> BotAuth -> FlowContext -> m Flo
 prefetchSavedLocations env auth ctx = do
   esl <- env.backend.getSavedLocations auth
   pure $ case esl of
-    Right locs -> ctx {savedLocations = Just locs} :: FlowContext
+    Right locs -> ctx {FlowContext.savedLocations = Just locs} :: FlowContext
     Left _ -> ctx
 
 -- ---------------------------------------------------------------------------
@@ -186,7 +189,7 @@ promptForPickupWith env ev ctx0 mNotice = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       body = withNotice mNotice s.flexiSharePrompt
-  save env ev ctx {state = AwaitingPickup}
+  save env ev ctx {FlowContext.state = AwaitingPickup}
   if not env.cfg.merchant.favouritesEnabled
     then locationRequest env to body
     else case favourites ctx of
@@ -220,13 +223,13 @@ withPickupChecks env ev ctx point k = do
   mctx' <-
     if isNothing ctx.personId
       then do
-        let ctxP = ctx {pendingAction = Just PendingBook}
+        let ctxP = ctx {FlowContext.pendingAction = Just PendingBook}
         save env ev ctxP
         mok <- ensureAuth env ev (prefetchSavedLocations env) ctxP
         case mok of
           Nothing -> pure Nothing
           Just c -> do
-            let c1 = c {pendingAction = Nothing}
+            let c1 = c {FlowContext.pendingAction = Nothing}
             save env ev c1
             pure (Just c1)
       else pure (Just ctx)
@@ -244,7 +247,7 @@ withPickupChecks env ev ctx point k = do
           case eServiceable of
             Right True -> k ctx1 auth
             _ -> do
-              save env ev ctx1 {state = Idle}
+              save env ev ctx1 {FlowContext.state = Idle}
               replyButtons env to (s.flexiOutOfArea area) [btn s.flexiTryAgain "book"]
 
 -- | The post-auth, post-geofence continuation of handlePickupPin: reverse-
@@ -261,7 +264,7 @@ continuePickup env ev ctx1 auth lat lon mName mAddr = do
 -- | The pickup is known: regular asks for the drop, flexi confirms the pickup.
 continuePickupAt :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> BotPlace -> Maybe Text -> m ()
 continuePickupAt env ev ctx1 origin mName = do
-  let ctx2 = ctx1 {origin = Just origin}
+  let ctx2 = ctx1 {FlowContext.origin = Just origin}
   -- Regular asks for the drop straight away: its fare confirmation shows the full
   -- pickup address and has a Change pickup button, and nothing is booked before
   -- Book auto. Flexi keeps the confirm step, because confirming pickup IS its booking.
@@ -280,7 +283,7 @@ sendPickupConfirmWith :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> M
 sendPickupConfirmWith env ev ctx mNotice mNamedPlace = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
-  save env ev ctx {state = ConfirmingPickup}
+  save env ev ctx {FlowContext.state = ConfirmingPickup}
   let faMaybe = formatAddress <$> ctx.origin
       areaMaybe = ctx.origin >>= (\o -> o.address.area)
       -- Full address (building/street/area) preferred over the bare area
@@ -331,10 +334,10 @@ handleFavouritePick env ev ctx tag = case findFavourite ctx tag of
     | otherwise -> promptForPickup env ev ctx
   Just loc
     | isDropState ctx.state -> case (ctx.personId, ctx.origin) of
-      (Just _, Just _) -> startRegularSearch env ev ctx {destination = Just (savedToPlace loc)}
+      (Just _, Just _) -> startRegularSearch env ev ctx {FlowContext.destination = Just (savedToPlace loc)}
       _ -> do
         reply env ev.fromPhone (t env.cfg.translations ctx.language).sessionExpired
-        save env ev ctx {state = Idle}
+        save env ev ctx {FlowContext.state = Idle}
     | otherwise ->
       withPickupChecks env ev ctx (LatLon loc.lat loc.lon) $ \ctx1 _ ->
         continuePickupAt env ev ctx1 (savedToPlace loc) (Just loc.tag)
@@ -345,10 +348,10 @@ shareNewLocation env ev ctx = do
   let s = t env.cfg.translations ctx.language
   if isDropState ctx.state
     then do
-      save env ev ctx {state = AwaitingRegularDrop}
+      save env ev ctx {FlowContext.state = AwaitingRegularDrop}
       locationRequest env ev.fromPhone s.regularDropPrompt
     else do
-      save env ev ctx {state = AwaitingPickup}
+      save env ev ctx {FlowContext.state = AwaitingPickup}
       locationRequest env ev.fromPhone s.flexiSharePrompt
 
 -- | Where the booking continues after a favourite is saved (or failed to
@@ -409,7 +412,7 @@ startFlexiSearch env ev ctx = do
   case (ctx.personId, ctx.origin) of
     (Just pid, Just origin) -> do
       let auth = BotAuth pid
-      save env ev ctx {state = FlexiSearching, cancelRequested = Just False}
+      save env ev ctx {FlowContext.state = FlexiSearching, FlowContext.cancelRequested = Just False}
       -- Acknowledge at once, with the Cancel button, so the rider isn't left in
       -- silence while quotes are polled. The fare follows as its own message
       -- once a quote exists (see below).
@@ -452,10 +455,10 @@ startFlexiSearch env ev ctx = do
                           else do
                             let ac =
                                   afterConfirm
-                                    { flexiBookingId = Just bookingId,
-                                      activeBookingId = Just bookingId,
-                                      selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
-                                      state = Tracking
+                                    { FlowContext.flexiBookingId = Just bookingId,
+                                      FlowContext.activeBookingId = Just bookingId,
+                                      FlowContext.selectStartedAt = Just (addUTCTime (-120) flowStartedAt),
+                                      FlowContext.state = Tracking
                                     }
                             save env ev ac
                             registerRide' env ev bookingId ac "confirmed"
@@ -505,7 +508,7 @@ pollFlexiDriver env ev auth bookingId lang attempt
         case eb of
           Right (Just b)
             | isJust b.driverName || isJust b.vehicleNumber || isJust b.rideOtp -> do
-              save env ev fresh {activeBookingId = Just b.bookingId}
+              save env ev fresh {FlowContext.activeBookingId = Just b.bookingId}
               pure (PollFound b)
           _ -> do
             -- Once per search, not every driverPollNotifyEvery attempts: one
@@ -527,7 +530,7 @@ flexiNoAuto :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 flexiNoAuto env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
-  save env ev ctx {state = Idle}
+  save env ev ctx {FlowContext.state = Idle}
   replyButtons env to s.flexiNoAuto [btn s.flexiTryAgain "book"]
 
 -- | Render the shared "auto found" driver card (@engine.ts:1166-1175@) via the
@@ -557,7 +560,7 @@ promptForRegularDropWith env ev ctx0 mNotice = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       body = withNotice mNotice s.regularDropPrompt
-  save env ev ctx {state = AwaitingRegularDrop}
+  save env ev ctx {FlowContext.state = AwaitingRegularDrop}
   if not env.cfg.merchant.favouritesEnabled
     then locationRequest env to body
     else case favourites ctx of
@@ -578,7 +581,7 @@ handleRegularDrop env ev ctx input = do
           edest <- env.backend.reverseGeocode auth (LatLon lat lon)
           let dest0 = placeOrPin lat lon edest
               dest = applyNameOverride dest0 mName mAddr
-          startRegularSearch env ev ctx {destination = Just dest}
+          startRegularSearch env ev ctx {FlowContext.destination = Just dest}
         _ -> do
           esp <- env.backend.searchPlaces auth input (searchCenterForDest ctx)
           let places = either (const []) identity esp
@@ -586,11 +589,11 @@ handleRegularDrop env ev ctx input = do
             then reply env to s.noPlacesFound
             else do
               let opts = take 3 (map (\p -> DestinationOption {description = p.description, placeId = p.placeId}) places)
-              save env ev ctx {state = ConfirmingRegularDrop}
+              save env ev ctx {FlowContext.state = ConfirmingRegularDrop}
               replyButtons env to s.regularSelectDrop [btn (T.take 24 o.description) ("regdrop:" <> o.placeId) | o <- opts]
     _ -> do
       reply env to s.sessionExpired
-      save env ev ctx {state = Idle}
+      save env ev ctx {FlowContext.state = Idle}
 
 -- | Rider picked a searched drop option (or typed a new address) (@engine.ts:786-803@).
 handleConfirmingRegularDrop :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Text -> m ()
@@ -605,7 +608,7 @@ handleConfirmingRegularDrop env ev ctx input = do
         ep <- env.backend.getPlaceDetails auth (T.drop 8 input)
         case ep of
           Left _ -> reply env to s.somethingWentWrong
-          Right place -> startRegularSearch env ev ctx {destination = Just place}
+          Right place -> startRegularSearch env ev ctx {FlowContext.destination = Just place}
     else handleRegularDrop env ev ctx input
 
 -- | Price the one-way auto (ONE_WAY search → estimates → pick auto) then show the
@@ -619,7 +622,7 @@ startRegularSearch env ev ctx = do
       let auth = BotAuth pid
       -- No "Getting your fare..." message: the fare confirmation follows within
       -- seconds. A message sent while searching still gets that reply (stateSwitch).
-      save env ev ctx {state = RegularSearching}
+      save env ev ctx {FlowContext.state = RegularSearching}
       esid <- env.backend.searchRide auth origin destination
       case esid of
         Left _ -> flexiNoAuto env ev ctx
@@ -630,10 +633,10 @@ startRegularSearch env ev ctx = do
             Right [] -> flexiNoAuto env ev ctx
             Right estimates@(e0 : _) -> do
               let autoEst = fromMaybe e0 (find (\e -> e.vehicleVariant == "AUTO_RICKSHAW") estimates)
-              sendRegularFareConfirm env ev ctx {regularEstimateId = Just autoEst.estimateId, regularFare = Just autoEst.estimatedFare}
+              sendRegularFareConfirm env ev ctx {FlowContext.regularEstimateId = Just autoEst.estimateId, FlowContext.regularFare = Just autoEst.estimatedFare}
     _ -> do
       reply env to s.sessionExpired
-      save env ev ctx {state = Idle}
+      save env ev ctx {FlowContext.state = Idle}
 
 -- | Poll @getEstimates@ up to @regularEstimatePollAttempts@ times (@engine.ts:825-829@).
 pollEstimates :: Monad m => BotEnv m -> BotAuth -> Text -> Int -> m (Either BotError [BotEstimate])
@@ -653,7 +656,7 @@ sendRegularFareConfirm :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> 
 sendRegularFareConfirm env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
-  save env ev ctx {state = ConfirmingRegularFare}
+  save env ev ctx {FlowContext.state = ConfirmingRegularFare}
   -- Full addresses (building, street, area) for both ends, not just the drop's area.
   let dropAddr = maybe "your destination" formatAddress ctx.destination
       pickupAddr = maybe "your pickup" formatAddress ctx.origin
@@ -673,7 +676,7 @@ confirmRegularBooking env ev ctx = do
   case (ctx.personId, ctx.regularEstimateId) of
     (Just pid, Just estimateId) -> do
       let auth = BotAuth pid
-      save env ev ctx {cancelRequested = Just False}
+      save env ev ctx {FlowContext.cancelRequested = Just False}
       replyButtons env to s.regularBooking [btn s.flexiCancelSearch "cancel"]
       -- Reference time BEFORE select (minus skew) so the booking clears listV2.
       selectCalledAt <- addUTCTime (-120) <$> env.clock.now
@@ -685,7 +688,7 @@ confirmRegularBooking env ev ctx = do
           if afterSelect.cancelRequested == Just True || afterSelect.state == Idle
             then pure ()
             else do
-              save env ev afterSelect {state = Tracking, selectStartedAt = Just selectCalledAt}
+              save env ev afterSelect {FlowContext.state = Tracking, FlowContext.selectStartedAt = Just selectCalledAt}
               outcome <- pollRegularBooking env ev auth selectCalledAt ctx.language 0
               case outcome of
                 PollAborted -> pure ()
@@ -720,7 +723,7 @@ pollRegularBooking env ev auth createdAfter lang attempt
         bookings <- listedBookings env auth fresh (SinceExactly createdAfter)
         case bookings of
           (b : _) -> do
-            save env ev fresh {activeBookingId = Just b.bookingId}
+            save env ev fresh {FlowContext.activeBookingId = Just b.bookingId}
             pure (PollFound b)
           [] -> do
             -- Once per search, not every driverPollNotifyEvery attempts: one
@@ -867,7 +870,7 @@ formatAddress p =
 -- it (@engine.ts:1009-1011,768@).
 applyNameOverride :: BotPlace -> Maybe Text -> Maybe Text -> BotPlace
 applyNameOverride p mName mAddr = case mName <|> mAddr of
-  Just nm | isNothing p.address.area -> p {address = (p.address) {area = Just nm}}
+  Just nm | isNothing p.address.area -> p {BotPlace.address = (p.address) {BotAddress.area = Just nm}}
   _ -> p
 
 -- | The tariff display line (@engine.ts:571-579@), from the quote's fare-policy

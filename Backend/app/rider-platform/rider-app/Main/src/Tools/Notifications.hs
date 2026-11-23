@@ -63,7 +63,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Types as FCMType
 import Kernel.External.Types (Language, SchedulerFlow, ServiceFlow)
-import Kernel.Prelude (getField)
+import Kernel.Prelude (field', getField)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (count, runInReplica)
@@ -82,7 +82,7 @@ import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as Fields
 import qualified Safety.Domain.Types.SafetySettings as Fields
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
-import SharedLogic.JobScheduler
+import SharedLogic.JobScheduler hiding (ScheduleTagActionNotificationJobData (..), ScheduledRideNotificationsToRiderJobData (..))
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Person as SLP
 import SharedLogic.Quote
@@ -119,14 +119,18 @@ templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
 
 createNotificationReq :: Text -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
-createNotificationReq key modifier = modifier $ def {notificationKey = key}
+createNotificationReq key modifier = modifier $ def & field' @"notificationKey" .~ key
 
 showLocalTime :: Seconds -> UTCTime -> Text
 showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %b, %I:%M %p" $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) time
 
 -- | A code-owned key: the row is looked up under its name, then under its legacy name.
 createKeyedNotificationReq :: RiderPushKey -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
-createKeyedNotificationReq key modifier = modifier $ def {notificationKey = keyName key, legacyNotificationKey = legacyKeyName key}
+createKeyedNotificationReq key modifier =
+  modifier $
+    def
+      & field' @"notificationKey" .~ keyName key
+      & field' @"legacyNotificationKey" .~ legacyKeyName key
 
 data NotificationRequest = NotificationRequest
   { subCategory :: Maybe Notification.SubCategory,
@@ -139,7 +143,7 @@ data NotificationRequest = NotificationRequest
     notificationTypeForSound :: Maybe Notification.Category,
     auth :: Maybe Notification.Auth
   }
-  deriving (Show, Eq)
+  deriving (Generic, Show, Eq)
 
 instance Default NotificationRequest where
   def =

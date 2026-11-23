@@ -77,7 +77,6 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -Wwarn=ambiguous-fields
   - -fwrite-ide-info
   - -hiedir=.hie
 
@@ -96,7 +95,6 @@ library:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
@@ -130,7 +128,6 @@ tests:
       - condition: flag(Local)
         then:
           ghc-options:
-            - -Wno-ambiguous-fields
             - -Wno-incomplete-uni-patterns
             - -Wno-incomplete-record-updates
             - -O0

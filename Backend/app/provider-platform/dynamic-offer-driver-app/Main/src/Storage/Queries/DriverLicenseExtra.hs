@@ -1,6 +1,7 @@
 module Storage.Queries.DriverLicenseExtra where
 
 import Domain.Types.DriverLicense
+import qualified Domain.Types.DriverLicense as DDriverLicense (DriverLicenseE (..))
 import Domain.Types.Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -100,7 +101,7 @@ resolveLegacyByHash dlNumberHash merchantId = do
             [Se.Is BeamDL.id $ Se.Eq dl.id.getId]
           pure $
             if personMerchantId == merchantId
-              then Just (dl {merchantId = Just personMerchantId} :: DriverLicense)
+              then Just (dl {DDriverLicense.merchantId = Just personMerchantId})
               else Nothing
 
 findByDLNumberAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> VerificationStatus -> Id DM.Merchant -> m (Maybe DriverLicense)

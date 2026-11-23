@@ -142,6 +142,7 @@ import qualified Domain.Types.RegistrationToken as Fields
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.Vehicle as DVehicle (Vehicle (..))
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as Fields
@@ -1209,7 +1210,7 @@ updateVehicleVariantAndServiceTier :: DTC.TransporterConfig -> DV.VehicleVariant
 updateVehicleVariantAndServiceTier transporterConfig variant vehicle vehicleCategory = do
   -- Compute service tiers against the NEW variant: callers pass the vehicle read before the
   -- variant change is persisted, so override it in-memory before fetching eligible tiers.
-  let updatedVehicle = vehicle {DVeh.variant = variant} :: DVeh.Vehicle
+  let updatedVehicle = vehicle {DVehicle.variant = variant} :: DVeh.Vehicle
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
   serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AutoSelectedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId

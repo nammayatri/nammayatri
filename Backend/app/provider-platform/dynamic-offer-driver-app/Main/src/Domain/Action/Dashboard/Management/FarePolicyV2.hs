@@ -58,6 +58,7 @@ import Domain.Types.Common (TripCategory (..))
 import qualified Domain.Types.ConditionalCharges as DTAC
 import Domain.Types.Extra.ConditionalCharges (ConditionalChargesCategories (..))
 import qualified Domain.Types.FareAlertSubscription as DFAS
+import qualified Domain.Types.FarePolicy as DFarePolicy (FarePolicyD (..))
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
@@ -533,7 +534,7 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
       let cloneIssues = validatePolicy transporterConfig (toApiPolicy source Nothing)
       unless (null cloneIssues) $
         throwError (InvalidRequest $ "Source policy invalid, fix it before cloning: " <> T.intercalate "; " (map (\i -> i.field <> ": " <> i.message) cloneIssues))
-      pure $ (source :: FarePolicyD.FarePolicy) {FarePolicyD.id = newPolicyId, FarePolicyD.merchantId = Just merchant.id, FarePolicyD.merchantOperatingCityId = Just merchantOpCity.id, FarePolicyD.createdAt = now, FarePolicyD.updatedAt = now}
+      pure $ (source :: FarePolicyD.FarePolicy) {DFarePolicy.id = newPolicyId, DFarePolicy.merchantId = Just merchant.id, DFarePolicy.merchantOperatingCityId = Just merchantOpCity.id, DFarePolicy.createdAt = now, DFarePolicy.updatedAt = now}
     (Nothing, Nothing) -> throwError (InvalidRequest "either sourceFarePolicyId or an inline policy is required")
   -- the variant must be able to price the trip category: a Progressive policy
   -- bound to a Rental combo (say, cloned from a OneWay donor) misprices or
@@ -623,7 +624,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
             source <- CQFP.findById Nothing fareProduct.farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fareProduct.farePolicyId.getId)
             now <- getCurrentTime
             clonePolicyId <- generateGUID
-            let clone = (source :: FarePolicyD.FarePolicy) {FarePolicyD.id = clonePolicyId, FarePolicyD.createdAt = now, FarePolicyD.updatedAt = now}
+            let clone = (source :: FarePolicyD.FarePolicy) {DFarePolicy.id = clonePolicyId, DFarePolicy.createdAt = now, DFarePolicy.updatedAt = now}
             CQFP.create clone
             writeAmbulanceSlabs clone
             sourceCharges <- QCC.findAllByFp source.id.getId

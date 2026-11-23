@@ -1,3 +1,8 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: beckn-test
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
@@ -119,12 +124,10 @@ library:
   source-dirs:
     - src
   ghc-options:
-    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
@@ -135,7 +138,6 @@ library:
           - -j4
       else:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
@@ -156,7 +158,6 @@ tests:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
@@ -167,7 +168,6 @@ tests:
           - -j4
       else:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2

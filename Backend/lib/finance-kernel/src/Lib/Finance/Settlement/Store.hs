@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module Lib.Finance.Settlement.Store
   ( storeParseResult,
     IngestionResult (..),
@@ -12,6 +10,7 @@ import qualified Data.Text as T
 import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..), TxnType (..))
 import qualified Kernel.External.Settlement.Interface.Types as Ext
+import qualified Kernel.External.Settlement.Interface.Types as PaymentSettlementReport (PaymentSettlementReport (..))
 import Kernel.Prelude
 import qualified Kernel.Types.ActorInfo as Fields
 import qualified Kernel.Types.Id as Fields
@@ -69,7 +68,7 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
           Just refTxnId -> maybe report.orderId (.orderId) <$> QPgReport.findOrderByTxnId refTxnId
           Nothing -> pure report.orderId
         else pure report.orderId
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType (report {Ext.orderId = orderId'})
+    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType (report {PaymentSettlementReport.orderId = orderId'})
     let isDuplicate = case (pgReport.txnId, pgReport.utr) of
           (Just tId, Just utr) -> isJust <$> QPgReport.findByTxnIdUtrRefundIdDisputeId tId utr pgReport.refundId pgReport.disputeId
           _ -> pure False

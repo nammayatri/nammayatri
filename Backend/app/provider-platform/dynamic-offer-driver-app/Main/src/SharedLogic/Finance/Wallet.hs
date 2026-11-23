@@ -73,7 +73,6 @@
   Invoice: created inside 'createDriverWalletTransaction' (EndRide/Internal.hs) using
   FinanceM's auto-collected entry IDs — analogous to BAP's model.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Wallet
   ( walletReferenceBaseRide,
@@ -221,6 +220,7 @@ import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData, run
 import qualified Lib.Finance.Balance as FinanceBalance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Lib.Finance.FinanceM as FinanceCtx (FinanceCtx (..))
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
@@ -871,8 +871,8 @@ createWalletHold counterpartyType ownerId amount currency merchantId merchantOpe
     Just _ -> pure $ Right ()
     Nothing -> do
       let ctx =
-            (buildDriverChargeCtx counterpartyType ownerId merchantId.getId merchantOperatingCityId.getId currency referenceId False :: FinanceCtx)
-              { concernedIndividualId = fmap (.getId) mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
+            (buildDriverChargeCtx counterpartyType ownerId merchantId.getId merchantOperatingCityId.getId currency referenceId False)
+              { FinanceCtx.concernedIndividualId = fmap (.getId) mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
               }
       result <- runFinance ctx $ void $ transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata OwnerLiability PlatformAsset amount walletReferenceStatutoryHold
       pure $ void result

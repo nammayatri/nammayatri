@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
+import qualified SharedLogic.External.Nandi.Types as UpdateWaybillDetailsReq (UpdateWaybillDetailsReq (..))
 import qualified SharedLogic.External.Nandi.Types as VehicleUpsertRequest (VehicleUpsertRequest (..))
 import SharedLogic.FRFSUtils (unixToUTC)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -228,7 +229,7 @@ validateVehicleChange baseUrl gtfsId req = case req.vehicle_no of
                 showLayoutId mbNewLayoutId,
                 ") do not share the same seat layout, vehicle change is not allowed"
               ]
-    pure (req :: UpdateWaybillDetailsReq) {vehicle_no = Just newVehicleNo}
+    pure req {UpdateWaybillDetailsReq.vehicle_no = Just newVehicleNo}
   where
     validateNonBlank rawVehicleNo = do
       let vehicleNo = T.strip rawVehicleNo

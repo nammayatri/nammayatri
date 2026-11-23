@@ -7,6 +7,7 @@ module Domain.Action.UI.DriverSafetySettings
 where
 
 import qualified API.Types.UI.DriverSafetySettings as API
+import qualified API.Types.UI.DriverSafetySettings as GetDriverSafetySettingsRes (GetDriverSafetySettingsRes (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -49,7 +50,7 @@ getDriverGetSafetySettings (mbPersonId, _, _) personId = do
   aggregatedRideShareSetting <- deriveAggregatedRideShareSetting personId
   return $
     (toGetRes personId safetySettings)
-      { API.aggregatedRideShareSetting = aggregatedRideShareSetting
+      { GetDriverSafetySettingsRes.aggregatedRideShareSetting = aggregatedRideShareSetting
       }
 
 putDriverUpdateSafetySettings ::

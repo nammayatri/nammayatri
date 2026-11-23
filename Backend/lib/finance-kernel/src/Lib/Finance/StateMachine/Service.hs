@@ -5,7 +5,6 @@
   Implements LAW 3: Deterministic State Transitions.
   Uses generated Beam queries internally.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.StateMachine.Service
   ( -- * State machine operations

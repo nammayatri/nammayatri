@@ -157,9 +157,9 @@ library
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
 
 test-suite utils-rate-limit-test
   type: exitcode-stdio-1.0
@@ -204,7 +204,7 @@ test-suite utils-rate-limit-test
       PackageImports
       TemplateHaskell
       OverloadedRecordDot
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -threaded -Wno-ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -threaded
   build-depends:
       JuicyPixels
     , JuicyPixels-extra

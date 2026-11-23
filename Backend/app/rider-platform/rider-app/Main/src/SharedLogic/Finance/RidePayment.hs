@@ -196,6 +196,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as Fields
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Finance.FinanceM as FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
 import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..))
 import qualified Lib.Finance.Ledger.Service
@@ -443,17 +444,17 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
 
 applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx
 applyBookingProviderFieldsToCtx booking ctx =
-  ctx{merchantId = fromMaybe ctx.merchantId booking.issuedById,
-      merchantName = booking.issuedByName <|> ctx.merchantName,
-      issuedByAddress = booking.issuedByAddress <|> ctx.issuedByAddress,
-      supplierName = booking.supplierName <|> ctx.supplierName,
-      supplierAddress = booking.supplierAddress <|> ctx.supplierAddress,
-      supplierGSTIN = booking.supplierGSTIN <|> ctx.supplierGSTIN,
-      supplierVatNumber = booking.supplierTaxNo <|> ctx.supplierVatNumber,
-      supplierId = booking.supplierId <|> ctx.supplierId,
-      merchantGstin = booking.issuedByGstin <|> ctx.merchantGstin,
-      merchantVatNumber = booking.issuedByTaxNo <|> ctx.merchantVatNumber,
-      fromLocationAddress =
+  ctx{FinanceM.merchantId = fromMaybe ctx.merchantId booking.issuedById,
+      FinanceM.merchantName = booking.issuedByName <|> ctx.merchantName,
+      FinanceM.issuedByAddress = booking.issuedByAddress <|> ctx.issuedByAddress,
+      FinanceM.supplierName = booking.supplierName <|> ctx.supplierName,
+      FinanceM.supplierAddress = booking.supplierAddress <|> ctx.supplierAddress,
+      FinanceM.supplierGSTIN = booking.supplierGSTIN <|> ctx.supplierGSTIN,
+      FinanceM.supplierVatNumber = booking.supplierTaxNo <|> ctx.supplierVatNumber,
+      FinanceM.supplierId = booking.supplierId <|> ctx.supplierId,
+      FinanceM.merchantGstin = booking.issuedByGstin <|> ctx.merchantGstin,
+      FinanceM.merchantVatNumber = booking.issuedByTaxNo <|> ctx.merchantVatNumber,
+      FinanceM.fromLocationAddress =
         let addr = booking.fromLocation.address
             nonEmpty = mfilter (not . T.null)
             parts = catMaybes (nonEmpty <$> [addr.door, addr.building, addr.street, nonEmpty addr.area <|> nonEmpty addr.ward, addr.city, addr.state, addr.areaCode, addr.country])
@@ -1223,7 +1224,7 @@ createRefundRaisedLedger ctx taxRegime refundRequestId splits discountRecovery =
       pure $ Right [e.id]
     Nothing -> do
       result <-
-        runFinance ctx {entityReferenceId = Just refundRequestId.getId, entityReferenceType = Just LE.RefundRequest} $ do
+        runFinance ctx {FinanceM.entityReferenceId = Just refundRequestId.getId, FinanceM.entityReferenceType = Just LE.RefundRequest} $ do
           forM_ splits $ \s -> do
             let (baseRef, vatRef) = refundRefTypesForComponent taxRegime s.component
             void $ transferPending OwnerExpense BuyerControl s.fareAmount baseRef

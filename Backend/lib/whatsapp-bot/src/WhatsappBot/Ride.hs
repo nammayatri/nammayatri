@@ -51,6 +51,7 @@ import WhatsappBot.I18n (LanguageStrings (..), t)
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Messages (RideStage (..), buildTrackingLink, classifyStage)
 import WhatsappBot.Types
+import qualified WhatsappBot.Types as FlowContext (FlowContext (..))
 
 -- ---------------------------------------------------------------------------
 -- Ride resolution: the two policies, named (engine.ts:1599-1612 + the five
@@ -235,7 +236,7 @@ handleCancel env ev ctx mkRow input = do
       replyWithMenu env ev mkRow s.cancelled
     Just pid -> do
       let auth = BotAuth pid
-      save env ev ctx {cancelRequested = Just True}
+      save env ev ctx {FlowContext.cancelRequested = Just True}
       -- Listing, NOT the ledger: cancel must also work in the pre-registration
       -- window (cancel-mid-search), and it keeps using the listing after
       -- registration too (cancel-after-register pins getActiveBookings there).
@@ -261,7 +262,7 @@ handleCancel env ev ctx mkRow input = do
             resetContext env ev
             replyWithMenu env ev mkRow s.rideAlreadyCancelled
           | rStatus == "INPROGRESS" -> do
-            save env ev ctx {cancelRequested = Just False}
+            save env ev ctx {FlowContext.cancelRequested = Just False}
             reply env to s.rideInProgress
           | otherwise -> case booking of
             Just b -> do
@@ -324,19 +325,19 @@ handleSosTrigger env ev ctx = do
       -- SOS targets the RIDE id (rideList[0].id); no assigned ride => nothing to SOS.
       Nothing -> do
         reply env to (s.sosFailed "No active ride found")
-        save env ev ctx {state = Tracking}
+        save env ev ctx {FlowContext.state = Tracking}
       Just rid -> do
         esos <- env.backend.triggerSOS auth rid Nothing
         case esos of
           Left err -> do
             reply env to (s.sosFailed err.botErrorMessage)
-            save env ev ctx {state = Tracking}
+            save env ev ctx {FlowContext.state = Tracking}
           Right sosId -> do
-            save env ev ctx {sosId = Just sosId, state = Tracking}
+            save env ev ctx {FlowContext.sosId = Just sosId, FlowContext.state = Tracking}
             replyButtons env to s.sosTriggered [btn s.markSafeButton "mark_safe_confirm"]
     [] -> do
       reply env to (s.sosFailed "No active ride found")
-      save env ev ctx {state = Tracking}
+      save env ev ctx {FlowContext.state = Tracking}
 
 -- | @mark_safe_trigger@ (@engine.ts:237-249@): call markRideAsSafe, clear the SOS.
 handleMarkSafeTrigger :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
@@ -351,10 +352,10 @@ handleMarkSafeTrigger env ev ctx = do
       case em of
         Left err -> do
           reply env to (s.markSafeFailed err.botErrorMessage)
-          save env ev ctx {state = Tracking}
+          save env ev ctx {FlowContext.state = Tracking}
         Right () -> do
           reply env to s.markedSafe
-          save env ev ctx {sosId = Nothing, state = Tracking}
+          save env ev ctx {FlowContext.sosId = Nothing, FlowContext.state = Tracking}
 
 -- ---------------------------------------------------------------------------
 -- Call driver (engine.ts:389-406)

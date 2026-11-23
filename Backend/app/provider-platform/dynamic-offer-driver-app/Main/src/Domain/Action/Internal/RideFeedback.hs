@@ -32,6 +32,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideFeedbackConfig as DRFC
 import qualified Domain.Types.RideFeedbackResponse as DRFR
+import qualified Domain.Types.RideFeedbackResponse as DRideFeedbackActionResult (RideFeedbackActionResult (..))
 import Environment
 import IssueManagement.Common (Translation (..))
 import Kernel.External.Types (Language (ENGLISH))
@@ -493,7 +494,7 @@ postActionResults bookingId responseId apiKey req = do
     response <- fetchJourneyResponse journey responseId
     let previous = fromMaybe [] response.actionResults
         -- A retry reports its own run; attempts add up so the inspector shows every try.
-        updated = [maybe r (\new -> (new :: DRFR.RideFeedbackActionResult) {DRFR.attempts = r.attempts + new.attempts}) (find (sameAction r) req.results) | r <- previous]
+        updated = [maybe r (\new -> (new :: DRFR.RideFeedbackActionResult) {DRideFeedbackActionResult.attempts = r.attempts + new.attempts}) (find (sameAction r) req.results) | r <- previous]
         added = [r | r <- req.results, not (any (sameAction r) previous)]
     QRFR.updateActionResults (Just $ updated <> added) response.id
   pure Success
@@ -527,7 +528,7 @@ getRetryableActions bookingId responseId apiKey = do
               action <- rule.actions,
               any (\r -> r.ruleId == rule.ruleId && r.actionType == action.actionType) due
           ]
-        claimed = [if any (sameAction r) (map (pendingResult now) actions) then (r :: DRFR.RideFeedbackActionResult) {DRFR.status = DRFR.PENDING, DRFR.updatedAt = now} else r | r <- results]
+        claimed = [if any (sameAction r) (map (pendingResult now) actions) then (r :: DRFR.RideFeedbackActionResult) {DRideFeedbackActionResult.status = DRFR.PENDING, DRideFeedbackActionResult.updatedAt = now} else r | r <- results]
     unless (null actions) $ QRFR.updateActionResults (Just claimed) current.id
     pure RetryableActionsRes {responseId = current.id, questionKey = current.questionKey, rideId = current.rideId, answer, actions}
 

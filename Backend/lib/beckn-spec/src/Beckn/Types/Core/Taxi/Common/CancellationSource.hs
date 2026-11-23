@@ -15,6 +15,7 @@
 module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
 import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.OpenApi
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
@@ -39,7 +40,7 @@ instance FromJSON CancellationSource where
 cancellationSourceJSONOptions :: Options
 cancellationSourceJSONOptions =
   defaultOptions
-    { constructorTagModifier = \case
+    { Aeson.constructorTagModifier = \case
         "ByUser" -> "CANCELLED_BY_USER"
         "ByDriver" -> "CANCELLED_BY_DRIVER"
         "ByMerchant" -> "CANCELLED_BY_MERCHANT"

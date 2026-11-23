@@ -4,7 +4,6 @@
   Input types for audit operations.
   The actual operations are in Lib.Finance.Audit.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Audit.Interface
   ( AuditInput (..),

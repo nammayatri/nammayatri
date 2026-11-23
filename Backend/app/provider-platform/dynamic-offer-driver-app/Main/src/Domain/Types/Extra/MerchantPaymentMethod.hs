@@ -8,6 +8,8 @@ module Domain.Types.Extra.MerchantPaymentMethod
 where
 
 import Control.Lens.Operators ((?~))
+import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Types
 import qualified Data.List as List
 import Data.OpenApi
@@ -46,14 +48,14 @@ instance ToSchema PaymentInstrument where
 paymentInstrumentOptions :: Options
 paymentInstrumentOptions =
   defaultOptions
-    { sumEncoding = paymentInstrumentTaggedObject
+    { Aeson.sumEncoding = paymentInstrumentTaggedObject
     }
 
 paymentInstrumentTaggedObject :: SumEncoding
 paymentInstrumentTaggedObject =
   defaultTaggedObject
-    { tagFieldName = "instrumentType",
-      contentsFieldName = "instrumentName"
+    { Aeson.tagFieldName = "instrumentType",
+      Aeson.contentsFieldName = "instrumentName"
     }
 
 instance Show PaymentInstrument where

@@ -37,6 +37,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCMOverlayReq (FCMOverlayReq (..))
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -369,10 +370,10 @@ sendOverlayByKey ctx driverId overlayKey mbTemplateParams = do
 -- rule's templateParams object. Unknown placeholders are left as-is.
 substituteOverlayParams :: Maybe A.Value -> FCM.FCMOverlayReq -> FCM.FCMOverlayReq
 substituteOverlayParams (Just (A.Object o)) req =
-  req{FCM.title = subst <$> req.title,
-      FCM.description = subst <$> req.description,
-      FCM.okButtonText = subst <$> req.okButtonText,
-      FCM.toastMessage = subst <$> req.toastMessage
+  req{FCMOverlayReq.title = subst <$> req.title,
+      FCMOverlayReq.description = subst <$> req.description,
+      FCMOverlayReq.okButtonText = subst <$> req.okButtonText,
+      FCMOverlayReq.toastMessage = subst <$> req.toastMessage
      }
   where
     subst txt = foldl' (\acc (k, v) -> T.replace ("{#" <> AK.toText k <> "#}") (renderParam v) acc) txt (AKM.toList o)

@@ -56,9 +56,12 @@ import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import Domain.Types.FareParameters ()
 import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified Domain.Types.Geometry as Fields
 import qualified Domain.Types.InterCityTravelCities as Fields
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Location as DLocation (Location (..))
+import qualified Domain.Types.Location as DLocationAddress (LocationAddress (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -528,7 +531,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
       -- Resolve domain discount using the correct email domain per billing category
       mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
       mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain sReq.businessEmailDomain SLT.PERSONAL fp.vehicleServiceTier
-      let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
+      let fp' = fp{DFullFarePolicy.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFullFarePolicy.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           isAllowed <- VSTAR.isAreaAllowedForVSTMaybe vehicleServiceTierItem mbAreaForVST
@@ -1438,7 +1441,7 @@ withDropSpecialLocationArea :: Maybe Text -> Maybe Text -> DLoc.Location -> DLoc
 withDropSpecialLocationArea mbSpecialLocationTag mbSpecialLocationName location =
   case (T.splitOn "_" <$> mbSpecialLocationTag, mbSpecialLocationName) of
     (Just (_ : dropCategory : "PriorityDrop" : _), Just name)
-      | dropCategory `elem` dropAreaOverrideCategories -> location{DLoc.address = location.address{DLoc.area = Just name}}
+      | dropCategory `elem` dropAreaOverrideCategories -> location{DLocation.address = location.address{DLocationAddress.area = Just name}}
     _ -> location
 
 getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address

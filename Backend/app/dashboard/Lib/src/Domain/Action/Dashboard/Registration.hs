@@ -869,7 +869,7 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
-  QP.create fleetOwner{verified = mbBoolVerified}
+  QP.create fleetOwner{PT.verified = mbBoolVerified}
   QAccess.create merchantAccess
 
 -- | Create the dashboard-side operator.

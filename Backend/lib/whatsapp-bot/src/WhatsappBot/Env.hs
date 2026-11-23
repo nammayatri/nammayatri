@@ -64,6 +64,7 @@ import WhatsappBot.I18n (LanguageStrings (..), SupportedLanguage, t)
 -- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Types
+import qualified WhatsappBot.Types as FlowContext (FlowContext (..))
 
 -- | Static per-conversation config: the resolved merchant and the poll-loop
 -- constants. Held separate from the handles so tests can vary it without
@@ -183,7 +184,7 @@ ensureAuth env ev hook ctx = do
       mstored <- env.persons.getPerson uk
       case mstored of
         Just sp -> do
-          let ctx1 = ctx {personId = Just sp.personId, language = ctx.language <|> sp.language} :: FlowContext
+          let ctx1 = ctx {FlowContext.personId = Just sp.personId, FlowContext.language = ctx.language <|> sp.language} :: FlowContext
               auth = BotAuth sp.personId
           ctx2 <- hook auth ctx1
           save env ev ctx2
@@ -191,14 +192,14 @@ ensureAuth env ev hook ctx = do
         Nothing -> case extractPhone env.cfg.merchant ev of
           Nothing -> do
             reply env to s.sessionExpired
-            save env ev ctx {state = Idle}
+            save env ev ctx {FlowContext.state = Idle}
             pure Nothing
           Just phone -> do
             eauth <- env.backend.authenticate phone
             case eauth of
               Left err -> do
                 reply env to (s.setupFailed err.botErrorMessage)
-                save env ev ctx {state = Idle}
+                save env ev ctx {FlowContext.state = Idle}
                 pure Nothing
               Right authResult -> do
                 -- The one point segment/displayName are ever knowable (see
@@ -210,7 +211,7 @@ ensureAuth env ev hook ctx = do
                 case (authResult.segment, authResult.displayName) of
                   (ExistingApp, Just name) -> reply env to (s.welcomeBack name)
                   _ -> pure ()
-                ctx2 <- hook auth (ctx {personId = Just auth.personId} :: FlowContext)
+                ctx2 <- hook auth (ctx {FlowContext.personId = Just auth.personId} :: FlowContext)
                 env.persons.setPerson uk StoredPerson {personId = auth.personId, language = ctx2.language}
                 save env ev ctx2
                 pure (Just ctx2)
@@ -241,7 +242,7 @@ resetContext :: Monad m => BotEnv m -> InboundEvent -> m ()
 resetContext env ev = do
   mctx <- getCtx env ev
   let ctx = fromMaybe initialContext mctx
-  save env ev initialContext {personId = ctx.personId, savedLocations = ctx.savedLocations, language = ctx.language}
+  save env ev initialContext {FlowContext.personId = ctx.personId, FlowContext.savedLocations = ctx.savedLocations, FlowContext.language = ctx.language}
 
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers

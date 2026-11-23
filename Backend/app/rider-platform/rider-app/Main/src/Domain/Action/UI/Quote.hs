@@ -100,6 +100,7 @@ import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.OfferTypes as CumulativeOfferResp (CumulativeOfferResp (..))
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Settlement as Settlement
@@ -621,7 +622,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
     let grossOffer offer = let gross = Settlement.grossTotalTaxInclusive mbPaymentCharge offer.postOfferAmount in offer {SOffer.postOfferAmount = gross, SOffer.estimatedPostOfferAmount = gross}
         displayedOffers = case DTrip.tripCategoryToPricingPolicy <$> quoteEntity.tripCategory of
           Just DTrip.EstimateBased {} -> mbOffer
-          _ -> (\offers -> (offers {SOffer.offerListResp = map grossOffer offers.offerListResp} :: SOffer.CumulativeOfferResp)) <$> mbOffer
+          _ -> (\offers -> offers {CumulativeOfferResp.offerListResp = map grossOffer offers.offerListResp}) <$> mbOffer
     pure quoteEntity {customerOffers = displayedOffers, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
 
 sortByNearestDriverDistance :: [SQuote.Quote] -> [SQuote.Quote]

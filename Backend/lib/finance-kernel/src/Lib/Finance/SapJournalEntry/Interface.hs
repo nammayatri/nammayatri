@@ -4,7 +4,6 @@
   Input types for SAP journal entry operations.
   The actual operations are in Lib.Finance.SapJournalEntry.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.SapJournalEntry.Interface
   ( SapJournalEntryInput (..),

@@ -21,11 +21,13 @@ where
 import Control.Applicative ((<|>))
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.Map.Strict (Map)
 import Data.OpenApi hiding (description, name, password, url)
+import qualified Data.OpenApi as OpenApi
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Kernel.External.Call.Types
@@ -163,15 +165,15 @@ instance FromJSON MapsServiceConfigUpdateTReq where
 updateMapsReqOptions :: (String -> String) -> Options
 updateMapsReqOptions modifier =
   defaultOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = modifier
+    { Aeson.sumEncoding = updateReqTaggedObject,
+      Aeson.constructorTagModifier = modifier
     }
 
 updateMapsReqSchemaOptions :: SchemaOptions
 updateMapsReqSchemaOptions =
   defaultSchemaOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = updateMapsReqConstructorModifier
+    { OpenApi.sumEncoding = updateReqTaggedObject,
+      OpenApi.constructorTagModifier = updateMapsReqConstructorModifier
     }
 
 updateReqTaggedObject :: SumEncoding
@@ -357,15 +359,15 @@ instance FromJSON SmsServiceConfigUpdateTReq where
 updateSmsReqOptions :: (String -> String) -> Options
 updateSmsReqOptions modifier =
   defaultOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = modifier
+    { Aeson.sumEncoding = updateReqTaggedObject,
+      Aeson.constructorTagModifier = modifier
     }
 
 updateSmsReqSchemaOptions :: SchemaOptions
 updateSmsReqSchemaOptions =
   defaultSchemaOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = updateSmsReqConstructorModifier
+    { OpenApi.sumEncoding = updateReqTaggedObject,
+      OpenApi.constructorTagModifier = updateSmsReqConstructorModifier
     }
 
 updateSmsReqConstructorModifier :: String -> String
@@ -495,15 +497,15 @@ instance FromJSON VerificationServiceConfigUpdateTReq where
 updateVerificationReqOptions :: (String -> String) -> Options
 updateVerificationReqOptions modifier =
   defaultOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = modifier
+    { Aeson.sumEncoding = updateReqTaggedObject,
+      Aeson.constructorTagModifier = modifier
     }
 
 updateVerificationReqSchemaOptions :: SchemaOptions
 updateVerificationReqSchemaOptions =
   defaultSchemaOptions
-    { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = updateVerificationReqConstructorModifier
+    { OpenApi.sumEncoding = updateReqTaggedObject,
+      OpenApi.constructorTagModifier = updateVerificationReqConstructorModifier
     }
 
 updateVerificationReqConstructorModifier :: String -> String
@@ -903,15 +905,15 @@ instance ToSchema SupportedVehicleClasses where
 supportedVCOptions :: Options
 supportedVCOptions =
   defaultOptions
-    { sumEncoding = supportedVCTaggedObject,
-      constructorTagModifier = supportedVCModifier
+    { Aeson.sumEncoding = supportedVCTaggedObject,
+      Aeson.constructorTagModifier = supportedVCModifier
     }
 
 supportedVCSchemaOptions :: SchemaOptions
 supportedVCSchemaOptions =
   defaultSchemaOptions
-    { sumEncoding = supportedVCTaggedObject,
-      constructorTagModifier = supportedVCModifier
+    { OpenApi.sumEncoding = supportedVCTaggedObject,
+      OpenApi.constructorTagModifier = supportedVCModifier
     }
 
 supportedVCTaggedObject :: SumEncoding

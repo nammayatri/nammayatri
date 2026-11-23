@@ -19,6 +19,7 @@ module Domain.Action.Beckn.FRFS.OnSearch
 where
 
 import qualified API.Types.UI.FRFSTicketService as API
+import qualified API.Types.UI.FRFSTicketService as FRFSRouteStationsAPI (FRFSRouteStationsAPI (..))
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as SpecT
 import qualified BecknV2.FRFS.Utils as SpecUtils
@@ -492,7 +493,7 @@ enrichRouteStations searchId integratedBPPConfig = do
     fillStations :: API.FRFSRouteStationsAPI -> [DStation] -> API.FRFSRouteStationsAPI
     fillStations routeStation stations
       | null stations = routeStation
-      | otherwise = routeStation {API.stations = map (castStationToAPI integratedBPPConfig.id) stations}
+      | otherwise = routeStation {FRFSRouteStationsAPI.stations = map (castStationToAPI integratedBPPConfig.id) stations}
 
 castStationToAPI :: Id DIBC.IntegratedBPPConfig -> DStation -> API.FRFSStationAPI
 castStationToAPI integratedBppConfigId DStation {..} =

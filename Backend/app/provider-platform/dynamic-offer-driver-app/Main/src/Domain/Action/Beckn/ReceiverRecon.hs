@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module Domain.Action.Beckn.ReceiverRecon
   ( ReceiverReconRequest (..),
     ReceiverReconOrder (..),
