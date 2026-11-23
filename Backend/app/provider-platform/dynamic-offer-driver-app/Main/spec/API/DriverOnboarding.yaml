@@ -54,6 +54,16 @@ types:
     enum: "VALID,INVALID"
   RCTakeoverPhotoResp:
     result: RCTakeoverPhotoResult
+    # Optional detail on the check; older apps read only result.
+    takeoverScore: Maybe Double
+    inputs: Maybe RCTakeoverPhotoScores
+    vehicleType: Maybe Text # auto / cab / bike / other / no_vehicle
+    reason: Maybe Text # why it is INVALID
+  RCTakeoverPhotoScores:
+    plateVisible: Double
+    plateMatchesRc: Double
+    isRealPhoto: Double
+    photoQuality: Double
   ValidationStatus:
     enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
     derive: "Read"

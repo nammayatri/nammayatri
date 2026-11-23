@@ -279,7 +279,13 @@ data RCTakeoverPhotoReq = RCTakeoverPhotoReq {image :: Kernel.Prelude.Text, rcNo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RCTakeoverPhotoResp = RCTakeoverPhotoResp {result :: RCTakeoverPhotoResult}
+data RCTakeoverPhotoResp = RCTakeoverPhotoResp
+  { inputs :: Kernel.Prelude.Maybe RCTakeoverPhotoScores,
+    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    result :: RCTakeoverPhotoResult,
+    takeoverScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleType :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -287,6 +293,10 @@ data RCTakeoverPhotoResult
   = VALID
   | INVALID
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RCTakeoverPhotoScores = RCTakeoverPhotoScores {isRealPhoto :: Kernel.Prelude.Double, photoQuality :: Kernel.Prelude.Double, plateMatchesRc :: Kernel.Prelude.Double, plateVisible :: Kernel.Prelude.Double}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}

@@ -1,5 +1,6 @@
 module Storage.Queries.DriverRCAssociationExtra where
 
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (toLower)
 import qualified Database.Beam as B
@@ -100,6 +101,12 @@ findLinkedByRCIdAndDriverId (Id driverId) (Id rcId) now = findOneWithKV [Se.And 
 
 updateRcErrorMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> Text -> m ()
 updateRcErrorMessage (Id driverId) (Id rcId) errorMessage = updateWithKV [Se.Set BeamDRCA.errorMessage (Just errorMessage)] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId]]
+
+-- | The latest RC takeover photo check, on the driver's current link to the RC. No link (a fleet RC the driver
+--   isn't linked to yet): nothing is written.
+updateTakeoverVerifyResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> A.Value -> m ()
+updateTakeoverVerifyResponse (Id driverId) (Id rcId) now response =
+  updateWithKV [Se.Set BeamDRCA.takeoverVerifyResponse (Just response)] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
 findLatestByRCIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
 findLatestByRCIdAndDriverId (Id rcId) (Id driverId) =

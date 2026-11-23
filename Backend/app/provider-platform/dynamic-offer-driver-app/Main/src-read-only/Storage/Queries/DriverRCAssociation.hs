@@ -84,6 +84,7 @@ updateByPrimaryKey (Domain.Types.DriverRCAssociation.DriverRCAssociation {..}) =
       Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.isRcActive isRcActive,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
+      Se.Set Beam.takeoverVerifyResponse takeoverVerifyResponse,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
