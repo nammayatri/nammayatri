@@ -594,7 +594,13 @@ resolveTimeWindow merchantOperatingCityId visitDate ticketService req now = do
 
   -- An extension pays the whole-stay fee minus the fee for the stay so far, as in ParkWise.
   let fee = TWB.calculateFee tz tariff stayStart end - TWB.calculateFee tz tariff stayStart start
-  pure TimeWindowBooking {windowStart = start, windowEnd = end, windowPlate = plate, windowFee = max 0 fee, windowParent = (\(rid, _, _, _) -> rid) <$> extension, windowCategory = categoryId}
+  -- a ₹0 payment order is refused by Juspay, so refuse here before any row is written
+  when (fee <= 0) $
+    throwError . InvalidRequest $
+      if isJust extension
+        then "This stay's tariff charges nothing for extra time, so it can't be extended; book the full duration instead"
+        else "This booking has nothing to pay for the selected time"
+  pure TimeWindowBooking {windowStart = start, windowEnd = end, windowPlate = plate, windowFee = fee, windowParent = (\(rid, _, _, _) -> rid) <$> extension, windowCategory = categoryId}
 
 -- Accumulate vendor splits from multiple sources
 accumulateVendorSplits :: [Maybe [Payment.VendorSplitDetails]] -> Maybe [Payment.VendorSplitDetails]

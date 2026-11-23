@@ -327,15 +327,17 @@ cityTimeZone cityId = (.timeDiffFromUtc) <$> (getConfig (RiderConfigDimensions {
 -- | Open zones of live parking clusters, with each vehicle type's free spaces for the requested window (default: right now).
 -- With lat and lon: zones within the radius, nearest first. Without: every open zone in the city, by name.
 getParkingZones :: AuthInfo -> Maybe Int -> Maybe Double -> Maybe Double -> Maybe Int -> Maybe UTCTime -> Environment.Flow [API.Types.UI.ParkingBooking.ParkingZoneResp]
-getParkingZones (_, merchantId) mbDuration mbLat mbLon mbRadius mbStart = do
-  city <- CQM.getDefaultMerchantOperatingCity merchantId
-  tz <- cityTimeZone city.id
+getParkingZones (mbPersonId, merchantId) mbDuration mbLat mbLon mbRadius mbStart = do
+  cityId <- case mbPersonId of
+    Just personId -> (.merchantOperatingCityId) <$> (QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId))
+    Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity merchantId
+  tz <- cityTimeZone cityId
   now <- getCurrentTime
   whenJust mbDuration $ \d -> unless (d > 0) $ throwError $ InvalidRequest "durationMinutes must be positive"
   let start = fromMaybe now mbStart
       window = (start, maybe (addUTCTime 1 start) (\d -> addUTCTime (fromIntegral d * 60) start) mbDuration)
       radius = fromIntegral $ maybe 2000 (min 10000 . max 100) mbRadius
-  clusters <- filter (\p -> p.placeType == DTP.Parking && p.status == DTP.Active) <$> QTicketPlace.getTicketPlaces city.id
+  clusters <- filter (\p -> p.placeType == DTP.Parking && p.status == DTP.Active) <$> QTicketPlace.getTicketPlaces cityId
   zones <- concat <$> forM clusters (\cluster -> map (cluster,) . filter (\z -> z.bookingMode == DTS.TimeWindow && not z.isClosed) <$> QTicketService.getTicketServicesByPlaceId cluster.id.getId)
   let location (cluster, zone) = (,) <$> (zone.lat <|> cluster.lat) <*> (zone.lon <|> cluster.lon)
   nearby <- case (mbLat, mbLon) of
@@ -434,7 +436,7 @@ parkingStays (mbPersonId, merchantId) statuses = do
 
 -- | Pay to extend a paid parking booking. Creates an extension booking through the normal book flow; the stay ends later once it is paid.
 postParkingBookingsExtend :: AuthInfo -> Id DTB.TicketBookingService -> API.Types.UI.ParkingBooking.ParkingExtendReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postParkingBookingsExtend auth@(_, merchantId) bookingServiceId req = do
+postParkingBookingsExtend auth bookingServiceId req = do
   row <- QTBS.findById bookingServiceId >>= fromMaybeM (InvalidRequest "Parking booking not found")
   booking <- QTB.findById row.ticketBookingId >>= fromMaybeM (InvalidRequest "Parking booking not found")
   chain@(root, _) <- TicketService.parkingChain row
@@ -443,8 +445,7 @@ postParkingBookingsExtend auth@(_, merchantId) bookingServiceId req = do
   (businessHourId, category, peopleCategoryId) <-
     find (\(_, c, _) -> Just c.id == root.serviceCategoryId) <$> TicketService.parkingVehicleTypes service
       >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId)
-  city <- CQM.getDefaultMerchantOperatingCity merchantId
-  tz <- cityTimeZone city.id
+  tz <- cityTimeZone booking.merchantOperatingCityId
   TicketService.postTicketPlacesBook auth booking.ticketPlaceId $
     TicketAPI.TicketBookingReq
       { visitDate = TWB.localDay tz stayEnd,
@@ -464,7 +465,7 @@ postParkingBookingsExtend auth@(_, merchantId) bookingServiceId req = do
 
 -- | End a running parking stay now and free its space. Reports the tariff for the time actually parked; nothing is refunded, as in ParkWise.
 postParkingBookingsStop :: AuthInfo -> Id DTB.TicketBookingService -> Environment.Flow API.Types.UI.ParkingBooking.ParkingStopResp
-postParkingBookingsStop (mbPersonId, merchantId) bookingServiceId = do
+postParkingBookingsStop (mbPersonId, _) bookingServiceId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   row <- QTBS.findById bookingServiceId >>= fromMaybeM (InvalidRequest "Parking booking not found")
   booking <- QTB.findById row.ticketBookingId >>= fromMaybeM (InvalidRequest "Parking booking not found")
@@ -481,8 +482,7 @@ postParkingBookingsStop (mbPersonId, merchantId) bookingServiceId = do
   (_, _, peopleCategoryId) <-
     find (\(_, c, _) -> Just c.id == root.serviceCategoryId) <$> TicketService.parkingVehicleTypes service
       >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId)
-  city <- CQM.getDefaultMerchantOperatingCity merchantId
-  tz <- cityTimeZone city.id
+  tz <- cityTimeZone booking.merchantOperatingCityId
   tariff <- TicketService.parkingTariff peopleCategoryId (TWB.localDay tz stayStart)
   pure
     API.Types.UI.ParkingBooking.ParkingStopResp
