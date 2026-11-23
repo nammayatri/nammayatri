@@ -201,6 +201,7 @@ library:
     - external
     - communication-engine
     - gtfs-data-server
+    - bms-backend
 
 executables:
   rider-app-exe:

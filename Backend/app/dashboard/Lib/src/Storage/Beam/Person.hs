@@ -54,7 +54,8 @@ data PersonT f = PersonT
     tokenNoEncrypted :: B.C f (Maybe Text),
     tokenNoHash :: B.C f (Maybe DbHash),
     vpaEncrypted :: B.C f (Maybe Text),
-    vpaHash :: B.C f (Maybe DbHash)
+    vpaHash :: B.C f (Maybe DbHash),
+    organizationId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -250,6 +250,7 @@ buildPersonCreateReq req role merchantId = do
         secretKey = Nothing,
         is2faEnabled = False,
         twoFaExempt = False,
+        organizationId = Nothing,
         tokenNo = Nothing,
         vpa = Nothing
       }

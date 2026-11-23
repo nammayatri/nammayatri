@@ -82,6 +82,17 @@ library:
     - Lib.BmsBackend.API.Events
     - Lib.BmsBackend.Flow
     - Lib.BmsBackend.Types
+    - Lib.BmsBackend.Transit.Common
+    - Lib.BmsBackend.Transit.Fleet.API
+    - Lib.BmsBackend.Transit.Fleet.Types
+    - Lib.BmsBackend.Transit.Masters.API
+    - Lib.BmsBackend.Transit.Masters.Types
+    - Lib.BmsBackend.Transit.Stickers.API
+    - Lib.BmsBackend.Transit.Stickers.Types
+    - Lib.BmsBackend.Transit.V1.API
+    - Lib.BmsBackend.Transit.V1.Types
+    - Lib.BmsBackend.Transit.V2.API
+    - Lib.BmsBackend.Transit.V2.Types
   ghc-options:
     - -Wall
     - -Wcompat
