@@ -11,7 +11,7 @@
   },
   "steps": [
     {
-      "note": "tap Quick Ride -> silent auth resolves an already-known person -> Welcome back message -> pickup request [2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]",
+      "note": "tap Quick Ride -> silent auth resolves an already-known person -> Welcome back message -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -62,15 +62,9 @@
           "merchant": "FLEXI"
         },
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "917411122233",
-          "merchant": "FLEXI",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": [

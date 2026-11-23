@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): Quick Ride rider saves a new pickup pin as Gym from the confirm, then is back on the confirm.",
   "env": {
     "merchant": "pn_flexi",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {
@@ -266,7 +267,7 @@
       "expectBackend": []
     },
     {
-      "note": "type Gym -> addSavedLocation Gym -> back to the confirm, no fav:save now",
+      "note": "type Gym -> addSavedLocation Gym -> back to the confirm, no fav:save now [review fix: the saved list is read again before checking the name]",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -318,6 +319,10 @@
         }
       ],
       "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        },
         {
           "args": [
             "Gym",

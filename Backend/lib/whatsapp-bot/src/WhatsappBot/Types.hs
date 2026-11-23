@@ -224,6 +224,10 @@ data MerchantCtx = MerchantCtx
     flexiSupportPhone :: Maybe Text,
     nyTrackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
     appDownloadUrl :: Text, -- shown on the "Get the App" button's follow-up message (Engine.hs)
+    -- Favourite places (Flow.Favourites): the saved-places list at pickup/drop,
+    -- "Save place", and the "Add a favourite" nudge. Off keeps the plain
+    -- location request exactly as before the feature.
+    favouritesEnabled :: Bool,
     -- Trigger words checked against every inbound message before anything
     -- else in Engine.hs's intercept chain — previously hardcoded in Ride.hs.
     cancelTriggers :: [Text],

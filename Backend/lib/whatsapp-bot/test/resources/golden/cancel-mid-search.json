@@ -62,15 +62,9 @@
       },
       "expectOutbound": [
         {
-          "kind": "list",
+          "kind": "location_request",
           "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "fav:pick:Home",
-            "fav:pick:Work",
-            "fav:share",
-            "fav:add"
-          ]
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": [
@@ -84,8 +78,7 @@
           "method": "getSavedLocations",
           "args": []
         }
-      ],
-      "note": "[2026-11-20 favourite places: the seeded rider has Home and Work saved, so the location request becomes the favourites list]"
+      ]
     },
     {
       "inbound": {
@@ -135,8 +128,7 @@
           "merchant": "FLEXI",
           "buttons": [
             "pickup_confirm",
-            "pickup_adjust",
-            "fav:save"
+            "pickup_adjust"
           ]
         }
       ],
@@ -155,8 +147,7 @@
             77.1
           ]
         }
-      ],
-      "note": "[2026-11-20 favourite places: the shared pin is not a favourite, so the confirm also offers fav:save]"
+      ]
     },
     {
       "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote. [2026-10-29 message cuts: Language moved from the menu row to More] [2026-11-17 review: 'Finding an auto' + Cancel is sent at once again, before the search, so finding+Cancel is back; the fare_policy fare line follows only once a quote exists and the search is still live] [2026-11-17 cancel before confirm: a cancel seen after the quote poll now stops before confirmQuote, so no orphaned booking is created; confirmQuote dropped from expectBackend]",

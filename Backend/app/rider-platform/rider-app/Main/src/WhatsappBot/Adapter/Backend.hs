@@ -68,6 +68,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as Person
 import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest), MerchantError (MerchantOperatingCityNotFound))
 import qualified Tools.Fields as Fields
@@ -248,9 +249,21 @@ mkBackendHandle merchantId mocId _ctx =
       addSavedLocation = \auth loc ->
         runBot "addSavedLocation" $
           void $ DSavedReqLocation.createSavedReqLocation (Id auth.personId) (toCreateSavedReq loc),
-      deleteSavedLocation = \auth tag ->
-        runBot "deleteSavedLocation" $
-          void $ DSavedReqLocation.deleteSavedReqLocation (Id auth.personId) tag,
+      -- The backend has no update-by-tag and the app's create refuses a
+      -- duplicate tag, so: delete, create, and if the create fails put the
+      -- old row(s) back before reporting the failure — a failed replace must
+      -- never leave the rider without their old place.
+      replaceSavedLocation = \auth loc ->
+        runBot "replaceSavedLocation" $ do
+          let riderId = Id auth.personId
+          old <- QSavedReqLocation.findAllByRiderIdAndTag riderId loc.tag
+          void $ DSavedReqLocation.deleteSavedReqLocation riderId loc.tag
+          res <- try @_ @SomeException $ DSavedReqLocation.createSavedReqLocation riderId (toCreateSavedReq loc)
+          case res of
+            Right _ -> pure ()
+            Left e -> do
+              mapM_ QSavedReqLocation.create old
+              throwM e,
       updateProfile = \auth upd ->
         runBot "updateProfile" $
           void $

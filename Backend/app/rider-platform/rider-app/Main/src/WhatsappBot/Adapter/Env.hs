@@ -81,6 +81,7 @@ mkMerchantCtx pnId c =
       flexiSupportPhone = c.flexiSupportPhone,
       nyTrackingUrl = c.nyTrackingUrl,
       appDownloadUrl = c.appDownloadUrl,
+      favouritesEnabled = fromMaybe False c.favouritesEnabled,
       cancelTriggers = c.cancelTriggers,
       statusTriggers = c.statusTriggers,
       flexiQuotePollAttempts = c.flexiQuotePollAttempts,

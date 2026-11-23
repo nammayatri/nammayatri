@@ -72,21 +72,20 @@ import Kernel.Prelude
 -- runs Flow.Booking -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, firstNonEmpty, getCtx, locationRequest, mkUserKey, reply, replyButtons, replyWithMenu, save)
 import qualified WhatsappBot.Env as Fields
--- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
--- (getField), so their selectors are never referenced by name, but the HasField
--- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)
-
 import WhatsappBot.Flow.Favourites (favourites, findFavourite, isSavedPlace, savedToPlace, sendPlaceList)
 import qualified WhatsappBot.Handles as Fields
 import WhatsappBot.I18n (LanguageStrings, SupportedLanguage, t)
 import qualified WhatsappBot.I18n as Fields
+-- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
+-- (getField), so their selectors are never referenced by name, but the HasField
+-- instances are needed. (Naming them would trip -Wunused-imports under -Werror.)
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Messages (buildDriverCard)
 import qualified WhatsappBot.Messages as Fields
 -- The flow-agnostic ride lifecycle lives in Ride (Flow.Booking -> Ride -> Env).
 import WhatsappBot.Ride (BookingWindow (..), bumpStage, handleStatus, isValidBookingId, listedBookings, registerRide')
 import WhatsappBot.Types
-import WhatsappBot.Util (fmtInt, fmtNum)
+import WhatsappBot.Util (fmtInt, fmtNum, placeOrPin)
 
 -- ---------------------------------------------------------------------------
 -- Booking entry (engine.ts:583-603, 714-725, 276-292)
@@ -182,14 +181,17 @@ promptForPickup :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 promptForPickup env ev ctx = promptForPickupWith env ev ctx Nothing
 
 promptForPickupWith :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Maybe Text -> m ()
-promptForPickupWith env ev ctx mNotice = do
+promptForPickupWith env ev ctx0 mNotice = do
+  ctx <- loadFavouritesIfMissing env ctx0
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       body = withNotice mNotice s.flexiSharePrompt
   save env ev ctx {state = AwaitingPickup}
-  case favourites ctx of
-    [] -> locationRequestWithNudge env ev ctx s body
-    favs -> sendPlaceList env to s body s.favChoosePickup favs
+  if not env.cfg.merchant.favouritesEnabled
+    then locationRequest env to body
+    else case favourites ctx of
+      [] -> locationRequestWithNudge env ev ctx s body
+      favs -> sendPlaceList env to s body s.favChoosePickup favs
 
 -- | The @__location_pin__@ intercept (@engine.ts:947-1017@). Only ever reached
 -- with an 'InLocationPin'; a missing pin falls back to re-prompting.
@@ -252,9 +254,7 @@ withPickupChecks env ev ctx point k = do
 continuePickup :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> BotAuth -> Double -> Double -> Maybe Text -> Maybe Text -> m ()
 continuePickup env ev ctx1 auth lat lon mName mAddr = do
   eorigin <- env.backend.reverseGeocode auth (LatLon lat lon)
-  let origin0 = case eorigin of
-        Right p -> p
-        Left _ -> BotPlace {lat = lat, lon = lon, placeId = fmtNum lat <> "," <> fmtNum lon, address = emptyAddress}
+  let origin0 = placeOrPin lat lon eorigin
       origin = applyNameOverride origin0 mName mAddr
   continuePickupAt env ev ctx1 origin mName
 
@@ -294,7 +294,7 @@ sendPickupConfirmWith env ev ctx mNotice mNamedPlace = do
       body = withNotice mNotice $ case mNamedPlace of
         Just np -> s.flexiConfirmSavedPlace np
         Nothing -> s.flexiConfirmPickup label
-      canSave = isNothing mNamedPlace && isJust ctx.personId && maybe False (not . isSavedPlace ctx) ctx.origin
+      canSave = env.cfg.merchant.favouritesEnabled && isNothing mNamedPlace && isJust ctx.personId && maybe False (not . isSavedPlace ctx) ctx.origin
   replyButtons env to body ([btn s.pickupConfirmButton "pickup_confirm", btn s.pickupAdjustButton "pickup_adjust"] <> [btn s.favSaveButton "fav:save" | canSave])
 
 -- | @pickup_confirm@ dispatch (@engine.ts:293-305@): flexi searches immediately,
@@ -369,6 +369,17 @@ locationRequestWithNudge env ev ctx s body = do
   locationRequest env ev.fromPhone body
   when (isJust ctx.personId) $
     replyButtons env ev.fromPhone s.favAddPrompt [btn s.favAddNew "fav:add"]
+
+-- | Load the rider's saved places when they were never loaded. A login on a
+-- bare greeting ('WhatsappBot.Engine.handleIdle') runs no prefetch, and the
+-- next 'ensureAuth' returns early for a logged-in rider, so without this a
+-- rider with favourites would get the no-favourites prompt. @Just []@ (loaded,
+-- none) is kept as is. Only when the merchant has favourites on, so the
+-- backend calls of a merchant without them are unchanged.
+loadFavouritesIfMissing :: Monad m => BotEnv m -> FlowContext -> m FlowContext
+loadFavouritesIfMissing env ctx = case (env.cfg.merchant.favouritesEnabled, ctx.savedLocations, ctx.personId) of
+  (True, Nothing, Just pid) -> prefetchSavedLocations env (BotAuth pid) ctx
+  _ -> pure ctx
 
 withNotice :: Maybe Text -> Text -> Text
 withNotice mNotice body = maybe body (\n -> n <> "\n\n" <> body) mNotice
@@ -541,14 +552,17 @@ promptForRegularDrop :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m 
 promptForRegularDrop env ev ctx = promptForRegularDropWith env ev ctx Nothing
 
 promptForRegularDropWith :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Maybe Text -> m ()
-promptForRegularDropWith env ev ctx mNotice = do
+promptForRegularDropWith env ev ctx0 mNotice = do
+  ctx <- loadFavouritesIfMissing env ctx0
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       body = withNotice mNotice s.regularDropPrompt
   save env ev ctx {state = AwaitingRegularDrop}
-  case favourites ctx of
-    [] -> locationRequestWithNudge env ev ctx s body
-    favs -> sendPlaceList env to s body s.favChooseDrop favs
+  if not env.cfg.merchant.favouritesEnabled
+    then locationRequest env to body
+    else case favourites ctx of
+      [] -> locationRequestWithNudge env ev ctx s body
+      favs -> sendPlaceList env to s body s.favChooseDrop favs
 
 -- | Capture the drop — a pin (reverse-geocode) or typed address (search →
 -- disambiguate) — then price the one-way auto (@engine.ts:752-783@).
@@ -562,9 +576,7 @@ handleRegularDrop env ev ctx input = do
       case ev.kind of
         InLocationPin lat lon mName mAddr | input == "__location_pin__" -> do
           edest <- env.backend.reverseGeocode auth (LatLon lat lon)
-          let dest0 = case edest of
-                Right p -> p
-                Left _ -> BotPlace {lat = lat, lon = lon, placeId = fmtNum lat <> "," <> fmtNum lon, address = emptyAddress}
+          let dest0 = placeOrPin lat lon edest
               dest = applyNameOverride dest0 mName mAddr
           startRegularSearch env ev ctx {destination = Just dest}
         _ -> do
@@ -857,9 +869,6 @@ applyNameOverride :: BotPlace -> Maybe Text -> Maybe Text -> BotPlace
 applyNameOverride p mName mAddr = case mName <|> mAddr of
   Just nm | isNothing p.address.area -> p {address = (p.address) {area = Just nm}}
   _ -> p
-
-emptyAddress :: BotAddress
-emptyAddress = BotAddress {area = Nothing, building = Nothing, city = Nothing, country = Nothing, state = Nothing, street = Nothing}
 
 -- | The tariff display line (@engine.ts:571-579@), from the quote's fare-policy
 -- rates; Nothing when the quote carries no rate card.

@@ -3,6 +3,7 @@
   "description": "Favourites (hand-written, not from TS): Quick Ride rider picks Home from the pickup list; no pin, no reverse-geocode, the search uses Home.",
   "env": {
     "merchant": "pn_flexi",
+    "favourites": true,
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {

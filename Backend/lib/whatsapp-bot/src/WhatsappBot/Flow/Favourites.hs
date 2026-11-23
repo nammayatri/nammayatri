@@ -1,5 +1,5 @@
 -- | Favourite places: the rider's saved places (the same list as the Namma
--- Yatri app, @atlas_app.saved_req_location@) offered at pickup and drop, and
+-- Yatri app, @atlas_app.saved_location@) offered at pickup and drop, and
 -- the steps that save a new one.
 --
 -- Not ported from TS: the original connector had no favourites.
@@ -49,7 +49,7 @@ import qualified WhatsappBot.I18n as Fields
 -- Instances only: LanguageStrings fields are dot-accessed via RDP (getField).
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Types
-import WhatsappBot.Util (fmtNum)
+import WhatsappBot.Util (isPinPlace, pinPlaceId, placeOrPin)
 
 -- | How the booking continues once a save finishes: a one-line notice
 -- ("Saved as Home", or the failure text) to show first, and the context with
@@ -116,12 +116,12 @@ savedToPlace loc =
   BotPlace
     { lat = loc.lat,
       lon = loc.lon,
-      placeId = fromMaybe (fmtNum loc.lat <> "," <> fmtNum loc.lon) loc.placeId,
+      placeId = fromMaybe (pinPlaceId loc.lat loc.lon) loc.placeId,
       address = BotAddress {area = loc.area, building = loc.building, city = loc.city, country = loc.country, state = loc.state, street = Nothing}
     }
 
--- | A place to save under @tag@. A @"lat,lon"@ placeId is the bot's own
--- fallback for a failed reverse-geocode, not a real place id, so it is dropped.
+-- | A place to save under @tag@. A pin-only place's placeholder id is not a
+-- real place id, so it is not stored ('isPinPlace').
 placeToSaved :: Text -> BotPlace -> BotSavedLocation
 placeToSaved tag p =
   BotSavedLocation
@@ -133,7 +133,7 @@ placeToSaved tag p =
       city = p.address.city,
       country = p.address.country,
       state = p.address.state,
-      placeId = if "," `T.isInfixOf` p.placeId then Nothing else Just p.placeId
+      placeId = if isPinPlace p then Nothing else Just p.placeId
     }
 
 -- ---------------------------------------------------------------------------
@@ -165,9 +165,7 @@ handleFavouritePin env ev ctx = do
     (_, Nothing) -> sessionLost env ev ctx
     (InLocationPin lat lon mName mAddr, Just pid) -> do
       eplace <- env.backend.reverseGeocode (BotAuth pid) (LatLon lat lon)
-      let place0 = case eplace of
-            Right p -> p
-            Left _ -> BotPlace {lat = lat, lon = lon, placeId = fmtNum lat <> "," <> fmtNum lon, address = BotAddress {area = Nothing, building = Nothing, city = Nothing, country = Nothing, state = Nothing, street = Nothing}}
+      let place0 = placeOrPin lat lon eplace
           place = case mName <|> mAddr of
             Just nm | isNothing place0.address.area -> place0 {address = (place0.address) {area = Just nm}}
             _ -> place0
@@ -194,19 +192,22 @@ handleFavouriteText env ev ctx resume = case ev.kind of
     Just name -> askReplace env ev ctx name
     Nothing -> askName env ev ctx
 
--- | "Replace your Home?" Yes deletes the old one and saves this place; No asks
--- for a different name.
+-- | "Replace your Home?" Yes swaps the old place for this one; No asks for a
+-- different name.
 handleReplaceAnswer :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Resume m -> Bool -> m ()
 handleReplaceAnswer env ev ctx resume yes = do
   let s = t env.cfg.translations ctx.language
   case (ctx.personId, ctx.favouriteDraft, ctx.favouriteName) of
     (Just pid, Just place, Just name)
       | yes -> do
-        let auth = BotAuth pid
-        edel <- env.backend.deleteSavedLocation auth name
-        case edel of
+        let saved = placeToSaved name place
+        -- One call: the backend keeps the old place when the new one can't be
+        -- saved, so on failure the rider's list is unchanged and "couldn't
+        -- save" is true.
+        erep <- env.backend.replaceSavedLocation (BotAuth pid) saved
+        case erep of
           Left _ -> finish env ev ctx resume s.favSaveFailed ctx.savedLocations
-          Right () -> addAndFinish env ev ctx resume auth name place
+          Right () -> finishSaved env ev ctx resume saved
       | otherwise -> do
         save env ev ctx {favouriteName = Nothing}
         reply env ev.fromPhone s.favTypeName
@@ -214,16 +215,22 @@ handleReplaceAnswer env ev ctx resume yes = do
     _ -> askName env ev ctx
 
 -- | Save the draft under @name@, or ask to replace when the rider already has
--- a favourite with that name (the backend refuses duplicate names).
+-- a favourite with that name (the backend refuses duplicate names). The list
+-- is read again first: the one loaded at login misses a place the rider has
+-- since added in the app, which would skip the replace question and fail.
 saveAs :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Resume m -> Text -> m ()
-saveAs env ev ctx resume name = case (ctx.personId, ctx.favouriteDraft) of
-  (Just pid, Just place)
-    | isJust (findFavourite ctx name) -> do
-      save env ev ctx {favouriteName = Just name}
-      askReplace env ev ctx name
-    | otherwise -> addAndFinish env ev ctx resume (BotAuth pid) name place
-  (Nothing, _) -> sessionLost env ev ctx
-  (_, Nothing) -> finish env ev ctx resume (t env.cfg.translations ctx.language).favSaveFailed ctx.savedLocations
+saveAs env ev ctx0 resume name = case (ctx0.personId, ctx0.favouriteDraft) of
+  (Just pid, Just place) -> do
+    let auth = BotAuth pid
+    esl <- env.backend.getSavedLocations auth
+    let ctx = either (const ctx0) (\locs -> ctx0 {savedLocations = Just locs}) esl
+    if isJust (findFavourite ctx name)
+      then do
+        save env ev ctx {favouriteName = Just name}
+        askReplace env ev ctx name
+      else addAndFinish env ev ctx resume auth name place
+  (Nothing, _) -> sessionLost env ev ctx0
+  (_, Nothing) -> finish env ev ctx0 resume (t env.cfg.translations ctx0.language).favSaveFailed ctx0.savedLocations
 
 addAndFinish :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Resume m -> BotAuth -> Text -> BotPlace -> m ()
 addAndFinish env ev ctx resume auth name place = do
@@ -232,9 +239,15 @@ addAndFinish env ev ctx resume auth name place = do
   eadd <- env.backend.addSavedLocation auth saved
   case eadd of
     Left _ -> finish env ev ctx resume s.favSaveFailed ctx.savedLocations
-    Right () ->
-      let others = filter (\l -> l.tag /= name) (favourites ctx)
-       in finish env ev ctx resume (s.favSaved name) (Just (others <> [saved]))
+    Right () -> finishSaved env ev ctx resume saved
+
+-- | A save went through: "Saved as <name>", and the list now holds the new
+-- place in place of any old one with that name.
+finishSaved :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Resume m -> BotSavedLocation -> m ()
+finishSaved env ev ctx resume saved =
+  let s = t env.cfg.translations ctx.language
+      others = filter (\l -> l.tag /= saved.tag) (favourites ctx)
+   in finish env ev ctx resume (s.favSaved saved.tag) (Just (others <> [saved]))
 
 -- | Clear the save steps, put the rider back where they were, and continue.
 finish :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> Resume m -> Text -> Maybe [BotSavedLocation] -> m ()
