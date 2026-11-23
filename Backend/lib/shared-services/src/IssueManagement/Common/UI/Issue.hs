@@ -49,7 +49,8 @@ data IssueReportReq = IssueReportReq
     -- | The deeper choices the customer made in a pre-ticket bot (e.g. "Threatened me"),
     -- shown as the ticket's sub category when no backend option applies.
     subCategoryName :: Maybe Text,
-    botLabel :: Maybe Text
+    botLabel :: Maybe Text,
+    triggerNotification :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 
@@ -65,7 +66,23 @@ data IssueReportRes = IssueReportRes
 
 type IssueListAPI =
   QueryParam "language" Language
+    :> QueryParam "issueListType" IssueListType
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
     :> Get '[JSON] IssueReportListRes
+
+data IssueListType = ISSUES_ONGOING | ISSUES_COMPLETED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData IssueListType where
+  parseUrlPiece "ONGOING" = Right ISSUES_ONGOING
+  parseUrlPiece "COMPLETED" = Right ISSUES_COMPLETED
+  parseUrlPiece _ = Left "Invalid IssueListType. Expected ONGOING or COMPLETED"
+
+instance ToHttpApiData IssueListType where
+  toUrlPiece ISSUES_ONGOING = "ONGOING"
+  toUrlPiece ISSUES_COMPLETED = "COMPLETED"
 
 newtype IssueReportListRes = IssueReportListRes
   { issues :: [IssueReportListItem]
@@ -81,6 +98,7 @@ data IssueReportListItem = IssueReportListItem
     optionLabel :: Maybe Text,
     rideId :: Maybe (Id Ride),
     ticketBookingId :: Maybe (Id FRFSTicketBooking),
+    ticketId :: Maybe Text,
     createdAt :: UTCTime,
     rideInfo :: Maybe IssueReportRideInfo
   }
@@ -102,6 +120,38 @@ data IssueReportRideInfo = IssueReportRideInfo
 type IssueInfoAPI =
   QueryParam "language" Language
     :> Get '[JSON] IssueInfoRes
+
+type IssueTicketDetailsAPI =
+  Get '[JSON] IssueTicketDetailsRes
+
+data IssueTicketDetailsRes = IssueTicketDetailsRes
+  { -- Issue report fields
+    issueReportId :: Maybe (Id IssueReport),
+    issueReportShortId :: Maybe (ShortId IssueReport),
+    personId :: Maybe Text,
+    rideId :: Maybe Text,
+    categoryId :: Maybe Text,
+    issueDescription :: Maybe Text,
+    issueStatus :: Maybe Text,
+    createdAt :: Maybe UTCTime,
+    updatedAt :: Maybe UTCTime,
+    -- Kapture ticket fields (app + dashboard)
+    ticketId :: Maybe Text,
+    kaptureStatus :: Maybe Text,
+    kaptureCategory :: Maybe Text,
+    lastFollowUp :: Maybe Text,
+    -- Dashboard-only fields (Nothing for app callers)
+    substatus :: Maybe Text,
+    assignedToName :: Maybe Text,
+    disposition :: Maybe Text,
+    slaStatus :: Maybe Text,
+    tat :: Maybe Text,
+    sla :: Maybe Text,
+    ticketUrl :: Maybe Text,
+    priority :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
