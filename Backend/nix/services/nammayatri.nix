@@ -1240,7 +1240,12 @@ in
                     # The production build needs more than node's default heap.
                     # (Set here, not in environment: process-compose's env parser
                     # rejects a value that itself contains '='.)
-                    NODE_OPTIONS=--max-old-space-size=8192 npx vite build
+                    # NODE_ENV=development: control-center's api.ts sends calls
+                    # through this same-origin proxy only when import.meta.env.DEV
+                    # is true, and Vite takes DEV from NODE_ENV (not --mode).
+                    # Without it the bundle calls VITE_API_URL (127.0.0.1:8017)
+                    # and login fails with "Network Error". Still one bundled build.
+                    NODE_ENV=development NODE_OPTIONS=--max-old-space-size=8192 npx vite build
                     exec npx vite preview --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
                   fi
                   exec npm run dev -- --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
