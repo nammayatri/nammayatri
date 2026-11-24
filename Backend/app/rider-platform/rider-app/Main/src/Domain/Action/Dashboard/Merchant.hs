@@ -1481,7 +1481,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
           mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
           termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
-          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, recommend = False, faqs = Nothing, isRecurring = True, metadata = Nothing, platformFee = Nothing, platformFeeVendor = Nothing, pricingOnwards = Nothing, endDate = Nothing, isClosed = False, startDate = Nothing, venue = Nothing, assignTicketToBpp = False, enforcedAsSubPlace = False, ..}
+          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, recommend = False, faqs = Nothing, isRecurring = True, metadata = Nothing, platformFee = Nothing, platformFeeVendor = Nothing, pricingOnwards = Nothing, endDate = Nothing, isClosed = False, startDate = Nothing, venue = Nothing, assignTicketToBpp = False, enforcedAsSubPlace = False, geomGeoJson = Nothing, ..}
 
       ------------- TicketService --------------------------------------------------
       service <- cleanCSVField idx row.svc "Service"
@@ -1518,6 +1518,11 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 maxSelection = Nothing,
                 note = Nothing,
                 priority = Nothing,
+                bookingMode = DayVisit,
+                maxDurationMinutes = Nothing,
+                lat = Nothing,
+                lon = Nothing,
+                geomGeoJson = Nothing,
                 ..
               }
 
@@ -1625,6 +1630,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 placeId = Nothing,
                 rules = Nothing,
                 isClosed = False,
+                durationTariff = Nothing,
                 ..
               }
       return (ticketPlace, ticketService, businessHour, serviceCategory, servicePeopleCategory)

@@ -3,6 +3,17 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
+  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
+  BusinessHour: Domain.Types.BusinessHour
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketBooking: Domain.Types.TicketBooking
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
 
 module: ParkingBooking
 types:
@@ -36,7 +47,35 @@ types:
     recordType: NewType
     customerId: Id Person
 
+  # Rider parking (TokenAuth). A cluster is a Parking ticket_place, a zone is one of its ticket_services,
+  # a vehicle type is one of the zone's service categories (capacity) with its people category (tariff).
+  ParkingStayStatus:
+    enum: "Reserved,PendingPayment,Active,Ended"
+
+  ParkingStayResp:
+    bookingServiceId: Id TicketBookingService # the original booking; pass this to extend / stop
+    ticketBookingShortId: ShortId TicketBooking
+    placeId: Id TicketPlace # the cluster
+    placeName: Text
+    serviceId: Id TicketService # the zone
+    zoneName: Text
+    categoryId: Maybe (Id ServiceCategory) # the vehicle type
+    vehicleType: Maybe Text
+    vehicleNumber: Text
+    startTime: UTCTime
+    endTime: UTCTime # includes paid extensions
+    amount: HighPrecMoney # paid so far, extensions included
+    status: ParkingStayStatus
+
+  ParkingExtendReq:
+    durationMinutes: Int
+
+  ParkingStopResp:
+    finalAmount: HighPrecMoney # tariff for the time actually parked; no refund is issued
+    durationMinutes: Int
+
 apis:
+  # deprecated: partner booking, replaced by the rider APIs below
   - POST:
       endpoint: /multimodal/parking/book
       auth: NoAuth
@@ -46,6 +85,7 @@ apis:
         type: ParkingBookingReq
       response:
         type: ParkingBookingResponse
+  # deprecated
   - POST:
       endpoint: /multimodal/parking/marshal/create
       auth: NoAuth
@@ -56,3 +96,23 @@ apis:
       response:
         type: MarshalPersonResp
 
+  # Rider parking: zones, availability and stays are served by the /ticket APIs (placeType Parking)
+  # POST /ticket/booking/{bookingServiceId}/extend
+  - POST:
+      endpoint: /ticket/booking/{bookingServiceId}/extend
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      request:
+        type: API.Types.UI.ParkingBooking.ParkingExtendReq
+      response:
+        type: Kernel.External.Payment.Interface.Types.CreateOrderResp
+
+  # POST /ticket/booking/{bookingServiceId}/stop
+  - POST:
+      endpoint: /ticket/booking/{bookingServiceId}/stop
+      auth: TokenAuth
+      params:
+        bookingServiceId: Id TicketBookingService
+      response:
+        type: API.Types.UI.ParkingBooking.ParkingStopResp

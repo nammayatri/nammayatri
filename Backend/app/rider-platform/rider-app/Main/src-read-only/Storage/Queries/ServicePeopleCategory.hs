@@ -64,6 +64,7 @@ updateByIdAndTimebounds (Domain.Types.ServicePeopleCategory.ServicePeopleCategor
       Se.Set Beam.placeId placeId,
       Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
+      Se.Set Beam.durationTariff durationTariff,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.timeBounds $ Se.Eq (Kernel.Prelude.Just timeBounds)]]
@@ -80,6 +81,7 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
   updateWithKV
     [ Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
       Se.Set Beam.description description,
+      Se.Set Beam.durationTariff durationTariff,
       Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.name name,

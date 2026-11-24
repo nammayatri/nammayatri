@@ -9,6 +9,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified SharedLogic.TicketRule.Core
 import qualified Tools.Beam.UtilsTH
 
@@ -22,6 +23,7 @@ data TicketPlace = TicketPlace
     enforcedAsSubPlace :: Kernel.Prelude.Bool,
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
+    geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     isClosed :: Kernel.Prelude.Bool,
@@ -83,10 +85,13 @@ data PlaceType
   | ReligiousSite
   | Boating
   | Other
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  | Parking
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Fee)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceType)
+
+$(mkHttpInstancesForEnum ''PlaceType)

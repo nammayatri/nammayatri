@@ -27,11 +27,15 @@ data TicketBookingServiceT f = TicketBookingServiceT
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    parentBookingServiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    serviceCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     status :: B.C f Domain.Types.TicketBookingService.ServiceStatus,
     ticketBookingId :: B.C f Kernel.Prelude.Text,
     ticketServiceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     verificationCount :: B.C f Kernel.Prelude.Int,
     visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
@@ -45,6 +49,6 @@ instance B.Table TicketBookingServiceT where
 
 type TicketBookingService = TicketBookingServiceT Identity
 
-$(enableKVPG ''TicketBookingServiceT ['id] [['shortId], ['visitDate]])
+$(enableKVPG ''TicketBookingServiceT ['id] [['parentBookingServiceId], ['shortId], ['ticketBookingId], ['ticketServiceId], ['vehicleNumber], ['visitDate]])
 
 $(mkTableInstances ''TicketBookingServiceT "ticket_booking_service")
