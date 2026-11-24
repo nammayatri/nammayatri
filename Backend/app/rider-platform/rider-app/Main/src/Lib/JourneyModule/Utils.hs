@@ -68,6 +68,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.FRFSBookingWrite as FRFSBookingWrite
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -1990,7 +1991,7 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
                 DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg,
                 DFRFSTicketBooking.settleableAmount = switchedSettleableAmount
               }
-      void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
+      void $ FRFSBookingWrite.updateBookingKeepingOtp updatedBooking
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
       QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
   where

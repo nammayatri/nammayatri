@@ -613,6 +613,7 @@ library
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
+      SharedLogic.FRFSBookingWrite
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelEffects
       SharedLogic.FRFSCancelJourney
