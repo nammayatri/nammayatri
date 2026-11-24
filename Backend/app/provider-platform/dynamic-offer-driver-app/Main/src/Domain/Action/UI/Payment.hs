@@ -594,7 +594,7 @@ processWalletTopupWebhook driver order transactionStatus = do
   let lockKey = "wallet:topup:lock:" <> order.id.getId
   Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.invoiceConfig
     -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
     -- the success push is gated on it — a redelivery must not re-notify.
     -- Also the wallet's running-balance lock: every other posting on this wallet (ride end,
