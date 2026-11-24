@@ -2498,7 +2498,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId personId docType
           mbAssoc <- QRCAssoc.findActiveAssociationByRC rcId True
           whenJust mbAssoc $ \assoc -> when (assoc.driverId == personId) $ do
             QRCAssoc.deactivateRCForDriver False personId rcId
-            QVehicle.deleteByDriverid personId
+            QVehicle.deleteById personId
             unless separateEnablement downgradePerson
           when unifiedRecompute $
             void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId
