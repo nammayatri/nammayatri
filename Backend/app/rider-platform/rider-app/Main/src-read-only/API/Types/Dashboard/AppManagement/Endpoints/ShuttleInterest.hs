@@ -15,6 +15,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
@@ -63,9 +64,12 @@ data ShuttleInterestMapResp = ShuttleInterestMapResp {points :: [ShuttleInterest
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ShuttlePublishedRoute = ShuttlePublishedRoute
-  { firstDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { fareAmount :: Kernel.Types.Common.HighPrecMoney,
+    firstDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
+    passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     routeCode :: Kernel.Prelude.Text,
+    shape :: [[Kernel.Prelude.Double]],
     shortName :: Kernel.Prelude.Text,
     stops :: [ShuttlePublishedStop],
     tripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -93,7 +97,11 @@ data ShuttlePublishedTripInfo = ShuttlePublishedTripInfo {days :: [Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = "shuttleInterest" :> (GetShuttleInterestList :<|> (GetShuttleInterestMapPoints :<|> GetShuttleInterestPublishedRoutes))
+data ShuttleRoutesPublishResp = ShuttleRoutesPublishResp {fileName :: Kernel.Prelude.Text, gtfsZipBase64 :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = "shuttleInterest" :> (GetShuttleInterestList :<|> (GetShuttleInterestMapPoints :<|> (GetShuttleInterestPublishedRoutes :<|> PostShuttleInterestShuttleRoutesPublish)))
 
 type GetShuttleInterestList =
   "list"
@@ -123,21 +131,25 @@ type GetShuttleInterestMapPoints =
 
 type GetShuttleInterestPublishedRoutes = "publishedRoutes" :> (QueryParam "day" Kernel.Prelude.Text :> Get ('[JSON]) ShuttlePublishedRoutesResp)
 
+type PostShuttleInterestShuttleRoutesPublish = "shuttleRoutes" :> ("publish" :> Post ('[JSON]) ShuttleRoutesPublishResp)
+
 data ShuttleInterestAPIs = ShuttleInterestAPIs
   { getShuttleInterestList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ShuttleInterestListResp)))),
     getShuttleInterestMapPoints :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttleInterestMapResp)),
-    getShuttleInterestPublishedRoutes :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttlePublishedRoutesResp)
+    getShuttleInterestPublishedRoutes :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ShuttlePublishedRoutesResp),
+    postShuttleInterestShuttleRoutesPublish :: (EulerHS.Types.EulerClient ShuttleRoutesPublishResp)
   }
 
 mkShuttleInterestAPIs :: Client EulerHS.Types.EulerClient API -> ShuttleInterestAPIs
 mkShuttleInterestAPIs shuttleInterestClient = (ShuttleInterestAPIs {..})
   where
-    getShuttleInterestList :<|> getShuttleInterestMapPoints :<|> getShuttleInterestPublishedRoutes = shuttleInterestClient
+    getShuttleInterestList :<|> getShuttleInterestMapPoints :<|> getShuttleInterestPublishedRoutes :<|> postShuttleInterestShuttleRoutesPublish = shuttleInterestClient
 
 data ShuttleInterestUserActionType
   = GET_SHUTTLE_INTEREST_LIST
   | GET_SHUTTLE_INTEREST_MAP_POINTS
   | GET_SHUTTLE_INTEREST_PUBLISHED_ROUTES
+  | POST_SHUTTLE_INTEREST_SHUTTLE_ROUTES_PUBLISH
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

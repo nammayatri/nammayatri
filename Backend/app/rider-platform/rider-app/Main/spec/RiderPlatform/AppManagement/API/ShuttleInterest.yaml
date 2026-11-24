@@ -54,15 +54,15 @@ types:
   ShuttleInterestMapResp:
     points: "[ShuttleInterestMapPoint]"
 
-  # The city's published corporate shuttle routes, as GIMS serves them from the corp_<city> GTFS feed (the single source
-  # for routes): every route with its stops in order and its first trip's times.
+  # The city's corporate shuttle routes, planned from the interest forms (the same plan the GTFS download gives): every
+  # route with its stops in order and its trips.
   ShuttlePublishedStop:
     stopCode: Text
     name: Text
     lat: Double
     lon: Double
     sequence: Int
-    minutesFromStart: Maybe Int # from the route's first trip (GIMS example trip)
+    minutesFromStart: Maybe Int # from the route's first stop
 
   # A published trip on the day asked for (or on every day it runs, when no day is asked for).
   ShuttlePublishedTripInfo:
@@ -79,6 +79,15 @@ types:
     firstDeparture: Maybe Text # HH:MM of the route's first trip
     stops: "[ShuttlePublishedStop]"
     trips: "[ShuttlePublishedTripInfo]" # its trips (on the asked day), from the published timetable
+    passOrganizationId: Id PassOrganization
+    fareAmount: HighPrecMoney # seat fare for every forward stop pair
+    shape: "[[Double]]" # the route along the roads, [lat, lon] points (the GTFS shape)
+
+  # The city's GTFS feed (corp_<city>), to load into the GIMS editor (new feed from a zip, or reload the feed). Also saves
+  # the routes' seat fares.
+  ShuttleRoutesPublishResp:
+    fileName: Text # <city>.corp_shuttle.gtfs.zip
+    gtfsZipBase64: Text
 
   ShuttlePublishedRoutesResp:
     feedKey: Maybe Text # corp_<city>, or none when the city has no published corporate feed
@@ -116,3 +125,10 @@ apis:
         - day: Text # e.g. monday: only the routes with a trip that day, with that day's trips
       response:
         type: ShuttlePublishedRoutesResp
+  - POST:
+      endpoint: /shuttleRoutes/publish
+      auth: ApiAuthV2
+      migrate:
+        capability: corporate-shuttle.routes.write
+      response:
+        type: ShuttleRoutesPublishResp

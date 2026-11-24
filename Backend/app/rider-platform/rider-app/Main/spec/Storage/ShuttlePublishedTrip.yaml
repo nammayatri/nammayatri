@@ -3,9 +3,9 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Data.Time
 
-# Corporate shuttle: which day each published trip runs, and how many employees it carries that day. Written by the publish
-# tool (Backend/dev/corporate-shuttle-routes) from the plan, next to the GTFS feed: GIMS serves the routes, stops and stop
-# times but not the trips' calendar, so the days are kept here. One row per feed, trip and day: trip ids follow the
+# Corporate shuttle: which day each published trip runs, and how many employees it carries that day. Written by the control
+# centre's GTFS download, from the same plan as the feed: GIMS serves the routes, stops and stop times but not the trips'
+# calendar, so the days are kept here. One row per feed, trip and day: trip ids follow the
 # naming convention inside one city's feed and need not be unique across feeds.
 ShuttlePublishedTrip:
   tableName: shuttle_published_trip
@@ -40,5 +40,10 @@ ShuttlePublishedTrip:
       kvFunction: findAllWithKV
       where:
         and: [feedKey, merchantOperatingCityId]
+
+    deleteByFeedKeyAndTripIdAndDay:
+      kvFunction: deleteWithKV
+      where:
+        and: [feedKey, tripId, day]
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

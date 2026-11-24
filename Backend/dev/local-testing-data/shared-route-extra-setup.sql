@@ -29,7 +29,7 @@
 --    with the demand knobs on the rider rows' DIRECT provider config.
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- Module C: the city's OTP and GIMS endpoints point at the local servers that serve the corp_chennai feed (OTP on 8089, GIMS on
--- 8090), as shared-cab-extra-setup.sql does for its feed. The feed itself is built by Backend/dev/corporate-shuttle-routes.
+-- 8090), as shared-cab-extra-setup.sql does for its feed. The feed itself is published from the control centre.
 UPDATE atlas_app.merchant_service_config SET config_json = jsonb_set(config_json::jsonb,'{baseUrl}','"http://localhost:8089/otp/gtfs/v1/"')::json
  WHERE service_name='MultiModal_OTPTransit' AND merchant_operating_city_id='c7e3c3eb-cc15-46d4-ba04-5af55ac87874';
 UPDATE atlas_app.merchant_service_config SET config_json = jsonb_set(config_json::jsonb,'{baseUrl}','"http://localhost:8090"')::json

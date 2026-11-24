@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ShuttlePublishedTrip.ShuttlePublishedTrip] -> m ()
 createMany = traverse_ create
 
+deleteByFeedKeyAndTripIdAndDay :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m ()))
+deleteByFeedKeyAndTripIdAndDay feedKey tripId day = do deleteWithKV [Se.And [Se.Is Beam.feedKey $ Se.Eq feedKey, Se.Is Beam.tripId $ Se.Eq tripId, Se.Is Beam.day $ Se.Eq day]]
+
 findAllByFeedKeyAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
