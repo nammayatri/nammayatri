@@ -18,10 +18,10 @@ INSERT INTO atlas_app.pass_organization (
     updated_at
 )
 SELECT
-    md5('corporate-shuttle-org-' || company.code)::uuid::text,
+    md5('corporate-shuttle-org-' || company.code || '-' || moc.id)::uuid::text,
     company.name,
     'RegularPass',
-    md5('corporate-shuttle-org-admin-' || company.code)::uuid::text,
+    md5('corporate-shuttle-org-admin-' || company.code || '-' || moc.id)::uuid::text,
     moc.merchant_id,
     moc.id,
     company.address,

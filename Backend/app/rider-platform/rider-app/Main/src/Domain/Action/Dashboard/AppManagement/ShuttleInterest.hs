@@ -15,6 +15,8 @@ import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import Data.Containers.ListUtils (nubOrd)
+import qualified Data.IntMap.Strict as IntMap
+import qualified Data.IntSet as IntSet
 import Data.List (elemIndex, partition, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -36,6 +38,7 @@ import qualified Domain.Types.ShuttlePublishedTrip as DShuttlePublishedTrip
 import qualified Domain.Types.StopFare as DStopFare
 import qualified Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Types.TimeBound (TimeBound (Unbounded))
@@ -297,7 +300,7 @@ planCompany config merchantOperatingCity company = case (company.officeLat, comp
   (Just lat, Just lon) -> do
     let officeAt = Maps.LatLong lat lon
         org = orgCode company.name
-    interests <- QShuttleInterest.findAllByMerchantOperatingCityIdAndPassOrganizationId (Just 10000) (Just 0) merchantOperatingCity.id company.id
+    interests <- allInterests merchantOperatingCity company
     laidOut <- forM [True, False] $ \morning -> do
       let everyone = ridersFor morning Nothing interests
       forM (layout officeAt everyone) $ \pickups -> do
@@ -310,7 +313,8 @@ planCompany config merchantOperatingCity company = case (company.officeLat, comp
                 | day <- weekDays,
                   (t, ids) <- shuttles [(r.wish, r.riderId) | r <- ridersFor morning (Just day) interests, Map.member r.riderId stopAt],
                   -- MORNING: at the first stop with riders of this shuttle at their time; EVENING: from the office then
-                  let dep = if morning then t - minimum [offsets !! (stopAt Map.! pid) | pid <- ids] else t
+                  -- a service day starts at midnight: a shuttle would leave before it leaves at 00:00 instead
+                  let dep = max 0 (if morning then t - minimum [offsets !! (stopAt Map.! pid) | pid <- ids] else t)
               ]
         pure (morning, stops, offsets, shape, uniqueDepartures trips)
     let planned = sortOn (\(morning, _, _, _, trips) -> (not morning, minimum (1440 : [d | (_, d, _) <- trips]))) (concat laidOut)
@@ -334,6 +338,15 @@ planCompany config merchantOperatingCity company = case (company.officeLat, comp
     bump dayTrips = snd (mapAccumL (\used (d, dep, ids) -> let dep' = until (`notElem` used) (+ splitGapMinutes) dep in (dep' : used, (d, dep', ids))) [] dayTrips)
     groupBy' f = Map.elems . Map.fromListWith (flip (<>)) . map (\x -> (f x, [x]))
 
+-- | Every current interest form of the company, read page by page (none is left out of the plan).
+allInterests :: DMOC.MerchantOperatingCity -> DPassOrganization.PassOrganization -> Environment.Flow [DShuttleInterest.ShuttleInterest]
+allInterests merchantOperatingCity company = go 0
+  where
+    pageSize = 1000
+    go offset = do
+      page <- QShuttleInterest.findAllByMerchantOperatingCityIdAndPassOrganizationId (Just pageSize) (Just offset) merchantOperatingCity.id company.id
+      if length page < pageSize then pure page else (page <>) <$> go (offset + pageSize)
+
 -- | That direction's riders (on that day, or on any day), each with the time they want, in minutes after midnight.
 ridersFor :: Bool -> Maybe Text -> [DShuttleInterest.ShuttleInterest] -> [Rider]
 ridersFor morning mbDay interests =
@@ -351,14 +364,19 @@ layout :: Maps.LatLong -> [Rider] -> [[PlanStop]]
 layout officeAt riders = [sortOn (\s -> negate (metersBetween s.at officeAt)) group <> [PlanStop officeAt True []] | group <- link (cover riders)]
 
 cover :: [Rider] -> [PlanStop]
-cover riders = go riders
+cover riders = go (IntMap.map length near) (IntSet.fromList (IntMap.keys byIndex))
   where
-    go [] = []
-    go unplaced@(firstLeft : _) =
-      let reach c = [r | r <- unplaced, metersBetween c.home r.home <= walkMeters]
-          (point, near) = foldl (\b c -> if length (reach c) > length (snd b) then (c, reach c) else b) (firstLeft, []) riders
-          ids = map (.riderId) near
-       in PlanStop point.home False ids : go [r | r <- unplaced, r.riderId `notElem` ids]
+    byIndex = IntMap.fromList (zip [0 ..] riders)
+    -- every rider's neighbourhood (riders within walkMeters, itself included), computed once; it is symmetric
+    near = IntMap.map (\r -> [j | (j, o) <- IntMap.toList byIndex, metersBetween r.home o.home <= walkMeters]) byIndex
+    go counts unplaced
+      | IntSet.null unplaced = []
+      | otherwise =
+        -- the point the most still-unplaced riders can walk to (the first such rider on a tie)
+        let best = fst (IntMap.foldlWithKey (\b i c -> if c > snd b then (i, c) else b) (-1, 0) counts)
+            taken = filter (`IntSet.member` unplaced) (near IntMap.! best)
+            counts' = foldl (\m j -> foldl (flip (IntMap.adjust (subtract 1))) m (near IntMap.! j)) counts taken
+         in PlanStop (byIndex IntMap.! best).home False (map (\j -> (byIndex IntMap.! j).riderId) taken) : go counts' (foldr IntSet.delete unplaced taken)
 
 link :: [PlanStop] -> [[PlanStop]]
 link = foldl add []
@@ -381,12 +399,12 @@ shuttles wishes = merge (concatMap split (Map.toList slots))
     tryMerge groups i = do
       let (t, ids) = groups !! i
       guard (length ids < minLoad)
-      let fits j = j >= 0 && j < length groups && abs (fst (groups !! j) - t) <= mergeMinutes && length (snd (groups !! j)) + length ids <= seats
-      j <- listToMaybe (sortOn (\j -> abs (fst (groups !! j) - t)) (filter fits [i - 1, i + 1]))
-      let (a, b) = (min i j, max i j)
-          (ta, ia) = groups !! a
-          (tb, ib) = groups !! b
-      pure (take a groups <> [(if length ia >= length ib then ta else tb, ia <> ib)] <> drop (b + 1) groups)
+      -- any shuttle within mergeMinutes with room, the nearest in time first
+      let fits j = j /= i && abs (fst (groups !! j) - t) <= mergeMinutes && length (snd (groups !! j)) + length ids <= seats
+      j <- listToMaybe (sortOn (\j -> abs (fst (groups !! j) - t)) (filter fits [0 .. length groups - 1]))
+      let (tj, ij) = groups !! j
+          merged = (if length ij >= length ids then tj else t, ij <> ids)
+      pure (sortOn fst (merged : [g | (k, g) <- zip [0 ..] groups, k /= i, k /= j]))
 
 -- | Snap the stops to the road and drive them in order: (stops on the road, minutes from the first stop, road line).
 onRoads :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Environment.Flow ([Maps.LatLong], [Int], [[Double]])
@@ -436,10 +454,12 @@ nearestRoad merchantOperatingCity p = do
        in find (isJust . mfilter (not . T.null) . (.roadName)) near <|> listToMaybe near
     Left _ -> Nothing
 
--- | The company's code in every id: its name's initials ("Namma Yatri" -> NY), or the whole name when it is one word.
+-- | The company's code in every id: its name's initials ("Namma Yatri" -> NY), or the whole name when it is one word
+-- ("Juspay" -> JUSPAY); words such as Corp or Pvt Ltd are left out ("ACME Corp" -> ACME).
 orgCode :: Text -> Text
 orgCode companyName =
-  let ws = T.words (T.map (\c -> if isAlphaNum c then c else ' ') companyName)
+  let ws = filter ((`notElem` companyWords) . T.toLower) (T.words (T.map (\c -> if isAlphaNum c then c else ' ') companyName))
+      companyWords = ["corp", "corporation", "inc", "ltd", "limited", "pvt", "private", "llc", "llp", "co", "company"]
    in T.toUpper (T.take 8 (if length ws > 1 then T.concat (map (T.take 1) ws) else T.concat ws))
 
 routeName :: [PlannedStop] -> Text
@@ -469,15 +489,15 @@ replaceTrips config routeCodes timetable rows = do
   forM_ (filter (\t -> tripKey t `notElem` map tripKey rows) current) $ \t -> QShuttlePublishedTrip.deleteByFeedKeyAndTripIdAndDay config.feedKey t.tripId t.day
   forM_ rows $ \t -> if tripKey t `elem` map tripKey current then QShuttlePublishedTrip.updateByPrimaryKey t else QShuttlePublishedTrip.create t
 
--- | Minutes after midnight -> "HH:MM".
+-- | Minutes after the service day's midnight -> "HH:MM"; past midnight stays on that service day (24:10, as GTFS writes it).
 minutesToHHMM :: Int -> Text
-minutesToHHMM m = pad (m `div` 60 `mod` 24) <> ":" <> pad (m `mod` 60)
+minutesToHHMM m = pad (m `div` 60) <> ":" <> pad (m `mod` 60)
   where
     pad n = T.justifyRight 2 '0' (show n)
 
 parseHHMM :: Text -> Maybe Int
 parseHHMM t = case T.splitOn ":" t of
-  [h, m] | T.length h == 2, T.length m == 2, Just hh <- readMaybe (T.unpack h), Just mm <- readMaybe (T.unpack m), hh < 24, mm < 60 -> Just (hh * 60 + mm)
+  [h, m] | T.length h == 2, T.length m == 2, Just hh <- readMaybe (T.unpack h), Just mm <- readMaybe (T.unpack m), hh < 48, mm < 60 -> Just (hh * 60 + mm)
   _ -> Nothing
 
 -- Publishing ----------------------------------------------------------------------------------------------------------
@@ -501,8 +521,10 @@ postShuttleInterestShuttleRoutesPublish merchantShortId opCity = do
   forM_ published $ \(r, _) -> writeFares config merchantOperatingCity tier now r
   -- the published timetable becomes this plan's (rows still planned are updated in place, the rest removed: never deleted
   -- and re-created under one key, which the KV drainer could apply out of order)
-  timetable <- QShuttlePublishedTrip.findAllByFeedKeyAndMerchantOperatingCityId config.feedKey merchantOperatingCity.id
-  replaceTrips config (nubOrd (map (.routeCode) timetable <> map ((.routeCode) . fst) published)) timetable (concatMap snd published)
+  -- one publish of a feed at a time: a second waits, so the stored timetable is always one plan's
+  Redis.withWaitAndLockRedis ("CorporateShuttle:Publish:Lock:" <> config.feedKey) 60 100000 $ do
+    timetable <- QShuttlePublishedTrip.findAllByFeedKeyAndMerchantOperatingCityId config.feedKey merchantOperatingCity.id
+    replaceTrips config (nubOrd (map (.routeCode) timetable <> map ((.routeCode) . fst) published)) timetable (concatMap snd published)
   let city = T.drop 5 config.feedKey
       folder = city <> ".corp_shuttle.gtfs"
       files = gtfsFiles config (utctDay now) published

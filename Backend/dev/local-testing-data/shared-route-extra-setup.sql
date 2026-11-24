@@ -112,3 +112,5 @@ ON CONFLICT DO NOTHING;
 -- Module C: ACME's work-email domain. A rider whose verified business email is @acme.example belongs to ACME
 -- (SharedLogic.CorporateMembership); the dashboard sets this through passOrganization/update's emailDomains.
 UPDATE atlas_app.pass_organization SET email_domains = '{acme.example}' WHERE id = md5('e2e-corp-org-acme')::uuid::text;
+-- and its office (the drop of every to-office trip; every planned route ends there): without it no routes are planned
+UPDATE atlas_app.pass_organization SET office_lat = 12.8251, office_lon = 80.2182 WHERE id = md5('e2e-corp-org-acme')::uuid::text;
