@@ -1670,7 +1670,6 @@ TransporterConfig:
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
     enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
-    enablePersonCallIdentity: Maybe Bool # When True, Twilio in-app calls use the per-person call identity (person.call_identity) and the TwiML endpoint checks the caller and whether calling is still allowed. Nothing = per-ride identities, no checks
 
   beamType:
     currency: Maybe Currency

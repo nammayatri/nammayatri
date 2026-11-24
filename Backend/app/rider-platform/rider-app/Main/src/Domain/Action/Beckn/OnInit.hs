@@ -14,10 +14,6 @@
 
 module Domain.Action.Beckn.OnInit where
 
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Digest.Pure.MD5 as MD5
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Beckn.Common as DCommon
 import Domain.Types
 import Domain.Types.Booking (BPPBooking, Booking)
@@ -42,6 +38,7 @@ import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Person as SLP
+import SharedLogic.Utils (generateTwillioCallerIdentity)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -184,7 +181,7 @@ onInit req = do
               if fromMaybe False riderConfig.enableShareNumberWithDriver
                 then Just (fromMaybe False safetySettings.consentToShareMobileNumber)
                 else Nothing,
-            riderCallIdentity = if fromMaybe False riderConfig.enablePersonCallIdentity then Just (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 person.id.getId))))) else Nothing,
+            riderCallIdentity = if fromMaybe False riderConfig.enablePersonCallIdentity then Just (generateTwillioCallerIdentity person.id) else Nothing,
             enableFrequentLocationUpdates = checkSafetySettingConstraint (convertToPersonRideShareOptions <$> safetySettings.aggregatedRideShareSetting) riderConfig now,
             paymentId = req.paymentId,
             enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
@@ -283,7 +280,7 @@ buildOnInitResFromBooking bookingId = do
           if fromMaybe False riderConfig.enableShareNumberWithDriver
             then Just (fromMaybe False safetySettings.consentToShareMobileNumber)
             else Nothing,
-        riderCallIdentity = if fromMaybe False riderConfig.enablePersonCallIdentity then Just (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 person.id.getId))))) else Nothing,
+        riderCallIdentity = if fromMaybe False riderConfig.enablePersonCallIdentity then Just (generateTwillioCallerIdentity person.id) else Nothing,
         isValueAddNP,
         enableFrequentLocationUpdates = checkSafetySettingConstraint (convertToPersonRideShareOptions <$> safetySettings.aggregatedRideShareSetting) riderConfig now,
         paymentId = Nothing,

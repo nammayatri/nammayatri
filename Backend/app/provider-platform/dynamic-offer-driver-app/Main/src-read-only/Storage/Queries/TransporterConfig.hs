@@ -307,7 +307,6 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableMobilityBilling enableMobilityBilling,
       Se.Set Beam.enableOndcScheduledRideSupport enableOndcScheduledRideSupport,
       Se.Set Beam.enableOverchargingBlocker (Just enableOverchargingBlocker),
-      Se.Set Beam.enablePersonCallIdentity enablePersonCallIdentity,
       Se.Set Beam.enablePullPendingDocVerification enablePullPendingDocVerification,
       Se.Set Beam.enableScheduleReallocation enableScheduleReallocation,
       Se.Set Beam.enableSupportForSafety enableSupportForSafety,

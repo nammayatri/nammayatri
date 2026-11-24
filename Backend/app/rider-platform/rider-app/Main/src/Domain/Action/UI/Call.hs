@@ -34,15 +34,12 @@ module Domain.Action.UI.Call
 where
 
 import Data.Aeson (object, (.=))
-import qualified Data.ByteString.Lazy as BSL
 import Data.Char as DC
-import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, nubBy)
 import qualified Data.Map as M
 import Data.Text hiding (elem, filter, find, map, null)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
@@ -92,6 +89,7 @@ import qualified SharedLogic.DriverNumber as SDN
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import SharedLogic.SharedCab.Interest (bestEffort)
 import qualified SharedLogic.SharedCab.SessionState as Fields
+import SharedLogic.Utils (generateTwillioCallerIdentity)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
@@ -619,7 +617,7 @@ getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
         riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
         return $
           if (riderConfig >>= (.enablePersonCallIdentity)) == Just True
-            then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 booking.riderId.getId))))
+            then generateTwillioCallerIdentity booking.riderId
             else booking.transactionId
       Domain.Action.UI.Call.DRIVER -> do
         return ride.bppRideId.getId
@@ -630,7 +628,7 @@ getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
     person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
     unless ((riderConfig >>= (.enablePersonCallIdentity)) == Just True) $ throwError (InvalidRequest "Per-person call identity is not enabled")
-    getAccessToken (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 personId.getId))))) person.merchantOperatingCityId merchantId
+    getAccessToken (generateTwillioCallerIdentity personId) person.merchantOperatingCityId merchantId
   where
     getAccessToken id cityId merId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId

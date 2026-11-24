@@ -39,14 +39,11 @@ module Domain.Action.UI.Call
 where
 
 import Data.Aeson (object, (.=))
-import qualified Data.ByteString.Lazy as BSL
 import Data.Char (toUpper)
-import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HMS
 import Data.Map as DM
 import qualified Data.Maybe as DM
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time (timeToTimeOfDay, utctDayTime)
@@ -116,6 +113,7 @@ import Tools.Call hiding (addCampaignData)
 import Tools.Error
 import qualified Tools.Fields as Fields
 import Tools.Notifications hiding (priority)
+import Tools.Utils (generateTwillioCallerIdentity)
 import TransactionLogs.Types
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
 
@@ -539,19 +537,13 @@ getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
     entityId <- case entity of
       Domain.Action.UI.Call.CUSTOMER ->
         return booking.transactionId
-      Domain.Action.UI.Call.DRIVER -> do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-        return $
-          if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True
-            then T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 ride.driverId.getId))))
-            else ride.id.getId
+      Domain.Action.UI.Call.DRIVER ->
+        return $ if isJust booking.riderCallIdentity then generateTwillioCallerIdentity ride.driverId else ride.id.getId
     getAccessToken entityId ride.merchantOperatingCityId
   Nothing -> do
     (personId, _, cityId) <- mbCaller & fromMaybeM (InvalidRequest "token is required when bppRideId is not given")
     unless (entity == Domain.Action.UI.Call.DRIVER) $ throwError (InvalidRequest "Only the DRIVER token can be issued without bppRideId")
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
-    unless ((transporterConfig >>= (.enablePersonCallIdentity)) == Just True) $ throwError (InvalidRequest "Per-person call identity is not enabled")
-    getAccessToken (T.pack (show (MD5.md5 (BSL.fromStrict (TE.encodeUtf8 personId.getId))))) cityId
+    getAccessToken (generateTwillioCallerIdentity personId) cityId
   where
     getAccessToken id cityId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId
@@ -579,9 +571,7 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-      let riderCallIdentity = if (transporterConfig >>= (.enablePersonCallIdentity)) == Just True then booking.riderCallIdentity else Nothing
-          dial = Dial (Just (T.unpack (fromMaybe booking.transactionId riderCallIdentity)))
+      let dial = Dial (Just (T.unpack (fromMaybe booking.transactionId booking.riderCallIdentity)))
       return $ Just dial
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp
