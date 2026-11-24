@@ -20,6 +20,7 @@ module Tools.Notifications
     FCMReq (..),
     IssueBreachEntityData (..),
     FeedbackBadgeEntityData (..),
+    CancelNotificationEntityData (..),
     RideAssignedNotificationData (..),
     SharedCabAllocationEntityData (..),
     EditDestinationPayload (..),
@@ -456,12 +457,19 @@ notifyOnCancel ::
   m ()
 notifyOnCancel merchantOpCityId rideId booking person cancellationSource = do
   subCategory <- getSubCategory cancellationSource
-  notificationData <- buildCancelNotificationData merchantOpCityId person.id person.deviceToken rideId booking subCategory
+  notificationData <- buildCancelNotificationData merchantOpCityId person.id person.deviceToken person.language rideId booking subCategory
   runWithServiceConfigForProviders merchantOpCityId person.clientId person.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken person.id)
   where
     getSubCategory = \case
       SBCR.ByAllocator -> throwError (InternalError "Unexpected cancellation reason.")
       _ -> return $ cancellationSourceToSubCategory cancellationSource
+
+-- | Who cancelled and the trip category, so the driver app can pick its cancel overlay and sound without reading the text.
+data CancelNotificationEntityData = CancelNotificationEntityData
+  { subCategory :: Notification.SubCategory,
+    tripCategory :: Trip.TripCategory
+  }
+  deriving (Generic, ToJSON, Show)
 
 buildCancelNotificationData ::
   ( ServiceFlow m r,
@@ -470,22 +478,22 @@ buildCancelNotificationData ::
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe Language ->
   Id DRide.Ride ->
   Booking ->
   Notification.SubCategory ->
-  m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
-buildCancelNotificationData merchantOpCityId driverId mbDeviceToken rideId booking subCategory = do
+  m (Notification.NotificationReq CancelNotificationEntityData EmptyDynamicParam)
+buildCancelNotificationData merchantOpCityId driverId mbDeviceToken mbLanguage rideId booking subCategory = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let params = [("startTime", showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)]
-  -- Read in English: the driver app shows its ride-cancelled overlay by matching this row's English body.
-  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_Cancelled (Just booking.tripCategory) (Just subCategory) Nothing (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Ride_Cancelled (Just booking.tripCategory) (Just subCategory) mbLanguage (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
   return $
     Notification.NotificationReq
       { category = Notification.CANCELLED_PRODUCT,
         subCategory = Just subCategory,
         showNotification = Notification.SHOW,
         messagePriority = Nothing,
-        entity = Notification.Entity Notification.Product rideId.getId EmptyDynamicParam,
+        entity = Notification.Entity Notification.Product rideId.getId (CancelNotificationEntityData subCategory booking.tripCategory),
         dynamicParams = EmptyDynamicParam,
         body = buildTemplate params mbMerchantPN.body,
         title = buildTemplate params mbMerchantPN.title,
