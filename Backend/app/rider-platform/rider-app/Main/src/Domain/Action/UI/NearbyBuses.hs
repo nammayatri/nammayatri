@@ -61,7 +61,7 @@ postNearbyBusBooking (mbPersonId, _) req = do
     if req.requireNearbyBuses
       then do
         -- the cab feed sits on its own config, which the city's bus lookup never returns
-        mbCabConfig <- if SharedCab.isSharedCabTier req.serviceTier then Just <$> SharedCab.cityCabConfig (Just person.id) else pure Nothing
+        mbCabConfig <- if SharedCab.isSharedCabTier req.serviceTier then Just <$> (SharedCab.findSharedCabConfig (Just person.id) >>= fromMaybeM (InvalidRequest "Shared cab is not available in your city")) else pure Nothing
         getSimpleNearbyBuses person.merchantOperatingCityId riderConfig mbCabConfig req
       else return []
 
