@@ -32,7 +32,7 @@
           },
           {
             "key": "token",
-            "value": "{{city_dashboard_token}}"
+            "value": "{{dashboard_token}}"
           }
         ],
         "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/serviceUsageConfig/maps/update",
