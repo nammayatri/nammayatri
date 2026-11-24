@@ -283,7 +283,6 @@ library
       Domain.Action.Dashboard.SearchTry
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
-      Domain.Action.Dashboard.System
       Domain.Action.DashboardAuth.AppManagement.MerchantOnboarding
       Domain.Action.DashboardAuth.AppManagement.Payment
       Domain.Action.DashboardAuth.IssueManagement.Issue
@@ -1097,7 +1096,6 @@ library
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.Sos
       API.Action.DashboardAuth.Management.SosMedia
-      API.Action.DashboardAuth.Management.System
       API.Action.DashboardAuth.RideBooking
       API.Action.DashboardAuth.RideBooking.AddBaggage
       API.Action.DashboardAuth.RideBooking.Booking
@@ -1268,7 +1266,6 @@ library
       API.Types.RiderPlatform.Management.Endpoints.SearchTry
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
-      API.Types.RiderPlatform.Management.Endpoints.System
       API.Types.RiderPlatform.Management.FeedbackForm
       API.Types.RiderPlatform.Management.FRFSAlerts
       API.Types.RiderPlatform.Management.FRFSTicket
@@ -1287,7 +1284,6 @@ library
       API.Types.RiderPlatform.Management.SearchTry
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
-      API.Types.RiderPlatform.Management.System
       API.Types.UI.AlertWebhook
       API.Types.UI.AssetManifest
       API.Types.UI.AssetReleaseInternal
