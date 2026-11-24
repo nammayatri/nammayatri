@@ -342,7 +342,8 @@ startRideHandler ServiceHandle {..} rideId req = do
         let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
         TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
       -- Schedule payout for special zone rides if enabled
-      let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
+      -- Online pays out as UPI did before it existed.
+      let paymentInstrument = DMPM.bookablePaymentInstrument $ fromMaybe DMPM.Cash booking.paymentInstrument
       when
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory
