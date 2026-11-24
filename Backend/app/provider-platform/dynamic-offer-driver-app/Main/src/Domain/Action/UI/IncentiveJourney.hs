@@ -70,8 +70,8 @@ mkHandle =
         pure transporterConfig.timeDiffFromUtc,
       findPersonById = \_ -> pure Nothing,
       findAssignmentsByUserId = SLJourney.findAssignmentsByUserId . cast,
-      -- UI does not list dashboard memberships; keep opt-in filtered path.
-      findDashboardAssignmentsByUserId = SLJourney.findAssignmentsByUserId . cast,
+      -- Driver list includes pending OptIn invites (popup); eval/settle still use findAssignments*.
+      findDashboardAssignmentsByUserId = SLJourney.findDashboardAssignmentsByUserId . cast,
       findStatsHistoryByPersonId = \personId dayStart dayEnd mbLimit mbOffset ->
         QStats.findHistoryByPersonIdAndCreatedAtRange personId dayStart dayEnd mbLimit mbOffset,
       findStatsByPersonIdAndPeriodKey = \personId periodKey ->

@@ -71,8 +71,15 @@ data IncentiveJourneyMilestoneItem = IncentiveJourneyMilestoneItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+-- | Mirrors dashboard assignment opt-in state so the driver app can show the OptIn popup.
+-- NotRequired = Assigned campaign; Pending / OptedIn = OptIn invite state.
+data OptInStatus = NotRequired | Pending | OptedIn
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data IncentiveJourneyListItem = IncentiveJourneyListItem
-  { cohortJourneyMappingId :: Id DCJM.CohortJourneyMapping,
+  { campaignUserLinkType :: DCJM.CampaignUserLinkType,
+    cohortJourneyMappingId :: Id DCJM.CohortJourneyMapping,
     description :: Maybe Text,
     enabled :: Bool,
     endDate :: UTCTime,
@@ -82,6 +89,10 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     journeyType :: DIJ.IncentiveJourneyType,
     milestones :: [IncentiveJourneyMilestoneItem],
     name :: Text,
+    optInStatus :: OptInStatus,
+    optedInAt :: Maybe UTCTime,
+    -- | UCM invite / membership expiry — FE uses this for POST /optIn.validTill.
+    validTill :: Maybe UTCTime,
     startDate :: UTCTime,
     streakRange :: Int
   }
