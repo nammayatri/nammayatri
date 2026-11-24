@@ -48,6 +48,7 @@ types:
       requireRecentRide: Bool
       requireNearbyBuses: Bool
       fetchAll: Maybe Bool
+      serviceTier: Maybe ServiceTierType
 
   NearbyBusesResponse:
       nearbyBuses: [NearbyBus]
