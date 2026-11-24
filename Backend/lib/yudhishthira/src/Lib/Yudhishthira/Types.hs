@@ -52,6 +52,7 @@ module Lib.Yudhishthira.Types
     BehaviourDomainStatus (..),
     BehaviourStatusRes (..),
     isBehaviourDomain,
+    isSensitiveLogicDomain,
     ConfigPilotVerifyReq (..),
     ConfigPilotRolloutObject (..),
     ConfigPilotRolloutReq,
@@ -434,6 +435,15 @@ isBehaviourDomain = \case
   QUOTE_RESPONSE_BEHAVIOR -> True
   AUTO_ACCEPT_CANCELLATION_BEHAVIOR -> True
   RATING_BEHAVIOR -> True
+  _ -> False
+
+-- | isSensitiveConfigType lifted to LogicDomain, for the config read APIs that
+-- take a domain instead of a bare ConfigType.
+isSensitiveLogicDomain :: LogicDomain -> Bool
+isSensitiveLogicDomain = \case
+  RIDER_CONFIG configType -> isSensitiveConfigType configType
+  DRIVER_CONFIG configType -> isSensitiveConfigType configType
+  RIDER_CONFIG_OVERRIDES configType -> isSensitiveConfigType configType
   _ -> False
 
 isRiderOnlyConfigType :: ConfigType -> Bool
