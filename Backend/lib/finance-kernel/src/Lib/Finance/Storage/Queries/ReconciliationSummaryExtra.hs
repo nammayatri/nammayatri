@@ -17,14 +17,16 @@ findByDateRangeAndSpec ::
   ReconT.Domain ->
   ReconT.DataSource ->
   ReconT.DataSource ->
+  Text -> -- merchantOperatingCityId
   Maybe UTCTime ->
   Maybe UTCTime ->
   m [Domain.ReconciliationSummary]
-findByDateRangeAndSpec domain source target mbFromDate mbToDate =
+findByDateRangeAndSpec domain source target opCityId mbFromDate mbToDate =
   findAllWithKV $
     [ Se.Is Beam.domain $ Se.Eq domain,
       Se.Is Beam.source $ Se.Eq source,
-      Se.Is Beam.target $ Se.Eq target
+      Se.Is Beam.target $ Se.Eq target,
+      Se.Is Beam.merchantOperatingCityId $ Se.Eq opCityId
     ]
       <> maybe [] (\from -> [Se.Is Beam.reconciliationDate $ Se.GreaterThanOrEq from]) mbFromDate
       <> maybe [] (\to -> [Se.Is Beam.reconciliationDate $ Se.LessThanOrEq to]) mbToDate
