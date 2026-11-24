@@ -121,9 +121,8 @@ pollBatchStatus h partner batch = do
             logError $ "HDFC CBX inquiry referenced an unknown order: " <> itemRef
             pure Nothing
           Just order -> do
-            -- Write lifecycle events BEFORE applyItemOutcome (which skips final orders)
-            Journal.recordItemEvents batch order outcome mbSettleStatus
             newStatus <- applyItemOutcome h batch.merchantOperatingCityId requestsById order outcome mbSettleStatus
+            Journal.recordItemEvents batch order newStatus outcome mbSettleStatus
             pure (Just (order.orderId, newStatus))
       -- Read what is left from the orders, not HDFC's rows: an item missing from the response is
       -- still in flight. AWAITING_PARTNER_APPROVAL only while every item waits for the approver.

@@ -1,5 +1,5 @@
 module Lib.Payment.Payout.Bulk.Journal
-  ( eventsOfOutcome,
+  ( eventsFor,
     recordInitiated,
     recordItemEvents,
   )
@@ -15,14 +15,14 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutLifecycleEvent as QPLE
 
-eventsOfOutcome :: Payout.BulkItemOutcome -> Maybe Payout.TransferStatus -> [DPLE.PayoutLifecycleEventType]
-eventsOfOutcome outcome mbSettleStatus = case outcome of
-  Payout.ItemPendingApproval {} -> []
-  Payout.ItemInterim {} -> []
-  Payout.ItemProcessed {} ->
-    DPLE.SETTLED_AT_BANK : [DPLE.REVERSED | mbSettleStatus == Just Payout.TRANSFER_FAILED]
-  Payout.ItemRejected {} ->
-    [DPLE.FAILED]
+eventsFor :: Payout.PayoutOrderStatus -> Maybe Payout.TransferStatus -> [DPLE.PayoutLifecycleEventType]
+eventsFor appliedStatus mbSettleStatus = case appliedStatus of
+  Payout.SUCCESS -> [DPLE.SETTLED_AT_BANK]
+  Payout.FAILURE
+    | mbSettleStatus == Just Payout.TRANSFER_FAILED ->
+      [DPLE.SETTLED_AT_BANK, DPLE.REVERSED]
+    | otherwise -> [DPLE.FAILED]
+  _ -> []
 
 recordInitiated ::
   (BeamFlow m r, MonadFlow m) =>
@@ -43,11 +43,12 @@ recordItemEvents ::
   (BeamFlow m r, MonadFlow m) =>
   DPayoutBatch.PayoutBatch ->
   DPayoutOrder.PayoutOrder ->
+  Payout.PayoutOrderStatus ->
   Payout.BulkItemOutcome ->
   Maybe Payout.TransferStatus ->
   m ()
-recordItemEvents batch order outcome mbSettleStatus = do
-  let events = eventsOfOutcome outcome mbSettleStatus
+recordItemEvents batch order appliedStatus outcome mbSettleStatus = do
+  let events = eventsFor appliedStatus mbSettleStatus
       mbBatchNo = batch.partnerBatchRef
       partnerCode = codeOf outcome
   case mbBatchNo of
