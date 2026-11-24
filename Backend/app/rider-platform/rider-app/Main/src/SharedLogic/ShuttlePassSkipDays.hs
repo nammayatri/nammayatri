@@ -85,8 +85,10 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
         pure (term.id, [(day, mbDeparture)])
       Nothing -> throwError (InvalidRequest $ "No shuttle term of this pass covers " <> show day)
+  -- 60s: far longer than the fresh reads and one write it covers, so it cannot lapse mid-update and let the issue job
+  -- in. It is released as soon as the update finishes, so the length only matters if this process dies holding it.
   forM_ (Map.toList $ Map.fromListWith (<>) termByDay) $ \(termId, termDays) ->
-    Redis.whenWithLockRedisAndReturnValue (ShuttlePass.termLockKey termId) 10 (updateFresh timeDiff termId termDays) >>= \case
+    Redis.whenWithLockRedisAndReturnValue (ShuttlePass.termLockKey termId) 60 (updateFresh timeDiff termId termDays) >>= \case
       Left _ -> throwError (InvalidRequest "This pass is being updated, please try again")
       Right () -> pure ()
   where

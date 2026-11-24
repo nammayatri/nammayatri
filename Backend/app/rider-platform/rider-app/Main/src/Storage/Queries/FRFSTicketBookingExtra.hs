@@ -7,14 +7,124 @@ import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
+
+-- | `updateByPrimaryKey` (generated) minus the boarding OTP column. The shuttle pass issue job sets the OTP on its own
+-- (`updateBoardingOtp`), so a whole-record write built from an earlier read must not touch that column at all.
+-- Keep in step with the generated `updateByPrimaryKey` when columns are added to FRFSTicketBooking.
+updateByPrimaryKeyExceptBoardingOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateByPrimaryKeyExceptBoardingOtp (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam._type _type,
+      Se.Set Beam.bookingAuthCode bookingAuthCode,
+      Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
+      Se.Set Beam.bppBankCode bppBankCode,
+      Se.Set Beam.bppDelayedInterest bppDelayedInterest,
+      Se.Set Beam.bppItemId bppItemId,
+      Se.Set Beam.bppOrderId bppOrderId,
+      Se.Set Beam.bppPaymentId bppPaymentId,
+      Se.Set Beam.bppSubscriberId bppSubscriberId,
+      Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
+      Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
+      Se.Set Beam.cancellationCharges cancellationCharges,
+      Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
+      Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
+      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
+      Se.Set Beam.cloudType cloudType,
+      Se.Set Beam.conductorId conductorId,
+      Se.Set Beam.customerCancelled customerCancelled,
+      Se.Set Beam.discountedTickets discountedTickets,
+      Se.Set Beam.driverId driverId,
+      Se.Set Beam.driverMobileNumber driverMobileNumber,
+      Se.Set Beam.driverName driverName,
+      Se.Set Beam.eventDiscountAmount eventDiscountAmount,
+      Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
+      Se.Set Beam.finalBoardedScheduleNo finalBoardedScheduleNo,
+      Se.Set Beam.finalBoardedVehicleNumber finalBoardedVehicleNumber,
+      Se.Set Beam.finalBoardedVehicleNumberSource finalBoardedVehicleNumberSource,
+      Se.Set Beam.finalBoardedVehicleServiceTierType finalBoardedVehicleServiceTierType,
+      Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
+      Se.Set Beam.frfsTicketBookingPaymentIdForTicketGeneration frfsTicketBookingPaymentIdForTicketGeneration,
+      Se.Set Beam.fromStationAddress fromStationAddress,
+      Se.Set Beam.fromStationId fromStationCode,
+      Se.Set Beam.fromStationName fromStationName,
+      Se.Set Beam.fromStationLat (Kernel.External.Maps.Types.lat <$> fromStationPoint),
+      Se.Set Beam.fromStationLon (Kernel.External.Maps.Types.lon <$> fromStationPoint),
+      Se.Set Beam.fromStopIdx fromStopIdx,
+      Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
+      Se.Set Beam.holdId holdId,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
+      Se.Set Beam.isBookingCancellable isBookingCancellable,
+      Se.Set Beam.isFareChanged isFareChanged,
+      Se.Set Beam.isMockPayment isMockPayment,
+      Se.Set Beam.isSingleMode isSingleMode,
+      Se.Set Beam.isSpotBooking isSpotBooking,
+      Se.Set Beam.journeyOnInitDone journeyOnInitDone,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
+      Se.Set Beam.ondcOnInitReceived ondcOnInitReceived,
+      Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
+      Se.Set Beam.osBuildVersion osBuildVersion,
+      Se.Set Beam.osType osType,
+      Se.Set Beam.overriddenAmount overriddenAmount,
+      Se.Set Beam.overrideAppliedEntityId overrideAppliedEntityId,
+      Se.Set Beam.overrideType overrideType,
+      Se.Set Beam.parentBookingId (Kernel.Types.Id.getId <$> parentBookingId),
+      Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
+      Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
+      Se.Set Beam.payerVpa payerVpa,
+      Se.Set Beam.paymentTxnId paymentTxnId,
+      Se.Set Beam.providerDescription providerDescription,
+      Se.Set Beam.providerId providerId,
+      Se.Set Beam.providerName providerName,
+      Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
+      Se.Set Beam.refundAmount refundAmount,
+      Se.Set Beam.rescheduleCount rescheduleCount,
+      Se.Set Beam.rideId rideId,
+      Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeCode routeCode,
+      Se.Set Beam.routeName routeName,
+      Se.Set Beam.routeStationsJson routeStationsJson,
+      Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
+      Se.Set Beam.seatSelectionType seatSelectionType,
+      Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.settleableAmount settleableAmount,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
+      Se.Set Beam.startTime startTime,
+      Se.Set Beam.stationsJson stationsJson,
+      Se.Set Beam.status status,
+      Se.Set Beam.toStationAddress toStationAddress,
+      Se.Set Beam.toStationId toStationCode,
+      Se.Set Beam.toStationName toStationName,
+      Se.Set Beam.toStationLat (Kernel.External.Maps.Types.lat <$> toStationPoint),
+      Se.Set Beam.toStationLon (Kernel.External.Maps.Types.lon <$> toStationPoint),
+      Se.Set Beam.toStopIdx toStopIdx,
+      Se.Set Beam.currency ((Kernel.Prelude.Just . Kernel.Types.Price.getPriceCurrency) totalPrice),
+      Se.Set Beam.price (Kernel.Types.Price.getPriceAmount totalPrice),
+      Se.Set Beam.tripId tripId,
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.vehicleTripId vehicleTripId,
+      Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.waybillNo waybillNo,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 -- | This city's CONFIRMED shared-cab bookings with no cab, updated in [windowStart, upperBound), paged newest-first on an
 -- updatedAt keyset. updatedAt is the degrade time (degradedBoarding touches the booking and nothing else writes a cab-less
