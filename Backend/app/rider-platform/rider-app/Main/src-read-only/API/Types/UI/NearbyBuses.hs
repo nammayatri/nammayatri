@@ -36,6 +36,7 @@ data NearbyBusesRequest = NearbyBusesRequest
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     requireNearbyBuses :: Kernel.Prelude.Bool,
     requireRecentRide :: Kernel.Prelude.Bool,
+    serviceTier :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     userLat :: Kernel.Prelude.Double,
     userLon :: Kernel.Prelude.Double,
     vehicleType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory
