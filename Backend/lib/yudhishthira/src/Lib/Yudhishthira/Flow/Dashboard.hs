@@ -614,6 +614,7 @@ verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy req logicData 
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain merchantOpCityId mbVersion domain = do
+  throwIfSensitiveLogicDomain domain -- a patch on a secret-bearing config holds the secret values it sets
   allRollouts <- CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain
   let rolloutStatusMap = buildVersionStatusMap allRollouts
   case mbVersion of
@@ -1006,10 +1007,11 @@ getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
           configTypes = case configChoice of
             Lib.Yudhishthira.Types.DriverCfg -> map extractDriverConfig configsInExperiment
             Lib.Yudhishthira.Types.RiderCfg -> map extractRiderConfig configsInExperiment
-      return $ catMaybes configTypes
+      -- secret-bearing config types are never readable, so they are not offered either
+      return $ filter (not . Lib.Yudhishthira.Types.isSensitiveConfigType) (catMaybes configTypes)
     _ -> do
       let configTypes :: [Lib.Yudhishthira.Types.ConfigType] = Lib.Yudhishthira.Types.allValues
-      return configTypes
+      return $ filter (not . Lib.Yudhishthira.Types.isSensitiveConfigType) configTypes
 
 getNammaTagConfigPilotAllUiConfigs :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Bool -> Lib.Yudhishthira.Types.ConfigTypeChoice -> m [Lib.Yudhishthira.Types.LogicDomain]
 getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
@@ -1037,6 +1039,7 @@ getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
 
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
+  throwIfSensitiveLogicDomain domain' -- patches of a secret-bearing config carry the secret values themselves
   allConfigRollouts <- CADLR.resolveWithDefaultFallback domain' (\c -> LYSQADLR.findRunningByMerchantOpCityAndDomain c domain') merchantOpCityId
   let runningConfigRollouts = filter (\rollout -> rollout.isBaseVersion == Just True || rollout.percentageRollout /= 0 || rollout.experimentStatus == Just LYT.RUNNING) allConfigRollouts
       -- canRevert is true only for the current base version that was promoted via conclude
@@ -1080,6 +1083,7 @@ getNammaTagConfigPilotUiConfigDetails merchantOpCityId domain' = do
 
 getNammaTagConfigPilotAlwaysOnList :: (BeamFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.LogicDomain -> m LYT.AlwaysOnListResp
 getNammaTagConfigPilotAlwaysOnList merchantOpCityId domain' = do
+  throwIfSensitiveLogicDomain domain'
   baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomainWithFallback merchantOpCityId domain'
   -- Keep the always-on rows and inner rollout lookups keyed to the city the base resolved from
   -- (the real city, or the inherited "default" city), so the whole response is one coherent source.
@@ -1282,5 +1286,6 @@ pushConfigHistory domain version merchantOpCityId configsJson = do
 
 postNammaTagConfigPilotGetPatchedElement :: BeamFlow m r => Id LYT.MerchantOperatingCity -> LYT.GetPatchedElementReq -> m Lib.Yudhishthira.Types.GetPatchedElementResp
 postNammaTagConfigPilotGetPatchedElement _ req = do
+  throwIfSensitiveLogicDomain req.domain
   appDynamicLogicElement <- QADLE.findByPrimaryKey req.domain 0 req.version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show req.domain <> " and version " <> show req.version)
   return $ Lib.Yudhishthira.Types.GetPatchedElementResp $ appDynamicLogicElement.patchedElement
