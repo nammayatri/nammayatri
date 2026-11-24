@@ -5,8 +5,6 @@ module IssueManagement.Domain.Action.Dashboard.Issue where
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AKey
-import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString as BS
 import Data.Either (partitionEithers)
 import qualified Data.List as DL
@@ -51,7 +49,6 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
-import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -2422,70 +2419,6 @@ postIssueApiIntegrationDelete merchantShortId opCity apiIntegrationId issueHandl
   QAI.deleteById apiIntegrationId
   pure Success
 
-postIssueApiIntegrationTest ::
-  ( BeamFlow m r,
-    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl
-  ) =>
-  ShortId Merchant ->
-  Context.City ->
-  Common.TestApiIntegrationReq ->
-  ServiceHandle m ->
-  Identifier ->
-  m Common.TestApiIntegrationRes
-postIssueApiIntegrationTest merchantShortId opCity req issueHandle _identifier = do
-  moCity <-
-    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
-      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
-  let definition = req.definition
-      params = maybe Map.empty valueToParamMap req.sampleParams
-      authorHeaders = map (\h -> (h.key, h.value)) (fromMaybe [] definition.headers)
-  (testUrl, testHeaders) <- case fromMaybe DAI.External definition.kind of
-    DAI.External -> pure (definition.urlTemplate, authorHeaders)
-    DAI.InternalRider -> do
-      mbLookupToken <- issueHandle.selfLookupToken
-      case mbLookupToken of
-        Nothing -> throwError $ InvalidRequest "Internal lookups are not configured on this deployment"
-        Just lookupToken -> do
-          selfBaseUrl <- asks (.selfBaseUrl)
-          pure (mkDirectDashboardUrl (showBaseUrl selfBaseUrl) moCity definition.urlTemplate, mkTokenHeaders lookupToken authorHeaders)
-    DAI.InternalDriver -> do
-      counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
-      case counterpart of
-        Nothing -> throwError $ InvalidRequest "Driver-side internal lookups are not configured on this deployment"
-        Just (driverBase, driverToken) ->
-          pure (mkDashboardUrl (showBaseUrl driverBase) moCity definition.urlTemplate, mkTokenHeaders driverToken authorHeaders)
-  result <-
-    Executor.executeIntegration
-      (show definition.method)
-      testUrl
-      testHeaders
-      definition.bodyTemplate
-      (max 100 (min 10000 (fromMaybe 3000 definition.timeoutMs)))
-      (map (\f -> (f.name, f.path)) definition.responseFields)
-      params
-  pure
-    Common.TestApiIntegrationRes
-      { success = isNothing result.errorMessage,
-        statusCode = result.statusCode,
-        latencyMs = result.latencyMs,
-        extractedFields = Just $ A.toJSON $ Map.map (fromMaybe A.Null) result.extractedFields,
-        rawResponse = result.rawResponse,
-        errorMessage = result.errorMessage
-      }
-  where
-    valueToParamMap :: A.Value -> Map.Map T.Text T.Text
-    valueToParamMap (A.Object obj) =
-      Map.fromList
-        [ (AKey.toText k, valueToText v)
-          | (k, v) <- AKM.toList obj
-        ]
-    valueToParamMap _ = Map.empty
-
-    valueToText (A.String s) = s
-    valueToText (A.Number n) = T.pack (show n)
-    valueToText (A.Bool b) = if b then "true" else "false"
-    valueToText v = encodeToText v
-
 -- | Dashboard chat simulator: walks the real customer flow - ApiCall engine
 -- included, so lookups actually execute - under a synthetic person, letting
 -- flow authors test end-to-end without a rider session. The synthetic person
@@ -2516,16 +2449,3 @@ getIssueFlowSimulate merchantShortId city categoryId mbOptionId mbRideId mbSessi
   let sessionKey = fromMaybe moCity.id.getId mbSessionId
       simulatorPersonId = Id $ "dashboard-simulator-" <> sessionKey
   UIR.getIssueOption (simulatorPersonId, moCity.merchantId, moCity.id) categoryId mbOptionId Nothing mbRideId (Just ENGLISH) issueHandle identifier
-
-mkDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
-mkDashboardUrl base moCity urlTail =
-  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-   in basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
-
-mkDirectDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
-mkDirectDashboardUrl base moCity urlTail =
-  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-   in basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
-
-mkTokenHeaders :: T.Text -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
-mkTokenHeaders token authorHeaders = ("token", token) : filter (\(k, _) -> T.toLower k /= "token") authorHeaders
