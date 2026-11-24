@@ -21,13 +21,19 @@ where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.ExotelEndRide as DExotelEndRide
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
+import Domain.Types.Exophone (ExophoneType (..))
+import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
+import Kernel.Types.Id (getId)
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.Queries.PersonExtra as QPerson
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
@@ -54,7 +60,13 @@ callBasedEndRide callFrom_ callTo_ = withFlowHandlerAPI . ActorInfo.withRequestI
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
-  exophone <- CQExophone.findByEndRidePhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+  endRideCandidates <- filter (\e -> e.exophoneType == END_RIDE) <$> CQExophone.findAllByPhone callTo
+  tentativeExophone <- case endRideCandidates of
+    (x : _) -> pure x
+    [] -> Kernel.Utils.Common.throwError (ExophoneDoesNotExist callTo)
+  driver <- runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash tentativeExophone.merchantId DP.DRIVER) >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  activeRide <- runInReplica (QRideLite.getCurrentActiveByDriverIdLite driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  let exophone = fromMaybe tentativeExophone (find (\e -> Just e.merchantOperatingCityId == activeRide.merchantOperatingCityId) endRideCandidates)
   shandle <- EndRide.buildEndRideHandle exophone.merchantId exophone.merchantOperatingCityId Nothing False
   DExotelEndRide.callBasedEndRide shandle exophone.merchantId mobileNumberHash callFrom
   where
