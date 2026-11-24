@@ -86,7 +86,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           mbDropLocation <- QL.findById dropLocMapping.locationId
           whenJust mbDropLocation $ \dl -> do
             let dropLatLong = LatLong {lat = dl.lat, lon = dl.lon}
-            QDI.updateTripEndLocation (Just dropLatLong) driverId
+            QDI.updateTripCategoryAndTripEndLocationByDriverId (Kernel.Types.Id.cast driverId) Nothing (Just dropLatLong)
             unless isAdvanceRide $ updatePassedThroughDrop driverId
           prevOrder <- QLM.maxOrderByEntity bookingUpdateReq.bookingId.getId
           dropLocMapBooking <- SLM.buildLocationMapping' dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId) prevOrder

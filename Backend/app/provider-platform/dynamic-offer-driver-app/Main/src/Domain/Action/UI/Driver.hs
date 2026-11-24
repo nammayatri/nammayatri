@@ -2037,7 +2037,7 @@ getNearbySearchRequests ::
   Maybe (Id DST.SearchTry) ->
   m GetNearbySearchRequestsRes
 getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
-  nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
+  nearbyReqs <- if isJust searchTryIdReq then QSRD.findByDriver driverId else runInReplica $ QSRD.findByDriver driverId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
@@ -2051,7 +2051,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
-      searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+      searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       if searchTry.status /= DST.ACTIVE
         then pure Nothing
         else Just <$> (USRD.getSentEntity nearbyReq >>= maybe (buildActiveEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq searchTry) pure)
