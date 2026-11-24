@@ -364,19 +364,28 @@ layout :: Maps.LatLong -> [Rider] -> [[PlanStop]]
 layout officeAt riders = [sortOn (\s -> negate (metersBetween s.at officeAt)) group <> [PlanStop officeAt True []] | group <- link (cover riders)]
 
 cover :: [Rider] -> [PlanStop]
-cover riders = go (IntMap.map length near) (IntSet.fromList (IntMap.keys byIndex))
+cover riders = go (IntMap.map (sum . map weight) near) (IntSet.fromList (IntMap.keys points))
   where
-    byIndex = IntMap.fromList (zip [0 ..] riders)
-    -- every rider's neighbourhood (riders within walkMeters, itself included), computed once; it is symmetric
-    near = IntMap.map (\r -> [j | (j, o) <- IntMap.toList byIndex, metersBetween r.home o.home <= walkMeters]) byIndex
+    -- riders at the same spot (to about a metre) are one point weighted by its riders, so a crowded pickup costs one entry,
+    -- not one per pair of riders; points keep the riders' order (the first such rider wins a tie)
+    spot p = (round (p.lat * 1e5) :: Integer, round (p.lon * 1e5) :: Integer)
+    points = IntMap.fromList (zip [0 ..] (sortOn ((.riderId) . NE.head) (Map.elems (Map.fromListWith (flip (<>)) [(spot r.home, r :| []) | r <- riders]))))
+    homeOf i = (.home) (NE.head (points IntMap.! i))
+    weight i = length (points IntMap.! i)
+    -- each point's neighbourhood (points within walkMeters, itself included), looked for only in the grid cells around it:
+    -- a cell is at least walkMeters wide, so no neighbour is missed
+    cell p = (floor (p.lat / cellDegrees) :: Integer, floor (p.lon / cellDegrees) :: Integer)
+    cellDegrees = 0.006
+    byCell = Map.fromListWith (<>) [(cell (homeOf i), [i]) | i <- IntMap.keys points]
+    near = IntMap.mapWithKey (\i _ -> let (y, x) = cell (homeOf i) in [j | dy <- [-1, 0, 1], dx <- [-1, 0, 1], j <- Map.findWithDefault [] (y + dy, x + dx) byCell, metersBetween (homeOf i) (homeOf j) <= walkMeters]) points
     go counts unplaced
       | IntSet.null unplaced = []
       | otherwise =
-        -- the point the most still-unplaced riders can walk to (the first such rider on a tie)
+        -- the point the most still-unplaced riders can walk to
         let best = fst (IntMap.foldlWithKey (\b i c -> if c > snd b then (i, c) else b) (-1, 0) counts)
             taken = filter (`IntSet.member` unplaced) (near IntMap.! best)
-            counts' = foldl (\m j -> foldl (flip (IntMap.adjust (subtract 1))) m (near IntMap.! j)) counts taken
-         in PlanStop (byIndex IntMap.! best).home False (map (\j -> (byIndex IntMap.! j).riderId) taken) : go counts' (foldr IntSet.delete unplaced taken)
+            counts' = foldl (\m j -> foldl (flip (IntMap.adjust (subtract (weight j)))) m (near IntMap.! j)) counts taken
+         in PlanStop (homeOf best) False (concatMap (map (.riderId) . NE.toList . (points IntMap.!)) taken) : go counts' (foldr IntSet.delete unplaced taken)
 
 link :: [PlanStop] -> [[PlanStop]]
 link = foldl add []
