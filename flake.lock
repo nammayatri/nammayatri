@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "amazonka-git": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1690490235,
-        "narHash": "sha256-ml7tGa+hCVbhBWaGDUOVM67Mh+F8R5WU7cLdcMqdVkw=",
-        "owner": "brendanhay",
-        "repo": "amazonka",
-        "rev": "e081929d5a81f30397c9c9a219b154da1a922fb8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "brendanhay",
-        "ref": "2.0.0",
-        "repo": "amazonka",
-        "type": "github"
-      }
-    },
     "beam": {
       "inputs": {
         "common": "common_8",
@@ -6493,11 +6476,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1795081262,
-        "narHash": "sha256-yIEnEj4gf0vYUo1Whrp+Znnpj5qvobzmo4INxyRXgCs=",
+        "lastModified": 1795572355,
+        "narHash": "sha256-Tiz0JudYSlf7Nl1b0qjyFenXmfgE8gwFztxr6Uh4Ta8=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "10624e98e6bc10e099aa2856280b6dd8c6ad3249",
+        "rev": "b8e212fce4129e333f1c715f321965efb326a264",
         "type": "github"
       },
       "original": {

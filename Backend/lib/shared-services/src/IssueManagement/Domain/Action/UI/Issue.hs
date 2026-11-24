@@ -1708,6 +1708,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       estimateFareBreakup = maybe [] (.estimateFareBreakup) mbRideInfoRes
       freeWaitingMinutes = maybe 0.0 (.amount) (getEstimateFromArray "FREE_WAITING_TIME_IN_MINUTES" estimateFareBreakup)
       waitingChargeRatePerMin = maybe 0.0 (.amount) (getEstimateFromArray "WAITING_CHARGE_RATE_PER_MIN" estimateFareBreakup)
+      fareDecimals = getDisplayAccuracy $ maybe INR (.amount.currency) (listToMaybe fareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1744,9 +1745,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
-        "WAITING_CHARGES" -> formatMoney "" waitingCharges
+        "WAITING_CHARGES" -> formatMoney fareDecimals "" waitingCharges
         "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
-        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney "" waitingChargeRatePerMin
+        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney fareDecimals "" waitingChargeRatePerMin
         "WAITING_TIME" -> waitingTimeText freeWaitingMinutes waitingChargeRatePerMin waitingCharges mbRideInfoRes
         "FARE_INVOICE" -> maybe "" fareInvoiceText mbRideInfoRes
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
@@ -1774,13 +1775,14 @@ getConfigValue language issueConfig mbRideInfoRes key = do
                in T.pack formatted
             _ -> vehicleNo
 
-toCents :: HighPrecMoney -> Integer
-toCents money = round (money * 100)
+toCents :: Int -> HighPrecMoney -> Integer
+toCents decimals money = round (money * 10 ^ decimals)
 
-formatMoney :: Text -> HighPrecMoney -> Text
-formatMoney symbol money =
-  let cents = toCents money
-   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` 100) <> "." <> T.justifyRight 2 '0' (show (abs cents `mod` 100))
+formatMoney :: Int -> Text -> HighPrecMoney -> Text
+formatMoney decimals symbol money =
+  let cents = toCents decimals money
+      centsPerUnit = 10 ^ decimals
+   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` centsPerUnit) <> "." <> T.justifyRight decimals '0' (show (abs cents `mod` centsPerUnit))
 
 waitingTimeText :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe RideInfoRes -> Text
 waitingTimeText freeMinutes ratePerMin charges mbRideInfoRes =
@@ -1801,11 +1803,13 @@ fareInvoiceText rideInfo = maybe "" breakdownText rideInfo.fareBreakdown
     breakdownText breakdown =
       T.intercalate "<br><br>" $ [totalText] <> distanceText <> [breakupText]
       where
-        money = formatMoney $ case breakdown.currency of
+        decimals = getDisplayAccuracy breakdown.currency
+        money = formatMoney decimals $ case breakdown.currency of
           EUR -> "€"
           INR -> "₹"
           USD -> "$"
-        moneyDiff amount = (if toCents amount > 0 then "+" else "") <> money amount
+          JOD -> "JD"
+        moneyDiff amount = (if toCents decimals amount > 0 then "+" else "") <> money amount
         totalText = section "TOTAL_FARE" $ case breakdown.finalTotal of
           Just finalTotal -> compareText (money breakdown.estimatedTotal) (money finalTotal) <> "<br>" <> valueText "DIFFERENCE" (moneyDiff (finalTotal - breakdown.estimatedTotal))
           Nothing -> valueText "ESTIMATED" (money breakdown.estimatedTotal)
