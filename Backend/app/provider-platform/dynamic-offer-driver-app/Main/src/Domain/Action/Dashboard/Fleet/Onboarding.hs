@@ -28,12 +28,14 @@ import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Status as UIStatus
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
-import qualified Domain.Types.DocumentVerificationStagesConfig
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.DriverReferral as Fields
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import qualified Environment
@@ -51,6 +53,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VehicleDocs
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -86,7 +89,7 @@ getOnboardingDocumentConfigs merchantShortId opCity mbDashboardLanguage fleetOwn
 
   (Onboarding.DocumentVerificationConfigList {..}, onboardingStages) <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle requestorRole
   let fleetStages = map castOnboardingStageAPIEntity onboardingStages
-  fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage fleetStages) fleetConfigsRaw
+  fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage fleetStages) fleetConfigsRaw
   let castConfigs = fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
@@ -131,7 +134,7 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       isMandatoryForEnabling = isMandatoryForEnabling,
       rcNumberPrefixList = rcNumberPrefixList,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
-      documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
+      documentFields = fmap (map castDocumentFieldInfo) documentFields,
       documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
       documentOnboardingStage = SDO.castDocumentOnboardingStage <$> documentOnboardingStage,
       isReminderSupported = isReminderSupported,
@@ -149,12 +152,68 @@ castOnboardingStageAPIEntity Onboarding.DocumentOnboardingStageAPIEntity {..} =
       stageDependency = map SDO.castDocumentOnboardingStage stageDependency,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       media = fmap (map castMediaInfo) media,
-      guidelines = fmap (map SDO.castImageInfo) guidelines,
+      guidelines = fmap (map castImageInfo) guidelines,
       ..
     }
 
-castMediaInfo :: Domain.Types.DocumentVerificationStagesConfig.MediaInfo -> CommonOnboarding.MediaInfo
-castMediaInfo Domain.Types.DocumentVerificationStagesConfig.MediaInfo {..} = CommonOnboarding.MediaInfo {..}
+mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [CommonOnboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow CommonOnboarding.DocumentVerificationConfigAPIEntity
+mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
+  translatedFields <- traverse (DOnboarding.translateDocumentFields merchantOperatingCityId language documentType) documentFields
+  translatedTitle <- CQTranslations.findTranslatedText (Just merchantOperatingCityId) language (FleetOwnerDocument_Title documentType) title
+  translatedDescription <- CQTranslations.findOptionalTranslatedText (Just merchantOperatingCityId) language (FleetOwnerDocument_Description documentType) description
+  translatedDisableWarning <- forM disableWarning $ CQTranslations.findTranslatedText (Just merchantOperatingCityId) language (FleetOwnerDocument_DisableWarning documentType)
+  return $
+    CommonOnboarding.DocumentVerificationConfigAPIEntity
+      { title = translatedTitle,
+        description = translatedDescription,
+        disableWarning = translatedDisableWarning,
+        applicableTo = CommonOnboarding.FLEET,
+        filterForOldApks = Nothing,
+        rcNumberPrefixList = [],
+        documentType = SDO.castDocumentType documentType,
+        dependencyDocumentType = map SDO.castDocumentType dependencyDocumentType,
+        documentCategory = SDO.castDocumentCategory <$> documentCategory,
+        isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
+        documentFields = fmap (map castDocumentFieldInfo) translatedFields,
+        documentFlowGrouping = SDO.castDocumentFlowGrouping Domain.Types.DocumentVerificationConfig.STANDARD,
+        documentOnboardingStage = SDO.castDocumentOnboardingStage <$> documentOnboardingStage,
+        isReminderSupported = Nothing,
+        isApprovalSupported = Nothing,
+        rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
+        doNotValidateDuringOnboarding = Nothing,
+        doStrictVerification = doStrictVerifcation,
+        onboardingStage = find (\stage -> Just stage.stage == (SDO.castDocumentOnboardingStage <$> documentOnboardingStage)) onboardingStages,
+        ..
+      }
+
+castDocumentFieldInfo :: Onboarding.FieldInfo -> CommonOnboarding.FieldInfo
+castDocumentFieldInfo Onboarding.FieldInfo {..} =
+  CommonOnboarding.FieldInfo
+    { name = name,
+      _type = SDO.castDocumentFieldType _type,
+      isMandatory = isMandatory,
+      regexValidation = regexValidation,
+      description = description,
+      placeholder = placeholder,
+      hint = hint,
+      dropdownValues = dropdownValues,
+      fieldConstraints = fieldConstraints,
+      requestKey = requestKey,
+      descriptionUrl = descriptionUrl,
+      fields = fmap (map castDocumentFieldInfo) fields,
+      images = fmap (map castImageInfo) images
+    }
+
+castImageInfo :: Onboarding.ImageInfo -> CommonOnboarding.ImageInfo
+castImageInfo Onboarding.ImageInfo {..} =
+  CommonOnboarding.ImageInfo
+    { title = title,
+      text = text,
+      imageUrl = imageUrl
+    }
+
+castMediaInfo :: Onboarding.MediaInfo -> CommonOnboarding.MediaInfo
+castMediaInfo Onboarding.MediaInfo {..} = CommonOnboarding.MediaInfo {..}
 
 getOnboardingGetReferralDetails ::
   ShortId DM.Merchant ->

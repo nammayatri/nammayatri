@@ -12,6 +12,7 @@ import qualified "this" Domain.Types.FareBreakup
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.RefundRequest
 import qualified "this" Domain.Types.Ride
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Payment.Interface.Types
@@ -39,7 +40,7 @@ data RefundRequestInfoResp = RefundRequestInfoResp
     refundPurpose :: Domain.Types.RefundRequest.RefundPurpose,
     status :: Domain.Types.RefundRequest.RefundRequestStatus,
     code :: Domain.Types.RefundRequest.RefundRequestCode,
-    description :: Kernel.Prelude.Text,
+    description :: Domain.Types.TranslationKey.TranslatedText,
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundsId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds),
     refundsAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
@@ -75,7 +76,7 @@ data RefundRequestItem = RefundRequestItem
     refundPurpose :: Domain.Types.RefundRequest.RefundPurpose,
     status :: Domain.Types.RefundRequest.RefundRequestStatus,
     code :: Domain.Types.RefundRequest.RefundRequestCode,
-    description :: Kernel.Prelude.Text,
+    description :: Domain.Types.TranslationKey.TranslatedText,
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundsId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds),
     refundsAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,

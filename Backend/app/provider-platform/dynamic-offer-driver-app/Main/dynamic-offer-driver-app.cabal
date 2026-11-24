@@ -330,6 +330,7 @@ library
       Domain.Action.DashboardAuth.Management.Notification
       Domain.Action.DashboardAuth.Management.Person
       Domain.Action.DashboardAuth.Management.RadarTickets
+      Domain.Action.DashboardAuth.Management.Ride
       Domain.Action.DashboardAuth.Operator.FleetManagement
       Domain.Action.DashboardAuth.Operator.Registration
       Domain.Action.DashboardAuth.RideBooking.Driver

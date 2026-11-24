@@ -26,6 +26,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived, translatedTextToText)
 import Domain.Types.TranslationKeys (DocumentRejectReason, TranslationKey (..), VerificationMessage (..), documentRejectReasonText)
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleCategory as DVC
@@ -399,7 +400,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
-            mbShownReason <- translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbProcessedReason
+            mbShownReason <- fmap translatedTextToText <$> translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbProcessedReason
             mbFinalMetadata <- withImageMetadataFallback entityImagesInfo (Just rcImagesInfo) docType mbImageId mbMetadata
             return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbShownReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = mbImageId2, documentExpiry = mbExpiry, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
           Nothing -> do
@@ -926,12 +927,13 @@ storedRejectReason (Just key) (Just text) | (documentRejectReasonText <$> docume
 storedRejectReason _ mbText = mbText
 
 -- | A reason that is a key name becomes the row for the city and language, or the key's English
--- sentence; any other text (typed by ops, returned by a verification provider) is shown as stored.
-translateRejectReason :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Language -> Maybe Text -> m (Maybe Text)
+-- sentence; any other text is shown as stored: typed by ops, returned by a verification provider,
+-- or an English reason written here that has no key yet (face match failed, document archived).
+translateRejectReason :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Language -> Maybe Text -> m (Maybe TranslatedText)
 translateRejectReason merchantOpCityId language = traverse $ \reason ->
   case documentRejectReasonByKey reason of
-    Just keyed -> fromMaybe (documentRejectReasonText keyed) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (DocumentReason_Text keyed)
-    Nothing -> pure reason
+    Just keyed -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (DocumentReason_Text keyed) (documentRejectReasonText keyed)
+    Nothing -> pure (textAsReceived reason)
 
 documentStatusMessage :: OnboardingFlow m r => ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Id DMOC.MerchantOperatingCity -> Language -> Bool -> m (Maybe Text)
 documentStatusMessage status mbReason docType mbVerificationUrl merchantOpCityId language skipMessages

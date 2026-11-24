@@ -7,7 +7,6 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MessageDictionary as DMD
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
-import qualified Domain.Types.Translations as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Types as Language
@@ -63,10 +62,9 @@ getRideGetCancellationReasons (mbDriverId, _merchantId, _merchantOpCityId) rideI
 
   -- For each message key, look up the translation in driver's language (falls back to ENGLISH)
   forM visibleEntries $ \entry -> do
-    mbTranslation <- CQTranslations.findByOpsKey (Just merchantOpCityId) driverLanguage entry.messageKey
-    let reasonMessage = maybe entry.messageKey (.message) mbTranslation
+    reasonMessage <- CQTranslations.findTranslatedTextByOpsKey (Just merchantOpCityId) driverLanguage entry.messageKey entry.messageKey
     pure $
       API.Types.UI.CancellationReasonLookup.CancellationReasonResp
         { reasonCode = entry.messageKey,
-          reasonMessage = reasonMessage
+          reasonMessage
         }

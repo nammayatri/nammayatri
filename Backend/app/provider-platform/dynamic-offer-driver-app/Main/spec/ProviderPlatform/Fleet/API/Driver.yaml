@@ -1705,21 +1705,21 @@ apis:
 types:
   UpdateCashRideReq:
     - enableCashRide: Bool
-    - targetIds: Maybe [Text]
+    - targetIds: "Maybe [!Text]"
     - derive: "'HideSecrets"
   AddRidePayoutAccountNumberReq:
-    - driverMobileNumber: Text
-    - driverMobileNumberCountryCode: Text
-    - driverName: Maybe Text
-    - accountNumber: Maybe Text
-    - ifscCode: Maybe Text
-    - bankName: Maybe Text
-    - vehicleRegistrationNumber: Text
+    - driverMobileNumber: "!Text"
+    - driverMobileNumberCountryCode: "!Text"
+    - driverName: "Maybe !Text"
+    - accountNumber: "Maybe !Text"
+    - ifscCode: "Maybe !Text"
+    - bankName: "Maybe !Text"
+    - vehicleRegistrationNumber: "!Text"
     - vehicleBalance: Maybe HighPrecMoney
     - vehicleBalanceAdjustmentPercentage: Maybe Centesimal
     - derive: "'HideSecrets"
   EstimatedRouteDetails:
-    - polyline: Maybe Text
+    - polyline: "Maybe !Text"
     - duration: Maybe Seconds
     - distance: Maybe Meters
   EstimateRouteReq:
@@ -1728,44 +1728,44 @@ types:
   ApproveDriverReq:
     - driverId: Id Driver
     - approve: Maybe Bool
-    - reason: Maybe Text
+    - reason: "Maybe !Text"
     - derive: "'HideSecrets"
   OnboardingLinkConsentReq:
     - driverId: Id Driver
-    - code: Text
+    - code: "!Text"
     - derive: "'HideSecrets"
   ChangeFleetOwnerReq:
-    - newFleetOwnerId: Text
-    - reason: Maybe Text
+    - newFleetOwnerId: "!Text"
+    - reason: "Maybe !Text"
     - derive: "'HideSecrets"
 
   UpdateDriverReq:
-    - firstName: Maybe Text
-    - lastName: Maybe Text
-    - mobileNo: Maybe Text
-    - mobileCountryCode: Maybe Text
+    - firstName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - mobileNo: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
     - dob: Maybe Day
-    - gender: Maybe Text
-    - email: Maybe Text
-    - address: Maybe Text
+    - gender: "Maybe !Text"
+    - email: "Maybe !Text"
+    - address: "Maybe !Text"
     - addressDocumentType: Maybe AddressDocumentType
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
-    - stripeIdNumber: Maybe Text
-    - fleetName: Maybe Text
+    - stripeIdNumber: "Maybe !Text"
+    - fleetName: "Maybe !Text"
     - fleetType: Maybe FleetType
-    - nomineeName: Maybe Text
+    - nomineeName: "Maybe !Text"
     - nomineeDob: Maybe Day
-    - nomineeRel: Maybe Text
+    - nomineeRel: "Maybe !Text"
     - addressState: Maybe IndianState
     - onboardingAs: Maybe OnboardingAs
     - derive: "'HideSecrets"
   DriverDetailsRes:
     - driverId: Id Driver
-    - firstName: Text
-    - lastName: Maybe Text
+    - firstName: "!Text"
+    - lastName: "Maybe !Text"
     - dob: Maybe Day
-    - email: Maybe Text
+    - email: "Maybe !Text"
     - derive: "'HideSecrets"
   NearbyDriverReq:
     - point: LatLong
@@ -1777,22 +1777,22 @@ types:
   NearbyDriverRespT:
     - drivers: [DriverInfoT]
   DriverInfo:
-    - routeCode: Text
-    - driverName: Text
-    - vehicleNumber: Text
+    - routeCode: "!Text"
+    - driverName: "!Text"
+    - vehicleNumber: "!Text"
     - rideStatus: RideStatus
-    - routeLongName: Maybe Text
+    - routeLongName: "Maybe !Text"
     - point: LatLong
     - driverId: Id Driver
   DriverInfoT:
-    - routeCode: Text
-    - driverName: Text
-    - vehicleNumber: Text
+    - routeCode: "!Text"
+    - driverName: "!Text"
+    - vehicleNumber: "!Text"
     - rideStatus: RideStatus
-    - routeLongName: Maybe Text
+    - routeLongName: "Maybe !Text"
     - point: LatLong
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
     - driverId: Id Driver
   RideStatus:
     enum: ON_PICKUP | ON_RIDE
@@ -1815,25 +1815,25 @@ types:
   RoundTripDetail:
     - frequency: Int
   TripDetails:
-    - routeCode: Text
+    - routeCode: "!Text"
     - roundTrip: Maybe RoundTripDetail
     - scheduledTripTime: Maybe UTCTime
-    - vipName: Maybe Text
-    - dutyType: Maybe Text
+    - vipName: "Maybe !Text"
+    - dutyType: "Maybe !Text"
     - startAddress: Maybe Address
     - endAddress: Maybe Address
     - tripType: Maybe TripType
     - estimatedRouteDetails: Maybe EstimatedRouteDetails
   Address:
     - point: LatLong
-    - address: Maybe Text
+    - address: "Maybe !Text"
   TripPlannerReq:
     - driverId: Id Driver
-    - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
-    - driverBadgeName: Maybe Text
-    - conductorBadgeName: Maybe Text
-    - pilotBadgeName: Maybe Text
-    - vehicleNumber: Text
+    - badgeName: "Maybe !Text" # TODO :: To be deprecated, and replaced with driverBadgeName
+    - driverBadgeName: "Maybe !Text"
+    - conductorBadgeName: "Maybe !Text"
+    - pilotBadgeName: "Maybe !Text"
+    - vehicleNumber: "!Text"
     - trips: [TripDetails]
     - derive: "'HideSecrets"
   FleetOwnerListRes:
@@ -1841,7 +1841,7 @@ types:
     - ownersList: [FleetOwnerListAPIEntity]
   FleetOwnerListItem:
     - fleetOwnerId: Id Person
-    - fleetOwnerName: Text
+    - fleetOwnerName: "!Text"
     - merchantId: Id Merchant
     - merchantOperatingCityId: Id MerchantOperatingCity
     - fleetType: FleetType
@@ -1851,41 +1851,41 @@ types:
     - blocked: Bool
     - isEligibleForSubscription: Bool
     - address: Maybe StripeAddress
-    - fleetName: Maybe Text
-    - email: Maybe Text
-    - mobileNumber: Maybe Text
-    - mobileCountryCode: Maybe Text
+    - fleetName: "Maybe !Text"
+    - email: "Maybe !Text"
+    - mobileNumber: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
     - createdAt: Maybe UTCTime
     - docsVerificationStatusUpdatedAt: UTCTime
   FleetGroup:
     - level: Int
-    - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing
-    - groupCode: Text
+    - parentGroupCode: "Maybe !Text" # At Initial Level, this will be Nothing
+    - groupCode: "!Text"
   FleetOwnerListAPIEntity:
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
     - fleetGroup: Maybe FleetGroup
     - groups: "[FleetGroup]"
     - order: Maybe Int
     - enabled: Bool
   TripTransactionDetail:
     - tripTransactionId: Id TripTransaction
-    - routeCode: Text
+    - routeCode: "!Text"
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - tripStatus: TripStatus
   TripTransactionDetailT:
     - tripTransactionId: Id TripTransaction
-    - routeCode: Text
+    - routeCode: "!Text"
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - tripStatus: TripStatus
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
     - tripType: Maybe TripType
     - scheduledTripTime: Maybe UTCTime
-    - dutyType: Maybe Text
-    - vipName: Maybe Text
+    - dutyType: "Maybe !Text"
+    - vipName: "Maybe !Text"
     - startAddress: Maybe Address
     - endAddress: Maybe Address
     - estimatedRouteDetails: Maybe EstimatedRouteDetails
@@ -1907,15 +1907,15 @@ types:
     - estimatedRouteDetails: Maybe EstimatedRouteDetails
     - derive: "'HideSecrets"
   AddVehicleReq:
-    - registrationNo: Text
-    - vehicleClass: Text
+    - registrationNo: "!Text"
+    - vehicleClass: "!Text"
     - capacity: Maybe Int
-    - colour: Text
-    - energyType: Maybe Text
-    - model: Text
-    - make: Text
+    - colour: "!Text"
+    - energyType: "Maybe !Text"
+    - model: "!Text"
+    - make: "!Text"
     - airConditioned: Maybe Bool
-    - driverName: Maybe Text
+    - driverName: "Maybe !Text"
     - imageId: Maybe (Id Image)
     - imageId2: Maybe (Id Image)
     - vehicleCategory: Maybe VehicleCategory
@@ -1924,11 +1924,11 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
-    - vehicleTags: Maybe [Text]
-    - fuelType: Maybe Text
+    - vehicleTags: "Maybe [!Text]"
+    - fuelType: "Maybe !Text"
     - skipFleetChecks: Maybe Bool
-    - udinNumber: Maybe Text
-    - previousRcNumber: Maybe Text
+    - udinNumber: "Maybe !Text"
+    - previousRcNumber: "Maybe !Text"
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
@@ -1938,25 +1938,25 @@ types:
     - vehicles: [VehicleAPIEntity]
   VehicleAPIEntity:
     - variant: Maybe VehicleVariant
-    - model: Maybe Text
-    - color: Maybe Text
-    - registrationNo: Text
+    - model: "Maybe !Text"
+    - color: "Maybe !Text"
+    - registrationNo: "!Text"
     - isActive: Maybe Bool
   VehicleAPIEntityT:
     - variant: Maybe VehicleVariant
-    - model: Maybe Text
-    - color: Maybe Text
-    - registrationNo: Text
+    - model: "Maybe !Text"
+    - color: "Maybe !Text"
+    - registrationNo: "!Text"
     - isActive: Maybe Bool
     - verified: Maybe Bool
     - approved: Maybe Bool
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
-    - driverMobileNumber: Maybe Text
-    - driverMobileCountryCode: Maybe Text
-    - driverAccountNumber: Maybe Text
-    - driverIfscCode: Maybe Text
-    - driverName: Maybe Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
+    - driverMobileNumber: "Maybe !Text"
+    - driverMobileCountryCode: "Maybe !Text"
+    - driverAccountNumber: "Maybe !Text"
+    - driverIfscCode: "Maybe !Text"
+    - driverName: "Maybe !Text"
     - vehicleBalance: Maybe Double
     - vehicleBalanceAdjustmentPercentage: Maybe Centesimal
   FleetBadgeRes:
@@ -1966,15 +1966,15 @@ types:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntityT]
   FleetBadgesAPIEntity:
-    - badgeName: Text
+    - badgeName: "!Text"
     - isActive: Bool
     - badgeType: FleetBadgeType
   FleetBadgesAPIEntityT:
-    - badgeName: Text
+    - badgeName: "!Text"
     - isActive: Bool
     - badgeType: FleetBadgeType
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
   FleetListDriverResT:
     - fleetDriversInfos: [FleetDriversAPIEntityT]
   FleetListDriverRes:
@@ -1982,22 +1982,22 @@ types:
     - fleetDriversInfos: [FleetDriversAPIEntity]
   FleetDriversAPIEntity:
     - driverId: Id Driver
-    - firstName: Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - mobileNumber: Maybe Text
-    - mobileCountryCode: Maybe Text
+    - firstName: "!Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - mobileNumber: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
     - isActive: Maybe Bool
   FleetDriversAPIEntityT:
     - driverId: Id Driver
-    - firstName: Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - mobileNumber: Maybe Text
-    - mobileCountryCode: Maybe Text
+    - firstName: "!Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - mobileNumber: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
     - isActive: Maybe Bool
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
   FleetTotalEarningResponse:
     - totalRides: Int
     - totalEarning: Int
@@ -2015,7 +2015,7 @@ types:
   FleetDriverStatsRes:
     - enum: "EarningsList FleetDriverEarningsStatsRes | MetricsList FleetDriverMetricsStatsRes"
   FleetDriverEarningsStatsRes:
-    - driverName: Text
+    - driverName: "!Text"
     - totalEarningGross: Maybe HighPrecMoney
     - inAppEarningGross: Maybe HighPrecMoney
     - cashEarningGross: Maybe HighPrecMoney
@@ -2025,7 +2025,7 @@ types:
     - cashEarningNet: Maybe HighPrecMoney
     - currency: Currency
   FleetDriverMetricsStatsRes:
-    - driverName: Text
+    - driverName: "!Text"
     - rating: Maybe Double
     - acceptedRideRequests: Maybe Int
     - rejectedRideRequests: Maybe Int
@@ -2048,39 +2048,39 @@ types:
     - bookings: [FleetBookingItem]
     - summary: Summary
   FleetBookingItem:
-    - bookingId: Text
-    - serviceId: Text
-    - ticketBookingShortId: Maybe Text
-    - ticketBookingServiceShortId: Maybe Text
-    - serviceName: Text
-    - placeName: Text
-    - vehicleNo: Text
+    - bookingId: "!Text"
+    - serviceId: "!Text"
+    - ticketBookingShortId: "Maybe !Text"
+    - ticketBookingServiceShortId: "Maybe !Text"
+    - serviceName: "!Text"
+    - placeName: "!Text"
+    - vehicleNo: "!Text"
     - amount: Double
     - bookedSeats: Int
-    - status: Text
+    - status: "!Text"
     - visitDate: Maybe Day
     - createdAt: UTCTime
     - updatedAt: UTCTime
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
-    - paymentMethod: Maybe Text
-    - customerMobileNumber: Maybe Text
-    - customerName: Maybe Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
+    - paymentMethod: "Maybe !Text"
+    - customerMobileNumber: "Maybe !Text"
+    - customerName: "Maybe !Text"
   FleetBookingAssignmentsResponse:
     - bookings: [FleetBookingAssignmentItem]
     - summary: Summary
   FleetBookingAssignmentItem:
-    - bookingId: Text
-    - serviceId: Text
-    - serviceName: Text
-    - placeName: Text
-    - vehicleNo: Text
+    - bookingId: "!Text"
+    - serviceId: "!Text"
+    - serviceName: "!Text"
+    - placeName: "!Text"
+    - vehicleNo: "!Text"
     - amount: Double
     - visitDate: Maybe Day
     - createdAt: UTCTime
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
-    - paymentMethod: Maybe Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
+    - paymentMethod: "Maybe !Text"
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
     - derive: "HttpInstance"
@@ -2090,14 +2090,14 @@ types:
   FleetEarningRes:
     - totalRides: Int
     - totalEarning: Int
-    - vehicleNo: Maybe Text
+    - vehicleNo: "Maybe !Text"
     - driverId: Maybe (Id Driver)
-    - driverName: Maybe Text
+    - driverName: "Maybe !Text"
     - status: Maybe DriverMode
     - vehicleType: Maybe VehicleVariant
     - totalDuration: TotalDuration
     - distanceTravelled: Double
-    - driverPhoneNo: Maybe Text
+    - driverPhoneNo: "Maybe !Text"
     - cancelledRides: Int
   TotalDuration:
     - hours: Int
@@ -2106,31 +2106,31 @@ types:
     - enum: "Active, InActive, Valid, Invalid, Pending, OnRide, TripAssigned"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
-    - fleetOwnerId: Text
+    - fleetOwnerId: "!Text"
     - listItem: [DriveVehicleAssociationListItem]
     - summary: Summary
   DrivertoVehicleAssociationResT:
-    - fleetOwnerId: Text
-    - fleetOwnerName: Maybe Text
-    - fleetName: Maybe Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "Maybe !Text"
+    - fleetName: "Maybe !Text"
     - listItem: [DriveVehicleAssociationListItemT]
     - summary: DriverSummary
   RCStatusReq:
-    - rcNo: Text
+    - rcNo: "!Text"
     - isActivate: Bool
     - serviceName: Maybe ServiceNames
-    - planToAssociate: Maybe Text
+    - planToAssociate: "Maybe !Text"
     - derive: "'HideSecrets"
   DriveVehicleAssociationListItem:
-    - driverId: Maybe Text
-    - vehicleNo: Maybe Text
-    - driverName: Maybe Text
-    - firstName: Maybe Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - conductorName: Maybe Text
+    - driverId: "Maybe !Text"
+    - vehicleNo: "Maybe !Text"
+    - driverName: "Maybe !Text"
+    - firstName: "Maybe !Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - conductorName: "Maybe !Text"
     - status: Maybe DriverMode
-    - driverPhoneNo: Maybe Text
+    - driverPhoneNo: "Maybe !Text"
     - completedRides: Int # will remove this
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
@@ -2139,27 +2139,27 @@ types:
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
-    - upcomingRouteCode: Maybe Text
+    - upcomingRouteCode: "Maybe !Text"
     - createdAt: Maybe UTCTime
   DriveVehicleAssociationListItemT:
-    - driverId: Maybe Text
-    - vehicleNo: Maybe Text
-    - rcId: Maybe Text
-    - profilePhotoImageId: Maybe Text
-    - vehicleIconURL: Maybe Text
-    - vehicleColor: Maybe Text
-    - vehicleMake: Maybe Text
-    - vehicleModel: Maybe Text
+    - driverId: "Maybe !Text"
+    - vehicleNo: "Maybe !Text"
+    - rcId: "Maybe !Text"
+    - profilePhotoImageId: "Maybe !Text"
+    - vehicleIconURL: "Maybe !Text"
+    - vehicleColor: "Maybe !Text"
+    - vehicleMake: "Maybe !Text"
+    - vehicleModel: "Maybe !Text"
     - vehicleYear: Maybe Int
-    - driverName: Maybe Text
-    - firstName: Maybe Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - conductorName: Maybe Text
+    - driverName: "Maybe !Text"
+    - firstName: "Maybe !Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - conductorName: "Maybe !Text"
     - status: Maybe DriverMode
-    - driverPhoneNo: Maybe Text
-    - driverMobileCountryCode: Maybe Text
-    - driverEmail: Maybe Text
+    - driverPhoneNo: "Maybe !Text"
+    - driverMobileCountryCode: "Maybe !Text"
+    - driverEmail: "Maybe !Text"
     - completedRides: Int # will remove this
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
@@ -2168,28 +2168,29 @@ types:
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
-    - upcomingRouteCode: Maybe Text
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
-    - fleetName: Maybe Text
-    - requestReason: Maybe Text
-    - responseReason: Maybe Text
+    - upcomingRouteCode: "Maybe !Text"
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
+    - fleetName: "Maybe !Text"
+    - requestReason: "Maybe !Text"
+    - responseReason: "Maybe !Text"
     - associatedOn: Maybe UTCTime
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
     - enabled: Maybe Bool
     - verified: Maybe Bool
     - approved: Maybe Bool
-    - selectedServiceTiers: [Text]
+    # selectedServiceTiers are tier names that the dashboard maps back to tiers; they stay as stored
+    - selectedServiceTiers: "[!Text]"
     - driverDob: Maybe UTCTime
-    - failedRules: Maybe [Text]
+    - failedRules: "Maybe [!Text]"
     - enableCashRide: Maybe Bool
   EditVehicleReq:
-    - manufacturer: Maybe Text
-    - model: Maybe Text
-    - color: Maybe Text
+    - manufacturer: "Maybe !Text"
+    - model: "Maybe !Text"
+    - color: "Maybe !Text"
     - year: Maybe Int
-    - certificateNumber: Maybe Text
+    - certificateNumber: "Maybe !Text"
     - derive: "'HideSecrets"
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
@@ -2213,7 +2214,7 @@ types:
     - localResidenceProof: Maybe VerificationStatus
     - drivingSchoolCertificate: Maybe VerificationStatus
   FleetDashboardAnalyticsCacheReq:
-    - fleetOwnerId: Text
+    - fleetOwnerId: "!Text"
     - activeDriverCount: Maybe Int
     - activeVehicleCount: Maybe Int
     - currentOnlineDriver: Maybe Int
@@ -2221,73 +2222,73 @@ types:
     - enum: "ONLINE, OFFLINE, SILENT"
     - derive: "HttpInstance"
   UpdateFleetOwnerInfoReq:
-    - firstName: Maybe Text
-    - lastName: Maybe Text
-    - mobileNo: Maybe Text
-    - mobileCountryCode: Maybe Text
-    - email: Maybe Text
+    - firstName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - mobileNo: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
+    - email: "Maybe !Text"
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
-    - stripeIdNumber: Maybe Text
-    - fleetName: Maybe Text
+    - stripeIdNumber: "Maybe !Text"
+    - fleetName: "Maybe !Text"
     - fleetType: Maybe FleetType
-    - businessLicenseNumber: Maybe Text
+    - businessLicenseNumber: "Maybe !Text"
     - derive: "'HideSecrets"
   CreateDriversReq:
     - file: FilePath
-    - fleetOwnerId: Maybe Text
+    - fleetOwnerId: "Maybe !Text"
     - derive: "'HideSecrets"
   CreateVehiclesReq:
     - file: FilePath
-    - fleetOwnerId: Maybe Text
-    - requestorId: Maybe Text
+    - fleetOwnerId: "Maybe !Text"
+    - requestorId: "Maybe !Text"
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
-    - id: Text
-    - name: Maybe Text
-    - firstName: Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - mobileNo: Maybe Text
-    - mobileCountryCode: Maybe Text
-    - email: Maybe Text
+    - id: "!Text"
+    - name: "Maybe !Text"
+    - firstName: "!Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - mobileNo: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
+    - email: "Maybe !Text"
     - blocked: Bool
     - enabled: Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
-    - fleetType: Text
+    - fleetType: "!Text"
     - verified: Bool
-    - approvedBy: Maybe Text
-    - roleName: Maybe Text
-    - referredByOperatorId: Maybe Text
+    - approvedBy: "Maybe !Text"
+    - roleName: "Maybe !Text"
+    - referredByOperatorId: "Maybe !Text"
     - isEligibleForSubscription: Maybe Bool
-    - gstNumber: Maybe Text
-    - gstImageId: Maybe Text
-    - panNumber: Maybe Text
-    - aadhaarNumber: Maybe Text
+    - gstNumber: "Maybe !Text"
+    - gstImageId: "Maybe !Text"
+    - panNumber: "Maybe !Text"
+    - aadhaarNumber: "Maybe !Text"
     - fleetConfig: Maybe FleetConfig
-    - operatorName: Maybe Text
-    - operatorContact: Maybe Text
-    - operators: "[(Text, Maybe Text)]"
-    - referralCode: Maybe Text
-    - operatorReferralCode: Maybe Text
+    - operatorName: "Maybe !Text"
+    - operatorContact: "Maybe !Text"
+    - operators: "[(!Text, Maybe !Text)]"
+    - referralCode: "Maybe !Text"
+    - operatorReferralCode: "Maybe !Text"
     - registeredAt: Maybe UTCTime
-    - businessLicenseNumber: Maybe Text
-    - vatNumber: Maybe Text
+    - businessLicenseNumber: "Maybe !Text"
+    - vatNumber: "Maybe !Text"
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
-    - stripeIdNumber: Maybe Text
+    - stripeIdNumber: "Maybe !Text"
     - updatedAt: UTCTime
     - panAadhaarLinkedFlag: Maybe Bool
     - gstinApplicableFlag: Maybe Bool
     - tdsApplicableFlag: Maybe Bool
-    - walletId: Maybe Text
-    - bankAccountNumber: Maybe Text
-    - bankIfsc: Maybe Text
-    - bankVerificationStatus: Maybe Text
-    - upiId: Maybe Text
-    - linkedDriverIds: "[Text]"
-    - fleetName: Maybe Text
-    - address: Maybe Text
+    - walletId: "Maybe !Text"
+    - bankAccountNumber: "Maybe !Text"
+    - bankIfsc: "Maybe !Text"
+    - bankVerificationStatus: "Maybe !Text"
+    - upiId: "Maybe !Text"
+    - linkedDriverIds: "[!Text]"
+    - fleetName: "Maybe !Text"
+    - address: "Maybe !Text"
     - addressState: Maybe IndianState
     - addressDocumentType: Maybe AddressDocumentType
     - approved: Maybe Bool
@@ -2331,44 +2332,46 @@ types:
     - enable: Bool
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
-    - mobileCountryCode: Text
-    - mobileNumber: Text
-    - otp: Text
+    - mobileCountryCode: "!Text"
+    - mobileNumber: "!Text"
+    - otp: "!Text"
     - deviceToken: Maybe FCMRecipientToken
     - derive: "'HideSecrets"
   LinkRCWithDriverForFleetReq:
-    - driverMobileCountryCode: Maybe Text
-    - driverMobileNumber: Text
-    - vehicleRegistrationNumber: Text
+    - driverMobileCountryCode: "Maybe !Text"
+    - driverMobileNumber: "!Text"
+    - vehicleRegistrationNumber: "!Text"
     - derive: "'HideSecrets"
   DriverRequestDetails:
     - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
-    - title: Text
-    - body: Text
+    # title and body are bus-route alert text, not keyed
+    - title: "!Text"
+    - body: "!Text"
     - raisedAt: UTCTime
     - status: Maybe Domain.Types.Alert.AlertRequestStatus
-    - approvalRequestId: Text
-    - routeCode: Text
-    - driverId: Text
-    - tripTransactionId: Text
+    - approvalRequestId: "!Text"
+    - routeCode: "!Text"
+    - driverId: "!Text"
+    - tripTransactionId: "!Text"
     - isViolated: Bool
   DriverRequestDetailsT:
     - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
-    - title: Text
-    - body: Text
+    # title and body are bus-route alert text, not keyed
+    - title: "!Text"
+    - body: "!Text"
     - raisedAt: UTCTime
     - status: Maybe Domain.Types.Alert.AlertRequestStatus
-    - approvalRequestId: Text
-    - routeCode: Text
-    - driverId: Text
-    - tripTransactionId: Text
+    - approvalRequestId: "!Text"
+    - routeCode: "!Text"
+    - driverId: "!Text"
+    - tripTransactionId: "!Text"
     - isViolated: Bool
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
+    - fleetOwnerId: "!Text"
+    - fleetOwnerName: "!Text"
   RequestRespondReq:
     - status: Domain.Types.Alert.AlertRequestStatus
-    - approvalRequestId: Text
-    - reason: Text
+    - approvalRequestId: "!Text"
+    - reason: "!Text"
     - derive: "'HideSecrets"
   DriverRequestResp:
     - recordType: NewType
@@ -2381,9 +2384,9 @@ types:
     - summary: Summary
     - derive: "'HideSecrets"
   RouteRespItem:
-    - code: Text
-    - shortName: Text
-    - longName: Text
+    - code: "!Text"
+    - shortName: "!Text"
+    - longName: "!Text"
     - startPoint: LatLong
     - endPoint: LatLong
     - distance: Maybe Meters
@@ -2393,29 +2396,29 @@ types:
     - derive: "'HideSecrets"
   CreateDriverBusRouteMappingReq:
     - file: FilePath
-    - fleetOwnerId: Maybe Text
+    - fleetOwnerId: "Maybe !Text"
     - derive: "'HideSecrets"
   APISuccessWithUnprocessedEntities:
     - recordType: NewType
-    - unprocessedEntities: [Text]
+    - unprocessedEntities: "[!Text]"
   ProcessedDriverInfo:
     - driverId: Id Driver
-    - phoneNo: Text
+    - phoneNo: "!Text"
   AddDriversResp:
     - processedDrivers: [ProcessedDriverInfo]
-    - unprocessedEntities: [Text]
+    - unprocessedEntities: "[!Text]"
   MultiOwnerSelect:
     - recordType: NewType
-    - fleetOwnerIds: [Text]
+    - fleetOwnerIds: "[!Text]"
   StopInfo:
-    name: Text
-    code: Text
+    name: "!Text"
+    code: "!Text"
     point: LatLong
     derive: "'HideSecrets"
   RouteDetails:
-    - code: Text
-    - shortName: Text
-    - longName: Text
+    - code: "!Text"
+    - shortName: "!Text"
+    - longName: "!Text"
     - startPoint: LatLong
     - endPoint: LatLong
     - stops: [StopInfo]
@@ -2449,14 +2452,14 @@ types:
     - drivers: [DriverDetails]
   DriverDetails:
     - driverId: Id Driver
-    - firstName: Text
-    - middleName: Maybe Text
-    - lastName: Maybe Text
-    - gender: Maybe Text
-    - mobileCountryCode: Maybe Text
-    - mobileNumber: Maybe Text
-    - email: Maybe Text
-    - vehicleNumber: Maybe Text
+    - firstName: "!Text"
+    - middleName: "Maybe !Text"
+    - lastName: "Maybe !Text"
+    - gender: "Maybe !Text"
+    - mobileCountryCode: "Maybe !Text"
+    - mobileNumber: "Maybe !Text"
+    - email: "Maybe !Text"
+    - vehicleNumber: "Maybe !Text"
     - vehicleVariant: Maybe VehicleVariant
     - derive: "'HideSecrets"
   NearbyDriversReqV2:
@@ -2472,38 +2475,38 @@ types:
     - driverId: Id Driver
     - point: LatLong
     - rideStatus: Maybe RideStatus
-    - rideId: Maybe Text
+    - rideId: "Maybe !Text"
     - rideInfo: Maybe RideInfo
   NearbyDriverDetailsT:
-    - fleetOwnerId: Text
+    - fleetOwnerId: "!Text"
     - driverId: Id Driver
     - point: LatLong
-    - fleetOwnerName: Text
+    - fleetOwnerName: "!Text"
     - rideStatus: Maybe RideStatus
-    - rideId: Maybe Text
+    - rideId: "Maybe !Text"
     - rideInfo: Maybe RideInfo
   RideInfo:
     - enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
   BusRideInfo:
-    busNumber: Text
-    routeCode: Text
+    busNumber: "!Text"
+    routeCode: "!Text"
     source: LatLong
     destination: LatLong
-    routeLongName: Maybe Text
-    driverName: Maybe Text
-    groupId : Maybe Text
+    routeLongName: "Maybe !Text"
+    driverName: "Maybe !Text"
+    groupId : "Maybe !Text"
     derive: "'HideSecrets"
   PilotRideInfo:
-    pilotNumber: Text
-    startAddress: Maybe Text
-    endAddress: Maybe Text
+    pilotNumber: "!Text"
+    startAddress: "Maybe !Text"
+    endAddress: "Maybe !Text"
     source: LatLong
     destination: LatLong
-    driverName: Maybe Text
-    dutyType: Maybe Text
-    vipName: Maybe Text
+    driverName: "Maybe !Text"
+    dutyType: "Maybe !Text"
+    vipName: "Maybe !Text"
     scheduledTripTime: Maybe UTCTime
-    groupId: Maybe Text
+    groupId: "Maybe !Text"
   CarRideInfo:
     pickupLocation: LatLong
     minDistanceBetweenTwoPoints: Maybe Int
@@ -2537,14 +2540,14 @@ types:
   FleetAnalyticsRes:
     - enum: "Filtered FilteredFleetAnalyticsRes | Earnings EarningFleetAnalyticsRes"
   FleetVehicleStatsRes:
-    - fleetOwnerId: Text
+    - fleetOwnerId: "!Text"
     - listItem: [FleetVehicleStatsItem]
     - summary: Summary
   FleetVehicleStatsItem:
-    - vehicleNo: Maybe Text
-    - vehicleModel: Maybe Text
-    - vehicleManufacturer: Maybe Text
-    - rcId: Maybe Text
+    - vehicleNo: "Maybe !Text"
+    - vehicleModel: "Maybe !Text"
+    - vehicleManufacturer: "Maybe !Text"
+    - rcId: "Maybe !Text"
     - totalEarnings: HighPrecMoney
     - currency: Maybe Currency
     - completedRides: Int
@@ -2556,17 +2559,17 @@ types:
     - unlinkedVehicles: [UnlinkedVehicle]
   OnboardedDriver:
     - driverId: Id Driver
-    - mobileNumber: Maybe Text
+    - mobileNumber: "Maybe !Text"
   UnlinkedVehicle:
-    - vehicleNo: Maybe Text
-    - rcId: Maybe Text
+    - vehicleNo: "Maybe !Text"
+    - rcId: "Maybe !Text"
   FleetScheduledBookingListRes:
     - bookings: [FleetScheduledBooking]
   FleetScheduledBooking:
     - bookingDetails: FleetBookingAPIEntity
     - fareDetails: [RateCardItem]
   FleetBookingAPIEntity:
-    - id: Text
+    - id: "!Text"
     - fromLocation: LocationAPIEntity
     - toLocation: Maybe LocationAPIEntity
     - estimatedFare: HighPrecMoney
@@ -2575,44 +2578,45 @@ types:
     - estimatedDuration: Maybe Seconds
     - startTime: UTCTime
     - vehicleServiceTier: ServiceTierType
-    - vehicleServiceTierName: Text
+    # vehicleServiceTierName is the stored tier name; this endpoint does not know the dashboard user's language
+    - vehicleServiceTierName: "!Text"
     - tripCategory: TripCategory
     - distanceToPickup: Maybe Meters
     - isScheduled: Bool
     - paymentInstrument: Maybe PaymentInstrument
   AssignScheduledBookingReq:
-    - bookingId: Text
+    - bookingId: "!Text"
     - driverId: Id Driver
-    - clientId: Maybe Text
+    - clientId: "Maybe !Text"
     - derive: "'HideSecrets"
   CancelScheduledBookingReq:
-    - rideId: Text
+    - rideId: "!Text"
     - reasonCode: CancellationReasonCode
-    - additionalInfo: Maybe Text
+    - additionalInfo: "Maybe !Text"
     - derive: "'HideSecrets"
   ReassignScheduledBookingReq:
-    - rideId: Text
+    - rideId: "!Text"
     - newDriverId: Id Driver
-    - clientId: Maybe Text
+    - clientId: "Maybe !Text"
     - derive: "'HideSecrets"
   RateCardItem:
-    - title: Text
+    - title: "!Text"
     - price: Money
     - priceWithCurrency: PriceAPIEntity
   LocationAPIEntity:
-    - id: Text
+    - id: "!Text"
     - lat: Double
     - lon: Double
-    - street: Maybe Text
-    - door: Maybe Text
-    - city: Maybe Text
-    - state: Maybe Text
-    - country: Maybe Text
-    - building: Maybe Text
-    - areaCode: Maybe Text
-    - area: Maybe Text
-    - instructions: Maybe Text
-    - extras: Maybe Text
+    - street: "Maybe !Text"
+    - door: "Maybe !Text"
+    - city: "Maybe !Text"
+    - state: "Maybe !Text"
+    - country: "Maybe !Text"
+    - building: "Maybe !Text"
+    - areaCode: "Maybe !Text"
+    - area: "Maybe !Text"
+    - instructions: "Maybe !Text"
+    - extras: "Maybe !Text"
   StatusSummaryResponse:
     - total: Int
     - verified: Int
@@ -2623,45 +2627,45 @@ types:
     enum: "DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS"
     derive: "HttpInstance"
   AssociationDetail:
-    - driverName: Maybe Text
-    - driverMobileNumber: Maybe Text
-    - driverId: Maybe Text
-    - fleetOwnerId: Maybe Text
-    - fleetOwnerName: Maybe Text
-    - fleetOwnerMobileNumber: Maybe Text
+    - driverName: "Maybe !Text"
+    - driverMobileNumber: "Maybe !Text"
+    - driverId: "Maybe !Text"
+    - fleetOwnerId: "Maybe !Text"
+    - fleetOwnerName: "Maybe !Text"
+    - fleetOwnerMobileNumber: "Maybe !Text"
   VehicleInfo:
-    - vehicleNo: Text
-    - rcId: Text
-    - vehicleVariant: Maybe Text
-    - manufacturerModel: Maybe Text
-    - manufacturer: Maybe Text
+    - vehicleNo: "!Text"
+    - rcId: "!Text"
+    - vehicleVariant: "Maybe !Text"
+    - manufacturerModel: "Maybe !Text"
+    - manufacturer: "Maybe !Text"
     - fitnessExpiry: Maybe UTCTime
     - pucExpiry: Maybe UTCTime
     - insuranceValidity: Maybe UTCTime
-    - vehicleClass: Maybe Text
-    - vehicleModel: Maybe Text
-    - vehicleColor: Maybe Text
-    - vehicleManufacturer: Maybe Text
+    - vehicleClass: "Maybe !Text"
+    - vehicleModel: "Maybe !Text"
+    - vehicleColor: "Maybe !Text"
+    - vehicleManufacturer: "Maybe !Text"
     - vehicleCapacity: Maybe Int
-    - vehicleEnergyType: Maybe Text
+    - vehicleEnergyType: "Maybe !Text"
     - vehicleDoors: Maybe Int
     - vehicleSeatBelts: Maybe Int
-    - verificationStatus: Maybe Text
+    - verificationStatus: "Maybe !Text"
     - airConditioned: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - luggageCapacity: Maybe Int
     - mYManufacturing: Maybe Day
     - vehicleRating: Maybe Double
-    - vehicleRatingRemark: Maybe Text
+    - vehicleRatingRemark: "Maybe !Text"
     - vehicleModelYear: Maybe Int
     - dateOfRegistration: Maybe UTCTime
-    - rejectReason: Maybe Text
+    - rejectReason: Maybe TranslatedText
     - approved: Maybe Bool
     - verified: Maybe Bool
     - reviewRequired: Maybe Bool
     - reviewedAt: Maybe UTCTime
-    - failedRules: "[Text]"
+    - failedRules: "[!Text]"
     - permitExpiry: Maybe UTCTime
     - vehicleCategory: Maybe VehicleCategory
     - createdAt: UTCTime

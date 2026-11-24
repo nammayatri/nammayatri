@@ -20,9 +20,11 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified "this" Domain.Types.Person as DP
 import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.TranslationKey (TranslatedText)
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Payment.Interface
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -51,6 +53,7 @@ import qualified Tools.Notifications as Notify
 getPaymentRefundRequestList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Language ->
   Maybe Int ->
   Maybe Int ->
   Maybe DRefundRequest.RefundRequestStatus ->
@@ -61,7 +64,7 @@ getPaymentRefundRequestList ::
   Maybe UTCTime ->
   Maybe Text ->
   Flow Common.RefundRequestResp
-getPaymentRefundRequestList merchantShortId opCity mbLimit mbOffset status code customerId orderId from to _mbRequestorId = do
+getPaymentRefundRequestList merchantShortId opCity mbDashboardLanguage mbLimit mbOffset status code customerId orderId from to _mbRequestorId = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -69,15 +72,17 @@ getPaymentRefundRequestList merchantShortId opCity mbLimit mbOffset status code 
   refundRequests <- runInReplica $ QRefundRequest.findAllRefundRequestItem merchantOpCity.id limit offset status code customerId orderId from to
   let count = length refundRequests
   let summary = Common.Summary {totalCount = count, count}
-  pure $ Common.RefundRequestResp {refundRequests = mkRefundRequestItem <$> refundRequests, summary = summary}
+  items <- forM refundRequests $ \rr -> mkRefundRequestItem rr <$> DRidePayment.refundDescriptionText merchantOpCity.id mbDashboardLanguage rr.description
+  pure $ Common.RefundRequestResp {refundRequests = items, summary = summary}
   where
     maxLimit = 20
     defaultLimit = 10
 
-mkRefundRequestItem :: DRefundRequest.RefundRequest -> Common.RefundRequestItem
-mkRefundRequestItem DRefundRequest.RefundRequest {..} =
+mkRefundRequestItem :: DRefundRequest.RefundRequest -> TranslatedText -> Common.RefundRequestItem
+mkRefundRequestItem DRefundRequest.RefundRequest {..} translatedDescription =
   Common.RefundRequestItem
-    { refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
+    { description = translatedDescription,
+      refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
       requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
       transactionAmount = PriceAPIEntity transactionAmount currency,
       ..
@@ -86,12 +91,14 @@ mkRefundRequestItem DRefundRequest.RefundRequest {..} =
 getPaymentRefundRequestInfo ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Language ->
   Id DRefundRequest.RefundRequest ->
   Maybe Bool ->
   Maybe Text ->
   Flow Common.RefundRequestInfoResp
-getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds _mbRequestorId = do
+getPaymentRefundRequestInfo merchantShortId opCity mbDashboardLanguage refundRequestId refreshRefunds _mbRequestorId = do
   refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
+  translatedDescription <- DRidePayment.refundDescriptionText refundRequest.merchantOperatingCityId mbDashboardLanguage refundRequest.description
   mbRideId <- SPayment.getRideIdForOrder refundRequest.orderId
   let refundRequestInfoHandler =
         DRidePayment.RefundRequestInfoHandler
@@ -99,21 +106,23 @@ getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefund
               merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
               merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
               unless (rr.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId),
-            mkRefundRequestInfoResp = mkRefundRequestInfoResp mbRideId,
+            mkRefundRequestInfoResp = mkRefundRequestInfoResp mbRideId translatedDescription,
             fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.") -- required only for admin
           }
   DRidePayment.fetchPaymentRefundRequestInfo @Common.RefundRequestInfoResp refundRequestInfoHandler refreshRefunds refundRequest
 
 mkRefundRequestInfoResp ::
   Maybe (Id DRide.Ride) ->
+  TranslatedText ->
   DRefundRequest.RefundRequest ->
   Maybe Text ->
   Maybe Kernel.External.Payment.Interface.RefundStatus ->
   Maybe Text ->
   Common.RefundRequestInfoResp
-mkRefundRequestInfoResp rideId DRefundRequest.RefundRequest {..} evidence refundStatus errorCode =
+mkRefundRequestInfoResp rideId translatedDescription DRefundRequest.RefundRequest {..} evidence refundStatus errorCode =
   Common.RefundRequestInfoResp
-    { refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
+    { description = translatedDescription,
+      refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
       requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
       transactionAmount = PriceAPIEntity transactionAmount currency,
       requestedRefundComponents = map mkRefundComponentItem <$> requestedRefundComponents,

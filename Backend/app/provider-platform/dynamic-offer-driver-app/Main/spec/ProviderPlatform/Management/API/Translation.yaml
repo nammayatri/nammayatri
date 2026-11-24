@@ -41,8 +41,8 @@ types:
     - domains: [TranslationDomainSummary]
 
   TranslationDomainSummary:
-    - domain: Text
-    - fields: [Text]
+    - domain: "!Text"
+    - fields: "[!Text]"
     - dimensions: [TranslationDimension]
     - keyCount: Int
     - textCount: Int
@@ -57,26 +57,26 @@ types:
   # A dimension is a column that narrows one key's text to a variant (push: trip category,
   # sub-category); values are the text forms the column stores.
   TranslationDimension:
-    - name: Text
-    - values: [Text]
+    - name: "!Text"
+    - values: "[!Text]"
 
   TranslationKeysResp:
-    - domain: Text
-    - fields: [Text]
+    - domain: "!Text"
+    - fields: "[!Text]"
     - dimensions: [TranslationDimension]
     - entries: [TranslationKeyEntry]
 
   TranslationKeyEntry:
-    - key: Text
-    - legacyKey: Maybe Text
+    - key: "!Text"
+    - legacyKey: "Maybe !Text"
     - texts: [TranslationText]
 
   # variant: the (dimension, value) pairs the text is for; empty for the text used when no variant matches.
   TranslationText:
     - language: Language
-    - field: Text
-    - variant: "[(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
-    - text: Text
+    - field: "!Text"
+    - variant: "[(!Kernel.Prelude.Text, !Kernel.Prelude.Text)]"
+    - text: "!Text"
     - source: TranslationTextSource
 
   TranslationTextSource:
@@ -87,11 +87,11 @@ types:
     - derive: "'HideSecrets"
 
   TranslationUpsertEntry:
-    - key: Text
+    - key: "!Text"
     - language: Language
-    - field: Text
-    - variant: "Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
-    - text: Text
+    - field: "!Text"
+    - variant: "Maybe [(!Kernel.Prelude.Text, !Kernel.Prelude.Text)]"
+    - text: "!Text"
 
   # Every entry is tried; saved counts the written ones and failed names each cell that was not,
   # with the reason. The entries of one key, variant and language stand or fall together.
@@ -100,8 +100,8 @@ types:
     - failed: [TranslationUpsertFailure]
 
   TranslationUpsertFailure:
-    - key: Text
+    - key: "!Text"
     - language: Language
-    - field: Text
-    - variant: "Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]"
-    - reason: Text
+    - field: "!Text"
+    - variant: "Maybe [(!Kernel.Prelude.Text, !Kernel.Prelude.Text)]"
+    - reason: "!Text"

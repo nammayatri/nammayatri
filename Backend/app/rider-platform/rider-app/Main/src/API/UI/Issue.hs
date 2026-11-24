@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
+import Domain.Types.TranslationKey (translatedTextToText)
 import Environment
 import EulerHS.Prelude hiding (elem, forM_, id)
 import qualified IGM.Enums as Spec
@@ -354,7 +355,7 @@ castRideInfo merchantId _ rideId = do
   rideInfoRes <-
     Redis.safeGet makeRideInfoCacheKey >>= \case
       Just res -> pure res
-      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast rideId)
+      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) Nothing (cast rideId)
   mbBooking <- runInReplica $ QB.findById (Id rideInfoRes.bookingId.getId)
   mbRide <- runInReplica $ QR.findById (cast rideId)
   fareBreakdown <- forM mbBooking $ \booking -> SFareBreakdown.buildFareBreakdown booking mbRide >>= SFareBreakdown.withOfferTotals booking mbRide
@@ -370,7 +371,7 @@ castRideInfo merchantId _ rideId = do
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
           vehicleVariant = Just res.vehicleVariant,
-          vehicleServiceTierName = res.vehicleServiceTierName,
+          vehicleServiceTierName = translatedTextToText <$> res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Nothing,
           merchantOperatingCityId = res.merchantOperatingCityId,

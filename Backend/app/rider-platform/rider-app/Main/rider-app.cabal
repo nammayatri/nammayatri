@@ -290,6 +290,7 @@ library
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
+      Domain.Action.DashboardAuth.Management.Ride
       Domain.Action.Internal.Auth
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf

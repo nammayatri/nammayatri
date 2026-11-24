@@ -64,13 +64,15 @@ import qualified Domain.Types.Quote as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as Fields
+import Domain.Types.TranslationKey (textAsReceived)
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (Language, SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -106,6 +108,7 @@ import qualified SharedLogic.Ride
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -342,7 +345,7 @@ getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ =
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
-  ridesDetail <- mapM (\ride -> rideInfo merchant.id (cast ride.id)) lastNRides
+  ridesDetail <- mapM (\ride -> rideInfo merchant.id Nothing (cast ride.id)) lastNRides
   let rdList = map (makeRequiredRideDetail personId) (zip3 lastNRides ridesDetail lastNBookingStatus)
   return Common.TicketRideListRes {rides = rdList}
   where
@@ -389,14 +392,17 @@ getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ =
 getRideInfo ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Language ->
   Id Common.Ride ->
   Flow Common.RideInfoRes
-getRideInfo merchantShortId _ rideId = do
+getRideInfo merchantShortId _ mbDashboardLanguage rideId = do
   merchant <- findMerchantByShortId merchantShortId
-  rideInfo merchant.id rideId
+  rideInfo merchant.id mbDashboardLanguage rideId
 
-rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
-rideInfo merchantId reqRideId = do
+-- | The tier name and the offer title are in the given language, as stored when there is none (the
+-- issue flow, the ticket ride list).
+rideInfo :: Id DM.Merchant -> Maybe Language -> Id Common.Ride -> Flow Common.RideInfoRes
+rideInfo merchantId mbLanguage reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -414,7 +420,10 @@ rideInfo merchantId reqRideId = do
   fareBreakup <- SFareBreakdown.getRideFareRows breakdown ride
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  mbOfferInfo <- getRideOfferInfo booking ride person
+  mbOfferInfo <- getRideOfferInfo mbLanguage booking ride person
+  translatedTierName <- forM booking.serviceTierName $ \tierName -> case mbLanguage of
+    Just language -> CQTranslations.findTranslatedTextOrOpsText booking.merchantOperatingCityId language (ServiceTier_Name booking.vehicleServiceTierType) tierName
+    Nothing -> pure (textAsReceived tierName)
   mbBCReason <-
     if ride.status == DRide.CANCELLED
       then B.runInReplica $ QBCReason.findByRideBookingId booking.id
@@ -457,7 +466,7 @@ rideInfo merchantId reqRideId = do
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
         vehicleVariant = ride.vehicleVariant,
-        vehicleServiceTierName = booking.serviceTierName,
+        vehicleServiceTierName = translatedTierName,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
@@ -502,8 +511,8 @@ rideInfo merchantId reqRideId = do
         isScheduled = booking.isScheduled
       }
 
-getRideOfferInfo :: DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)
-getRideOfferInfo booking ride person =
+getRideOfferInfo :: Maybe Language -> DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)
+getRideOfferInfo mbLanguage booking ride person =
   forM booking.selectedOfferId $ \selectedOfferId -> B.runInReplica $ do
     mbBookingOffer <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
     mbRideOffer <-
@@ -517,11 +526,14 @@ getRideOfferInfo booking ride person =
         | rideOffer.payoutAmount > 0 -> cashbackOfferStatus (isJust person.payoutVpa) <$> RidePaymentFinance.findCashbackPayoutEntries ride.id.getId
         | otherwise -> (,Nothing) <$> getDiscountOfferStatus ride.id rideOffer.offerId
     let mbOffer = listToMaybe $ catMaybes [mbRideOffer, mbBookingOffer]
+    translatedOfferTitle <- fmap join . forM mbOffer $ \offer -> case mbLanguage of
+      Just _ -> CQTranslations.findOptionalTranslatedText booking.merchantOperatingCityId mbLanguage (Offer_Title offer.offerId) offer.offerTitle
+      Nothing -> pure (textAsReceived <$> offer.offerTitle)
     pure
       Common.RideOfferInfo
         { offerId = maybe selectedOfferId (.offerId) mbOffer,
           offerCode = mbOffer <&> (.offerCode),
-          offerTitle = mbOffer >>= (.offerTitle),
+          offerTitle = translatedOfferTitle,
           status = offerStatus,
           currency = booking.estimatedFare.currency,
           discountAmount = mbRideOffer <&> (.discountAmount),

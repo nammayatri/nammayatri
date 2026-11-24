@@ -108,6 +108,7 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SubscriptionConfig as Fields
+import Domain.Types.TranslationKey (textAsReceived)
 import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
@@ -544,8 +545,8 @@ getDriverRegistrationDocumentsCommonList ::
 getDriverRegistrationDocumentsCommonList =
   getDriverRegistrationCommonDocumentsList
 
-getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Common.DocumentType -> Maybe Common.EntityType -> Flow Common.GetDocumentResponse
-getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityType = do
+getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Maybe Lang.Language -> Text -> Maybe Common.DocumentType -> Maybe Common.EntityType -> Flow Common.GetDocumentResponse
+getDriverRegistrationGetDocument merchantShortId opCity mbLanguage entityId mbDocType mbEntityType = do
   merchant <- findMerchantByShortId merchantShortId
   case fromMaybe Common.ImageEntity mbEntityType of
     Common.ImageEntity -> do
@@ -569,7 +570,13 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
           pure (img, mbImage)
         Nothing -> pure (Nothing, Nothing)
       let mbFinalMeta = mbMeta <|> (mbImage >>= \image -> VDocs.imageMetadataToDocumentMetadata (mapDocumentType docType) (Just image.id.getId) =<< image.metadata)
-      pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbImage <&> (.createdAt), commonDocumentData = mbCommonDocData, rejectReason = mbRejectReason, metadata = A.toJSON <$> mbFinalMeta}
+      -- the city is only needed to read a keyed reject reason's row
+      rejectReason <- case mbRejectReason of
+        Just reason | isJust (VDocs.documentRejectReasonByKey reason) -> do
+          merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+          VDocs.translateRejectReason merchantOpCityId (fromMaybe Lang.ENGLISH mbLanguage) mbRejectReason
+        _ -> pure (textAsReceived <$> mbRejectReason)
+      pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbImage <&> (.createdAt), commonDocumentData = mbCommonDocData, rejectReason = rejectReason, metadata = A.toJSON <$> mbFinalMeta}
   where
     withRc :: (DRC.VehicleRegistrationCertificate -> Maybe a -> Flow (Maybe VDocs.DocumentMetadata)) -> Maybe a -> Id DRC.VehicleRegistrationCertificate -> Flow (Maybe VDocs.DocumentMetadata)
     withRc mk mbDoc rcId = QRC.findById rcId >>= maybe (pure Nothing) (\rc -> mk rc mbDoc)
@@ -618,11 +625,11 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       DVC.DriverLicense -> do
         mb <- QDL.findById (Id docId)
         mbMeta <- SStatus.mkDLMetadata mb
-        pure (mb <&> (.documentImageId1), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
+        pure (mb <&> (.documentImageId1), Nothing, mb >>= \d -> VDocs.storedRejectReason d.rejectReasonKey d.rejectReason, mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleRegistrationCertificate -> do
         mb <- QRC.findById (Id docId)
         mbMeta <- forM mb VDocs.mkRCMetadata
-        pure (mb <&> (.documentImageId), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
+        pure (mb <&> (.documentImageId), Nothing, mb >>= \d -> VDocs.storedRejectReason d.rejectReasonKey d.rejectReason, mb <&> (.verificationStatus), mbMeta)
       DVC.PanCard -> do
         mb <- QPan.findById (Id docId)
         mbMeta <- SStatus.mkPanMetadata mb
@@ -642,7 +649,7 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       DVC.VehicleInsurance -> do
         mb <- QVI.findByPrimaryKey (Id docId)
         mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleInsuranceMetadata (Just d) d.rcId) mb
-        pure (mb <&> (.documentImageId), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
+        pure (mb <&> (.documentImageId), Nothing, mb >>= \d -> VDocs.storedRejectReason d.rejectReasonKey d.rejectReason, mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleFitnessCertificate -> do
         mb <- QFC.findByPrimaryKey (Id docId)
         mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleFitnessMetadata (Just d) d.rcId) mb

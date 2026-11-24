@@ -22,8 +22,8 @@ module: DriverWallet
 
 types:
   WalletItem:
-    itemReference: Text
-    itemName: Text
+    itemReference: "!Text"
+    itemName: TranslatedText
     itemValue: HighPrecMoney
     redeemableBalance: HighPrecMoney
     nonRedeemableBalance: HighPrecMoney
@@ -57,21 +57,21 @@ types:
     agg: "[WalletAggregateBucket]"
   TopUpRequest:
     amount: HighPrecMoney
-    purpose: Maybe Text  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
+    purpose: "Maybe !Text"  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
   PayoutHistoryItem:
     amount: Maybe HighPrecMoney
     payoutFee: HighPrecMoney
     entityName: Maybe EntityName
     status: PayoutRequestStatus
     timestamp: UTCTime
-    payoutMethod: Text
-    payoutVpa: Maybe Text
-    bankName: Maybe Text
-    bankAccountLast4: Maybe Text
+    payoutMethod: "!Text"
+    payoutVpa: "Maybe !Text"
+    bankName: "Maybe !Text"
+    bankAccountLast4: "Maybe !Text"
     payoutType: Maybe PayoutType  # INSTANT, SCHEDULED or ADHOC; unset for cash
-    transactionId: Maybe Text  # Payout order short id
-    bankReference: Maybe Text  # Bank reference once paid (UTR, RRN, ...)
-    bankReferenceType: Maybe Text  # UTR, RRN, FT_NUMBER or PARTNER_REF
+    transactionId: "Maybe !Text"  # Payout order short id
+    bankReference: "Maybe !Text"  # Bank reference once paid (UTR, RRN, ...)
+    bankReferenceType: "Maybe !Text"  # UTR, RRN, FT_NUMBER or PARTNER_REF
     statusUpdatedAt: Maybe UTCTime  # Last status change
     merchantTopUpAmount: Maybe HighPrecMoney
   PayoutHistoryResponse:
@@ -108,22 +108,22 @@ types:
   WalletPaymentInfo:
     kind: WalletPaymentKind
     stage: WalletPaymentStage
-    referenceId: Text
+    referenceId: "!Text"
     initiatedAt: Maybe UTCTime
     scheduledAt: Maybe UTCTime
     completedAt: Maybe UTCTime
-    payoutVpa: Maybe Text
-    transactionId: Maybe Text
+    payoutVpa: "Maybe !Text"
+    transactionId: "Maybe !Text"
   WalletTransactionHistoryItem:
-    itemReference: Text
-    itemName: Text
+    itemReference: "!Text"
+    itemName: TranslatedText
     itemValue: HighPrecMoney
     isCredit: Bool
     status: EntryStatus
     paymentOrder: Maybe PaymentOrderInfo
     payment: Maybe WalletPaymentInfo
     date: UTCTime
-    reason: Maybe Text
+    reason: "Maybe !Text"
   WalletTransactionHistoryResponse:
     items: "[WalletTransactionHistoryItem]"
 
@@ -136,8 +136,8 @@ types:
     items: "[WalletItem]"
   WalletLedgerEntryItem:
     entryId: Id LedgerEntry
-    itemReference: Text
-    itemName: Text
+    itemReference: "!Text"
+    itemName: TranslatedText
     itemValue: HighPrecMoney
     isCredit: Bool
     isReversal: Bool
@@ -145,21 +145,21 @@ types:
     status: Maybe EntryStatus
     settlementStatus: Maybe SettlementStatus
     entityReferenceType: Maybe EntityReferenceType
-    entityReferenceId: Maybe Text
+    entityReferenceId: "Maybe !Text"
     reversalOf: Maybe (Id LedgerEntry)
     isDisplayOnly: Maybe Bool
   WalletLedgerRideInfo:
     rideId: Id Ride
-    rideShortId: Text
+    rideShortId: "!Text"
     rideEndTime: Maybe UTCTime
     driverId: Id Person
-    driverName: Maybe Text
-    vehicleNumber: Maybe Text
+    driverName: "Maybe !Text"
+    vehicleNumber: "Maybe !Text"
     isOnline: Maybe Bool
   WalletLedgerGroupData:
     enum: "RideWallet WalletLedgerRideInfo, PayoutWallet WalletPaymentInfo"
   WalletLedgerEntryGroup:
-    referenceId: Text
+    referenceId: "!Text"
     groupType: WalletLedgerEntryGroupType
     date: UTCTime
     netAmount: HighPrecMoney

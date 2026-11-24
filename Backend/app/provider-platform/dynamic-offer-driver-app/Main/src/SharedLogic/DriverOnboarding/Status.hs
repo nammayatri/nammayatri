@@ -86,6 +86,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKey (translatedTextToText)
 import Domain.Types.TranslationKeys (RcRuleFailure, TranslationKey (..), VerificationMessage (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
@@ -897,7 +898,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
         Nothing -> getInProgressDriverDocuments person.role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs mbCommonDoc
 
-    mbShownReason <- translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbReason
+    mbShownReason <- fmap translatedTextToText <$> translateRejectReason entityImagesInfo.merchantOperatingCity.id language mbReason
     mbMessage <- documentStatusMessage status mbShownReason docType mbUrl entityImagesInfo.merchantOperatingCity.id language skipMessages
     let finalMessage = mbShownReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
     mbDocMetadata <- case mbMetadata of

@@ -6,9 +6,9 @@ imports:
 module: CancellationReasons
 types:
   CancellationReasonEntity:
-    code: Text
-    iconUrl: Text
-    text: Text
+    code: "!Text"
+    iconUrl: "!Text"
+    text: TranslatedText
     derive: "Show"
 
 apis:

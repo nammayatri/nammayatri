@@ -2,12 +2,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.CachedQueries.Translations (findTextByKey, findTextByKeyWithFallback, findTextByKeyOrOpsText, findByOpsKey, findByOpsKeyInTable, clearCache) where
+module Storage.CachedQueries.Translations (findTextByKey, findTextByKeyWithFallback, findTextByKeyOrOpsText, findByOpsKey, findByOpsKeyInTable, findTranslatedText, findOptionalTranslatedText, findTranslatedTextOrOpsText, findTranslatedTextByOpsKey, clearCache) where
 
+import Control.Applicative ((<|>))
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
-import Domain.Types.TranslationKey (lookupNames)
+import Domain.Types.TranslationKey (TranslatedText, lookupNames, textReadByKey)
 import Domain.Types.TranslationKeys (RiderTranslationKey)
 import qualified Domain.Types.Translations
 import Kernel.Beam.Functions
@@ -105,6 +106,22 @@ findTextByKeyOrOpsText cityId language key text =
 -- | 'findTextByKey' in the reader's language (English when unset), else the code's own English text.
 findTextByKeyWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Text -> m Text
 findTextByKeyWithFallback cityId mbLanguage key fallback = fromMaybe fallback <$> findTextByKey cityId (fromMaybe Lang.ENGLISH mbLanguage) key
+
+-- | 'findTextByKeyWithFallback' as the translatable text of an API field.
+findTranslatedText :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Text -> m TranslatedText
+findTranslatedText cityId mbLanguage key fallback = textReadByKey <$> findTextByKeyWithFallback cityId mbLanguage key fallback
+
+-- | 'findTranslatedText' for an optional field: the key's text, else the given text when there is one.
+findOptionalTranslatedText :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Maybe Lang.Language -> RiderTranslationKey -> Maybe Text -> m (Maybe TranslatedText)
+findOptionalTranslatedText cityId mbLanguage key fallback = fmap textReadByKey . (<|> fallback) <$> findTextByKey cityId (fromMaybe Lang.ENGLISH mbLanguage) key
+
+-- | 'findTextByKeyOrOpsText' as the translatable text of an API field.
+findTranslatedTextOrOpsText :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> RiderTranslationKey -> Text -> m TranslatedText
+findTranslatedTextOrOpsText cityId language key text = textReadByKey <$> findTextByKeyOrOpsText cityId language key text
+
+-- | 'findByOpsKey' as the translatable text of an API field; the given text when the key has no row.
+findTranslatedTextByOpsKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Lang.Language -> Text -> Text -> m TranslatedText
+findTranslatedTextByOpsKey cityId language key fallback = textReadByKey . maybe fallback (.message) <$> findByOpsKey cityId language key
 
 -- | The row of a key that ops typed into a config row (cancellation reasons, pass texts, tier
 -- names stored as text): config pilot first, else the table. Text the code owns has a

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Code-owned text keys.
 --
@@ -25,6 +26,10 @@ module Domain.Types.TranslationKey
     legacyOrKeyName,
     dotted,
     dottedConstructorName,
+    TranslatedText,
+    translatedTextToText,
+    textReadByKey,
+    textAsReceived,
   )
 where
 
@@ -77,3 +82,22 @@ instance (GConstructorName f, GConstructorName g) => GConstructorName (f :+: g) 
 
 instance Constructor c => GConstructorName (C1 c f) where
   gConstructorName = conName
+
+-- | Translatable text, in the reader's language. An API field of this type is filled by reading
+-- a translation key through the app's "Storage.CachedQueries.Translations"; a string literal does
+-- not fit it. It is sent as the same plain string as 'Text'.
+newtype TranslatedText = TranslatedText Text
+  deriving newtype (Show, Eq, ToJSON, FromJSON, ToSchema)
+
+translatedTextToText :: TranslatedText -> Text
+translatedTextToText (TranslatedText text) = text
+
+-- | The text a key lookup returned. Only "Storage.CachedQueries.Translations" of each app calls it;
+-- the @translation-keys-only@ pre-commit hook keeps it there.
+textReadByKey :: Text -> TranslatedText
+textReadByKey = TranslatedText
+
+-- | For text that comes from outside the code and is shown as given: typed by ops (a gate's own name),
+-- typed by a user, or sent by another service. Never a string literal: translatable text belongs to a key.
+textAsReceived :: Text -> TranslatedText
+textAsReceived = TranslatedText
