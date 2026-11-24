@@ -1403,7 +1403,9 @@ buildComponentMap FareParameters {..} =
             (GovtChargesComponent, maybeZero govtCharges),
             (PaymentChargePaidByCustomerComponent, maybeZero paymentProcessingFee + maybeZero paymentProcessingFeeTax),
             (PersonalDiscountComponent, if shouldApplyPersonalDiscount then negate (maybeZero personalDiscount) else 0),
-            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0)
+            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0),
+            (AirportEntryFeeComponent, maybeZero airportEntryFee),
+            (AirportEntryFeeTaxComponent, maybeZero airportEntryFeeTax)
           ]
    in Map.union baseMap (detailComponentMap fareParametersDetails)
 

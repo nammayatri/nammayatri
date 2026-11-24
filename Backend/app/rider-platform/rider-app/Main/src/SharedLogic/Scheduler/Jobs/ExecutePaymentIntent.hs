@@ -124,10 +124,10 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = (RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = person.firstName}
-            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates fare.amount rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ledgerCtx
+            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType fare.amount rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ledgerCtx
             logDebug $ "makePaymentIntent (execute-payment-intent): breakups=" <> show rideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False
-            let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx fare.amount rideFareBreakups)
+            let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx booking.fareSettlementType fare.amount rideFareBreakups)
             case mbPaymentIntentResp of
               Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
               Just paymentIntentResp -> do

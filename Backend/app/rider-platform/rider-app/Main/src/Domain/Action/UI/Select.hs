@@ -377,7 +377,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
     Nothing -> pure Nothing
     Just offerId -> do
       fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback estimate.id.getId DFareBreakup.ESTIMATE (pure [])
-      let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx estimate.estimatedTotalFare.amount fareBreakups
+      let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx estimate.fareSettlementType estimate.estimatedTotalFare.amount fareBreakups
           offerBasePrice = mkPrice (Just estimate.estimatedTotalFare.currency) offerBaseAmount
       offerResult <- withTryCatch "selectOfferDiscount" $ SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId personId merchantOperatingCityId DOrder.RideHailing (show estimate.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing Nothing (Just searchRequest)
       case offerResult of

@@ -675,7 +675,7 @@ rideAssignedReqHandler req = do
                       supplierAddress = assignedInvCfg >>= (.supplierAddress),
                       supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
                     }
-          let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
+          let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
           logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
           -- Wrap makePaymentIntent in retry, capture result for orderId
           mbPaymentResp <-
@@ -718,7 +718,7 @@ rideAssignedReqHandler req = do
                         supplierVatNumber = cashInvCfg >>= (.supplierVatNumber)
                       }
             estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
-            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
+            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
             result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.taxRegime ledgerInfo.gstRates ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat (ledgerInfo.airportEntryFee, ledgerInfo.airportEntryFeeTax) ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat) (ledgerInfo.cancellationCharge, ledgerInfo.cancellationTax)
             case result of
               Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
@@ -1033,7 +1033,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- its VAT (same basis as /getOfferDiscount and the quote-list offer
   -- basket). Fall back to the aggregate totalFare when the BPP didn't emit
   -- the ten-tag summary.
-  let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx totalFare.amount breakups
+  let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx booking.fareSettlementType totalFare.amount breakups
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
   -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
   -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
@@ -1124,7 +1124,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfg >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
                 }
-      let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
+      let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
           cashLedgerCtx
@@ -1166,7 +1166,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
                 }
-      let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
+      let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
       logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
       let scheduleAfter = riderConfig.executePaymentDelay
           executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount'}

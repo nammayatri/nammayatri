@@ -329,7 +329,7 @@ rideNetEarnings mbFareParams ride =
   netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (maybe 0 componentTax mbFareParams) (fromMaybe 0 ride.fare - customerCharge)
   where
     taxRegime = if maybe False (fromMaybe False . (.isVatTaxType)) mbFareParams then Tax.VAT else Tax.GST
-    componentTax fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax, if SL.edcCollectsParking fp.fareSettlementType then Nothing else fp.airportEntryFeeTax])
+    componentTax fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if SL.edcCollectsParking fp.fareSettlementType then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
     customerCharge = if (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) == Just PAYMENT_CUSTOMER then fromMaybe 0 ride.paymentCharge else 0
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
