@@ -140,7 +140,7 @@ Bulk audit (provider): BulkUserCohortMappingRun
 
 `userId`, `cohortMappingId` (→ CJM), `enabled`, `validTill`, plus opt-in fields (`optInPeriod`, `optedInAt`, `optedInBy`, `termsAcceptedAt` — null for Assigned). Unique `(userId, cohortMappingId)`.
 
-**Active for eval / driver UI:** `enabled && validTill >= now && (cjm.campaignUserLinkType ∈ {NULL, Assigned} || isJust optedInAt)`. Invited-but-not-opted OptIn rows stay out of `findAssignments*` / `findAssignmentsForDriver`. **Dashboard assignment list** uses `findMemberships*` / `findDashboardAssignmentsByUserId` (same enabled/validTill gate, **no** optedInAt filter) so pending invites remain visible; response includes `campaignUserLinkType`, `optInStatus` (`NotRequired` | `Pending` | `OptedIn`), and `optedInAt` so ops can tell invite vs accepted (`userEnabled` alone cannot). Auto-apply never applies to OptIn cohorts.
+**Active for eval / settle / tags:** `enabled && validTill >= now && (cjm.campaignUserLinkType ∈ {NULL, Assigned} || isJust optedInAt)`. Invited-but-not-opted OptIn rows stay out of `findAssignments*` / `findAssignmentsForDriver`. **Dashboard assignments + driver GET `/incentive/journey/list`** use `findMemberships*` / `findDashboardAssignmentsByUserId` (same enabled/validTill gate, **no** optedInAt filter) so pending invites remain visible for the opt-in popup; responses include `campaignUserLinkType`, `optInStatus` (`NotRequired` | `Pending` | `OptedIn`), `optedInAt`, and (driver list) `validTill`. Eval/settle forks still use the opted-in-filtered path. Auto-apply never applies to OptIn cohorts.
 
 ---
 
@@ -567,7 +567,7 @@ GET .../incentive/journey/list?limit&offset
 GET .../incentive/journey/history?date&limit&offset
 ```
 
-- **List:** only **active-window** enabled CJMs for the person’s assignments; per milestone `currentValue`/`status` for current `periodKey` (missing stats → `NotStarted`). Active before inactive ordering helpers in `Display.hs`.  
+- **List:** **active-window** enabled CJMs for the person’s memberships (includes **Pending OptIn** invites); per milestone `currentValue`/`status` for current `periodKey` (missing stats → `NotStarted`). Additive fields: `campaignUserLinkType`, `optInStatus`, `optedInAt`, `validTill` (for POST `/optIn`). Eval/settle still require opted-in for OptIn. Active before inactive ordering helpers in `Display.hs`.  
 - **History:** stats / synthesized rows for the requested date’s period keys. Includes **`periodEndExclusive`** (city-local exclusive end). Monthly ends use **campaign `startDate` clip steps** (same as settlement) — not `anchor + 1 month` (wrong for 29–31 starts after the first period). Dashboard **`/stats/history/{driverId|personId}`** exposes the same field for Control Center.  
 - Special-location ids resolved to names when `findSpecialLocationNameById` is wired.
 - **Target for UI (no stats column):** both list and history return milestone `evaluation` (`Maybe Value`, same JSON style as `currentMetrics`).

@@ -126,11 +126,19 @@ getIncentiveJourneyList ::
   Maybe Int ->
   Maybe Int ->
   m API.IncentiveJourneyListRes
+mkUiOptInStatus :: DCJM.CohortJourneyMapping -> Maybe DUCM.UserCohortMapping -> API.OptInStatus
+mkUiOptInStatus cjm mbUcm =
+  case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
+    DCJM.Assigned -> API.NotRequired
+    DCJM.OptIn ->
+      if isJust (mbUcm >>= (.optedInAt)) then API.OptedIn else API.Pending
 getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimit mbOffset = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
   localTime <- getLocalCurrentTime timeDiffFromUtc
-  assignments <- handle.findAssignmentsByUserId driverId
+  -- Include pending OptIn invites so FE can surface the opt-in popup (cjmId / validTill).
+  -- Eval / settle / tags keep using findAssignmentsByUserId (optedInAt required for OptIn).
+  assignments <- handle.findDashboardAssignmentsByUserId driverId
   let mappedJourneyIds = map ((.journeyId) . (.cohortJourneyMapping)) assignments
   if null mappedJourneyIds
     then pure API.IncentiveJourneyListRes {journeys = []}
@@ -166,12 +174,21 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                       cjm.startDate
                       cjm.streakRange
                       journey.journeyType
+                  mbUcm =
+                    listToMaybe
+                      [ ucm
+                        | a <- assignments,
+                          a.cohortJourneyMapping.id == cjm.id,
+                          Just ucm <- [a.userCohortMapping]
+                      ]
+                  linkType = fromMaybe DCJM.Assigned cjm.campaignUserLinkType
               statsRows <- handle.findStatsByPersonIdCjmAndPeriodKey driverId cjm.id periodKey
               specialLocationNames <- buildSpecialLocationNames handle milestones
               items <- mapM (toMilestoneItem specialLocationNames statsRows) milestones
               pure $
                 API.IncentiveJourneyListItem
-                  { cohortJourneyMappingId = cjm.id,
+                  { campaignUserLinkType = linkType,
+                    cohortJourneyMappingId = cjm.id,
                     journeyId = journey.id,
                     name = journey.name,
                     description = journey.description,
@@ -182,6 +199,9 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                     endDate = endDate,
                     streakRange = cjm.streakRange,
                     enabled = cjm.enabled,
+                    optInStatus = mkUiOptInStatus cjm mbUcm,
+                    optedInAt = mbUcm >>= (.optedInAt),
+                    validTill = (.validTill) <$> mbUcm,
                     milestones = items
                   }
           pure API.IncentiveJourneyListRes {journeys = journeys}

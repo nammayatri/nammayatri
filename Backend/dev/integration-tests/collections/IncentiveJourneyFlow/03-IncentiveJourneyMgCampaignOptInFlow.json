@@ -730,7 +730,7 @@
       ]
     },
     {
-      "name": "GET Driver List Before OptIn Should Omit MG (UI)",
+      "name": "GET Driver List Before OptIn Shows Pending MG (UI)",
       "request": {
         "method": "GET",
         "header": [
@@ -759,9 +759,14 @@
             "exec": [
               "pm.test('List 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
-              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id'); });",
-              "pm.test(\"OptIn invite not on active list before opt-in\", function () {",
-              "  pm.expect(hit, \"should be absent until opted in\").to.not.be.ok;",
+              "var hit = (d.journeys || []).find(function (j) { return j.journeyId === pm.environment.get('ij_mg_journey_id') || j.cohortJourneyMappingId === pm.environment.get('ij_mg_cjm_id'); });",
+              "pm.test(\"Pending OptIn invite appears on driver list\", function () {",
+              "  pm.expect(hit, \"pending invite\").to.be.ok;",
+              "  pm.expect(hit.cohortJourneyMappingId).to.eql(pm.environment.get('ij_mg_cjm_id'));",
+              "  pm.expect(hit.campaignUserLinkType).to.eql('OptIn');",
+              "  pm.expect(hit.optInStatus).to.eql('Pending');",
+              "  pm.expect(hit.optedInAt).to.eql(null);",
+              "  pm.expect(hit.validTill, 'validTill for optIn body').to.be.ok;",
               "});"
             ]
           }
@@ -910,6 +915,12 @@
               "pm.test(\"list-after-optin controlFeatures payloads\", function () {",
               "  pm.expect(hit, 'hit').to.be.ok;",
               "  assertMgControlFeatures(hit.controlFeatures, \"list-after-optin\");",
+              "});",
+              "pm.test(\"list-after-optin optInStatus OptedIn\", function () {",
+              "  pm.expect(hit, 'hit').to.be.ok;",
+              "  pm.expect(hit.campaignUserLinkType).to.eql('OptIn');",
+              "  pm.expect(hit.optInStatus).to.eql('OptedIn');",
+              "  pm.expect(hit.optedInAt, 'optedInAt').to.be.ok;",
               "});"
             ]
           }
