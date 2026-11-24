@@ -455,12 +455,7 @@ takeoverQuestions plate =
           )
       ),
       ("plate_visible", Grid.NoulQ "Is the vehicle number plate clearly visible and readable?"),
-      ( "plate_matches_rc",
-        Grid.NoulQ
-          ( "Does the number plate in the photo read exactly " <> plate
-              <> " (ignore spaces and line breaks)? Compare the characters one by one, especially the letters A, N and M and the digits 1, 2 and 3."
-          )
-      ),
+      ("plate_matches_rc", Grid.NoulQ (plateMatchesRcInstructions plate)),
       ("is_real_photo", Grid.NoulQ "Is this a real photo of a physical vehicle, not a photo of a screen, a printout or another photo?"),
       -- vehicle-specific wording in place of the shared-kernel built-in; same key, so Grid.getPhotoQuality still reads it
       ( Grid.photoQualityKey,
@@ -469,6 +464,26 @@ takeoverQuestions plate =
           ("unusable: blurry, dark or plate cut off" :| ["poor", "ok", "good: sharp, well lit, full vehicle and plate visible"])
       )
     ]
+
+-- | Auto plates are usually printed on two lines, and the split point varies ("KA01" / "AN3305",
+--   "KA01A" / "N3305"). Asked only for the one-line form, the model scored a correct two-line plate as a
+--   mismatch, so the question shows the common two-line splits of the same number.
+plateMatchesRcInstructions :: Text -> Text
+plateMatchesRcInstructions plate =
+  "Does the vehicle's number plate show the registration " <> plate <> "? "
+    <> twoLineHint
+    <> "Ignore spaces, dots, dashes, the word IND and the hologram. "
+    <> "Answer yes only if every character matches; compare look-alike characters carefully (A/N/M, 0/O/D, 1/I, 2/Z, 5/S, 8/B)."
+  where
+    twoLineHint
+      | T.length plate >= 7 =
+        let (top1, bottom1) = T.splitAt 4 plate
+            (top2, bottom2) = T.splitAt (T.length plate - 5) plate
+            splits = if top1 == top2 then [(top1, bottom1)] else [(top1, bottom1), (top2, bottom2)]
+            showSplit (top, bottom) = "'" <> top <> "' on top and '" <> bottom <> "' below"
+         in "The plate is often printed on two lines, for example " <> T.intercalate ", or " (map showSplit splits)
+              <> ": read both lines together as one number. "
+      | otherwise = "The plate may be printed on two lines: read both lines together as one number. "
 
 -- | All five answers must be present and valid (decodeAnswers silently drops bad ones). The vehicle type is
 --   a hard check, kept out of the score.
