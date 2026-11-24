@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Mobility.ARDU.Fixtures as Fixtures
 import qualified "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
-import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QDI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
@@ -150,7 +150,7 @@ setDriversActive isActive mode = do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
   let newFlowStatus = DDriverMode.getDriverFlowStatus mode isActive
   transporterConfig <-
-    SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
+    SCTC.getTransporterConfigFromDB Fixtures.nammaYatriPartnerMerchantOperatingCityId
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
   forM_
     drivers

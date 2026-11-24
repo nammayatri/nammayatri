@@ -50,9 +50,6 @@ import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 type API =
   "profile"
     :> ( TokenAuth
-           :> QueryParam "toss" Int
-           :> QueryParam "tenant" Text
-           :> QueryParam "context" Text
            :> QueryParam "includeProfileImage" Bool
            :> Header "x-bundle-version" Version
            :> Header "x-rn-version" Text
@@ -112,11 +109,11 @@ handler =
     :<|> marketingEvents
     :<|> (triggerOTP :<|> verifyOTP)
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = withFlowHandlerAPIPersonId personId $ getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DProfile.ProfileRes
+getPersonDetails (personId, merchantId) includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = withFlowHandlerAPIPersonId personId $ getPersonDetails' (personId, merchantId) includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId
 
-getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Flow DProfile.ProfileRes
-getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = DProfile.getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId
+getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Flow DProfile.ProfileRes
+getPersonDetails' (personId, merchantId) includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = DProfile.getPersonDetails (personId, merchantId) includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler APISuccess.APISuccess
 updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = withFlowHandlerAPIPersonId personId $ updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId

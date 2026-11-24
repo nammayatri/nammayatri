@@ -220,9 +220,6 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: KTC.CacConfig,
-    cacTenants :: [String],
-    superPositionConfig :: KTC.SuperPositionConfig,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
@@ -317,11 +314,6 @@ data AppEnv = AppEnv
     twoFaIssuerName :: Text,
     internalAuthAPIKey :: Text,
     exotelToken :: Text,
-    -- Read from AUTH_MAP. Absent means "no CAC tokens configured" rather than a
-    -- boot failure: provider-dashboard errors out without it, but refusing to
-    -- start a rider/driver-facing server over a shim that is documented as
-    -- temporary would be the wrong trade.
-    cacAclMap :: [(String, [(String, String)])],
     port :: Int,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
@@ -384,9 +376,6 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     _version :: Text,
-    cacConfig :: KTC.CacConfig,
-    cacTenants :: [String],
-    superPositionConfig :: KTC.SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
@@ -519,9 +508,6 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as
   -- lib-dashboard's buildAppEnv so a deadline behaves identically here.
   let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
-  -- Unlike provider-dashboard, an unset or unparseable AUTH_MAP is not fatal here:
-  -- it just means no CAC tokens are configured and the shim denies every request.
-  cacAclMap <- maybe [] (fromMaybe [] . readMaybe) <$> lookupEnv "AUTH_MAP"
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
   where
     parseIso8601UTC :: Text -> Maybe UTCTime

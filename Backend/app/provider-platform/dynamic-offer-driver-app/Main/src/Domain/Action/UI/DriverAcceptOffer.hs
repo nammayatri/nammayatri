@@ -68,6 +68,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAP (sendDriverOffer)
+import qualified SharedLogic.DriverPool.Config as SCDPC
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
@@ -79,7 +80,6 @@ import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.IncentiveJourney ()
-import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -94,7 +94,6 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Fields as Fields
 import TransactionLogs.Types (KeyConfig, TokenConfig)
-import Utils.Common.Cac.KeyNameConstants
 
 isAllowedExtraFee :: DriverExtraFeeBounds -> HighPrecMoney -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
@@ -168,7 +167,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
   quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
   quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
   when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-  farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ Maps.getCoordinates searchReq.fromLocation) (Just . Maps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+  farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ Maps.getCoordinates searchReq.fromLocation) (Just . Maps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion searchReq.configInExperimentVersions searchReq.specialLocationName
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   whenJust reqOfferedValue $ \off ->
     whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -314,7 +313,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
   where
     getQuoteLimit dist vehicleServiceTier tripCategory sr area searchRepeatType searchRepeatCounter = do
       L.setOptionLocal TxnIdKey sr.transactionId
-      driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id sr.transactionId))) sr
+      driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter sr
       pure driverPoolCfg.driverQuoteLimit
     validateSearchTryActive searchTryId = do
       -- Lock Description: This is a Lock held between Driver Respond and Cancel Search, if UI Cancel Search is OnGoing then the SearchTry will be marked as CANCELLED and Driver Respond will fail with `RideRequestAlreadyAcceptedOrCancelled`.

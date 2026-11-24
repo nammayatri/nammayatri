@@ -11,24 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.GoHomeConfig
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ But most likely you need a version from Cac with inMem results feature."
-    #-}
-where
+module Storage.CachedQueries.GoHomeConfig where
 
-import qualified Client.Main as CM
-import Control.Monad
 import Data.Text as Text
-import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheConfig (..), CacheFlow)
@@ -49,11 +39,6 @@ getGoHomeConfigFromDB id = do
           Hedis.setExp (makeGoHomeKey id) cfg expTime
           return (Just cfg)
         Nothing -> return Nothing
-
-getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
-getConfigsFromMemory id = do
-  isExpired <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
-  getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 findByMerchantOpCityId = getGoHomeConfigFromDB

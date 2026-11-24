@@ -42,8 +42,8 @@ import qualified Kernel.Utils.Text as TU
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Tools.Error
 
 ---------------------------------------------------------------------

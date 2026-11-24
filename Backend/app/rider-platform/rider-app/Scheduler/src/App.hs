@@ -15,9 +15,7 @@
 
 module App where
 
-import qualified Client.Main as CM
 import qualified Control.Concurrent.MVar as MVar
-import qualified Data.Bool as B
 import Data.Singletons (SingI)
 import qualified Data.Text as T
 import qualified "rider-app" Domain.Types.BecknConfig as Fields
@@ -211,7 +209,6 @@ runRiderAppScheduler configModifier = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
-        _ <- liftIO $ createCAC handlerCfg.appCfg
         -- Load FRFS BAPs
         frfsBap <-
           try QBecknConfig.findAll
@@ -230,22 +227,3 @@ runRiderAppScheduler configModifier = do
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
     runSchedulerServiceWith (withInMemManagement flowRt' handlerEnv) handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
-
-createCAC :: Environment.AppCfg -> IO ()
-createCAC appCfg = do
-  when appCfg.cacConfig.enableCac $ do
-    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
-    case cacStatus of
-      0 -> CM.startCACPolling appCfg.cacTenants
-      _ -> do
-        -- logError "CAC client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  when appCfg.superPositionConfig.enableSuperPosition $ do
-    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
-    case superPositionStatus of
-      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
-      _ -> do
-        -- logError "CAC super position client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection

@@ -83,7 +83,6 @@ library
     , extra
     , finance-kernel
     , generic-lens
-    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
@@ -172,7 +171,6 @@ executable rider-app-scheduler-exe
     , extra
     , finance-kernel
     , generic-lens
-    , haskell-cac
     , hspec
     , mobility-core
     , openapi3

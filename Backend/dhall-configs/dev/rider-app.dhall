@@ -396,27 +396,6 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.SendRideInvoiceEmail, mapValue = True }
       ]
 
-let cacConfig =
-      { host = "http://localhost:${mockServerPort}"
-      , interval = 10
-      , tenant = "test"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
-      , enableCac = False
-      }
-
-let cacTenants = [ "dev", "test" ]
-
-let superPositionConfig =
-      { host = "http://localhost:${mockServerPort}"
-      , interval = 10
-      , tenants = [ "dev", "test" ]
-      , retryConnection = False
-      , enablePolling = True
-      , enableSuperPosition = False
-      }
-
 let LocationTrackingeServiceConfig =
       { clouds =
         [ { cloud = common.CloudType.AWS, url = "http://localhost:${ltsPort}/" }
@@ -621,10 +600,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , _version = "2.1.0"
     , hotSpotExpiry = +604800
-    , cacConfig
-    , cacTenants
     , tsServiceConfig
-    , superPositionConfig
     , kafkaClickhouseCfg
     , riderClickhouseCfg
     , dashboardClickhouseCfg

@@ -31,19 +31,6 @@
         "trace"
         "alchemist-generator-exe"
       ];
-      cacConfig = p: p.overrideAttrs (oa: {
-        inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
-        preBuild = ''
-          export ${if pkgs.stdenv.isLinux then "LD_LIBRARY_PATH" else "DYLD_LIBRARY_PATH"}="$cac_client/lib";
-        '';
-        nativeBuildInputs = (oa.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
-        postFixup = (oa.postFixup or "") + ''
-          if [-d $bin/bin/* ]; then
-            wrapProgram $bin/bin/* \
-              --set ${if pkgs.stdenv.isLinux then "LD_LIBRARY_PATH" else "DYLD_LIBRARY_PATH"} "$cac_client/lib"
-          fi
-        '';
-      });
       gtfstidy = with pkgs; buildGoModule rec {
         pname = "gtfstidy";
         version = "deceaaaea84c61392642bff40468ba79ef2fc9dc";
@@ -68,29 +55,6 @@
         };
       };
       localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
-      # The upstream haskell-cac flake builds its Rust `cac_client` with
-      # `pkgs.darwin.apple_sdk.frameworks.{Security,SystemConfiguration}`.
-      # Those legacy framework stubs throw on evaluation in nixpkgs >= 25.11
-      # (see <https://nixos.org/manual/nixpkgs/stable/#sec-darwin-legacy-frameworks>);
-      # the frameworks now ship with the default Apple SDK, so simply dropping
-      # them is the documented migration. We cannot change the input itself, so
-      # rebuild both the package and its crane deps-only artifact with a
-      # framework-free buildInputs list. Linux never evaluates the stubs
-      # (`lib.optionals` is lazy), so it keeps the upstream derivation as-is.
-      cacClient =
-        let
-          upstream = inputs.haskell-cac.packages.${system}.cac_client;
-          withoutFrameworks = drv: drv.overrideAttrs (_: {
-            buildInputs = [ pkgs.fixDarwinDylibNames pkgs.libiconv pkgs.openssl ];
-          });
-        in
-        if pkgs.stdenv.isDarwin
-        then
-          (withoutFrameworks upstream).overrideAttrs
-            (old: {
-              cargoArtifacts = withoutFrameworks old.cargoArtifacts;
-            })
-        else upstream;
     in
     {
       pre-commit.settings.imports = [
@@ -106,7 +70,6 @@
         imports = [
           inputs.beckn-gateway.haskellFlakeProjectModules.output
           # inputs.namma-dsl.haskellFlakeProjectModules.output
-          inputs.haskell-cac.haskellFlakeProjectModules.output
         ];
         # "packages" and "apps" are excluded from autoWire so we can filter out
         # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
@@ -141,18 +104,7 @@
           google-cloud-common.source = inputs.google-cloud-haskell + /lib/google-cloud-common;
         };
         settings = {
-          alchemist.custom = cacConfig;
-          rider-app.custom = cacConfig;
-          rider-app-drainer.custom = cacConfig;
-          dynamic-offer-driver-app.custom = cacConfig;
-          producer.custom = cacConfig;
-          dynamic-offer-driver-drainer.custom = cacConfig;
-          lib-dashboard.custom = cacConfig;
-          kafka-consumers.custom = cacConfig;
-          driver-offer-allocator.custom = cacConfig;
           namma-dsl.libraryProfiling = false;
-          # Overrides the definition from inputs.haskell-cac.haskellFlakeProjectModules.output
-          cac_client.custom = lib.mkForce (_: cacClient);
           location-updates.check = false;
           singletons-th.jailbreak = true;
           singletons-base = {
@@ -259,16 +211,8 @@
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
-          # NOTE: deliberately *not* `inputs.haskell-cac.devShells.${system}.haskell-cac`:
-          # that shell is built against upstream's unpatched `cac_client` (see
-          # `cacClient` above) and would re-introduce the darwin.apple_sdk
-          # evaluation failure. haskell-cac's Haskell deps already come from our
-          # own haskellProjects (via haskellFlakeProjectModules.output); the only
-          # other thing that shell did was export LIBRARY_PATH, done below.
         ];
         shellHook = ''
-          export LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
-          export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
           # Default stack limit (8 MB) is too small for linking rider-app-exe
           # and dynamic-offer-driver-app-exe — ld recurses the symbol table and
           # segfaults. Bump soft stack to the hard max so the exe link succeeds

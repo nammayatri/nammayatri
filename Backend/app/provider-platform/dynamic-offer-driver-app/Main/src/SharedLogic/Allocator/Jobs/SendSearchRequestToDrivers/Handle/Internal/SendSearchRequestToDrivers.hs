@@ -138,7 +138,6 @@ import Tools.Maps as Maps
 import qualified Tools.Metrics as TM
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types (KeyConfig, TokenConfig)
-import Utils.Common.Cac.KeyNameConstants
 
 type LanguageDictionary = M.Map Maps.Language DSR.SearchRequest
 
@@ -328,7 +327,7 @@ sendSearchRequestToDrivers dispatchMode isAllocatorBatch isTopUpDispatch tripQuo
     let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
     addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge tripQuoteDetail.bufferedFare validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
-    farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory tripQuoteDetail.vehicleServiceTier searchReq.area tripQuoteDetail.estimateOrQuoteId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+    farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory tripQuoteDetail.vehicleServiceTier searchReq.area tripQuoteDetail.estimateOrQuoteId Nothing Nothing searchReq.dynamicPricingLogicVersion searchReq.configInExperimentVersions searchReq.specialLocationName
     -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
     mbScheduledRideMinWalletBalance <- getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime flagNow (getScheduledRideMinWalletFloorFromSnapshot tripQuoteDetail.estimateOrQuoteId) dPoolRes.driverPoolResult.driverId.getId
     mbTierName <- USRD.translatedTierName language searchReq sReqFD
@@ -515,7 +514,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
 
   baseFare <- case tripQuoteDetail.tripCategory of
     DTC.Ambulance _ -> do
-      farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+      farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion searchReq.configInExperimentVersions searchReq.specialLocationName
       getBaseFare searchTry searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
   deploymentVersion <- asks (.version)

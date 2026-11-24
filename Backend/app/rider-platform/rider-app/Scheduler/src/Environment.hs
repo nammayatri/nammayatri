@@ -116,7 +116,6 @@ data HandlerEnv = HandlerEnv
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    cacConfig :: CacConfig,
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,

@@ -17,8 +17,6 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
-import qualified Client.Main as CM
-import qualified Data.Bool as B
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -87,25 +85,6 @@ import qualified "utils" Utils.Common.RateLimit.Redis as RLR
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
 
-createCAC :: AppCfg -> IO ()
-createCAC appCfg = do
-  when appCfg.cacConfig.enableCac $ do
-    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
-    case cacStatus of
-      0 -> CM.startCACPolling appCfg.cacTenants
-      _ -> do
-        -- logError "CAC client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  when appCfg.superPositionConfig.enableSuperPosition $ do
-    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
-    case superPositionStatus of
-      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
-      _ -> do
-        -- logError "CAC super position client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
@@ -154,7 +133,6 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
-        _ <- liftIO $ createCAC appCfg
         initCityMaps
         fork "driver supply metrics publisher" DSM.runDriverSupplyMetricsPublisher
         allProviders <-

@@ -69,8 +69,6 @@ library
       PackageImports
       OverloadedRecordDot
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
-  extra-libraries:
-      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -87,7 +85,6 @@ library
     , extra
     , finance-kernel
     , generic-lens
-    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
@@ -161,8 +158,6 @@ executable driver-offer-allocator-exe
       PackageImports
       OverloadedRecordDot
   ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
-  extra-libraries:
-      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -178,7 +173,6 @@ executable driver-offer-allocator-exe
     , extra
     , finance-kernel
     , generic-lens
-    , haskell-cac
     , hspec
     , mobility-core
     , openapi3

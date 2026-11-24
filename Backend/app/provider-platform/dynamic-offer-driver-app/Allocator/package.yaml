@@ -133,10 +133,7 @@ library:
     - sessionizer-metrics
     - mobility-core
     - beckn-spec
-    - haskell-cac
     - external
-  extra-libraries:
-    - cac_client
 
 executables:
   driver-offer-allocator-exe:
@@ -169,7 +166,4 @@ executables:
     dependencies:
       - driver-offer-allocator
       - mobility-core
-      - haskell-cac
       - external
-    extra-libraries:
-      - cac_client

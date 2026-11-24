@@ -57,16 +57,6 @@ let hedisSecondaryClusterCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let cacConfig =
-      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
-      , interval = 10
-      , tenant = "test"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
-      , enableCac = False
-      }
-
 let kvConfigUpdateFrequency = +10
 
 let kafkaProducerCfg =
@@ -117,7 +107,6 @@ in  { hedisCfg
     , runReviver = True
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
-    , cacConfig
     , producersPerPod = +5
     , inMemConfig
     , blackListedJobs = [] : List Text

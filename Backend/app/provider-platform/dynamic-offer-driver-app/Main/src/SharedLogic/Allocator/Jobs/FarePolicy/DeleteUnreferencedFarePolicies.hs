@@ -31,7 +31,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), DeleteUnreferencedFarePoliciesJobData (..), SchedulerJobFlow)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.Queries.ConditionalCharges as QCC
 import qualified Storage.Queries.FareProduct as SQF
 

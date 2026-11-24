@@ -81,7 +81,7 @@ import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFareProduct
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
@@ -1936,7 +1936,7 @@ fareCategories planId mbPlanName (driverId, _merchantId, merchantOpCityId) = do
       case mbCategory of
         Nothing -> pure Nothing
         Just categoryName -> do
-          mbFarePolicy <- CQFP.findById Nothing fareProduct.farePolicyId
+          mbFarePolicy <- CQFP.findFarePolicyFromDB fareProduct.farePolicyId
           case mbFarePolicy of
             Nothing -> pure Nothing
             Just farePolicy -> case waivedFor farePolicy.platformFeeChargesBy plan of
@@ -2014,7 +2014,7 @@ fareCategories planId mbPlanName (driverId, _merchantId, merchantOpCityId) = do
       case find isBaseOneWayProduct relevantProducts of
         Nothing -> pure []
         Just baseProduct -> do
-          mbBaseFarePolicy <- CQFP.findById Nothing baseProduct.farePolicyId
+          mbBaseFarePolicy <- CQFP.findFarePolicyFromDB baseProduct.farePolicyId
           case mbBaseFarePolicy of
             Nothing -> pure []
             Just baseFarePolicy -> do

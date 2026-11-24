@@ -118,16 +118,6 @@ let serviceClickhouseCfg =
 
 let dashboardClickhouseCfg = serviceClickhouseCfg
 
-let cacConfig =
-      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
-      , interval = 10
-      , tenant = "test"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
-      , enableCac = False
-      }
-
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 in  { hedisCfg
@@ -172,7 +162,6 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
-    , cacConfig
     , kafkaClickhouseCfg
     , serviceClickhouseCfg
     , kafkaProducerCfg

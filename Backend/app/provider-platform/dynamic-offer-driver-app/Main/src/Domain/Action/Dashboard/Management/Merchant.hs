@@ -245,26 +245,26 @@ import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.MerchantDocument ()
 import Storage.Beam.SpecialZone ()
-import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
-import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
-import qualified Storage.Cac.DriverPoolConfig as CQDPC
-import qualified Storage.Cac.FarePolicy as CQFP
-import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
+import qualified Storage.CachedQueries.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CDIPC
+import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
+import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMerchantState
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -1175,7 +1175,7 @@ getMerchantConfigDriverIntelligentPool :: ShortId DM.Merchant -> Context.City ->
 getMerchantConfigDriverIntelligentPool merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.getDriverIntelligentPoolConfigFromDB merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   pure $ mkDriverIntelligentPoolConfigRes config
 
 mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
@@ -1191,7 +1191,7 @@ postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CDIPC.getDriverIntelligentPoolConfigFromDB merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{DDIPC.availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                DDIPC.availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
@@ -1742,7 +1742,7 @@ getAllBaseFaresFromFarePolicy fp = case fp.farePolicyDetails of
 postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
   let farePolicyId = cast reqFarePolicyId
-  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findFarePolicyFromDB farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   SMerchant.checkCurrencies farePolicy.currency $
     [ req.serviceChargeWithCurrency,
       req.perMinuteRideExtraTimeChargeWithCurrency,
@@ -2298,7 +2298,7 @@ ambulanceSlabsCreateLockKey cityId = "Driver:FarePolicy:AmbulanceSlabs:CreateLoc
 getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Flow Common.FarePolicyDetailsResp
 getMerchantConfigFarePolicyDetails _ _ reqFarePolicyId = do
   let farePolicyId = cast reqFarePolicyId
-  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findFarePolicyFromDB farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   let curr = farePolicy.currency
   let (farePolicyType, mbBaseFare, mbBaseDistance, mbDeadKmFare, mbWaitingChargeInfo, mbNightShiftCharge, mbPerMinRateSections, mbPerMinRateDurationBasis) = case farePolicy.farePolicyDetails of
         FarePolicy.ProgressiveDetails d ->
@@ -2481,7 +2481,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
   -- Deduplicate and batch-fetch fare policies (avoids N+1 queries)
   let uniqueFpIds = DL.nub $ map (.farePolicyId) fareProducts
   logTagInfo "FarePolicyExport" $ "Found " <> show (length fareProducts) <> " fare products with " <> show (length uniqueFpIds) <> " unique fare policies"
-  farePolicies <- catMaybes <$> mapM (CQFP.findById Nothing) uniqueFpIds
+  farePolicies <- catMaybes <$> mapM CQFP.findFarePolicyFromDB uniqueFpIds
   let farePolicyMap = Map.fromList $ map (\fp -> (fp.id, fp)) farePolicies
 
   -- Deduplicate and batch-fetch cancellation policies
@@ -3659,7 +3659,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
         -- entirely) must not silently wipe an existing cap config out. A
         -- present-but-empty config here is also how capping gets turned off,
         -- since the config's presence IS the on/off switch.
-        Nothing -> (>>= (.fareRecomputeCapConfig)) <$> CQFP.findById Nothing (Id idText)
+        Nothing -> (>>= (.fareRecomputeCapConfig)) <$> CQFP.findFarePolicyFromDB (Id idText)
         Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
           Left err -> throwError $ InvalidRequest ("Fare Recompute Cap Config parsing failed :: " <> T.pack err)
           Right config -> case FarePolicy.validateFareRecomputeCapConfig config of
@@ -4566,7 +4566,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     -- alongside the product) or Nothing if the source policy is missing.
     buildFareProduct mId newCityId currentTime DFareProduct.FareProduct {..} = do
       newId <- generateGUID
-      mbSourcePolicy <- CQFP.findById Nothing farePolicyId
+      mbSourcePolicy <- CQFP.findFarePolicyFromDB farePolicyId
       (mbClonedPolicy, newFarePolicyId) <- case mbSourcePolicy of
         Nothing -> do
           logError $ "buildFareProduct: source FarePolicy " <> farePolicyId.getId <> " not found; new FareProduct will reference the original id"

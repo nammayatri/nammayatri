@@ -200,7 +200,7 @@
     },
     "common_10": {
       "inputs": {
-        "crane": "crane_13",
+        "crane": "crane_12",
         "flake-parts": "flake-parts_12",
         "flake-root": "flake-root_10",
         "haskell-flake": "haskell-flake_10",
@@ -232,7 +232,7 @@
     },
     "common_11": {
       "inputs": {
-        "crane": "crane_14",
+        "crane": "crane_13",
         "flake-parts": "flake-parts_13",
         "flake-root": "flake-root_11",
         "haskell-flake": "haskell-flake_11",
@@ -264,7 +264,7 @@
     },
     "common_12": {
       "inputs": {
-        "crane": "crane_15",
+        "crane": "crane_14",
         "flake-parts": "flake-parts_14",
         "flake-root": "flake-root_12",
         "haskell-flake": "haskell-flake_12",
@@ -296,7 +296,7 @@
     },
     "common_2": {
       "inputs": {
-        "crane": "crane_4",
+        "crane": "crane_3",
         "flake-parts": "flake-parts_3",
         "flake-root": "flake-root_2",
         "haskell-flake": "haskell-flake_2",
@@ -328,7 +328,7 @@
     },
     "common_3": {
       "inputs": {
-        "crane": "crane_6",
+        "crane": "crane_5",
         "flake-parts": "flake-parts_5",
         "flake-root": "flake-root_3",
         "haskell-flake": "haskell-flake_3",
@@ -360,7 +360,7 @@
     },
     "common_4": {
       "inputs": {
-        "crane": "crane_7",
+        "crane": "crane_6",
         "flake-parts": "flake-parts_6",
         "flake-root": "flake-root_4",
         "haskell-flake": "haskell-flake_4",
@@ -392,7 +392,7 @@
     },
     "common_5": {
       "inputs": {
-        "crane": "crane_8",
+        "crane": "crane_7",
         "flake-parts": "flake-parts_7",
         "flake-root": "flake-root_5",
         "haskell-flake": "haskell-flake_5",
@@ -424,7 +424,7 @@
     },
     "common_6": {
       "inputs": {
-        "crane": "crane_9",
+        "crane": "crane_8",
         "flake-parts": "flake-parts_8",
         "flake-root": "flake-root_6",
         "haskell-flake": "haskell-flake_6",
@@ -457,7 +457,7 @@
     },
     "common_7": {
       "inputs": {
-        "crane": "crane_10",
+        "crane": "crane_9",
         "flake-parts": "flake-parts_9",
         "flake-root": "flake-root_7",
         "haskell-flake": "haskell-flake_7",
@@ -489,7 +489,7 @@
     },
     "common_8": {
       "inputs": {
-        "crane": "crane_11",
+        "crane": "crane_10",
         "flake-parts": "flake-parts_10",
         "flake-root": "flake-root_8",
         "haskell-flake": "haskell-flake_8",
@@ -521,7 +521,7 @@
     },
     "common_9": {
       "inputs": {
-        "crane": "crane_12",
+        "crane": "crane_11",
         "flake-parts": "flake-parts_11",
         "flake-root": "flake-root_9",
         "haskell-flake": "haskell-flake_9",
@@ -641,43 +641,7 @@
         "type": "github"
       }
     },
-    "crane_15": {
-      "locked": {
-        "lastModified": 1792350552,
-        "narHash": "sha256-292lvpvxTGKryKxh3/3tcIVi85CwYGdl4oOi113Sob8=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "e675a36b7377bebe41d548388a2501cbb16d380d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
     "crane_2": {
-      "inputs": {
-        "nixpkgs": [
-          "haskell-cac",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1711681752,
-        "narHash": "sha256-LEg6/dmEFxx6Ygti5DO9MOhGNpyB7zdxdWtzv/FCTXk=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "ada0fb4dcce4561acb1eb17c59b7306d9d4a95f3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
-    "crane_3": {
       "inputs": {
         "flake-compat": "flake-compat_2",
         "flake-utils": "flake-utils_3",
@@ -701,7 +665,7 @@
         "type": "github"
       }
     },
-    "crane_4": {
+    "crane_3": {
       "locked": {
         "lastModified": 1792350552,
         "narHash": "sha256-292lvpvxTGKryKxh3/3tcIVi85CwYGdl4oOi113Sob8=",
@@ -716,7 +680,7 @@
         "type": "github"
       }
     },
-    "crane_5": {
+    "crane_4": {
       "inputs": {
         "nixpkgs": [
           "notification-service",
@@ -729,6 +693,21 @@
         "owner": "ipetkov",
         "repo": "crane",
         "rev": "0efe36f9232e0961512572883ba9c995aa1f54b1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
+    "crane_5": {
+      "locked": {
+        "lastModified": 1792350552,
+        "narHash": "sha256-292lvpvxTGKryKxh3/3tcIVi85CwYGdl4oOi113Sob8=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "e675a36b7377bebe41d548388a2501cbb16d380d",
         "type": "github"
       },
       "original": {
@@ -2442,32 +2421,6 @@
         "type": "github"
       }
     },
-    "haskell-cac": {
-      "inputs": {
-        "common": [
-          "common"
-        ],
-        "crane": "crane_2",
-        "nixpkgs": [
-          "common",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1794916755,
-        "narHash": "sha256-e+LhAAQyebBKEBhZeSLoNb/HvzfQPum7r8brrhba+Q8=",
-        "owner": "piyushKumar-1",
-        "repo": "haskell_cac_client",
-        "rev": "ddd9a58091def4a21957a8e458c5fe12aa9e6c8f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "piyushKumar-1",
-        "ref": "Testing",
-        "repo": "haskell_cac_client",
-        "type": "github"
-      }
-    },
     "haskell-flake": {
       "locked": {
         "lastModified": 1714025946,
@@ -2719,7 +2672,7 @@
     },
     "location-tracking-service": {
       "inputs": {
-        "crane": "crane_3",
+        "crane": "crane_2",
         "flake-parts": "flake-parts_2",
         "nixpkgs": "nixpkgs_6",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
@@ -5126,7 +5079,7 @@
     },
     "notification-service": {
       "inputs": {
-        "crane": "crane_5",
+        "crane": "crane_4",
         "flake-parts": "flake-parts_4",
         "nixpkgs": "nixpkgs_15",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_4",
@@ -6059,7 +6012,6 @@
         "db-manager-src": "db-manager-src",
         "easy-purescript-nix": "easy-purescript-nix",
         "google-cloud-haskell": "google-cloud-haskell",
-        "haskell-cac": "haskell-cac",
         "haskell-flake": [
           "common",
           "haskell-flake"
@@ -6476,11 +6428,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1795611487,
-        "narHash": "sha256-F9dmsaUAF35kjFYe0iobry5zMyehotG9xQ7f2W2/oU8=",
+        "lastModified": 1795676059,
+        "narHash": "sha256-Zu2LSsil5PE3WGFXkVCodkXZ9Zj3kg71dzKrYs7rC5M=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "fc1fdbd0ce4598b96a702e3c4a31bf654b991d10",
+        "rev": "e48fb03dcd50d1747784e51f7213ca106a8bda15",
         "type": "github"
       },
       "original": {

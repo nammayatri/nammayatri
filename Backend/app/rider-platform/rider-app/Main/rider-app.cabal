@@ -443,7 +443,6 @@ library
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
       Domain.Types.Booking.API
-      Domain.Types.CacType
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.EventManagement
@@ -587,7 +586,6 @@ library
       SharedLogic.BookingDeposit
       SharedLogic.BookingDepositLedger
       SharedLogic.BookingDepositStatus
-      SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
@@ -2058,7 +2056,6 @@ library
     , geohash ==1.0.1
     , gtfs-data-server
     , hashable
-    , haskell-cac
     , hedis
     , http-api-data
     , http-client

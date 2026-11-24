@@ -14,10 +14,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.FarePolicy
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ But most likely you need a version from Cac with inMem results feature."
-    #-}
   ( clearCache,
     create,
     delete,

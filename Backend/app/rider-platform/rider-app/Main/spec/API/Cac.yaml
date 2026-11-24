@@ -1,3 +1,6 @@
+# Kept after haskell-cac removal for backward compatibility: older rider apps
+# may still call /v2/getUiConfigs; dropping the route would 404 them.
+# Handler returns empty Object {}.
 imports:
 module: Cac
 types: {}
@@ -5,9 +8,6 @@ apis:
   - POST:
       endpoint: /getUiConfigs
       auth: TokenAuth
-      query:
-        - toss: Int
-        - tenant: Text
       request:
         type: "Data.Aeson.Object"
       response:

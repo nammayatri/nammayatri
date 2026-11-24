@@ -11,14 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module SharedLogic.DriverPool.Config
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ But most likely you need a version from Cac with inMem results feature."
-    #-}
   ( module SharedLogic.DriverPool.Config,
     module CDP,
   )
@@ -30,17 +25,16 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Default.Class
 import Data.Text as Text hiding (filter, find)
 import qualified Data.Vector as V
+import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig as DDPC
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude as KP
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
-import Kernel.Types.Cac (CACData (..))
 import Kernel.Types.Common
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
@@ -61,7 +55,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.DynamicLogic as TDL
 import qualified Tools.Fields as Fields
-import Utils.Common.CacUtils
 
 getDriverPoolConfigFromDB' ::
   Maybe DVST.ServiceTierType ->
@@ -165,6 +158,31 @@ instance Default DriverPoolConfig where
         idleBulkChunkSize = Nothing
       }
 
+getDriverPoolConfig ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BeamFlow m r,
+    ClickhouseFlow m r
+  ) =>
+  Id MerchantOperatingCity ->
+  DVST.ServiceTierType ->
+  DTC.TripCategory ->
+  SL.Area ->
+  Maybe Meters ->
+  SearchRepeatType ->
+  Int ->
+  DSR.SearchRequest ->
+  m DriverPoolConfig
+getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance searchRepeatType searchRepeatCounter sreq = do
+  config <-
+    getDriverPoolConfigFromDB merchantOpCityId (Just serviceTier) (show tripCategory) area tripDistance searchRepeatType searchRepeatCounter sreq
+      |<|>| getDriverPoolConfigFromDB merchantOpCityId (Just serviceTier) "All" area tripDistance searchRepeatType searchRepeatCounter sreq
+  when (isNothing config) do
+    logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
+    throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
+  logDebug $ "driverPoolConfig we recieved for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance <> " is:" <> show config
+  pure (fromJust config)
+
 getDriverPoolConfigFromDB ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -178,17 +196,16 @@ getDriverPoolConfigFromDB ::
   Maybe Meters ->
   SearchRepeatType ->
   Int ->
-  Maybe CacKey ->
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter stickeyKey sreq = do
+getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter sreq = do
   configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CDP.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions Nothing))
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs
   let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
-  oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
+  oldVersion <- getConfigVersion Nothing
   (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion Nothing
   let customerTags = convertTags <$> sreq.customerNammaTags
   now <- getCurrentTime
@@ -204,13 +221,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
             (isJust version && isNothing oldVersion)
             ( do
                 QSR.updatePoolingConfigVersion version sreq.id
-                cacheConfigVersion (getKeyValue <$> stickeyKey) (fromJust version)
-            )
-          whenJust
-            stickeyKey
-            ( \stickeyKey' -> do
-                let cacData = CACData (getKeyValue stickeyKey') (getKeyName stickeyKey') "" "driver_pool_config" (Text.pack (show version))
-                fork "push driver_pool_config data to kafka" $ pushToKafka cacData "driver-pool-config-data" ""
+                cacheConfigVersion Nothing (fromJust version)
             )
           pure $ Just dpc''.config
         A.Error e -> do
@@ -230,7 +241,7 @@ getConfigVersion mbStickyKey = do
 
 cacheConfigVersion :: (CacheFlow m r) => Maybe Text -> Int -> m ()
 cacheConfigVersion mbStickyKey version = do
-  expTime <- fromIntegral <$> asks (.cacConfig.cacExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   case mbStickyKey of
     Nothing -> pure ()
     Just stId' -> Hedis.withCrossAppRedis (Hedis.setExp (makeConfigVersionKey stId') version expTime)

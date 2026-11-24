@@ -43,9 +43,6 @@ import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
-import qualified Data.Aeson.KeyMap as DAKM
-import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Map as M
@@ -71,11 +68,9 @@ import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude (concatMapM)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
@@ -110,7 +105,6 @@ import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPersonD
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
-import SharedLogic.Cac
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.OTP as SOTP
@@ -174,7 +168,6 @@ data ProfileRes = ProfileRes
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     followsRide :: Bool,
-    frontendConfigHash :: Maybe Text,
     isSafetyCenterDisabled :: Bool,
     customerReferralCode :: Maybe Text,
     deviceId :: Maybe Text,
@@ -329,9 +322,6 @@ getPersonDetails ::
     HasField "blackListedJobs" r [Text]
   ) =>
   (Id Person.Person, Id Merchant.Merchant) ->
-  Maybe Int ->
-  Maybe Text ->
-  Maybe Text ->
   Maybe Bool ->
   Maybe Version ->
   Maybe Text ->
@@ -340,7 +330,7 @@ getPersonDetails ::
   Maybe Text ->
   Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
+getPersonDetails (personId, _) includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice mbClientId = do
   logInfo $ "[Profile.getPersonDetails] START | personId: " <> personId.getId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId personId
@@ -376,13 +366,6 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
     let updatedPerson = person {Person.email = Nothing}
     void $ QPerson.updateByPrimaryKey updatedPerson
   logInfo "[Profile.getPersonDetails] email validation done"
-  systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
-  let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
-  logInfo $ "[Profile.getPersonDetails] calling getFrontendConfigs, useCACConfig=" <> show useCACConfig
-  frntndfgs <- if useCACConfig then getFrontendConfigs person toss tenant' context' else return $ Just DAKM.empty
-  logInfo "[Profile.getPersonDetails] getFrontendConfigs done"
-  let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   logInfo "[Profile.getPersonDetails] findSafetySettings done"
   -- Temporary consent catch-up; see RCP.syncConsentIfNeeded for the removal plan.
@@ -434,9 +417,9 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   let mobileNumberRequired = isNothing person.mobileNumber && person.identifierType `elem` [Person.MOBILENUMBER, Person.EMAIL]
       isEmailVerified = isJust person.email && SSL.hasTrustedEmail person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage pendingLegalPolicies mobileNumberRequired isEmailVerified
+  makeProfileRes riderConfig decPerson tag isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage pendingLegalPolicies mobileNumberRequired isEmailVerified
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam pendingLegalPolicies mobileNumberRequired isEmailVerified = do
+    makeProfileRes riderConfig Person.Person {..} disability isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam pendingLegalPolicies mobileNumberRequired isEmailVerified = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -448,7 +431,6 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
           { maskedMobileNumber = maskText <$> mobileNumber,
             maskedDeviceToken = maskText <$> deviceToken,
             hasTakenRide = hasTakenValidRide,
-            frontendConfigHash = md5DigestHash,
             hasTakenValidAutoRide = hasTakenAutoRide,
             hasTakenValidCabRide = hasTakenCabRide,
             hasTakenValidBikeRide = hasTakenValidFirstBikeRide,

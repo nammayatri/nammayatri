@@ -22,7 +22,7 @@ in
                 nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
                 buildInputs =
                   config.haskellProjects.default.outputs.devShell.buildInputs
-                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client pkgs.libsodium pkgs.rdkafka ]
+                  ++ [ pkgs.libsodium pkgs.rdkafka ]
                   ++ (with pkgs; [
                     pcre # libpcre.so.1
                     elfutils # libelf.so.1, libdw.so.1 (GHC 9.8 RTS)
@@ -40,7 +40,7 @@ in
               chmod -R +w $out/bin
               for exe in $out/bin/*; do
                 wrapProgram "$exe" \
-                  --prefix LD_LIBRARY_PATH : "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib:${pkgs.libsodium}/lib:${pkgs.rdkafka}/lib"
+                  --prefix LD_LIBRARY_PATH : "${pkgs.libsodium}/lib:${pkgs.rdkafka}/lib"
               done
             ''
           else self'.packages.nammayatri;

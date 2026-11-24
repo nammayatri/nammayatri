@@ -490,27 +490,6 @@ let LocationTrackingeServiceConfig =
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
-let cacConfig =
-      { host = "http://localhost:${mockServerPort}"
-      , interval = 10
-      , tenant = "test"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
-      , enableCac = False
-      }
-
-let cacTenants = [ "dev", "test" ]
-
-let superPositionConfig =
-      { host = "http://localhost:${mockServerPort}"
-      , interval = 10
-      , tenants = [ "dev", "test" ]
-      , retryConnection = False
-      , enablePolling = True
-      , enableSuperPosition = False
-      }
-
 let maxMessages
     : Text
     = "5000"
@@ -752,10 +731,7 @@ in  { esqDBCfg
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
     , _version = "2.1.0"
-    , cacConfig
     , tsServiceConfig
-    , cacTenants
-    , superPositionConfig
     , maxStraightLineRectificationThreshold = +800
     , singleBatchProcessingTempDelay = +2
     , ondcTokenMap = sec.ondcTokenMap

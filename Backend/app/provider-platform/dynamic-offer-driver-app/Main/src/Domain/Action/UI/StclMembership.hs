@@ -46,7 +46,6 @@ import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import qualified Tools.Fields as Fields
 import qualified Tools.Payment as TPayment
-import qualified Utils.Common.Cac.KeyNameConstants as CCK
 
 -- Fallback defaults used when the per-MOC TransporterConfig leaves the corresponding field unset.
 -- The handler reads these via TransporterConfig and only falls back here if the column is NULL,

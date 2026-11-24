@@ -174,7 +174,6 @@ type API =
            :<|> FollowRide.API
            :<|> SosApi.API
            :<|> FRFSTicketService.API
-           :<|> Cac.API
            :<|> CustomerReferral.API
            :<|> DeletedPerson.API
            :<|> EditLocation.API
@@ -188,6 +187,7 @@ type API =
            :<|> AssetManifest.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> Cac.API
            :<|> RentalsIntercityCache.API
            :<|> Miscellaneous.API
            :<|> NearbyDrivers.API
@@ -319,7 +319,6 @@ handler =
     :<|> FollowRide.handler
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler
-    :<|> Cac.handler
     :<|> CustomerReferral.handler
     :<|> DeletedPerson.handler
     :<|> EditLocation.handler
@@ -333,6 +332,7 @@ handler =
     :<|> AssetManifest.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> Cac.handler
     :<|> RentalsIntercityCache.handler
     :<|> Miscellaneous.handler
     :<|> NearbyDrivers.handler

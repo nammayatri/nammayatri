@@ -87,7 +87,6 @@ createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard role R
 
 checkAndUpdateDynamicReferralCode ::
   ( HasCacheConfig r,
-    HasCacConfig r,
     HasInMemEnv r,
     Redis.HedisFlow m r,
     MonadFlow m,
@@ -132,7 +131,6 @@ checkAndUpdateDynamicReferralCode merchantId merchantOperatingCityId transporter
 
 generateReferralCode ::
   ( HasCacheConfig r,
-    HasCacConfig r,
     HasInMemEnv r,
     Redis.HedisFlow m r,
     MonadFlow m,

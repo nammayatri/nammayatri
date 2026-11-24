@@ -187,7 +187,6 @@ library:
           - -j4
   dependencies:
     - mobility-core
-    - haskell-cac
     - beckn-spec
     - location-updates
     - special-zone-a
@@ -199,8 +198,6 @@ library:
     - utils
     - external
     - dashcam
-  extra-libraries:
-    - cac_client
 
 executables:
   dynamic-offer-driver-app-exe:
@@ -234,11 +231,8 @@ executables:
     dependencies:
       - dynamic-offer-driver-app
       - mobility-core
-      - haskell-cac
       - beckn-spec
       - beckn-services
-    extra-libraries:
-      - cac_client
 
 tests:
   driver-app-test:
@@ -254,7 +248,6 @@ tests:
     dependencies:
       - dynamic-offer-driver-app
       - mobility-core
-      - haskell-cac
       - beckn-spec
       - beckn-services
       - aeson
@@ -262,5 +255,3 @@ tests:
       - tasty-hunit
       - text
       - bytestring
-    extra-libraries:
-      - cac_client
