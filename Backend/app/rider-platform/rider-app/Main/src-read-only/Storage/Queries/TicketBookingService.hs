@@ -28,6 +28,12 @@ createMany = traverse_ create
 findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m [Domain.Types.TicketBookingService.TicketBookingService]
 findAllByBookingId ticketBookingId = do findAllWithKV [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
+findAllByParentBookingServiceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService) ->
+  m [Domain.Types.TicketBookingService.TicketBookingService]
+findAllByParentBookingServiceId parentBookingServiceId = do findAllWithKV [Se.Is Beam.parentBookingServiceId $ Se.Eq (Kernel.Types.Id.getId <$> parentBookingServiceId)]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe Domain.Types.TicketBookingService.TicketBookingService)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -46,6 +52,12 @@ updateAssignmentById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Pr
 updateAssignmentById assignmentId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.assignmentId assignmentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExpiryDateById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
+updateExpiryDateById expiryDate id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.expiryDate expiryDate, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -82,11 +94,15 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
       Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.parentBookingServiceId (Kernel.Types.Id.getId <$> parentBookingServiceId),
+      Se.Set Beam.serviceCategoryId (Kernel.Types.Id.getId <$> serviceCategoryId),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
+      Se.Set Beam.startTime startTime,
       Se.Set Beam.status status,
       Se.Set Beam.ticketBookingId (Kernel.Types.Id.getId ticketBookingId),
       Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.verificationCount verificationCount,
       Se.Set Beam.visitDate visitDate,

@@ -2,7 +2,9 @@
 
 module API.Types.UI.TicketService where
 
+import qualified API.Types.UI.ParkingBooking
 import qualified Dashboard.Common
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
@@ -76,9 +78,21 @@ data DirectTicketBookingResp = DirectTicketBookingResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ParkingZonePin = ParkingZonePin
+  { distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    geomGeoJson :: Kernel.Prelude.Maybe Data.Text.Text,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    name :: Data.Text.Text,
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PeopleCategoriesResp = PeopleCategoriesResp
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
     description :: Data.Text.Text,
+    durationTariff :: Kernel.Prelude.Maybe Data.Aeson.Value,
     iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Data.Text.Text,
@@ -117,6 +131,7 @@ data TicketBookingAPIEntityV2 = TicketBookingAPIEntityV2
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
+    parkingStays :: Kernel.Prelude.Maybe [API.Types.UI.ParkingBooking.ParkingStayResp],
     peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
     personId :: Data.Text.Text,
     placeType :: Domain.Types.TicketPlace.PlaceType,
@@ -238,7 +253,11 @@ data TicketBookingServicePeopleCategoryCancelReq = TicketBookingServicePeopleCat
 data TicketBookingServicesReq = TicketBookingServicesReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     categories :: [TicketBookingCategoryReq],
-    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
+    durationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    extendsBookingServiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService),
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -274,7 +293,7 @@ data TicketPlaceBookingList = TicketPlaceBookingList {bookings :: [API.Types.UI.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketPlaceResp = TicketPlaceResp {subPlaces :: [Domain.Types.TicketSubPlace.TicketSubPlace], ticketPlace :: Domain.Types.TicketPlace.TicketPlace}
+data TicketPlaceResp = TicketPlaceResp {parkingZones :: Kernel.Prelude.Maybe [ParkingZonePin], subPlaces :: [Domain.Types.TicketSubPlace.TicketSubPlace], ticketPlace :: Domain.Types.TicketPlace.TicketPlace}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -293,7 +312,11 @@ data TicketServiceResp = TicketServiceResp
     allowFutureBooking :: Kernel.Prelude.Bool,
     businessHours :: [BusinessHourResp],
     expiry :: Domain.Types.TicketService.ExpiryType,
+    geomGeoJson :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    maxDurationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxVerification :: Kernel.Prelude.Int,
     name :: Data.Text.Text,
     noteInfo :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -322,6 +345,7 @@ data TicketServiceVerificationResp = TicketServiceVerificationResp
     ticketServiceName :: Kernel.Prelude.Maybe Data.Text.Text,
     ticketServiceShortId :: Kernel.Prelude.Maybe Data.Text.Text,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
     verificationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
   }

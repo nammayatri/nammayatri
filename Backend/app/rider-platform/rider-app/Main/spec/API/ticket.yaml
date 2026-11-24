@@ -31,6 +31,7 @@ imports:
   Person: Domain.Types.Person
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   Summary: Dashboard.Common
+  Value: Data.Aeson
 
 module: TicketService
 types:
@@ -48,6 +49,10 @@ types:
     allowCancellation: Bool
     noteInfo: Maybe Text
     priority: Maybe Int
+    lat: Maybe Double # parking zone only, here and below
+    lon: Maybe Double
+    geomGeoJson: Maybe Text
+    maxDurationMinutes: Maybe Int
 
   BusinessHourResp:
     id: Id BusinessHour
@@ -79,6 +84,7 @@ types:
     description: Text
     cancellationCharges: "Maybe [CancellationCharge]"
     iconUrl: Maybe Text
+    durationTariff: Maybe Value # parking only
 
   TicketBookingReq:
     visitDate: Day
@@ -104,6 +110,10 @@ types:
     serviceId: Id TicketService
     businessHourId: Id BusinessHour
     categories: [TicketBookingCategoryReq]
+    startTime: Maybe UTCTime # TimeWindow services only; Nothing = now
+    durationMinutes: Maybe Int # TimeWindow services only
+    vehicleNumber: Maybe Text # TimeWindow services only
+    extendsBookingServiceId: Maybe (Id TicketBookingService) # TimeWindow: extends this paid booking; start = its current end
 
   TicketBookingCategoryReq:
     categoryId: Id ServiceCategory
@@ -139,6 +149,7 @@ types:
     visitDate: Day
     status: BookingStatus
     peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
+    parkingStays: "Maybe [API.Types.UI.ParkingBooking.ParkingStayResp]" # parking only
 
   TicketBookingDetails:
     ticketShortId: Text
@@ -242,6 +253,7 @@ types:
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
     categories: [TicketBookingCategoryDetails]
+    vehicleNumber: Maybe Text # parking: the marshal compares this with the parked car
 
   TicketVerificationStatus:
     enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking"
@@ -270,6 +282,15 @@ types:
   TicketPlaceResp:
     ticketPlace: TicketPlace
     subPlaces: "[TicketSubPlace]"
+    parkingZones: "Maybe [ParkingZonePin]" # placeType Parking only: the cluster's open zones near the rider
+
+  ParkingZonePin:
+    serviceId: Id TicketService
+    name: Text
+    lat: Double
+    lon: Double
+    distanceMeters: Maybe Int
+    geomGeoJson: Maybe Text
 
   TicketPlaceBookingList:
     - bookings: [API.Types.UI.TicketService.TicketBookingDetails]
@@ -289,6 +310,8 @@ apis:
       query:
         date: Day
         subPlaceId: Id TicketSubPlace
+        startTime: UTCTime # parking: free spaces for this window (default now)
+        durationMinutes: Int
       params:
         placeId: Id TicketPlace
       response:
@@ -422,6 +445,11 @@ apis:
       endpoint: /ticket/places/v2
       name: getTicketPlacesV2
       auth: TokenAuth
+      query:
+        placeType: PlaceType # Parking: live clusters in the rider's city with their zones; others: unchanged
+        lat: Double
+        lon: Double
+        radiusMeters: Int
       response:
         type: "[TicketPlaceResp]"
   - GET:

@@ -9,6 +9,7 @@ import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.FRFSTicketService
 import qualified API.Types.Dashboard.AppManagement.FrfsTripOperations
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified API.Types.Dashboard.AppManagement.Parking
 import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.PassOrganization
 import qualified API.Types.Dashboard.AppManagement.Payment
@@ -32,6 +33,7 @@ data AppManagementUserActionType
   | FRFS_TICKET_SERVICE API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceUserActionType
   | FRFS_TRIP_OPERATIONS API.Types.Dashboard.AppManagement.FrfsTripOperations.FrfsTripOperationsUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
+  | PARKING API.Types.Dashboard.AppManagement.Parking.ParkingUserActionType
   | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
   | PASS_ORGANIZATION API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
@@ -52,6 +54,7 @@ instance Text.Show.Show AppManagementUserActionType where
     FRFS_TICKET_SERVICE e -> "FRFS_TICKET_SERVICE/" <> show e
     FRFS_TRIP_OPERATIONS e -> "FRFS_TRIP_OPERATIONS/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
+    PARKING e -> "PARKING/" <> show e
     PASS e -> "PASS/" <> show e
     PASS_ORGANIZATION e -> "PASS_ORGANIZATION/" <> show e
     PAYMENT e -> "PAYMENT/" <> show e
@@ -105,6 +108,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "MERCHANT_ONBOARDING/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PARKING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PARKING/" r,
                    ( v1,
                      r2
                      ) <-

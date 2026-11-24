@@ -39,6 +39,12 @@ type API =
       :> "services"
       :> QueryParam "date" Data.Time.Calendar.Day
       :> QueryParam
+           "durationMinutes"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "startTime"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
            "subPlaceId"
            (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace)
       :> Get
@@ -205,6 +211,18 @@ type API =
       :> "ticket"
       :> "places"
       :> "v2"
+      :> QueryParam
+           "lat"
+           Kernel.Prelude.Double
+      :> QueryParam
+           "lon"
+           Kernel.Prelude.Double
+      :> QueryParam
+           "placeType"
+           Domain.Types.TicketPlace.PlaceType
+      :> QueryParam
+           "radiusMeters"
+           Kernel.Prelude.Int
       :> Get
            '[JSON]
            [API.Types.UI.TicketService.TicketPlaceResp]
@@ -294,10 +312,12 @@ getTicketPlacesServices ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
     Kernel.Prelude.Maybe Data.Time.Calendar.Day ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketServiceResp]
   )
-getTicketPlacesServices a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketPlacesServices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTicketPlacesServices a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.TicketService.getTicketPlacesServices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 postTicketPlacesBook ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -419,8 +439,17 @@ getTicketPlaceAvailability ::
   )
 getTicketPlaceAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketPlaceAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
-getTicketPlacesV2 :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceResp])
-getTicketPlacesV2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.TicketService.getTicketPlacesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getTicketPlacesV2 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Domain.Types.TicketPlace.PlaceType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceResp]
+  )
+getTicketPlacesV2 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.TicketService.getTicketPlacesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getTicketPlace ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

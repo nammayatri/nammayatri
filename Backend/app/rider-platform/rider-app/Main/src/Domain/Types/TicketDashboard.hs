@@ -57,7 +57,8 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     customTabs :: Maybe [DTicketPlace.CustomTab],
     recommend :: Maybe Bool,
     enforcedAsSubPlace :: Maybe Bool,
-    merchantOperatingCityId :: Maybe Text
+    merchantOperatingCityId :: Maybe Text,
+    geomGeoJson :: Maybe Text -- parking cluster outline
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -77,7 +78,13 @@ data TicketServiceDetails = TicketServiceDetails
     rules :: Maybe [Rule],
     maxSelection :: Maybe Int,
     note :: Maybe Text,
-    priority :: Maybe Int
+    priority :: Maybe Int,
+    bookingMode :: Maybe DTicketService.BookingMode, -- TimeWindow for parking; omitted keeps the current mode (DayVisit when new)
+    maxDurationMinutes :: Maybe Int,
+    lat :: Maybe Double, -- parking zone location and outline
+    lon :: Maybe Double,
+    geomGeoJson :: Maybe Text,
+    isClosed :: Maybe Bool -- omitted keeps the current value (open when new)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -113,7 +120,8 @@ data ServicePeopleCategoryDetails = ServicePeopleCategoryDetails
     timeBounds :: TimeBound,
     vendorSplitDetails :: Maybe [Payment.VendorSplitDetails],
     rules :: Maybe [Rule],
-    iconUrl :: Maybe Text
+    iconUrl :: Maybe Text,
+    durationTariff :: Maybe Value -- TimeWindow (parking) fee by duration
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
