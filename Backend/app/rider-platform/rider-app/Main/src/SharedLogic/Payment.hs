@@ -72,6 +72,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import qualified Lib.Payment.Wallet.Types as WalletSummary
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -907,6 +908,7 @@ mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge 
 
 buildLedgerInfoFromBreakups ::
   Maybe Tax.RiderTaxRates ->
+  Maybe SL.FareSettlementType ->
   HighPrecMoney ->
   [DFareBreakup.FareBreakup] ->
   HighPrecMoney -> -- requestedDiscount (bookingDiscountAmount)
@@ -914,7 +916,7 @@ buildLedgerInfoFromBreakups ::
   HighPrecMoney -> -- applicationFeeAmount (platform commission + payment charge)
   FinanceCtx ->
   RidePaymentLedgerInfo
-buildLedgerInfoFromBreakups mbRiderTaxRates fare breakups discount cashback appFee ctx =
+buildLedgerInfoFromBreakups mbRiderTaxRates mbFareSettlementType fare allBreakups discount cashback appFee ctx =
   mkRidePaymentLedgerInfo
     (fare - snd lineSums.rideFare - sum [base + tax | (base, tax) <- [lineSums.toll, lineSums.parking, lineSums.airportEntryFee, lineSums.cancellationFee, lineSums.paymentCharge]] - appFee)
     (snd lineSums.rideFare)
@@ -934,6 +936,7 @@ buildLedgerInfoFromBreakups mbRiderTaxRates fare breakups discount cashback appF
     (RidePaymentFinance.gstRatesFromLines ((\fb -> (fb.description, fb.amount.amount)) <$> breakups))
     ctx
   where
+    breakups = FB.withoutBoothLines (SL.edcCollectsParking mbFareSettlementType) (.description) allBreakups
     breakupLines = (\fb -> FB.BreakupLine fb.description fb.amount.amount) <$> breakups
     lineSums = FB.componentLines breakupLines
 

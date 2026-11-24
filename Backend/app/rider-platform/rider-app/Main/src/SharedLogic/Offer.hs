@@ -53,6 +53,7 @@ import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
@@ -220,12 +221,14 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
 
 type OfferFareCtx = Maybe (HighPrecMoney, [FB.BreakupLine])
 
-offerFareCtx :: HighPrecMoney -> [DFareBreakup.FareBreakup] -> (OfferFareCtx, HighPrecMoney)
-offerFareCtx fare fareBreakups
+offerFareCtx :: Maybe SL.FareSettlementType -> HighPrecMoney -> [DFareBreakup.FareBreakup] -> (OfferFareCtx, HighPrecMoney)
+offerFareCtx mbFareSettlementType fare allFareBreakups
   | null fareBreakups = (Nothing, fare)
   | otherwise =
     let breakupLines = [FB.BreakupLine fb.description fb.amount.amount | fb <- fareBreakups]
      in (Just (fare, breakupLines), FB.discountableAmount fare breakupLines)
+  where
+    fareBreakups = FB.withoutBoothLines (SL.edcCollectsParking mbFareSettlementType) (.description) allFareBreakups
 
 recomputePostOfferAmount ::
   (MonadFlow m) =>

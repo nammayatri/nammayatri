@@ -602,7 +602,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
         zip
           (zipWith3 (makeQuoteAPIEntity mbPaymentCharge) quoteList bppDetailList isValueAddNPList)
           ( quotesWithBreakups <&> \(q, fareBreakups) ->
-              let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx q.estimatedFare.amount fareBreakups
+              let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx q.fareSettlementType q.estimatedFare.amount fareBreakups
                   offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
                in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
           )
@@ -664,7 +664,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   estimatesWithCtx <- forM sortedEstimates $ \e -> do
     fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback e.id.getId DFareBreakup.ESTIMATE (pure [])
-    let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx e.estimatedFare.amount fareBreakups
+    let (mbBreakup, offerBaseAmount) = SOffer.offerFareCtx e.fareSettlementType e.estimatedFare.amount fareBreakups
         offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
     pure (e, mbBreakup, offerBasePrice)
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig

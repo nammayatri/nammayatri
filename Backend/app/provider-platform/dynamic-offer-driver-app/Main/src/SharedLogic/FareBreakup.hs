@@ -22,5 +22,5 @@ breakupComponentAmounts :: FareParameters -> Map.Map FareChargeComponent HighPre
 breakupComponentAmounts fareParams =
   let amounts = buildComponentMap fareParams
    in if SL.edcCollectsParking fareParams.fareSettlementType
-        then foldr Map.delete amounts [ParkingChargeComponent, ParkingTaxComponent]
+        then foldr Map.delete amounts [ParkingChargeComponent, ParkingTaxComponent, AirportEntryFeeComponent, AirportEntryFeeTaxComponent]
         else amounts
