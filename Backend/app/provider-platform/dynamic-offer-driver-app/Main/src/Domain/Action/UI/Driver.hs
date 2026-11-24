@@ -1105,6 +1105,9 @@ checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId mbC
   when (isNothing mbActivePurchase || availableBalance <= prepaidThreshold) $
     throwError (NoActivePrepaidPlan personId.getId)
 
+isSharedCabVehicle :: Vehicle -> Bool
+isSharedCabVehicle = (DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)
+
 setActivity ::
   ( BeamFlow m r,
     OnboardingFlow m r,
@@ -1118,7 +1121,9 @@ setActivity ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasShortDurationRetryCfg r c
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
@@ -1221,6 +1226,15 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive && not driverInfo.active) $
           fork "FleetEngine:notifyDriverOnline" $
             FleetEngine.notifyDriverOnline merchantOpCityId personId
+        -- best effort, forked: a vehicle read or LTS failure must not fail or slow go-online/offline
+        when (driverInfo.active /= isActive) $
+          fork "setActivity:sharedCabStandby" $ do
+            res <- withTryCatch "setActivity:sharedCabStandby" $ do
+              mbVehicle <- QVehicle.findById personId
+              whenJust mbVehicle $ \vehicle ->
+                when (isSharedCabVehicle vehicle) $
+                  void $ LTF.sharedCabStandby personId (if isActive then Just vehicle.registrationNo else Nothing)
+            either (\e -> logError $ "shared-cab standby failed for driver " <> personId.getId <> ": " <> show e) pure res
         pure APISuccess.Success
     )
     ( do
@@ -2019,7 +2033,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
-          activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
+          activeRideType = if maybe False isSharedCabVehicle mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
           sharedCabTripActive = Nothing,
           ..
