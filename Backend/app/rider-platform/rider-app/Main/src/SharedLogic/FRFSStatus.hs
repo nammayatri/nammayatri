@@ -58,6 +58,7 @@ import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.ShuttlePass as ShuttlePass
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -467,7 +468,10 @@ withOwnerBoardingOtp callerId booking FRFSTicketService.FRFSTicketBookingStatusA
   | booking.riderId /= callerId = pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = Nothing, ..}
   | otherwise = do
     mbCurrent <- QFRFSTicketBooking.findById booking.id
-    let otp = DBoardingOtp.getBoardingOtp <$> (mbCurrent >>= (.boardingOtp))
+    -- Fall back to the Redis copy when a whole-record booking write reset the row's OTP to an older read.
+    otp <- case DBoardingOtp.getBoardingOtp <$> (mbCurrent >>= (.boardingOtp)) of
+      Just rowOtp -> pure (Just rowOtp)
+      Nothing -> ShuttlePass.storedBoardingOtp booking.id
     pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = otp, ..}
 
 buildFRFSTicketBookingStatusAPIRes ::

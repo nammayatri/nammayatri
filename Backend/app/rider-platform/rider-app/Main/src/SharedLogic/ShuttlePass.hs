@@ -9,6 +9,7 @@ module SharedLogic.ShuttlePass
     ensureBoardingOtp,
     boardingOtpMatches,
     plainOtp,
+    storedBoardingOtp,
   )
 where
 
@@ -117,7 +118,12 @@ ensureBoardingOtp booking = do
 boardingOtpMatches :: DBooking.FRFSTicketBooking -> Text -> Flow Bool
 boardingOtpMatches booking presented
   | Rules.otpMatches (plainOtp booking) presented = pure True
-  | otherwise = (`Rules.otpMatches` presented) <$> Hedis.safeGet (otpKey booking.id)
+  | otherwise = (`Rules.otpMatches` presented) <$> storedBoardingOtp booking.id
+
+-- | The canonical OTP the issue job fixed in Redis. Survives a whole-record booking write that reset the row's
+-- copy to an older read, until the next job run writes it back.
+storedBoardingOtp :: (CacheFlow m r, MonadFlow m) => Id DBooking.FRFSTicketBooking -> m (Maybe Text)
+storedBoardingOtp bookingId = Hedis.safeGet (otpKey bookingId)
 
 otpKey :: Id DBooking.FRFSTicketBooking -> Text
 otpKey bookingId = "ShuttlePass:otp:" <> bookingId.getId
