@@ -486,6 +486,9 @@ FRFSTicketBooking:
     # is every CONFIRMED booking with this rideId. Replaces vehicleTripId once shared cab moves onto runs.
     rideId: Maybe Text
     sharedCabNoShows: Int
+    # Shuttle pass: 4-digit code the rider tells the driver at boarding. Shown only to the booking's owner; stored like
+    # Ride.otp (plain character(4)) since it is short-lived and per-ticket.
+    boardingOtp: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -550,6 +553,7 @@ FRFSTicketBooking:
     overrideType: text
     vehicleTripId: character varying(36)
     rideId: character varying(36)
+    boardingOtp: character(4)
 
   constraints:
     id: PrimaryKey
@@ -694,6 +698,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [rideId]
       where: id
+    updateBoardingOtp:
+      kvFunction: updateOneWithKV
+      params: [boardingOtp]
+      where: id
     # Stamps updatedAt alone: the degrade time the shared-cab sweep window keys on.
     updateUpdatedAtById:
       kvFunction: updateOneWithKV
@@ -705,6 +713,8 @@ FRFSTicketBooking:
     - columns: [waybillNo]
     - columns: [overrideAppliedEntityId]
     - columns: [riderId]
+    # Shuttle daily issue job: "is this term's ticket for day D already issued?" on every run.
+    - columns: [overrideAppliedEntityId, startTime]
 
   extraOperations:
     - EXTRA_QUERY_FILE

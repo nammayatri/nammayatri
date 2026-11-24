@@ -134,6 +134,13 @@ PurchasedPass:
 PurchasedPassPayment:
   tableName: purchased_pass_payment
 
+  types:
+    # A day the rider will not travel on a shuttle term: the daily issue job skips it and the trip goes back on the counter.
+    SkipDay:
+      day: Day
+      reason: Maybe Text
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
   fields:
     id: Id PurchasedPassPayment
     orderId: Id PaymentOrder
@@ -164,24 +171,33 @@ PurchasedPassPayment:
     destinationStopCode: Maybe Text
     maximumOverrideableFarePerTicket: Maybe HighPrecMoney
     validityDays: Maybe Int
+    # Shuttle subscription: the timetable trip (route_stop_time_table.trip_id) this term rides daily. On the payment row
+    # (one row per term) beside sourceStopCode/destinationStopCode, so a renewal can pick a different slot.
+    slotTripId: Maybe Text
+    # Days of this term the rider skipped/paused; read whole by the daily issue job. Small per-term list, so json not a table.
+    skipDays: "[SkipDay]"
 
   beamType:
     benefitDescription: Maybe Text
     clientSdkVersion: Maybe Text
     overrideBenefitConfigJson: Maybe Value
+    skipDays: Maybe Value
 
   fromTType:
     benefitDescription: Kernel.Prelude.fromMaybe ""|I
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     overrideBenefitConfigJson: (overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe)|E
+    skipDays: (Kernel.Prelude.fromMaybe [] (skipDays >>= Kernel.Utils.JSON.valueToMaybe))|E
 
   toTType:
     benefitDescription: Kernel.Prelude.Just|I
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     overrideBenefitConfigJson: (Data.Aeson.toJSON <$> overrideBenefitConfigJson)|E
+    skipDays: (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays))|E
 
   sqlType:
     overrideBenefitConfigJson: jsonb
+    skipDays: jsonb
 
   constraints:
     id: PrimaryKey
@@ -316,6 +332,11 @@ PurchasedPassPayment:
     updateAvailableTripCountById:
       kvFunction: updateOneWithKV
       params: [availableTripCount]
+      where: id
+
+    updateSkipDaysById:
+      kvFunction: updateOneWithKV
+      params: [skipDays]
       where: id
 
     updateActivatedAt:

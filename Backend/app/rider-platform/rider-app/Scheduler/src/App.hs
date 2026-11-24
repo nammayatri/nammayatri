@@ -24,7 +24,7 @@ import qualified "rider-app" Domain.Types.BecknConfig as Fields
 import qualified "rider-app" Domain.Types.Merchant as Fields
 import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import qualified Environment as Fields
-import "rider-app" Environment (AppCfg (..), buildAppEnv)
+import "rider-app" Environment (AppCfg (..), AppEnv, buildAppEnv)
 import qualified "rider-app" Environment as Fields
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -42,7 +42,7 @@ import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
-import Kernel.Types.Flow (runFlowR)
+import Kernel.Types.Flow (FlowR, runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft, handleLeftIO)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
@@ -64,6 +64,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
+import "rider-app" SharedLogic.Scheduler.Jobs.IssueShuttlePassTickets
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -112,8 +113,24 @@ putJobHandlerInListWrapper flowRt env jobHandler =
     runFlowR flowRt {R._optionsLocal = optionsLocal} env $
       ActorInfo.withJobIdActorInfoWrapper jobHandler job
 
-schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
-schedulerHandle flowRt env =
+-- | For a job that runs app-level flows (Environment.Flow of rider-app), on the AppEnv the scheduler builds
+-- at startup instead of the scheduler's own HandlerEnv.
+putAppJobHandlerInListWrapper ::
+  forall t (e :: t).
+  (JobProcessor t, JobInfoProcessor e, SingI e) =>
+  R.FlowRuntime ->
+  AppEnv ->
+  (Job e -> FlowR AppEnv ExecutionResult) ->
+  JobHandlersList t ->
+  JobHandlersList t
+putAppJobHandlerInListWrapper flowRt appEnv jobHandler =
+  putJobHandlerInList $ \job -> liftIO $ do
+    optionsLocal <- MVar.newMVar mempty
+    runFlowR flowRt {R._optionsLocal = optionsLocal} appEnv $
+      ActorInfo.withJobIdActorInfoWrapper jobHandler job
+
+schedulerHandle :: R.FlowRuntime -> HandlerEnv -> AppEnv -> SchedulerHandle RiderJobType
+schedulerHandle flowRt env appEnv =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
       getReadyTasks = QAllJ.getReadyTasks $ Just env.maxShards,
@@ -170,6 +187,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sharedCabAllocationTick
           & putJobHandlerInListWrapper flowRt env sharedCabSessionExpiry
           & putJobHandlerInListWrapper flowRt env sharedCabDegradedSweep
+          & putAppJobHandlerInListWrapper flowRt appEnv issueShuttlePassTickets
     }
 
 runRiderAppScheduler ::
@@ -229,7 +247,7 @@ runRiderAppScheduler configModifier = do
               ]
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerServiceWith (withInMemManagement flowRt' handlerEnv) handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
+    runSchedulerServiceWith (withInMemManagement flowRt' handlerEnv) handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv appEnv
 
 createCAC :: Environment.AppCfg -> IO ()
 createCAC appCfg = do

@@ -8,6 +8,7 @@ imports:
   PassDocumentType: Domain.Types.Pass
   PurchasedPass: Domain.Types.PurchasedPass
   PurchasedPassPayment: Domain.Types.PurchasedPassPayment
+  SkipDay: Domain.Types.PurchasedPassPayment
   StatusType: Domain.Types.PurchasedPass
   HighPrecMoney: Kernel.Types.Common
   ServiceTierType: BecknV2.FRFS.Enums
@@ -56,6 +57,8 @@ types:
     destinationStopCode: Maybe Text
     sourceStopName: Maybe Text
     destinationStopName: Maybe Text
+    slotTripId: Maybe Text
+    skipDays: "[SkipDay]"
     derive: "Show"
 
   PassCalculateFareReq:
@@ -64,6 +67,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
+    slotTripId: Maybe Text
     derive: "Show"
 
   PassCalculateFareResp:
@@ -149,6 +153,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
+    slotTripId: Maybe Text
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
@@ -239,6 +244,16 @@ types:
   SetPassPrefSrcAndDestReq:
     prefSrc: Text
     prefDest: Text
+    derive: "Show"
+
+  # Shuttle subscription: days of the term the rider will not travel. The daily issue job skips them.
+  PassSkipDaysReq:
+    days: "[Day]"
+    reason: Maybe Text
+    derive: "Show"
+
+  PassUnskipDaysReq:
+    days: "[Day]"
     derive: "Show"
 
   PassUploadProfilePictureReq:
@@ -382,6 +397,26 @@ apis:
         mediaId: Id MediaFile
       response:
         type: Text
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/skipDays
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassSkipDaysReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/unskipDays
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassUnskipDaysReq
+      response:
+        type: APISuccess
 
   - POST:
       endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}

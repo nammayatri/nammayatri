@@ -2518,6 +2518,36 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
 -- Returns True when it handled a shuttle booking, so the caller SUPPRESSES the generic
 -- FULFILLMENT_SUCCESS push; returns False for non-shuttle bookings (caller sends the generic push).
 -- Best-effort; never throws.
+-- | Shuttle subscription: the rider's boarding OTP, an hour before departure, with the driver and vehicle when
+-- they are assigned. Template key SHUTTLE_BOARDING_OTP (merchant_push_notification), vars: otp, vehicleNumber,
+-- driverName, driverPhone, pickupTime, source, destination.
+notifyShuttleBoardingOtp ::
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+  Seconds ->
+  UTCTime ->
+  Text ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m ()
+notifyShuttleBoardingOtp timeDiffFromUtc departure otp booking = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let entity = Notification.Entity Notification.Product person.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "SHUTTLE_BOARDING_OTP" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    [ ("otp", otp),
+      ("vehicleNumber", fromMaybe "" booking.vehicleNumber),
+      ("driverName", fromMaybe "" booking.driverName),
+      ("driverPhone", fromMaybe "" booking.driverMobileNumber),
+      ("pickupTime", showLocalTime timeDiffFromUtc departure),
+      ("source", fromMaybe "" booking.fromStationName),
+      ("destination", fromMaybe "" booking.toStationName)
+    ]
+    Nothing
+    Nothing
+
 notifyShuttleBookingConfirmed ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->

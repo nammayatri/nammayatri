@@ -27,6 +27,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
+            boardingOtp = boardingOtp,
             bookingAuthCode = bookingAuthCode,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
@@ -128,6 +129,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
   toTType' (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
+        Beam.boardingOtp = boardingOtp,
         Beam.bookingAuthCode = bookingAuthCode,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,

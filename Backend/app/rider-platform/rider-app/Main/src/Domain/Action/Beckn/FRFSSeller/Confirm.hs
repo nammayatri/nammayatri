@@ -493,6 +493,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       sharedCabNoShows = 0,
       vehicleTripId = Nothing,
       rideId = Nothing,
+      boardingOtp = Nothing,
       _type = journeyType.quoteType,
       bookingAuthCode = Nothing,
       bppBankAccountNumber = Just account.bankAccountNumber,

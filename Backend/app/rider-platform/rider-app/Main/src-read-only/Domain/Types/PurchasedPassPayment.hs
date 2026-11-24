@@ -46,6 +46,8 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    skipDays :: [Domain.Types.PurchasedPassPayment.SkipDay],
+    slotTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
@@ -54,3 +56,5 @@ data PurchasedPassPayment = PurchasedPassPayment
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SkipDay = SkipDay {day :: Data.Time.Calendar.Day, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

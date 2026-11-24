@@ -48,6 +48,7 @@ data JobName
   | PassExpiryReminderMasterTrigger
   | CashRideCashbackPayoutTrigger
   | SendLegalPolicyNotificationTrigger
+  | IssueShuttlePassTicketsTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -176,270 +177,399 @@ data UpsertTicketConfigResp = UpsertTicketConfigResp {unprocessedTicketConfigs :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigFailover :<|> PostMerchantTicketConfigUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantSchedulerRevive :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigAllowedDestinationStates :<|> GetMerchantConfigAllowedDestinationStates :<|> PostMerchantConfigMerchantCreateHelper :<|> GetMerchantRiderConfigEstimatesOrder :<|> PostMerchantRiderConfigEstimatesOrderUpdate :<|> GetMerchantConfigPaymentMethodList :<|> PostMerchantConfigPaymentMethodPaymentChargeUpdate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))
+type API = "merchant" :> (PostMerchantUpdate :<|> (GetMerchantServiceUsageConfig :<|> (PostMerchantServiceConfigMapsUpdate :<|> (PostMerchantServiceUsageConfigMapsUpdate :<|> (PostMerchantServiceConfigSmsUpdate :<|> (PostMerchantServiceUsageConfigSmsUpdate :<|> (PostMerchantConfigOperatingCityCreateHelper :<|> (PostMerchantConfigSpecialLocationUpsert :<|> (GetMerchantConfigSpecialLocationList :<|> (GetMerchantConfigGeometryList :<|> (PutMerchantConfigGeometryUpdate :<|> (PostMerchantSpecialLocationUpsertHelper :<|> (DeleteMerchantSpecialLocationDelete :<|> (PostMerchantSpecialLocationGatesUpsertHelper :<|> (DeleteMerchantSpecialLocationGatesDelete :<|> (PostMerchantConfigTollUpsert :<|> (GetMerchantConfigTollList :<|> (PostMerchantTollUpsert :<|> (DeleteMerchantTollDelete :<|> (PostMerchantConfigFailover :<|> (PostMerchantTicketConfigUpsert :<|> (PostMerchantSchedulerTrigger :<|> (PostMerchantSchedulerRevive :<|> (PostMerchantConfigOperatingCityWhiteList :<|> (PostMerchantConfigAllowedDestinationStates :<|> (GetMerchantConfigAllowedDestinationStates :<|> (PostMerchantConfigMerchantCreateHelper :<|> (GetMerchantRiderConfigEstimatesOrder :<|> (PostMerchantRiderConfigEstimatesOrderUpdate :<|> (GetMerchantConfigPaymentMethodList :<|> (PostMerchantConfigPaymentMethodPaymentChargeUpdate :<|> (PostMerchantConfigDebugLogUpdate :<|> (GetMerchantMerchantMessageCatalog :<|> (PostMerchantMerchantMessageUpsert :<|> (DeleteMerchantMerchantMessage :<|> (PostMerchantCloudUpdate :<|> PostMerchantCloudCityUpdate))))))))))))))))))))))))))))))))))))
 
-type PostMerchantUpdate = ("update" :> ReqBody '[JSON] MerchantUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMerchantUpdate = "update" :> (ReqBody '[JSON] MerchantUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetMerchantServiceUsageConfig = ("serviceUsageConfig" :> Get '[JSON] Dashboard.Common.Merchant.ServiceUsageConfigRes)
+type GetMerchantServiceUsageConfig = "serviceUsageConfig" :> Get '[JSON] Dashboard.Common.Merchant.ServiceUsageConfigRes
 
 type PostMerchantServiceConfigMapsUpdate =
-  ( "serviceConfig" :> "maps" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "serviceConfig"
+    :> ( "maps"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantServiceUsageConfigMapsUpdate =
-  ( "serviceUsageConfig" :> "maps" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceUsageConfigUpdateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "serviceUsageConfig"
+    :> ( "maps"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceUsageConfigUpdateReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantServiceConfigSmsUpdate =
-  ( "serviceConfig" :> "sms" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.SmsServiceConfigUpdateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "serviceConfig"
+    :> ( "sms"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.SmsServiceConfigUpdateReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantServiceUsageConfigSmsUpdate =
-  ( "serviceUsageConfig" :> "sms" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "serviceUsageConfig"
+    :> ( "sms"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantConfigOperatingCityCreate =
-  ( "config" :> "operatingCity" :> "create"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.CreateMerchantOperatingCityReq
-      :> Post '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
-  )
+  "config"
+    :> ( "operatingCity"
+           :> ( "create"
+                  :> ( Kernel.ServantMultipart.MultipartForm
+                         Kernel.ServantMultipart.Tmp
+                         Dashboard.Common.Merchant.CreateMerchantOperatingCityReq
+                         :> Post '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
+                     )
+              )
+       )
 
 type PostMerchantConfigOperatingCityCreateHelper =
-  ( "config" :> "operatingCity" :> "create" :> ReqBody '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT
-      :> Post
-           '[JSON]
-           Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
-  )
+  "config"
+    :> ( "operatingCity"
+           :> ( "create"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT
+                         :> Post
+                              '[JSON]
+                              Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
+                     )
+              )
+       )
 
 type PostMerchantConfigSpecialLocationUpsert =
-  ( "config" :> "specialLocation" :> "upsert"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-      :> Post '[JSON] Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
-  )
+  "config"
+    :> ( "specialLocation"
+           :> ( "upsert"
+                  :> ( Kernel.ServantMultipart.MultipartForm
+                         Kernel.ServantMultipart.Tmp
+                         Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+                         :> Post '[JSON] Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
+                     )
+              )
+       )
 
 type GetMerchantConfigSpecialLocationList =
-  ( "config" :> "specialLocation" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam
-           "locationType"
-           Lib.Types.SpecialLocation.SpecialLocationType
-      :> QueryParam
-           "locationTypes"
-           [Lib.Types.SpecialLocation.SpecialLocationType]
-      :> Get
-           '[JSON]
-           SpecialLocationResp
-  )
+  "config"
+    :> ( "specialLocation"
+           :> ( "list"
+                  :> ( QueryParam "limit" Kernel.Prelude.Int
+                         :> ( QueryParam "offset" Kernel.Prelude.Int
+                                :> ( QueryParam
+                                       "locationType"
+                                       Lib.Types.SpecialLocation.SpecialLocationType
+                                       :> ( QueryParam
+                                              "locationTypes"
+                                              [Lib.Types.SpecialLocation.SpecialLocationType]
+                                              :> Get
+                                                   '[JSON]
+                                                   SpecialLocationResp
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
 type GetMerchantConfigGeometryList =
-  ( "config" :> "geometry" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam
-           "allCities"
-           Kernel.Prelude.Bool
-      :> Get '[JSON] GeometryResp
-  )
+  "config"
+    :> ( "geometry"
+           :> ( "list"
+                  :> ( QueryParam "limit" Kernel.Prelude.Int
+                         :> ( QueryParam "offset" Kernel.Prelude.Int
+                                :> ( QueryParam
+                                       "allCities"
+                                       Kernel.Prelude.Bool
+                                       :> Get '[JSON] GeometryResp
+                                   )
+                            )
+                     )
+              )
+       )
 
 type PutMerchantConfigGeometryUpdate =
-  ( "config" :> "geometry" :> "update"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.UpdateGeometryReq
-      :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "config"
+    :> ( "geometry"
+           :> ( "update"
+                  :> ( Kernel.ServantMultipart.MultipartForm
+                         Kernel.ServantMultipart.Tmp
+                         Dashboard.Common.Merchant.UpdateGeometryReq
+                         :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantSpecialLocationUpsert =
-  ( "specialLocation" :> "upsert"
-      :> QueryParam
-           "specialLocationId"
-           (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
-      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertSpecialLocationReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "specialLocation"
+    :> ( "upsert"
+           :> ( QueryParam
+                  "specialLocationId"
+                  (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
+                  :> ( Kernel.ServantMultipart.MultipartForm
+                         Kernel.ServantMultipart.Tmp
+                         Dashboard.Common.Merchant.UpsertSpecialLocationReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantSpecialLocationUpsertHelper =
-  ( "specialLocation" :> "upsert" :> QueryParam "specialLocationId" (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
-      :> ReqBody
-           '[JSON]
-           Dashboard.Common.Merchant.UpsertSpecialLocationReqT
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "specialLocation"
+    :> ( "upsert"
+           :> ( QueryParam "specialLocationId" (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
+                  :> ( ReqBody
+                         '[JSON]
+                         Dashboard.Common.Merchant.UpsertSpecialLocationReqT
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type DeleteMerchantSpecialLocationDelete =
-  ( "specialLocation" :> Capture "specialLocationId" (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) :> "delete"
-      :> Delete
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "specialLocation"
+    :> ( Capture "specialLocationId" (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
+           :> ( "delete"
+                  :> Delete
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type PostMerchantSpecialLocationGatesUpsert =
-  ( "specialLocation"
-      :> Capture
+  "specialLocation"
+    :> ( Capture
            "specialLocationId"
            (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
-      :> "gates"
-      :> "upsert"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.UpsertSpecialLocationGateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+           :> ( "gates"
+                  :> ( "upsert"
+                         :> ( Kernel.ServantMultipart.MultipartForm
+                                Kernel.ServantMultipart.Tmp
+                                Dashboard.Common.Merchant.UpsertSpecialLocationGateReq
+                                :> Post
+                                     '[JSON]
+                                     Kernel.Types.APISuccess.APISuccess
+                            )
+                     )
+              )
+       )
 
 type PostMerchantSpecialLocationGatesUpsertHelper =
-  ( "specialLocation"
-      :> Capture
+  "specialLocation"
+    :> ( Capture
            "specialLocationId"
            (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
-      :> "gates"
-      :> "upsert"
-      :> ReqBody '[JSON] Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+           :> ( "gates"
+                  :> ( "upsert"
+                         :> ( ReqBody '[JSON] Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT
+                                :> Post
+                                     '[JSON]
+                                     Kernel.Types.APISuccess.APISuccess
+                            )
+                     )
+              )
+       )
 
 type DeleteMerchantSpecialLocationGatesDelete =
-  ( "specialLocation"
-      :> Capture
+  "specialLocation"
+    :> ( Capture
            "specialLocationId"
            (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
-      :> "gates"
-      :> "delete"
-      :> Capture "gateName" Kernel.Prelude.Text
-      :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+           :> ("gates" :> ("delete" :> (Capture "gateName" Kernel.Prelude.Text :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)))
+       )
 
 type PostMerchantConfigTollUpsert =
-  ( "config" :> "toll" :> "upsert" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertTollCsvReq
-      :> Post
-           '[JSON]
-           Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
-  )
+  "config"
+    :> ( "toll"
+           :> ( "upsert"
+                  :> ( Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertTollCsvReq
+                         :> Post
+                              '[JSON]
+                              Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
+                     )
+              )
+       )
 
-type GetMerchantConfigTollList = ("config" :> "toll" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] TollListResp)
+type GetMerchantConfigTollList = "config" :> ("toll" :> ("list" :> (QueryParam "limit" Kernel.Prelude.Int :> (QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] TollListResp))))
 
 type PostMerchantTollUpsert =
-  ( "toll" :> "upsert" :> QueryParam "tollId" (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) :> ReqBody '[JSON] Dashboard.Common.Merchant.UpsertTollReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "toll"
+    :> ( "upsert"
+           :> ( QueryParam "tollId" (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll)
+                  :> ( ReqBody
+                         '[JSON]
+                         Dashboard.Common.Merchant.UpsertTollReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
-type DeleteMerchantTollDelete = ("toll" :> Capture "tollId" (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type DeleteMerchantTollDelete = "toll" :> (Capture "tollId" (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) :> ("delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type PostMerchantConfigFailover =
-  ( "config" :> Capture "configName" Dashboard.Common.Merchant.ConfigNames :> "failover"
-      :> ReqBody
-           '[JSON]
-           Dashboard.Common.Merchant.ConfigFailoverReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "config"
+    :> ( Capture "configName" Dashboard.Common.Merchant.ConfigNames
+           :> ( "failover"
+                  :> ( ReqBody
+                         '[JSON]
+                         Dashboard.Common.Merchant.ConfigFailoverReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 type PostMerchantTicketConfigUpsert =
-  ( "ticket" :> "config" :> "upsert" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UpsertTicketConfigReq
-      :> Post
-           '[JSON]
-           UpsertTicketConfigResp
-  )
+  "ticket"
+    :> ( "config"
+           :> ( "upsert"
+                  :> ( Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UpsertTicketConfigReq
+                         :> Post
+                              '[JSON]
+                              UpsertTicketConfigResp
+                     )
+              )
+       )
 
-type PostMerchantSchedulerTrigger = ("scheduler" :> "trigger" :> ReqBody '[JSON] SchedulerTriggerReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMerchantSchedulerTrigger = "scheduler" :> ("trigger" :> (ReqBody '[JSON] SchedulerTriggerReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type PostMerchantSchedulerRevive = ("scheduler" :> "revive" :> ReqBody '[JSON] ReviveSchedulerJobsReq :> Post '[JSON] ReviveSchedulerJobsRes)
+type PostMerchantSchedulerRevive = "scheduler" :> ("revive" :> (ReqBody '[JSON] ReviveSchedulerJobsReq :> Post '[JSON] ReviveSchedulerJobsRes))
 
 type PostMerchantConfigOperatingCityWhiteList =
-  ( "config" :> "operatingCity" :> "whiteList" :> ReqBody '[JSON] Dashboard.Common.Merchant.WhiteListOperatingCityReq
-      :> Post
-           '[JSON]
-           Dashboard.Common.Merchant.WhiteListOperatingCityRes
-  )
+  "config"
+    :> ( "operatingCity"
+           :> ( "whiteList"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.WhiteListOperatingCityReq
+                         :> Post
+                              '[JSON]
+                              Dashboard.Common.Merchant.WhiteListOperatingCityRes
+                     )
+              )
+       )
 
 type PostMerchantConfigAllowedDestinationStates =
-  ( "config" :> "allowedDestinationStates" :> ReqBody '[JSON] Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "config"
+    :> ( "allowedDestinationStates"
+           :> ( ReqBody '[JSON] Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
 type GetMerchantConfigAllowedDestinationStates =
-  ( "config" :> "allowedDestinationStates" :> MandatoryQueryParam "stateName" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           Dashboard.Common.Merchant.AllowedDestinationStatesResp
-  )
+  "config"
+    :> ( "allowedDestinationStates"
+           :> ( MandatoryQueryParam "stateName" Kernel.Prelude.Text
+                  :> Get
+                       '[JSON]
+                       Dashboard.Common.Merchant.AllowedDestinationStatesResp
+              )
+       )
 
 type PostMerchantConfigMerchantCreate =
-  ( "config" :> "merchant" :> "create"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.CreateMerchantOperatingCityReq
-      :> Post '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
-  )
+  "config"
+    :> ( "merchant"
+           :> ( "create"
+                  :> ( Kernel.ServantMultipart.MultipartForm
+                         Kernel.ServantMultipart.Tmp
+                         Dashboard.Common.Merchant.CreateMerchantOperatingCityReq
+                         :> Post '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
+                     )
+              )
+       )
 
 type PostMerchantConfigMerchantCreateHelper =
-  ( "config" :> "merchant" :> "create" :> ReqBody '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT
-      :> Post
-           '[JSON]
-           Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
-  )
+  "config"
+    :> ( "merchant"
+           :> ( "create"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT
+                         :> Post
+                              '[JSON]
+                              Dashboard.Common.Merchant.CreateMerchantOperatingCityRes
+                     )
+              )
+       )
 
-type GetMerchantRiderConfigEstimatesOrder = ("riderConfig" :> "estimatesOrder" :> Get '[JSON] RiderConfigEstimatesOrderRes)
+type GetMerchantRiderConfigEstimatesOrder = "riderConfig" :> ("estimatesOrder" :> Get '[JSON] RiderConfigEstimatesOrderRes)
 
 type PostMerchantRiderConfigEstimatesOrderUpdate =
-  ( "riderConfig" :> "estimatesOrder" :> "update" :> ReqBody '[JSON] UpdateRiderConfigEstimatesOrderReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "riderConfig"
+    :> ( "estimatesOrder"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] UpdateRiderConfigEstimatesOrderReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
-type GetMerchantConfigPaymentMethodList = ("config" :> "paymentMethod" :> "list" :> Get '[JSON] PaymentMethodChargeListRes)
+type GetMerchantConfigPaymentMethodList = "config" :> ("paymentMethod" :> ("list" :> Get '[JSON] PaymentMethodChargeListRes))
 
 type PostMerchantConfigPaymentMethodPaymentChargeUpdate =
-  ( "config" :> "paymentMethod" :> Capture "paymentMethodId" Kernel.Prelude.Text :> "paymentCharge" :> "update"
-      :> ReqBody
-           '[JSON]
-           UpdatePaymentMethodChargeReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
+  "config"
+    :> ( "paymentMethod"
+           :> ( Capture "paymentMethodId" Kernel.Prelude.Text
+                  :> ( "paymentCharge"
+                         :> ( "update"
+                                :> ( ReqBody
+                                       '[JSON]
+                                       UpdatePaymentMethodChargeReq
+                                       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                                   )
+                            )
+                     )
+              )
+       )
 
 type PostMerchantConfigDebugLogUpdate =
-  ( "config" :> "debugLog" :> "update" :> ReqBody '[JSON] Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  "config"
+    :> ( "debugLog"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
-type GetMerchantMerchantMessageCatalog = ("merchantMessage" :> "catalog" :> Get '[JSON] RiderMerchantMessageCatalogResp)
+type GetMerchantMerchantMessageCatalog = "merchantMessage" :> ("catalog" :> Get '[JSON] RiderMerchantMessageCatalogResp)
 
-type PostMerchantMerchantMessageUpsert = ("merchantMessage" :> "upsert" :> ReqBody '[JSON] UpsertRiderMerchantMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMerchantMerchantMessageUpsert = "merchantMessage" :> ("upsert" :> (ReqBody '[JSON] UpsertRiderMerchantMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type DeleteMerchantMerchantMessage = ("merchantMessage" :> Capture "messageKey" Kernel.Prelude.Text :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type DeleteMerchantMerchantMessage = "merchantMessage" :> (Capture "messageKey" Kernel.Prelude.Text :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostMerchantCloudUpdate = ("cloud" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MerchantCloudUpdateReq :> Post '[JSON] Dashboard.Common.Merchant.MerchantCloudUpdateRes)
+type PostMerchantCloudUpdate = "cloud" :> ("update" :> (ReqBody '[JSON] Dashboard.Common.Merchant.MerchantCloudUpdateReq :> Post '[JSON] Dashboard.Common.Merchant.MerchantCloudUpdateRes))
 
 type PostMerchantCloudCityUpdate =
-  ( "cloud" :> "city" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateReq
-      :> Post
-           '[JSON]
-           Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateRes
-  )
+  "cloud"
+    :> ( "city"
+           :> ( "update"
+                  :> ( ReqBody '[JSON] Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateReq
+                         :> Post
+                              '[JSON]
+                              Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateRes
+                     )
+              )
+       )
 
 data MerchantAPIs = MerchantAPIs
   { postMerchantUpdate :: MerchantUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -454,22 +584,22 @@ data MerchantAPIs = MerchantAPIs
         Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
       ) ->
       EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
-    getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.SpecialLocationType] -> EulerHS.Types.EulerClient SpecialLocationResp,
-    getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient GeometryResp,
+    getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> (Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.SpecialLocationType] -> EulerHS.Types.EulerClient SpecialLocationResp))),
+    getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient GeometryResp)),
     putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> (Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     deleteMerchantSpecialLocationDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> (Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postMerchantConfigTollUpsert ::
       ( Data.ByteString.Lazy.ByteString,
         Dashboard.Common.Merchant.UpsertTollCsvReq
       ) ->
       EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
-    getMerchantConfigTollList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TollListResp,
-    postMerchantTollUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) -> Dashboard.Common.Merchant.UpsertTollReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigTollList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TollListResp),
+    postMerchantTollUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) -> (Dashboard.Common.Merchant.UpsertTollReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     deleteMerchantTollDelete :: Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMerchantConfigFailover :: Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFailover :: Dashboard.Common.Merchant.ConfigNames -> (Dashboard.Common.Merchant.ConfigFailoverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postMerchantTicketConfigUpsert :: (Data.ByteString.Lazy.ByteString, UpsertTicketConfigReq) -> EulerHS.Types.EulerClient UpsertTicketConfigResp,
     postMerchantSchedulerTrigger :: SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSchedulerRevive :: ReviveSchedulerJobsReq -> EulerHS.Types.EulerClient ReviveSchedulerJobsRes,
@@ -480,7 +610,7 @@ data MerchantAPIs = MerchantAPIs
     getMerchantRiderConfigEstimatesOrder :: EulerHS.Types.EulerClient RiderConfigEstimatesOrderRes,
     postMerchantRiderConfigEstimatesOrderUpdate :: UpdateRiderConfigEstimatesOrderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getMerchantConfigPaymentMethodList :: EulerHS.Types.EulerClient PaymentMethodChargeListRes,
-    postMerchantConfigPaymentMethodPaymentChargeUpdate :: Kernel.Prelude.Text -> UpdatePaymentMethodChargeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigPaymentMethodPaymentChargeUpdate :: Kernel.Prelude.Text -> (UpdatePaymentMethodChargeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postMerchantConfigDebugLogUpdate :: Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getMerchantMerchantMessageCatalog :: EulerHS.Types.EulerClient RiderMerchantMessageCatalogResp,
     postMerchantMerchantMessageUpsert :: UpsertRiderMerchantMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -489,7 +619,7 @@ data MerchantAPIs = MerchantAPIs
     postMerchantCloudCityUpdate :: Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateReq -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateRes
   }
 
-mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
+mkMerchantAPIs :: Client EulerHS.Types.EulerClient API -> MerchantAPIs
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
     postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantConfigSpecialLocationUpsert :<|> getMerchantConfigSpecialLocationList :<|> getMerchantConfigGeometryList :<|> putMerchantConfigGeometryUpdate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigTollUpsert :<|> getMerchantConfigTollList :<|> postMerchantTollUpsert :<|> deleteMerchantTollDelete :<|> postMerchantConfigFailover :<|> postMerchantTicketConfigUpsert :<|> postMerchantSchedulerTrigger :<|> postMerchantSchedulerRevive :<|> postMerchantConfigOperatingCityWhiteList :<|> postMerchantConfigAllowedDestinationStates :<|> getMerchantConfigAllowedDestinationStates :<|> postMerchantConfigMerchantCreate :<|> getMerchantRiderConfigEstimatesOrder :<|> postMerchantRiderConfigEstimatesOrderUpdate :<|> getMerchantConfigPaymentMethodList :<|> postMerchantConfigPaymentMethodPaymentChargeUpdate :<|> postMerchantConfigDebugLogUpdate :<|> getMerchantMerchantMessageCatalog :<|> postMerchantMerchantMessageUpsert :<|> deleteMerchantMerchantMessage :<|> postMerchantCloudUpdate :<|> postMerchantCloudCityUpdate = merchantClient

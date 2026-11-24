@@ -284,3 +284,20 @@ findSharedCabPlatesUpdatedSince plates statuses since =
 findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id FRFSTicketBooking] -> m [FRFSTicketBooking]
 findAllByIds [] = pure []
 findAllByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (getId <$> ids)]
+
+-- | A pass term's bookings starting in [dayStart, dayEnd): the shuttle daily issue job's "already issued for day D?"
+-- check, so a rerun never issues a second ticket. overrideAppliedEntityId is the PurchasedPassPayment id.
+findAllByOverrideAppliedEntityIdAndStartTimeRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [FRFSTicketBooking]
+findAllByOverrideAppliedEntityIdAndStartTimeRange entityId dayStart dayEnd =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.overrideAppliedEntityId $ Se.Eq (Just entityId),
+          Se.Is Beam.startTime $ Se.GreaterThanOrEq (Just dayStart),
+          Se.Is Beam.startTime $ Se.LessThan (Just dayEnd)
+        ]
+    ]

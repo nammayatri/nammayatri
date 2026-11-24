@@ -41,6 +41,8 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     personId :: B.C f Kernel.Prelude.Text,
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     purchasedPassId :: B.C f Kernel.Prelude.Text,
+    skipDays :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    slotTripId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sourceStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,

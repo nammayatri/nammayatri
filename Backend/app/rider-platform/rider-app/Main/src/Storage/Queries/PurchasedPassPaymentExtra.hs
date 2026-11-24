@@ -182,3 +182,26 @@ updateAvailableTripCountIfLowerById availableTripCount id = do
             ]
         ]
     ]
+
+-- | Shuttle subscription terms of a city that cover the given day: Active or PreBooked, with a slot, startDate <= day <= endDate.
+-- Read by the ticket issue job; paged on id.
+findActiveShuttleTermsOnDay ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Int ->
+  Int ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findActiveShuttleTermsOnDay merchantOperatingCityId day limit offset =
+  findAllWithOptionsDb
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.slotTripId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.startDate $ Se.LessThanOrEq day,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq day
+        ]
+    ]
+    (Se.Asc Beam.id)
+    (Just limit)
+    (Just offset)

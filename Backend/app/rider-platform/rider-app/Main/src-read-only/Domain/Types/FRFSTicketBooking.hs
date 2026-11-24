@@ -28,6 +28,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    boardingOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bookingAuthCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

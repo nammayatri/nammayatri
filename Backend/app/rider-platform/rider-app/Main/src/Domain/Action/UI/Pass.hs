@@ -22,6 +22,8 @@ module Domain.Action.UI.Pass
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
+    postMultimodalPassSkipDays,
+    postMultimodalPassUnskipDays,
     postMultimodalPassUploadProfilePictureV1,
     listPassCatalog,
     createPassCatalog,
@@ -121,6 +123,7 @@ import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.PersonPTStats as SPUS
 import qualified SharedLogic.RoutePassPricing as RoutePassPricing
 import qualified SharedLogic.SharedCab as SharedCab
+import qualified SharedLogic.ShuttlePassSkipDays as ShuttlePassSkipDays
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
@@ -253,7 +256,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
       else pure Nothing
   when (pass.frfsPriceOverrideApplicable == Just True && isNothing mbOverrideEntry) $
     throwError (InvalidRequest "This pass is not available right now")
-  let selection = fromMaybe (RoutePassPricing.PassPurchaseSelection Nothing Nothing Nothing Nothing Nothing) mbSelection
+  let selection = fromMaybe (RoutePassPricing.PassPurchaseSelection Nothing Nothing Nothing Nothing Nothing Nothing) mbSelection
   mbRouteTerm <- case mbOverrideEntry of
     Just (FRFSPassOverride.PassTicketBenefit config) -> Just <$> RoutePassPricing.resolveRoutePassTerm person pass config selection
     _ -> pure Nothing
@@ -431,6 +434,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             destinationStopCode = (.destinationStopCode) <$> mbRouteTerm,
             maximumOverrideableFarePerTicket = (.referenceFare) <$> mbRouteTerm,
             validityDays,
+            slotTripId = mbRouteTerm >>= (.slotTripId),
+            skipDays = [],
             createdAt = now,
             updatedAt = now
           }
@@ -559,7 +564,8 @@ postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
           destinationStopCode = req.destinationStopCode,
           tripCount = req.tripCount,
           validityDays = req.validityDays,
-          roundTrip = req.roundTrip
+          roundTrip = req.roundTrip,
+          slotTripId = req.slotTripId
         }
 
 -- Generate Redis lock key for pass purchase
@@ -2070,7 +2076,9 @@ buildRoutePassAPIEntity mbPass payment
           { sourceStopCode = payment.sourceStopCode,
             destinationStopCode = payment.destinationStopCode,
             sourceStopName,
-            destinationStopName
+            destinationStopName,
+            slotTripId = payment.slotTripId,
+            skipDays = payment.skipDays
           }
 
 -- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
@@ -2466,6 +2474,32 @@ postMultimodalPassSetPrefSrcAndDest (mbCallerPersonId, merchantId) purchasedPass
 
   return APISuccess.Success
 
+postMultimodalPassSkipDays ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPass.PurchasedPass ->
+    PassAPI.PassSkipDaysReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassSkipDays (mbCallerPersonId, merchantId) purchasedPassId req = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  ShuttlePassSkipDays.skipDays personId merchantId purchasedPassId req.days req.reason
+  pure APISuccess.Success
+
+postMultimodalPassUnskipDays ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPass.PurchasedPass ->
+    PassAPI.PassUnskipDaysReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassUnskipDays (mbCallerPersonId, merchantId) purchasedPassId req = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  ShuttlePassSkipDays.unskipDays personId merchantId purchasedPassId req.days
+  pure APISuccess.Success
+
 postMultimodalPassCalculateFare ::
   ( Kernel.Prelude.Maybe (Id.Id DP.Person),
     Id.Id DM.Merchant
@@ -2498,7 +2532,8 @@ postMultimodalPassCalculateFare (mbPersonId, merchantId) passId req = do
           destinationStopCode = Just req.destinationStopCode,
           tripCount = req.tripCount,
           validityDays = req.validityDays,
-          roundTrip = req.roundTrip
+          roundTrip = req.roundTrip,
+          slotTripId = req.slotTripId
         }
   pure
     PassAPI.PassCalculateFareResp

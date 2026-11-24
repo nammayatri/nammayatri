@@ -86,6 +86,7 @@ data RiderJobType
   | SharedCabSessionExpiry
   | SharedCabDegradedSweep
   | SendRideInvoiceEmail
+  | IssueShuttlePassTickets
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -139,6 +140,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
   restoreAnyJobInfo SSharedCabSessionExpiry jobData = AnyJobInfo <$> restoreJobInfo SSharedCabSessionExpiry jobData
   restoreAnyJobInfo SSharedCabDegradedSweep jobData = AnyJobInfo <$> restoreJobInfo SSharedCabDegradedSweep jobData
+  restoreAnyJobInfo SIssueShuttlePassTickets jobData = AnyJobInfo <$> restoreJobInfo SIssueShuttlePassTickets jobData
   restoreAnyJobInfo SSendRideInvoiceEmail jobData = AnyJobInfo <$> restoreJobInfo SSendRideInvoiceEmail jobData
 
 instance JobInfoProcessor 'Daily
@@ -573,3 +575,16 @@ data SendRideInvoiceEmailJobData = SendRideInvoiceEmailJobData
 instance JobInfoProcessor 'SendRideInvoiceEmail
 
 type instance JobContent 'SendRideInvoiceEmail = SendRideInvoiceEmailJobData
+
+-- | Shuttle subscription: issues each day's ticket at the change cutoff (5 hours before the slot departs).
+-- Runs every 15 minutes per city while autoSchedule is set.
+data IssueShuttlePassTicketsJobData = IssueShuttlePassTicketsJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    autoSchedule :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'IssueShuttlePassTickets
+
+type instance JobContent 'IssueShuttlePassTickets = IssueShuttlePassTicketsJobData

@@ -88,6 +88,9 @@ updateBPPPaymentIdById bppPaymentId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppPaymentId bppPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateBoardingOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateBoardingOtp boardingOtp id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.boardingOtp boardingOtp, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateBppBankDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
@@ -262,6 +265,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.boardingOtp boardingOtp,
       Se.Set Beam.bookingAuthCode bookingAuthCode,
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,

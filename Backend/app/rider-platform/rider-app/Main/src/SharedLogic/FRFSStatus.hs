@@ -459,6 +459,11 @@ getMerchantOperatingCityFromBooking tBooking = do
   let moCityId = tBooking.merchantOperatingCityId
   CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)
 
+-- | The shuttle boarding OTP is shown only to the booking's owner, on their own status call.
+withOwnerBoardingOtp :: Id Domain.Types.Person.Person -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.FRFSTicketBookingStatusAPIRes -> FRFSTicketService.FRFSTicketBookingStatusAPIRes
+withOwnerBoardingOtp callerId booking FRFSTicketService.FRFSTicketBookingStatusAPIRes {..} =
+  FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = if booking.riderId == callerId then booking.boardingOtp else Nothing, ..}
+
 buildFRFSTicketBookingStatusAPIRes ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -509,6 +514,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         appliedPassId = mbAppliedPassPayment >>= (.passId),
         appliedPassName = mbAppliedPassPayment >>= (.passName),
         startTime = booking.startTime,
+        boardingOtp = Nothing,
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,

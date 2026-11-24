@@ -689,6 +689,7 @@ library
       SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
+      SharedLogic.Scheduler.Jobs.IssueShuttlePassTickets
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -761,6 +762,8 @@ library
       SharedLogic.SharedCab.WalkUp
       SharedLogic.SharedRoute.Knobs
       SharedLogic.SharedRoute.Passenger
+      SharedLogic.ShuttlePass
+      SharedLogic.ShuttlePassSkipDays
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin
       SharedLogic.SosLocationTracking
