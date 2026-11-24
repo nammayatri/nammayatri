@@ -1321,7 +1321,7 @@ clearDuesByWalletTopup (driverId, merchantId, mocId) = do
 
 -- | Shared helper to build a FinanceCtx for driver wallet recharges (topup/cash).
 --   Populates merchant/supplier metadata so invoices and analytics have rich context.
--- TODO: Add supplier name and GSTIN
+--   Supplier name/address come from transporterConfig.invoiceConfig (wallet* fields).
 mkDriverWalletFinanceCtx ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -1334,8 +1334,9 @@ mkDriverWalletFinanceCtx ::
   Currency ->
   Text -> -- referenceId (order id or booth receipt id)
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  Maybe DTConf.InvoiceConfig -> -- caller-resolved transporterConfig.invoiceConfig
   m FinanceCtx
-mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGateEnabled = do
+mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGateEnabled mbInvoiceConfig = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
   let mName = Just merchant.name
@@ -1347,8 +1348,9 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
             <> show merchantOpCity.state
             <> ", "
             <> show merchantOpCity.country
-      supplierName = Nothing
-      supplierGSTIN = Nothing
+      supplierName = (mbInvoiceConfig >>= (.walletInvoiceSupplierName)) <|> mName
+      supplierAddress = (mbInvoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> address
+      supplierGSTIN = merchantOpCity.gstin <|> merchant.gstin
       supplierId = Nothing
   pure
     FinanceCtx
@@ -1369,7 +1371,7 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
         supplierGSTIN = supplierGSTIN,
         merchantGstin = Nothing,
         supplierVatNumber = Nothing,
-        supplierAddress = Nothing,
+        supplierAddress = supplierAddress,
         merchantVatNumber = Nothing,
         supplierId = supplierId,
         panOfParty = Nothing,
@@ -1418,7 +1420,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
       merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
       let currency = merchantOpCity.currency
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.invoiceConfig
       let cashRechargeInvoiceConfig =
             InvoiceConfig
               { invoiceType = SubscriptionPurchase,
