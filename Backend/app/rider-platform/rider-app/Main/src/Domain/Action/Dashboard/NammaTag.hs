@@ -947,6 +947,7 @@ getNammaTagConfigPilotAlwaysOnList merchantShortId opCity domain = do
 
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
+  LYTU.throwIfSensitiveConfigType configType
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
   merchant <- findMerchantByShortId _merchantShortId
   let merchantOpCityId = merchantOperatingCity.id
@@ -957,6 +958,7 @@ getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
 -- table directly instead of the effective (in-mem + Redis + rollout) value.
 getNammaTagConfigPilotGetTableDataFromDB :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
 getNammaTagConfigPilotGetTableDataFromDB _merchantShortId _opCity configType = do
+  LYTU.throwIfSensitiveConfigType configType
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
   merchant <- findMerchantByShortId _merchantShortId
   let merchantOpCityId = merchantOperatingCity.id
@@ -1029,6 +1031,7 @@ postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain
 postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity configType req = do
   unless (configType == req.configType) $
     throwError $ InvalidRequest "configType in the path does not match the request body"
+  LYTU.throwIfSensitiveConfigType configType
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mocId = merchantOperatingCity.id.getId
       dims = parseDims req.dimensions
