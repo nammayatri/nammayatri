@@ -566,8 +566,7 @@ onUpdate = \case
     -- driver can pick the trip up while the rider still sees a driver on the way.
     -- ride/list keeps returning the old booking (flagged) while the Redis key lives; the
     -- expiry job sends the held push if nobody was assigned in time.
-    mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-    let windowSeconds = fromMaybe (Seconds 0) (mbRiderConfig >>= (.silentReallocationWindowSeconds))
+    let windowSeconds = fromMaybe (Seconds 0) searchReq.silentReallocationWindowSeconds
         silentWindowEligible =
           windowSeconds.getSeconds > 0
             && cancellationSource == DBCR.ByDriver

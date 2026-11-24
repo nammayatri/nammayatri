@@ -96,6 +96,7 @@ data SearchRequest = SearchRequest
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
     selectedPaymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
+    silentReallocationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
     syncSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
