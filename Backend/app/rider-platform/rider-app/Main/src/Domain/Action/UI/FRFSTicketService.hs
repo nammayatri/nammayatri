@@ -1245,7 +1245,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId latestBooking.quoteId
         buildFRFSTicketBookingStatusAPIRes latestBooking quoteCategories Nothing
   withOwnerBoardingOtp personId booking
-    <$> frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes) booking person (\_ _ -> pure ())
+    =<< frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes) booking person (\_ _ -> pure ())
   where
     withPaymentStatusResponseHandler ::
       ( EncFlow m r,

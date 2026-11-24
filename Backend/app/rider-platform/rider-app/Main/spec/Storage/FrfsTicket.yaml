@@ -51,6 +51,7 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
+  BoardingOtp: Domain.Types.BoardingOtp
 
 FRFSSearch:
   tableName: frfs_search
@@ -487,8 +488,9 @@ FRFSTicketBooking:
     rideId: Maybe Text
     sharedCabNoShows: Int
     # Shuttle pass: 4-digit code the rider tells the driver at boarding. Shown only to the booking's owner; stored like
-    # Ride.otp (plain character(4)) since it is short-lived and per-ticket.
-    boardingOtp: Maybe Text
+    # Ride.otp (plain character(4)) since it is short-lived and per-ticket. BoardingOtp's Show is redacted so logs of
+    # the whole booking never carry it.
+    boardingOtp: Maybe BoardingOtp
 
   default:
     customerCancelled: "false"
@@ -515,6 +517,7 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Text
     clientBundleVersion: Maybe Text
     sharedCabNoShows: Maybe Int
+    boardingOtp: Maybe Text
 
   types:
     CashbackStatus:
@@ -531,6 +534,7 @@ FRFSTicketBooking:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
     sharedCabNoShows: Kernel.Prelude.fromMaybe 0|I
+    boardingOtp: (Domain.Types.BoardingOtp.BoardingOtp <$> boardingOtp)|E
 
   toTType:
     price: Kernel.Types.Price.getPriceAmount|I
@@ -543,6 +547,7 @@ FRFSTicketBooking:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
     sharedCabNoShows: Kernel.Prelude.Just|I
+    boardingOtp: (Domain.Types.BoardingOtp.getBoardingOtp <$> boardingOtp)|E
 
   sqlType:
     busLocationData: "json"

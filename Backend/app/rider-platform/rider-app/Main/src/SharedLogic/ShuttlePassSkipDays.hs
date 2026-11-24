@@ -86,13 +86,17 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
         pure (term.id, [(day, mbDeparture)])
       Nothing -> throwError (InvalidRequest $ "No shuttle term of this pass covers " <> show day)
   forM_ (Map.toList $ Map.fromListWith (<>) termByDay) $ \(termId, termDays) ->
-    Redis.whenWithLockRedisAndReturnValue (lockKey termId) 10 (updateFresh timeDiff termId termDays) >>= \case
+    Redis.whenWithLockRedisAndReturnValue (ShuttlePass.termLockKey termId) 10 (updateFresh timeDiff termId termDays) >>= \case
       Left _ -> throwError (InvalidRequest "This pass is being updated, please try again")
       Right () -> pure ()
   where
+    -- Under the lock: a fresh clock (the departure lookups above take time, and the cutoff may have passed
+    -- meanwhile) and a fresh read of the term.
     updateFresh timeDiff termId termDays = do
+      now <- getCurrentTime
+      let today = Rules.localDay timeDiff now
+      forM_ termDays $ \(day, mbDeparture) ->
+        unless (Rules.dayOpenForChange now today mbDeparture day) $
+          throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
       term <- QPPP.findByPrimaryKey termId >>= fromMaybeM (InvalidRequest $ "Term not found: " <> termId.getId)
       update timeDiff term termDays
-
-lockKey :: Id DPPP.PurchasedPassPayment -> Text
-lockKey termId = "ShuttlePassSkipDays:PurchasedPassPaymentId:" <> termId.getId

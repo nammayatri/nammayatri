@@ -5,12 +5,16 @@ module SharedLogic.ShuttlePass
     slotDepartureOn,
     ticketsForDay,
     recordIssued,
-    newBoardingOtp,
+    termLockKey,
+    ensureBoardingOtp,
+    boardingOtpMatches,
+    plainOtp,
   )
 where
 
 import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import qualified Data.Time as DT
+import qualified Domain.Types.BoardingOtp as DBoardingOtp
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -21,6 +25,7 @@ import Environment (Flow)
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -83,5 +88,40 @@ recordIssued term day bookingId = Hedis.setExp (issuedKey term.id day) bookingId
 issuedKey :: Id DPPP.PurchasedPassPayment -> DT.Day -> Text
 issuedKey termId day = "ShuttlePass:issued:" <> termId.getId <> ":" <> show day
 
-newBoardingOtp :: Flow Text
-newBoardingOtp = Rules.formatOtp <$> liftIO (randomRIO (0, 9999 :: Int))
+-- | The lock both the skip/unskip request and the issue job take for a term, so a day cannot be skipped and
+-- ticketed at the same time.
+termLockKey :: Id DPPP.PurchasedPassPayment -> Text
+termLockKey termId = "ShuttlePass:term:" <> termId.getId
+
+plainOtp :: DBooking.FRFSTicketBooking -> Maybe Text
+plainOtp booking = DBoardingOtp.getBoardingOtp <$> booking.boardingOtp
+
+-- | The booking's one boarding OTP. The first caller fixes it in Redis (set-if-absent), so two concurrent runs
+-- agree on the same code; it is seeded from the row when the row already has one. The row is (re)written when it
+-- differs, which also restores a code that a whole-record booking write replaced with an older read.
+ensureBoardingOtp :: DBooking.FRFSTicketBooking -> Flow Text
+ensureBoardingOtp booking = do
+  let key = otpKey booking.id
+  mbCanonical <- Hedis.safeGet key
+  otp <- case mbCanonical of
+    Just canonical -> pure canonical
+    Nothing -> do
+      candidate <- maybe (Rules.formatOtp <$> liftIO (randomRIO (0, 9999 :: Int))) pure (plainOtp booking)
+      won <- Hedis.setNxExpire key otpTtl candidate
+      if won then pure candidate else Hedis.safeGet key >>= fromMaybeM (InternalError "boarding OTP vanished")
+  unless (plainOtp booking == Just otp) $
+    QFRFSTicketBooking.updateBoardingOtp (Just (DBoardingOtp.BoardingOtp otp)) booking.id
+  pure otp
+
+-- | The driver's code against the booking's OTP: the row's value, or the canonical one when the row was overwritten.
+boardingOtpMatches :: DBooking.FRFSTicketBooking -> Text -> Flow Bool
+boardingOtpMatches booking presented
+  | Rules.otpMatches (plainOtp booking) presented = pure True
+  | otherwise = (`Rules.otpMatches` presented) <$> Hedis.safeGet (otpKey booking.id)
+
+otpKey :: Id DBooking.FRFSTicketBooking -> Text
+otpKey bookingId = "ShuttlePass:otp:" <> bookingId.getId
+
+-- | Three days: longer than any ticket from issue to departure.
+otpTtl :: Int
+otpTtl = 3 * 86400

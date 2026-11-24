@@ -32,6 +32,7 @@ import qualified SharedLogic.ShuttlePass as ShuttlePass
 import qualified SharedLogic.ShuttlePassRules as Rules
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.PurchasedPassPayment as QPPP
 import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
 import qualified Tools.Notifications as Notify
 
@@ -73,37 +74,45 @@ issueForTerm timeDiff now term day
         pure False
       Just departure
         | not (Rules.inIssueWindow now departure) -> pure False
-        | otherwise -> do
-          existing <- ShuttlePass.ticketsForDay timeDiff term day (Just departure)
-          (issued, tickets) <-
-            if null existing
-              then
-                book term day >>= \case
-                  Just booking -> pure (True, [booking])
-                  Nothing -> pure (False, [])
-              else pure (False, existing)
-          forM_ tickets $ \booking -> do
-            otp <- ensureOtp booking
-            when (Rules.otpDue now departure (isJust booking.vehicleNumber)) $
-              sendOtpOnce timeDiff departure booking otp
-          pure issued
+        | otherwise ->
+          -- The term lock is the one skip/unskip takes, so a day cannot be skipped while its ticket is being
+          -- booked. Held for as long as instant-book's own lock (600s), so it cannot expire mid-booking.
+          Hedis.whenWithLockRedisAndReturnValue (ShuttlePass.termLockKey term.id) 600 (issueLocked departure) >>= \case
+            Left _ -> do
+              logInfo $ "IssueShuttlePassTickets: term busy (skip/unskip in progress), next run retries term=" <> term.id.getId
+              pure False
+            Right (issued, tickets) -> do
+              forM_ tickets $ \booking -> do
+                otp <- ShuttlePass.ensureBoardingOtp booking
+                when (Rules.otpDue now departure (isJust booking.vehicleNumber)) $
+                  sendOtpOnce timeDiff departure booking otp
+              pure issued
+  where
+    -- A fresh read of the term: a skip may have landed since the page of terms was read.
+    issueLocked departure = do
+      fresh <- QPPP.findByPrimaryKey term.id >>= fromMaybeM (InvalidRequest $ "Term not found: " <> term.id.getId)
+      if day `elem` map (.day) fresh.skipDays
+        then pure (False, [])
+        else do
+          existing <- ShuttlePass.ticketsForDay timeDiff fresh day (Just departure)
+          if null existing
+            then
+              book fresh day <&> \case
+                Just booking -> (True, [booking])
+                Nothing -> (False, [])
+            else pure (False, existing)
 
--- | Every live ticket carries an OTP, including one issued outside this job (a retry or a rescheduled child).
-ensureOtp :: DBooking.FRFSTicketBooking -> Flow Text
-ensureOtp booking = case booking.boardingOtp of
-  Just otp -> pure otp
-  Nothing -> do
-    otp <- ShuttlePass.newBoardingOtp
-    QFRFSTicketBooking.updateBoardingOtp (Just otp) booking.id
-    pure otp
-
--- | Sent once per ticket.
+-- | Sent once per ticket. The claim is released when sending fails, so the next run tries again.
 sendOtpOnce :: Seconds -> UTCTime -> DBooking.FRFSTicketBooking -> Text -> Flow ()
 sendOtpOnce timeDiff departure booking otp = do
-  firstTime <- Hedis.tryLockRedis ("IssueShuttlePassTickets:otpSent:" <> booking.id.getId) 86400
-  when firstTime $ do
-    Notify.notifyShuttleBoardingOtp timeDiff departure otp booking
-    logInfo $ "IssueShuttlePassTickets: sent OTP booking=" <> booking.id.getId <> " vehicle=" <> show booking.vehicleNumber
+  let sentKey = "IssueShuttlePassTickets:otpSent:" <> booking.id.getId
+  firstTime <- Hedis.tryLockRedis sentKey 86400
+  when firstTime $
+    withTryCatch "IssueShuttlePassTickets:notify" (Notify.notifyShuttleBoardingOtp timeDiff departure otp booking) >>= \case
+      Right () -> logInfo $ "IssueShuttlePassTickets: sent OTP booking=" <> booking.id.getId <> " vehicle=" <> show booking.vehicleNumber
+      Left err -> do
+        void $ Hedis.del sentKey
+        logError $ "IssueShuttlePassTickets: OTP push failed, will retry booking=" <> booking.id.getId <> " err=" <> show err
 
 -- | Books the day's ticket and records it against the term's day. Nothing while instant-book is still in
 -- progress for this pass; the next run picks the booking up.
@@ -141,5 +150,10 @@ scheduleNext jobData = do
   let interval = 900 :: Int
       lockKey = "IssueShuttlePassTickets:nextRun:" <> jobData.merchantOperatingCityId.getId
   claimed <- Hedis.tryLockRedis lockKey (interval - 60)
+  -- Release the claim if the successor cannot be created, so a retry can still create it and the chain goes on.
   when claimed $
-    createJobIn @_ @'IssueShuttlePassTickets (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) (fromIntegral interval) jobData
+    withTryCatch "IssueShuttlePassTickets:scheduleNext" (createJobIn @_ @'IssueShuttlePassTickets (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) (fromIntegral interval) jobData) >>= \case
+      Right () -> pure ()
+      Left err -> do
+        void $ Hedis.del lockKey
+        throwM err

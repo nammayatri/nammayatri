@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 
 import qualified Data.Text
+import qualified Domain.Types.BoardingOtp
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,7 +28,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
-            boardingOtp = boardingOtp,
+            boardingOtp = Domain.Types.BoardingOtp.BoardingOtp <$> boardingOtp,
             bookingAuthCode = bookingAuthCode,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
@@ -129,7 +130,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
   toTType' (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
-        Beam.boardingOtp = boardingOtp,
+        Beam.boardingOtp = Domain.Types.BoardingOtp.getBoardingOtp <$> boardingOtp,
         Beam.bookingAuthCode = bookingAuthCode,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,

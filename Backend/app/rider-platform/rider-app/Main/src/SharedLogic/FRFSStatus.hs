@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.Text as Text
+import qualified Domain.Types.BoardingOtp as DBoardingOtp
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -459,10 +460,15 @@ getMerchantOperatingCityFromBooking tBooking = do
   let moCityId = tBooking.merchantOperatingCityId
   CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)
 
--- | The shuttle boarding OTP is shown only to the booking's owner, on their own status call.
-withOwnerBoardingOtp :: Id Domain.Types.Person.Person -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.FRFSTicketBookingStatusAPIRes -> FRFSTicketService.FRFSTicketBookingStatusAPIRes
-withOwnerBoardingOtp callerId booking FRFSTicketService.FRFSTicketBookingStatusAPIRes {..} =
-  FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = if booking.riderId == callerId then booking.boardingOtp else Nothing, ..}
+-- | The shuttle boarding OTP, shown only to the booking's owner on their own status call. Read from master, not the
+-- replica the status path starts from: the issue job writes the OTP, and a lagging replica would hide it.
+withOwnerBoardingOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Domain.Types.Person.Person -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.FRFSTicketBookingStatusAPIRes -> m FRFSTicketService.FRFSTicketBookingStatusAPIRes
+withOwnerBoardingOtp callerId booking FRFSTicketService.FRFSTicketBookingStatusAPIRes {..}
+  | booking.riderId /= callerId = pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = Nothing, ..}
+  | otherwise = do
+    mbCurrent <- QFRFSTicketBooking.findById booking.id
+    let otp = DBoardingOtp.getBoardingOtp <$> (mbCurrent >>= (.boardingOtp))
+    pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = otp, ..}
 
 buildFRFSTicketBookingStatusAPIRes ::
   ( EncFlow m r,

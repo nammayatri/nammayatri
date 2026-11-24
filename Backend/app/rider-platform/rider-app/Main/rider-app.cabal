@@ -440,6 +440,7 @@ library
       Domain.Types.AccessMatrix
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
+      Domain.Types.BoardingOtp
       Domain.Types.Booking.API
       Domain.Types.CacType
       Domain.Types.Common

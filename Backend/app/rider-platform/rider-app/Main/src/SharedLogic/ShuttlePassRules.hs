@@ -20,6 +20,7 @@ module SharedLogic.ShuttlePassRules
     removeSkipDays,
     formatOtp,
     otpMatches,
+    servesInOrder,
   )
 where
 
@@ -114,3 +115,8 @@ otpMatches :: Maybe Text -> Text -> Bool
 otpMatches mbStored presented = case T.strip <$> mbStored of
   Just stored -> not (T.null stored) && stored == T.strip presented
   Nothing -> False
+
+-- | Whether a trip serves pickup then drop, given the sequence numbers at which each stop occurs. GTFS lets a stop
+-- occur more than once in a trip, so any drop occurrence after any pickup occurrence counts.
+servesInOrder :: [Int] -> [Int] -> Bool
+servesInOrder pickupSequences dropSequences = any (\pickup -> any (> pickup) dropSequences) pickupSequences
