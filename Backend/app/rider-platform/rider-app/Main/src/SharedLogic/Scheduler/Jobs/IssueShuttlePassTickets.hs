@@ -95,12 +95,15 @@ issueForTerm timeDiff now term day
         then pure (False, [])
         else do
           existing <- ShuttlePass.ticketsForDay timeDiff fresh day (Just departure)
-          if null existing
-            then
-              book fresh day <&> \case
-                Just booking -> (True, [booking])
-                Nothing -> (False, [])
-            else pure (False, existing)
+          -- A fresh clock: waiting for the lock and the reads above take time, and the slot may have left meanwhile.
+          nowLocked <- getCurrentTime
+          if
+              | not (null existing) -> pure (False, existing)
+              | not (Rules.inIssueWindow nowLocked departure) -> pure (False, [])
+              | otherwise ->
+                book fresh day <&> \case
+                  Just booking -> (True, [booking])
+                  Nothing -> (False, [])
 
 -- | Sent once per ticket. The claim is released when sending fails, so the next run tries again.
 sendOtpOnce :: Seconds -> UTCTime -> DBooking.FRFSTicketBooking -> Text -> Flow ()
