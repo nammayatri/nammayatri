@@ -136,16 +136,16 @@ tests =
             row "b2" "Ravi" 1 "A" "B" True,
             row "b3" "Mei" 1 "B" "C" False
           ]
-          @?= [ rider "b1" "Asha" 2 "Alpha" "Charlie",
-                rider "b2" "Ravi" 1 "Alpha" "Bravo",
-                rider "b3" "Mei" 1 "Bravo" "Charlie"
+          @?= [ rider "b1" "Asha" 2 ("Alpha", "A") ("Charlie", "C"),
+                rider "b2" "Ravi" 1 ("Alpha", "A") ("Bravo", "B"),
+                rider "b3" "Mei" 1 ("Bravo", "B") ("Charlie", "C")
               ],
       testCase "riders: a booking holding no seat and an empty cab produce nothing" $ do
         View.ridersOf [] routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 0 "Z" "Y" True] @?= []
         View.ridersOf [] routeStops [] @?= [],
       testCase "MED-4: a rider whose stop is off the route keeps the stop's code" $
         View.ridersOf [] routeStops [row "b2" "Ravi" 1 "A" "Y" True, row "b3" "Mei" 1 "Z" "C" False]
-          @?= [rider "b2" "Ravi" 1 "Alpha" "Y", rider "b3" "Mei" 1 "Z" "Charlie"],
+          @?= [rider "b2" "Ravi" 1 ("Alpha", "A") ("Y", "Y"), rider "b3" "Mei" 1 ("Z", "Z") ("Charlie", "C")],
       testCase "riders: a rider whose drop stop the cab has passed is left out; one off the route stays" $
         map (.bookingId) (View.ridersOf ["A", "B"] routeStops [row "b1" "Asha" 1 "A" "B" True, row "b2" "Ravi" 1 "A" "C" True, row "b3" "Mei" 1 "B" "C" False, row "b4" "Lin" 1 "A" "Y" True])
           @?= ["b2", "b3", "b4"],
@@ -234,6 +234,7 @@ row :: Text -> Text -> Int -> Text -> Text -> Bool -> View.RiderRow
 row bookingId firstName seats boardStopCode dropStopCode boarded =
   View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, offerExpiresAt = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing}
 
-rider :: Text -> Text -> Int -> Text -> Text -> View.SharedCabRider
-rider bookingId firstName seats boardStop dropStop =
-  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing, boardStopCode = boardStop, dropStopCode = dropStop}
+-- | Expected rider row: each stop as (name, code). Off-route stops have no name, so the name is the code.
+rider :: Text -> Text -> Int -> (Text, Text) -> (Text, Text) -> View.SharedCabRider
+rider bookingId firstName seats (boardStop, boardStopCode) (dropStop, dropStopCode) =
+  View.SharedCabRider {bookingId, firstName, seats, boardStop, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing, chatChannelId = Nothing, callable = False, callNumber = Nothing, riderRating = Nothing, boardStopAddress = Nothing, dropStopAddress = Nothing, distanceMeters = Nothing, boardStopCode, dropStopCode}
