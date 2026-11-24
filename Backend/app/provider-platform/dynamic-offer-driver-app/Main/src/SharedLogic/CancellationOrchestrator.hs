@@ -108,6 +108,7 @@ import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
+import qualified SharedLogic.CohortCancellationCompensation.Resolve as Resolve
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
@@ -148,7 +149,11 @@ data CancellationDecision = CancellationDecision
     consequenceRow :: Maybe DCCM.CancellationConsequenceMatrix,
     cancelledBy :: DCT.CancellationType,
     reasonCode :: Maybe DTCR.CancellationReasonCode,
-    disToPickup :: Maybe Meters
+    disToPickup :: Maybe Meters,
+    -- Resolved ONCE here (not per-consumer) so the matrix-suppression and the cohort payout
+    -- read the same value — no cross-fork race. Set only on a CustomerAtFault cancel when the
+    -- driver is in a cohort with an enabled, positive riderCancellationCompensation.
+    cohortCancellationPayout :: Maybe HighPrecMoney
   }
   deriving (Generic)
 
@@ -211,6 +216,16 @@ decideCancellationConsequences booking ride transporterConfig source reasonCode 
   (signals, mbFaultVerdict) <- buildCancellationContext booking ride transporterConfig cancelledBy reasonCode disToPickup
   consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking ride mbFaultVerdict cancelledBy transporterConfig ride.driverId
   mbConsequenceRow <- CancellationConsequence.resolveConsequence consequenceInput
+  mbCohortPayout <-
+    if CancellationFault.isCustomerAtFault mbFaultVerdict
+      then do
+        resE <- withTryCatch "resolveRiderCancellationCompensation" $ Resolve.resolveRiderCancellationCompensation ride.driverId
+        case resE of
+          Left err -> do
+            logError $ "resolveRiderCancellationCompensation failed for ride " <> ride.id.getId <> ": " <> show err
+            pure Nothing
+          Right mbPayout -> pure mbPayout
+      else pure Nothing
   pure
     CancellationDecision
       { signals = signals,
@@ -218,7 +233,8 @@ decideCancellationConsequences booking ride transporterConfig source reasonCode 
         consequenceRow = mbConsequenceRow,
         cancelledBy = cancelledBy,
         reasonCode = reasonCode,
-        disToPickup = disToPickup
+        disToPickup = disToPickup,
+        cohortCancellationPayout = mbCohortPayout
       }
 
 -- | Consequences that apply to EVERY cancellation with an assigned ride, regardless of
@@ -325,13 +341,17 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverMoneyConsequence driver =
       whenJust ((\r -> CancellationConsequence.driverMoneyDeduction r (FC.netRideFare ctx.booking.fareParams ctx.booking.estimatedFare)) =<< row) $ \signedAmount ->
         fork "cancellationConsequenceDriverMoney" $ do
-          -- read off the search request, not the booking: reallocating near pickup books the
-          -- next driver with booking.isScheduled = False (SharedLogic.Cancel). booking.isScheduled
-          -- is only the fallback for a missing search request — it is never True for an instant search.
-          isScheduledSearch <- maybe ctx.booking.isScheduled (.isScheduled) <$> QSRLite.findByTransactionIdAndMerchantIdLite ctx.booking.transactionId ctx.booking.providerId
           let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || ctx.transporterConfig.driverWalletConfig.enableDriverWallet
-              isScheduledRidePenaltyOrRewardApplicable = isScheduledSearch && fromMaybe False ctx.transporterConfig.scheduledRideConfig.enableScheduledRidePenaltyOrReward
-          DCP.accumulateCancellationPenalty (isWalletEnabled || isScheduledRidePenaltyOrRewardApplicable) ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
+              campaignOverrides = signedAmount < 0 && isJust ctx.decision.cohortCancellationPayout && isWalletEnabled
+          if campaignOverrides
+            then logInfo $ "Matrix driver compensation suppressed; cohort campaign overrides for ride " <> ctx.ride.id.getId
+            else do
+              -- read off the search request, not the booking: reallocating near pickup books the
+              -- next driver with booking.isScheduled = False (SharedLogic.Cancel). booking.isScheduled
+              -- is only the fallback for a missing search request — it is never True for an instant search.
+              isScheduledSearch <- maybe ctx.booking.isScheduled (.isScheduled) <$> QSRLite.findByTransactionIdAndMerchantIdLite ctx.booking.transactionId ctx.booking.providerId
+              let isScheduledRidePenaltyOrRewardApplicable = isScheduledSearch && fromMaybe False ctx.transporterConfig.scheduledRideConfig.enableScheduledRidePenaltyOrReward
+              DCP.accumulateCancellationPenalty (isWalletEnabled || isScheduledRidePenaltyOrRewardApplicable) ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
 
     applyAvailableForRidesRevocation =
       when (CancellationFault.isDriverAtFault ctx.decision.faultVerdict) $ do
@@ -619,7 +639,9 @@ previewCancellationConsequences booking ride transporterConfig source reasonCode
         consequenceRow = mbConsequenceRow,
         cancelledBy = cancelledBy,
         reasonCode = reasonCode,
-        disToPickup = disToPickup
+        disToPickup = disToPickup,
+        -- dry-run/what-if preview never credits, so no cohort payout is resolved here.
+        cohortCancellationPayout = Nothing
       }
 
 -- | Build the customer charge outcome from an (already resolved) matrix row — shared by

@@ -596,6 +596,7 @@ rollCohortJourneyMapping handle merchantId merchantOpCityId previousId newStartD
       previous.streakEndRewardMetadata
       previous.campaignUserLinkType
       previous.controlFeatures
+      previous.additionalRewards
   rolloverAutoApplyMappings handle previous rolled
   handle.clearAssignmentCacheByCohortMappingId previous.id
   handle.clearAssignmentCacheByCohortMappingId rolled.id

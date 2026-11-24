@@ -14,7 +14,8 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney
 import qualified Tools.Beam.UtilsTH
 
 data CohortJourneyMapping = CohortJourneyMapping
-  { campaignUserLinkType :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType,
+  { additionalRewards :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    campaignUserLinkType :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType,
     cohortId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails,
     controlFeatures :: Kernel.Prelude.Maybe Data.Aeson.Value,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -35,8 +36,11 @@ data CohortJourneyMapping = CohortJourneyMapping
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CampaignUserLinkType = Assigned | OptIn deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data CampaignUserLinkType
+  = Assigned
+  | OptIn
+  deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CampaignUserLinkType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CampaignUserLinkType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''CampaignUserLinkType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''CampaignUserLinkType))

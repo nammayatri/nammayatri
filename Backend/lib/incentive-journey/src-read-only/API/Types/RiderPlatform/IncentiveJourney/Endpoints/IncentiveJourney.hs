@@ -55,6 +55,7 @@ data CohortJourneyMappingListItem = CohortJourneyMappingListItem
     journeyType :: IncentiveJourneyType,
     campaignUserLinkType :: CampaignUserLinkType,
     controlFeatures :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    additionalRewards :: Kernel.Prelude.Maybe Data.Aeson.Value,
     periodDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxWaiveOffCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     startDate :: Kernel.Prelude.UTCTime,
@@ -100,6 +101,7 @@ data CreateCohortJourneyMappingReq = CreateCohortJourneyMappingReq
     streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
     campaignUserLinkType :: Kernel.Prelude.Maybe CampaignUserLinkType,
     controlFeatures :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    additionalRewards :: Kernel.Prelude.Maybe Data.Aeson.Value,
     periodDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
@@ -367,6 +369,7 @@ data UpdateCohortJourneyMappingReq = UpdateCohortJourneyMappingReq
     streakEndSubscriptionWaiveOff :: Kernel.Prelude.Maybe SubscriptionWaiveOffConfig,
     campaignUserLinkType :: Kernel.Prelude.Maybe CampaignUserLinkType,
     controlFeatures :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    additionalRewards :: Kernel.Prelude.Maybe Data.Aeson.Value,
     periodDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
