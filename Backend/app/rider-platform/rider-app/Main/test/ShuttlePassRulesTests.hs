@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
 -- | Boundaries of the shuttle subscription rules (SharedLogic.ShuttlePassRules): the 5-hour change cutoff,
 -- the ticket issue window, when the boarding OTP goes out, skip-day merging and the OTP compare.
 module ShuttlePassRulesTests (tests) where
 
 import qualified Data.Time as DT
-import qualified Domain.Types.FRFSTicketBookingStatus as DStatus
-import qualified Domain.Types.PurchasedPassPayment as DPPP
-import Kernel.Prelude
-import Kernel.Types.Common (Seconds (..))
-import qualified SharedLogic.ShuttlePassRules as R
+import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DStatus
+import qualified "rider-app" Domain.Types.PurchasedPassPayment as DPPP
+import "mobility-core" Kernel.Prelude
+import "mobility-core" Kernel.Types.Common (Seconds (..))
+import qualified "rider-app" SharedLogic.ShuttlePassRules as R
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -22,15 +23,15 @@ day1 = DT.addDays 1 day0
 dayPrev = DT.addDays (-1) day0
 
 -- | Local IST wall-clock time on a day, as UTC.
-at :: DT.Day -> Int -> Int -> UTCTime
-at day h m = R.departureAt ist day (h * 3600 + m * 60)
+localAt :: DT.Day -> Int -> Int -> UTCTime
+localAt day h m = R.departureAt ist day (h * 3600 + m * 60)
 
 utc :: Integer -> Int -> Int -> Int -> Int -> UTCTime
 utc y mo d h mi = DT.UTCTime (DT.fromGregorian y mo d) (fromIntegral (h * 3600 + mi * 60))
 
 -- The 08:00 slot of day0.
 dep :: UTCTime
-dep = at day0 8 0
+dep = localAt day0 8 0
 
 tests :: TestTree
 tests =
@@ -51,38 +52,38 @@ tests =
         ],
       testGroup
         "issue window (departure - 5h .. departure)"
-        [ testCase "a minute before the cutoff: not yet" $ R.inIssueWindow (at day0 2 59) dep @?= False,
-          testCase "at the cutoff: issue" $ R.inIssueWindow (at day0 3 0) dep @?= True,
-          testCase "a minute before departure: issue" $ R.inIssueWindow (at day0 7 59) dep @?= True,
-          testCase "at departure: too late" $ R.inIssueWindow (at day0 8 0) dep @?= False,
+        [ testCase "a minute before the cutoff: not yet" $ R.inIssueWindow (localAt day0 2 59) dep @?= False,
+          testCase "at the cutoff: issue" $ R.inIssueWindow (localAt day0 3 0) dep @?= True,
+          testCase "a minute before departure: issue" $ R.inIssueWindow (localAt day0 7 59) dep @?= True,
+          testCase "at departure: too late" $ R.inIssueWindow (localAt day0 8 0) dep @?= False,
           testCase "an early 02:00 slot is issued the evening before" $
-            R.inIssueWindow (at dayPrev 21 30) (at day0 2 0) @?= True
+            R.inIssueWindow (localAt dayPrev 21 30) (localAt day0 2 0) @?= True
         ],
       testGroup
         "OTP notification (an hour before; waits for a vehicle until 15 minutes before)"
-        [ testCase "61 minutes before, vehicle assigned: not yet" $ R.otpDue (at day0 6 59) dep True @?= False,
-          testCase "60 minutes before, vehicle assigned: send" $ R.otpDue (at day0 7 0) dep True @?= True,
-          testCase "60 minutes before, no vehicle: wait" $ R.otpDue (at day0 7 0) dep False @?= False,
-          testCase "16 minutes before, no vehicle: wait" $ R.otpDue (at day0 7 44) dep False @?= False,
-          testCase "15 minutes before, no vehicle: send anyway" $ R.otpDue (at day0 7 45) dep False @?= True,
-          testCase "at departure: never" $ R.otpDue (at day0 8 0) dep True @?= False
+        [ testCase "61 minutes before, vehicle assigned: not yet" $ R.otpDue (localAt day0 6 59) dep True @?= False,
+          testCase "60 minutes before, vehicle assigned: send" $ R.otpDue (localAt day0 7 0) dep True @?= True,
+          testCase "60 minutes before, no vehicle: wait" $ R.otpDue (localAt day0 7 0) dep False @?= False,
+          testCase "16 minutes before, no vehicle: wait" $ R.otpDue (localAt day0 7 44) dep False @?= False,
+          testCase "15 minutes before, no vehicle: send anyway" $ R.otpDue (localAt day0 7 45) dep False @?= True,
+          testCase "at departure: never" $ R.otpDue (localAt day0 8 0) dep True @?= False
         ],
       testGroup
         "skip / unskip cutoff"
-        [ testCase "a past day is closed" $ R.dayOpenForChange (at day0 0 10) day0 Nothing dayPrev @?= False,
-          testCase "today before the cutoff is open" $ R.dayOpenForChange (at day0 2 59) day0 (Just dep) day0 @?= True,
-          testCase "today at the cutoff is closed" $ R.dayOpenForChange (at day0 3 0) day0 (Just dep) day0 @?= False,
+        [ testCase "a past day is closed" $ R.dayOpenForChange (localAt day0 0 10) day0 Nothing dayPrev @?= False,
+          testCase "today before the cutoff is open" $ R.dayOpenForChange (localAt day0 2 59) day0 (Just dep) day0 @?= True,
+          testCase "today at the cutoff is closed" $ R.dayOpenForChange (localAt day0 3 0) day0 (Just dep) day0 @?= False,
           testCase "tomorrow's 02:00 slot closes this evening" $
-            R.dayOpenForChange (at day0 21 0) day0 (Just (at day1 2 0)) day1 @?= False,
-          testCase "unknown departure: today is closed" $ R.dayOpenForChange (at day0 0 10) day0 Nothing day0 @?= False,
-          testCase "unknown departure: tomorrow is open" $ R.dayOpenForChange (at day0 23 0) day0 Nothing day1 @?= True
+            R.dayOpenForChange (localAt day0 21 0) day0 (Just (localAt day1 2 0)) day1 @?= False,
+          testCase "unknown departure: today is closed" $ R.dayOpenForChange (localAt day0 0 10) day0 Nothing day0 @?= False,
+          testCase "unknown departure: tomorrow is open" $ R.dayOpenForChange (localAt day0 23 0) day0 Nothing day1 @?= True
         ],
       testGroup
         "ticket windows and statuses"
         [ testCase "departure window: 6 hours before to 1 hour after" $
-            R.liveTicketWindow dep @?= (at day0 2 0, at day0 9 0),
+            R.liveTicketWindow dep @?= (localAt day0 2 0, localAt day0 9 0),
           testCase "whole-day window: from 5 hours before midnight to 1 hour after the next" $
-            R.dayTicketWindow ist day0 @?= (at dayPrev 19 0, at day1 1 0),
+            R.dayTicketWindow ist day0 @?= (localAt dayPrev 19 0, localAt day1 1 0),
           testCase "confirming and confirmed count as live" $
             map R.isLiveStatus [DStatus.CONFIRMING, DStatus.CONFIRMED] @?= [True, True],
           testCase "failed, cancelled, counter-cancelled, rescheduled do not" $
