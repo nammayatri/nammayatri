@@ -63,6 +63,7 @@ buildConfirmReqV2 req isValueAddNP = do
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
       consentToShareMobileNumber = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getConsentToShareMobileNumberTag isValueAddNP
+      customerCallIdentity = if isValueAddNP then Utils.getTag Tag.CUSTOMER_CALL_IDENTITY (fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags)) else Nothing
       driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
       customerLanguage = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getCustomerLanguageTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) (Utils.parseAddressWithTag fulfillment.fulfillmentTags Tag.DROP_ADDRESS)

@@ -217,7 +217,9 @@ data BookingDetails = BookingDetails
     isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
-    betterDriverAbortRadiusMeters :: Maybe Meters
+    betterDriverAbortRadiusMeters :: Maybe Meters,
+    -- | Driver's per-person Twilio call identity (DRIVER_CALL_IDENTITY tag); Nothing for older BPPs.
+    driverCallIdentity :: Maybe Text
   }
 
 data RideAssignedReq = RideAssignedReq

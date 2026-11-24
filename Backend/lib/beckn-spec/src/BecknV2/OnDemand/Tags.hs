@@ -528,6 +528,7 @@ data BecknTag
   | DASHBOARD_USER
   | CUSTOMER_PHONE_NUMBER
   | CONSENT_TO_SHARE_MOBILE_NUMBER -- CUSTOMER_INFO: rider consented to share their real mobile number with the driver
+  | CUSTOMER_CALL_IDENTITY -- CUSTOMER_INFO: rider's per-person Twilio in-app call identity
   | USER_OS_TYPE
   | USER_OS_VERSION
   | USER_MODEL_NAME
@@ -555,6 +556,7 @@ data BecknTag
   | IS_ALREADY_FAVOURITE
   | FAVOURITE_COUNT
   | IS_SCHEDULED_RIDE_ACTIVATED -- scheduled ride activated at the BPP (UPCOMING -> NEW)
+  | DRIVER_CALL_IDENTITY -- DRIVER_DETAILS: driver's per-person Twilio in-app call identity
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags
@@ -802,6 +804,7 @@ instance CompleteTag BecknTag where
     CUSTOMER_VEHICLE_CATEGORY -> CUSTOMER_INFO
     CUSTOMER_PHONE_NUMBER -> CUSTOMER_INFO
     CONSENT_TO_SHARE_MOBILE_NUMBER -> CUSTOMER_INFO
+    CUSTOMER_CALL_IDENTITY -> CUSTOMER_INFO
     DASHBOARD_USER -> CUSTOMER_INFO
     CUSTOMER_DISABILITY -> CUSTOMER_INFO
     CUSTOMER_NAMMA_TAGS -> CUSTOMER_INFO
@@ -860,6 +863,7 @@ instance CompleteTag BecknTag where
     IS_ALREADY_FAVOURITE -> DRIVER_DETAILS
     FAVOURITE_COUNT -> DRIVER_DETAILS
     IS_SCHEDULED_RIDE_ACTIVATED -> DRIVER_DETAILS
+    DRIVER_CALL_IDENTITY -> DRIVER_DETAILS
     -- Ride distance details tags
     CHARGEABLE_DISTANCE -> RIDE_DISTANCE_DETAILS
     TRAVELED_DISTANCE -> RIDE_DISTANCE_DETAILS

@@ -434,6 +434,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         insuredAmount = bArgs.insuredAmount,
         addOnData = addOnData,
         exotelDeclinedCallStatusReceivingTime = Nothing,
+        riderCallIdentity = Nothing,
         numberOfLuggages = searchRequest.numberOfLuggages,
         numberOfCheckInBags = searchRequest.numberOfCheckInBags,
         numberOfCabinBags = searchRequest.numberOfCabinBags,

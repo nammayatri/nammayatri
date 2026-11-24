@@ -101,6 +101,7 @@ data BookingT f = BookingT
     receiverPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    riderCallIdentity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

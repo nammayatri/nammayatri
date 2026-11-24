@@ -311,3 +311,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN tax_rates json ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_check_in_bags integer ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_cabin_bags integer ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_passengers integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN rider_call_identity text ;
