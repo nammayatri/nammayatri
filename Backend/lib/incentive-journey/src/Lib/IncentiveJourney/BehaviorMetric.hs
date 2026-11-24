@@ -12,6 +12,8 @@ module Lib.IncentiveJourney.BehaviorMetric
     mergeMetricContext,
     progressiveMergeMetricContext,
     metricContextFromCurrentMetrics,
+    scopedMetricContext,
+    behaviorCountersOnly,
     applyRideDeltasToContext,
     metricValueForCondition,
     evaluateBehaviorCondition,
@@ -166,9 +168,29 @@ enrichWithDerivedBehaviorRates ctx =
         }
 
 -- | Lift stats.currentMetrics (Inside/Outside + bag keys) into a MetricContext for settle/eval.
-metricContextFromCurrentMetrics :: Maybe Value -> MetricContext
-metricContextFromCurrentMetrics mbMetrics =
-  let online = Evaluation.lookupOnlineMinutes mbMetrics mempty
+-- AllDayMetrics: inside + outside (today's behaviour). InsideTimeboundMetrics: only the
+-- *InsideTimebound counters (behaviour ticks inside the window, ride counters bumped at
+-- ride-end inside the window); rates are re-derived from those counters.
+metricContextFromCurrentMetrics :: Evaluation.MetricScope -> Maybe Value -> MetricContext
+metricContextFromCurrentMetrics Evaluation.InsideTimeboundMetrics mbMetrics =
+  let inside = Evaluation.lookupMetricIntIn Evaluation.InsideTimeboundMetrics mbMetrics mempty
+   in enrichWithDerivedBehaviorRates $
+        MetricContext
+          { vars =
+              HM.fromList
+                [ (varOnlineMinutes, inside varOnlineMinutes),
+                  (varRrReceived, inside varRrReceived),
+                  (varRrAccepted, inside varRrAccepted),
+                  (varDxCancel, inside varDxCancel),
+                  (varDafCancel, inside varDafCancel),
+                  (varRidesCompleted, inside varRidesCompleted),
+                  (varEarnings, inside varEarnings),
+                  (varDistanceMeters, inside varDistanceMeters),
+                  (varRideTimeSeconds, inside varRideTimeSeconds)
+                ]
+          }
+metricContextFromCurrentMetrics Evaluation.AllDayMetrics mbMetrics =
+  let online = Evaluation.lookupOnlineMinutes Evaluation.AllDayMetrics mbMetrics mempty
       rrRecv = Evaluation.lookupMetricInt mbMetrics mempty "rrReceived"
       rrAcc = Evaluation.lookupMetricInt mbMetrics mempty "rrAccepted"
       dx = Evaluation.lookupMetricInt mbMetrics mempty "dxCancel"
@@ -195,6 +217,25 @@ metricContextFromCurrentMetrics mbMetrics =
                   (varRideTimeSeconds, rideTime)
                 ]
           }
+
+-- | Campaign behaviour counters of a bag (ij:bm), without the period ride counters.
+behaviorCountersOnly :: MetricContext -> MetricContext
+behaviorCountersOnly ctx =
+  MetricContext
+    { vars = HM.filterWithKey (\k _ -> k `elem` Evaluation.campaignBehaviorMetricBaseNames) ctx.vars
+    }
+
+-- | Stats row (progressive SoT) merged with the Redis bag, in a scope.
+-- AllDayMetrics: stats inside + outside, max-merged with the whole bag (today's behaviour).
+-- InsideTimeboundMetrics: stats *InsideTimebound counters, max-merged with only the bag's
+-- behaviour counters — ij:bm is bumped only inside a bounded window, while the period ride bag
+-- counts every ride of the day, so the inside ride counters come from the stats row alone.
+scopedMetricContext :: Evaluation.MetricScope -> Maybe Value -> MetricContext -> MetricContext
+scopedMetricContext scope mbStatsMetrics bag =
+  let statsCtx = metricContextFromCurrentMetrics scope mbStatsMetrics
+   in case scope of
+        Evaluation.AllDayMetrics -> progressiveMergeMetricContext statsCtx bag
+        Evaluation.InsideTimeboundMetrics -> progressiveMergeMetricContext statsCtx (behaviorCountersOnly bag)
 
 -- | Add this ride's deltas onto period ride counters already in the bag.
 applyRideDeltasToContext :: RideDeltas -> MetricContext -> MetricContext

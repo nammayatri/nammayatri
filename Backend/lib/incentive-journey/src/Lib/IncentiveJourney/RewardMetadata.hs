@@ -114,6 +114,9 @@ instance A.ToJSON MetricPercentRule where
 
 data MilestoneRewardMeta = MilestoneRewardMeta
   { includeEarningsAllDay :: Bool,
+    -- | MG online slabs + percent rules count the whole period (default True when absent).
+    -- False with milestone timeBounds: only *InsideTimebound metrics.
+    includeMetricsAllDay :: Bool,
     -- | Online-time → MG amount. Preferred over static rewardValue when non-empty.
     mgAmountSlabs :: [AmountSlab],
     -- | Unit of mgAmountSlabs.fromValue. Default Minutes (existing configs). UI Hours → *60 at resolve.
@@ -131,6 +134,7 @@ instance A.FromJSON MilestoneRewardMeta where
   parseJSON = withObject "MilestoneRewardMeta" $ \o ->
     MilestoneRewardMeta
       <$> (o .:? "includeEarningsAllDay" A..!= False)
+      <*> (o .:? "includeMetricsAllDay" A..!= True)
       <*> (o .:? "mgAmountSlabs" A..!= [])
       <*> (o .:? "mgAmountSlabsFromValueUnit" A..!= Minutes)
       <*> (o .:? "percentSlabs" A..!= [])
@@ -141,6 +145,7 @@ instance A.ToJSON MilestoneRewardMeta where
   toJSON MilestoneRewardMeta {..} =
     A.object
       [ "includeEarningsAllDay" A..= includeEarningsAllDay,
+        "includeMetricsAllDay" A..= includeMetricsAllDay,
         "mgAmountSlabs" A..= mgAmountSlabs,
         "mgAmountSlabsFromValueUnit" A..= mgAmountSlabsFromValueUnit,
         "percentSlabs" A..= percentSlabs,
@@ -150,6 +155,8 @@ instance A.ToJSON MilestoneRewardMeta where
 
 data StreakRewardMeta = StreakRewardMeta
   { includeEarningsAllDay :: Bool,
+    -- | Same as MilestoneRewardMeta.includeMetricsAllDay, for the streak-end MG (default True).
+    includeMetricsAllDay :: Bool,
     mgAmountSlabs :: [AmountSlab],
     mgAmountSlabsFromValueUnit :: MgAmountFromValueUnit,
     percentSlabs :: [MetricPercentRule],
@@ -170,6 +177,7 @@ instance A.FromJSON StreakRewardMeta where
   parseJSON = withObject "StreakRewardMeta" $ \o ->
     StreakRewardMeta
       <$> (o .:? "includeEarningsAllDay" A..!= False)
+      <*> (o .:? "includeMetricsAllDay" A..!= True)
       <*> (o .:? "mgAmountSlabs" A..!= [])
       <*> (o .:? "mgAmountSlabsFromValueUnit" A..!= Minutes)
       <*> (o .:? "percentSlabs" A..!= [])
@@ -185,6 +193,7 @@ instance A.ToJSON StreakRewardMeta where
     A.object $
       catMaybes
         [ Just ("includeEarningsAllDay" A..= includeEarningsAllDay),
+          Just ("includeMetricsAllDay" A..= includeMetricsAllDay),
           Just ("mgAmountSlabs" A..= mgAmountSlabs),
           Just ("mgAmountSlabsFromValueUnit" A..= mgAmountSlabsFromValueUnit),
           Just ("percentSlabs" A..= percentSlabs),
@@ -224,6 +233,7 @@ emptyMilestoneMeta :: MilestoneRewardMeta
 emptyMilestoneMeta =
   MilestoneRewardMeta
     { includeEarningsAllDay = False,
+      includeMetricsAllDay = True,
       mgAmountSlabs = [],
       mgAmountSlabsFromValueUnit = Minutes,
       percentSlabs = [],
@@ -266,6 +276,7 @@ emptyStreakMeta :: StreakRewardMeta
 emptyStreakMeta =
   StreakRewardMeta
     { includeEarningsAllDay = False,
+      includeMetricsAllDay = True,
       mgAmountSlabs = [],
       mgAmountSlabsFromValueUnit = Minutes,
       percentSlabs = [],
@@ -294,17 +305,20 @@ resolvePercentSlab slabs metricValue =
         xs -> (.percent) (maximumBy (comparing (.fromValue)) xs)
 
 -- | Minimum % across metric percent rules + violation rule. Empty rules → Nothing.
+-- Metric rules read the metric in the given scope (inside-only when includeMetricsAllDay = false
+-- with timeBounds); violation counts always use the inside-timebound keys.
 resolveMinPercent ::
+  Evaluation.MetricScope ->
   Maybe Value -> -- currentMetrics
   [MetricPercentRule] ->
   [PercentSlab] -> -- violation
   [Text] -> -- violation metric names
   Maybe Int
-resolveMinPercent mbMetrics percentRules violationSlabs violationNames =
+resolveMinPercent scope mbMetrics percentRules violationSlabs violationNames =
   let metricPercents =
         map
           ( \rule ->
-              let val = Evaluation.lookupMetricInt mbMetrics mempty rule.metric
+              let val = Evaluation.lookupMetricIntIn scope mbMetrics mempty rule.metric
                in resolvePercentSlab rule.slabs val
           )
           percentRules

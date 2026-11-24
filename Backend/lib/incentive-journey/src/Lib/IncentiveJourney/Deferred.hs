@@ -20,6 +20,9 @@ module Lib.IncentiveJourney.Deferred
     computeNetOffRowPayout,
     computeNetOffStreakPayout,
     earningsForNetOff,
+    payoutMetricScope,
+    campaignTimeBounds,
+    streakMetaAsMilestone,
     resolveMgAmount,
     resolvePayoutPercent,
     previousPeriodKeyInStreak,
@@ -32,12 +35,14 @@ where
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
+import Data.List (sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (Day, addDays, diffDays, utctDay)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
+import qualified Kernel.Types.TimeBound as TB
 import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
@@ -124,40 +129,54 @@ earningsForNetOff includeAllDay mbMetrics =
       outside = fromMaybe 0 (Evaluation.lookupNumber mbMetrics Evaluation.earningOutsideKey)
    in if includeAllDay then inside + outside else inside
 
-resolveMgAmount :: RM.MilestoneRewardMeta -> Maybe Int -> Maybe A.Value -> Int
-resolveMgAmount meta mbRewardValue mbMetrics =
+-- | Scope of the MG online slabs + percent rules: rewardMetadata.includeMetricsAllDay with the
+-- milestone timeBounds (no window → all day).
+payoutMetricScope :: RM.MilestoneRewardMeta -> Maybe TB.TimeBound -> Evaluation.MetricScope
+payoutMetricScope meta = Evaluation.metricScopeFor meta.includeMetricsAllDay
+
+-- | Campaign-level window for streak-end payouts (stats rows carry no milestone):
+-- the first milestone's timeBounds by order, as the campaign controls use.
+campaignTimeBounds :: [DIJM.IncentiveJourneyMilestone] -> Maybe TB.TimeBound
+campaignTimeBounds milestones =
+  (.timeBounds) =<< listToMaybe (sortOn (.order) milestones)
+
+resolveMgAmount :: Evaluation.MetricScope -> RM.MilestoneRewardMeta -> Maybe Int -> Maybe A.Value -> Int
+resolveMgAmount scope meta mbRewardValue mbMetrics =
   if not (null meta.mgAmountSlabs)
     then -- Prefer non-empty mgAmountSlabs over static rewardValue. Slabs compare in minutes
     -- (UI may send hours via mgAmountSlabsFromValueUnit=Hours → converted here).
 
-      let onlineMins = Evaluation.lookupOnlineMinutes mbMetrics mempty
+      let onlineMins = Evaluation.lookupOnlineMinutes scope mbMetrics mempty
           slabsInMinutes = RM.mgAmountSlabsInMinutes meta
        in RM.resolveAmountSlab slabsInMinutes onlineMins
     else fromMaybe 0 mbRewardValue
 
 -- | % from rewardMetadata slabs only (evaluation column is condition JsonLogic, not slabs).
 -- Configured slabs (including explicit 0%) win; no percent/violation slabs → 100% (same as streak settle).
-resolvePayoutPercent :: RM.MilestoneRewardMeta -> Maybe A.Value -> Int
-resolvePayoutPercent meta mbMetrics =
+resolvePayoutPercent :: Evaluation.MetricScope -> RM.MilestoneRewardMeta -> Maybe A.Value -> Int
+resolvePayoutPercent scope meta mbMetrics =
   fromMaybe 100 $
-    RM.resolveMinPercent mbMetrics meta.percentSlabs meta.violationPercentSlabs meta.violationMetrics
+    RM.resolveMinPercent scope mbMetrics meta.percentSlabs meta.violationPercentSlabs meta.violationMetrics
 
 computeNetOffMilestonePayout ::
+  Maybe TB.TimeBound -> -- milestone timeBounds
   Maybe A.Value -> -- rewardMetadata
   Maybe Int -> -- rewardValue fallback MG
   Maybe A.Value -> -- currentMetrics
   Int
-computeNetOffMilestonePayout mbRewardMeta mbRewardValue mbMetrics =
+computeNetOffMilestonePayout mbTimeBounds mbRewardMeta mbRewardValue mbMetrics =
   let meta = RM.parseMilestoneRewardMeta mbRewardMeta
-      mg = resolveMgAmount meta mbRewardValue mbMetrics
+      scope = payoutMetricScope meta mbTimeBounds
+      mg = resolveMgAmount scope meta mbRewardValue mbMetrics
       earnings = earningsForNetOff meta.includeEarningsAllDay mbMetrics
-      pct = resolvePayoutPercent meta mbMetrics
+      pct = resolvePayoutPercent scope meta mbMetrics
    in Evaluation.netOffPayout mg earnings pct
 
 streakMetaAsMilestone :: RM.StreakRewardMeta -> RM.MilestoneRewardMeta
 streakMetaAsMilestone streakMeta =
   RM.MilestoneRewardMeta
     { includeEarningsAllDay = streakMeta.includeEarningsAllDay,
+      includeMetricsAllDay = streakMeta.includeMetricsAllDay,
       mgAmountSlabs = streakMeta.mgAmountSlabs,
       mgAmountSlabsFromValueUnit = streakMeta.mgAmountSlabsFromValueUnit,
       percentSlabs = streakMeta.percentSlabs,
@@ -172,17 +191,19 @@ streakMetaAsMilestone streakMeta =
 --                if False: contribute 0 (over-earning days do not reduce payout)
 computeNetOffRowPayout ::
   RM.StreakRewardMeta ->
+  Maybe TB.TimeBound -> -- campaign timeBounds (campaignTimeBounds)
   Maybe Int ->
   Maybe A.Value ->
   Int
-computeNetOffRowPayout streakMeta mbRewardValue mbMetrics =
+computeNetOffRowPayout streakMeta mbTimeBounds mbRewardValue mbMetrics =
   let asMilestone = streakMetaAsMilestone streakMeta
-      mg = resolveMgAmount asMilestone mbRewardValue mbMetrics
+      scope = payoutMetricScope asMilestone mbTimeBounds
+      mg = resolveMgAmount scope asMilestone mbRewardValue mbMetrics
       earnings = earningsForNetOff streakMeta.includeEarningsAllDay mbMetrics
       delta = mg - round earnings
    in if delta > 0
         then
-          let pct = resolvePayoutPercent asMilestone mbMetrics
+          let pct = resolvePayoutPercent scope asMilestone mbMetrics
            in (delta * pct) `div` 100
         else
           if streakMeta.considerExtraEarning
@@ -195,10 +216,11 @@ computeNetOffRowPayout streakMeta mbRewardValue mbMetrics =
 -- inflate MG, and a legacy null-metrics sibling cannot add a second full guarantee.
 computeNetOffStreakPayout ::
   RM.StreakRewardMeta ->
+  Maybe TB.TimeBound -> -- campaign timeBounds (campaignTimeBounds)
   Maybe Int ->
   [(Text, Maybe A.Value)] ->
   Int
-computeNetOffStreakPayout streakMeta mbRewardValue periodMetricRows =
+computeNetOffStreakPayout streakMeta mbTimeBounds mbRewardValue periodMetricRows =
   let periodBags =
         Map.elems $
           foldl'
@@ -207,7 +229,7 @@ computeNetOffStreakPayout streakMeta mbRewardValue periodMetricRows =
             )
             Map.empty
             periodMetricRows
-      total = sum (map (computeNetOffRowPayout streakMeta mbRewardValue) periodBags)
+      total = sum (map (computeNetOffRowPayout streakMeta mbTimeBounds mbRewardValue) periodBags)
    in max 0 total
 
 -- | All streak period keys that are already closed at localTime (chronological).

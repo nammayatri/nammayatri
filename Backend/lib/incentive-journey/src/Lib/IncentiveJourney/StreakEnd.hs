@@ -27,6 +27,7 @@ import Data.Ord (comparing)
 import Data.Time (Day, utctDay)
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as TB
 import qualified Lib.IncentiveJourney.Convert as Convert
 import qualified Lib.IncentiveJourney.Deferred as Deferred
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
@@ -202,9 +203,10 @@ streakEndRewardSpec cjm =
 streakEndDispatchSpecAndPayout ::
   DCJM.CohortJourneyMapping ->
   RM.StreakRewardMeta ->
+  Maybe TB.TimeBound -> -- campaign timeBounds (Deferred.campaignTimeBounds), for includeMetricsAllDay
   [(Text, Maybe Value)] -> -- (periodKey, currentMetrics) rows in scope
   (Maybe Int, IJ.RewardSpec)
-streakEndDispatchSpecAndPayout cjm streakMeta periodMetrics =
+streakEndDispatchSpecAndPayout cjm streakMeta mbTimeBounds periodMetrics =
   case cjm.streakEndRewardType of
     Just Common.NetOffEarnings ->
       -- Per period: if (MG−earnings)>0 apply that row's %; else negative/zero per
@@ -212,6 +214,7 @@ streakEndDispatchSpecAndPayout cjm streakMeta periodMetrics =
       let payout =
             Deferred.computeNetOffStreakPayout
               streakMeta
+              mbTimeBounds
               cjm.streakEndRewardValue
               periodMetrics
           spec =

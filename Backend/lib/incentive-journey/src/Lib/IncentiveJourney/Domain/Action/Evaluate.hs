@@ -243,7 +243,7 @@ evaluateSingleJourney ijHandle input localTime journey cjm = do
       periodKey
       localTime
       bagEvalMilestones
-      input.rideDeltas.netEarningsDelta
+      input.rideDeltas
   -- Legacy: no evaluation JSON — existing mid-ride sequential delta eval (unchanged).
   unless (null legacyMilestones) $
     Eval.evaluateMilestonesInOrderWith
@@ -338,6 +338,14 @@ evaluateSingleJourneyOnTick ijHandle input localTime journey cjm = do
         tickMilestones
     when (StreakEnd.hasStreakEndRewardConfigured cjm) $
       tryAwardStreakEnd ijHandle input.personId periodKey localTime journey cjm milestones
+
+-- | Scope of the metrics the milestone condition reads: evaluation.includeMetricsAllDay
+-- (absent = all day) with the milestone timeBounds (no window → all day).
+ruleMetricScope :: DIJM.IncentiveJourneyMilestone -> Evaluation.MetricScope
+ruleMetricScope milestone =
+  Evaluation.metricScopeFor
+    (Evaluation.evaluationIncludeMetricsAllDay milestone.evaluation)
+    milestone.timeBounds
 
 -- | Needs full metric bag (not mid-ride delta-only legacy path).
 -- Behaviour conditionTypes without evaluation.logic must not use ride deltas
@@ -436,15 +444,22 @@ evaluateJsonLogicMilestone ijHandle personId merchantId merchantOpCityId localTi
         then pure False
         else do
           -- Stats is progressive SoT; Redis may be empty after eviction — never under-count.
-          let statsCtx = BM.metricContextFromCurrentMetrics (mbExisting >>= (.currentMetrics))
-              metrics' = BM.progressiveMergeMetricContext statsCtx metrics
+          -- The rule reads only inside-window activity when evaluation.includeMetricsAllDay = false
+          -- with timeBounds (out-of-window rides / ticks never reach the inside counters).
+          let mbStatsMetrics = mbExisting >>= (.currentMetrics)
+              allDayCtx = BM.scopedMetricContext Evaluation.AllDayMetrics mbStatsMetrics metrics
+              insideCtx = BM.scopedMetricContext Evaluation.InsideTimeboundMetrics mbStatsMetrics metrics
+              metrics' = case ruleMetricScope milestone of
+                Evaluation.AllDayMetrics -> allDayCtx
+                Evaluation.InsideTimeboundMetrics -> insideCtx
               currentValue = BM.metricValueForCondition evalMilestone.conditionType metrics'
               baseMetrics =
-                Evaluation.mergeCurrentMetrics
-                  (mbExisting >>= (.currentMetrics))
-                  metrics'.vars
+                Evaluation.mergeCurrentMetricsScoped
+                  mbStatsMetrics
+                  allDayCtx.vars
+                  insideCtx.vars
               meta = RM.parseMilestoneRewardMeta milestone.rewardMetadata
-              pct = Deferred.resolvePayoutPercent meta baseMetrics
+              pct = Deferred.resolvePayoutPercent (Deferred.payoutMetricScope meta milestone.timeBounds) meta baseMetrics
               withRuleMetrics = Evaluation.setSlabPercent baseMetrics pct
           -- Always refresh metrics snapshot while in progress.
           upsertJsonLogicStats ijHandle personId merchantId merchantOpCityId journey cjm periodKey milestone currentValue withRuleMetrics DIJS.InProgress Nothing
@@ -491,6 +506,8 @@ evaluateJsonLogicMilestone ijHandle personId merchantId merchantOpCityId localTi
 
 -- | Bag-eval: add this ride's net earnings into currentMetrics.
 -- Inside milestone timeBounds → earningInsideTimebound; else earningOutsideTimebound.
+-- Window milestones (bounded timeBounds) inside the window also add the ride to the rule-visible
+-- ride counters' *InsideTimebound keys, read when includeMetricsAllDay = false.
 -- Does not skip terminal rows (period ledger for NetOffEarnings payout).
 accumulateCurrentMetricsEarnings ::
   (BeamFlow m r) =>
@@ -503,49 +520,66 @@ accumulateCurrentMetricsEarnings ::
   Text ->
   UTCTime ->
   [DIJM.IncentiveJourneyMilestone] ->
-  Int ->
+  IJ.RideDeltas ->
   m ()
-accumulateCurrentMetricsEarnings _ _ _ _ _ _ _ _ _ 0 = pure ()
-accumulateCurrentMetricsEarnings ijHandle personId merchantId merchantOpCityId journey cjm periodKey localTime milestones netDelta = do
-  let deltaMoney = toHighPrecMoney netDelta
-  forM_ milestones $ \milestone ->
-    StatsSync.withStatsRowLock personId cjm.id milestone.id periodKey $ do
-      mbExisting <-
-        QStats.findStatsByPersonCjmAndMilestonePeriod personId cjm.id milestone.id periodKey
-      let within = Window.isWithinTimeBound localTime milestone.timeBounds
-          newMetrics =
-            Evaluation.bumpEarningsInCurrentMetrics
-              (mbExisting >>= (.currentMetrics))
-              within
-              deltaMoney
-      now <- getCurrentTime
-      statsId <- maybe generateGUID (pure . (.id)) mbExisting
-      campaignUserLinkType <- resolveStatsCampaignUserLinkType mbExisting cjm
-      void $
-        CQStats.upsertJourneyStats
-          ijHandle.actor
-          DIJS.IncentiveJourneyStats
-            { id = statsId,
-              personId = personId,
-              merchantId = merchantId,
-              merchantOperatingCityId = merchantOpCityId,
-              cohortId = cjm.cohortId,
-              campaignUserLinkType = campaignUserLinkType,
-              cohortJourneyMappingId = Just cjm.id,
-              journeyId = journey.id,
-              milestoneId = milestone.id,
-              periodKey = periodKey,
-              conditionType = milestone.conditionType,
-              conditionOperator = milestone.conditionOperator,
-              conditionValue = milestone.conditionValue,
-              currentValue = maybe 0 (.currentValue) mbExisting,
-              currentMetrics = newMetrics,
-              status = maybe DIJS.InProgress (.status) mbExisting,
-              rewardType = milestone.rewardType,
-              rewardValue = mbExisting >>= (.rewardValue),
-              createdAt = maybe now (.createdAt) mbExisting,
-              updatedAt = now
-            }
+accumulateCurrentMetricsEarnings ijHandle personId merchantId merchantOpCityId journey cjm periodKey localTime milestones deltas = do
+  let netDelta = deltas.netEarningsDelta
+      deltaMoney = toHighPrecMoney netDelta
+      insideRideCounters =
+        filter
+          ((/= 0) . snd)
+          [ (BM.varRidesCompleted, deltas.ridesDelta),
+            (BM.varEarnings, deltas.earningsDelta),
+            (BM.varDistanceMeters, deltas.distanceMetersDelta),
+            (BM.varRideTimeSeconds, deltas.rideTimeSecondsDelta)
+          ]
+  forM_ milestones $ \milestone -> do
+    let within = Window.isWithinTimeBound localTime milestone.timeBounds
+        bumpInside = within && Evaluation.hasTimeBounds milestone.timeBounds && not (null insideRideCounters)
+    when (netDelta /= 0 || bumpInside) $
+      StatsSync.withStatsRowLock personId cjm.id milestone.id periodKey $ do
+        mbExisting <-
+          QStats.findStatsByPersonCjmAndMilestonePeriod personId cjm.id milestone.id periodKey
+        let withEarnings =
+              if netDelta /= 0
+                then
+                  Evaluation.bumpEarningsInCurrentMetrics
+                    (mbExisting >>= (.currentMetrics))
+                    within
+                    deltaMoney
+                else mbExisting >>= (.currentMetrics)
+            newMetrics =
+              if bumpInside
+                then Evaluation.bumpInsideRideCountersInCurrentMetrics withEarnings insideRideCounters
+                else withEarnings
+        now <- getCurrentTime
+        statsId <- maybe generateGUID (pure . (.id)) mbExisting
+        campaignUserLinkType <- resolveStatsCampaignUserLinkType mbExisting cjm
+        void $
+          CQStats.upsertJourneyStats
+            ijHandle.actor
+            DIJS.IncentiveJourneyStats
+              { id = statsId,
+                personId = personId,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOpCityId,
+                cohortId = cjm.cohortId,
+                campaignUserLinkType = campaignUserLinkType,
+                cohortJourneyMappingId = Just cjm.id,
+                journeyId = journey.id,
+                milestoneId = milestone.id,
+                periodKey = periodKey,
+                conditionType = milestone.conditionType,
+                conditionOperator = milestone.conditionOperator,
+                conditionValue = milestone.conditionValue,
+                currentValue = maybe 0 (.currentValue) mbExisting,
+                currentMetrics = newMetrics,
+                status = maybe DIJS.InProgress (.status) mbExisting,
+                rewardType = milestone.rewardType,
+                rewardValue = mbExisting >>= (.rewardValue),
+                createdAt = maybe now (.createdAt) mbExisting,
+                updatedAt = now
+              }
 
 upsertJsonLogicStats ::
   (BeamFlow m r) =>
@@ -579,7 +613,7 @@ upsertJsonLogicStats ijHandle personId merchantId merchantOpCityId journey cjm p
             currentMetrics
             (mbExisting >>= (.currentMetrics))
         meta = RM.parseMilestoneRewardMeta milestone.rewardMetadata
-        pct = Deferred.resolvePayoutPercent meta mergedCounts
+        pct = Deferred.resolvePayoutPercent (Deferred.payoutMetricScope meta milestone.timeBounds) meta mergedCounts
         mergedMetrics = Evaluation.setSlabPercent mergedCounts pct
         mbExistingStatus = (.status) <$> mbExisting
         existingTerminal =
@@ -925,15 +959,21 @@ settleDeferredMilestonesForPeriod ijHandle personId merchantId merchantOpCityId 
                 redisMetrics <-
                   ijHandle.buildMetricContext personId cjm.id closedPeriodKey Nothing
                 -- Prefer stats.currentMetrics over wiped Redis zeros for condition + payout.
-                let statsCtx = BM.metricContextFromCurrentMetrics (mbExisting >>= (.currentMetrics))
-                    metrics = BM.progressiveMergeMetricContext statsCtx redisMetrics
+                -- Condition in the rule scope (evaluation.includeMetricsAllDay), payout in the reward scope.
+                let mbStatsMetrics = mbExisting >>= (.currentMetrics)
+                    allDayCtx = BM.scopedMetricContext Evaluation.AllDayMetrics mbStatsMetrics redisMetrics
+                    insideCtx = BM.scopedMetricContext Evaluation.InsideTimeboundMetrics mbStatsMetrics redisMetrics
+                    metrics = case ruleMetricScope milestone of
+                      Evaluation.AllDayMetrics -> allDayCtx
+                      Evaluation.InsideTimeboundMetrics -> insideCtx
                     currentValue = BM.metricValueForCondition (Convert.toLibConditionType milestone.conditionType) metrics
                     baseMetrics =
-                      Evaluation.mergeCurrentMetrics
-                        (mbExisting >>= (.currentMetrics))
-                        metrics.vars
+                      Evaluation.mergeCurrentMetricsScoped
+                        mbStatsMetrics
+                        allDayCtx.vars
+                        insideCtx.vars
                     meta = RM.parseMilestoneRewardMeta milestone.rewardMetadata
-                    pct = Deferred.resolvePayoutPercent meta baseMetrics
+                    pct = Deferred.resolvePayoutPercent (Deferred.payoutMetricScope meta milestone.timeBounds) meta baseMetrics
                     withMetrics = Evaluation.setSlabPercent baseMetrics pct
                     mbLogic = Evaluation.evaluationLogic milestone.evaluation
                     evalMilestone = Convert.toEvalMilestone milestone
@@ -951,6 +991,7 @@ settleDeferredMilestonesForPeriod ijHandle personId merchantId merchantOpCityId 
                   then do
                     let payout =
                           Deferred.computeNetOffMilestonePayout
+                            milestone.timeBounds
                             milestone.rewardMetadata
                             milestone.rewardValue
                             withMetrics
@@ -1080,6 +1121,7 @@ tryAwardPeriodizedStreakReward ijHandle personId journey cjm milestones closedPe
                             StreakEnd.streakEndDispatchSpecAndPayout
                               cjm
                               streakMeta
+                              (Deferred.campaignTimeBounds milestones)
                               [(row.periodKey, row.currentMetrics) | row <- allStats]
                       case cjm.streakEndRewardType of
                         Just Common.NetOffEarnings
@@ -1213,6 +1255,7 @@ tryAwardStreakEndClassic ijHandle personId periodKey journey cjm milestones = do
                 StreakEnd.streakEndDispatchSpecAndPayout
                   cjm
                   streakMeta
+                  (Deferred.campaignTimeBounds milestones)
                   [(row.periodKey, row.currentMetrics) | row <- scopedStats]
           case cjm.streakEndRewardType of
             Just Common.NetOffEarnings
