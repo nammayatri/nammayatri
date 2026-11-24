@@ -129,6 +129,9 @@ SearchRequest:
     betterPointRideDistanceSaved: Maybe Meters
     routeCacheUsed: Maybe Bool
     isSilentReallocationEnabled: Maybe Bool
+    # Window chosen by the config-pilot toss at search time. The driver-cancel path reads it from
+    # here instead of tossing again, so the rider gets the same arm that was sent to the BPP.
+    silentReallocationWindowSeconds: Maybe Seconds
 
 
   default:

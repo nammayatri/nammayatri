@@ -478,6 +478,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       mbIsWhatsappRequest
       (Just routeCacheUsed)
       isSilentReallocationEnabled
+      (if isSilentReallocationEnabled == Just True then riderCfg.silentReallocationWindowSeconds else Nothing)
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -522,8 +523,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
-  -- the BPP stamps reallocation tries as silent-window hits or misses, so it needs the window length
-  let silentWindowSeconds = if searchRequest.isSilentReallocationEnabled == Just True then riderCfg.silentReallocationWindowSeconds else Nothing
+  -- the BPP stamps reallocation tries as silent-window hits or misses, so it needs the window length.
+  -- It is the value persisted on the search request, so the BPP stamp and the rider-side window
+  -- opened on a driver cancel (Beckn.OnUpdate) always come from the same experiment toss.
+  let silentWindowSeconds = searchRequest.silentReallocationWindowSeconds
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,
@@ -799,8 +802,9 @@ buildSearchRequest ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Seconds ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId discoveredDropSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed mbIsSilentReallocationEnabled = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId discoveredDropSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed mbIsSilentReallocationEnabled mbSilentReallocationWindowSeconds = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -877,6 +881,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         betterPointRideDistanceSaved = Nothing,
         routeCacheUsed = mbRouteCacheUsed,
         isSilentReallocationEnabled = mbIsSilentReallocationEnabled,
+        silentReallocationWindowSeconds = mbSilentReallocationWindowSeconds,
         ..
       }
   where
