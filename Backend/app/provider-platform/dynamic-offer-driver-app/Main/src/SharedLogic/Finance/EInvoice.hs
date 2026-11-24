@@ -43,14 +43,25 @@ isEInvoiceEnabledForCity ::
   (BeamFlow.BeamFlow m r) =>
   Text ->
   m Bool
-isEInvoiceEnabledForCity merchantOpCityId = do
-  mbServiceConfig <-
-    getOneConfig
-      (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)})
-      Nothing
-  pure $ case mbServiceConfig of
-    Just sc | DMSC.GSTEInvoiceServiceConfig _ <- sc.serviceConfig -> True
-    _ -> False
+isEInvoiceEnabledForCity merchantOpCityId = isJust <$> findEInvoiceConfig merchantOpCityId
+
+-- | The city's e-invoice provider config: EY DigiGST when configured, else Chartered Info.
+findEInvoiceConfig ::
+  (BeamFlow.BeamFlow m r) =>
+  Text ->
+  m (Maybe GSTEInvoiceConfig)
+findEInvoiceConfig merchantOpCityId = do
+  mbDigiGST <- configFor GSTEInvoiceTypes.DigiGST
+  maybe (configFor GSTEInvoiceTypes.CharteredInfo) (pure . Just) mbDigiGST
+  where
+    configFor service = do
+      mbServiceConfig <-
+        getOneConfig
+          (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService service)})
+          Nothing
+      pure $ case mbServiceConfig of
+        Just sc | DMSC.GSTEInvoiceServiceConfig cfg <- sc.serviceConfig -> Just cfg
+        _ -> Nothing
 
 -- | Attempt B2B e-invoice generation for a created invoice.
 --
@@ -89,93 +100,109 @@ generateEInvoiceForInvoice invoice = do
     Nothing -> logInfo $ "GSTEInvoice: no DriverGstin for driver — treating as B2C, skipping e-invoice." <> ctx
     Just dg -> do
       logInfo $ "GSTEInvoice: found DriverGstin record gstinId=" <> dg.id.getId <> ctx
-      mbServiceConfig <-
-        getOneConfig
-          (MerchantServiceConfigDimensions {merchantOperatingCityId = invoice.merchantOperatingCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)})
-          Nothing
-      let mbCfg = do
-            sc <- mbServiceConfig
-            case sc.serviceConfig of
-              DMSC.GSTEInvoiceServiceConfig cfg -> Just cfg
-              _ -> Nothing
+      mbCfg <- findEInvoiceConfig invoice.merchantOperatingCityId
       case mbCfg of
-        Nothing ->
-          logInfo $
-            "GSTEInvoice: no GSTEInvoice service config for operating city — skipping e-invoice. hasRawServiceConfig="
-              <> show (isJust mbServiceConfig)
-              <> ctx
+        Nothing -> logInfo $ "GSTEInvoice: no GSTEInvoice service config for operating city — skipping e-invoice." <> ctx
         Just cfg -> do
           logInfo $ "GSTEInvoice: B2B transaction detected, generating e-invoice." <> ctx
-          eResult <- try @_ @SomeException $ case cfg of
-            CharteredInfoEInvoiceConfig ciCfg -> do
-              logDebug $ "GSTEInvoice: using Chartered Info GSP sellerGstin=" <> ciCfg.gstin <> ctx
-              decryptedGstin <- decrypt dg.gstin
-              logDebug $ "GSTEInvoice: decrypted buyer GSTIN, stateCode=" <> gstinStateCode decryptedGstin <> ctx
-              logDebug $ "GSTEInvoice: fetching auth token." <> ctx
-              authToken <- getOrRefreshAuthToken cfg
-              logDebug $
-                "GSTEInvoice: auth token obtained, tokenLength="
-                  <> show (T.length authToken)
-                  <> ctx
-              mbIndirectTax <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
-              logInfo $
-                "GSTEInvoice: indirect-tax lookup result hasRecord="
-                  <> show (isJust mbIndirectTax)
-                  <> maybe "" (\t -> " taxRate=" <> show t.taxRate <> " taxableValue=" <> show t.taxableValue) mbIndirectTax
-                  <> ctx
-              let payload = buildEInvoicePayload invoice dg decryptedGstin mbIndirectTax ciCfg
-              logDebug $
-                "GSTEInvoice: built payload, calling GSP generateEInvoice. payload="
-                  <> TL.toStrict (AesonText.encodeToLazyText payload)
-                  <> ctx
-              -- If the GSP rejects the token (GSP752), it means the token died
-              -- before/at use (the GSP hands out short, shared session tokens).
-              -- Drop the cached token, re-authenticate, and retry the call ONCE;
-              -- by the retry the GSP has usually rotated to a fresh token.
-              attempt1 <- try @_ @SomeException $ GSTEInvoice.generateEInvoice cfg authToken payload
-              eInvResp <- case attempt1 of
-                Right resp -> pure resp
-                Left err ->
-                  if isAuthTokenExpiredError err
-                    then do
-                      logWarning $ "GSTEInvoice: GSP rejected auth token (GSP752); invalidating cache and retrying once." <> ctx
-                      Redis.del (snd (authTokenCacheScope cfg))
-                      freshToken <- getOrRefreshAuthToken cfg
-                      logDebug $ "GSTEInvoice: retry with fresh auth token, tokenLength=" <> show (T.length freshToken) <> ctx
-                      GSTEInvoice.generateEInvoice cfg freshToken payload
-                    else throwM err
-              logInfo $
-                "GSTEInvoice: GSP responded status="
-                  <> eInvResp.status
-                  <> " irn="
-                  <> fromMaybe "<no IRN in response>" eInvResp.irn
-                  <> " ackNo="
-                  <> fromMaybe "<none>" eInvResp.ackNo
-                  <> " ackDt="
-                  <> fromMaybe "<none>" eInvResp.ackDt
-                  <> "SignesQRCode ="
-                  <> fromMaybe "<none>" eInvResp.signedQRCode
-                  <> ctx
-              logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
-              actorInfo <- asks (.actorInfo)
-              QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode (Just actorInfo.actorType) actorInfo.actorId invoice.id
-              QFInvoice.updatePdfS3Path Nothing (Just actorInfo.actorType) actorInfo.actorId invoice.id
-              logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
+          eResult <- try @_ @SomeException $ do
+            let seller = sellerGstinOf cfg
+            logDebug $ "GSTEInvoice: using " <> providerName cfg <> " sellerGstin=" <> seller.sellerGstin <> ctx
+            decryptedGstin <- decrypt dg.gstin
+            logDebug $ "GSTEInvoice: decrypted buyer GSTIN, stateCode=" <> gstinStateCode decryptedGstin <> ctx
+            logDebug $ "GSTEInvoice: fetching auth token." <> ctx
+            authToken <- getOrRefreshAuthToken cfg
+            logDebug $
+              "GSTEInvoice: auth token obtained, tokenLength="
+                <> show (T.length authToken)
+                <> ctx
+            mbIndirectTax <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
+            logInfo $
+              "GSTEInvoice: indirect-tax lookup result hasRecord="
+                <> show (isJust mbIndirectTax)
+                <> maybe "" (\t -> " taxRate=" <> show t.taxRate <> " taxableValue=" <> show t.taxableValue) mbIndirectTax
+                <> ctx
+            let payload = buildEInvoicePayload invoice dg decryptedGstin mbIndirectTax seller
+            logDebug $
+              "GSTEInvoice: built payload, calling GSP generateEInvoice. payload="
+                <> TL.toStrict (AesonText.encodeToLazyText payload)
+                <> ctx
+            -- If the provider rejects the token (Chartered Info GSP752, DigiGST HTTP 401),
+            -- the token died before/at use. Drop the cached token, re-authenticate,
+            -- and retry the call ONCE.
+            attempt1 <- try @_ @SomeException $ GSTEInvoice.generateEInvoice cfg authToken payload
+            eInvResp <- case attempt1 of
+              Right resp -> pure resp
+              Left err ->
+                if isAuthTokenExpiredError err
+                  then do
+                    logWarning $ "GSTEInvoice: provider rejected auth token; invalidating cache and retrying once." <> ctx
+                    Redis.del (snd (authTokenCacheScope cfg))
+                    freshToken <- getOrRefreshAuthToken cfg
+                    logDebug $ "GSTEInvoice: retry with fresh auth token, tokenLength=" <> show (T.length freshToken) <> ctx
+                    GSTEInvoice.generateEInvoice cfg freshToken payload
+                  else throwM err
+            logInfo $
+              "GSTEInvoice: GSP responded status="
+                <> eInvResp.status
+                <> " irn="
+                <> fromMaybe "<no IRN in response>" eInvResp.irn
+                <> " ackNo="
+                <> fromMaybe "<none>" eInvResp.ackNo
+                <> " ackDt="
+                <> fromMaybe "<none>" eInvResp.ackDt
+                <> "SignesQRCode ="
+                <> fromMaybe "<none>" eInvResp.signedQRCode
+                <> ctx
+            case eInvResp.irn of
+              Just irn | eInvResp.status == "1" -> do
+                logInfo $ "GSTEInvoice: IRN generated: " <> irn <> ctx
+                actorInfo <- asks (.actorInfo)
+                QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode (Just actorInfo.actorType) actorInfo.actorId invoice.id
+                QFInvoice.updatePdfS3Path Nothing (Just actorInfo.actorType) actorInfo.actorId invoice.id
+                logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
+              _ ->
+                logError $
+                  "GSTEInvoice: no IRN generated, invoice left unchanged. errors="
+                    <> show (fromMaybe [] eInvResp.errors)
+                    <> " info="
+                    <> show (fromMaybe [] eInvResp.infoDtls)
+                    <> ctx
           case eResult of
             Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx
             Left err -> logError $ "GSTEInvoice: e-invoice generation failed: " <> show err <> ctx
 
+-- | The platform (seller) GSTIN details, from whichever provider config the city uses.
+data SellerGstin = SellerGstin
+  { sellerGstin :: Text,
+    sellerLegalName :: Text,
+    sellerAddress :: Text,
+    sellerLocation :: Text,
+    sellerPinCode :: Int,
+    sellerStateCode :: Text
+  }
+
+sellerGstinOf :: GSTEInvoiceConfig -> SellerGstin
+sellerGstinOf (CharteredInfoEInvoiceConfig cfg) =
+  SellerGstin cfg.gstin cfg.sellerGstinLegalName cfg.sellerGstinAddr cfg.sellerGstinLocation cfg.sellerGstinPinCode cfg.sellerGstinStcd
+sellerGstinOf (DigiGSTEInvoiceConfig cfg) =
+  SellerGstin cfg.gstin cfg.sellerGstinLegalName cfg.sellerGstinAddr cfg.sellerGstinLocation cfg.sellerGstinPinCode cfg.sellerGstinStcd
+
+providerName :: GSTEInvoiceConfig -> Text
+providerName (CharteredInfoEInvoiceConfig _) = "Chartered Info GSP"
+providerName (DigiGSTEInvoiceConfig _) = "EY DigiGST"
+
 -- | Build the e-invoice payload from an Invoice plus the buyer's DriverGstin record.
---   buyerDtls is populated entirely from DriverGstin; the platform (seller)
---   details come from the CharteredInfoConfig.
+--   buyerDtls is populated entirely from DriverGstin; the seller details come
+--   from the city's provider config.
 buildEInvoicePayload ::
   FInvoice.Invoice ->
   DDriverGstin.DriverGstin ->
   Text -> -- decrypted driver GSTIN
   Maybe IndirectTax.IndirectTaxTransaction ->
-  CITypes.CharteredInfoConfig ->
+  SellerGstin ->
   CITypes.EInvoicePayload
-buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoConfig {..} =
+buildEInvoicePayload inv dg decryptedGstin mbIndirectTax SellerGstin {..} =
   let hsnCode = fromMaybe "" (mbIndirectTax >>= (.sacCode))
       gstRate = money3 $ fromMaybe 18 (mbIndirectTax >>= (.taxRate))
       igstAmount = money2 $ maybe 0 (realToFrac . (.igstAmount)) mbIndirectTax
@@ -195,7 +222,7 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
       totalInvoiceValue = money2 $ realToFrac inv.totalAmount
       zeroMoney = 0 :: Double
       buyerAddr = clampAddr1 $ fromMaybe (fromMaybe "" inv.issuedToAddress) dg.address
-      sellerAddr = clampAddr1 sellerGstinAddr
+      sellerAddr = clampAddr1 sellerAddress
    in CITypes.EInvoicePayload
         { version = "1.1",
           tranDtls =
@@ -211,12 +238,12 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
               },
           sellerDtls =
             CITypes.SellerDtls
-              { gstin = gstin,
-                lglNm = sellerGstinLegalName,
+              { gstin = sellerGstin,
+                lglNm = sellerLegalName,
                 addr1 = sellerAddr,
-                loc = sellerGstinLocation,
-                pin = sellerGstinPinCode,
-                stcd = sellerGstinStcd
+                loc = sellerLocation,
+                pin = sellerPinCode,
+                stcd = sellerStateCode
               },
           buyerDtls =
             CITypes.BuyerDtls
@@ -365,10 +392,13 @@ getOrRefreshAuthToken config = do
 authTokenCacheScope :: GSTEInvoiceConfig -> (Text, Text)
 authTokenCacheScope (CharteredInfoEInvoiceConfig cfg) =
   (cfg.gstin, "GSTEInvoice:authToken:" <> cfg.aspId <> ":" <> cfg.gstin <> ":" <> cfg.userName)
+authTokenCacheScope (DigiGSTEInvoiceConfig cfg) =
+  (cfg.gstin, "GSTEInvoice:authToken:DigiGST:" <> cfg.userName <> ":" <> cfg.gstin)
 
--- | GSP752 ("AuthToken not found or expired") is thrown as an InternalError whose
---   shown text embeds the GSP error body. Detect it so we can invalidate + retry once.
+-- | An expired token is thrown as an InternalError whose shown text embeds the
+--   provider's reply: Chartered Info GSP752 ("AuthToken not found or expired"),
+--   DigiGST HTTP 401 ("Invalid JWT token"). Detect it so we can invalidate + retry once.
 isAuthTokenExpiredError :: SomeException -> Bool
 isAuthTokenExpiredError e =
   let msg = T.pack (show e)
-   in "GSP752" `T.isInfixOf` msg || "AuthToken not found or expired" `T.isInfixOf` msg
+   in any (`T.isInfixOf` msg) ["GSP752", "AuthToken not found or expired", "statusCode = 401", "Invalid JWT token"]
