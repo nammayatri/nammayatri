@@ -112,6 +112,7 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (validateRideLocation)
+import qualified SharedLogic.SharedRun.Fare as SharedRunFare
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Toll ()
@@ -272,6 +273,8 @@ type EndRideFlow m r =
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    -- the shared-route run's fare is read from the rider platform, whose client wants the request id
+    HasRequestId r,
     JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
@@ -458,6 +461,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       pure (toList $ fmap mkPoint res.loc, map mkPoint accLoc)
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed, mbShadowApprox) <-
       case req of
+        -- a shared-route run is priced by its passengers, not its distance: the fare is the sum of the tickets of the
+        -- riders who boarded, read from the rider platform's manifest; the distance ladder below would price it as a cab ride
+        _ | DTC.isSharedRouteTrip booking.tripCategory -> do
+          (runFare, runFareParams) <- SharedRunFare.runFareAtEnd booking rideOld
+          pure (roundToIntegral rideOld.traveledDistance, runFare, Just runFareParams, rideOld, Nothing, Nothing, Nothing)
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
           res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance True handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
@@ -575,7 +583,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-    finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
+    finalCommission <-
+      if DTC.isSharedRouteTrip booking.tripCategory
+        then SharedRunFare.commissionAtEnd thresholdConfig baseFareParams mbFarePolicy
+        else Fare.calculateCommission baseFareParams mbFarePolicy
     let finalCancellationDuesCommission = Fare.calculateCancellationDuesCommission booking.cancellationDuesCommission baseFareParams
     -- SHADOW MODE: the legacy ladder above did the billing; this evaluates the
     -- unified decision core on the same inputs, persists its reason on the

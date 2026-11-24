@@ -88,6 +88,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time hiding (getCurrentTime)
 import qualified Data.UUID as UUID
+import qualified Domain.Types as DTC
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
@@ -482,6 +483,14 @@ data RideAssignedPrefetch = RideAssignedPrefetch
     rideDetails :: Maybe DRD.RideDetails
   }
 
+-- | A shared-route run (trip category SharedRoute) has no rider-platform Booking behind it: its passengers are FRFS
+-- tickets, and the rider platform learns about the run through the manifest calls, never through Beckn callbacks.
+-- Every sender below skips such a booking instead of posting to a BAP that has nothing to update.
+unlessSharedRun :: MonadFlow m => DRB.Booking -> Text -> m () -> m ()
+unlessSharedRun booking what action
+  | DTC.isSharedRouteTrip booking.tripCategory = logDebug $ "shared run " <> booking.id.getId <> ": " <> what <> " is not sent to a rider platform"
+  | otherwise = action
+
 noRideAssignedPrefetch :: RideAssignedPrefetch
 noRideAssignedPrefetch = RideAssignedPrefetch Nothing Nothing Nothing Nothing Nothing
 
@@ -804,7 +813,7 @@ sendRideAssignedUpdateToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh = do
+sendRideAssignedUpdateToBAP booking ride driver veh = unlessSharedRun booking "sendRideAssignedUpdateToBAP" $ do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -840,7 +849,7 @@ sendRideEnroutePickupStatusToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendRideEnroutePickupStatusToBAP booking ride driver veh = do
+sendRideEnroutePickupStatusToBAP booking ride driver veh = unlessSharedRun booking "sendRideEnroutePickupStatusToBAP" $ do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -900,7 +909,7 @@ sendRideStartedUpdateToBAP ::
   SRide.Ride ->
   Maybe Maps.LatLong ->
   m ()
-sendRideStartedUpdateToBAP booking ride tripStartLocation = do
+sendRideStartedUpdateToBAP booking ride tripStartLocation = unlessSharedRun booking "sendRideStartedUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -940,7 +949,7 @@ sendRideEstimatedEndTimeRangeUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendRideEstimatedEndTimeRangeUpdateToBAP booking ride = do
+sendRideEstimatedEndTimeRangeUpdateToBAP booking ride = unlessSharedRun booking "sendRideEstimatedEndTimeRangeUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -1016,7 +1025,7 @@ sendRideCompletedUpdateToBAP ::
   Maybe Maps.LatLong ->
   Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = unlessSharedRun booking "sendRideCompletedUpdateToBAP" $ do
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
@@ -1069,7 +1078,7 @@ sendBookingCancelledUpdateToBAP ::
   Maybe HighPrecMoney ->
   Maybe DRide.Ride ->
   m ()
-sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFeeBase cancellationFeeTax mbRide = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFeeBase cancellationFeeTax mbRide = unlessSharedRun booking "sendBookingCancelledUpdateToBAP" $ do
   mbBookingCancellationReason <- QBCR.findByBookingId booking.id
   let cancellationReasonCode = mbBookingCancellationReason >>= (.reasonCode) <&> (\(DCR.CancellationReasonCode code) -> code)
       -- base + tax kept separate by callers; total built only here for the CancellationTerm
@@ -1182,7 +1191,7 @@ sendDriverArrivalUpdateToBAP ::
   SRide.Ride ->
   Maybe UTCTime ->
   m ()
-sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
+sendDriverArrivalUpdateToBAP booking ride arrivalTime = unlessSharedRun booking "sendDriverArrivalUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -1225,7 +1234,7 @@ sendPhoneCallRequestUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendPhoneCallRequestUpdateToBAP booking ride = do
+sendPhoneCallRequestUpdateToBAP booking ride = unlessSharedRun booking "sendPhoneCallRequestUpdateToBAP" $ do
   mbBookingDetails <- buildBookingDetails booking ride
   whenJust mbBookingDetails $ \bookingDetails -> do
     let phoneCallRequestReq = ACL.PhoneCallRequestBuildReq ACL.DPhoneCallRequestReq {..}
@@ -1248,7 +1257,7 @@ sendPhoneCallCompletedUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendPhoneCallCompletedUpdateToBAP booking ride = do
+sendPhoneCallCompletedUpdateToBAP booking ride = unlessSharedRun booking "sendPhoneCallCompletedUpdateToBAP" $ do
   mbBookingDetails <- buildBookingDetails booking ride
   whenJust mbBookingDetails $ \bookingDetails -> do
     let phoneCallCompletedReq = ACL.PhoneCallCompletedBuildReq ACL.DPhoneCallCompletedReq {..}
@@ -1305,7 +1314,7 @@ sendStopArrivalUpdateToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendStopArrivalUpdateToBAP booking ride driver vehicle = do
+sendStopArrivalUpdateToBAP booking ride driver vehicle = unlessSharedRun booking "sendStopArrivalUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   let paymentUrl = Nothing
@@ -1337,7 +1346,7 @@ sendNewMessageToBAP ::
   SRide.Ride ->
   T.Text ->
   m ()
-sendNewMessageToBAP booking ride message = do
+sendNewMessageToBAP booking ride message = unlessSharedRun booking "sendNewMessageToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1376,7 +1385,7 @@ sendUpdateEditDestToBAP ::
   Maybe Maps.LatLong ->
   DOU.UpdateType ->
   m ()
-sendUpdateEditDestToBAP booking mbRide bookingUpdateReqDetails newDestination currentLocation updateType = do
+sendUpdateEditDestToBAP booking mbRide bookingUpdateReqDetails newDestination currentLocation updateType = unlessSharedRun booking "sendUpdateEditDestToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1415,7 +1424,7 @@ sendUpdateEditDestErrToBAP ::
   Text ->
   Text ->
   m ()
-sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorCode errorMessage = do
+sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorCode errorMessage = unlessSharedRun booking "sendUpdateEditDestErrToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1444,7 +1453,7 @@ sendSafetyAlertToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendSafetyAlertToBAP booking ride reason driver vehicle = do
+sendSafetyAlertToBAP booking ride reason driver vehicle = unlessSharedRun booking "sendSafetyAlertToBAP" $ do
   logDebug $ "sendSafetyAlertToBAP: reason: " <> T.pack (show reason)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   -- Re-routes through on_support for pilot cities (everyone else keeps on_update), since ONDC v2.1.0 categorizes this event under on_support, not on_update, for pilot merchants only.
@@ -1509,7 +1518,7 @@ sendEstimateRepetitionUpdateToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource driver vehicle = do
+sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource driver vehicle = unlessSharedRun booking "sendEstimateRepetitionUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1546,7 +1555,7 @@ sendQuoteRepetitionUpdateToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driver vehicle = do
+sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driver vehicle = unlessSharedRun booking "sendQuoteRepetitionUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1582,7 +1591,7 @@ sendReallocationUpdateToBAP ::
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendReallocationUpdateToBAP booking ride cancellationSource driver vehicle = do
+sendReallocationUpdateToBAP booking ride cancellationSource driver vehicle = unlessSharedRun booking "sendReallocationUpdateToBAP" $ do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -1652,7 +1661,7 @@ sendDestinationArrivalUpdateToBAP ::
   SRide.Ride ->
   Maybe UTCTime ->
   m ()
-sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
+sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = unlessSharedRun booking "sendDestinationArrivalUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -1685,7 +1694,7 @@ sendDriverNearPickupUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendDriverNearPickupUpdateToBAP booking ride = do
+sendDriverNearPickupUpdateToBAP booking ride = unlessSharedRun booking "sendDriverNearPickupUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1720,7 +1729,7 @@ sendReturnTripStartedUpdateToBAP ::
   SRide.Ride ->
   Maybe UTCTime ->
   m ()
-sendReturnTripStartedUpdateToBAP booking ride returnStartedAt = do
+sendReturnTripStartedUpdateToBAP booking ride returnStartedAt = unlessSharedRun booking "sendReturnTripStartedUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -1753,7 +1762,7 @@ notfyDeliveryImageUploadedToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   m ()
-notfyDeliveryImageUploadedToBAP booking ride = do
+notfyDeliveryImageUploadedToBAP booking ride = unlessSharedRun booking "notfyDeliveryImageUploadedToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -1813,7 +1822,7 @@ sendChangeServiceTierUpdateToBAP ::
   Text ->
   Fare.FareParameters ->
   m ()
-sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId fareParams = do
+sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId fareParams = unlessSharedRun booking "sendChangeServiceTierUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1849,7 +1858,7 @@ sendAddBaggageUpdateToBAP ::
   HighPrecMoney ->
   Fare.FareParameters ->
   m ()
-sendAddBaggageUpdateToBAP booking numberOfLuggages newEstimatedFare fareParams = do
+sendAddBaggageUpdateToBAP booking numberOfLuggages newEstimatedFare fareParams = unlessSharedRun booking "sendAddBaggageUpdateToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-

@@ -316,3 +316,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_of_passengers integ
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN rider_call_identity text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN trip_id text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN route_code text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN integrated_bpp_config_id text ;

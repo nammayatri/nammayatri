@@ -671,3 +671,73 @@ data MonitoringTripHour = MonitoringTripHour
     completed :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- | GIMS forwards @POST /graphql@ to the OTP instance that serves @gtfs_id@ (GTFS GraphQL, @/otp/gtfs/v1@). Same
+-- shape as GIMS' own GraphQLRequest; @city@ is the legacy instance selector and stays empty when a feed is given.
+data GtfsGraphQLRequest = GtfsGraphQLRequest
+  { query :: Text,
+    variables :: Maybe Value,
+    operation_name :: Maybe Text,
+    city :: Maybe Text,
+    gtfs_id :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+-- | One feed's timetable for one service day, as the shared-run materialiser reads it: every route of the feed, every
+-- trip the calendar runs that day, every stop time. Ids are OTP ids ("<feed>:<gtfs id>"); 'gtfsLocalId' strips the feed.
+data GtfsTimetableRoute = GtfsTimetableRoute
+  { gtfsId :: Text,
+    shortName :: Maybe Text,
+    longName :: Maybe Text,
+    patterns :: [GtfsTimetablePattern]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+newtype GtfsTimetablePattern = GtfsTimetablePattern
+  { tripsForDate :: [GtfsTimetableTrip]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GtfsTimetableTrip = GtfsTimetableTrip
+  { gtfsId :: Text,
+    tripHeadsign :: Maybe Text,
+    stoptimes :: [GtfsTimetableStopTime]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+-- | Times are GTFS seconds after the service day's midnight (so 08:30 is 30600; past-midnight trips exceed 86400).
+data GtfsTimetableStopTime = GtfsTimetableStopTime
+  { scheduledArrival :: Int,
+    scheduledDeparture :: Int,
+    stopPosition :: Int,
+    stop :: GtfsTimetableStop
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GtfsTimetableStop = GtfsTimetableStop
+  { gtfsId :: Text,
+    code :: Maybe Text,
+    name :: Maybe Text,
+    lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+-- | The GTFS id without OTP's feed prefix: "corp_chennai:CORP-ACME-1" -> "CORP-ACME-1".
+gtfsLocalId :: Text -> Text
+gtfsLocalId = snd . T.breakOnEnd ":"
+
+-- | The @data.routes@ of the timetable query, or the query's first GraphQL error.
+newtype GtfsTimetableResp = GtfsTimetableResp {routes :: [GtfsTimetableRoute]}
+  deriving (Generic, Show)
+
+instance FromJSON GtfsTimetableResp where
+  parseJSON = withObject "GtfsTimetableResp" $ \o -> do
+    mbErrors <- o .:? "errors"
+    case mbErrors of
+      Just (err : _) -> do
+        msg <- withObject "GraphQLError" (.: "message") err
+        fail ("GTFS GraphQL error: " <> msg)
+      _ -> do
+        payload <- o .: "data"
+        GtfsTimetableResp <$> payload .: "routes"

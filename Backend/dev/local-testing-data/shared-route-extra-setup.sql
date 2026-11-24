@@ -12,17 +12,14 @@
 -- Schema is not here: the columns come from the storage YAML (migrations-read-only): ride.trip_id / route_code /
 -- integrated_bpp_config_id, frfs_ticket_booking.ride_id, transporter_config.shared_run_config.
 --
--- The fixture is in two halves. This file is the config half. The data half goes through the apps, because its rows carry
--- encrypted fields the SQL cannot forge (vehicle numbers, phone numbers) — run it as the first folder of the shuttle Postman
--- collection (dev/integration-tests/collections/SharedRouteFlow/, module A opens it):
---   1. GTFS feed `corp_chennai` published into the local GIMS/OTP servers (module C's publish tool; until it lands, a hand-made
---      GTFS zip with the same ids): agency `corp_chennai`; route CORP-ACME-1 with stops CORP_ACME_S1 … CORP_ACME_S5 in order;
---      trips CORP-ACME-1-0830 and CORP-ACME-1-1800, Monday to Friday; stop times 10 minutes apart.
---   2. Driver side: register one fleet owner (the NY-owned entity, fleet name "ACME shuttle fleet"), two drivers under it, one
---      bus vehicle (BUS_NON_AC), vehicle on route CORP-ACME-1 through the fleet "add vehicle to route" API
---      (writes vehicle_route_mapping), and the driver tag DCO on the second driver through the dashboard tag API.
---   3. Rider side: three riders through /auth (dev OTP), the first two with a work email on the org domain acme.example
---      once module C's email verification exists.
+-- The fixture is in three pieces; this file is the config piece, pure SQL so the dev stack's context API can apply it with the
+-- other local-testing-data files. The other two live in dev/scripts/shared-route-fixture/ (README there):
+--   1. GTFS feed `corp_chennai`: corp_chennai.gtfs/, loaded into the local GIMS by hand. Agency `corp_chennai`; route CORP-ACME-1
+--      with stops CORP_ACME_S1 … CORP_ACME_S5; trips CORP-ACME-1-0830 (S1 to S5) and CORP-ACME-1-1800 (S5 to S1), Monday to
+--      Friday, stop times 10 minutes apart. Module C's publish tool replaces the hand-made folder later with the same ids.
+--   2. People and vehicle: apply-fixture-data.sh (needs the dev passetto for the encrypted columns). One fleet owner (the NY-owned
+--      entity, "ACME shuttle fleet"), two drivers under it (the second tagged DCO), one BUS_NON_AC bus bound to route CORP-ACME-1
+--      (vehicle_route_mapping), three riders. Phones 99999001xx, OTP 7891.
 --
 -- Convention this fixture follows (Plan tab, "GTFS convention"): feed key corp_<city>, agency key = the integrated bpp
 -- config's agency key, route code CORP-<org>-<n>, trip id <route>-<HHMM>, calendar = service days.
@@ -58,17 +55,19 @@ FROM atlas_driver_offer_bpp.integrated_bpp_config WHERE agency_key = 'chennai_bu
 ON CONFLICT DO NOTHING;
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
--- 2. Supply knobs: the driver city's transporter_config.shared_run_config. PER_TICKET fee (commission from the SharedRoute
---    fare policy on the sum of ticket fares), 30 min between a driver's runs, driver asked to check in 90 min before
---    departure, fallback job takes an unacknowledged run at 45 min before, 2 min wait at a stop before a no-show.
+-- 2. Supply knobs: the driver city's transporter_config.shared_run_config. The materialiser reads the timetable of every
+--    feed in `feeds` (here the corporate feed only). PER_TICKET fee (commission from the SharedRoute fare policy on the sum
+--    of ticket fares), 30 min between a driver's runs, driver asked to check in 90 min before departure, fallback job takes
+--    an unacknowledged run at 45 min before, 2 min wait at a stop before a no-show.
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET shared_run_config = '{"schedule":"TIMETABLED","driverFee":"PER_TICKET","clashWindowMinutes":30,"fallbackWindowMinutes":45,"checkInOffsetMinutes":90,"noShowWaitSeconds":120}'
+SET shared_run_config = '{"schedule":"TIMETABLED","feeds":["corp_chennai"],"driverFee":"PER_TICKET","clashWindowMinutes":30,"fallbackWindowMinutes":45,"checkInOffsetMinutes":90,"noShowWaitSeconds":120}'
 WHERE merchant_operating_city_id = 'f8e9db0a-96c8-49e4-942a-3e3f7265d2da';
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 3. Ticket fares (rider side): the SHUTTLE service tier on the corporate feed, one MatrixBased fare policy, the route fare
---    product for CORP-ACME-1 and a flat 40 INR for every forward stop pair of its five stops.
+--    product for CORP-ACME-1 and a flat 40 INR for every ordered stop pair of its five stops (S1 to S5 for the morning trip,
+--    S5 to S1 for the evening return).
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 INSERT INTO atlas_app.frfs_vehicle_service_tier (type,description,id,integrated_bpp_config_id,long_name,merchant_id,merchant_operating_city_id,provider_code,short_name,created_at,updated_at,is_air_conditioned,pay_on_board)
 VALUES ('SHUTTLE','Corporate shuttle',md5('e2e-corp-tier')::uuid::text,md5('e2e-corp-shuttle-ibc')::uuid::text,'Corporate Shuttle','4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874','SHUTTLE','Shuttle',now(),now(),true,false) ON CONFLICT DO NOTHING;
@@ -77,10 +76,10 @@ INSERT INTO atlas_app.frfs_fare_policy (id,type,description,merchant_id,merchant
 VALUES (md5('e2e-corp-fp-CORP-ACME-1')::uuid::text,'MatrixBased','corporate shuttle seat fare CORP-ACME-1','4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874',now(),now()) ON CONFLICT DO NOTHING;
 INSERT INTO atlas_app.frfs_route_fare_product (fare_policy_id,id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,route_code,time_bounds,vehicle_service_tier_id,vehicle_type,created_at,updated_at)
 VALUES (md5('e2e-corp-fp-CORP-ACME-1')::uuid::text,md5('e2e-corp-rfp-CORP-ACME-1')::uuid::text,md5('e2e-corp-shuttle-ibc')::uuid::text,'4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874','CORP-ACME-1','Unbounded',md5('e2e-corp-tier')::uuid::text,'BUS',now(),now()) ON CONFLICT DO NOTHING;
--- every forward pair (i < j) of S1..S5 at 40 INR
+-- every ordered pair (i <> j) of S1..S5 at 40 INR: i < j serves the 08:30 trip, i > j the 18:00 return
 INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy_id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,start_stop_code,category,created_at,updated_at)
 SELECT 40,'INR','CORP_ACME_S'||j,md5('e2e-corp-fp-CORP-ACME-1')::uuid::text,md5('e2e-corp-shuttle-ibc')::uuid::text,'4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874','CORP_ACME_S'||i,'ADULT',now(),now()
-FROM generate_series(1,4) AS i, generate_series(2,5) AS j WHERE i < j;
+FROM generate_series(1,5) AS i, generate_series(1,5) AS j WHERE i <> j;
 
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 4. Run fare product (driver side): the SharedRoute row the materialiser prices a run from, cloned from the city's on-demand

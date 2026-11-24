@@ -220,7 +220,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MaterialiseSharedRunsJobData (..), MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator as Fields
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
@@ -683,6 +683,14 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           case jobData' of
             Just jobData -> do
               createJobIn @_ @'SendLegalPolicyNotification (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: SendLegalPolicyNotificationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        -- the shared-run engine's daily clock for one city; it re-arms itself, so this is fired once per city
+        Just Common.MaterialiseSharedRunsTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe MaterialiseSharedRunsJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'MaterialiseSharedRuns (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: MaterialiseSharedRunsJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

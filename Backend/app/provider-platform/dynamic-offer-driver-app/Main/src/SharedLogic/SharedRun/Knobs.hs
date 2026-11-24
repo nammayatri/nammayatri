@@ -9,7 +9,6 @@ module SharedLogic.SharedRun.Knobs
     notImplemented,
     DriverFeeRule (..),
     driverFee,
-    runFare,
     clashWindow,
     checkInDue,
     fallbackDue,
@@ -57,10 +56,6 @@ driverFee knobs = case SharedRoute.driverFee knobs of
   PER_RUN -> notImplemented "PER_RUN fee: a flat commission from the SharedRoute fare_product row (module R)"
   PLAN_ONLY -> pure NoCommission
   NO_FEE -> pure NoCommission
-
--- | A run's fare is the money its tickets brought in; the fee basis only decides what is taken from it.
-runFare :: [HighPrecMoney] -> HighPrecMoney
-runFare = sum
 
 -- | Gap two runs of one driver must keep, on top of the travel time between them (OverlapCheck's buffer).
 clashWindow :: SharedSupplyKnobs -> NominalDiffTime

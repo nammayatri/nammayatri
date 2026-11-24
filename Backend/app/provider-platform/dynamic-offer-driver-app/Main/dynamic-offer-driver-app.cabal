@@ -655,6 +655,7 @@ library
       SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
+      SharedLogic.Allocator.Jobs.SharedRun.MaterialiseSharedRuns
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
@@ -866,7 +867,10 @@ library
       SharedLogic.Settlement
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SharedCab.Trip
+      SharedLogic.SharedRun.Fare
       SharedLogic.SharedRun.Knobs
+      SharedLogic.SharedRun.Materialise
+      SharedLogic.SharedRun.Session
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand

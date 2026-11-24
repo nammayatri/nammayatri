@@ -2487,7 +2487,7 @@ acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOffe
     mbShortOf <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig booking.isScheduled booking.startTime nowT (getScheduledRideMinWalletBalance quote transporterConfig) driver.id.getId
     whenJust mbShortOf $ \minBalance ->
       throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> show minBalance <> ".")
-  when booking.isScheduled $ ensureNoScheduledOverlap transporterConfig booking
+  when booking.isScheduled $ SBOC.ensureNoScheduledOverlap merchant.id driver.id transporterConfig booking
   when booking.isScheduled $ removeBookingFromRedis booking
   isBookingCancelled' <- CS.isBookingCancelled booking.id
   when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
@@ -2506,7 +2506,7 @@ acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOffe
       CS.withDriverScheduledHoldLock driver.id $ do
         -- authoritative re-check; a conflict here means we lost a race after the pre-flight passed,
         -- so restore the side effects the prefix above already performed before rejecting
-        recheck <- withTryCatch "acceptScheduledOverlapLocked" $ ensureNoScheduledOverlap transporterConfig booking
+        recheck <- withTryCatch "acceptScheduledOverlapLocked" $ SBOC.ensureNoScheduledOverlap merchant.id driver.id transporterConfig booking
         case recheck of
           Right _ -> pure ()
           Left exc -> do
@@ -2515,7 +2515,7 @@ acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOffe
             throwM exc
         res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False mbForcedAcceptanceMode
         -- gate write stays under the lock so concurrent accepts/releases cannot lose the min
-        updateLatestScheduledAsMin booking
+        SBOC.updateLatestScheduledAsMin driver.id booking
         pure res
       else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False mbForcedAcceptanceMode
   driverFCMPulledList <-
@@ -2547,29 +2547,6 @@ acceptStaticOfferDriverRequest mbSearchTry mbDriverSReqFD driver quoteId reqOffe
       pure Nothing
   return (driverFCMPulledList, mbRideRes)
   where
-    -- gate column keeps the earliest future hold (min); first hold collapses to today's overwrite
-    updateLatestScheduledAsMin booking = do
-      now <- getCurrentTime
-      driverInfo <- QDriverInformation.findById driver.id >>= fromMaybeM DriverInfoNotFound
-      let scheduledTime = booking.startTime
-          pickupPos = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-          keepExisting = maybe False (\existing -> existing > now && existing <= scheduledTime) driverInfo.latestScheduledBooking
-      unless keepExisting $ void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
-    -- single accept guard for board + broadcast: cap on scheduled holds + feasibility vs committed set; Maps failure fails closed
-    ensureNoScheduledOverlap schedulingCfg booking = do
-      committed <- SBOC.getDriverCommittedRides driver.id
-      let activeHolds = SBOC.countActiveHolds committed
-      -- trigger on any commitment (hold or in-progress); cap counts holds only, in-progress enters feasibility as a predecessor
-      unless (null committed) $ do
-        when (activeHolds >= schedulingCfg.scheduledRideConfig.maxHoldsPerDriver) $
-          throwError ScheduledRideOverlapConflict
-        now <- getCurrentTime
-        feasibleRes <-
-          withTryCatch "acceptScheduledOverlap" $
-            SBOC.isCandidateFeasible merchant.id booking.merchantOperatingCityId schedulingCfg (SBOC.mkCandidateFromBooking booking) (SBOC.mkCommittedIntervals now (Just booking.id) committed)
-        case feasibleRes of
-          Right True -> pure ()
-          _ -> throwError ScheduledRideOverlapConflict
     releaseBookingMarkers uBooking = CS.markBookingCancellationCompleted uBooking.id >> CS.markBookingAssignmentCompleted uBooking.id
     errHandler uBooking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
@@ -3799,7 +3776,7 @@ acceptScheduledBookingWithPreFetched ::
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow APISuccess
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking mbForcedAcceptanceMode = do
-  -- overlap enforced by the shared accept guard (ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
+  -- overlap enforced by the shared accept guard (SBOC.ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
   -- Prepaid credits valid today can still be swept before pickup, so mirror the dispatch-side gate
   -- on the direct-accept path. Solvency is not relaxed inside the R4 open-to-all window.
   when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do

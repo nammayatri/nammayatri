@@ -13,7 +13,7 @@ where
 
 import qualified API.Types.UI.SharedCabInternal as API
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (findIndex)
+import Data.List (findIndex, lookup)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -56,6 +56,7 @@ import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified SharedLogic.SharedCab.StopProgress as StopProgress
 import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
+import qualified SharedLogic.SharedRoute.Manifest as Manifest
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -214,18 +215,87 @@ agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
 agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
 
 -- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
-getSharedCabSession :: Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession agencyId driver plate mbToken = do
+-- With a ride id the driver is on a shared-route run, which has no cab session: its passengers are the bookings on the ride.
+getSharedCabSession :: Maybe Text -> Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
+getSharedCabSession mbRideId agencyId driver plate mbToken = do
   checkToken mbToken
-  merchantId <- agencyMerchant agencyId
-  s <- ownSession merchantId driver plate
-  -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
-  -- journey completed (the next poll shows it), then the cab's tick step runs
-  fork "sharedCabSessionStopProgress" $ do
-    withTryCatch "sharedCabCompleteArrivedRides" (StopProgress.completeArrivedRides s)
-      >>= either (\e -> logError $ "shared-cab: completing arrived rides failed for " <> s.vehicleNumber <> ": " <> show e) pure
-    StopProgress.stepSessionCab s
-  mkSessionRespFrom CachedCab s
+  case mbRideId of
+    Just rideId -> runSessionView rideId
+    Nothing -> do
+      merchantId <- agencyMerchant agencyId
+      s <- ownSession merchantId driver plate
+      -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
+      -- journey completed (the next poll shows it), then the cab's tick step runs
+      fork "sharedCabSessionStopProgress" $ do
+        withTryCatch "sharedCabCompleteArrivedRides" (StopProgress.completeArrivedRides s)
+          >>= either (\e -> logError $ "shared-cab: completing arrived rides failed for " <> s.vehicleNumber <> ": " <> show e) pure
+        StopProgress.stepSessionCab s
+      mkSessionRespFrom CachedCab s
+
+-- | A shared-route run in the session's shape. The run is the driver platform's ride and its passengers the CONFIRMED
+-- bookings placed on it, each shown at the stops it boards and alights; the dropped and no-show ones are off the rider list
+-- but the boarded fares, dropped included, are the trip earnings the run's fare reads. Nothing of a cab's live state
+-- applies (no offers, walk-ups, demand, fix or check-in). The route and stops come from the first passenger's booking,
+-- as nothing else on this side names the run's route; an empty run shows none.
+runSessionView :: Text -> Environment.Flow View.SharedCabSession
+runSessionView rideId = do
+  passengers <- Manifest.runPassengers rideId
+  let live = [p | p <- passengers, p.state `elem` [DSharedRoute.WAITING, DSharedRoute.BOARDED]]
+      carried = [p.booking.totalPrice.amount | p <- passengers, p.state `elem` [DSharedRoute.BOARDED, DSharedRoute.DROPPED]]
+  (route, stops, addresses, feedKey) <- case [(p.booking, code) | p <- passengers, Just code <- [p.booking.routeCode]] of
+    (booking, code) : _ -> do
+      integratedBppConfig <- getIntegratedBppConfig booking.integratedBppConfigId
+      route <- sessionRoute integratedBppConfig code
+      stops <- routeStops integratedBppConfig code
+      addresses <- Booking.stopAddresses integratedBppConfig.merchantOperatingCityId (map (.stopCode) stops)
+      pure (route, stops, addresses, integratedBppConfig.feedKey)
+    [] -> pure (View.SessionRoute {code = "", name = "", direction = "", nextStops = [], nextStopCodes = []}, [], Map.empty, "")
+  let names = [(st.stopCode, st.stopName) | st <- stops]
+      nameOf code = fromMaybe code (lookup code names)
+      riderOf p =
+        View.SharedCabRider
+          { bookingId = p.booking.id.getId,
+            firstName = p.firstName,
+            seats = length p.tickets,
+            boardStop = nameOf p.booking.fromStationCode,
+            dropStop = nameOf p.booking.toStationCode,
+            fare = p.booking.totalPrice.amount,
+            riderStatus = if p.state == DSharedRoute.BOARDED then View.BOARDED else View.ARRIVING,
+            minutesAway = Nothing,
+            expiresAt = Nothing,
+            chatChannelId = Nothing,
+            callable = False,
+            callNumber = Nothing,
+            riderRating = Nothing,
+            boardStopAddress = Map.lookup p.booking.fromStationCode addresses,
+            dropStopAddress = Map.lookup p.booking.toStationCode addresses,
+            distanceMeters = Nothing,
+            boardStopCode = p.booking.fromStationCode,
+            dropStopCode = p.booking.toStationCode
+          }
+      riders = map riderOf live
+  pure
+    View.SharedCabSession
+      { route,
+        tripId = rideId,
+        gtfsId = feedKey,
+        queuedRoute = Nothing,
+        status = View.ACTIVE,
+        pauseReason = Nothing,
+        movement = View.SessionMovementMoving,
+        capacity = sum (map (.seats) riders),
+        walkupCount = 0,
+        available = 0,
+        version = 0,
+        riders,
+        pendingOffers = [],
+        stops = [View.sessionStopOf st.stopCode st.stopName st.stopPoint | st <- stops],
+        shapePolyline = Nothing,
+        vehicle = Nothing,
+        demandAhead = [],
+        tripEarnings = if null carried then Nothing else Just (sum carried),
+        checkIn = Nothing
+      }
 
 -- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
 -- pushes and re-ticks go out after it.
@@ -251,15 +321,29 @@ postSharedCabSessionOperations mbToken req = do
 postSharedCabBookingOperations :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabBookingOperationReq -> Environment.Flow View.SharedCabSession
 postSharedCabBookingOperations bookingId mbToken req = do
   checkToken mbToken
-  case req.operation of
-    API.ACCEPT -> Offer.acceptOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
-    API.DECLINE -> Offer.declineOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
-    API.CANCEL -> driverAction DriverCancel
-    API.BOARDED_WITHOUT_CODE -> driverAction DriverBoarded
-    API.BOARDED_WITH_OTP -> boardWithOtp
-    API.NO_SHOW -> SharedRouteKnobs.notImplemented "NO_SHOW: the driver's wait at the stop and the no-show consequence (modules R and S)"
-    API.DROPPED -> driverAction DriverDropped
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
+  case booking.rideId of
+    -- a passenger of a shared-route run: the rider platform placed them on the ride, so the offer verbs do not apply and the
+    -- board / no-show / drop go to the run's manifest
+    Just rideId -> do
+      action <- case req.operation of
+        API.BOARDED_WITHOUT_CODE -> pure (Manifest.Board Nothing)
+        API.BOARDED_WITH_OTP -> Manifest.Board . Just <$> (req.otp & fromMaybeM (InvalidRequest "otp is required to board with OTP"))
+        API.NO_SHOW -> pure Manifest.NoShow
+        API.DROPPED -> pure Manifest.Drop
+        other -> throwError (InvalidRequest $ show other <> " is a shared-cab offer verb; a run's passengers are placed by the rider platform")
+      Manifest.applyRunAction rideId booking action req.vehicleNumber
+      runSessionView rideId
+    Nothing -> cabBookingOperation
   where
+    cabBookingOperation = case req.operation of
+      API.ACCEPT -> Offer.acceptOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
+      API.DECLINE -> Offer.declineOffer req.driverId req.vehicleNumber bookingId >>= owned >>= mkSessionResp
+      API.CANCEL -> driverAction DriverCancel
+      API.BOARDED_WITHOUT_CODE -> driverAction DriverBoarded
+      API.BOARDED_WITH_OTP -> boardWithOtp
+      API.NO_SHOW -> SharedRouteKnobs.notImplemented "NO_SHOW: the driver's wait at the stop and the no-show consequence (modules R and S)"
+      API.DROPPED -> driverAction DriverDropped
     driverAction action = runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= mkSessionResp
     owned = either throwError pure . ownedSession req.driverId . Just
     -- The boarding knob decides what the driver's OTP means: under NO_CHECK it is a plain board, under OTP it must

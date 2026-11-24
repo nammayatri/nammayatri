@@ -54,6 +54,7 @@ import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Action.UI.SharedCab as SharedCab
+import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.FarePolicy as Fields
@@ -104,6 +105,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
+import qualified SharedLogic.SharedRun.Session as RunSession
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -520,7 +522,8 @@ stopAction rideId pt stopLocId action = do
       stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      -- a shared-route run has no rider-platform ride; its passengers follow the run through the manifest
+      unless (DTrip.isSharedRouteTrip ride.tripCategory) $ void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let mbNextStopFEIndex = if currentStopFEIndex + 1 < length stopsLM then Just (currentStopFEIndex + 1) else Nothing
       fork "FleetEngine:notifyStopDeparted" $
         FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id mbNextStopFEIndex
@@ -547,9 +550,17 @@ stopAction rideId pt stopLocId action = do
       let nowTs = floor $ utcTimeToPOSIXSeconds now
       VID.addReachedStop rideId stopLM.order pt nowTs
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      unless (DTrip.isSharedRouteTrip ride.tripCategory) $ void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       fork "FleetEngine:notifyStopArrived" $
         FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id currentStopFEIndex
+      -- a shared-route run departs at once from a stop where nobody boards or alights: its passengers are read as the
+      -- run's session; the first and last stops are the run's pickup and drop and never come through here
+      when (DTrip.isSharedRouteTrip ride.tripCategory) $ do
+        mbStopCode <- (>>= RunSession.stopCodeOf) <$> QLoc.findById stopLocId
+        session <- RunSession.runSession ride
+        whenJust mbStopCode $ \stopCode ->
+          unless (RunSession.boardingAt stopCode session || RunSession.alightingAt stopCode session) $
+            void $ stopAction rideId pt stopLocId DEPART
       pure Success
   where
     isValidStopArrivedAction stopLM =

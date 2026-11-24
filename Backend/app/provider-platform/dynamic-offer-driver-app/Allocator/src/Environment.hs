@@ -119,6 +119,8 @@ data HandlerEnv = HandlerEnv
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
     nwAddress :: BaseUrl,
+    -- | the driver app's UI address, read by the ride tracking URL when a job creates a ride (a shared-route run's assignment)
+    selfUIUrl :: BaseUrl,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     fabricGatewayBaseUrl :: BaseUrl,
     schedulerType :: SchedulerType,

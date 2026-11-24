@@ -72,21 +72,25 @@ type API =
                     )
                       :<|> ( ( "sharedCab"
                                  :> ( "session"
-                                        :> ( MandatoryQueryParam
-                                               "agencyId"
+                                        :> ( QueryParam
+                                               "rideId"
                                                Kernel.Prelude.Text
                                                :> ( MandatoryQueryParam
-                                                      "driverId"
+                                                      "agencyId"
                                                       Kernel.Prelude.Text
                                                       :> ( MandatoryQueryParam
-                                                             "vehicleNumber"
+                                                             "driverId"
                                                              Kernel.Prelude.Text
-                                                             :> ( Header
-                                                                    "token"
+                                                             :> ( MandatoryQueryParam
+                                                                    "vehicleNumber"
                                                                     Kernel.Prelude.Text
-                                                                    :> Get
-                                                                         '[JSON]
-                                                                         SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                    :> ( Header
+                                                                           "token"
+                                                                           Kernel.Prelude.Text
+                                                                           :> Get
+                                                                                '[JSON]
+                                                                                SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                       )
                                                                 )
                                                          )
                                                   )
@@ -196,8 +200,8 @@ postSharedCabRoutesDemand a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withReque
 postSharedCabRouteOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
 postSharedCabRouteOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteOperations a2 a1
 
-getSharedCabSession :: Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)))
-getSharedCabSession a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a4 a3 a2 a1
+getSharedCabSession :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))))
+getSharedCabSession a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a5 a4 a3 a2 a1
 
 postSharedCabSessionOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabSessionOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabSessionOperations a2 a1
