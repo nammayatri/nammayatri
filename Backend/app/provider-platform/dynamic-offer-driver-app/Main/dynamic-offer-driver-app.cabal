@@ -291,7 +291,6 @@ library
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
-      Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.TdsDistribution
       Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
@@ -1349,7 +1348,6 @@ library
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.SosMedia
       API.Action.DashboardAuth.Management.SpecialZoneQueue
-      API.Action.DashboardAuth.Management.System
       API.Action.DashboardAuth.Management.TdsDistribution
       API.Action.DashboardAuth.Management.Vehicle
       API.Action.DashboardAuth.Management.VehicleDetails
@@ -1533,7 +1531,6 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
-      API.Types.ProviderPlatform.Management.Endpoints.System
       API.Types.ProviderPlatform.Management.Endpoints.TdsDistribution
       API.Types.ProviderPlatform.Management.Endpoints.Vehicle
       API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
@@ -1566,7 +1563,6 @@ library
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
-      API.Types.ProviderPlatform.Management.System
       API.Types.ProviderPlatform.Management.TdsDistribution
       API.Types.ProviderPlatform.Management.Vehicle
       API.Types.ProviderPlatform.Management.VehicleDetails

@@ -4,8 +4,6 @@ imports:
   ApiIntegrationListRes: IssueManagement.Common.Dashboard.Issue
   UpsertApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
   UpsertApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
-  TestApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
-  TestApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
   IssueOptionListRes: IssueManagement.Common.UI.Issue
   CategoryType: IssueManagement.Domain.Types.Issue.IssueCategory
   IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
@@ -493,16 +491,6 @@ apis:
         apiIntegrationId: Id IssueApiIntegration
       response:
         type: APISuccess
-      migrate:
-        capability: system-config.customer_issue_config.write
-  - POST: # ApiIntegrationTestAPI
-      endpoint: /apiIntegration/test
-      name: PostIssueApiIntegrationTest
-      auth: ApiAuthV2
-      request:
-        type: TestApiIntegrationReq
-      response:
-        type: TestApiIntegrationRes
       migrate:
         capability: system-config.customer_issue_config.write
   - GET: # FlowSimulateAPI - walk the chat flow (engine included) from the dashboard
