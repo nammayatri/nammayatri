@@ -763,6 +763,7 @@ library
       SharedLogic.SharedRoute.Knobs
       SharedLogic.SharedRoute.Passenger
       SharedLogic.ShuttlePass
+      SharedLogic.ShuttlePassRules
       SharedLogic.ShuttlePassSkipDays
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin

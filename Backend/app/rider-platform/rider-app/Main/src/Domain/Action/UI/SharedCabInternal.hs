@@ -56,6 +56,7 @@ import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified SharedLogic.SharedCab.StopProgress as StopProgress
 import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
+import qualified SharedLogic.ShuttlePassRules as ShuttlePassRules
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -273,7 +274,7 @@ postSharedCabBookingOperations bookingId mbToken req = do
         SharedRouteKnobs.Admit -> driverAction DriverBoarded
         SharedRouteKnobs.RejectBoarding why -> throwError (InvalidRequest why)
         SharedRouteKnobs.CheckOtp presented
-          | booking.boardingOtp == Just presented -> driverAction DriverBoarded
+          | ShuttlePassRules.otpMatches booking.boardingOtp presented -> driverAction DriverBoarded
           | otherwise -> throwError (InvalidRequest "Wrong boarding OTP")
         other -> SharedRouteKnobs.notImplemented ("boarding with an OTP under a knob that asks for " <> show other)
 

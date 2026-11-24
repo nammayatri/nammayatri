@@ -22,6 +22,7 @@ import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
 import qualified SharedCabBlacklistTests
+import qualified ShuttlePassRulesTests
 import Test.Tasty (defaultMain, testGroup)
 import qualified TollDecisionTests
 import qualified WelcomeEmailTemplateTests
@@ -64,5 +65,9 @@ main = do
         testGroup
           "SharedCab Unit Tests"
           [ SharedCabBlacklistTests.tests
+          ],
+        testGroup
+          "Shuttle Pass Unit Tests"
+          [ ShuttlePassRulesTests.tests
           ]
       ]

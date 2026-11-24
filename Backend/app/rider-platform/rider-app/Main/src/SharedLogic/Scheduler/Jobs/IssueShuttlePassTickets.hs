@@ -2,10 +2,10 @@
 -- slot departs. After that point reschedule, skip and cancel are closed, so the ticket no longer moves.
 --
 -- Runs every 15 minutes per city. Each run looks at terms covering today and tomorrow (a slot before 05:00
--- is issued the evening before) and books, through pass instant-book, every slot whose cutoff has passed and
--- whose departure has not, unless the day is skipped or already has a live ticket. Every live ticket gets a
--- boarding OTP, and an hour before departure the rider is sent it with the driver and vehicle (held back until
--- a vehicle is assigned, but never later than 15 minutes before departure).
+-- is issued the evening before) and books, through pass instant-book, every slot inside its issue window,
+-- unless the day is skipped or already has a live ticket. Every live ticket gets a boarding OTP, and an hour
+-- before departure the rider is sent it with the driver and vehicle (held back until a vehicle is assigned,
+-- but never later than 15 minutes before departure).
 --
 -- Runs on the rider-app environment (not the scheduler's) because instant-book is an app-level flow.
 module SharedLogic.Scheduler.Jobs.IssueShuttlePassTickets
@@ -29,6 +29,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.ShuttlePass as ShuttlePass
+import qualified SharedLogic.ShuttlePassRules as Rules
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
@@ -40,7 +41,7 @@ issueShuttlePassTickets Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
       cityId = jobData.merchantOperatingCityId
   timeDiff <- ShuttlePass.cityTimeDiff cityId
   now <- getCurrentTime
-  let today = ShuttlePass.localDay timeDiff now
+  let today = Rules.localDay timeDiff now
   issued <- sum <$> mapM (issueForDay timeDiff now cityId.getId) [today, DT.addDays 1 today]
   logInfo $ "IssueShuttlePassTickets: issued=" <> show issued
   when jobData.autoSchedule $ scheduleNext jobData
@@ -71,37 +72,43 @@ issueForTerm timeDiff now term day
         logWarning $ "IssueShuttlePassTickets: no departure for term=" <> term.id.getId <> " slot=" <> show term.slotTripId <> " day=" <> show day
         pure False
       Just departure
-        | now < ShuttlePass.issueTimeOn departure || now >= departure -> pure False
+        | not (Rules.inIssueWindow now departure) -> pure False
         | otherwise -> do
-          existing <- ShuttlePass.liveTickets term departure
-          issued <- if null existing then book term >> pure True else pure False
-          tickets <- if issued then ShuttlePass.liveTickets term departure else pure existing
-          withOtps <- mapM ensureOtp tickets
-          when (now >= addUTCTime (negate ShuttlePass.otpLeadTime) departure) $
-            forM_ withOtps $ \(booking, otp) -> sendOtpOnce timeDiff now departure booking otp
+          existing <- ShuttlePass.ticketsForDay timeDiff term day (Just departure)
+          (issued, tickets) <-
+            if null existing
+              then
+                book term day >>= \case
+                  Just booking -> pure (True, [booking])
+                  Nothing -> pure (False, [])
+              else pure (False, existing)
+          forM_ tickets $ \booking -> do
+            otp <- ensureOtp booking
+            when (Rules.otpDue now departure (isJust booking.vehicleNumber)) $
+              sendOtpOnce timeDiff departure booking otp
           pure issued
 
 -- | Every live ticket carries an OTP, including one issued outside this job (a retry or a rescheduled child).
-ensureOtp :: DBooking.FRFSTicketBooking -> Flow (DBooking.FRFSTicketBooking, Text)
+ensureOtp :: DBooking.FRFSTicketBooking -> Flow Text
 ensureOtp booking = case booking.boardingOtp of
-  Just otp -> pure (booking, otp)
+  Just otp -> pure otp
   Nothing -> do
     otp <- ShuttlePass.newBoardingOtp
     QFRFSTicketBooking.updateBoardingOtp (Just otp) booking.id
-    pure (booking, otp)
+    pure otp
 
--- | Sent once per ticket. Waits for a vehicle while there is time; 15 minutes before departure it goes anyway.
-sendOtpOnce :: Seconds -> UTCTime -> UTCTime -> DBooking.FRFSTicketBooking -> Text -> Flow ()
-sendOtpOnce timeDiff now departure booking otp = do
-  let lastCall = now >= addUTCTime (negate 900) departure
-  when (isJust booking.vehicleNumber || lastCall) $ do
-    firstTime <- Hedis.tryLockRedis ("IssueShuttlePassTickets:otpSent:" <> booking.id.getId) 86400
-    when firstTime $ do
-      Notify.notifyShuttleBoardingOtp timeDiff departure otp booking
-      logInfo $ "IssueShuttlePassTickets: sent OTP booking=" <> booking.id.getId <> " vehicle=" <> show booking.vehicleNumber
+-- | Sent once per ticket.
+sendOtpOnce :: Seconds -> UTCTime -> DBooking.FRFSTicketBooking -> Text -> Flow ()
+sendOtpOnce timeDiff departure booking otp = do
+  firstTime <- Hedis.tryLockRedis ("IssueShuttlePassTickets:otpSent:" <> booking.id.getId) 86400
+  when firstTime $ do
+    Notify.notifyShuttleBoardingOtp timeDiff departure otp booking
+    logInfo $ "IssueShuttlePassTickets: sent OTP booking=" <> booking.id.getId <> " vehicle=" <> show booking.vehicleNumber
 
-book :: DPPP.PurchasedPassPayment -> Flow ()
-book term = do
+-- | Books the day's ticket and records it against the term's day. Nothing while instant-book is still in
+-- progress for this pass; the next run picks the booking up.
+book :: DPPP.PurchasedPassPayment -> DT.Day -> Flow (Maybe DBooking.FRFSTicketBooking)
+book term day = do
   sourceStopCode <- term.sourceStopCode & fromMaybeM (InvalidRequest "Term has no source stop")
   destinationStopCode <- term.destinationStopCode & fromMaybeM (InvalidRequest "Term has no destination stop")
   let req =
@@ -119,7 +126,14 @@ book term = do
           }
   -- forceBook: a recent ticket on the same pass (e.g. an ad-hoc ride) must not block the daily ticket.
   resp <- DFRFSTicketService.postFrfsPassInstantBook (Just term.personId, term.merchantId) (Just True) req
-  logInfo $ "IssueShuttlePassTickets: issued term=" <> term.id.getId <> " booking=" <> show ((.bookingId) <$> resp.booking) <> " inProgress=" <> show resp.inProgress
+  case (.bookingId) <$> resp.booking of
+    Nothing -> do
+      logInfo $ "IssueShuttlePassTickets: instant-book in progress term=" <> term.id.getId
+      pure Nothing
+    Just bookingId -> do
+      ShuttlePass.recordIssued term day bookingId
+      logInfo $ "IssueShuttlePassTickets: issued term=" <> term.id.getId <> " day=" <> show day <> " booking=" <> bookingId.getId
+      QFRFSTicketBooking.findById bookingId
 
 -- | One next run per city per 15 minutes, however many times this run is triggered.
 scheduleNext :: IssueShuttlePassTicketsJobData -> Flow ()
