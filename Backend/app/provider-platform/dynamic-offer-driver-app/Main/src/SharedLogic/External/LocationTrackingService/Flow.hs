@@ -40,6 +40,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.NearByTag as N
 import qualified SharedLogic.External.LocationTrackingService.API.PickupDriverLocation as PickupDriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.QueueHistory as QueueHistoryAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
+import qualified SharedLogic.External.LocationTrackingService.API.SharedCabStandby as SharedCabStandbyAPI
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.QuickRetry (withQuickRetry)
@@ -277,6 +278,18 @@ blockDriverLocationsTill merchantId driverId blockTill = do
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_BLOCK_TILL_API") url)
   logDebug $ "lts driver block till: " <> show blockLocationsTillResp
   return blockLocationsTillResp
+
+sharedCabStandby :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DP.Person -> Maybe Text -> m APISuccess
+sharedCabStandby driverId vehicleNumber = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = localUrl ltsCfg
+  let req = SharedCabStandbyReq {vehicleNumber}
+  standbyResp <-
+    withQuickRetry $
+      callAPI url (SharedCabStandbyAPI.sharedCabStandby driverId req) "sharedCabStandby" SharedCabStandbyAPI.locationTrackingServiceAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_SHARED_CAB_STANDBY_API") url)
+  logDebug $ "lts shared cab standby: " <> show standbyResp
+  return standbyResp
 
 manualQueueRemove :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Maybe Text -> Bool -> m APISuccess
 manualQueueRemove specialLocationId vehicleType merchantId driverId reason preservePosition = do

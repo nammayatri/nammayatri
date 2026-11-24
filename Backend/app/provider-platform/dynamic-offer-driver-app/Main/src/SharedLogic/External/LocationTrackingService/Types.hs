@@ -137,6 +137,11 @@ data DriverBlockTillReq = DriverBlockTillReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+newtype SharedCabStandbyReq = SharedCabStandbyReq
+  { vehicleNumber :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
