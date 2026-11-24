@@ -1046,6 +1046,7 @@ getNammaTagConfigPilotAlwaysOnList merchantShortId opCity domain = do
 
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
+  LYTU.throwIfSensitiveConfigType configType
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let domain = LYT.DRIVER_CONFIG configType
@@ -1055,6 +1056,7 @@ getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
 -- table directly instead of the effective (in-mem + Redis + rollout) value.
 getNammaTagConfigPilotGetTableDataFromDB :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.TableDataResp
 getNammaTagConfigPilotGetTableDataFromDB _merchantShortId _opCity configType = do
+  LYTU.throwIfSensitiveConfigType configType
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let domain = LYT.DRIVER_CONFIG configType
@@ -1107,6 +1109,7 @@ postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain
 postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity configType req = do
   unless (configType == req.configType) $
     throwError $ InvalidRequest "configType in the path does not match the request body"
+  LYTU.throwIfSensitiveConfigType configType
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let mocId = merchantOpCityId.getId
