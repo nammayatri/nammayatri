@@ -5,6 +5,7 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Provider
     postIncentiveJourneyMilestoneCreate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyDriverAssignments,
+    getIncentiveJourneyCohortJourneyMembers,
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyStreakEndInspect,
     postIncentiveJourneyCohortCreate,
@@ -371,6 +372,69 @@ getIncentiveJourneyDriverAssignments ::
 getIncentiveJourneyDriverAssignments handle merchantShortId opCity driverId = do
   views <- Core.listAssignmentViews handle merchantShortId opCity (ID.cast @Dashboard.Common.Driver @DIJC.Person driverId)
   pure Common.IncentiveJourneyDriverAssignmentListRes {assignments = map toDriverAssignmentItem views}
+
+-- | Campaign Members tab. optInStatus per row uses Core.mkAssignmentOptInStatus, the same rule
+-- as getIncentiveJourneyDriverAssignments. Summary ignores filters / paging.
+getIncentiveJourneyCohortJourneyMembers ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ID.Id Dashboard.Common.CohortJourneyMapping ->
+  Maybe Common.OptInStatus ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe (ID.Id Dashboard.Common.Driver) ->
+  Maybe Int ->
+  Maybe Int ->
+  m Common.IncentiveJourneyCampaignMembersRes
+getIncentiveJourneyCohortJourneyMembers handle merchantShortId opCity cjmId mbOptInStatus mbOptedInFrom mbOptedInTo mbEnabled mbActiveNow mbDriverId mbLimit mbOffset = do
+  let flt =
+        Core.CampaignMembersFilter
+          { optInStatus = toDomainOptInStatus <$> mbOptInStatus,
+            optedInFrom = mbOptedInFrom,
+            optedInTo = mbOptedInTo,
+            enabled = mbEnabled,
+            activeNow = mbActiveNow,
+            userId = ID.cast @Dashboard.Common.Driver @DIJC.Person <$> mbDriverId,
+            limit = mbLimit,
+            offset = mbOffset
+          }
+  (summary, members) <-
+    Core.listCampaignMembers
+      handle
+      merchantShortId
+      opCity
+      (ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping cjmId)
+      flt
+  pure
+    Common.IncentiveJourneyCampaignMembersRes
+      { summary =
+          Common.IncentiveJourneyCampaignMembersSummary
+            { total = summary.total,
+              optedIn = summary.optedIn,
+              invited = summary.invited,
+              disabled = summary.disabled,
+              expired = summary.expired,
+              optedInToday = summary.optedInToday
+            },
+        members = map toCampaignMemberItem members
+      }
+
+toCampaignMemberItem :: Core.CampaignMemberView -> Common.IncentiveJourneyCampaignMemberItem
+toCampaignMemberItem v =
+  Common.IncentiveJourneyCampaignMemberItem
+    { driverId = ID.cast @DIJC.Person @Dashboard.Common.Driver v.userId,
+      optInStatus = toApiOptInStatus v.optInStatus,
+      optedInAt = v.optedInAt,
+      optedInBy = v.optedInBy,
+      assignedAt = v.assignedAt,
+      enabled = v.enabled,
+      validTill = v.validTill,
+      activeNow = v.activeNow
+    }
 
 postIncentiveJourneyStatsWaiveOff ::
   BeamFlow m r =>
@@ -1023,6 +1087,12 @@ toApiOptInStatus = \case
   Core.NotRequired -> Common.NotRequired
   Core.Pending -> Common.Pending
   Core.OptedIn -> Common.OptedIn
+
+toDomainOptInStatus :: Common.OptInStatus -> Core.AssignmentOptInStatus
+toDomainOptInStatus = \case
+  Common.NotRequired -> Core.NotRequired
+  Common.Pending -> Core.Pending
+  Common.OptedIn -> Core.OptedIn
 
 toDomainOptInPeriod :: Common.OptInPeriod -> DCJM.OptInPeriod
 toDomainOptInPeriod = \case

@@ -28,7 +28,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (PostIncentiveJourneyStreakEndInspect :<|> (GetIncentiveJourneyDriverAssignments :<|> (PostIncentiveJourneyCohortCreate :<|> (GetIncentiveJourneyCohortList :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> (PostIncentiveJourneyAutoApplyCohortCreate :<|> (PutIncentiveJourneyAutoApplyCohortUpdate :<|> (GetIncentiveJourneyAutoApplyCohortList :<|> (PostIncentiveJourneyUnassign :<|> (PostIncentiveJourneyAssignBulkFromS3 :<|> GetIncentiveJourneyAssignBulkFromS3List)))))))))))))))))))))
+type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (PostIncentiveJourneyStreakEndInspect :<|> (GetIncentiveJourneyDriverAssignments :<|> (GetIncentiveJourneyCohortJourneyMembers :<|> (PostIncentiveJourneyCohortCreate :<|> (GetIncentiveJourneyCohortList :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> (PostIncentiveJourneyAutoApplyCohortCreate :<|> (PutIncentiveJourneyAutoApplyCohortUpdate :<|> (GetIncentiveJourneyAutoApplyCohortList :<|> (PostIncentiveJourneyUnassign :<|> (PostIncentiveJourneyAssignBulkFromS3 :<|> GetIncentiveJourneyAssignBulkFromS3List))))))))))))))))))))))
 
 type GetIncentiveJourneyList =
   DashboardUserAuth
@@ -77,6 +77,12 @@ type GetIncentiveJourneyDriverAssignments =
     ('DRIVER_OFFER_BPP_MANAGEMENT)
     "PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_DRIVER_ASSIGNMENTS"
     :> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyDriverAssignments
+
+type GetIncentiveJourneyCohortJourneyMembers =
+  DashboardUserAuth
+    ('DRIVER_OFFER_BPP_MANAGEMENT)
+    "PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_COHORT_JOURNEY_MEMBERS"
+    :> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyCohortJourneyMembers
 
 type PostIncentiveJourneyCohortCreate =
   DashboardUserAuth
@@ -163,7 +169,7 @@ type GetIncentiveJourneyAssignBulkFromS3List =
     :> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyAssignBulkFromS3List
 
 handler :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIncentiveJourneyList merchantId city :<|> postIncentiveJourneyCreate merchantId city :<|> getIncentiveJourneyMilestoneList merchantId city :<|> postIncentiveJourneyMilestoneCreate merchantId city :<|> getIncentiveJourneyStatsHistory merchantId city :<|> postIncentiveJourneyStatsWaiveOff merchantId city :<|> postIncentiveJourneyStreakEndInspect merchantId city :<|> getIncentiveJourneyDriverAssignments merchantId city :<|> postIncentiveJourneyCohortCreate merchantId city :<|> getIncentiveJourneyCohortList merchantId city :<|> postIncentiveJourneyCohortJourneyCreate merchantId city :<|> putIncentiveJourneyCohortJourneyUpdate merchantId city :<|> postIncentiveJourneyCohortJourneyRoll merchantId city :<|> getIncentiveJourneyCohortJourneyList merchantId city :<|> postIncentiveJourneyAssign merchantId city :<|> postIncentiveJourneyOptIn merchantId city :<|> postIncentiveJourneyAutoApplyCohortCreate merchantId city :<|> putIncentiveJourneyAutoApplyCohortUpdate merchantId city :<|> getIncentiveJourneyAutoApplyCohortList merchantId city :<|> postIncentiveJourneyUnassign merchantId city :<|> postIncentiveJourneyAssignBulkFromS3 merchantId city :<|> getIncentiveJourneyAssignBulkFromS3List merchantId city
+handler merchantId city = getIncentiveJourneyList merchantId city :<|> postIncentiveJourneyCreate merchantId city :<|> getIncentiveJourneyMilestoneList merchantId city :<|> postIncentiveJourneyMilestoneCreate merchantId city :<|> getIncentiveJourneyStatsHistory merchantId city :<|> postIncentiveJourneyStatsWaiveOff merchantId city :<|> postIncentiveJourneyStreakEndInspect merchantId city :<|> getIncentiveJourneyDriverAssignments merchantId city :<|> getIncentiveJourneyCohortJourneyMembers merchantId city :<|> postIncentiveJourneyCohortCreate merchantId city :<|> getIncentiveJourneyCohortList merchantId city :<|> postIncentiveJourneyCohortJourneyCreate merchantId city :<|> putIncentiveJourneyCohortJourneyUpdate merchantId city :<|> postIncentiveJourneyCohortJourneyRoll merchantId city :<|> getIncentiveJourneyCohortJourneyList merchantId city :<|> postIncentiveJourneyAssign merchantId city :<|> postIncentiveJourneyOptIn merchantId city :<|> postIncentiveJourneyAutoApplyCohortCreate merchantId city :<|> putIncentiveJourneyAutoApplyCohortUpdate merchantId city :<|> getIncentiveJourneyAutoApplyCohortList merchantId city :<|> postIncentiveJourneyUnassign merchantId city :<|> postIncentiveJourneyAssignBulkFromS3 merchantId city :<|> getIncentiveJourneyAssignBulkFromS3List merchantId city
 
 getIncentiveJourneyList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe (API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyType) -> Environment.FlowHandler API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyListRes))))))
 getIncentiveJourneyList a7 a6 a5 a4 a3 a2 a1 =
@@ -231,6 +237,14 @@ getIncentiveJourneyDriverAssignments a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.getIncentiveJourneyDriverAssignments a4 a3 a1
+    )
+
+getIncentiveJourneyCohortJourneyMembers :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping -> (Kernel.Prelude.Maybe (API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.OptInStatus) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyCampaignMembersRes)))))))))))
+getIncentiveJourneyCohortJourneyMembers a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a10 a12 a11
+        Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.getIncentiveJourneyCohortJourneyMembers a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
     )
 
 postIncentiveJourneyCohortCreate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.CreateCohortDetailsReq -> Environment.FlowHandler API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.CreateCohortDetailsRes)))

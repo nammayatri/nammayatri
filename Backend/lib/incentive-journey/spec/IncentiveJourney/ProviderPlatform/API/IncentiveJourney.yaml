@@ -110,6 +110,28 @@ apis:
       migrate:
         capability: system-config.coins.read
 
+  # Campaign Members tab. summary is over the whole CJM (filters / paging ignored);
+  # members are filtered + paginated (createdAt, id ascending). limit default 50, max 500.
+  # optedInFrom inclusive, optedInTo exclusive (on optedInAt; rows never opted in are excluded).
+  - GET:
+      endpoint: /cohortJourney/{cohortJourneyMappingId}/members
+      auth: ApiAuthV2
+      params:
+        cohortJourneyMappingId: Id CohortJourneyMapping
+      query:
+        - optInStatus: OptInStatus
+        - optedInFrom: UTCTime
+        - optedInTo: UTCTime
+        - enabled: Bool
+        - activeNow: Bool
+        - driverId: Id Driver
+        - limit: Int
+        - offset: Int
+      response:
+        type: IncentiveJourneyCampaignMembersRes
+      migrate:
+        capability: system-config.coins.read
+
   - POST:
       endpoint: /cohort/create
       auth: ApiAuthV2
@@ -426,6 +448,34 @@ types:
 
   IncentiveJourneyDriverAssignmentListRes:
     - assignments: "[IncentiveJourneyDriverAssignmentItem]"
+
+  # Whole-campaign counts. optedIn / invited = enabled rows with optInStatus OptedIn / Pending;
+  # disabled = enabled false; expired = enabled with validTill before city-local now;
+  # optedInToday = optedInAt since city-local midnight (TransporterConfig.timeDiffFromUtc).
+  IncentiveJourneyCampaignMembersSummary:
+    - total: Int
+    - optedIn: Int
+    - invited: Int
+    - disabled: Int
+    - expired: Int
+    - optedInToday: Int
+
+  # optInStatus: same rule as /driver/{driverId}/assignments. assignedAt = UCM createdAt.
+  # activeNow: campaign enabled and in window, UCM enabled, validTill >= city-local now,
+  # and Assigned link or opted in (same rule as the control-features slot / IJCampaign tag).
+  IncentiveJourneyCampaignMemberItem:
+    - driverId: Id Driver
+    - optInStatus: OptInStatus
+    - optedInAt: Maybe UTCTime
+    - optedInBy: Maybe Text
+    - assignedAt: UTCTime
+    - enabled: Bool
+    - validTill: UTCTime
+    - activeNow: Bool
+
+  IncentiveJourneyCampaignMembersRes:
+    - summary: IncentiveJourneyCampaignMembersSummary
+    - members: "[IncentiveJourneyCampaignMemberItem]"
 
   WaiveIncentiveJourneyMilestoneReq:
     - driverId: Id Driver

@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyMilestoneCreate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyDriverAssignments,
+    getIncentiveJourneyCohortJourneyMembers,
     postIncentiveJourneyStatsWaiveOff,
     postIncentiveJourneyStreakEndInspect,
     postIncentiveJourneyCohortCreate,
@@ -255,6 +256,22 @@ getIncentiveJourneyDriverAssignments ::
   Environment.Flow Common.IncentiveJourneyDriverAssignmentListRes
 getIncentiveJourneyDriverAssignments merchantShortId opCity =
   LibProvider.getIncentiveJourneyDriverAssignments mkHandle (ShortId merchantShortId.getShortId) opCity
+
+getIncentiveJourneyCohortJourneyMembers ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Id Dashboard.Common.CohortJourneyMapping ->
+  Maybe Common.OptInStatus ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe (Id Dashboard.Common.Driver) ->
+  Maybe Int ->
+  Maybe Int ->
+  Environment.Flow Common.IncentiveJourneyCampaignMembersRes
+getIncentiveJourneyCohortJourneyMembers merchantShortId opCity =
+  LibProvider.getIncentiveJourneyCohortJourneyMembers mkHandle (ShortId merchantShortId.getShortId) opCity
 
 postIncentiveJourneyStatsWaiveOff ::
   ShortId DM.Merchant ->
