@@ -273,8 +273,10 @@ handler merchantId req validatedReq = do
       mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
         allPaymentMethods <-
           CQMPM.findAllByMerchantOpCityId merchantOpCityId
-        let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
-        mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
+        let mbPaymentMethod = find (compareMerchantPaymentMethod (DMPM.bookablePaymentMethodInfo paymentMethodInfo)) allPaymentMethods
+        paymentMethod <- mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
+        -- Keep the requested instrument: Online books against the UPI method but stays Online on the booking.
+        pure (paymentMethod :: DMPM.MerchantPaymentMethod) {DMPM.paymentInstrument = paymentMethodInfo.paymentInstrument}
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
 -- | Formerly-closure-captured inputs of buildBooking, so both Beckn init and the
