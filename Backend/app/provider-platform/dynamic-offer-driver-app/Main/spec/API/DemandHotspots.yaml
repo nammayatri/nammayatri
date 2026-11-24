@@ -25,5 +25,9 @@ apis:
   - GET:
       endpoint: /driver/demandHotspots
       auth: TokenAuth PROVIDER_TYPE
+      query:
+        sharedDemand: Bool
+        lat: Double
+        lon: Double
       response:
         type: GetDemandHotspotsResp

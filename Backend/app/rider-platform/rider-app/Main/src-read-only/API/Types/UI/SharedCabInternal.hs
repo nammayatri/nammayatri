@@ -15,6 +15,10 @@ data AffectedRider = AffectedRider {bookingId :: Kernel.Prelude.Text, dropStop :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data NearbyStandDemand = NearbyStandDemand {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, searching :: Kernel.Prelude.Int, stopCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RiderCallNumberResp = RiderCallNumberResp {riderNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

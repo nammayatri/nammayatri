@@ -744,7 +744,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
 
   -- a rider looking for a cab at this stop is demand the driver sees ahead of them
   when (SharedCab.isSharedCabAgency integratedBPPConfig.agencyKey) $
-    fork "sharedCab demand" $ SharedCab.recordSearch merchantOperatingCity.id.getId personId.getId fromStationCode
+    fork "sharedCab demand" $ SharedCab.recordSearch merchantOperatingCity.id.getId personId.getId fromStationCode (LatLong <$> fromStation.lat <*> fromStation.lon)
   searchReqId <- generateGUID
   now <- getCurrentTime
   hasApplicablePass <-

@@ -11,6 +11,8 @@ module SharedLogic.SharedCab.RiderClient
     BAPDemandReq (..),
     getSharedCabRouteData,
     postSharedCabRoutesDemand,
+    NearbyStandDemand (..),
+    getSharedCabNearbyDemand,
     postRouteOperation,
     getSharedCabSession,
     postSessionOperation,
@@ -113,6 +115,25 @@ type RouteDataAPI =
 
 type DemandAPI = InternalAPI ("routes" :> "demand" :> TokenHeader :> ReqBody '[JSON] BAPDemandReq :> Post '[JSON] SharedCabDemandResp)
 
+data NearbyStandDemand = NearbyStandDemand
+  { stopCode :: Text,
+    lat :: Double,
+    lon :: Double,
+    searching :: Int
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+type NearbyDemandAPI =
+  InternalAPI
+    ( "nearbyDemand"
+        :> QueryParam' '[Required, Strict] "agencyId" Text
+        :> QueryParam' '[Required, Strict] "lat" Double
+        :> QueryParam' '[Required, Strict] "lon" Double
+        :> TokenHeader
+        :> Get '[JSON] [NearbyStandDemand]
+    )
+
 type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
 
 -- | Parameterised on the response so the reconciler can probe the same endpoint without decoding the session. agencyId names the
@@ -186,6 +207,10 @@ getSharedCabRouteData apiKey internalUrl agencyId = do
 postSharedCabRoutesDemand :: BAPFlow m r => Text -> BaseUrl -> BAPDemandReq -> m SharedCabDemandResp
 postSharedCabRoutesDemand apiKey internalUrl req = do
   callRider internalUrl "PostSharedCabRoutesDemand" (client (Proxy @DemandAPI) (Just apiKey) req) (Proxy @DemandAPI)
+
+getSharedCabNearbyDemand :: BAPFlow m r => Text -> BaseUrl -> Text -> Double -> Double -> m [NearbyStandDemand]
+getSharedCabNearbyDemand apiKey internalUrl agencyId latitude longitude =
+  callRider internalUrl "GetSharedCabNearbyDemand" (client (Proxy @NearbyDemandAPI) agencyId latitude longitude (Just apiKey)) (Proxy @NearbyDemandAPI)
 
 postRouteOperation :: BAPFlow m r => Text -> BaseUrl -> BAPRouteOperationReq -> m SelectRouteResp
 postRouteOperation apiKey internalUrl req = do

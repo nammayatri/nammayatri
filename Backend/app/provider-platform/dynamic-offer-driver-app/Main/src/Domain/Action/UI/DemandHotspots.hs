@@ -16,31 +16,41 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
 import qualified Data.Vector as V
+import qualified Domain.Types.Common as DCommon
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DEMAND_HOTSPOTS))
+import Domain.Types.IntegratedBPPConfig (PlatformType (..))
+import qualified Domain.Types.IntegratedBPPConfig as Fields
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Trip as Trip
+import qualified Domain.Types.Vehicle as Fields
 import Environment
-import EulerHS.Prelude hiding (foldr', groupBy, id, length, map, mapM_, null, sum, whenJust)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (elem, foldr', groupBy, id, length, map, mapM_, null, sum, whenJust)
 import GHC.Num.Integer (integerToInt)
 import Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.Error
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing
-import Kernel.Utils.Logging (logDebug)
+import Kernel.Utils.Logging (logDebug, logError)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.CallBAPInternal as Fields
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
+import qualified SharedLogic.SharedCab.RiderClient as RiderClient
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Vehicle as QVehicle
 
 -- What it is:
 -- Entire city is divided into geohashes. A search adds a member and a ride start
@@ -124,9 +134,57 @@ getDriverDemandHotspots ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
+    Maybe Double ->
+    Maybe Double ->
+    Maybe Bool ->
     Flow GetDemandHotspotsResp
   )
-getDriverDemandHotspots (_, _, merchantOpCityId) = do
+getDriverDemandHotspots (mbPersonId, _, merchantOpCityId) mbLat mbLon mbSharedDemand = do
+  mbSharedFork <- case (mbSharedDemand, mbPersonId, LatLong <$> mbLat <*> mbLon) of
+    (Just True, Just personId, Just point) -> Just <$> awaitableFork "demandHotspots->sharedRun" (sharedRunHotspots personId merchantOpCityId point)
+    _ -> pure Nothing
+  cityResp <- cityDemandHotspots merchantOpCityId
+  sharedHotspots <- maybe (pure []) awaitSharedRun mbSharedFork
+  pure $
+    if null sharedHotspots
+      then cityResp
+      else
+        GetDemandHotspotsResp
+          { createdAt = cityResp.createdAt,
+            expiryAt = cityResp.expiryAt,
+            hotspotsDetails = cityResp.hotspotsDetails <> sharedHotspots,
+            enableDemandHotspots = True
+          }
+  where
+    awaitSharedRun sharedFork =
+      L.await Nothing sharedFork >>= \case
+        Right hotspots -> pure hotspots
+        Left err -> logError ("shared-run hotspots failed: " <> show err) >> pure []
+
+sharedRunHotspots :: Id Domain.Types.Person.Person -> Id MerchantOperatingCity -> LatLong -> Flow [HotspotsDetails]
+sharedRunHotspots personId merchantOpCityId point = do
+  mbVehicle <- QVehicle.findById personId
+  if maybe False (elem DCommon.SHARED_CAB . (.selectedServiceTiers)) mbVehicle
+    then do
+      integratedBPPConfig <- findIntegratedBPPConfig Nothing merchantOpCityId "SHARED_CAB" APPLICATION
+      bap <- asks (.appBackendBapInternal)
+      let cell = maybe "" T.pack (Geohash.encode 6 (point.lat, point.lon))
+      stands <-
+        IM.withInMemCache ["SharedRunHotspots", merchantOpCityId.getId, cell] 5 $
+          RiderClient.getSharedCabNearbyDemand bap.apiKey bap.url integratedBPPConfig.agencyKey point.lat point.lon
+      pure (map toHotspot stands)
+    else pure []
+  where
+    toHotspot :: RiderClient.NearbyStandDemand -> HotspotsDetails
+    toHotspot stand =
+      HotspotsDetails
+        { location = LatLong stand.lat stand.lon,
+          frequency = stand.searching,
+          categories = [HotspotCategoryCount {tripOption = "SharedRun", isScheduled = False, frequency = stand.searching}]
+        }
+
+cityDemandHotspots :: Id MerchantOperatingCity -> Flow GetDemandHotspotsResp
+cityDemandHotspots merchantOpCityId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   demandHotspotsExcluded <- CQLF.isFeatureExcluded DEMAND_HOTSPOTS

@@ -44,10 +44,6 @@ data SharedCabBookingOperationReq = SharedCabBookingOperationReq {operation :: S
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabDemandReq = SharedCabDemandReq {routeCodes :: [Kernel.Prelude.Text]}
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SharedCabMessageReq = SharedCabMessageReq {message :: Kernel.Prelude.Text}
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

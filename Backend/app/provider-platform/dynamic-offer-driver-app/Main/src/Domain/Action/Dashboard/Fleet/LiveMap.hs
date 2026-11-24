@@ -240,7 +240,7 @@ getLiveMapDemandHotspots ::
 getLiveMapDemandHotspots merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found for merchant: " <> merchant.id.getId <> " and city: " <> show opCity)
-  resp <- DemandHotspots.getDriverDemandHotspots (Nothing, merchant.id, merchantOpCity.id)
+  resp <- DemandHotspots.getDriverDemandHotspots (Nothing, merchant.id, merchantOpCity.id) Nothing Nothing Nothing
   pure $ toDashboardHotspots resp
 
 toDashboardHotspots :: UIHotspots.GetDemandHotspotsResp -> Common.DemandHotspotsResp

@@ -31,6 +31,7 @@ module SharedLogic.SharedCab.Keys
     allocLeaseKey,
     refundRetryCityKey,
     demandKey,
+    demandStandsKey,
     allocJobGuardKey,
     allocRunKey,
     expiryJobGuardKey,
@@ -154,6 +155,9 @@ refundRetryCityKey cityId = "sharedcab:refundretry:city:" <> cityId.getId
 
 demandKey :: Text -> Text -> Int -> Text
 demandKey cityId stopCode bucket = "sharedcab:demand:" <> cityId <> ":" <> stopCode <> ":" <> show bucket
+
+demandStandsKey :: Text -> Int -> Text
+demandStandsKey cityId bucket = "sharedcab:demand:stands:" <> cityId <> ":" <> show bucket
 
 allocJobGuardKey :: CityId -> Text
 allocJobGuardKey cityId = "sharedcab:allocJob:" <> cityId.getId

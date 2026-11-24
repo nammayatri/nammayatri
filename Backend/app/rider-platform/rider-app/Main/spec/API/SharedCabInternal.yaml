@@ -16,6 +16,12 @@ types:
     agencyId: Text
     routeCodes: "[Text]"
 
+  NearbyStandDemand:
+    stopCode: Text
+    lat: Double
+    lon: Double
+    searching: Int
+
   AffectedRider:
     bookingId: Text
     firstName: Text
@@ -99,6 +105,17 @@ apis:
         type: SharedCabDemandReq
       response:
         type: SharedCabDemandResp
+  - GET:
+      endpoint: /sharedCab/nearbyDemand
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        agencyId: Text
+        lat: Double
+        lon: Double
+      response:
+        type: "[NearbyStandDemand]"
   - POST:
       endpoint: /sharedCab/route/operations
       auth: NoAuth

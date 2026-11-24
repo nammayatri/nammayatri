@@ -59,6 +59,8 @@ data SharedCabTunables = SharedCabTunables
     demandStopsPerRoute :: Int,
     -- | The most routes one demand read may ask for.
     maxDemandRoutes :: Int,
+    nearbyDemandRadiusM :: Int,
+    maxNearbyDemandStands :: Int,
     -- | A claim is an offer the driver accepts or declines; off unless the city's rider_config turns it on.
     driverAcceptEnabled :: Bool,
     -- | Seconds the driver has to answer the first offer to a booking, and each later one (after a decline or a timeout).
@@ -105,6 +107,8 @@ defaultTunables =
       interestWindowSec = 10 * 60,
       demandStopsPerRoute = 5,
       maxDemandRoutes = 50,
+      nearbyDemandRadiusM = 2000,
+      maxNearbyDemandStands = 50,
       driverAcceptEnabled = False,
       offerTimeoutSec = 30,
       offerRetryTimeoutSec = 15,
@@ -149,6 +153,8 @@ tunablesOf busPingMaxAgeSec mbConfig =
       interestWindowSec = pick (.interestWindowSec) (.interestWindowSec),
       demandStopsPerRoute = pickPositive (.demandStopsPerRoute) (.demandStopsPerRoute),
       maxDemandRoutes = pickPositive (.maxDemandRoutes) (.maxDemandRoutes),
+      nearbyDemandRadiusM = pickPositive (.nearbyDemandRadiusM) (.nearbyDemandRadiusM),
+      maxNearbyDemandStands = pickPositive (.maxNearbyDemandStands) (.maxNearbyDemandStands),
       driverAcceptEnabled = pick (.driverAcceptEnabled) (.driverAcceptEnabled),
       offerTimeoutSec = pick (.offerTimeoutSec) (.offerTimeoutSec),
       offerRetryTimeoutSec = pick (.offerRetryTimeoutSec) (.offerRetryTimeoutSec),

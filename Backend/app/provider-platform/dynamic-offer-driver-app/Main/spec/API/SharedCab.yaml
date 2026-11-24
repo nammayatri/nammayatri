@@ -3,7 +3,6 @@ imports:
   CallRes: Domain.Action.UI.Call
   GetCallStatusRes: Domain.Action.UI.Call
   CallStatus: Domain.Types.CallStatus
-  SharedCabDemandResp: Domain.Types.SharedCabSession
   SharedCabRouteDataResp: Domain.Types.SharedCabSession
   SharedCabSession: Domain.Types.SharedCabSession
   VehicleTripStatus: Domain.Types.VehicleTrip
@@ -15,10 +14,6 @@ imports:
 module: SharedCab
 
 types:
-  SharedCabDemandReq:
-    routeCodes: "[Text]"
-    derive: "Show,Eq"
-
   SelectRouteMode:
     enum: "AfterLastDrop,Force"
     derive': "Show, Eq, Generic, ToSchema"
@@ -90,13 +85,6 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: SharedCabRouteDataResp
-  - POST:
-      endpoint: /sharedCab/routes/demand
-      auth: TokenAuth PROVIDER_TYPE
-      request:
-        type: SharedCabDemandReq
-      response:
-        type: SharedCabDemandResp
   - POST:
       endpoint: /sharedCab/route/operations
       auth: TokenAuth PROVIDER_TYPE

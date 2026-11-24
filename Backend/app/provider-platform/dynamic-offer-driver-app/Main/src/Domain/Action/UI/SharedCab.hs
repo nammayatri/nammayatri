@@ -11,7 +11,6 @@
 -- checks under the plate lock that the driver owns the cab's live session and (for booking actions) that the booking is on that plate.
 module Domain.Action.UI.SharedCab
   ( getPublicTransportData,
-    postSharedCabRoutesDemand,
     postSharedCabRouteOperations,
     getSharedCabSession,
     postSharedCabSessionOperations,
@@ -77,9 +76,6 @@ type TokenAuthInfo = (Maybe (Id SP.Person), Id Merchant, Id MerchantOperatingCit
 
 getPublicTransportData :: TokenAuthInfo -> Flow SharedCabRouteDataResp
 getPublicTransportData auth = requireDriver auth >>= routeData
-
-postSharedCabRoutesDemand :: TokenAuthInfo -> SharedCabDemandReq -> Flow SharedCabDemandResp
-postSharedCabRoutesDemand auth req = requireDriver auth >>= (`routesDemand` req)
 
 postSharedCabRouteOperations :: TokenAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 postSharedCabRouteOperations auth req = requireDriver auth >>= (`routeOperation` req)
@@ -208,13 +204,6 @@ sharedCabFeedVersion merchantOpCityId isSharedCab
               (.publicTransportVersion)
                 <$> SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = []}
         )
-
-routesDemand :: DriverAuthInfo -> SharedCabDemandReq -> Flow SharedCabDemandResp
-routesDemand (personId, _merchantId, merchantOpCityId) req = do
-  _ <- validateSharedCabDriver personId
-  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-  bap <- bapInternal
-  SharedCabBAP.postSharedCabRoutesDemand bap.apiKey bap.url SharedCabBAP.BAPDemandReq {SharedCabBAP.agencyId = integratedBPPConfig.agencyKey, SharedCabBAP.routeCodes = req.routeCodes}
 
 routeOperation :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 routeOperation auth req = case req.operation of

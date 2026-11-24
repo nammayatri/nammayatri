@@ -11,17 +11,21 @@ module SharedLogic.SharedCab.Demand
     searchingRiders,
     findingByRoute,
     tallyDemand,
+    StandDemand (..),
+    nearbyStandDemand,
   )
 where
 
 import qualified Data.Aeson as A
-import Data.List (nub)
+import qualified Data.ByteString.Lazy as BSL
+import Data.List (nub, nubBy)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.SharedCabSession as SCS
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
@@ -32,7 +36,7 @@ import SharedLogic.SharedCab.Allocation.Select (groupByKey)
 import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Interest (interestedOnRoutes)
-import SharedLogic.SharedCab.Keys (demandKey)
+import SharedLogic.SharedCab.Keys (demandKey, demandStandsKey)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 bucketSec, bucketCount, bucketTtlSec :: Int
@@ -47,10 +51,41 @@ bucketOf :: UTCTime -> Int
 bucketOf now = floor (utcTimeToPOSIXSeconds now) `div` bucketSec
 
 -- | A rider was shown a shared cab boarding at `stopCode`. Sets of rider ids, not events: the read subtracts the riders already waiting.
-recordSearch :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> Text -> m ()
-recordSearch cityId riderId stopCode = do
+recordSearch :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> Text -> Maybe LatLong -> m ()
+recordSearch cityId riderId stopCode mbStopPoint = do
   now <- getCurrentTime
-  Redis.withMasterRedis $ Redis.sAddExp (demandKey cityId stopCode (bucketOf now)) [riderId] bucketTtlSec
+  let bucket = bucketOf now
+  Redis.withMasterRedis $ do
+    Redis.sAddExp (demandKey cityId stopCode bucket) [riderId] bucketTtlSec
+    whenJust mbStopPoint $ \point -> do
+      let member = BSL.toStrict (A.encode (DemandStand stopCode point.lat point.lon))
+      void $ Redis.geoAdd (demandStandsKey cityId bucket) [(point.lon, point.lat, member)]
+      Redis.expire (demandStandsKey cityId bucket) bucketTtlSec
+
+data DemandStand = DemandStand {stopCode :: Text, lat :: Double, lon :: Double}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data StandDemand = StandDemand {stopCode :: Text, point :: LatLong, searching :: Int}
+  deriving (Show, Eq, Generic)
+
+nearbyStandDemand :: (CacheFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> LatLong -> m [StandDemand]
+nearbyStandDemand cfg cityId center = do
+  now <- getCurrentTime
+  stands :: [DemandStand] <-
+    take cfg.maxNearbyDemandStands . nubBy (\a b -> a.stopCode == b.stopCode) . concat
+      <$> Redis.withMasterRedis
+        ( forM [0 .. bucketCount - 1] $ \i ->
+            Redis.geoSearchDecoded (demandStandsKey cityId (bucketOf now - i)) (Redis.FromLonLat center.lon center.lat) (Redis.ByRadius (fromIntegral cfg.nearbyDemandRadiusM) "m")
+        )
+  if null stands
+    then pure []
+    else do
+      searched <- searchedAtStops cityId now (map (.stopCode) stands)
+      pure
+        [ StandDemand {stopCode = stand.stopCode, point = LatLong stand.lat stand.lon, searching = Set.size riders}
+          | (stand, (_, riders)) <- zip stands searched,
+            not (Set.null riders)
+        ]
 
 data StopDemand = StopDemand {waiting :: Int, searching :: Int}
   deriving (Show, Eq, Generic, ToJSON)

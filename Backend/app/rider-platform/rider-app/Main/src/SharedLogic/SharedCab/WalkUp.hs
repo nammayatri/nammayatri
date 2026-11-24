@@ -241,7 +241,7 @@ trackStopRoutes mbPersonId stopCode mbRouteCodes = do
       let stopPoint = (.stopPoint) <$> listToMaybe mappings
       -- the rider opening a stand's cab view counts as waiting on the routes through it, and a failure to note that never fails the view
       whenJust mbPersonId $ \personId ->
-        void $ bestEffort (logError . ("shared-cab interest write failed: " <>)) (recordInterest cfg codes personId.getId >> Demand.recordSearch cabIbc.merchantOperatingCityId.getId personId.getId stopCode)
+        void $ bestEffort (logError . ("shared-cab interest write failed: " <>)) (recordInterest cfg codes personId.getId >> Demand.recordSearch cabIbc.merchantOperatingCityId.getId personId.getId stopCode stopPoint)
       forM (filter wanted codes) (passingRoute cabIbc now cfg stopPoint)
   where
     passingRoute cabIbc now cfg stopPoint code = do
@@ -282,7 +282,10 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
   cfg <- Config.getTunables person.merchantOperatingCityId
   -- opening the cab list for a boarding stop is a search for a cab there
   whenJust req.sourceStopCode $ \stopCode ->
-    void $ bestEffort (logError . ("shared-cab search not recorded: " <>)) (Demand.recordSearch cabIbc.merchantOperatingCityId.getId person.id.getId stopCode)
+    void $
+      bestEffort (logError . ("shared-cab search not recorded: " <>)) $ do
+        stopPoint <- fmap (.stopPoint) . listToMaybe <$> OTPRest.getRouteStopMappingByStopCode stopCode cabIbc
+        Demand.recordSearch cabIbc.merchantOperatingCityId.getId person.id.getId stopCode stopPoint
   legs <- forM legReqs $ \legReq -> do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code

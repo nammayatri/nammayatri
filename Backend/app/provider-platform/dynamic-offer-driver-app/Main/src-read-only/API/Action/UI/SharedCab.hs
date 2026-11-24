@@ -39,12 +39,14 @@ type API =
   )
     :<|> ( ( TokenAuth
                :> ( "sharedCab"
-                      :> ( "routes"
-                             :> ( "demand"
-                                    :> ( ReqBody '[JSON] API.Types.UI.SharedCab.SharedCabDemandReq
+                      :> ( "route"
+                             :> ( "operations"
+                                    :> ( ReqBody
+                                           '[JSON]
+                                           API.Types.UI.SharedCab.SharedCabRouteOperationReq
                                            :> Post
                                                 '[JSON]
-                                                Domain.Types.SharedCabSession.SharedCabDemandResp
+                                                API.Types.UI.SharedCab.SelectRouteResp
                                        )
                                 )
                          )
@@ -52,38 +54,42 @@ type API =
            )
              :<|> ( ( TokenAuth
                         :> ( "sharedCab"
-                               :> ( "route"
-                                      :> ( "operations"
-                                             :> ( ReqBody
-                                                    '[JSON]
-                                                    API.Types.UI.SharedCab.SharedCabRouteOperationReq
-                                                    :> Post
-                                                         '[JSON]
-                                                         API.Types.UI.SharedCab.SelectRouteResp
-                                                )
-                                         )
+                               :> ( "session"
+                                      :> Get
+                                           '[JSON]
+                                           (Kernel.Prelude.Maybe Domain.Types.SharedCabSession.SharedCabSession)
                                   )
                            )
                     )
                       :<|> ( ( TokenAuth
                                  :> ( "sharedCab"
                                         :> ( "session"
-                                               :> Get
-                                                    '[JSON]
-                                                    (Kernel.Prelude.Maybe Domain.Types.SharedCabSession.SharedCabSession)
+                                               :> ( "operations"
+                                                      :> ( ReqBody
+                                                             '[JSON]
+                                                             API.Types.UI.SharedCab.SharedCabSessionOperationReq
+                                                             :> Post
+                                                                  '[JSON]
+                                                                  Domain.Types.SharedCabSession.SharedCabSession
+                                                         )
+                                                  )
                                            )
                                     )
                              )
                                :<|> ( ( TokenAuth
                                           :> ( "sharedCab"
-                                                 :> ( "session"
-                                                        :> ( "operations"
-                                                               :> ( ReqBody
-                                                                      '[JSON]
-                                                                      API.Types.UI.SharedCab.SharedCabSessionOperationReq
-                                                                      :> Post
-                                                                           '[JSON]
-                                                                           Domain.Types.SharedCabSession.SharedCabSession
+                                                 :> ( "booking"
+                                                        :> ( Capture
+                                                               "bookingId"
+                                                               Kernel.Prelude.Text
+                                                               :> ( "operations"
+                                                                      :> ( ReqBody
+                                                                             '[JSON]
+                                                                             API.Types.UI.SharedCab.SharedCabBookingOperationReq
+                                                                             :> Post
+                                                                                  '[JSON]
+                                                                                  Domain.Types.SharedCabSession.SharedCabSession
+                                                                         )
                                                                   )
                                                            )
                                                     )
@@ -95,14 +101,10 @@ type API =
                                                                  :> ( Capture
                                                                         "bookingId"
                                                                         Kernel.Prelude.Text
-                                                                        :> ( "operations"
-                                                                               :> ( ReqBody
-                                                                                      '[JSON]
-                                                                                      API.Types.UI.SharedCab.SharedCabBookingOperationReq
-                                                                                      :> Post
-                                                                                           '[JSON]
-                                                                                           Domain.Types.SharedCabSession.SharedCabSession
-                                                                                  )
+                                                                        :> ( "call"
+                                                                               :> Post
+                                                                                    '[JSON]
+                                                                                    Domain.Action.UI.Call.CallRes
                                                                            )
                                                                     )
                                                              )
@@ -114,49 +116,33 @@ type API =
                                                                           :> ( Capture
                                                                                  "bookingId"
                                                                                  Kernel.Prelude.Text
-                                                                                 :> ( "call"
-                                                                                        :> Post
-                                                                                             '[JSON]
-                                                                                             Domain.Action.UI.Call.CallRes
+                                                                                 :> ( "message"
+                                                                                        :> ( ReqBody
+                                                                                               '[JSON]
+                                                                                               API.Types.UI.SharedCab.SharedCabMessageReq
+                                                                                               :> Post
+                                                                                                    '[JSON]
+                                                                                                    Kernel.Types.APISuccess.APISuccess
+                                                                                           )
                                                                                     )
                                                                              )
                                                                       )
                                                                )
                                                         )
-                                                          :<|> ( ( TokenAuth
-                                                                     :> ( "sharedCab"
-                                                                            :> ( "booking"
-                                                                                   :> ( Capture
-                                                                                          "bookingId"
-                                                                                          Kernel.Prelude.Text
-                                                                                          :> ( "message"
-                                                                                                 :> ( ReqBody
-                                                                                                        '[JSON]
-                                                                                                        API.Types.UI.SharedCab.SharedCabMessageReq
-                                                                                                        :> Post
-                                                                                                             '[JSON]
-                                                                                                             Kernel.Types.APISuccess.APISuccess
-                                                                                                    )
-                                                                                             )
-                                                                                      )
-                                                                               )
-                                                                        )
-                                                                 )
-                                                                   :<|> ( TokenAuth
-                                                                            :> ( "sharedCab"
-                                                                                   :> ( "call"
-                                                                                          :> ( Capture
-                                                                                                 "callId"
-                                                                                                 (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus)
-                                                                                                 :> ( "status"
-                                                                                                        :> Get
-                                                                                                             '[JSON]
-                                                                                                             Domain.Action.UI.Call.GetCallStatusRes
-                                                                                                    )
-                                                                                             )
-                                                                                      )
-                                                                               )
-                                                                        )
+                                                          :<|> ( TokenAuth
+                                                                   :> ( "sharedCab"
+                                                                          :> ( "call"
+                                                                                 :> ( Capture
+                                                                                        "callId"
+                                                                                        (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus)
+                                                                                        :> ( "status"
+                                                                                               :> Get
+                                                                                                    '[JSON]
+                                                                                                    Domain.Action.UI.Call.GetCallStatusRes
+                                                                                           )
+                                                                                    )
+                                                                             )
+                                                                      )
                                                                )
                                                       )
                                              )
@@ -166,7 +152,7 @@ type API =
          )
 
 handler :: Environment.FlowServer API
-handler = getPublicTransportData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus
+handler = getPublicTransportData :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus
 
 getPublicTransportData ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -175,14 +161,6 @@ getPublicTransportData ::
   ) ->
   Environment.FlowHandler Domain.Types.SharedCabSession.SharedCabRouteDataResp
 getPublicTransportData a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.SharedCab.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
-
-postSharedCabRoutesDemand ::
-  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-  ) ->
-  (API.Types.UI.SharedCab.SharedCabDemandReq -> Environment.FlowHandler Domain.Types.SharedCabSession.SharedCabDemandResp)
-postSharedCabRoutesDemand a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.postSharedCabRoutesDemand (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSharedCabRouteOperations ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,

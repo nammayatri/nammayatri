@@ -1,6 +1,7 @@
 module Domain.Action.UI.SharedCabInternal
   ( getSharedCabRoutesData,
     postSharedCabRoutesDemand,
+    getSharedCabNearbyDemand,
     postSharedCabRouteOperations,
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
@@ -128,6 +129,15 @@ postSharedCabRoutesDemand mbToken req = do
   stops <- if null candidates then pure [] else Demand.demandOnRoutes cfg cityId.getId candidates
   publicTransportVersion <- feedVersion integratedBppConfig
   pure View.SharedCabDemandResp {publicTransportVersion, stops}
+
+getSharedCabNearbyDemand :: Text -> Double -> Double -> Maybe Text -> Environment.Flow [API.NearbyStandDemand]
+getSharedCabNearbyDemand agencyId latitude longitude mbToken = do
+  checkToken mbToken
+  integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
+  let cityId = integratedBppConfig.merchantOperatingCityId
+  cfg <- Config.getTunables cityId
+  stands <- Demand.nearbyStandDemand cfg cityId.getId (LatLong latitude longitude)
+  pure [API.NearbyStandDemand {stopCode = s.stopCode, lat = s.point.lat, lon = s.point.lon, searching = s.searching} | s <- stands]
 
 required :: Text -> Maybe a -> Environment.Flow a
 required field = fromMaybeM (InvalidRequest (field <> " is required for this operation"))
