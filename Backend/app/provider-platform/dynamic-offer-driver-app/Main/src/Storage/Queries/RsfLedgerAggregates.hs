@@ -49,12 +49,12 @@ findUnclaimedCompletedBookings merchantId from to = do
 
 -- The dashboard's missed-orders page, paged by the query: the order ids claimed since `from` (a booking created in
 -- the range can only be claimed after it was created) are read from the ledger through KV, and the booking query
--- leaves them out and applies the BAP filter, limit and offset. Returns (total, page).
-findUnclaimedCompletedBookingsPage :: (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m (Int, [DBooking.Booking])
-findUnclaimedCompletedBookingsPage merchantId from to mbBapId limit offset = do
+-- leaves them out and applies the BAP / booking filters, limit and offset. Returns (total, page).
+findUnclaimedCompletedBookingsPage :: (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe (Id DBooking.Booking) -> Int -> Int -> m (Int, [DBooking.Booking])
+findUnclaimedCompletedBookingsPage merchantId from to mbBapId mbBookingId limit offset = do
   now <- getCurrentTime
   claims <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange merchantId DL.BAP_CLAIM from (addUTCTime 60 now)
   let claimed = map Id . HS.toList $ HS.fromList (mapMaybe (.orderId) claims)
-  total <- QBooking.countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId claimed
-  page <- QBooking.findCompletedOnlinePageByProviderAndCreatedAtRange merchantId from to mbBapId claimed limit offset
+  total <- QBooking.countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId mbBookingId claimed
+  page <- QBooking.findCompletedOnlinePageByProviderAndCreatedAtRange merchantId from to mbBapId mbBookingId claimed limit offset
   pure (total, page)
