@@ -794,7 +794,7 @@ postRidePayoutOfferSync merchantShortId _ _mbRequestorId req = withDynamicLogLev
               person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
               totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
               breakups <- QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
-              let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx totalFare.amount breakups
+              let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx booking.fareSettlementType totalFare.amount breakups
                   offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
               offerStatsInput <- SPayment.buildOfferStatsInput person
               mbRideOfferEntity <- SOffer.processRideOffer (Just offerStatsInput) booking person ride offerBasePrice fareCtx

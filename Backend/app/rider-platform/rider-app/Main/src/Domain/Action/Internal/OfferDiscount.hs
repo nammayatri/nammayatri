@@ -15,6 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.InternalAuth as SIA
 import qualified SharedLogic.Offer as SOffer
@@ -54,7 +55,7 @@ getOfferDiscount apiKey bppBookingId req = do
   internalAPIKey <- asks (.internalAPIKey)
   SIA.checkInternalKey "offerDiscount" [internalAPIKey] apiKey
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
-  let mbOfferBase = req.fareAmount <&> \fare -> maybe fare (\breakupLines -> if null breakupLines then fare else FB.discountableAmount fare breakupLines) req.fareBreakups
+  let mbOfferBase = req.fareAmount <&> \fare -> maybe fare (\breakupLines -> if null breakupLines then fare else FB.discountableAmount fare breakupLines) (FB.withoutBoothLines (SL.edcCollectsParking booking.fareSettlementType) (.title) <$> req.fareBreakups)
   case (booking.selectedOfferId, mbOfferBase) of
     (Just offerId, Just offerBase) -> do
       let serviceTier = fromMaybe booking.vehicleServiceTierType req.serviceTier

@@ -232,6 +232,8 @@ data FPV2FareChargeComponent
   | GovtChargesComponent
   | PersonalDiscountComponent
   | BusinessDiscountComponent
+  | AirportEntryFeeComponent
+  | AirportEntryFeeTaxComponent
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -472,7 +472,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
           _ -> 0
         breakup = SFC.mkFareParamsBreakups True identity Common.FPV2FareBreakupItem fareParams
         chargeRes = SFC.finalisePaymentCharge mbPaymentChargeDetails totalFare (fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax) req.discountAmount fareParams
-        componentTax = sum (catMaybes [fareParams.govtCharges, fareParams.tollFareTax, fareParams.parkingChargeTax, fareParams.cancellationDuesTax, if SL.edcCollectsParking fareParams.fareSettlementType then Nothing else fareParams.airportEntryFeeTax])
+        componentTax = sum (catMaybes ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))
         taxRegime = fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime
         mbBearer = (.bearer) <$> mbPaymentChargeDetails
         customerCharge = if mbBearer == Just PAYMENT_CUSTOMER then fromMaybe 0 chargeRes.paymentCharge else 0
@@ -1571,6 +1571,8 @@ toApiChargeComponent = \case
   FarePolicyD.GovtChargesComponent -> Common.GovtChargesComponent
   FarePolicyD.PersonalDiscountComponent -> Common.PersonalDiscountComponent
   FarePolicyD.BusinessDiscountComponent -> Common.BusinessDiscountComponent
+  FarePolicyD.AirportEntryFeeComponent -> Common.AirportEntryFeeComponent
+  FarePolicyD.AirportEntryFeeTaxComponent -> Common.AirportEntryFeeTaxComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1624,3 +1626,5 @@ fromApiChargeComponent = \case
   Common.GovtChargesComponent -> FarePolicyD.GovtChargesComponent
   Common.PersonalDiscountComponent -> FarePolicyD.PersonalDiscountComponent
   Common.BusinessDiscountComponent -> FarePolicyD.BusinessDiscountComponent
+  Common.AirportEntryFeeComponent -> FarePolicyD.AirportEntryFeeComponent
+  Common.AirportEntryFeeTaxComponent -> FarePolicyD.AirportEntryFeeTaxComponent

@@ -367,7 +367,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
       taxDeduction
         | fromMaybe False chargedFareParams.isVatTaxType = 0
         | Just dues <- mbCancellationDues = fromMaybe 0 dues.cancellationFeeTax
-        | otherwise = sum (map (fromMaybe 0) [chargedFareParams.govtCharges, chargedFareParams.tollFareTax, chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax])
+        | otherwise = sum (map (fromMaybe 0) ([chargedFareParams.govtCharges, chargedFareParams.tollFareTax] <> if SL.edcCollectsParking chargedFareParams.fareSettlementType then [] else [chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax]))
   let mkComp key componentType mbLabel value rowSubItems =
         if value > 0
           then
@@ -632,7 +632,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       chargeInAppFee = customerBearsCharge || driverBearsCharge
       ridePaymentCharge = fromMaybe 0 ride.paymentCharge
       quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
-      componentTaxOf fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax, if edcCollectsParking then Nothing else fp.airportEntryFeeTax])
+      componentTaxOf fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if edcCollectsParking then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
