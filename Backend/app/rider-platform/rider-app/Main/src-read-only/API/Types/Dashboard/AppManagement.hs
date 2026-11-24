@@ -11,7 +11,6 @@ import qualified API.Types.Dashboard.AppManagement.FrfsTripOperations
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.PassOrganization
-import qualified API.Types.Dashboard.AppManagement.Passetto
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.SeatLayout
 import qualified API.Types.Dashboard.AppManagement.StopRouteDetails
@@ -35,7 +34,6 @@ data AppManagementUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
   | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
   | PASS_ORGANIZATION API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUserActionType
-  | PASSETTO API.Types.Dashboard.AppManagement.Passetto.PassettoUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | SEAT_LAYOUT API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutUserActionType
   | STOP_ROUTE_DETAILS API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsUserActionType
@@ -56,7 +54,6 @@ instance Text.Show.Show AppManagementUserActionType where
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
     PASS e -> "PASS/" <> show e
     PASS_ORGANIZATION e -> "PASS_ORGANIZATION/" <> show e
-    PASSETTO e -> "PASSETTO/" <> show e
     PAYMENT e -> "PAYMENT/" <> show e
     SEAT_LAYOUT e -> "SEAT_LAYOUT/" <> show e
     STOP_ROUTE_DETAILS e -> "STOP_ROUTE_DETAILS/" <> show e
@@ -126,15 +123,6 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PASS_ORGANIZATION/" r,
-                   ( v1,
-                     r2
-                     ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
-               ]
-            ++ [ ( PASSETTO v1,
-                   r2
-                 )
-                 | r1 <- stripPrefix "PASSETTO/" r,
                    ( v1,
                      r2
                      ) <-

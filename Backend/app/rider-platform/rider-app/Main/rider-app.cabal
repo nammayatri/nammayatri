@@ -234,7 +234,6 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
-      Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.SeatLayout
@@ -1060,7 +1059,6 @@ library
       API.Action.DashboardAuth.AppManagement.FrfsTripOperations
       API.Action.DashboardAuth.AppManagement.MerchantOnboarding
       API.Action.DashboardAuth.AppManagement.Pass
-      API.Action.DashboardAuth.AppManagement.Passetto
       API.Action.DashboardAuth.AppManagement.PassOrganization
       API.Action.DashboardAuth.AppManagement.Payment
       API.Action.DashboardAuth.AppManagement.SeatLayout
@@ -1189,7 +1187,6 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.FrfsTripOperations
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
-      API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.SeatLayout
@@ -1203,7 +1200,6 @@ library
       API.Types.Dashboard.AppManagement.FrfsTripOperations
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
-      API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.SeatLayout
