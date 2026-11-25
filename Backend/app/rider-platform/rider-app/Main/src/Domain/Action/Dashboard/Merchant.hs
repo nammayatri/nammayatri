@@ -445,6 +445,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
             poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
             ..
           }
 
@@ -1929,7 +1930,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
                 boothSpecificFleet = Nothing,
-                poolingMode = Nothing
+                poolingMode = Nothing,
+                queueGeomGeoJson = Nothing
               }
           gateInfo =
             DGI.GateInfo

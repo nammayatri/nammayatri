@@ -33,7 +33,11 @@ getSpecialLocationList (_, _, merchantOperatingCityId) isOrigin mbIfNoneMatch = 
     _ -> do
       specialLocationsWithAllGates <- notNullGateGeoJson <$> findFullSpecialLocationsByMerchantOperatingCityId mocId
       let isOrigin' = fromMaybe True isOrigin
-          filteredLocs = mapMaybe (\loc -> filterGates (Just loc) isOrigin') specialLocationsWithAllGates
+          -- The driver app uses `geoJson` to decide whether the driver is in the zone (queue card,
+          -- pickup screen, location-update config, map outline), which is about the queue, not
+          -- pricing. Serve the queue polygon when one is configured. Computed before the ETag so a
+          -- queue-polygon change invalidates clients' cached lists.
+          filteredLocs = map withQueueGeoJson $ mapMaybe (\loc -> filterGates (Just loc) isOrigin') specialLocationsWithAllGates
           eTag = computeSpecialLocationListETag filteredLocs
       setFullSpecialLocationHash mocId eTag
       pure $ addHeader eTag filteredLocs
