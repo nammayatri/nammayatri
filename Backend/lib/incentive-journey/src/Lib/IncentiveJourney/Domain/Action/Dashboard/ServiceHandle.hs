@@ -43,9 +43,9 @@ data ServiceHandle m = ServiceHandle
     -- | Local UTC offset for day-bound history / UI local time (TransporterConfig / RiderConfig).
     getTimeDiffFromUtc :: Id Common.MerchantOperatingCity -> m Seconds,
     findPersonById :: Id Common.Person -> m (Maybe Common.PersonInfo),
-    -- | Eval / UI / slot checks: OptIn only after optedInAt.
+    -- | Eval / UI / slot checks: OptIn only when period-active (optedInAt + optInPeriod).
     findAssignmentsByUserId :: Id Common.Person -> m [IJ.JourneyAssignment],
-    -- | Dashboard assignment list: includes pending OptIn invites (optedInAt null).
+    -- | Dashboard / driver list memberships: includes pending OptIn invites.
     findDashboardAssignmentsByUserId :: Id Common.Person -> m [IJ.JourneyAssignment],
     findStatsHistoryByPersonId ::
       Id Common.Person ->

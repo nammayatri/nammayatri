@@ -25,6 +25,7 @@ module Lib.IncentiveJourney
     module Lib.IncentiveJourney.JsonLogic,
     module Lib.IncentiveJourney.MetricBagRedis,
     module Lib.IncentiveJourney.MgCampaign,
+    module Lib.IncentiveJourney.OptIn,
     module Lib.IncentiveJourney.Evaluation,
     module Lib.IncentiveJourney.RewardMetadata,
     module Lib.IncentiveJourney.Deferred,
@@ -48,6 +49,7 @@ import Lib.IncentiveJourney.Idempotency
 import Lib.IncentiveJourney.JsonLogic
 import Lib.IncentiveJourney.MetricBagRedis
 import Lib.IncentiveJourney.MgCampaign
+import Lib.IncentiveJourney.OptIn
 import Lib.IncentiveJourney.Period
 import Lib.IncentiveJourney.Reward
 import Lib.IncentiveJourney.RewardMetadata
