@@ -127,7 +127,8 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
                     username = iffcoExtCfg.username,
                     password = iffcoExtCfg.password,
                     masterPolicyClient = iffcoExtCfg.masterPolicyClient,
-                    insurancePlan = iffcoExtCfg.insurancePlan
+                    insurancePlan = iffcoExtCfg.insurancePlan,
+                    endpointPath = iffcoExtCfg.endpointPath
                   }
               req =
                 InsuranceTypes.HomeDeclarationReq
