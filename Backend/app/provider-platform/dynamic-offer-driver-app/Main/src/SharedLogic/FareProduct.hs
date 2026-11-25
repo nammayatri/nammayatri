@@ -222,8 +222,9 @@ getAllFareProducts mbPricingTime _merchantId merchantOpCityId searchSources from
             then do
               logInfo $ "DEBUG findFareProductsWithGateFallback: no gate-specific fare products for area=" <> show areaWithGate <> ", falling back to area without gate"
               products <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory areaWithoutGate
-              otherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources areaWithoutGate
-              return (products, otherProducts, areaWithoutGate)
+              gateOtherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources areaWithGate
+              parentOtherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources areaWithoutGate
+              return (products, gateOtherProducts <> parentOtherProducts, areaWithoutGate)
             else return (gateProducts, [], areaWithGate)
         else do
           products <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory areaWithoutGate
