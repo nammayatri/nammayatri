@@ -49,7 +49,9 @@ data DIRECTConfig = DIRECTConfig
     -- bus): how its passengers book, hold seats, board and cancel. Absent for operator feeds (metro,
     -- government bus) whose rails stay as they are. Read through SharedLogic.SharedRoute.Knobs, which
     -- also validates it.
-    sharedKnobs :: Maybe SharedDemandKnobs
+    sharedKnobs :: Maybe SharedDemandKnobs,
+    repeatSlotTimeToleranceSec :: Maybe Seconds,
+    repeatSlotLookaheadDays :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

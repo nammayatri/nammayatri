@@ -59,20 +59,24 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
   toRoute <- withGtfsFallback booking.id.getId ("routeStopMapping:" <> toStationCode) [] (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStationCode routeCode integratedBPPConfig) <&> listToMaybe
   when (isNothing fromRoute || isNothing toRoute) $
     logError $ "DirectOrder:getTicketDetail stop provider code unavailable, QR will carry the NANDI placeholder. bookingId=" <> booking.id.getId <> " routeCode=" <> routeCode <> " fromStopCode=" <> fromStationCode <> " toStopCode=" <> toStationCode
-  qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
+  now <- getCurrentTime
+  -- Anchor every validity/refresh window to the trip's real scheduled start, not booking time --
+  -- a ticket booked ahead of the travel day must stay valid (and its OTP/QR refresh cycle must
+  -- begin) around when the ride actually happens, not expire overnight before it does.
+  let travelTime = fromMaybe now booking.startTime
+      qrValidity = addUTCTime (secondsToNominalDiffTime qrTtl) travelTime
   ticketNumber <- do
     id <- generateGUID
     uuid <- UU.fromText id & fromMaybeM (InternalError "Not being able to parse into UUID")
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Int)
-  now <- getCurrentTime
   otpCode <-
     Redis.get otpKey
       >>= \case
         Just (optCode :: Int) -> return optCode
         Nothing -> do
           otpCode :: Int <- (generateOTPCode >>= (pure . readMaybe . T.unpack)) >>= fromMaybeM (InternalError "Failed to generate OTP Code")
-          let endOfDayDiffInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime $ Time.TimeOfDay 23 59 59)) now
-          Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
+          let endOfTravelDayDiffInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (UTCTime (utctDay travelTime) (timeOfDayToTime $ Time.TimeOfDay 23 59 59)) now
+          Redis.setExp otpKey otpCode endOfTravelDayDiffInSeconds.getSeconds
           return otpCode
   let ticketDescription = "ROUTE: " <> routeShortName <> " | FROM: " <> fromStationName <> " | TO: " <> toStationName
       routeShortName = maybe routeStation.shortName (.shortName) mbRoute
@@ -83,7 +87,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
       adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
       childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
-      qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
+      qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) travelTime)
       seatLabels =
         let labels = concatMap (fromMaybe [] . (.seatLabels)) quoteCategories
          in if null labels then Nothing else Just labels
@@ -120,8 +124,12 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
 
+    -- Scoped to this booking -- an unscoped key would hand every ticket issued while it's still
+    -- live (until end of the first ticket's travel day) the SAME OTP code as whichever booking
+    -- happened to seed it first. A cart issuing several tickets in one pass makes this collide in
+    -- practice, not just in theory.
     otpKey :: Text
-    otpKey = "otpKey"
+    otpKey = "otpKey-" <> booking.id.getId
 
 withGtfsFallback :: (MonadFlow m) => Text -> Text -> a -> m a -> m a
 withGtfsFallback bookingId label fallback action =

@@ -987,3 +987,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_keep_journey_confirmed_until_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_person_call_identity boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN search_group_max_items integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN booking_group_max_slots integer ;
