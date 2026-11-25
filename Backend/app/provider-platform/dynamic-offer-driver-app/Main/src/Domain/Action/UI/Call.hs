@@ -113,6 +113,7 @@ import Tools.Call hiding (addCampaignData)
 import Tools.Error
 import qualified Tools.Fields as Fields
 import Tools.Notifications hiding (priority)
+import Tools.Utils (generateTwillioCallerIdentity)
 import TransactionLogs.Types
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
 
@@ -525,21 +526,29 @@ type CallBAPConstraints m r c =
     Hedis.HedisLTSFlowEnv r
   )
 
+-- | Twilio access token. With a ride id: that ride's party, as before. Without one: the verified
+-- caller's own per-person identity, for registering outside a ride (app open, logout).
 getCallTwillioAccessToken ::
-  ( Id SRide.Ride ->
+  ( Maybe (Id SRide.Ride) ->
+    Maybe (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
     EntityType ->
     DeviceType ->
     Flow Text
   )
-getCallTwillioAccessToken rideId entity deviceType = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  entityId <- case entity of
-    Domain.Action.UI.Call.CUSTOMER ->
-      return booking.transactionId
-    Domain.Action.UI.Call.DRIVER ->
-      return ride.id.getId
-  getAccessToken entityId ride.merchantOperatingCityId
+getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
+  Just rideId -> do
+    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    entityId <- case entity of
+      Domain.Action.UI.Call.CUSTOMER ->
+        return booking.transactionId
+      Domain.Action.UI.Call.DRIVER ->
+        return $ if isJust booking.riderCallIdentity then generateTwillioCallerIdentity ride.driverId else ride.id.getId
+    getAccessToken entityId ride.merchantOperatingCityId
+  Nothing -> do
+    (personId, _, cityId) <- mbCaller & fromMaybeM (InvalidRequest "token is required when bppRideId is not given")
+    unless (entity == Domain.Action.UI.Call.DRIVER) $ throwError (InvalidRequest "Only the DRIVER token can be issued without bppRideId")
+    getAccessToken (generateTwillioCallerIdentity personId) cityId
   where
     getAccessToken id cityId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId
@@ -567,7 +576,7 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      let dial = Dial (Just (T.unpack booking.transactionId))
+      let dial = Dial (Just (T.unpack (fromMaybe booking.transactionId booking.riderCallIdentity)))
       return $ Just dial
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp

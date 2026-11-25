@@ -1,0 +1,284 @@
+{
+  "scenario": "fav-nudge-no-favourites",
+  "description": "Favourites (hand-written, not from TS): a rider with no favourites gets the location request plus the Add a favourite message; adding Home turns the next prompt into the list.",
+  "env": {
+    "merchant": "pn_flexi",
+    "favourites": true,
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "knobs": [
+    {
+      "method": "getSavedLocations",
+      "behavior": "empty"
+    }
+  ],
+  "steps": [
+    {
+      "note": "tap Quick Ride -> no favourites -> location request + Add a favourite message",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-nudge-no-favourites.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            "9361176218"
+          ],
+          "method": "authenticate"
+        },
+        {
+          "args": [],
+          "method": "getSavedLocations"
+        }
+      ]
+    },
+    {
+      "note": "Add a favourite -> location request for the place to save",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-nudge-no-favourites.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "fav:add",
+                          "title": "Add a favourite"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "pin -> reverse-geocode -> name buttons",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-nudge-no-favourites.3",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:name:Home",
+            "fav:name:Work",
+            "fav:name:Other"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            13.34,
+            77.1
+          ],
+          "method": "reverseGeocode"
+        }
+      ]
+    },
+    {
+      "note": "Home -> addSavedLocation Home -> pickup question again, now as the list [review fix: the saved list is read again before checking the name]",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.fav-nudge-no-favourites.4",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "fav:name:Home",
+                          "title": "Home"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        },
+        {
+          "args": [
+            "Home",
+            13.34,
+            77.1
+          ],
+          "method": "addSavedLocation"
+        }
+      ]
+    }
+  ]
+}

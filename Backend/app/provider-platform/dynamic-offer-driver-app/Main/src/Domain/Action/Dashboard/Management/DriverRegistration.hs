@@ -1523,6 +1523,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRCA.associatedOn = now,
                       DRCA.associatedTill = convertTextToUTC (Just "2099-12-12"),
                       DRCA.errorMessage = Nothing,
+                      DRCA.takeoverVerifyResponse = Nothing,
                       DRCA.consent = True,
                       DRCA.consentTimestamp = now,
                       DRCA.isRcActive = True,

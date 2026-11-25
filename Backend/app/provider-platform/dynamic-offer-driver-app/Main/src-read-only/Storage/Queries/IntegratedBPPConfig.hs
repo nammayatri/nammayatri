@@ -5,6 +5,7 @@
 module Storage.Queries.IntegratedBPPConfig where
 
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -17,15 +18,28 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import qualified Storage.Queries.Transformers.IntegratedBPPConfig
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m ()
 createMany = traverse_ create
+
+findAllByFeedKeyAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+findAllByFeedKeyAndCity feedKey merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.feedKey $ Se.Eq feedKey,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
 
 findAllByPlatformAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig]))
 findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
   findAllWithKV
     [ Se.And
@@ -35,12 +49,13 @@ findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
         ]
     ]
 
-findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey]]
 
 findByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])))
 findByDomainAndCityAndVehicleCategory domain city vehicleCategory platformType = do
   findAllWithKV
     [ Se.And
@@ -53,7 +68,8 @@ findByDomainAndCityAndVehicleCategory domain city vehicleCategory platformType =
 
 findByDomainAndCityAndVehicleCategoryAnyPlatform ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig]))
 findByDomainAndCityAndVehicleCategoryAnyPlatform domain city vehicleCategory = do
   findAllWithKV
     [ Se.And
@@ -63,15 +79,16 @@ findByDomainAndCityAndVehicleCategoryAnyPlatform domain city vehicleCategory = d
         ]
     ]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+  Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig ->
+  m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ()
 updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV

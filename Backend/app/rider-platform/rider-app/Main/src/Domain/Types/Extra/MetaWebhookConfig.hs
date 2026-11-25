@@ -45,11 +45,19 @@ data MetaBotCfg = MetaBotCfg
     flexiRentalDurationS :: Int,
     flexiIntroVideoUrl :: Maybe Text,
     flexiSupportPhone :: Maybe Text,
-    nyTrackingUrl :: Text,
+    -- Ride tracking link template ({rideId} placeholder); Nothing/empty =
+    -- the default link (WhatsappBot.Messages.buildTrackingLink). Optional so
+    -- a row without the key still loads. Was nyTrackingUrl (India-specific
+    -- name); 0089 copies the old key's value to this one.
+    trackingUrl :: Maybe Text,
     -- App-download promo link, shown via the "Get the App" button on the
     -- ride-completion message (WhatsappBot.Messages/Engine.hs) — same
-    -- per-merchant pattern as nyTrackingUrl above.
+    -- per-merchant pattern as trackingUrl above.
     appDownloadUrl :: Text,
+    -- Favourite places on WhatsApp (saved-places list, "Save place", "Add a
+    -- favourite"). Optional: a row without the key decodes as Nothing = off,
+    -- so existing rows need no migration and each merchant opts in.
+    favouritesEnabled :: Maybe Bool,
     -- Trigger words checked against every inbound message, before anything
     -- else (WhatsappBot.Engine's intercept chain) — previously hardcoded in
     -- WhatsappBot.Ride. Per-merchant only; not per-language (still matched

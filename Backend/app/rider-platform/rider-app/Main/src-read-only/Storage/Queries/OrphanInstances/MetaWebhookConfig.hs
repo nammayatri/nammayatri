@@ -30,7 +30,9 @@ instance FromTType' Beam.MetaWebhookConfig Domain.Types.MetaWebhookConfig.MetaWe
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            phoneCountryCode = phoneCountryCode,
             phoneNumberId = phoneNumberId,
+            phoneNumberLength = phoneNumberLength,
             updatedAt = updatedAt,
             verifyToken = Encrypted verifyToken
           }
@@ -48,7 +50,9 @@ instance ToTType' Beam.MetaWebhookConfig Domain.Types.MetaWebhookConfig.MetaWebh
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.phoneCountryCode = phoneCountryCode,
         Beam.phoneNumberId = phoneNumberId,
+        Beam.phoneNumberLength = phoneNumberLength,
         Beam.updatedAt = updatedAt,
         Beam.verifyToken = verifyToken & unEncrypted
       }

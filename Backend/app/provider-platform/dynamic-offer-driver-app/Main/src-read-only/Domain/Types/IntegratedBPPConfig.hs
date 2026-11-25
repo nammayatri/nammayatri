@@ -52,9 +52,16 @@ data ONDCBecknConfig = ONDCBecknConfig
   }
   deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PlatformType
+  = MULTIMODAL
+  | PARTNERORG
+  | APPLICATION
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ProviderConfig = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig deriving (Generic, FromJSON, ToJSON, Eq, Show)
+data ProviderConfig
+  = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig
+  | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 

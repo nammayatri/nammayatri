@@ -33,10 +33,10 @@ import Servant
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
-getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
-  mbFleet <- Tools.Auth.DashboardUserAuth.requestorFleetFlag a9
-  Domain.Action.Dashboard.RideBooking.Driver.getDriverInfo a11 a10 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a9) mbFleet a8 a7 a6 a5 a4 a3 a2 a1
+getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
+getDriverInfo a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
+  mbFleet <- Tools.Auth.DashboardUserAuth.requestorFleetFlag a10
+  Domain.Action.Dashboard.RideBooking.Driver.getDriverInfo a12 a11 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a10) mbFleet a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 -- The acting operator is recorded as the collector: provider-dashboard sent its
 -- own session's person id in the request body.

@@ -35,6 +35,8 @@ DriverStats:
     updatedAt : UTCTime
     favRiderCount : Int
     totalPayoutEarnings: HighPrecMoney
+    # Lifetime ₹ from Incentive Journey rewards (Cash/NetOff/Coins→cash rate/SWO estimated fee saved). Not referral.
+    totalIncentiveJourneyEarnings: HighPrecMoney
     totalValidActivatedRides: Int
     totalReferralCounts: Int
     totalPayoutAmountPaid: Maybe HighPrecMoney
@@ -77,6 +79,7 @@ DriverStats:
     totalValidActivatedRides: Maybe Int
     totalReferralCounts: Maybe Int
     totalPayoutEarnings: Maybe HighPrecMoney
+    totalIncentiveJourneyEarnings: Maybe HighPrecMoney
     validDriverCancellationTagCount: Maybe Int
     validCustomerCancellationTagCount: Maybe Int
     safetyPlusRideCount: Maybe Int
@@ -96,6 +99,7 @@ DriverStats:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
     rating: Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore|EM
     totalPayoutEarnings: Storage.Queries.Transformers.DailyStats.getHighPrecMoney|I
+    totalIncentiveJourneyEarnings: Storage.Queries.Transformers.DailyStats.getHighPrecMoney|I
     totalValidActivatedRides: Kernel.Prelude.fromMaybe 0|I
     totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
     validDriverCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
@@ -122,6 +126,7 @@ DriverStats:
     distanceUnit: Kernel.Prelude.Just|I
     totalPayoutEarnings: Kernel.Prelude.Just|I
     totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
+    totalIncentiveJourneyEarnings: Kernel.Prelude.Just|I
     totalValidActivatedRides: Kernel.Prelude.Just|I
     totalReferralCounts: Kernel.Prelude.Just|I
     validDriverCancellationTagCount: Kernel.Prelude.Just|I
@@ -147,6 +152,11 @@ DriverStats:
     updatePayoutEarningsByDriverId:
       kvFunction: updateOneWithKV
       params: [totalPayoutEarnings]
+      where: driverId
+
+    updateTotalIncentiveJourneyEarnings:
+      kvFunction: updateOneWithKV
+      params: [totalIncentiveJourneyEarnings]
       where: driverId
 
     updateTotalValidRidesAndPayoutEarnings:
@@ -227,6 +237,7 @@ DriverStats:
     validCustomerCancellationTagCount: "0"
     onlineDuration: "0"
     coinsConvertedToDirectPayoutCash: "0"
+    totalIncentiveJourneyEarnings: "0"
     blacklistCoinEvents: "'{}'"
 
   extraOperations:

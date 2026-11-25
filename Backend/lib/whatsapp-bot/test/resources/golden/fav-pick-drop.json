@@ -1,0 +1,239 @@
+{
+  "scenario": "fav-pick-drop",
+  "description": "Favourites (hand-written, not from TS): regular rider shares a pickup pin, then picks Work as the drop from the list.",
+  "env": {
+    "merchant": "pn_reg",
+    "favourites": true,
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919812345678"
+  },
+  "steps": [
+    {
+      "note": "tap ride type -> silent auth -> favourites list for pickup",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-pick-drop.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:regular",
+                          "title": "Ride with destination"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            "9812345678"
+          ],
+          "method": "authenticate"
+        },
+        {
+          "args": [],
+          "method": "getSavedLocations"
+        }
+      ]
+    },
+    {
+      "note": "pickup pin -> favourites list for the drop",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-pick-drop.2",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            13.34,
+            77.1
+          ],
+          "method": "checkServiceable"
+        },
+        {
+          "args": [
+            13.34,
+            77.1
+          ],
+          "method": "reverseGeocode"
+        }
+      ]
+    },
+    {
+      "note": "pick Work -> one-way search to Work (placeId mock-work) -> fare confirm",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_reg"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919812345678"
+                      },
+                      "wa_id": "919812345678"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919812345678",
+                      "id": "wamid.fav-pick-drop.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "list_reply",
+                        "list_reply": {
+                          "id": "fav:pick:Work",
+                          "title": "Work"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919812345678",
+          "merchant": "REG",
+          "buttons": [
+            "regular_book",
+            "regular_change_drop",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "args": [
+            {
+              "lat": 13.34,
+              "lon": 77.1,
+              "placeId": "mock-pin"
+            },
+            {
+              "lat": 13.329,
+              "lon": 77.123,
+              "placeId": "mock-work"
+            }
+          ],
+          "method": "searchRide"
+        },
+        {
+          "args": [
+            "mock-search-1"
+          ],
+          "method": "getEstimates"
+        }
+      ]
+    }
+  ]
+}

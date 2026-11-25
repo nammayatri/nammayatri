@@ -108,6 +108,12 @@ Booking:
     initiatedAs: Maybe TripParty
     isReferredRide: Maybe Bool
     isSafetyPlus : Bool
+    # A shared-route run (trip category SharedRoute) is a booking the materialiser creates from a GTFS trip, not a rider's
+    # search: the trip it materialises, its route, and the feed's integrated bpp config (the rider platform's row has the same
+    # id). The ride copies all three when a driver is assigned. Nothing on every other booking.
+    tripId: Maybe Text
+    routeCode: Maybe Text
+    integratedBppConfigId: Maybe Text
     isPetRide: Bool
     preferenceMatchScore: Maybe Double
     configInExperimentVersions: "[ConfigVersionMap]"
@@ -141,6 +147,7 @@ Booking:
     addOnData: "[AddOnData]"
     paymentChargeDetails: Maybe PaymentChargeDetails
     taxRates: Maybe DriverTaxRates
+    riderCallIdentity: Maybe Text
 
   excludedFields:
     - merchantId
@@ -306,6 +313,10 @@ Booking:
     updateTaxRates:
       kvFunction: updateOneWithKV
       params: [taxRates]
+      where: id
+    updateRiderCallIdentity:
+      kvFunction: updateOneWithKV
+      params: [riderCallIdentity]
       where: id
 
   constraints:

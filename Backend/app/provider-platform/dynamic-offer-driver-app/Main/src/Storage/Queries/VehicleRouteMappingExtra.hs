@@ -21,6 +21,11 @@ findAllRouteMappings vehicleNumberHash = do findAllWithKV [Se.Is Beam.vehicleNum
 findOneMapping :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Encryption.DbHash -> Data.Text.Text -> m (Maybe Domain.Types.VehicleRouteMapping.VehicleRouteMapping))
 findOneMapping vehicleNumberHash routeCode = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode]]
 
+-- | The vehicles bound to a route, blocked ones left out: the shared-run materialiser hands a new run of the route to the
+-- driver of the first of them.
+findAllByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Data.Text.Text -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping]
+findAllByRouteCode routeCode = findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.blocked $ Se.Eq False]]
+
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRouteMapping -> DbHash -> m ()
 upsert a@VehicleRouteMapping {..} vehicleNumberHash = do
   res <- findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode]]

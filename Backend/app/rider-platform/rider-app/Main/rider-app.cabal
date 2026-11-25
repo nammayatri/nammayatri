@@ -154,6 +154,7 @@ library
       Beckn.ACL.FRFS.Search
       Beckn.ACL.FRFS.Select
       Beckn.ACL.FRFS.Status
+      Beckn.ACL.FRFS.Update
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.FRFSSeller.OnCancel
       Beckn.ACL.FRFSSeller.OnConfirm
@@ -233,7 +234,6 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
-      Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.SeatLayout
@@ -282,7 +282,6 @@ library
       Domain.Action.Dashboard.SearchTry
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
-      Domain.Action.Dashboard.System
       Domain.Action.DashboardAuth.AppManagement.MerchantOnboarding
       Domain.Action.DashboardAuth.AppManagement.Payment
       Domain.Action.DashboardAuth.IssueManagement.Issue
@@ -624,6 +623,7 @@ library
       SharedLogic.FRFSPassInstantBook
       SharedLogic.FRFSPassOverride
       SharedLogic.FRFSPassTicketStatistics
+      SharedLogic.FRFSRefundUpdate
       SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
@@ -767,6 +767,7 @@ library
       SharedLogic.SharedCabPassRules
       SharedLogic.SharedCabPassSkipDays
       SharedLogic.SharedRoute.Knobs
+      SharedLogic.SharedRoute.Manifest
       SharedLogic.SharedRoute.Passenger
       SharedLogic.SilentReallocation
       SharedLogic.SocialLogin
@@ -1065,7 +1066,6 @@ library
       API.Action.DashboardAuth.AppManagement.FrfsTripOperations
       API.Action.DashboardAuth.AppManagement.MerchantOnboarding
       API.Action.DashboardAuth.AppManagement.Pass
-      API.Action.DashboardAuth.AppManagement.Passetto
       API.Action.DashboardAuth.AppManagement.PassOrganization
       API.Action.DashboardAuth.AppManagement.Payment
       API.Action.DashboardAuth.AppManagement.SeatLayout
@@ -1101,7 +1101,6 @@ library
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.Sos
       API.Action.DashboardAuth.Management.SosMedia
-      API.Action.DashboardAuth.Management.System
       API.Action.DashboardAuth.RideBooking
       API.Action.DashboardAuth.RideBooking.AddBaggage
       API.Action.DashboardAuth.RideBooking.Booking
@@ -1195,7 +1194,6 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.FrfsTripOperations
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
-      API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.SeatLayout
@@ -1209,7 +1207,6 @@ library
       API.Types.Dashboard.AppManagement.FrfsTripOperations
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
-      API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.SeatLayout
@@ -1272,7 +1269,6 @@ library
       API.Types.RiderPlatform.Management.Endpoints.SearchTry
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
-      API.Types.RiderPlatform.Management.Endpoints.System
       API.Types.RiderPlatform.Management.FeedbackForm
       API.Types.RiderPlatform.Management.FRFSAlerts
       API.Types.RiderPlatform.Management.FRFSTicket
@@ -1291,7 +1287,6 @@ library
       API.Types.RiderPlatform.Management.SearchTry
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
-      API.Types.RiderPlatform.Management.System
       API.Types.UI.AlertWebhook
       API.Types.UI.AssetManifest
       API.Types.UI.AssetReleaseInternal

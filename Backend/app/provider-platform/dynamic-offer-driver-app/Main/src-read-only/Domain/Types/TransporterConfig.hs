@@ -579,7 +579,9 @@ data InvoiceConfig = InvoiceConfig
     invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     reverseCharge :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    signatureImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
+    signatureImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
+    walletInvoiceSupplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    walletInvoiceSupplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 

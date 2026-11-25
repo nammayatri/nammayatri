@@ -69,6 +69,8 @@ module BecknV2.FRFS.Types
     TagGroup (..),
     Time (..),
     TimeRange (..),
+    UpdateReq (..),
+    UpdateReqMessage (..),
     Vehicle (..),
   )
 where
@@ -287,6 +289,60 @@ optionsCancelReqMessage =
       [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
         ("cancelReqMessageDescriptor", "descriptor"),
         ("cancelReqMessageOrderId", "order_id")
+      ]
+
+-- |
+data UpdateReq = UpdateReq
+  { -- |
+    updateReqContext :: Context,
+    -- |
+    updateReqMessage :: UpdateReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON UpdateReq where
+  parseJSON = genericParseJSON optionsUpdateReq
+
+instance ToJSON UpdateReq where
+  toJSON = genericToJSON optionsUpdateReq
+
+optionsUpdateReq :: Options
+optionsUpdateReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("updateReqContext", "context"),
+        ("updateReqMessage", "message")
+      ]
+
+-- |
+data UpdateReqMessage = UpdateReqMessage
+  { -- | Comma separated paths of the order objects being updated, e.g. "order.payments"
+    updateReqMessageUpdateTarget :: Text,
+    -- |
+    updateReqMessageOrder :: Order
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON UpdateReqMessage where
+  parseJSON = genericParseJSON optionsUpdateReqMessage
+
+instance ToJSON UpdateReqMessage where
+  toJSON = genericToJSON optionsUpdateReqMessage
+
+optionsUpdateReqMessage :: Options
+optionsUpdateReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("updateReqMessageUpdateTarget", "update_target"),
+        ("updateReqMessageOrder", "order")
       ]
 
 -- | Describes a cancellation event

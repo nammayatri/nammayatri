@@ -40,6 +40,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import Tools.Encryption (decryptWithDefault)
 import qualified Tools.Fields as Fields
 
 data BPPInvoiceInfo = BPPInvoiceInfo
@@ -83,6 +84,7 @@ resolveBPPInvoiceInfo res = do
         Just assoc -> QFOI.findByPrimaryKey (Id assoc.fleetOwnerId :: Id DP.Person)
         Nothing -> pure Nothing
     Nothing -> pure Nothing
+  mbFleetGstin <- decryptWithDefault (mbFleetInfo >>= (.gstNumber)) (mbFleetInfo >>= (.gstNumberDec))
   pure $ case mbFleetInfo of
     Just fleetInfo ->
       BPPInvoiceInfo
@@ -91,7 +93,7 @@ resolveBPPInvoiceInfo res = do
           issuedByAddress = merchantAddress,
           supplierName = fleetInfo.fleetName,
           supplierAddress = fleetInfo.stripeAddress <&> formatStripeAddress,
-          supplierGSTIN = fleetInfo.gstNumberDec,
+          supplierGSTIN = mbFleetGstin,
           supplierTaxNo = fleetInfo.vatNumber,
           supplierId = Just fleetInfo.fleetOwnerPersonId.getId,
           issuedByGstin = merchantGstin,

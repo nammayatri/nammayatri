@@ -234,6 +234,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import Storage.Queries.FleetOwnerInformation as QFOI
+import Tools.Encryption (decryptWithDefault)
 import Tools.Error (MerchantPaymentMethodError (..), TransporterError (TransporterConfigNotFound))
 import qualified Tools.Fields as Fields
 
@@ -570,11 +571,13 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
   (sName, sGSTIN, sVatNumber, sAddress, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+      -- The GSTIN lives in the encrypted column; gstNumberDec maps to the legacy plaintext column, which is always written as NULL.
+      mbFleetGstin <- decryptWithDefault (mbFleetInfo >>= (.gstNumber)) (mbFleetInfo >>= (.gstNumberDec))
       let customRate = mbFleetInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
           formattedAddress = nonBlank (mbFleetInfo >>= (.stripeAddress) <&> formatStripeAddress) <|> nonBlank (mbFleetInfo >>= (.address))
       pure
         ( mbFleetInfo >>= (.fleetName),
-          mbFleetInfo >>= (.gstNumberDec),
+          mbFleetGstin,
           mbFleetInfo >>= (.vatNumber),
           formattedAddress,
           Just fleetOwnerId.getId,

@@ -119,6 +119,8 @@ data HandlerEnv = HandlerEnv
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
     nwAddress :: BaseUrl,
+    -- | the driver app's UI address, read by the ride tracking URL when a job creates a ride (a shared-route run's assignment)
+    selfUIUrl :: BaseUrl,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     fabricGatewayBaseUrl :: BaseUrl,
     schedulerType :: SchedulerType,
@@ -163,6 +165,7 @@ data HandlerEnv = HandlerEnv
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     actorInfo :: Finance.ActorInfo,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     quoteRespondCoolDown :: Int,

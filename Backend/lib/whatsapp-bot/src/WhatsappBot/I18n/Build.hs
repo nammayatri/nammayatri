@@ -148,6 +148,25 @@ buildLanguageStringsM resolveField = do
   regularConfirmButton' <- resolveField "wa_bot_regularConfirmButton"
   regularChangeDropButton' <- resolveField "wa_bot_regularChangeDropButton"
   regularChangePickupButton' <- resolveField "wa_bot_regularChangePickupButton"
+  favChoosePickup' <- resolveField "wa_bot_favChoosePickup"
+  favChooseDrop' <- resolveField "wa_bot_favChooseDrop"
+  favSectionSaved' <- resolveField "wa_bot_favSectionSaved"
+  favSectionOther' <- resolveField "wa_bot_favSectionOther"
+  favShareNew' <- resolveField "wa_bot_favShareNew"
+  favAddNew' <- resolveField "wa_bot_favAddNew"
+  favAddPrompt' <- resolveField "wa_bot_favAddPrompt"
+  favSaveButton' <- resolveField "wa_bot_favSaveButton"
+  favAddPinPrompt' <- resolveField "wa_bot_favAddPinPrompt"
+  favNamePrompt' <- resolveField "wa_bot_favNamePrompt"
+  favNameHome' <- resolveField "wa_bot_favNameHome"
+  favNameWork' <- resolveField "wa_bot_favNameWork"
+  favNameOther' <- resolveField "wa_bot_favNameOther"
+  favTypeName' <- resolveField "wa_bot_favTypeName"
+  favSavedTmpl <- resolveField "wa_bot_favSaved"
+  favReplacePromptTmpl <- resolveField "wa_bot_favReplacePrompt"
+  favReplaceYes' <- resolveField "wa_bot_favReplaceYes"
+  favReplaceNo' <- resolveField "wa_bot_favReplaceNo"
+  favSaveFailed' <- resolveField "wa_bot_favSaveFailed"
   regularSearching' <- resolveField "wa_bot_regularSearching"
   regularBooking' <- resolveField "wa_bot_regularBooking"
   somethingWentWrong' <- resolveField "wa_bot_somethingWentWrong"
@@ -268,6 +287,25 @@ buildLanguageStringsM resolveField = do
         regularChangePickupButton = regularChangePickupButton',
         regularSearching = regularSearching',
         regularBooking = regularBooking',
+        favChoosePickup = favChoosePickup',
+        favChooseDrop = favChooseDrop',
+        favSectionSaved = favSectionSaved',
+        favSectionOther = favSectionOther',
+        favShareNew = favShareNew',
+        favAddNew = favAddNew',
+        favAddPrompt = favAddPrompt',
+        favSaveButton = favSaveButton',
+        favAddPinPrompt = favAddPinPrompt',
+        favNamePrompt = favNamePrompt',
+        favNameHome = favNameHome',
+        favNameWork = favNameWork',
+        favNameOther = favNameOther',
+        favTypeName = favTypeName',
+        favSaved = \n -> substitute favSavedTmpl [n],
+        favReplacePrompt = \n -> substitute favReplacePromptTmpl [n],
+        favReplaceYes = favReplaceYes',
+        favReplaceNo = favReplaceNo',
+        favSaveFailed = favSaveFailed',
         somethingWentWrong = somethingWentWrong',
         sessionExpired = sessionExpired',
         error = \e -> substitute errorTmpl [e]

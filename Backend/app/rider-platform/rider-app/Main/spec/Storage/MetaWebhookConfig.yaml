@@ -63,8 +63,18 @@ MetaWebhookConfig:
     # without affecting other rows. ANDed with the global metaBotEnabled flag
     # (Environment.hs) at the call site.
     enabled: Bool
+    # The WhatsApp number's country, for logging the rider in: the dialling
+    # code ("+91", "+358") and the national number length (10 for India;
+    # NULL = no length check, for countries whose mobile numbers vary in
+    # length, e.g. Finland). Existing rows get the India defaults.
+    phoneCountryCode: Maybe Text
+    phoneNumberLength: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  default:
+    phoneCountryCode: "'+91'"
+    phoneNumberLength: "10"
 
   beamType:
     appSecret: Text

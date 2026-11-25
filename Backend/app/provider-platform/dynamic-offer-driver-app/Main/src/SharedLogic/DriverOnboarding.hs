@@ -331,6 +331,7 @@ createDriverRCAssociationIfPossible transporterConfig driverId rc = do
             associatedOn = now,
             associatedTill = end,
             errorMessage = Nothing,
+            takeoverVerifyResponse = Nothing,
             consent = True,
             consentTimestamp = now,
             isRcActive = False,

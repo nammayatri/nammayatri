@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverRCAssociation where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -20,6 +21,7 @@ data DriverRCAssociationT f = DriverRCAssociationT
     id :: B.C f Kernel.Prelude.Text,
     isRcActive :: B.C f Kernel.Prelude.Bool,
     rcId :: B.C f Kernel.Prelude.Text,
+    takeoverVerifyResponse :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

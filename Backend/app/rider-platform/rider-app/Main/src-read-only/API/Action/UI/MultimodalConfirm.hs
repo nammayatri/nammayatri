@@ -17,6 +17,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -89,6 +90,28 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "booking"
+      :> "list"
+      :> QueryParam
+           "cursor"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "fromDate"
+           EulerHS.Prelude.Integer
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "scope"
+           API.Types.UI.MultimodalConfirm.TicketListScope
+      :> QueryParam
+           "toDate"
+           EulerHS.Prelude.Integer
+      :> Get
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.MultimodalBookingListRes
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -633,7 +656,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> postPublicTransportVehicleDataBlock :<|> getPublicTransportBlockedVehicles :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalOrderReschedule :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName :<|> postMultimodalUpdateBusLocation :<|> postStoreTowerInfo :<|> getMultimodalTrackStopRoutes
+handler = postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingList :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> postPublicTransportVehicleDataBlock :<|> getPublicTransportBlockedVehicles :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalOrderReschedule :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName :<|> postMultimodalUpdateBusLocation :<|> postStoreTowerInfo :<|> getMultimodalTrackStopRoutes
 
 postMultimodalRouteServiceability ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -679,6 +702,19 @@ getMultimodalBookingInfo ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 getMultimodalBookingInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getMultimodalBookingList ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe API.Types.UI.MultimodalConfirm.TicketListScope ->
+    Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalBookingListRes
+  )
+getMultimodalBookingList a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

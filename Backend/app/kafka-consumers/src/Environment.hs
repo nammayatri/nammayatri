@@ -17,6 +17,7 @@ module Environment where
 import qualified Control.Concurrent.MVar as MVar
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import "dynamic-offer-driver-app" Environment (RideEventsPublisherCfg)
 import EulerHS.Prelude hiding (maybe, show)
 import qualified EulerHS.Runtime as R
 import Kafka.Consumer
@@ -82,7 +83,14 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER | FLEET_ANALYTICS_REALTIME deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType
+  = LOCATION_UPDATE
+  | BROADCAST_MESSAGE
+  | FLEET_COMMUNICATION_DISPATCH
+  | RIDE_EVENTS_CONSUMER
+  | FLEET_ANALYTICS_REALTIME
+  | IJ_BEHAVIOR_TICK_CONSUMER
+  deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -92,6 +100,7 @@ instance Show ConsumerType where
   show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
   show RIDE_EVENTS_CONSUMER = "ride-events-consumer"
   show FLEET_ANALYTICS_REALTIME = "fleet-analytics-realtime"
+  show IJ_BEHAVIOR_TICK_CONSUMER = "ij-behavior-tick-consumer"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.
@@ -147,7 +156,9 @@ data AppCfg = AppCfg
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
     shortDurationRetryCfg :: RetryCfg,
-    selfBaseUrl :: Kernel.BaseUrl
+    selfBaseUrl :: Kernel.BaseUrl,
+    -- | Needed for PostActionsEnv (wallet-floor offline → IJ onlineMinutes publish).
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic, FromDhall)
 
@@ -212,7 +223,8 @@ data AppEnv = AppEnv
     shortDurationRetryCfg :: RetryCfg,
     cloudType :: Maybe CloudType,
     actorInfo :: Finance.ActorInfo,
-    selfBaseUrl :: Kernel.BaseUrl
+    selfBaseUrl :: Kernel.BaseUrl,
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic)
 

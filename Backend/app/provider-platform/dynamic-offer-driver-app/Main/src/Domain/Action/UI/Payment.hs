@@ -217,8 +217,7 @@ getStatus ::
     JobCreatorEnv r,
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -360,8 +359,7 @@ getStatusV2 ::
     Redis.HedisLTSFlowEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -596,7 +594,7 @@ processWalletTopupWebhook driver order transactionStatus = do
   let lockKey = "wallet:topup:lock:" <> order.id.getId
   Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.invoiceConfig
     -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
     -- the success push is gated on it — a redelivery must not re-notify.
     -- Also the wallet's running-balance lock: every other posting on this wallet (ride end,
@@ -663,8 +661,7 @@ processPayment ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->

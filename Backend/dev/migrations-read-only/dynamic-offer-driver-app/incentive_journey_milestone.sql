@@ -23,3 +23,8 @@ ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN mercha
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY incentive_journey_milestone_idx_journey_id ON atlas_driver_offer_bpp.incentive_journey_milestone USING btree (journey_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN evaluation json  default NULL;

@@ -77,6 +77,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
+import Tools.Utils (generateTwillioCallerIdentity)
 
 data OneShotAssignReq = OneShotAssignReq
   { merchant :: DM.Merchant,
@@ -240,7 +241,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
               registeredAt = Just driver.createdAt,
               image = rideAssignedReq.image,
               isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
-              accountId = Nothing -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              accountId = Nothing, -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              callIdentity = generateTwillioCallerIdentity driver.id <$ booking.riderCallIdentity
             },
         vehicleDetails =
           CallBAPInternal.OneShotVehicleDetails

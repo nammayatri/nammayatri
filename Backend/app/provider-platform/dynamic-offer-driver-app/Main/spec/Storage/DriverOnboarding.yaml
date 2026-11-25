@@ -443,6 +443,10 @@ DriverRCAssociation:
     consentTimestamp: UTCTime
     isRcActive: Bool
     errorMessage: Maybe Text
+    # Latest RC takeover photo check by this driver for this RC: our verdict, scores and Grid's raw output.
+    takeoverVerifyResponse: Maybe Value
+  sqlType:
+    takeoverVerifyResponse: json
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

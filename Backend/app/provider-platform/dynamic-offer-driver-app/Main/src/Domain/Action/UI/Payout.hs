@@ -63,13 +63,12 @@ import qualified Kernel.External.Payout.Interface.Stripe as IStripe
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Logging (withDynamicLogLevel)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -834,7 +833,12 @@ callPayoutServiceActionForRefresh _merchantId merchantOpCityId mbEntityName payo
   payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
   pure (payoutStatusResp.status, payoutStatusResp.orderId)
 
-processPreviousPayoutAmount :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
+processPreviousPayoutAmount ::
+  SLIJ.JourneyCashPayoutFlow m r =>
+  Id Person.Person ->
+  Maybe Text ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   when (isJust mbVpa) $
     void $ SLIJ.retryVerifiedVpaJourneyCashPayouts personId

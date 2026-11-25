@@ -112,6 +112,10 @@ data SharedDemandKnobs = SharedDemandKnobs
 -- | Supply-side knobs, on the driver platform per city (transporter config).
 data SharedSupplyKnobs = SharedSupplyKnobs
   { schedule :: ScheduleMode,
+    -- | GTFS feed keys (integrated bpp config @feed_key@, same on both platforms) whose timetables this city
+    -- turns into runs. The materialiser reads every route of every feed listed here; a feed not listed is
+    -- somebody else's (a government bus feed GIMS also serves, say).
+    feeds :: [Text],
     driverFee :: DriverFeeBasis,
     -- | Minutes two runs of one driver must keep apart, over and above travel time between them.
     clashWindowMinutes :: Int,
@@ -143,7 +147,9 @@ validateDemandKnobs k =
 validateSupplyKnobs :: SharedSupplyKnobs -> Either Text ()
 validateSupplyKnobs k =
   firstFailure
-    [ (k.clashWindowMinutes < 0, "clashWindowMinutes must not be negative"),
+    [ (k.schedule == TIMETABLED && null k.feeds, "a TIMETABLED city needs at least one GTFS feed in feeds to read its timetable from"),
+      (any T.null k.feeds, "feeds must not contain an empty feed key"),
+      (k.clashWindowMinutes < 0, "clashWindowMinutes must not be negative"),
       (k.fallbackWindowMinutes < 0, "fallbackWindowMinutes must not be negative"),
       (k.checkInOffsetMinutes < 0, "checkInOffsetMinutes must not be negative"),
       (k.noShowWaitSeconds < 0, "noShowWaitSeconds must not be negative"),

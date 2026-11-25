@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN error_messag
 
 CREATE INDEX CONCURRENTLY driver_rc_association_idx_driver_id ON atlas_driver_offer_bpp.driver_rc_association USING btree (driver_id);
 CREATE INDEX CONCURRENTLY driver_rc_association_idx_rc_id ON atlas_driver_offer_bpp.driver_rc_association USING btree (rc_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN takeover_verify_response json ;

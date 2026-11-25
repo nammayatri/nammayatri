@@ -1,6 +1,9 @@
 module Lib.GtfsDataServer.Flow where
 
-import Data.Time (Day)
+import Data.Aeson (object, (.=))
+import qualified Data.Aeson as A
+import qualified Data.Text as T
+import Data.Time (Day, defaultTimeLocale, formatTime)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -156,3 +159,26 @@ getDepotCrewV2 baseUrl gtfsId depotId serviceDate page pageSize query =
 getDepotOverviewV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Day -> m MonitoringOverview
 getDepotOverviewV2 baseUrl gtfsId depotId serviceDate =
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotOverviewV2 gtfsId depotId serviceDate) "getDepotOverviewV2" NandiAPI.nandiDepotOverviewV2API >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_OVERVIEW_V2_API") baseUrl)
+
+-- | Every route of a feed with the trips its calendar runs on @serviceDay@ and their stop times, in one GraphQL query
+-- through GIMS to OTP. The shared-run materialiser's one read of the timetable.
+getFeedTimetableForDate :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Day -> m [GtfsTimetableRoute]
+getFeedTimetableForDate baseUrl gtfsId serviceDay = do
+  let req =
+        GtfsGraphQLRequest
+          { query = timetableQuery,
+            variables = Just (object ["feeds" .= [gtfsId], "serviceDate" .= formatTime defaultTimeLocale "%Y%m%d" serviceDay]),
+            operation_name = Just "SharedRunTimetable",
+            city = Nothing,
+            gtfs_id = Just gtfsId
+          }
+  raw <- withShortRetry $ callAPI baseUrl (NandiAPI.postNandiGtfsGraphQL req) "getFeedTimetableForDate" NandiAPI.nandiGtfsGraphQLAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GTFS_GRAPHQL_API") baseUrl)
+  case A.fromJSON raw of
+    A.Success (GtfsTimetableResp routes) -> pure routes
+    A.Error err -> throwError $ InternalError ("GTFS timetable for feed " <> gtfsId <> " on " <> show serviceDay <> " could not be read: " <> T.pack err)
+  where
+    timetableQuery =
+      "query SharedRunTimetable($feeds: [String], $serviceDate: String!) {\
+      \ routes(feeds: $feeds) { gtfsId shortName longName\
+      \   patterns { tripsForDate(serviceDate: $serviceDate) { gtfsId tripHeadsign\
+      \     stoptimes { scheduledArrival scheduledDeparture stopPosition stop { gtfsId code name lat lon } } } } } }"

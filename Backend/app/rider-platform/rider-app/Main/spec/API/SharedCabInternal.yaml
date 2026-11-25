@@ -117,6 +117,9 @@ apis:
         driverId: Text
         vehicleNumber: Text
         agencyId: Text
+      # a shared-route run: the driver platform's ride id; its passengers are the bookings placed on it, not a Redis session
+      query:
+        rideId: Text
       response:
         type: SharedCabSession
   - POST:

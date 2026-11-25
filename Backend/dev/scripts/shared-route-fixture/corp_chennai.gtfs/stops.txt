@@ -1,0 +1,6 @@
+stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type
+CORP_ACME_S1,CORP_ACME_S1,Adyar Depot,13.00670,80.25700,0
+CORP_ACME_S2,CORP_ACME_S2,Thiruvanmiyur,12.98300,80.25940,0
+CORP_ACME_S3,CORP_ACME_S3,Perungudi,12.96110,80.24200,0
+CORP_ACME_S4,CORP_ACME_S4,Thoraipakkam,12.93900,80.23400,0
+CORP_ACME_S5,CORP_ACME_S5,ACME campus Sholinganallur,12.90100,80.22790,0

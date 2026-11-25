@@ -22,6 +22,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Error
 import SharedLogic.DriverOnboarding
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite

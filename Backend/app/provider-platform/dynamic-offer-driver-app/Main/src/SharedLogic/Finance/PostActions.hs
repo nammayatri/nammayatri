@@ -23,28 +23,45 @@ where
 
 import Data.List (nubBy)
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fork, logError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.VehicleServiceTier as SVST
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | What the hook needs beyond the finance kernel: taking a driver offline below the wallet floor
---   changes driver mode, which also updates the fleet/operator status counters (ClickHouse).
-type PostActionsEnv r = (HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv)
+--   changes driver mode (ClickHouse fleet counters + IJ onlineMinutes closed-session publish).
+type PostActionsEnv r =
+  ( HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
+  )
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.
 runFinance ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
+  ( BeamFlow m r,
+    Finance.HasActorInfo m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    Metrics.CoreMetrics m
+  ) =>
   Finance.FinanceCtx ->
   Finance.FinanceM m a ->
   m (Either Finance.FinanceError (a, [Id Finance.LedgerEntry]))
@@ -59,7 +76,16 @@ runFinance ctx action = do
 
 -- | Runs 'runPostActionsForAccount' against every account a runFinance call touched.
 runPostActions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    Metrics.CoreMetrics m
+  ) =>
   Bool ->
   Finance.FinanceState ->
   m ()
@@ -81,7 +107,16 @@ runPostActions walletGateEnabled finalState = do
 --   outside this module (createWalletEntryDelta now goes through runFinance); kept as
 --   the single-account entry point for future direct dispatch needs.
 runPostActionsForAccount ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    Metrics.CoreMetrics m
+  ) =>
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
   Maybe DTC.TransporterConfig -> -- the city's config when it has driverWalletConfig.enableDriverWallet
   Finance.AffectedAccount ->

@@ -74,11 +74,11 @@ def published_versions(t: ssh.Target | None, source: str) -> tuple[list, str | N
 
 
 def pick_version(versions: list) -> dict | None:
-    """'Latest, but safe': the newest verified version, else the newest one not
-    marked not_stable. None for an empty list (the import then falls back to
+    """'Latest, but safe': the newest version marked stable in DB Manager, else the
+    newest one not marked not_stable. None for an empty list (the import then falls back to
     config_transfer.py's pinned version)."""
     usable = [v for v in versions if isinstance(v, dict) and isinstance(v.get("version"), int)]
-    for keep in (lambda v: v.get("status") == "verified",
+    for keep in (lambda v: v.get("status") == "stable",
                  lambda v: v.get("status") != "not_stable"):
         pool = [v for v in usable if keep(v)]
         if pool:

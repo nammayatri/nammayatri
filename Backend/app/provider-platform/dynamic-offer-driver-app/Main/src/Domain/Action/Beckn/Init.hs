@@ -434,6 +434,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         insuredAmount = bArgs.insuredAmount,
         addOnData = addOnData,
         exotelDeclinedCallStatusReceivingTime = Nothing,
+        riderCallIdentity = Nothing,
         numberOfLuggages = searchRequest.numberOfLuggages,
         numberOfCheckInBags = searchRequest.numberOfCheckInBags,
         numberOfCabinBags = searchRequest.numberOfCabinBags,
@@ -447,6 +448,10 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         ledgerWriteMode = Nothing,
         financeInvoiceId = Nothing,
         discountAmount = mbClampedDiscount,
+        -- a Beckn booking is never a shared-route run; the materialiser sets these on the runs it creates
+        tripId = Nothing,
+        routeCode = Nothing,
+        integratedBppConfigId = Nothing,
         ..
       }
 

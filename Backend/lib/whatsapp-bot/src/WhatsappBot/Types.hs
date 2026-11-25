@@ -32,6 +32,11 @@ data FlowState
   | ConfirmingSos
   | ConfirmingMarkSafe
   | ChoosingLanguage
+  | -- | Waiting for the pin of a place to save as a favourite ("Add a favourite").
+    AwaitingFavouritePin
+  | -- | Waiting for the name of the favourite being saved (or, with
+    -- 'favouriteName' set, for "replace the existing one?").
+    SavingFavourite
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Deferred action resumed after auth (@states.ts:34@).
@@ -217,8 +222,19 @@ data MerchantCtx = MerchantCtx
     flexiRentalDurationS :: Int,
     flexiIntroVideoUrl :: Maybe Text,
     flexiSupportPhone :: Maybe Text,
-    nyTrackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
+    trackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
     appDownloadUrl :: Text, -- shown on the "Get the App" button's follow-up message (Engine.hs)
+    -- Favourite places (Flow.Favourites): the saved-places list at pickup/drop,
+    -- "Save place", and the "Add a favourite" nudge. Off keeps the plain
+    -- location request exactly as before the feature.
+    favouritesEnabled :: Bool,
+    -- The WhatsApp number's country (meta_config columns): the dialling code
+    -- with its "+" ("+91", "+358") and the national number length (Just 10
+    -- for India; Nothing = no length check, where mobile lengths vary, e.g.
+    -- Finland). Used to turn the sender's WhatsApp number into the rider's
+    -- login number, and to make phone numbers in messages tappable.
+    phoneCountryCode :: Text,
+    phoneNumberLength :: Maybe Int,
     -- Trigger words checked against every inbound message before anything
     -- else in Engine.hs's intercept chain — previously hardcoded in Ride.hs.
     cancelTriggers :: [Text],
@@ -254,7 +270,14 @@ data FlowContext = FlowContext
     rideType :: Maybe RideType,
     flexiBookingId :: Maybe Text,
     regularEstimateId :: Maybe Text,
-    regularFare :: Maybe Double
+    regularFare :: Maybe Double,
+    -- | The place being saved as a favourite.
+    favouriteDraft :: Maybe BotPlace,
+    -- | The name it is being saved under, set only while asking whether to
+    -- replace an existing favourite of that name.
+    favouriteName :: Maybe Text,
+    -- | Where the booking continues once the favourite is saved.
+    favouriteReturn :: Maybe FlowState
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -275,7 +298,10 @@ initialContext =
       rideType = Nothing,
       flexiBookingId = Nothing,
       regularEstimateId = Nothing,
-      regularFare = Nothing
+      regularFare = Nothing,
+      favouriteDraft = Nothing,
+      favouriteName = Nothing,
+      favouriteReturn = Nothing
     }
 
 -- | Session envelope (@session/manager.ts:6-14@). Timestamps as 'UTCTime';

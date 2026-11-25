@@ -107,3 +107,7 @@ IntegratedBPPConfig:
       kvFunction: findAllWithKV
       where:
         and: [domain, vehicleCategory, platformType]
+    findAllByFeedKeyAndCity:
+      kvFunction: findAllWithKV
+      where:
+        and: [feedKey, merchantOperatingCityId]

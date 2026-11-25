@@ -167,7 +167,10 @@ def load_environments():
 
 
 def load_patches():
+    """Prefer local patches.json; fall back to patches.json.example (git-tracked)."""
     path = ASSETS_DIR / "patches.json"
+    if not path.exists():
+        path = ASSETS_DIR / "patches.json.example"
     return json.load(open(path)) if path.exists() else {}
 
 
@@ -726,6 +729,36 @@ def _expand_patched_data_inplace(patched_base):
             count += 1
     if count:
         print(f"[import] resolved env-templates in {count} patched JSON file(s)")
+
+
+def _sanitize_patched_dir_with_global_replacements(patched_base, direction):
+    """Re-apply patches.json(.example) global_replacements onto an already-patched
+    tree. Lets local/devbox import clear leftover production hosts when the
+    CloudFront zip was built with an older patch set."""
+    patch_config = load_patches().get(direction, {})
+    reps = [r for r in patch_config.get("global_replacements", []) if "find" in r and "replace" in r]
+    if not reps:
+        return
+    files_touched = 0
+    replacements = 0
+    for jf in patched_base.rglob("*.json"):
+        try:
+            text = jf.read_text()
+        except OSError:
+            continue
+        new = text
+        for r in reps:
+            if r["find"] in new:
+                new = new.replace(r["find"], r["replace"])
+        if new != text:
+            jf.write_text(new)
+            files_touched += 1
+            replacements += 1
+    if files_touched:
+        print(
+            f"[import] re-applied {direction} global_replacements on "
+            f"{files_touched} file(s) (sanitize leftover prod hosts)"
+        )
 
 
 _MOCK_SERVER_BASE_PORT = "8080"
@@ -1972,7 +2005,13 @@ def cmd_import(args):
     # against this user's nix-shell env. Idempotent — safe to re-run.
     _expand_patched_data_inplace(patched_base)
 
-    prod_hosts = _find_production_hosts(Path(args.local_dir) if args.local_dir else patched_base, config_tables, schemas)
+    import_base = Path(args.local_dir) if args.local_dir else patched_base
+    # CloudFront zip can lag patches.json.example; re-apply global_replacements
+    # in-place so leftover moving.tech / beckn.juspay.in hosts are rewritten
+    # before the hard refuse (common after rebase when master export grows).
+    _sanitize_patched_dir_with_global_replacements(import_base, direction)
+
+    prod_hosts = _find_production_hosts(import_base, config_tables, schemas)
     if prod_hosts:
         _report_production_hosts(prod_hosts)
         if not getattr(args, "allow_production_hosts", False):

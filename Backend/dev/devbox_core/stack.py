@@ -194,10 +194,11 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
         time.sleep(interval)
 
 
-def stop(t: ssh.Target, wdir: str, grace: int = 30, timeout: int = 90) -> dict:
+def stop(t: ssh.Target, wdir: str, grace: int = 30, timeout: int | None = None) -> dict:
     """Stop the stack: TERM to its process group (process-compose then stops
     every service), wait up to `grace` seconds, then KILL whatever still runs
-    inside the workspace folder.
+    inside the workspace folder. The ssh call gets grace + 60 seconds unless
+    `timeout` says otherwise.
 
     Returns {"wasRunning": bool, "killedLeftovers": int}."""
     d = shlex.quote(wdir.rstrip("/"))
@@ -205,8 +206,11 @@ def stop(t: ssh.Target, wdir: str, grace: int = 30, timeout: int = 90) -> dict:
 {_alive_sh()}
 # Leave the folder so this shell is not one of the processes "inside" it.
 cd /
-inside() {{ for c in /proc/[0-9]*; do w=$(readlink "$c/cwd" 2>/dev/null) || continue
-  case "$w" in {d}|{d}/*) echo "${{c#/proc/}}";; esac; done; }}
+# One find over /proc, not one readlink per process: on a busy dev-box (~800
+# processes) the per-process loop took ~2.5 s, so `grace` rounds of it outran
+# the ssh timeout and the stop run failed, leaving the release at STOPPING.
+inside() {{ find /proc -mindepth 2 -maxdepth 2 -name cwd -printf '%h %l\\n' 2>/dev/null |
+  while read -r p w; do case "$w" in {d}|{d}/*) echo "${{p#/proc/}}";; esac; done; }}
 was=false
 if [ "$alive" = yes ]; then was=true; kill -TERM -- "-$pid" 2>/dev/null || true; fi
 for i in $(seq {int(grace)}); do
@@ -217,7 +221,7 @@ n=0; for p in $(inside); do kill -KILL "$p" 2>/dev/null && n=$((n+1)); done
 rm -f {d}/{STATE}
 echo "{{\\"wasRunning\\": $was, \\"killedLeftovers\\": $n}}"
 """
-    r = ssh.run(t, script, timeout=timeout)
+    r = ssh.run(t, script, timeout=timeout or grace + 60)
     if r.returncode != 0 or not r.stdout.strip():
         raise RuntimeError(f"stack stop failed on {t.host}: {(r.stderr or '').strip() or f'exit {r.returncode}'}")
     return json.loads(r.stdout.strip().splitlines()[-1])

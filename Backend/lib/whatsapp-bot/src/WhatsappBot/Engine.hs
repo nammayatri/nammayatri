@@ -51,7 +51,8 @@ import WhatsappBot.Env (BotEnv, btn, ensureAuth, mkUserKey, rawInput, reply, rep
 -- The flow-agnostic ride lifecycle now lives in Ride (Engine -> Ride -> Env).
 
 import qualified WhatsappBot.Env as Fields
-import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, sendPickupConfirm, sendRegularFareConfirm)
+import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, handleConfirmingRegularDrop, handleFavouritePick, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, resumeAfterFavourite, sendPickupConfirm, sendRegularFareConfirm, shareNewLocation)
+import WhatsappBot.Flow.Favourites (handleFavouriteNameTap, handleFavouritePin, handleFavouriteText, handleReplaceAnswer, startAddFavourite, startSavePlace)
 import WhatsappBot.Handles (StoredPerson (..))
 import qualified WhatsappBot.Handles as Fields
 import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
@@ -106,13 +107,19 @@ runEngine env ev ctx = do
       s = t env.cfg.translations ctx.language
       input = T.strip (rawInput ev)
       lower = T.toLower input
+      favOn = env.cfg.merchant.favouritesEnabled
   if
       | Just langCode <- T.stripPrefix "lang:" input, isLangCode langCode -> handleLang env ev ctx langCode -- :103-118 (anchored to lang:<word>)
       | input == "choose_language" || input == "more_languages" -> handleChooseLanguage env ev ctx input -- :120-123
       -- 'handleCancel' takes the post-cancel menu row as a parameter: the row is
       -- booking-flow-specific (Flow.Booking) and Ride must not import a flow.
       | lower `elem` env.cfg.merchant.cancelTriggers || "cancel:" `T.isPrefixOf` input -> handleCancel env ev ctx (menuRow env ev) input -- :126-129
-      | any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers -> case ctx.personId of -- :131-140
+      -- Not while a favourite's name is being typed: status triggers match
+      -- anywhere in the text, so a name like "Race track" would show ride
+      -- status instead of being saved. (Cancel triggers stay: they match the
+      -- whole message only, so typing exactly "cancel" still gets out.)
+      | ctx.state /= SavingFavourite,
+        any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers -> case ctx.personId of -- :131-140
         Nothing -> handleIdle env ev ctx {pendingAction = Just PendingStatus} "book"
         Just _ -> handleStatus env ev ctx
       | input == "main_menu" -> do
@@ -156,6 +163,17 @@ runEngine env ev ctx = do
       | input == "regular_book" && isJust ctx.personId && isJust ctx.regularEstimateId && ctx.state == ConfirmingRegularFare ->
         confirmRegularBooking env ev ctx -- :312-315
       | input == "regular_change_drop" && isJust ctx.personId -> promptForRegularDrop env ev ctx -- :316-319
+      -- Favourite places (not ported from TS; Flow.Favourites). The list rows
+      -- only mean something while a pickup or drop is being chosen. With the
+      -- merchant's favourites off, a stale fav:* tap falls through to the
+      -- state switch like any unknown text.
+      | favOn, Just tag <- T.stripPrefix "fav:pick:" input, isJust ctx.personId, ctx.state `elem` placeStates -> handleFavouritePick env ev ctx tag
+      | favOn && input == "fav:share" && ctx.state `elem` placeStates -> shareNewLocation env ev ctx
+      | favOn && input == "fav:add" && isJust ctx.personId && ctx.state `elem` placeStates -> startAddFavourite env ev ctx
+      | favOn && input == "fav:save" && isJust ctx.personId && ctx.state == ConfirmingPickup, Just o <- ctx.origin -> startSavePlace env ev ctx o ConfirmingPickup
+      | Just name <- T.stripPrefix "fav:name:" input, ctx.state == SavingFavourite -> handleFavouriteNameTap env ev ctx (resumeAfterFavourite env ev) name
+      | input == "fav:replace:yes" && ctx.state == SavingFavourite -> handleReplaceAnswer env ev ctx (resumeAfterFavourite env ev) True
+      | input == "fav:replace:no" && ctx.state == SavingFavourite -> handleReplaceAnswer env ev ctx (resumeAfterFavourite env ev) False
       | "flexi_end_otp:" `T.isPrefixOf` input -> handleFlexiEndOtp env ev ctx (T.drop 14 input) -- :325-359
       | input == "more" -> handleMore env ev ctx -- :365-375
       | input == "help" -> handleHelp env ev ctx -- :376-380
@@ -186,6 +204,8 @@ stateSwitch env ev ctx input =
         Tracking -> handleTracking env ev ctx
         ConfirmingSos -> replyButtons env to s.sosConfirm [btn s.yesTriggerSOS "sos_trigger", btn s.noGoBack "sos_cancel"]
         ConfirmingMarkSafe -> replyButtons env to s.markSafeConfirm [btn s.yesMarkSafe "mark_safe_trigger", btn s.noGoBack "mark_safe_cancel"]
+        AwaitingFavouritePin -> handleFavouritePin env ev ctx
+        SavingFavourite -> handleFavouriteText env ev ctx (resumeAfterFavourite env ev)
 
 -- ---------------------------------------------------------------------------
 -- IDLE (engine.ts:498-531)
@@ -318,7 +338,7 @@ handleSupport env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
       raw = fromMaybe "" env.cfg.merchant.flexiSupportPhone
-      dial = fromMaybe raw (formatDialable (Just raw))
+      dial = fromMaybe raw (formatDialable env.cfg.merchant (Just raw))
   row <- menuRow env ev s
   replyButtons env to (s.supportMessage dial) row
 
@@ -348,6 +368,10 @@ sendIntroVideo env ev ctx = do
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers
 -- ---------------------------------------------------------------------------
+
+-- | The states in which the favourites list is on screen (pickup or drop).
+placeStates :: [FlowState]
+placeStates = [AwaitingPickup, ConfirmingPickup, AwaitingRegularDrop, ConfirmingRegularDrop]
 
 -- | Emergency helpline reply (@engine.ts:261@).
 emergencyMsg :: Text

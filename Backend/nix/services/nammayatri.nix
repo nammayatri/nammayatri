@@ -384,6 +384,7 @@ in
         cabalExecutables ++ [
           "rider-producer-exe"
           "kafka-ride-events-consumer-exe"
+          "kafka-ij-behavior-tick-consumer-exe"
           "kafka-fleet-analytics-consumer-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
@@ -623,6 +624,9 @@ in
                   for i in $(seq 0 9); do
                     redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
                     redis-cli -p ${toString ports.redis} XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
+                    # IJ BehaviourMetricTick streams (IJ_BEHAVIOR_TICK_CONSUMER).
+                    redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "dynamic-offer-driver-app:ij_behavior_tick_stream_$i" ij-behavior-tick-consumers 0 MKSTREAM || true
+                    redis-cli -p ${toString ports.redis} XGROUP CREATE "dynamic-offer-driver-app:ij_behavior_tick_stream_$i" ij-behavior-tick-consumers 0 MKSTREAM || true
                   done
                 '';
               };
@@ -659,6 +663,9 @@ in
                       key="dynamic-offer-driver-app:ride_events_stream_$i"
                       redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
                       redis-cli -p ${toString ports.redis} XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                      ij_key="dynamic-offer-driver-app:ij_behavior_tick_stream_$i"
+                      redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "$ij_key" ij-behavior-tick-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                      redis-cli -p ${toString ports.redis} XGROUP CREATE "$ij_key" ij-behavior-tick-consumers 0 MKSTREAM >/dev/null 2>&1 || true
                     done
                     sleep 30
                   done
@@ -1193,14 +1200,18 @@ in
             };
 
             # ── Control centre (nammayatri/control-center, frontend only) ─────
-            # Runs the Vite dev server when a control-center/ checkout sits at
-            # the repo root (the devbox workflow puts one there; most laptops
-            # have none, and then it just exits). Caddy serves it at
-            # /control-centre/; on a dev-box that is under hopper's gateway
-            # prefix (data/cc-prefix, written by the pre-flight), and Vite must
-            # be told the full path the browser uses (CC_BASE). Node comes from
-            # nixpkgs-unstable: the main pin is too old for the repo's Vite.
-            # Nothing depends on it, so the backend never waits for npm install.
+            # Runs when a control-center/ checkout sits at the repo root (the
+            # devbox workflow puts one there; most laptops have none, and then
+            # it just exits). Caddy serves it at /control-centre/; on a dev-box
+            # that is under hopper's gateway prefix (data/cc-prefix, written by
+            # the pre-flight), and Vite must be told the full path the browser
+            # uses (CC_BASE). On a laptop it is the Vite dev server. On a
+            # dev-box it is a production bundle: there every request crosses
+            # the public relay (~1.5 s each), and the dev server's hundreds of
+            # unbundled modules time out (408) so the page never loads.
+            # Node comes from nixpkgs-unstable: the main pin is too old for the
+            # repo's Vite. Nothing depends on it, so the backend never waits
+            # for npm install or the build.
             control-centre = {
               imports = [ common ];
               namespace = lib.mkForce "test";
@@ -1222,6 +1233,21 @@ in
                   echo "control-centre: serving under $CC_BASE"
                   cd "$ROOT/control-center"
                   npm install --no-audit --no-fund
+                  if [ -n "$CC_PREFIX" ]; then
+                    # vite build, not npm run build: the type check and lint
+                    # scripts add minutes and nothing to serving the page.
+                    # vite preview reuses server.proxy, so /api/... is unchanged.
+                    # The production build needs more than node's default heap.
+                    # (Set here, not in environment: process-compose's env parser
+                    # rejects a value that itself contains '='.)
+                    # NODE_ENV=development: control-center's api.ts sends calls
+                    # through this same-origin proxy only when import.meta.env.DEV
+                    # is true, and Vite takes DEV from NODE_ENV (not --mode).
+                    # Without it the bundle calls VITE_API_URL (127.0.0.1:8017)
+                    # and login fails with "Network Error". Still one bundled build.
+                    NODE_ENV=development NODE_OPTIONS=--max-old-space-size=8192 npx vite build
+                    exec npx vite preview --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
+                  fi
                   exec npm run dev -- --host 127.0.0.1 --port ${toString ports.control-centre} --strictPort
                 '';
               };
@@ -1255,6 +1281,28 @@ in
                 CONSUMER_TYPE = "RIDE_EVENTS_CONSUMER";
                 METRICS_PORT = toString ports.kafka-ride-events-consumer-metrics;
                 # See kafka-consumers-exe above.
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "mock-registry".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
+            };
+
+            # IJ BehaviourMetricTick consumer: Accept/Cancel BT bump publishes to
+            # ij_behavior_tick_stream_*; this process runs JsonLogic bag eval +
+            # stats upsert. Required for IncentiveJourneyFlow suite 03's
+            # BehaviourMetricTick-only award path.
+            kafka-ij-behavior-tick-consumer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "IJ_BEHAVIOR_TICK_CONSUMER";
+                METRICS_PORT = toString ports.kafka-ij-behavior-tick-consumer-metrics;
                 GET_MY_SCHEMA = "atlas_driver_offer_bpp";
               };
               depends_on = {

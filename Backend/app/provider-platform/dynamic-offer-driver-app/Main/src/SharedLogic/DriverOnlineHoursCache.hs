@@ -15,6 +15,7 @@
 module SharedLogic.DriverOnlineHoursCache
   ( markOnlineToday,
     markOfflineToday,
+    bankOpenOnlineSession,
     getTodayOnlineDuration,
     localDay,
     localMidnightUtc,
@@ -80,6 +81,38 @@ markOfflineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
             newTotalOnline = priorTotal + max (Seconds 0) (diffUTCTimeInSeconds now effectiveStart)
         Redis.setExp key (cache {day = today, totalOnline = newTotalOnline, lastOnlineAt = Nothing}) onlineHoursKeyExpiry
         pure $ Just (lastOnlineAt, now)
+    _ -> pure Nothing
+
+-- | Bank an open ONLINE session without going offline: credit [lastOnlineAt, now] and
+-- set lastOnlineAt = now so a later markOfflineToday only covers the remainder (no double-count).
+-- Returns Nothing when not online, or when elapsed < minElapsed (watermark left untouched).
+bankOpenOnlineSession ::
+  (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DP.Person ->
+  Seconds ->
+  Seconds ->
+  m (Maybe (UTCTime, UTCTime))
+bankOpenOnlineSession driverId timeDiffFromUtc minElapsed = Redis.withCrossAppRedis $ do
+  now <- getCurrentTime
+  let today = localDay timeDiffFromUtc now
+      todayStart = localMidnightUtc timeDiffFromUtc today
+      key = mkOnlineHoursKey driverId.getId
+  (mbCache :: Maybe DriverOnlineHoursCache) <- Redis.safeGet key
+  case mbCache of
+    Just cache
+      | Just lastOnlineAt <- cache.lastOnlineAt -> do
+        let elapsed = max (Seconds 0) (diffUTCTimeInSeconds now lastOnlineAt)
+        if elapsed < minElapsed
+          then pure Nothing
+          else do
+            let effectiveStart = max lastOnlineAt todayStart
+                priorTotal = if cache.day == today then cache.totalOnline else Seconds 0
+                newTotalOnline = priorTotal + max (Seconds 0) (diffUTCTimeInSeconds now effectiveStart)
+            Redis.setExp
+              key
+              (cache {day = today, totalOnline = newTotalOnline, lastOnlineAt = Just now})
+              onlineHoursKeyExpiry
+            pure $ Just (lastOnlineAt, now)
     _ -> pure Nothing
 
 getTodayOnlineDuration :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Seconds

@@ -11,6 +11,7 @@ import Tools.Auth
 data FaqAPIEntity = FaqAPIEntity
   { answer :: Kernel.Prelude.Text,
     category :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    displayOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     faqGroupId :: Kernel.Prelude.Text,
     question :: Kernel.Prelude.Text,
     subCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text

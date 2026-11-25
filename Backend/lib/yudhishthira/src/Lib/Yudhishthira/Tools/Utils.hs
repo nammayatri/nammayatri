@@ -22,6 +22,19 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 
+-- | Guard for config pilot read APIs: a config type that can hold secret values
+-- (see isSensitiveConfigType) is never served to the dashboard.
+throwIfSensitiveConfigType :: MonadFlow m => LYT.ConfigType -> m ()
+throwIfSensitiveConfigType configType =
+  when (LYT.isSensitiveConfigType configType) $
+    throwError $ InvalidRequest $ "Config type " <> show configType <> " can hold secret values and cannot be read through config pilot."
+
+-- | throwIfSensitiveConfigType for the read APIs that carry a LogicDomain.
+throwIfSensitiveLogicDomain :: MonadFlow m => LYT.LogicDomain -> m ()
+throwIfSensitiveLogicDomain domain =
+  when (LYT.isSensitiveLogicDomain domain) $
+    throwError $ InvalidRequest $ "Config domain " <> show domain <> " can hold secret values and cannot be read through config pilot."
+
 mandatoryChakraFields :: [Text]
 mandatoryChakraFields = [userIdField]
 

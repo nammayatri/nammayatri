@@ -77,6 +77,7 @@ import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSRefundUpdate as FRFSRefundUpdate
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -465,7 +466,9 @@ refundStatusHandler ::
     ServiceFlow m r,
     Finance.HasActorInfo m r,
     MonadMask m,
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   DOrder.PaymentOrder ->
   DOrder.PaymentServiceType ->
@@ -492,7 +495,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
-        HasBAPMetrics m r
+        HasBAPMetrics m r,
+        CallFRFSBPP.BecknAPICallFlow m r,
+        HasRequestId r
       ) =>
       DRefunds.Refunds ->
       m ()
@@ -526,6 +531,10 @@ refundStatusHandler paymentOrder paymentServiceType = do
                           then FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.COUNTER_CANCELLED FRFSUtils.counterCancellationRefundTag booking bapConfig refund.refundAmount mRiderNumber fareParameters
                           else whenJust booking.refundAmount $ \bookingRefundAmount ->
                             FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.CANCELLED FRFSUtils.cancellationRefundTag booking bapConfig bookingRefundAmount mRiderNumber fareParameters
+                        let updatedRefundAmount = case paymentOrder.effectAmount of
+                              Just effectAmount | effectAmount /= paymentOrder.amount -> effectAmount
+                              _ -> maybe refund.refundAmount abs booking.refundAmount
+                        FRFSRefundUpdate.sendRefundUpdateToBpp booking paymentOrder.id refund.arn updatedRefundAmount
                 FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUNDED "refund_success" mbBooking bookingPayment
               Payment.REFUND_FAILURE ->
                 FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_FAILED "refund_failure" mbBooking bookingPayment
@@ -647,7 +656,9 @@ initiateRefundWithPaymentStatusRespSync ::
     EncFlow m r,
     SchedulerFlow r,
     HasBAPMetrics m r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->

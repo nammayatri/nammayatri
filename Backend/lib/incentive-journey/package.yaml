@@ -58,9 +58,11 @@ dependencies:
   - text
   - time
   - aeson
+  - scientific
   - openapi3
   - containers
   - unordered-containers
+  - vector
   - extra
   - beam-core
   - beam-mysql
@@ -114,6 +116,8 @@ library:
     - mobility-core
     - beckn-spec
     - lib-dashboard
+    - json-logic-hs
+    - behavior-tracker
     - extra
     - singletons
     - singletons-th

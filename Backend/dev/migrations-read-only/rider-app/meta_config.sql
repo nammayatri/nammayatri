@@ -32,3 +32,9 @@ ALTER TABLE atlas_app.meta_config ALTER COLUMN access_token SET NOT NULL;
 ALTER TABLE atlas_app.meta_config ALTER COLUMN base_url DROP DEFAULT;
 ALTER TABLE atlas_app.meta_config ALTER COLUMN api_version DROP DEFAULT;
 ALTER TABLE atlas_app.meta_config ALTER COLUMN access_token DROP DEFAULT;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.meta_config ADD COLUMN phone_number_length integer  default 10;
+ALTER TABLE atlas_app.meta_config ADD COLUMN phone_country_code text  default '+91';
