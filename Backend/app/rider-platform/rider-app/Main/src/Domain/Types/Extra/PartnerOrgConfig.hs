@@ -24,6 +24,7 @@ data ConfigType
   | BPP_STATUS_CALL
   | WALLET_CLASS_NAME
   | WALLET_QR_TYPE
+  | FLEET_SYNC
   deriving (Generic, Eq, Ord, Read, Show, ToSchema, ToParamSchema, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable ConfigType
 
@@ -36,6 +37,7 @@ data PartnerOrganizationConfig
   | BPPStatusCall BPPStatusCallConfig
   | WalletClassName WalletClassNameConfig
   | WalletQRType WalletQRTypeConfig
+  | FleetSync FleetSyncConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RegistrationConfig = RegistrationConfig
@@ -76,6 +78,11 @@ instance ToJSON TicketSMSConfig where
 optionsTicketSMSConfig :: A.Options
 optionsTicketSMSConfig = defaultOptions {omitNothingFields = True}
 
+newtype FleetSyncConfig = FleetSyncConfig
+  { merchantOperatingCityId :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 newtype BPPStatusCallConfig = BPPStatusCallConfig
   { intervalInSec :: Int
   }
@@ -88,6 +95,7 @@ getConfigType (TicketSMS _) = TICKET_SMS
 getConfigType (BPPStatusCall _) = BPP_STATUS_CALL
 getConfigType (WalletClassName _) = WALLET_CLASS_NAME
 getConfigType (WalletQRType _) = WALLET_QR_TYPE
+getConfigType (FleetSync _) = FLEET_SYNC
 
 getConfigJSON :: PartnerOrganizationConfig -> A.Value
 getConfigJSON (Registration cfg) = A.toJSON cfg
@@ -96,6 +104,7 @@ getConfigJSON (TicketSMS cfg) = A.toJSON cfg
 getConfigJSON (BPPStatusCall cfg) = A.toJSON cfg
 getConfigJSON (WalletClassName cfg) = A.toJSON cfg
 getConfigJSON (WalletQRType cfg) = A.toJSON cfg
+getConfigJSON (FleetSync cfg) = A.toJSON cfg
 
 getRegistrationConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m RegistrationConfig
 getRegistrationConfig (Registration cfg) = pure cfg
@@ -116,6 +125,10 @@ getBPPStatusCallConfig cfg = throwError . InternalError $ unknownConfigType BPP_
 getWalletClassNameConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m WalletClassNameConfig
 getWalletClassNameConfig (WalletClassName cfg) = pure cfg
 getWalletClassNameConfig cfg = throwError . InternalError $ unknownConfigType WALLET_CLASS_NAME cfg
+
+getFleetSyncConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m FleetSyncConfig
+getFleetSyncConfig (FleetSync cfg) = pure cfg
+getFleetSyncConfig cfg = throwError . InternalError $ unknownConfigType FLEET_SYNC cfg
 
 getWalletQRTypeConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m WalletQRTypeConfig
 getWalletQRTypeConfig (WalletQRType cfg) = pure cfg

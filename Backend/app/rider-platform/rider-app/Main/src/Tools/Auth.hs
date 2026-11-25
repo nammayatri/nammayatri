@@ -196,4 +196,4 @@ verifyPartnerOrganization ::
 verifyPartnerOrganization apiKey = do
   apiKeyHash <- getDbHash apiKey
   mbPartnerOrganization <- B.runInReplica $ CQPO.findByApiKeyHash apiKeyHash
-  mbPartnerOrganization & fromMaybeM (InvalidAPIKey apiKey)
+  mbPartnerOrganization & fromMaybeM (InvalidAPIKey "")
