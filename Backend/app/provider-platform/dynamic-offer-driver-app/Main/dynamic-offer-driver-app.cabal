@@ -873,6 +873,7 @@ library
       SharedLogic.SharedRun.Fare
       SharedLogic.SharedRun.Knobs
       SharedLogic.SharedRun.Materialise
+      SharedLogic.SharedRun.Reassign
       SharedLogic.SharedRun.Session
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
