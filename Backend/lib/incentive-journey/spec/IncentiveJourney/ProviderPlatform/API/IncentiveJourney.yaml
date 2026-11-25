@@ -113,6 +113,7 @@ apis:
   # Campaign Members tab. summary is over the whole CJM (filters / paging ignored);
   # members are filtered + paginated (createdAt, id ascending). limit default 50, max 500.
   # optedInFrom inclusive, optedInTo exclusive (on optedInAt; rows never opted in are excluded).
+  # Both are city-local wall clock, like stored optedInAt / validTill.
   - GET:
       endpoint: /cohortJourney/{cohortJourneyMappingId}/members
       auth: ApiAuthV2
@@ -449,9 +450,10 @@ types:
   IncentiveJourneyDriverAssignmentListRes:
     - assignments: "[IncentiveJourneyDriverAssignmentItem]"
 
-  # Whole-campaign counts. optedIn / invited = enabled rows with optInStatus OptedIn / Pending;
+  # Whole-campaign counts. optedIn / invited = enabled rows with optInStatus OptedIn / Pending
+  # (OptedIn = opted in for the current period: Daily = same local day, Weekly = campaign week);
   # disabled = enabled false; expired = enabled with validTill before city-local now;
-  # optedInToday = optedInAt since city-local midnight (TransporterConfig.timeDiffFromUtc).
+  # optedInToday = optedInAt (city-local wall clock) since city-local midnight.
   IncentiveJourneyCampaignMembersSummary:
     - total: Int
     - optedIn: Int
@@ -462,10 +464,12 @@ types:
 
   # optInStatus: same rule as /driver/{driverId}/assignments. assignedAt = UCM createdAt.
   # activeNow: campaign enabled and in window, UCM enabled, validTill >= city-local now,
-  # and Assigned link or opted in (same rule as the control-features slot / IJCampaign tag).
+  # and Assigned link or opted in for the current period (same rule as the control-features slot / IJCampaign tag).
+  # optInPeriod: the stored opt-in period (OptInDaily / OptInWeekly); Nothing when not opted in.
   IncentiveJourneyCampaignMemberItem:
     - driverId: Id Driver
     - optInStatus: OptInStatus
+    - optInPeriod: Maybe OptInPeriod
     - optedInAt: Maybe UTCTime
     - optedInBy: Maybe Text
     - assignedAt: UTCTime

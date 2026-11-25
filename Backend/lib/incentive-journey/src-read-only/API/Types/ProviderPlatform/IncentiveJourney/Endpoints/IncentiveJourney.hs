@@ -263,6 +263,7 @@ data CreateIncentiveJourneyRes = CreateIncentiveJourneyRes {journeyId :: Kernel.
 data IncentiveJourneyCampaignMemberItem = IncentiveJourneyCampaignMemberItem
   { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     optInStatus :: OptInStatus,
+    optInPeriod :: Kernel.Prelude.Maybe OptInPeriod,
     optedInAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     optedInBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     assignedAt :: Kernel.Prelude.UTCTime,

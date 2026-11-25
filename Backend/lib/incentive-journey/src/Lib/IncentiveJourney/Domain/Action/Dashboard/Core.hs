@@ -365,6 +365,7 @@ instance IsHTTPError IncentiveJourneyDashboardError where
 instance IsAPIError IncentiveJourneyDashboardError
 
 -- | Members tab filters. All optional; optedInFrom inclusive, optedInTo exclusive.
+-- optedInFrom / optedInTo are city-local wall clock (same as stored UCM.optedInAt).
 data CampaignMembersFilter = CampaignMembersFilter
   { optInStatus :: Maybe AssignmentOptInStatus,
     optedInFrom :: Maybe UTCTime,
@@ -389,6 +390,7 @@ data CampaignMembersSummary = CampaignMembersSummary
 data CampaignMemberView = CampaignMemberView
   { userId :: ID.Id DIJC.Person,
     optInStatus :: AssignmentOptInStatus,
+    optInPeriod :: Maybe DUCM.OptInPeriod,
     optedInAt :: Maybe UTCTime,
     optedInBy :: Maybe Text,
     assignedAt :: UTCTime,
@@ -398,12 +400,12 @@ data CampaignMemberView = CampaignMemberView
   }
 
 -- | Campaign (CJM) members: whole-campaign summary + filtered page ordered by (createdAt, id).
--- Times: UCM.validTill / CJM.startDate are city-local wall clock (compared with
--- getLocalCurrentTime); optedInAt is real UTC, so "today" = city-local midnight shifted
--- back by TransporterConfig / RiderConfig timeDiffFromUtc.
--- activeNow mirrors CampaignSync.assignmentOccupiesControlFeaturesSlot (CJM enabled and in
--- window; Assigned, or OptIn with optedInAt) plus the UCM liveness rule of
--- findActiveByUserId (enabled, validTill >= local now).
+-- Times: UCM.validTill / optedInAt / CJM.startDate are all city-local wall clock (compared
+-- with getLocalCurrentTime), so "today" = city-local midnight.
+-- optInStatus / activeNow follow the period-active opt-in rule (IJ.isOptInActiveForLocalTime:
+-- Daily = same local day as optedInAt, Weekly = campaign-anchored week). activeNow mirrors
+-- CampaignSync.assignmentOccupiesControlFeaturesSlot (CJM enabled and in window; Assigned, or
+-- period-active OptIn) plus the UCM liveness rule of findActiveByUserId (enabled, validTill >= local now).
 listCampaignMembers ::
   BeamFlow m r =>
   ServiceHandle m ->
@@ -421,15 +423,15 @@ listCampaignMembers handle merchantShortId opCity cjmId flt = do
   timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
   localNow <- getLocalCurrentTime timeDiffFromUtc
   rows <- QUCMExtra.findAllByCohortMappingId cjmId
-  let tzOffset = fromIntegral (getSeconds timeDiffFromUtc)
-      todayStartUtc = addUTCTime (negate tzOffset) (UTCTime (utctDay localNow) 0)
+  let todayStartLocal = UTCTime (utctDay localNow) 0
       campaignEnd = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
       campaignLive = cjm.enabled && localNow >= cjm.startDate && localNow < campaignEnd
       linkType = fromMaybe DCJM.Assigned cjm.campaignUserLinkType
       toView ucm =
         CampaignMemberView
           { userId = ucm.userId,
-            optInStatus = mkAssignmentOptInStatus cjm (Just ucm),
+            optInStatus = mkAssignmentOptInStatus localNow cjm (Just ucm),
+            optInPeriod = ucm.optInPeriod,
             optedInAt = ucm.optedInAt,
             optedInBy = ucm.optedInBy,
             assignedAt = ucm.createdAt,
@@ -439,7 +441,7 @@ listCampaignMembers handle merchantShortId opCity cjmId flt = do
               campaignLive
                 && ucm.enabled
                 && ucm.validTill >= localNow
-                && (linkType == DCJM.Assigned || isJust ucm.optedInAt)
+                && (linkType == DCJM.Assigned || IJ.isOptInActiveForLocalTime localNow (Just cjm.startDate) ucm)
           }
       views = map toView $ sortOn (\ucm -> (ucm.createdAt, ucm.id.getId)) rows
       count p = length (filter p views)
@@ -450,7 +452,7 @@ listCampaignMembers handle merchantShortId opCity cjmId flt = do
             invited = count (\v -> v.enabled && v.optInStatus == Pending),
             disabled = count (not . (.enabled)),
             expired = count (\v -> v.enabled && v.validTill < localNow),
-            optedInToday = count (\v -> maybe False (>= todayStartUtc) v.optedInAt)
+            optedInToday = count (\v -> maybe False (>= todayStartLocal) v.optedInAt)
           }
       matches v =
         maybe True (== v.optInStatus) flt.optInStatus

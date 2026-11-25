@@ -428,6 +428,7 @@ toCampaignMemberItem v =
   Common.IncentiveJourneyCampaignMemberItem
     { driverId = ID.cast @DIJC.Person @Dashboard.Common.Driver v.userId,
       optInStatus = toApiOptInStatus v.optInStatus,
+      optInPeriod = toApiOptInPeriod <$> v.optInPeriod,
       optedInAt = v.optedInAt,
       optedInBy = v.optedInBy,
       assignedAt = v.assignedAt,
@@ -1103,6 +1104,11 @@ toApiOptInPeriod :: DCJM.OptInPeriod -> Common.OptInPeriod
 toApiOptInPeriod = \case
   DCJM.Daily -> Common.OptInDaily
   DCJM.Weekly -> Common.OptInWeekly
+
+toApiOptInPeriod :: DUCM.OptInPeriod -> Common.OptInPeriod
+toApiOptInPeriod = \case
+  DUCM.Daily -> Common.OptInDaily
+  DUCM.Weekly -> Common.OptInWeekly
 
 toDomainConditionType :: Common.MilestoneConditionType -> DIJM.MilestoneConditionType
 toDomainConditionType = \case
