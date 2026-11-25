@@ -35,6 +35,7 @@ library
       Utils.Common.Cac.UtilsTH
       Utils.Common.CacUtils
       Utils.Common.CrossCloudProxy
+      Utils.Common.DashboardVpnGuard
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
@@ -165,6 +166,7 @@ test-suite utils-rate-limit-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      DashboardVpnGuardSpec
       Paths_utils
   hs-source-dirs:
       test

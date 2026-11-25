@@ -30,6 +30,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver, prepareDashboardDbForApp)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
+import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
@@ -78,8 +79,10 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
+import qualified "lib-dashboard" Tools.Auth.Verify as DashboardVerify
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import qualified Tools.Fields as Fields
+import qualified "utils" Utils.Common.DashboardVpnGuard as VpnGuard
 import "utils" Utils.Common.Events as UE
 import qualified "utils" Utils.Common.RateLimit as RL
 import qualified "utils" Utils.Common.RateLimit.Redis as RLR
@@ -207,7 +210,17 @@ runDynamicOfferDriverApp' appCfg = do
             refreshSeconds = 10,
             clientIpPositionFromRight = rateLimitXffPosition
           }
-    runSettings settings $ timeoutMiddleware (rateLimitMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv)))
+    dashboardVpnGuard <-
+      VpnGuard.dashboardVpnGuardMiddleware
+        VpnGuard.DashboardVpnGuardBackend
+          { fetchConfig = runFlowR flowRt' appEnv . findById,
+            lookupRoleName = runFlowR flowRt' appEnv . runInDashboardDb . DashboardVerify.dashboardRoleNameForToken,
+            logInfoIO = runFlowR flowRt' appEnv . logInfo,
+            logErrorIO = runFlowR flowRt' appEnv . logError,
+            clientIpPositionFromRight = rateLimitXffPosition,
+            refreshSeconds = 10
+          }
+    runSettings settings $ timeoutMiddleware (rateLimitMiddleware (dashboardVpnGuard (App.run proxyManager (App.EnvR flowRt' appEnv))))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList
