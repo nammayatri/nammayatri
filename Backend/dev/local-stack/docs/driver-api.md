@@ -516,9 +516,7 @@ real traffic): 484 requests to 35 drivers between 2026-08-09 and 2026-11-24; at 
 moment a request arrived the driver had **no other open request 421 times (87 %), one
 other 56 times (11.6 %), two others 7 times (1.4 %), never more**. « Open » counts a
 request while its window is valid, answered or not, so what a list would show is at most
-that. **Read, not yet observed**: two different searches -- the
-source tree is newer than the running binary; `investigations/probe-driver-overlap.sql`
-and a real two-search test confirm it.
+that. **Then checked on the data** (`probe-driver-quote-overlap.sql`, run by the owner the same day): 271 quotes by 25 drivers, and **one** pair of quotes of one driver, on two searches, whose windows overlap -- and the first quote of that pair is **Inactive** today. Consistent with the rule (a quote that is no longer active does not block the next offer), while 63 arrivals had another request open and the simulated drivers answer everything: if the rule did not hold there would be many pairs. NOT a proof: `status` is the status NOW, not at the time, so the single pair cannot be classified for certain; the rule itself stays read in the source tree (newer than the running binary) and seen on the same request.
 
 ### Losing an offer — recorded by the server, exposed by nothing
 
