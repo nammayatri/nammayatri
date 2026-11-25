@@ -708,6 +708,7 @@ in  { esqDBCfg
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
+    , issueLookupToken = Some sec.issueLookupToken
     , cloudSwitchPassword = sec.cloudSwitchPassword
     , cacheConfig
     , metricsSearchDurationTimeout = +45
