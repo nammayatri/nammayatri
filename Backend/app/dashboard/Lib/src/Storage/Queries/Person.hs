@@ -636,6 +636,24 @@ updatePersonPasswordByAdmin personId newPasswordHash = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+-- | Super-admin forced reset: keeps the current password (it is what the person presents to
+-- changePasswordAfterExpiry) but gates every login and token check until they choose a new one.
+-- updatePersonPassword clears the flag.
+setForcePasswordChange :: BeamFlow m r => Id Person -> m ()
+setForcePasswordChange personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.forcePasswordChange $ Just True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+-- | Every person who can log in with a password (the target set of a super-admin "reset all").
+findAllWithPassword :: BeamFlow m r => m [Person]
+findAllWithPassword =
+  findAllWithKV [Se.Is BeamP.passwordHash $ Se.Not $ Se.Eq Nothing]
+
 updatePersonPasswordUpdatedAt :: BeamFlow m r => Id Person -> m ()
 updatePersonPasswordUpdatedAt personId = do
   now <- getCurrentTime

@@ -182,6 +182,25 @@ newtype ChangePasswordByAdminReq = ChangePasswordByAdminReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Exactly one of: @resetAll = true@ (every password user), or a non-empty @personIds@.
+data ForcePasswordResetReq = ForcePasswordResetReq
+  { personIds :: Maybe [Id DP.Person],
+    resetAll :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data ForcePasswordResetSkipped = ForcePasswordResetSkipped
+  { personId :: Id DP.Person,
+    reason :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data ForcePasswordResetRes = ForcePasswordResetRes
+  { resetCount :: Int,
+    skipped :: [ForcePasswordResetSkipped]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 newtype ReleaseRegisterReq = ReleaseRegisterReq
   {token :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -869,6 +888,10 @@ changePasswordAfterExpiry req = do
   loginRateLimitOptions <- asks (.loginRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just req.email)) loginRateLimitOptions
   encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
+  -- Checked after the credential lookup so it cannot be used to probe passwords. Without it a
+  -- forced reset could be satisfied by "changing" to the same secret.
+  when (req.newPassword == req.oldPassword) $
+    throwError $ InvalidRequest "New password must be different from the current password."
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     validateStrongPassword req.newPassword
@@ -992,6 +1015,60 @@ changePasswordByAdmin tokenInfo personId req = do
   Auth.cleanCachedTokens personId
   QReg.deleteAllByPersonId personId
   pure Success
+
+-- | SUPER_ADMIN only (DashboardAuth has no tier for it, so it is checked here). Forces the selected
+-- people, or every password user, to choose a new password: their current password stays valid
+-- only as the old credential for changePasswordAfterExpiry, and every session they hold is ended.
+forcePasswordReset ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  ForcePasswordResetReq ->
+  m ForcePasswordResetRes
+forcePasswordReset tokenInfo req = do
+  unlessM (isSuperAdmin tokenInfo.personId) $ throwError AccessDenied
+  (targets, notFound) <- case (req.resetAll, req.personIds) of
+    (Just True, Nothing) -> (,[]) <$> QP.findAllWithPassword
+    (Just True, Just []) -> (,[]) <$> QP.findAllWithPassword
+    (mbAll, Just ids@(_ : _)) | mbAll /= Just True -> do
+      let uniqueIds = nubOrd ids
+      when (length uniqueIds > maxForcePasswordResetIds) $
+        throwError $ InvalidRequest ("At most " <> show maxForcePasswordResetIds <> " personIds per request; use resetAll for everyone.")
+      found <- QP.findAllByIds uniqueIds
+      let foundIds = (.id) <$> found
+      pure (found, filter (`notElem` foundIds) uniqueIds)
+    _ -> throwError $ InvalidRequest "Pass either resetAll = true or a non-empty personIds list, not both."
+  let classify p
+        | p.id == tokenInfo.personId = Left (skip p.id "Cannot force-reset your own password")
+        | isNothing p.passwordHash = Left (skip p.id "No password set (OTP-only login)")
+        | isNothing p.email = Left (skip p.id "No email, so the password cannot be changed after reset")
+        | otherwise = Right p.id
+      classified = classify <$> targets
+      skippedTargets = [s | Left s <- classified]
+      toReset = [pid | Right pid <- classified]
+  forM_ toReset $ \pid -> do
+    QP.setForcePasswordChange pid
+    -- Sessions opened with the current password must not outlive the reset.
+    Auth.cleanCachedTokens pid
+    QReg.deleteAllByPersonId pid
+    recordAdminActionOnPerson DT.DashboardUserForcePasswordReset tokenInfo pid
+  logInfo $
+    "Force password reset by " <> tokenInfo.personId.getId
+      <> " (resetAll=" <> show (req.resetAll == Just True)
+      <> "): reset " <> show (length toReset)
+      <> ", skipped " <> show (length skippedTargets + length notFound)
+  pure
+    ForcePasswordResetRes
+      { resetCount = length toReset,
+        skipped = skippedTargets <> ((`skip` "Person not found") <$> notFound)
+      }
+  where
+    skip pid why = ForcePasswordResetSkipped {personId = pid, reason = why}
+
+maxForcePasswordResetIds :: Int
+maxForcePasswordResetIds = 500
 
 changeMobileNumberByAdmin ::
   (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["updateRestrictedBppRoles" ::: [Text]]) =>
