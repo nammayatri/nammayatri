@@ -78,6 +78,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import Tools.Event
 import qualified Tools.Fields as Fields
@@ -452,6 +453,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         tripId = Nothing,
         routeCode = Nothing,
         integratedBppConfigId = Nothing,
+        bookingType = TBooking.getBookingTypeFromTripCategory tripCategory,
         ..
       }
 

@@ -37,7 +37,7 @@ Booking:
       enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"
       derive: "HttpInstance"
     BookingType:
-      enum: "SpecialZoneBooking,NormalBooking"
+      enum: "SpecialZoneBooking,NormalBooking,NudgeRide"
 
   fields:
     id: Id Booking
@@ -101,6 +101,7 @@ Booking:
     estimateId: Maybe (Id Estimate)
     paymentId: Maybe Text
     isDashboardRequest: Bool
+    bookingType: BookingType
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
     parcelType: Maybe ParcelType
@@ -179,7 +180,6 @@ Booking:
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
-      bookingType: BookingType
     fromLocation:
       fromLocationId: Maybe Text
     stops: {}
@@ -205,7 +205,7 @@ Booking:
     #estimatedFare: Kernel.Prelude.realToFrac|I
     distanceToPickup: (Kernel.Prelude.realToFrac <$> distanceToPickup)|E
     isScheduled: (Just isScheduled)|E
-    bookingType: Storage.Queries.Transformers.Booking.getBookingTypeFromTripCategory tripCategory|E
+    bookingType: bookingType|E
     fromLocationId: (Just $ Storage.Queries.Transformers.SearchRequest.getLocationId fromLocation)|E
     toLocationId: Storage.Queries.Transformers.SearchRequest.getLocationId <$> toLocation|E
     vehicleVariant: vehicleServiceTier|E
@@ -233,13 +233,15 @@ Booking:
 
   intermediateTransformers:
     fromTType:
+      - tripCategoryResolved: Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory|E
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - fromAndToLocation': Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId|EM
       - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
       - senderAndReceiverDetails: Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone|EM
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
-    tripCategory: getTripCategory
+    bookingType: bookingType|E
+    tripCategory: tripCategoryResolved|E
     merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
     fareParams: 'Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))|EM'
     fromLocation: fst fromAndToLocation'|E

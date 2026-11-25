@@ -133,6 +133,8 @@ data AllocatorJobType
   | WalletIntegrityCheck
   | ChargeWalletPenalty
   | MaterialiseSharedRuns
+  | CompleteStaleNudgeRide
+  | NudgeRidePayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -224,6 +226,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
   restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
   restoreAnyJobInfo SMaterialiseSharedRuns jobData = AnyJobInfo <$> restoreJobInfo SMaterialiseSharedRuns jobData
+  restoreAnyJobInfo SCompleteStaleNudgeRide jobData = AnyJobInfo <$> restoreJobInfo SCompleteStaleNudgeRide jobData
+  restoreAnyJobInfo SNudgeRidePayout jobData = AnyJobInfo <$> restoreJobInfo SNudgeRidePayout jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -1082,3 +1086,23 @@ data MaterialiseSharedRunsJobData = MaterialiseSharedRunsJobData
 instance JobInfoProcessor 'MaterialiseSharedRuns
 
 type instance JobContent 'MaterialiseSharedRuns = MaterialiseSharedRunsJobData
+
+data CompleteStaleNudgeRideJobData = CompleteStaleNudgeRideJobData
+  { rideId :: Id DRide.Ride,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CompleteStaleNudgeRide
+
+type instance JobContent 'CompleteStaleNudgeRide = CompleteStaleNudgeRideJobData
+
+data NudgeRidePayoutJobData = NudgeRidePayoutJobData
+  { rideId :: Id DRide.Ride,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'NudgeRidePayout
+
+type instance JobContent 'NudgeRidePayout = NudgeRidePayoutJobData

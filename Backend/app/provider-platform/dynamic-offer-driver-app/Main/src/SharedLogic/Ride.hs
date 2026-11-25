@@ -71,6 +71,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJobData (..))
+import qualified SharedLogic.Allocator.Jobs.NudgeRide.CompleteStaleNudgeRide as NudgeRideJob
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
@@ -84,6 +85,7 @@ import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, removePrep
 import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.NudgeRide as NudgeRide
 import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -314,6 +316,23 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
   fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
+
+  fork "endNudgeRideOnNewAssign" $ do
+    mbNudgeRideId <- Redis.safeGet (NudgeRide.nudgeRideRedisKey driver.id)
+    Redis.del (NudgeRide.nudgeRideRedisKey driver.id)
+    whenJust (mbNudgeRideId :: Maybe Text) $ \nudgeRideIdText -> do
+      let nudgeRideId = Id nudgeRideIdText
+      mbNudgeRide <- QRide.findById nudgeRideId
+      whenJust mbNudgeRide $ \nudgeRide -> do
+        mbNudgeBooking <- QRB.findById nudgeRide.bookingId
+        whenJust mbNudgeBooking $ \nudgeBooking ->
+          when (nudgeBooking.bookingType == DBooking.NudgeRide) $
+            case nudgeRide.status of
+              DRide.INPROGRESS -> NudgeRideJob.endNudgeRide nudgeRideId (cast driver.id) nudgeBooking nudgeRide
+              DRide.NEW -> do
+                QRide.updateStatus nudgeRideId DRide.CANCELLED
+                QRB.updateStatus nudgeBooking.id DBooking.CANCELLED
+              _ -> pure ()
 
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
