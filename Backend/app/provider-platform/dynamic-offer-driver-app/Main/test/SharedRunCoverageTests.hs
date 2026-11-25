@@ -5,6 +5,8 @@
 module SharedRunCoverageTests (tests) where
 
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian)
+import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
+import "dynamic-offer-driver-app" SharedLogic.ScheduledBooking.OverlapCheck (CommittedInterval (..), DriverClass (..), ScheduledCandidate (..), classifyDriver)
 import "dynamic-offer-driver-app" SharedLogic.SharedRun.Coverage.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -32,6 +34,31 @@ run at assignment =
 unacked, acked :: Maybe Assignment
 unacked = Just (Assignment {acknowledged = False})
 acked = Just (Assignment {acknowledged = True})
+
+here :: LatLong
+here = LatLong 12.97 77.59
+
+-- | a 30-minute hold ending @gapMinutes@ before departure
+holdEndingBefore :: NominalDiffTime -> Bool -> CommittedInterval
+holdEndingBefore gapMinutes isRun =
+  CommittedInterval
+    { intervalStart = minutesBefore (gapMinutes + 30),
+      intervalEnd = minutesBefore gapMinutes,
+      intervalPickup = here,
+      intervalDrop = here,
+      intervalIsRun = isRun
+    }
+
+runCandidate :: Bool -> ScheduledCandidate
+runCandidate isRun = ScheduledCandidate {candidateStart = departure, candidateEnd = addUTCTime 1800 departure, candidatePickup = here, candidateDrop = Just here, candidateIsRun = isRun}
+
+-- | the city's scheduled-ride buffer is 10 minutes and its clash window 45: the gap 'gapBetween' would give
+gapTo :: Bool -> Bool -> NominalDiffTime
+gapTo candidateIsRun neighbourIsRun = if candidateIsRun || neighbourIsRun then 45 * 60 else 10 * 60
+
+rejectedOnTime :: DriverClass () -> Bool
+rejectedOnTime (ClassDecided _ False) = True
+rejectedOnTime _ = False
 
 candidate :: String -> CandidateSource -> Bool -> Candidate String ()
 candidate driverId source servesTier = Candidate {driverId, source, servesTier, payload = ()}
@@ -92,5 +119,16 @@ tests =
           testCase "a vehicle that does not serve the run's tier is left out" $
             selectCandidates [] [candidate "b1" BoundVehicle False, candidate "f1" FleetDriver True]
               @?= ([candidate "f1" FleetDriver True], [("b1", WrongServiceTier)])
+        ],
+      testGroup
+        "clash window"
+        [ testCase "a second run 20 minutes after the driver's run is refused" $
+            rejectedOnTime (classifyDriver (gapTo True) (runCandidate True) () [holdEndingBefore 20 True]) @?= True,
+          testCase "a second run 60 minutes after the driver's run is allowed (left to the distance check)" $
+            rejectedOnTime (classifyDriver (gapTo True) (runCandidate True) () [holdEndingBefore 60 True]) @?= False,
+          testCase "an ordinary ride 20 minutes after an ordinary ride keeps the plain buffer" $
+            rejectedOnTime (classifyDriver (gapTo False) (runCandidate False) () [holdEndingBefore 20 False]) @?= False,
+          testCase "an ordinary ride 20 minutes after a run keeps the clash window" $
+            rejectedOnTime (classifyDriver (gapTo False) (runCandidate False) () [holdEndingBefore 20 True]) @?= True
         ]
     ]

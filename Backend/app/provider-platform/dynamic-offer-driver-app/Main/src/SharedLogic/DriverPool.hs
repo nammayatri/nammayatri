@@ -1525,7 +1525,10 @@ applyScheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental 
               { candidateStart = currentSearchInfo.searchTry.startTime,
                 candidateEnd = addUTCTime (maybe 0 Kernel.Utils.Common.secondsToNominalDiffTime currentSearchInfo.estimatedDuration) currentSearchInfo.searchTry.startTime,
                 candidatePickup = currentSearchInfo.pickupLocation,
-                candidateDrop = currentSearchInfo.dropLocation
+                candidateDrop = currentSearchInfo.dropLocation,
+                -- a search is never a shared-route run (runs are materialised, not searched); a run among the
+                -- driver's holds still keeps the clash window through its own interval
+                candidateIsRun = False
               }
       -- one batched read of committed rides for all non-fresh drivers (fresh-driver + hold-cap checks stay cheap and pure); only the feasibility distance work is batched
       committedByDriver <- SBOC.getDriverCommittedRidesForDrivers [cast dp.driverPoolResult.driverId | dp <- pool, not (isFreshDriver dp)]
