@@ -29,6 +29,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.Extra.SharedCab ()
 import Domain.Types.SharedCabSession
+import Domain.Types.SharedRoute (RunRef (..))
 import EulerHS.Types (EulerClient, client)
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -86,7 +87,10 @@ data BAPBookingOperationReq = BAPBookingOperationReq
     driverId :: Text,
     vehicleNumber :: Text,
     reason :: Maybe Text,
-    otp :: Maybe Text
+    otp :: Maybe Text,
+    -- | the run's GTFS trip and first departure when the booking is a shared-route run's passenger, both or neither
+    runTripId :: Maybe Text,
+    runDeparture :: Maybe UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)
@@ -116,8 +120,9 @@ type DemandAPI = InternalAPI ("routes" :> "demand" :> TokenHeader :> ReqBody '[J
 type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
 
 -- | Parameterised on the response so the reconciler can probe the same endpoint without decoding the session. agencyId names the
--- rider-app merchant to ask for the plate's run if rider-app lost the session. rideId names a shared-route run: rider-app then
--- answers with the bookings placed on that ride, which have no plate session.
+-- rider-app merchant to ask for the plate's run if rider-app lost the session. runTripId and runDeparture name a shared-route
+-- run (both or neither): rider-app then answers with that day's tickets on the trip, which have no plate session; rideId
+-- only labels it.
 type SessionAPI res =
   InternalAPI
     ( "session"
@@ -125,6 +130,8 @@ type SessionAPI res =
         :> QueryParam' '[Required, Strict] "vehicleNumber" Text
         :> QueryParam' '[Required, Strict] "agencyId" Text
         :> QueryParam "rideId" Text
+        :> QueryParam "runTripId" Text
+        :> QueryParam "runDeparture" UTCTime
         :> TokenHeader
         :> Get '[JSON] res
     )
@@ -158,11 +165,11 @@ data BAPMessageReq = BAPMessageReq
 
 type MessageAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "message" :> TokenHeader :> ReqBody '[JSON] BAPMessageReq :> Post '[JSON] APISuccess)
 
-sessionClient :: Text -> Text -> Text -> Maybe Text -> Maybe Text -> EulerClient (Maybe SharedCabSession)
+sessionClient :: Text -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> EulerClient (Maybe SharedCabSession)
 sessionClient = client (Proxy @(SessionAPI (Maybe SharedCabSession)))
 
 -- | The reconciler only asks whether a session exists, so it does not decode one.
-sessionProbeClient :: Text -> Text -> Text -> Maybe Text -> Maybe Text -> EulerClient Aeson.Value
+sessionProbeClient :: Text -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> EulerClient Aeson.Value
 sessionProbeClient = client (Proxy @(SessionAPI Aeson.Value))
 
 callRider :: (BAPFlow m r, SanitizedUrl api, ToJSON a) => BaseUrl -> Text -> EulerClient a -> Proxy api -> m a
@@ -194,9 +201,12 @@ postRouteOperation apiKey internalUrl req = do
   callRider internalUrl "SharedCabRouteOperation" (client (Proxy @RouteOperationAPI) (Just apiKey) req) (Proxy @RouteOperationAPI)
 
 -- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status); every other error re-throws verbatim.
-getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> Text -> Maybe Text -> m (Maybe SharedCabSession)
-getSharedCabSession apiKey internalUrl driverId vehicleNumber agencyId mbRideId = do
-  callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber agencyId mbRideId (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
+-- | A run's session is asked for by its 'RunRef' (and labelled with the ride id); a cab's by neither.
+getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> Text -> Maybe (Text, RunRef) -> m (Maybe SharedCabSession)
+getSharedCabSession apiKey internalUrl driverId vehicleNumber agencyId mbRun = do
+  let mbRideId = fst <$> mbRun
+      mbRef = snd <$> mbRun
+  callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber agencyId mbRideId ((.tripId) <$> mbRef) ((.departure) <$> mbRef) (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
     `catch` \case
       BapProxyResponseError _ code _ _ | code == sessionNotFoundErrorCode -> pure Nothing
       err -> throwError err

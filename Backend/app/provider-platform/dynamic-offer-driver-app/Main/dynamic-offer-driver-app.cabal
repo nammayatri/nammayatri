@@ -2713,6 +2713,7 @@ test-suite driver-app-test
   main-is: Main.hs
   other-modules:
       SharedCabProxyTests
+      SharedRunTests
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
       test

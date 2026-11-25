@@ -544,8 +544,18 @@ assignRun merchant transporterConfig booking driver fleetOwnerId = do
       res <- SRide.initializeRide merchant driver booking Nothing Nothing Nothing Nothing (Just fleetOwnerId) False False (Just DRide.AssignedByFleetOwner)
       SBOC.updateLatestScheduledAsMin driver.id booking
       pure res
+  -- the rider platform finds the run's passengers by the trip and feed the ride carries, not by the ride id; a ride
+  -- without them would show its driver an empty run
+  let missing = missingRunIdentity ride
+  unless (null missing) $
+    logError $ "shared run " <> booking.id.getId <> ": ride " <> ride.id.getId <> " was created without " <> T.intercalate ", " missing <> "; its passengers cannot be found"
   now <- getCurrentTime
   let jobScheduledTime = max 2 (diffUTCTime booking.startTime now - transporterConfig.scheduleRideBufferTime)
   createJobIn @_ @'ScheduledRideAssignedOnUpdate (Just merchant.id) (Just booking.merchantOperatingCityId) jobScheduledTime $
     ScheduledRideAssignedOnUpdateJobData {driverId = driver.id, bookingId = booking.id, rideId = ride.id}
   CS.markBookingAssignmentCompleted booking.id
+
+-- | The run identity a ride must copy from its run booking (see "Domain.Types.SharedRoute".'RunRef'), by name, when absent.
+missingRunIdentity :: DRide.Ride -> [Text]
+missingRunIdentity ride =
+  [name | (name, present) <- [("tripId", isJust ride.tripId), ("routeCode", isJust ride.routeCode), ("integratedBppConfigId", isJust ride.integratedBppConfigId)], not present]
