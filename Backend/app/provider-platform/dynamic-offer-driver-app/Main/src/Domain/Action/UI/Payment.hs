@@ -813,7 +813,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
                   merchantGstin = merchantOperatingCity.gstin <|> merchant.gstin,
-                  merchantShortId = getShortId merchant.shortId
+                  merchantShortId = getShortId merchant.shortId,
+                  supplierName = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierName)) <|> Just merchant.name,
+                  supplierAddress = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> Just opCityAddress
                 }
         -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
