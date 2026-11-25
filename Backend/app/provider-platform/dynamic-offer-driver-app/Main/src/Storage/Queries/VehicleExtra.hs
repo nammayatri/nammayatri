@@ -118,8 +118,10 @@ updateVariantAndServiceTiers variant selectedServiceTiers category driverId = do
         LTSSync.selectedServiceTiers = LTSSync.Set selectedServiceTiers
       }
 
-deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> m ()
+deleteById driverId = do
+  LTSSync.deleteDriverPoolDataFromLTS (cast driverId)
+  deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId.getId)]
 
 findByAnyOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =

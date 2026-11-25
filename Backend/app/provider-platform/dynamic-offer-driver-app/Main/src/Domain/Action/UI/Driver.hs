@@ -308,6 +308,7 @@ import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -1135,7 +1136,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         let driverId = cast personId
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-        when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
+        let isGoingOnline = isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))
+        when isGoingOnline $ do
           when (PolicyDoc.isGoOnlineBlockerActive transporterConfig) $ do
             blockingDocs <- PolicyDoc.findBlockingUnacceptedPolicies person
             unless (null blockingDocs) $
@@ -1223,6 +1225,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive && not driverInfo.active) $
           fork "FleetEngine:notifyDriverOnline" $
             FleetEngine.notifyDriverOnline merchantOpCityId personId
+        when isGoingOnline $
+          fork "setActivity:rebuildDriverPoolDataIfStale" $
+            DPDBuilder.rebuildDriverPoolDataIfStale driverId
         pure APISuccess.Success
     )
     ( do
@@ -1564,7 +1569,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
 
     epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, HasField "ltsHedisEnv" r Redis.HedisEnv) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, Redis.HedisLTSFlowEnv r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
