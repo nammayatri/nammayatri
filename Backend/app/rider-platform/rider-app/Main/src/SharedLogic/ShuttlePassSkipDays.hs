@@ -46,12 +46,28 @@ skipDays personId merchantId purchasedPassId days reason = do
       QPPP.updateSkipDaysById updated payment.id
 
 -- | Undo skips, under the same cutoff. Days that were not skipped are ignored.
+--
+-- A skipped day's seat may since have gone to a rider who moved onto that slot, so where ops set the slot's seats the
+-- day comes back only while it still has room, checked under the slot's lock as a reschedule is. When it is full the
+-- rider can move the day to another slot instead (which also un-skips it).
 unskipDays :: Id DP.Person -> Id DM.Merchant -> Id DPurchasedPass.PurchasedPass -> [DT.Day] -> Flow ()
 unskipDays personId merchantId purchasedPassId days =
   forEachTerm personId merchantId purchasedPassId days $ \_ payment termDays -> do
-    let updated = Rules.removeSkipDays payment.skipDays (map fst termDays)
-    when (length updated /= length payment.skipDays) $
-      QPPP.updateSkipDaysById updated payment.id
+    let skipped = map (.day) payment.skipDays
+        unskipping = [day | (day, _) <- termDays, day `elem` skipped]
+        updated = Rules.removeSkipDays payment.skipDays (map fst termDays)
+        cityId = payment.merchantOperatingCityId
+    gated <- fmap catMaybes . forM unskipping $ \day -> case Rules.slotOn payment day of
+      Nothing -> pure Nothing
+      Just slot -> fmap (\capacity -> (slot, day, capacity)) <$> ShuttlePass.slotCapacity cityId slot
+    let checkAndWrite = do
+          forM_ gated $ \(slot, day, capacity) -> do
+            booked <- ShuttlePass.ridersOnSlot cityId slot day
+            unless (Rules.hasFreeSeat capacity booked) $
+              throwError (InvalidRequest $ "No seat left on your shuttle for " <> show day <> "; choose another shuttle for that day")
+          when (length updated /= length payment.skipDays) $
+            QPPP.updateSkipDaysById updated payment.id
+    foldr (\(slot, day, _) inner -> lockOrBusy (ShuttlePass.slotLockKey cityId slot day) inner) checkAndWrite gated
 
 -- | Shared checks, then runs the update once per term, under that term's lock and on a fresh read of it.
 -- Each day is passed with its slot departure when the timetable knows it.
@@ -88,9 +104,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
   -- 60s: far longer than the fresh reads and one write it covers, so it cannot lapse mid-update and let the issue job
   -- in. It is released as soon as the update finishes, so the length only matters if this process dies holding it.
   forM_ (Map.toList $ Map.fromListWith (<>) termByDay) $ \(termId, termDays) ->
-    Redis.whenWithLockRedisAndReturnValue (ShuttlePass.termLockKey termId) 60 (updateFresh timeDiff termId termDays) >>= \case
-      Left _ -> throwError (InvalidRequest "This pass is being updated, please try again")
-      Right () -> pure ()
+    lockOrBusy (ShuttlePass.termLockKey termId) (updateFresh timeDiff termId termDays)
   where
     -- Under the lock: a fresh clock (the departure lookups above take time, and the cutoff may have passed
     -- meanwhile) and a fresh read of the term.
@@ -102,3 +116,10 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
       term <- QPPP.findByPrimaryKey termId >>= fromMaybeM (InvalidRequest $ "Term not found: " <> termId.getId)
       update timeDiff term termDays
+
+-- | Try-lock for 60s (see above); a busy lock fails the request rather than waiting.
+lockOrBusy :: Text -> Flow () -> Flow ()
+lockOrBusy key action =
+  Redis.whenWithLockRedisAndReturnValue key 60 action >>= \case
+    Left _ -> throwError (InvalidRequest "This pass is being updated, please try again")
+    Right () -> pure ()

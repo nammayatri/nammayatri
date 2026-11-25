@@ -70,7 +70,7 @@ issueForTerm timeDiff now term day
   | otherwise =
     ShuttlePass.slotDepartureOn timeDiff term day >>= \case
       Nothing -> do
-        logWarning $ "IssueShuttlePassTickets: no departure for term=" <> term.id.getId <> " slot=" <> show term.slotTripId <> " day=" <> show day
+        logWarning $ "IssueShuttlePassTickets: no departure for term=" <> term.id.getId <> " slot=" <> show (Rules.slotOn term day) <> " day=" <> show day
         pure False
       Just departure
         | not (Rules.inIssueWindow now departure) -> pure False
@@ -132,7 +132,8 @@ book term day = do
             serviceTier = Nothing,
             routeCode = Nothing,
             vehicleNumber = Nothing,
-            tripId = term.slotTripId,
+            -- The day's reschedule when there is one, else the term's own slot.
+            tripId = Rules.slotOn term day,
             seatIds = Nothing,
             platformType = Nothing
           }

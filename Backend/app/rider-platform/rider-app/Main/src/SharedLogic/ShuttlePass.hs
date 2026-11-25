@@ -3,6 +3,11 @@
 module SharedLogic.ShuttlePass
   ( cityTimeDiff,
     slotDepartureOn,
+    slotDepartureFor,
+    termBppConfig,
+    slotCapacity,
+    ridersOnSlot,
+    slotLockKey,
     ticketsForDay,
     recordIssued,
     termLockKey,
@@ -22,6 +27,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.ShuttleSlotCapacity as DShuttleSlotCapacity
 import Environment (Flow)
 import qualified Environment
 import Kernel.Prelude
@@ -38,6 +44,8 @@ import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingExtra as QBookingExtra
+import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
+import qualified Storage.Queries.ShuttleSlotCapacity as QShuttleSlotCapacity
 import System.Random (randomRIO)
 
 cityTimeDiff :: Id DMOC.MerchantOperatingCity -> Flow Seconds
@@ -45,30 +53,62 @@ cityTimeDiff cityId = do
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
   pure $ maybe (Seconds 19800) (\(config :: DRC.RiderConfig) -> config.timeDiffFromUtc) mbRiderConfig
 
--- | When the term's slot leaves the rider's pickup stop on that day. Nothing when the term has no slot, the
--- timetable does not list the pickup on the trip, or any lookup fails: callers fall back to whole-day rules
--- rather than failing the request.
+-- | When the slot the term rides that day (its own, or the day's reschedule) leaves the rider's pickup stop. Nothing when
+-- the term has no slot, the timetable does not list the pickup on the trip, or any lookup fails: callers fall back to
+-- whole-day rules rather than failing the request.
 slotDepartureOn :: Seconds -> DPPP.PurchasedPassPayment -> DT.Day -> Flow (Maybe UTCTime)
-slotDepartureOn timeDiff term day = case (term.slotTripId, term.sourceStopCode, term.passId) of
-  (Just slotTripId, Just pickupStopCode, Just passId) ->
-    withTryCatch "ShuttlePass:slotDepartureOn" (lookupDeparture slotTripId pickupStopCode passId) >>= \case
+slotDepartureOn timeDiff term day = maybe (pure Nothing) (\slot -> slotDepartureFor timeDiff term slot day) (Rules.slotOn term day)
+
+-- | When the given trip leaves the term's pickup stop on that day. Failure-safe, as 'slotDepartureOn'.
+slotDepartureFor :: Seconds -> DPPP.PurchasedPassPayment -> Text -> DT.Day -> Flow (Maybe UTCTime)
+slotDepartureFor timeDiff term slotTripId day = case term.sourceStopCode of
+  Just pickupStopCode ->
+    withTryCatch "ShuttlePass:slotDepartureFor" (lookupDeparture pickupStopCode) >>= \case
       Right mbDeparture -> pure mbDeparture
       Left err -> do
-        logWarning $ "ShuttlePass: departure lookup failed term=" <> term.id.getId <> " day=" <> show day <> " err=" <> show err
+        logWarning $ "ShuttlePass: departure lookup failed term=" <> term.id.getId <> " slot=" <> slotTripId <> " day=" <> show day <> " err=" <> show err
         pure Nothing
-  _ -> pure Nothing
+  Nothing -> pure Nothing
   where
-    lookupDeparture slotTripId pickupStopCode passId =
-      CQPass.findById passId >>= \case
+    lookupDeparture pickupStopCode =
+      termBppConfig term >>= \case
         Nothing -> pure Nothing
-        Just (pass :: DPass.Pass) -> do
-          integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing term.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory pass.vehicleType) DIBC.MULTIMODAL
+        Just integratedBPPConfig -> do
           mbTripInfo <- OTPRest.getNandiTripInfo integratedBPPConfig slotTripId
           pickupCodes <- OTPRest.getEquivalentStopCodes pickupStopCode integratedBPPConfig
           pure $ do
             tripInfo <- mbTripInfo
             stop <- find (\(s :: NandiTypes.StopSchedule) -> s.stopCode `elem` pickupCodes) tripInfo.schedule
             pure $ Rules.departureAt timeDiff day stop.departureTime
+
+-- | The timetable config of the term's pass (its vehicle type, in the term's city). Nothing when the pass is gone.
+termBppConfig :: DPPP.PurchasedPassPayment -> Flow (Maybe DIBC.IntegratedBPPConfig)
+termBppConfig term = case term.passId of
+  Nothing -> pure Nothing
+  Just passId ->
+    CQPass.findById passId >>= \case
+      Nothing -> pure Nothing
+      Just (pass :: DPass.Pass) -> Just <$> SIBC.findIntegratedBPPConfig Nothing term.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory pass.vehicleType) DIBC.MULTIMODAL
+
+-- | Seats ops set for a slot in the city. Nothing when not set.
+slotCapacity :: Id DMOC.MerchantOperatingCity -> Text -> Flow (Maybe Int)
+slotCapacity cityId slotTripId = fmap (\(row :: DShuttleSlotCapacity.ShuttleSlotCapacity) -> row.capacity) <$> QShuttleSlotCapacity.findByTripIdAndMerchantOperatingCityId slotTripId cityId
+
+-- | Riders holding a seat on the slot that day: every live term of the city that rides it then and has not skipped it,
+-- whether the slot is its own or it rescheduled onto it. Call under 'slotLockKey' when the count gates a write.
+ridersOnSlot :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Flow Int
+ridersOnSlot cityId slotTripId day = go 0 0
+  where
+    pageSize = 500
+    go offset count = do
+      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId.getId day pageSize offset
+      let count' = count + length (filter (Rules.ridesSlotOn slotTripId day) terms)
+      if length terms < pageSize then pure count' else go (offset + pageSize) count'
+
+-- | Taken by every write that adds a rider to a slot's day (reschedule onto it, unskip on it), so two of them cannot
+-- both take its last seat.
+slotLockKey :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Text
+slotLockKey cityId slotTripId day = "ShuttlePass:slot:" <> cityId.getId <> ":" <> slotTripId <> ":" <> show day
 
 -- | The term's live tickets for a day. The booking the issue job recorded comes first (it does not depend on
 -- the ticket's startTime); otherwise a startTime window around the departure, or around the whole day when the

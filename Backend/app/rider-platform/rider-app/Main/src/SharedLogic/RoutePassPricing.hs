@@ -5,6 +5,7 @@ module SharedLogic.RoutePassPricing
     resolveRoutePassTerm,
     resolveValidityDays,
     normaliseStopCode,
+    validateSlotTrip,
   )
 where
 

@@ -124,7 +124,37 @@ tests =
           testCase "an empty code never matches" $ R.otpMatches (Just "") "" @?= False,
           testCase "showing a booking's OTP (as logs do) never prints the code" $
             ("4821" `T.isInfixOf` T.pack (P.show (Just (BoardingOtp "4821")))) @?= False
+        ],
+      testGroup
+        "reschedule (7:30 -> 9:30 on one day)"
+        [ testCase "a day without a change rides the term's own slot" $
+            R.slotFor (Just "T0730") [] day0 @?= Just "T0730",
+          testCase "a changed day rides the new slot; other days keep their own" $
+            (R.slotFor (Just "T0730") [move day0 "T0930"] day0, R.slotFor (Just "T0730") [move day0 "T0930"] day1)
+              @?= (Just "T0930", Just "T0730"),
+          testCase "moving a day again replaces its earlier change" $
+            R.setSlotChange (Just "T0730") [move day0 "T0930"] day0 "T1130" @?= [move day0 "T1130"],
+          testCase "moving a day back to its own slot leaves no change" $
+            R.setSlotChange (Just "T0730") [move day0 "T0930", move day1 "T0930"] day0 "T0730" @?= [move day1 "T0930"],
+          testCase "a rider moved onto 9:30 takes a seat on it, not on 7:30" $
+            (rides "T0930" [move day0 "T0930"] [], rides "T0730" [move day0 "T0930"] []) @?= (True, False),
+          testCase "a skipped day takes no seat" $
+            rides "T0730" [] [skip day0 Nothing] @?= False,
+          testCase "a day outside the term takes no seat" $
+            R.ridesSlot "T0730" day1 (dayPrev, day0) (Just "T0730") [] [] @?= False,
+          testCase "the last seat is free, a full slot is not" $
+            (R.hasFreeSeat 40 39, R.hasFreeSeat 40 40, R.hasFreeSeat 0 0) @?= (True, False, False),
+          testCase "open while both slots are more than 5 hours away" $
+            R.rescheduleOpen (localAt day0 2 29) day0 (Just (localAt day0 7 30)) (localAt day0 9 30) day0 @?= True,
+          testCase "closed once the current 7:30 is within 5 hours, though 9:30 is not" $
+            R.rescheduleOpen (localAt day0 2 30) day0 (Just (localAt day0 7 30)) (localAt day0 9 30) day0 @?= False,
+          testCase "closed when moving to an earlier slot within 5 hours" $
+            R.rescheduleOpen (localAt day0 2 0) day0 (Just (localAt day0 9 30)) (localAt day0 6 30) day0 @?= False,
+          testCase "a later day is open with the current slot's time unknown" $
+            R.rescheduleOpen (localAt day0 20 0) day0 Nothing (localAt day1 9 30) day1 @?= True
         ]
     ]
   where
     skip day reason = DPPP.SkipDay {day, reason}
+    move day slotTripId = DPPP.SlotChange {day, slotTripId}
+    rides slot changes skips = R.ridesSlot slot day0 (dayPrev, day1) (Just "T0730") changes skips

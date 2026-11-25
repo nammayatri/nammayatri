@@ -195,6 +195,14 @@ updateSkipDaysById skipDays id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.skipDays (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateSlotChangesById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Domain.Types.PurchasedPassPayment.SlotChange] ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
+updateSlotChangesById slotChanges id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.slotChanges (Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusAndDatesById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Data.Time.Calendar.Day ->
@@ -256,6 +264,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
       Se.Set Beam.skipDays (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays)),
+      Se.Set Beam.slotChanges (Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges)),
       Se.Set Beam.slotTripId slotTripId,
       Se.Set Beam.sourceStopCode sourceStopCode,
       Se.Set Beam.startDate startDate,

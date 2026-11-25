@@ -765,6 +765,7 @@ library
       SharedLogic.SharedRoute.Knobs
       SharedLogic.SharedRoute.Passenger
       SharedLogic.ShuttlePass
+      SharedLogic.ShuttlePassReschedule
       SharedLogic.ShuttlePassRules
       SharedLogic.ShuttlePassSkipDays
       SharedLogic.SilentReallocation
@@ -1514,6 +1515,7 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.ShuttleSlotCapacity
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1694,6 +1696,7 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.ShuttleSlotCapacity
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1961,6 +1964,7 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.ShuttleSlotCapacity
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation

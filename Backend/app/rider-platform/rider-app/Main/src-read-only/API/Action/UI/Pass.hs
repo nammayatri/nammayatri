@@ -350,26 +350,70 @@ type API =
                                                                                                                                               )
                                                                                                                                        )
                                                                                                                                 )
-                                                                                                                                  :<|> ( TokenAuth
-                                                                                                                                           :> ( "multimodal"
-                                                                                                                                                  :> ( "pass"
-                                                                                                                                                         :> ( "set"
-                                                                                                                                                                :> ( "prefSrcAndDest"
-                                                                                                                                                                       :> ( Capture
-                                                                                                                                                                              "purchasedPassId"
-                                                                                                                                                                              (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
-                                                                                                                                                                              :> ( ReqBody
+                                                                                                                                  :<|> ( ( TokenAuth
+                                                                                                                                             :> ( "multimodal"
+                                                                                                                                                    :> ( "pass"
+                                                                                                                                                           :> ( Capture
+                                                                                                                                                                  "purchasedPassId"
+                                                                                                                                                                  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                  :> ( "reschedule"
+                                                                                                                                                                         :> ( ReqBody
+                                                                                                                                                                                '[JSON]
+                                                                                                                                                                                API.Types.UI.Pass.PassRescheduleReq
+                                                                                                                                                                                :> Post
                                                                                                                                                                                      '[JSON]
-                                                                                                                                                                                     API.Types.UI.Pass.SetPassPrefSrcAndDestReq
-                                                                                                                                                                                     :> Post
-                                                                                                                                                                                          '[JSON]
-                                                                                                                                                                                          Kernel.Types.APISuccess.APISuccess
-                                                                                                                                                                                 )
-                                                                                                                                                                          )
-                                                                                                                                                                   )
-                                                                                                                                                            )
-                                                                                                                                                     )
-                                                                                                                                              )
+                                                                                                                                                                                     Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                            )
+                                                                                                                                                                     )
+                                                                                                                                                              )
+                                                                                                                                                       )
+                                                                                                                                                )
+                                                                                                                                         )
+                                                                                                                                           :<|> ( ( TokenAuth
+                                                                                                                                                      :> ( "multimodal"
+                                                                                                                                                             :> ( "pass"
+                                                                                                                                                                    :> ( Capture
+                                                                                                                                                                           "purchasedPassId"
+                                                                                                                                                                           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                           :> ( "slotAvailability"
+                                                                                                                                                                                  :> ( MandatoryQueryParam
+                                                                                                                                                                                         "day"
+                                                                                                                                                                                         Data.Time.Day
+                                                                                                                                                                                         :> ( MandatoryQueryParam
+                                                                                                                                                                                                "slotTripId"
+                                                                                                                                                                                                Data.Text.Text
+                                                                                                                                                                                                :> Get
+                                                                                                                                                                                                     '[JSON]
+                                                                                                                                                                                                     API.Types.UI.Pass.PassSlotAvailabilityResp
+                                                                                                                                                                                            )
+                                                                                                                                                                                     )
+                                                                                                                                                                              )
+                                                                                                                                                                       )
+                                                                                                                                                                )
+                                                                                                                                                         )
+                                                                                                                                                  )
+                                                                                                                                                    :<|> ( TokenAuth
+                                                                                                                                                             :> ( "multimodal"
+                                                                                                                                                                    :> ( "pass"
+                                                                                                                                                                           :> ( "set"
+                                                                                                                                                                                  :> ( "prefSrcAndDest"
+                                                                                                                                                                                         :> ( Capture
+                                                                                                                                                                                                "purchasedPassId"
+                                                                                                                                                                                                (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                                                :> ( ReqBody
+                                                                                                                                                                                                       '[JSON]
+                                                                                                                                                                                                       API.Types.UI.Pass.SetPassPrefSrcAndDestReq
+                                                                                                                                                                                                       :> Post
+                                                                                                                                                                                                            '[JSON]
+                                                                                                                                                                                                            Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                                   )
+                                                                                                                                                                                            )
+                                                                                                                                                                                     )
+                                                                                                                                                                              )
+                                                                                                                                                                       )
+                                                                                                                                                                )
+                                                                                                                                                         )
+                                                                                                                                                )
                                                                                                                                        )
                                                                                                                               )
                                                                                                                      )
@@ -387,7 +431,7 @@ type API =
          )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassCalculateFare :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSkipDays :<|> postMultimodalPassUnskipDays :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassCalculateFare :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSkipDays :<|> postMultimodalPassUnskipDays :<|> postMultimodalPassReschedule :<|> getMultimodalPassSlotAvailability :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -493,6 +537,20 @@ postMultimodalPassUnskipDays ::
   ) ->
   (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassUnskipDaysReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
 postMultimodalPassUnskipDays a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassUnskipDays (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalPassReschedule ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassRescheduleReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
+postMultimodalPassReschedule a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getMultimodalPassSlotAvailability ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (Data.Time.Day -> (Data.Text.Text -> Environment.FlowHandler API.Types.UI.Pass.PassSlotAvailabilityResp)))
+getMultimodalPassSlotAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.getMultimodalPassSlotAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalPassSetPrefSrcAndDest ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,

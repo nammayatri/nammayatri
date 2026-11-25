@@ -141,6 +141,12 @@ PurchasedPassPayment:
       reason: Maybe Text
       derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
 
+    # A day of a shuttle term moved to another slot (reschedule): the daily issue job books that day on this trip.
+    SlotChange:
+      day: Day
+      slotTripId: Text
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
   fields:
     id: Id PurchasedPassPayment
     orderId: Id PaymentOrder
@@ -176,28 +182,34 @@ PurchasedPassPayment:
     slotTripId: Maybe Text
     # Days of this term the rider skipped/paused; read whole by the daily issue job. Small per-term list, so json not a table.
     skipDays: "[SkipDay]"
+    # Days of this term moved to another slot; any other day rides slotTripId.
+    slotChanges: "[SlotChange]"
 
   beamType:
     benefitDescription: Maybe Text
     clientSdkVersion: Maybe Text
     overrideBenefitConfigJson: Maybe Value
     skipDays: Maybe Value
+    slotChanges: Maybe Value
 
   fromTType:
     benefitDescription: Kernel.Prelude.fromMaybe ""|I
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     overrideBenefitConfigJson: (overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe)|E
     skipDays: (Kernel.Prelude.fromMaybe [] (skipDays >>= Kernel.Utils.JSON.valueToMaybe))|E
+    slotChanges: (Kernel.Prelude.fromMaybe [] (slotChanges >>= Kernel.Utils.JSON.valueToMaybe))|E
 
   toTType:
     benefitDescription: Kernel.Prelude.Just|I
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     overrideBenefitConfigJson: (Data.Aeson.toJSON <$> overrideBenefitConfigJson)|E
     skipDays: (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays))|E
+    slotChanges: (Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges))|E
 
   sqlType:
     overrideBenefitConfigJson: jsonb
     skipDays: jsonb
+    slotChanges: jsonb
 
   constraints:
     id: PrimaryKey
@@ -337,6 +349,11 @@ PurchasedPassPayment:
     updateSkipDaysById:
       kvFunction: updateOneWithKV
       params: [skipDays]
+      where: id
+
+    updateSlotChangesById:
+      kvFunction: updateOneWithKV
+      params: [slotChanges]
       where: id
 
     updateActivatedAt:

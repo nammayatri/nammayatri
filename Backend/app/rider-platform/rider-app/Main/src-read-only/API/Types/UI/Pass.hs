@@ -125,6 +125,10 @@ data PassInfoAPIEntity = PassInfoAPIEntity {dynamicPasses :: [PassAPIEntity], pa
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassRescheduleReq = PassRescheduleReq {day :: Data.Time.Day, slotTripId :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassSelectReq = PassSelectReq
   { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
     imeiNumber :: Data.Text.Text,
@@ -148,6 +152,18 @@ data PassSelectionAPIEntity = PassSelectionAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassSkipDaysReq = PassSkipDaysReq {days :: [Data.Time.Day], reason :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassSlotAvailabilityResp = PassSlotAvailabilityResp
+  { availableSeats :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    booked :: Kernel.Prelude.Int,
+    canReschedule :: Kernel.Prelude.Bool,
+    capacity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    day :: Data.Time.Day,
+    departureTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    slotTripId :: Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -253,6 +269,7 @@ data RoutePassAPIEntity = RoutePassAPIEntity
   { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
     destinationStopName :: Data.Maybe.Maybe Data.Text.Text,
     skipDays :: [Domain.Types.PurchasedPassPayment.SkipDay],
+    slotChanges :: [Domain.Types.PurchasedPassPayment.SlotChange],
     slotTripId :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopName :: Data.Maybe.Maybe Data.Text.Text

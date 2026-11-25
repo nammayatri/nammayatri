@@ -9,6 +9,7 @@ imports:
   PurchasedPass: Domain.Types.PurchasedPass
   PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   SkipDay: Domain.Types.PurchasedPassPayment
+  SlotChange: Domain.Types.PurchasedPassPayment
   StatusType: Domain.Types.PurchasedPass
   HighPrecMoney: Kernel.Types.Common
   ServiceTierType: BecknV2.FRFS.Enums
@@ -59,6 +60,7 @@ types:
     destinationStopName: Maybe Text
     slotTripId: Maybe Text
     skipDays: "[SkipDay]"
+    slotChanges: "[SlotChange]"
     derive: "Show"
 
   PassCalculateFareReq:
@@ -256,6 +258,22 @@ types:
     days: "[Day]"
     derive: "Show"
 
+  # Shuttle subscription: ride another slot (e.g. 9:30 instead of 7:30) on one day of the term, if it has a free seat.
+  PassRescheduleReq:
+    day: Day
+    slotTripId: Text
+    derive: "Show"
+
+  PassSlotAvailabilityResp:
+    slotTripId: Text
+    day: Day
+    departureTime: Maybe UTCTime
+    capacity: Maybe Int
+    booked: Int
+    availableSeats: Maybe Int
+    canReschedule: Bool
+    derive: "Show"
+
   PassUploadProfilePictureReq:
     purchasedPassId: Id PurchasedPass
     profilePicture: Text
@@ -417,6 +435,27 @@ apis:
         type: PassUnskipDaysReq
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/reschedule
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassRescheduleReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /multimodal/pass/{purchasedPassId}/slotAvailability
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      mandatoryQuery:
+        day: Day
+        slotTripId: Text
+      response:
+        type: PassSlotAvailabilityResp
 
   - POST:
       endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}
