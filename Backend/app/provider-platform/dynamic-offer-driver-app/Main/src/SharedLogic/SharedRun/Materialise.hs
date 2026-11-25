@@ -79,6 +79,7 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SharedRun.Assign as Assign
+import qualified SharedLogic.SharedRun.Coverage as Coverage
 import qualified SharedLogic.SharedRun.Knobs as Knobs
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.SchedulerJob ()
@@ -455,6 +456,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
       SFP.cacheFarePolicyByScheduledEstOrQuoteId quoteId.getId startTime Nothing fullFarePolicy
       QRB.createBooking booking
       SBooking.addScheduledBookingInRedis booking
+      Coverage.scheduleCoverageJobs transporterConfig booking
       logInfo $ "shared run created: booking " <> bookingId.getId <> " for trip " <> tripId <> " of " <> routeCode <> " at " <> show startTime
       Created <$> assignBoundVehicle merchant transporterConfig booking routeCode
 
