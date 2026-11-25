@@ -288,12 +288,18 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
       stops <- sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code cabIbc
       snapshot <- RouteSnapshot.routeSnapshot cabIbc.merchantOperatingCityId code
+      tracked <- either (const []) identity <$> withTryCatch "sharedCab:serviceability:tracked" (Lts.readRoutePositions cabIbc.id code)
       let wanted = filter (\c -> maybe True (\plate -> c.session.vehicleNumber == plate) req.vehicleNumber) snapshot
           boardStop = req.sourceStopCode >>= \stopCode -> (stopCode,) . (.stopPoint) <$> find ((== stopCode) . (.stopCode)) stops
           cabOf c =
             let load = Seats.riderLoad c.seats req.sourceStopCode req.destinationStopCode c.track
              in cabVehicle now cfg (isJust req.vehicleNumber) boardStop load c.session c.track
-          (scheduled, live) = partitionEithers (map cabOf wanted)
+          (scheduled, declared) = partitionEithers (map cabOf wanted)
+          live = declared <> [undeclaredVehicle now (isJust req.vehicleNumber) cab | cab <- tracked, isUndeclared cab]
+          isUndeclared cab =
+            cab.vehicleNumber `notElem` map (.session.vehicleNumber) snapshot
+              && Select.isFreshPosition now cfg.ltsMaxAgeSec cab
+              && maybe True (== cab.vehicleNumber) req.vehicleNumber
           boardEta v = (.arrivalTimeUnix) <$> (find (\e -> Just e.stopCode == req.sourceStopCode) =<< v.eta)
       pure
         ApiTypes.RouteWithLiveVehicle
@@ -307,6 +313,29 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
           }
     pure ApiTypes.LegRouteWithLiveVehicle {legOrder = legReq.legOrder, routeWithLiveVehicles = routes}
   pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing, pickEnabled = Just cfg.pickEnabled}
+
+-- | A cab gps-processor has on the route with no driver session behind it (the route was matched from its movement): shown where it
+-- is and when it reaches the stops ahead, with no trip to pick and no seat count.
+undeclaredVehicle :: UTCTime -> Bool -> Lts.CabTrack -> ApiTypes.LiveVehicleInfo
+undeclaredVehicle now namedByPlate cab =
+  ApiTypes.LiveVehicleInfo
+    { number = if namedByPlate then cab.vehicleNumber else T.takeEnd 4 cab.vehicleNumber,
+      vehicleTagNumber = Nothing,
+      currentTripId = Nothing,
+      serviceTierType = Spec.SHARED_CAB,
+      vehicleVariant = Nothing,
+      serviceTierName = Nothing,
+      locationUTCTimestamp = cab.pingAt,
+      eta = Just (map (Lts.stopEta now) cab.etas),
+      position = cab.position,
+      serviceSubTypes = Nothing,
+      seatSelectionType = Nothing,
+      isUpcomingTrip = Nothing,
+      previousRouteId = Nothing,
+      bearing = Nothing,
+      availableSeats = Nothing,
+      occupiedSeats = Nothing
+    }
 
 -- | One cab in the rider's route view, named by its trip (the pick's cabId) and the plate's last four characters; the whole plate only
 -- when the request asks for that cab by it. A fresh fix lists it live, the board stop's ETA kept only when the allocator would believe
