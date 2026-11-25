@@ -62,18 +62,6 @@ types:
     # driver-app's id for the run a SELECT_ROUTE or RETURN_TRIP opens
     vehicleTripId: Maybe Text
 
-  SharedCabSessionOperation:
-    enum: "SET_SEATS,RESUME,CAB_FULL,STILL_ON_ROUTE"
-
-  SharedCabSessionOperationReq:
-    operation: SharedCabSessionOperation
-    driverId: Text
-    vehicleNumber: Text
-    version: Maybe Int
-    walkupCount: Maybe Int
-    # the open check-in a STILL_ON_ROUTE answers
-    checkInId: Maybe Text
-
   # The driver's verbs on one passenger of their run, shared by every product on the shared-route spine.
   # BOARDED_WITH_OTP carries the rider's per-booking code in `otp` and is accepted only where the feed's
   # boarding knob is OTP; NO_SHOW is the driver giving up on a booked rider after the configured wait.
@@ -143,15 +131,6 @@ apis:
         type: SharedCabRouteOperationReq
       response:
         type: SelectRouteResp
-  - POST:
-      endpoint: /sharedCab/session/operations
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: SharedCabSessionOperationReq
-      response:
-        type: SharedCabSession
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: NoAuth

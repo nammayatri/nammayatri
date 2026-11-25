@@ -4,7 +4,6 @@ module SharedLogic.SharedCab.CheckIn
   ( CheckIn (..),
     openIfNone,
     readCheckIn,
-    answer,
     answerCheckIn,
     clear,
     checkInView,
@@ -17,8 +16,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Keys (checkInKey)
 import SharedLogic.SharedCab.Lock (shared)
-import SharedLogic.SharedCab.Session (readSession, withPlateLock)
-import SharedLogic.SharedCab.SessionState (Session (..), ownedSession)
+import SharedLogic.SharedCab.Session (withPlateLock)
 import Tools.Error (SharedCabSessionError (..))
 
 data CheckIn = CheckIn
@@ -57,22 +55,6 @@ answerCheckIn :: Maybe Text -> Maybe CheckIn -> Either SharedCabSessionError Che
 answerCheckIn mbId = \case
   Just c | Just c.checkInId == mbId -> Right c {answered = True}
   _ -> Left CheckInClosed
-
--- | Only the driver of the plate's live session may answer. Every Yes is logged: nothing else bounds how long a driver who keeps
--- answering keeps the riders.
-answer :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> Maybe Text -> m Session
-answer driver plate mbId = withPlateLock plate $ do
-  s <- readSession plate >>= either throwError pure . ownedSession driver
-  c <- readCheckIn plate >>= either throwError pure . answerCheckIn mbId
-  now <- getCurrentTime
-  write plate now c
-  logInfo $
-    "shared-cab check-in: " <> plate <> " still on route " <> s.routeCode <> ", off route "
-      <> show (floor (diffUTCTime now c.offSince / 60) :: Int)
-      <> " min (check-in "
-      <> c.checkInId
-      <> ")"
-  pure s
 
 -- | Takes the plate's check-in away and hands back what was there. Only the tick opens one, so none read means none to take.
 clear :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> m (Maybe CheckIn)

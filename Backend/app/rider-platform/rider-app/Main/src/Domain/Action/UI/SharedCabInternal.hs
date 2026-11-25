@@ -4,7 +4,6 @@ module Domain.Action.UI.SharedCabInternal
     getSharedCabNearbyDemand,
     getSharedCabRidePassengers,
     postSharedCabRouteOperations,
-    postSharedCabSessionOperations,
     postSharedCabBookingOperations,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
@@ -255,25 +254,6 @@ ownSession merchantId driver plate = Session.getSession merchantId plate >>= eit
 
 agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
 agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
-
--- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
--- pushes and re-ticks go out after it.
-postSharedCabSessionOperations :: Maybe Text -> API.SharedCabSessionOperationReq -> Environment.Flow View.SharedCabSession
-postSharedCabSessionOperations mbToken req = do
-  checkToken mbToken
-  case req.operation of
-    API.SET_SEATS -> do
-      version <- required "version" req.version
-      walkupCount <- required "walkupCount" req.walkupCount
-      Session.setWalkupCount req.driverId req.vehicleNumber version walkupCount >>= mkSessionResp
-    API.RESUME -> Session.resume req.driverId req.vehicleNumber >>= seeded >>= mkSessionResp
-    API.CAB_FULL -> do
-      (full, released) <- Session.markCabFull req.driverId req.vehicleNumber (Allocation.closeUnboarded plate AllocTypes.SeatLost)
-      Allocation.afterUnboarded plate AllocTypes.SeatLost released
-      mkSessionResp full
-    API.STILL_ON_ROUTE -> CheckIn.answer req.driverId plate req.checkInId >>= mkSessionResp
-  where
-    plate = req.vehicleNumber
 
 -- | The driver answers the offer on a newly allocated rider. Accepting arms the claim's normal timer and tells the rider; declining closes the
 -- allocation (the plate is skipped for this booking) and the next tick offers the next cab.

@@ -65,20 +65,3 @@ data SharedCabRouteOperationReq = SharedCabRouteOperationReq
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToSchema)
-
-data SharedCabSessionOperation
-  = SET_SEATS
-  | RESUME
-  | CAB_FULL
-  | STILL_ON_ROUTE
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabSessionOperationReq = SharedCabSessionOperationReq
-  { checkInId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    operation :: SharedCabSessionOperation,
-    version :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -12,7 +12,6 @@
 module Domain.Action.UI.SharedCab
   ( getPublicTransportData,
     postSharedCabRouteOperations,
-    postSharedCabSessionOperations,
     postSharedCabBookingOperations,
     postSharedCabBookingCall,
     postSharedCabBookingMessage,
@@ -72,9 +71,6 @@ getPublicTransportData auth = requireDriver auth >>= routeData
 
 postSharedCabRouteOperations :: TokenAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 postSharedCabRouteOperations auth req = requireDriver auth >>= (`routeOperation` req)
-
-postSharedCabSessionOperations :: TokenAuthInfo -> SharedCabSessionOperationReq -> Flow SharedCabSession
-postSharedCabSessionOperations auth req = requireDriver auth >>= (`sessionOperation` req)
 
 postSharedCabBookingOperations :: TokenAuthInfo -> Text -> SharedCabBookingOperationReq -> Flow SharedCabSession
 postSharedCabBookingOperations auth bookingId req = requireDriver auth >>= \driver -> bookingOperation driver bookingId req
@@ -240,22 +236,6 @@ endSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req = do
           SharedCabBAP.atLastStop = req.atLastStop,
           SharedCabBAP.forceEnd = req.forceEnd,
           SharedCabBAP.vehicleTripId = returnTripId
-        }
-
-sessionOperation :: DriverAuthInfo -> SharedCabSessionOperationReq -> Flow SharedCabSession
-sessionOperation auth@(personId, _merchantId, merchantOpCityId) req = do
-  vehicle <- validateSharedCabDriver personId
-  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-  bap <- bapInternal
-  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) (Just . Just) $
-    SharedCabBAP.postSessionOperation bap.apiKey bap.url $
-      SharedCabBAP.BAPSessionOperationReq
-        { SharedCabBAP.operation = req.operation,
-          SharedCabBAP.driverId = personId.getId,
-          SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-          SharedCabBAP.version = req.version,
-          SharedCabBAP.walkupCount = req.walkupCount,
-          SharedCabBAP.checkInId = req.checkInId
         }
 
 data BookingAction = Cancel Text | BoardedWithoutCode | BoardedWithOtp Text | NoShow | Dropped | Accept | Decline

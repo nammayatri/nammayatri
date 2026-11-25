@@ -38,16 +38,6 @@ types:
     endedTripEarnings: Maybe HighPrecMoney
     derive: "Show,Eq"
 
-  SharedCabSessionOperation:
-    enum: "SET_SEATS,RESUME,CAB_FULL,STILL_ON_ROUTE"
-
-  SharedCabSessionOperationReq:
-    operation: SharedCabSessionOperation
-    version: Maybe Int
-    walkupCount: Maybe Int
-    checkInId: Maybe Text
-    derive: "Show,Eq"
-
   # Mirrors rider-app's SharedCabInternal contract: BOARDED_WITH_OTP needs `otp`, NO_SHOW is the driver
   # giving up on a booked rider after the configured wait.
   SharedCabBookingOperation:
@@ -76,13 +66,6 @@ apis:
         type: SharedCabRouteOperationReq
       response:
         type: SelectRouteResp
-  - POST:
-      endpoint: /sharedCab/session/operations
-      auth: TokenAuth PROVIDER_TYPE
-      request:
-        type: SharedCabSessionOperationReq
-      response:
-        type: SharedCabSession
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: TokenAuth PROVIDER_TYPE

@@ -4,7 +4,6 @@ module SharedLogic.SharedCab.Session
     applyQueuedRoute,
     endRoute,
     pause,
-    resume,
     getSession,
     getSessionFresh,
     readSession,
@@ -16,7 +15,6 @@ module SharedLogic.SharedCab.Session
     activeSessionsOnRoute,
     liveSessionsInCity,
     setWalkupCount,
-    markCabFull,
     expire,
     dropStrandedRider,
   )
@@ -282,16 +280,6 @@ pause plate reason = withPlateLock plate $ do
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
   saveSession prior s
 
-resume :: Text -> Text -> Environment.Flow Session
-resume driver plate = do
-  resumed <- withPlateLock plate $ do
-    prior <- readSession plate
-    owned <- liftSession $ ownedSession driver prior
-    requireSharedCabEnabled owned.merchantOperatingCityId
-    s <- liftSession $ resumeSession owned
-    saveSession prior s
-  resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
-
 setWalkupCount :: Text -> Text -> Int -> Int -> Environment.Flow Session
 setWalkupCount driver plate expectedVersion count = withPlateLock plate $ do
   prior <- readSession plate
@@ -300,18 +288,6 @@ setWalkupCount driver plate expectedVersion count = withPlateLock plate $ do
   s' <- liftSession $ setWalkup expectedVersion count s
   held <- Seats.setWalkups s count
   saveSession prior s' {walkupCount = held}
-
--- | Cab full: `releaseUnboarded` (the unboarded allocations going) runs under the plate lock, then walk-ups take every seat left,
--- so no claim lands in between. Its result comes back for the caller to send the releases' effects outside the lock.
-markCabFull :: Text -> Text -> Environment.Flow a -> Environment.Flow (Session, a)
-markCabFull driver plate releaseUnboarded = do
-  (full, released) <- withPlateLock plate $ do
-    prior <- readSession plate
-    s <- liftSession $ ownedSession driver prior
-    released <- releaseUnboarded
-    held <- Seats.setWalkups s s.capacity
-    (,released) <$> saveSession prior (fillCab held s)
-  pure (full, released)
 
 -- | End a rider `finish` couldn't drop. Plate lock serialises with `finish` and re-open; plate -> booking lock order.
 dropStrandedRider :: (TripClientFlow m r, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool

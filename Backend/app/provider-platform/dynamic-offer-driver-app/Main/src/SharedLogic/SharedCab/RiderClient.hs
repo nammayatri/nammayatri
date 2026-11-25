@@ -4,7 +4,6 @@
 -- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
   ( BAPRouteOperationReq (..),
-    BAPSessionOperationReq (..),
     BAPBookingOperationReq (..),
     BAPDemandReq (..),
     getSharedCabRouteData,
@@ -12,7 +11,6 @@ module SharedLogic.SharedCab.RiderClient
     NearbyStandDemand (..),
     getSharedCabNearbyDemand,
     postRouteOperation,
-    postSessionOperation,
     postBookingOperation,
     RiderCallNumberResp (..),
     getRiderCallNumber,
@@ -64,17 +62,6 @@ data BAPRouteOperationReq = BAPRouteOperationReq
     atLastStop :: Maybe Bool,
     forceEnd :: Maybe Bool,
     vehicleTripId :: Maybe Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON)
-
-data BAPSessionOperationReq = BAPSessionOperationReq
-  { operation :: SharedCabSessionOperation,
-    driverId :: Text,
-    vehicleNumber :: Text,
-    version :: Maybe Int,
-    walkupCount :: Maybe Int,
-    checkInId :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)
@@ -131,8 +118,6 @@ type NearbyDemandAPI =
     )
 
 type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
-
-type SessionOperationAPI = InternalAPI ("session" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPSessionOperationReq :> Post '[JSON] SharedCabSession)
 
 type BookingOperationAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPBookingOperationReq :> Post '[JSON] SharedCabSession)
 
@@ -192,10 +177,6 @@ getSharedCabNearbyDemand apiKey internalUrl agencyId latitude longitude =
 postRouteOperation :: BAPFlow m r => Text -> BaseUrl -> BAPRouteOperationReq -> m SelectRouteResp
 postRouteOperation apiKey internalUrl req = do
   callRider internalUrl "SharedCabRouteOperation" (client (Proxy @RouteOperationAPI) (Just apiKey) req) (Proxy @RouteOperationAPI)
-
-postSessionOperation :: BAPFlow m r => Text -> BaseUrl -> BAPSessionOperationReq -> m SharedCabSession
-postSessionOperation apiKey internalUrl req = do
-  callRider internalUrl "SharedCabSessionOperation" (client (Proxy @SessionOperationAPI) (Just apiKey) req) (Proxy @SessionOperationAPI)
 
 postBookingOperation :: BAPFlow m r => Text -> BaseUrl -> Text -> BAPBookingOperationReq -> m SharedCabSession
 postBookingOperation apiKey internalUrl bookingId req = do

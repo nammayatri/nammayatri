@@ -111,17 +111,21 @@ type API =
                                              )
                                       )
                                         :<|> ( ( "sharedCab"
-                                                   :> ( "session"
-                                                          :> ( "operations"
-                                                                 :> ( Header
-                                                                        "token"
-                                                                        Kernel.Prelude.Text
-                                                                        :> ( ReqBody
-                                                                               '[JSON]
-                                                                               API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq
-                                                                               :> Post
-                                                                                    '[JSON]
-                                                                                    SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                   :> ( "booking"
+                                                          :> ( Capture
+                                                                 "bookingId"
+                                                                 (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                 :> ( "operations"
+                                                                        :> ( Header
+                                                                               "token"
+                                                                               Kernel.Prelude.Text
+                                                                               :> ( ReqBody
+                                                                                      '[JSON]
+                                                                                      API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq
+                                                                                      :> Post
+                                                                                           '[JSON]
+                                                                                           SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                                  )
                                                                            )
                                                                     )
                                                              )
@@ -132,68 +136,46 @@ type API =
                                                                    :> ( Capture
                                                                           "bookingId"
                                                                           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                          :> ( "operations"
-                                                                                 :> ( Header
-                                                                                        "token"
+                                                                          :> ( "callNumber"
+                                                                                 :> ( MandatoryQueryParam
+                                                                                        "driverId"
                                                                                         Kernel.Prelude.Text
-                                                                                        :> ( ReqBody
-                                                                                               '[JSON]
-                                                                                               API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq
-                                                                                               :> Post
-                                                                                                    '[JSON]
-                                                                                                    SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                                        :> ( MandatoryQueryParam
+                                                                                               "vehicleNumber"
+                                                                                               Kernel.Prelude.Text
+                                                                                               :> ( Header
+                                                                                                      "token"
+                                                                                                      Kernel.Prelude.Text
+                                                                                                      :> Get
+                                                                                                           '[JSON]
+                                                                                                           API.Types.UI.SharedCabInternal.RiderCallNumberResp
+                                                                                                  )
                                                                                            )
                                                                                     )
                                                                              )
                                                                       )
                                                                )
                                                         )
-                                                          :<|> ( ( "sharedCab"
-                                                                     :> ( "booking"
-                                                                            :> ( Capture
-                                                                                   "bookingId"
-                                                                                   (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                   :> ( "callNumber"
-                                                                                          :> ( MandatoryQueryParam
-                                                                                                 "driverId"
-                                                                                                 Kernel.Prelude.Text
-                                                                                                 :> ( MandatoryQueryParam
-                                                                                                        "vehicleNumber"
-                                                                                                        Kernel.Prelude.Text
-                                                                                                        :> ( Header
-                                                                                                               "token"
-                                                                                                               Kernel.Prelude.Text
-                                                                                                               :> Get
-                                                                                                                    '[JSON]
-                                                                                                                    API.Types.UI.SharedCabInternal.RiderCallNumberResp
-                                                                                                           )
-                                                                                                    )
-                                                                                             )
-                                                                                      )
-                                                                               )
-                                                                        )
-                                                                 )
-                                                                   :<|> ( "sharedCab"
-                                                                            :> ( "booking"
-                                                                                   :> ( Capture
-                                                                                          "bookingId"
-                                                                                          (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                          :> ( "message"
-                                                                                                 :> ( Header
-                                                                                                        "token"
-                                                                                                        Kernel.Prelude.Text
-                                                                                                        :> ( ReqBody
-                                                                                                               '[JSON]
-                                                                                                               API.Types.UI.SharedCabInternal.SharedCabMessageReq
-                                                                                                               :> Post
-                                                                                                                    '[JSON]
-                                                                                                                    Kernel.Types.APISuccess.APISuccess
-                                                                                                           )
-                                                                                                    )
-                                                                                             )
-                                                                                      )
-                                                                               )
-                                                                        )
+                                                          :<|> ( "sharedCab"
+                                                                   :> ( "booking"
+                                                                          :> ( Capture
+                                                                                 "bookingId"
+                                                                                 (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                                 :> ( "message"
+                                                                                        :> ( Header
+                                                                                               "token"
+                                                                                               Kernel.Prelude.Text
+                                                                                               :> ( ReqBody
+                                                                                                      '[JSON]
+                                                                                                      API.Types.UI.SharedCabInternal.SharedCabMessageReq
+                                                                                                      :> Post
+                                                                                                           '[JSON]
+                                                                                                           Kernel.Types.APISuccess.APISuccess
+                                                                                                  )
+                                                                                           )
+                                                                                    )
+                                                                             )
+                                                                      )
                                                                )
                                                       )
                                              )
@@ -203,7 +185,7 @@ type API =
          )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutesData :<|> postSharedCabRoutesDemand :<|> getSharedCabNearbyDemand :<|> getSharedCabRidePassengers :<|> postSharedCabRouteOperations :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> getSharedCabBookingCallNumber :<|> postSharedCabBookingMessage
+handler = getSharedCabRoutesData :<|> postSharedCabRoutesDemand :<|> getSharedCabNearbyDemand :<|> getSharedCabRidePassengers :<|> postSharedCabRouteOperations :<|> postSharedCabBookingOperations :<|> getSharedCabBookingCallNumber :<|> postSharedCabBookingMessage
 
 getSharedCabRoutesData :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabRouteDataResp)
 getSharedCabRoutesData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabRoutesData a2 a1
@@ -219,9 +201,6 @@ getSharedCabRidePassengers a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequ
 
 postSharedCabRouteOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
 postSharedCabRouteOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteOperations a2 a1
-
-postSharedCabSessionOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
-postSharedCabSessionOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabSessionOperations a2 a1
 
 postSharedCabBookingOperations :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))
 postSharedCabBookingOperations a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabBookingOperations a3 a2 a1
