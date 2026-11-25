@@ -4482,7 +4482,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit,
           cloudType = Nothing,
           cloudBaseUrl = Nothing,
-          gstin = req.gstin <|> baseCity.gstin
+          gstin = req.gstin <|> baseCity.gstin,
+          address = Nothing
         }
 
     buildIntelligentPoolConfig mId newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =

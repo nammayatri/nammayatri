@@ -633,6 +633,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           supplierTaxNo = Nothing,
           issuedByGstin = Nothing,
           issuedByTaxNo = Nothing,
+          issuedByLogoUrl = Nothing,
           supplierId = Nothing,
           -- Both are filled in later, once a driver is assigned (eligibility roll / swap link).
           eligibleForBetterDriverSearch = Nothing,

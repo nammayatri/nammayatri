@@ -44,6 +44,7 @@ data FinanceInvoiceListItem = FinanceInvoiceListItem
     issuedToName :: Kernel.Prelude.Maybe Data.Text.Text,
     issuedToTaxNo :: Kernel.Prelude.Maybe Data.Text.Text,
     lineItems :: Data.Aeson.Value,
+    linkedInvoices :: [FinanceLinkedInvoices],
     merchantGstin :: Kernel.Prelude.Maybe Data.Text.Text,
     paymentMethod :: Kernel.Prelude.Maybe Data.Text.Text,
     qrCode :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -71,6 +72,10 @@ data FinanceInvoicePdfRes = FinanceInvoicePdfRes {invoiceNumber :: Data.Text.Tex
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FinanceLinkedInvoices = FinanceLinkedInvoices {invoiceType :: Domain.Types.Invoice.InvoiceType, invoices :: [FinanceInvoiceListItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data InvoiceRes = InvoiceRes
   { chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     chargeableDistanceWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
@@ -88,46 +93,65 @@ data InvoiceRes = InvoiceRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("invoice" :> (GetInvoiceInvoice :<|> GetInvoiceFinanceList :<|> GetInvoiceFinancePdf))
+type API = "invoice" :> (GetInvoiceInvoice :<|> (GetInvoiceFinanceList :<|> GetInvoiceFinancePdf))
 
 type GetInvoiceInvoice =
-  ( "invoice" :> MandatoryQueryParam "from" Kernel.Prelude.UTCTime :> MandatoryQueryParam "phoneNumber" Data.Text.Text
-      :> MandatoryQueryParam
-           "to"
-           Kernel.Prelude.UTCTime
-      :> Get '[JSON] [InvoiceRes]
-  )
+  "invoice"
+    :> ( MandatoryQueryParam "from" Kernel.Prelude.UTCTime
+           :> ( MandatoryQueryParam "phoneNumber" Data.Text.Text
+                  :> ( MandatoryQueryParam
+                         "to"
+                         Kernel.Prelude.UTCTime
+                         :> Get ('[JSON]) [InvoiceRes]
+                     )
+              )
+       )
 
 type GetInvoiceFinanceList =
-  ( "finance" :> "list" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "invoiceId" Data.Text.Text
-      :> QueryParam
-           "invoiceNumber"
-           Data.Text.Text
-      :> QueryParam "invoiceType" Domain.Types.Invoice.InvoiceType
-      :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "status"
-           Lib.Finance.Domain.Types.Invoice.InvoiceStatus
-      :> QueryParam
-           "to"
-           Kernel.Prelude.UTCTime
-      :> Get
-           '[JSON]
-           FinanceInvoiceListRes
-  )
+  "finance"
+    :> ( "list"
+           :> ( QueryParam "from" Kernel.Prelude.UTCTime
+                  :> ( QueryParam "invoiceId" Data.Text.Text
+                         :> ( QueryParam
+                                "invoiceNumber"
+                                Data.Text.Text
+                                :> ( QueryParam "invoiceType" Domain.Types.Invoice.InvoiceType
+                                       :> ( QueryParam "limit" Kernel.Prelude.Int
+                                              :> ( QueryParam
+                                                     "offset"
+                                                     Kernel.Prelude.Int
+                                                     :> ( QueryParam
+                                                            "referenceId"
+                                                            Data.Text.Text
+                                                            :> ( QueryParam
+                                                                   "status"
+                                                                   Lib.Finance.Domain.Types.Invoice.InvoiceStatus
+                                                                   :> ( QueryParam
+                                                                          "to"
+                                                                          Kernel.Prelude.UTCTime
+                                                                          :> Get
+                                                                               ('[JSON])
+                                                                               FinanceInvoiceListRes
+                                                                      )
+                                                               )
+                                                        )
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
-type GetInvoiceFinancePdf = ("finance" :> "pdf" :> MandatoryQueryParam "invoiceId" Data.Text.Text :> Get '[JSON] FinanceInvoicePdfRes)
+type GetInvoiceFinancePdf = "finance" :> ("pdf" :> (MandatoryQueryParam "invoiceId" Data.Text.Text :> Get ('[JSON]) FinanceInvoicePdfRes))
 
 data InvoiceAPIs = InvoiceAPIs
-  { getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes],
-    getInvoiceFinanceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FinanceInvoiceListRes,
-    getInvoiceFinancePdf :: Data.Text.Text -> EulerHS.Types.EulerClient FinanceInvoicePdfRes
+  { getInvoiceInvoice :: (Kernel.Prelude.UTCTime -> (Data.Text.Text -> (Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]))),
+    getInvoiceFinanceList :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient FinanceInvoiceListRes))))))))),
+    getInvoiceFinancePdf :: (Data.Text.Text -> EulerHS.Types.EulerClient FinanceInvoicePdfRes)
   }
 
-mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
+mkInvoiceAPIs :: Client EulerHS.Types.EulerClient API -> InvoiceAPIs
 mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})
   where
     getInvoiceInvoice :<|> getInvoiceFinanceList :<|> getInvoiceFinancePdf = invoiceClient
@@ -139,4 +163,4 @@ data InvoiceUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''InvoiceUserActionType])
+$(Data.Singletons.TH.genSingletons [(''InvoiceUserActionType)])

@@ -83,6 +83,7 @@ data Booking = Booking
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedByLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
