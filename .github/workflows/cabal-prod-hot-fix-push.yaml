@@ -50,6 +50,7 @@ jobs:
         id: check-docker-push
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-Common" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-Common-backup-24-11-2026" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
