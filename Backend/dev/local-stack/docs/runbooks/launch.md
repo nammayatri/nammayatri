@@ -52,7 +52,7 @@ This restores last night's off-site backup into throwaway containers (about 70 s
 
 > Since 2026-10-25 the list also names the two **review accounts** made for the stores' reviewers: `+222 22000701` (passenger) and `+222 22000702` (driver), so up to 14 drivers and 4 passengers. Their bypass (`SMS_BYPASS` in `/opt/ny/secrets/test-accounts.env`) must already be gone: remove it the day the review ends.
 >
-> Since 2026-11-22 it also names the **owner's two Algerian test accounts**, `+213 0555000197` (passenger) and `+213 0555000196` (driver), made while WhatsApp was banned and the office SIM silent. Remove them from `SMS_BYPASS` and empty `DZ_TEST_NUMBERS` in the app's `src/config.ts` (the build after that no longer shows them « Continuer avec SMS »).
+> Since 2026-11-22 it also names the **owner's two Algerian test accounts**, `+213 0555000197` (passenger) and `+213 0555000196` (driver) -- and, since 2026-11-25, two more passengers, `+213 0555000195` and `+213 0555000194` -- made while WhatsApp was banned and the office SIM silent. Remove them from `SMS_BYPASS` and empty `DZ_TEST_NUMBERS` in the app's `src/config.ts` (the build after that no longer shows them « Continuer avec SMS »).
 
     sudo ./launch-cleanup.sh              # who would go, and what stays. Writes nothing.
     sudo ./launch-cleanup.sh --apply      # does it

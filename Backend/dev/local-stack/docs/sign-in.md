@@ -232,6 +232,8 @@ for every +213 number. Two numbers were added on both sides:
 |---|---|---|---|
 | `+213 0555000197` | passenger | `SMS_BYPASS` (`+2130555000197`) | `DZ_TEST_NUMBERS` (`555000197`) |
 | `+213 0555000196` | driver | `SMS_BYPASS` (`+2130555000196`) | `DZ_TEST_NUMBERS` (`555000196`) |
+| `+213 0555000195` | passenger (2026-11-25) | `SMS_BYPASS` (`+2130555000195`) | `DZ_TEST_NUMBERS` (`555000195`) |
+| `+213 0555000194` | passenger (2026-11-25) | `SMS_BYPASS` (`+2130555000194`) | `DZ_TEST_NUMBERS` (`555000194`) |
 
 Any other Algerian number sees what it saw before. The new driver signs up
 like any driver (papers, car, the office's approval in the console, credit).

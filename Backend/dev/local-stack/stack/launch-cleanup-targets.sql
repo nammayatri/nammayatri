@@ -42,7 +42,10 @@ WITH wanted (side, cc, num) AS (VALUES
   ('driver', '+213', '0555000197'), ('driver', '+213', '555000197'),
   ('driver', '+213', '0555000196'), ('driver', '+213', '555000196'),
   ('rider',  '+213', '0555000197'), ('rider', '+213', '555000197'),
-  ('rider',  '+213', '0555000196'), ('rider', '+213', '555000196')
+  ('rider',  '+213', '0555000196'), ('rider', '+213', '555000196'),
+  -- Two more test passengers (2026-11-25), to test two requests at once.
+  ('rider',  '+213', '0555000195'), ('rider', '+213', '555000195'),
+  ('rider',  '+213', '0555000194'), ('rider', '+213', '555000194')
 )
 SELECT 'driver', p.id::text, p.mobile_country_code, p.unencrypted_mobile_number, coalesce(p.first_name, '')
   FROM atlas_driver_offer_bpp.person p
