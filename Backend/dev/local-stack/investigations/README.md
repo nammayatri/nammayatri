@@ -43,3 +43,8 @@ over. Finding that goes with it: the server refuses a driver's offer while he ha
 other active quote (`FOUND_ACTIVE_QUOTES`, `Domain/Action/UI/Driver.hs`
 `thereAreActiveQuotes`, which asks by driver id whatever the search), so one offer at
 a time is the server's rule, not only the app's (`docs/driver-api.md`).
+
+**`probe-driver-quote-overlap.sql`** (2026-11-25) -- follow-up: pairs of quotes of one
+driver on two searches whose windows overlap, split by the first quote's CURRENT status
+(so a pair whose first quote was already inactive is not mistaken for a breach: zero is
+the strong result). Aggregates only; the owner runs it. Validated on PGlite first.

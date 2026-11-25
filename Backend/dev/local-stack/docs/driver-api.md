@@ -510,7 +510,13 @@ are other active quotes from this driver"). So a driver cannot hold two offers, 
 cannot be chosen by two passengers at once; the drivers' waiting list therefore shows
 ONE offer in flight and greys the others (the owner's decision D1, option 1, the same
 day). **Observed** on the live server: offering twice on the SAME request
-(`stack/simulate-driver.py`). **Read, not yet observed**: two different searches -- the
+(`stack/simulate-driver.py`). **Measured the same day** (`probe-driver-overlap.sql`, run by the owner, aggregates
+only; pilot data, with the simulated cars and the virtual passengers, so a FLOOR for
+real traffic): 484 requests to 35 drivers between 2026-08-09 and 2026-11-24; at the
+moment a request arrived the driver had **no other open request 421 times (87 %), one
+other 56 times (11.6 %), two others 7 times (1.4 %), never more**. « Open » counts a
+request while its window is valid, answered or not, so what a list would show is at most
+that. **Read, not yet observed**: two different searches -- the
 source tree is newer than the running binary; `investigations/probe-driver-overlap.sql`
 and a real two-search test confirm it.
 
