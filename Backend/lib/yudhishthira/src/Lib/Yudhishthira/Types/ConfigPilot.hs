@@ -81,6 +81,15 @@ data ConfigType
   | FleetConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
+-- | Config types whose rows can hold secret values (external-service API keys,
+-- tokens, private keys).
+isSensitiveConfigType :: ConfigType -> Bool
+isSensitiveConfigType = \case
+  MerchantServiceConfig -> True
+  MerchantServiceConfigDriver -> True
+  IntegratedBPPConfig -> True
+  _ -> False
+
 instance ToHttpApiData ConfigType where
   toUrlPiece = T.pack . show
 
