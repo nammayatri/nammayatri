@@ -194,7 +194,7 @@ export type DataSourceName = 'master' | 'prod' | 'prod_international';
 /** One version DB Manager published for a source (<source>_to_local/metadata.json). */
 export interface PublishedVersion {
   version: number;
-  status?: 'verified' | 'not_verified' | 'not_stable';
+  status?: 'stable' | 'not_verified' | 'not_stable';
   metadata?: string;
   created_at?: string;
   uploaded_by?: string;
