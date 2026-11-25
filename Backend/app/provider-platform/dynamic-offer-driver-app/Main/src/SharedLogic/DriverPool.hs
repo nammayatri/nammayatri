@@ -1416,7 +1416,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
                 }
             qualifies dp =
               SRV.isVisibleUnderRules
-                (SRV.driverVisibilityFactsFromStats (Map.lookup dp.driverPoolResult.driverId statsByDriver) [] dp.driverPoolResult.lat dp.driverPoolResult.lon)
+                (SRV.driverVisibilityFactsFromStats (Map.lookup dp.driverPoolResult.driverId statsByDriver) (SRV.poolTagTexts dp.driverPoolResult.driverTags) dp.driverPoolResult.lat dp.driverPoolResult.lon)
                 bookingFacts
                 topDriverRules
         pure (filter qualifies drivers)
