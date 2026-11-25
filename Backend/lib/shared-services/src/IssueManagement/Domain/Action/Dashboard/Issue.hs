@@ -50,6 +50,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import IssueManagement.Tools.Error
+import qualified IssueManagement.Tools.LookupGuard as LookupGuard
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -2365,14 +2366,17 @@ postIssueApiIntegrationUpsert merchantShortId opCity req issueHandle _identifier
   merchantId <- resolveMerchantId merchantShortId opCity issueHandle
   when (T.null (T.strip req.name)) $ throwError $ InvalidRequest "Integration name cannot be empty"
   when (T.null (T.strip req.urlTemplate)) $ throwError $ InvalidRequest "URL template cannot be empty"
-  let integrationKind = fromMaybe DAI.External req.kind
-  case integrationKind of
-    DAI.External ->
-      unless ("http://" `T.isPrefixOf` req.urlTemplate || "https://" `T.isPrefixOf` req.urlTemplate) $
-        throwError $ InvalidRequest "External integrations need a full http(s):// URL"
-    _ ->
-      when ("http" `T.isPrefixOf` req.urlTemplate || "/" `T.isPrefixOf` req.urlTemplate) $
-        throwError $ InvalidRequest "Internal integrations take only the endpoint path after /dashboard/{merchant}/{city}/, e.g. ride/rideinfo/{{rideId}}"
+  -- Only internal lookups are accepted: External ones could reach any URL
+  -- from inside the cluster. Lookups are GET with no author headers or body;
+  -- the engine attaches its own token.
+  when (integrationKind == DAI.External) $
+    throwError $ InvalidRequest "External integrations are no longer supported; use an InternalRider or InternalDriver lookup"
+  unless (req.method == DAI.GET) $ throwError $ InvalidRequest "Lookups are GET-only"
+  unless (null (fromMaybe [] req.headers)) $ throwError $ InvalidRequest "Lookups do not take headers; the engine attaches its own token"
+  unless (maybe True (T.null . T.strip) req.bodyTemplate) $ throwError $ InvalidRequest "Lookups do not take a request body"
+  case LookupGuard.validateLookupTemplate (T.strip req.urlTemplate) of
+    Left err -> throwError $ InvalidRequest err
+    Right () -> pure ()
   when (null req.responseFields) $ throwError $ InvalidRequest "Declare at least one response field"
   now <- getCurrentTime
   case req.apiIntegrationId of
@@ -2386,17 +2390,20 @@ postIssueApiIntegrationUpsert merchantShortId opCity req issueHandle _identifier
       QAI.create (mkIntegration newId merchantId now now)
       pure $ Common.UpsertApiIntegrationRes {apiIntegrationId = newId}
   where
+    -- Omitted kind used to mean External, which is no longer supported.
+    integrationKind = fromMaybe DAI.InternalRider req.kind
+
     mkIntegration integrationId merchantId createdAt now =
       DAI.IssueApiIntegration
         { id = integrationId,
           merchantId = merchantId,
           name = req.name,
           description = req.description,
-          kind = fromMaybe DAI.External req.kind,
-          method = req.method,
-          urlTemplate = req.urlTemplate,
-          headersJson = encodeToText <$> req.headers,
-          bodyTemplate = req.bodyTemplate,
+          kind = integrationKind,
+          method = DAI.GET,
+          urlTemplate = T.strip req.urlTemplate,
+          headersJson = Nothing,
+          bodyTemplate = Nothing,
           timeoutMs = max 100 (min 10000 (fromMaybe 3000 req.timeoutMs)),
           responseFieldsJson = encodeToText req.responseFields,
           isActive = fromMaybe True req.isActive,
