@@ -553,7 +553,8 @@ rideAssignedReqHandler req = do
             DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
             DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId,
             DRB.issuedByGstin = bppInfo.issuedByGstin <|> req.booking.issuedByGstin,
-            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo
+            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo,
+            DRB.issuedByLogoUrl = bppInfo.issuedByLogoUrl <|> req.booking.issuedByLogoUrl
           }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
@@ -665,19 +666,11 @@ rideAssignedReqHandler req = do
           -- re-price here voids the ride-end invoice and writes a fresh one, the invoice the
           -- PDF actually renders ends up with no recipient and no supplier.
           riderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-          assignedRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
           let assignedRiderName = riderPerson.firstName
-              assignedInvCfg = assignedRiderConfig.invoiceConfig
               ledgerCtx =
-                -- applyBookingProviderFieldsToCtx only overlays supplier fields the BPP actually
-                -- sent, so seed them from config first -- otherwise a booking without those
-                -- fields leaves the invoice with no supplier at all.
                 RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                   (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                    { issuedToName = assignedRiderName,
-                      supplierName = assignedInvCfg >>= (.supplierName),
-                      supplierAddress = assignedInvCfg >>= (.supplierAddress),
-                      supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
+                    { issuedToName = assignedRiderName
                     }
           let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
           logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
@@ -711,15 +704,10 @@ rideAssignedReqHandler req = do
           -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
           deferPostAssignmentWork "assign:cashRideLedger" $ do
             cashRiderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-            cashRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
-            let cashInvCfg = cashRiderConfig.invoiceConfig
-                ledgerCtx =
+            let ledgerCtx =
                   RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                     (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
-                      { issuedToName = cashRiderPerson.firstName,
-                        supplierName = cashInvCfg >>= (.supplierName),
-                        supplierAddress = cashInvCfg >>= (.supplierAddress),
-                        supplierVatNumber = cashInvCfg >>= (.supplierVatNumber)
+                      { issuedToName = cashRiderPerson.firstName
                       }
             estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
             let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
@@ -749,8 +737,9 @@ rideAssignedReqHandler req = do
       -- rejects shorter trips, so they are never marked eligible.
       -- A swap does NOT re-roll - one search per original booking, so a rider cannot chain
       -- swaps and cancel a driver on each hop. To allow repeats later, drop this branch.
+      -- A scheduled booking is never eligible: its driver is not on the way at assignment time.
       eligibleForBetterDriverSearch <-
-        if isBetterDriverSwap
+        if isBetterDriverSwap || booking.isScheduled
           then pure False
           else do
             riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
@@ -1118,14 +1107,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       let riderName = person.firstName
-          mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderName,
-                  supplierName = mbInvCfg >>= (.supplierName),
-                  supplierAddress = mbInvCfg >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+                { issuedToName = riderName
                 }
       let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
       upsertRes <-
@@ -1160,14 +1145,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     else do
       -- Online Ride End branch → isOnline=True.
       let riderNameOnline = person.firstName
-          mbInvCfgOnline = riderConfig.invoiceConfig
           ledgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderNameOnline,
-                  supplierName = mbInvCfgOnline >>= (.supplierName),
-                  supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
+                { issuedToName = riderNameOnline
                 }
       let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
       logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
@@ -1541,7 +1522,11 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              ledgerCtx =
+                RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                  (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
+                    { issuedToName = personD.firstName
+                    }
               cancellationTaxRegime = RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx
               cancellationGstRates = RidePaymentFinance.gstRatesFromConfig (booking.riderTaxRates >>= (.riderPayable.cancellationFee))
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
@@ -1773,7 +1758,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {bookingPrePersisted = False, ..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])

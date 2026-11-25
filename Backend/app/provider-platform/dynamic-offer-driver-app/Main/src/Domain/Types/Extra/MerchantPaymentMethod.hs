@@ -25,7 +25,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList
 data PaymentType = ON_FULFILLMENT | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord)
 
-data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash | BoothOnline
+data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash | BoothOnline | Online
   deriving (Generic, Eq, Ord)
 
 isOnlinePaymentInstrument :: PaymentInstrument -> Bool
@@ -63,6 +63,7 @@ instance Show PaymentInstrument where
   show NetBanking = "NetBanking"
   show Cash = "Cash"
   show BoothOnline = "BoothOnline"
+  show Online = "Online"
 
 instance Read PaymentInstrument where
   readsPrec d' =
@@ -89,6 +90,9 @@ instance Read PaymentInstrument where
             ++ [ (BoothOnline, r1)
                  | r1 <- stripPrefix "BoothOnline" r
                ]
+            ++ [ (Online, r1)
+                 | r1 <- stripPrefix "Online" r
+               ]
       )
     where
       app_prec = 10
@@ -112,8 +116,8 @@ instance ToParamSchema PaymentInstrument where
     mempty
       & title ?~ "PaymentInstrument"
       & type_ ?~ OpenApiString
-      & format ?~ "Card_<CardType>,Wallet_<WalletType>,UPI,NetBanking,Cash,BoothOnline"
-      & enum_ ?~ map (String . T.pack . show) [Card DefaultCardType, Wallet DefaultWalletType, UPI, NetBanking, Cash, BoothOnline]
+      & format ?~ "Card_<CardType>,Wallet_<WalletType>,UPI,NetBanking,Cash,BoothOnline,Online"
+      & enum_ ?~ map (String . T.pack . show) [Card DefaultCardType, Wallet DefaultWalletType, UPI, NetBanking, Cash, BoothOnline, Online]
 
 data CardType = DefaultCardType
   deriving (Generic, Show, Read, Eq, ToSchema, Ord, ToParamSchema)
@@ -148,6 +152,15 @@ data PaymentMethodInfo = PaymentMethodInfo
     collectedBy :: PaymentCollector
   }
   deriving (Show, Eq)
+
+-- | The instrument a payment books against: an Online payment books against UPI.
+bookablePaymentInstrument :: PaymentInstrument -> PaymentInstrument
+bookablePaymentInstrument Online = UPI
+bookablePaymentInstrument instrument = instrument
+
+-- | The payment as the merchant payment method it books against.
+bookablePaymentMethodInfo :: PaymentMethodInfo -> PaymentMethodInfo
+bookablePaymentMethodInfo paymentMethodInfo = paymentMethodInfo {paymentInstrument = bookablePaymentInstrument paymentMethodInfo.paymentInstrument}
 
 $(mkBeamInstancesForEnum ''PaymentType)
 

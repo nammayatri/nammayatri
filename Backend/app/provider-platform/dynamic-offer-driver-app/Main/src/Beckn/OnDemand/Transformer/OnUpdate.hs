@@ -240,6 +240,37 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.StopsUpdatedBuildReq OU.DStopsUpdatedBuildReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show EventEnum.STOPS_UPDATED) isValueAddNP Nothing False 0
+    let lastOrder = (.order) <$> Kernel.Prelude.listToMaybe (reverse stops)
+        mkUpdatedStop parentOrder stop =
+          (Utils.mkIntermediateStop stop.location stop.order parentOrder)
+            { Spec.stopType = Just $ show (if Just stop.order == lastOrder then EventEnum.END else EventEnum.INTERMEDIATE_STOP),
+              Spec.stopTime = stop.reachedAt <&> \reachedAt -> Spec.Time {timeTimestamp = Just reachedAt, timeDuration = Nothing}
+            }
+        stopsUpdatedTags =
+          [ Tag.getFullTagGroup
+              Tag.UPDATE_DETAILS
+              [Tag.getFullTag Tag.STOPS_VERSION (Just . T.pack $ show stopsVersion)]
+          ]
+    pure $
+      Spec.Order
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment {Spec.fulfillmentStops = Just $ zipWith mkUpdatedStop (0 : map (.order) stops) stops}],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderTags = Just stopsUpdatedTags,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }
   OU.EditDestinationUpdate OU.DEditDestinationUpdateReq {..} -> do
     let booking = outerBooking
     fareParameters <- QFP.findById bookingUpdateReqDetails.fareParamsId >>= fromMaybeM (InternalError "Fare Parameters not found")

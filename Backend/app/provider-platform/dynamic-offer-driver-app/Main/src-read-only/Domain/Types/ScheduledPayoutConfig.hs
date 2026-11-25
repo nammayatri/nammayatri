@@ -51,4 +51,4 @@ data ScheduledPayoutFrequency
   | EVERY_N_DAYS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledPayoutFrequency)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledPayoutFrequency))

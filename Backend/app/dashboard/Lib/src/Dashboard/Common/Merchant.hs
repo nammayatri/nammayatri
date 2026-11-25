@@ -24,6 +24,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
+import Data.Map.Strict (Map)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -267,13 +268,25 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
 data OSRMTrafficCfgUpdateReq = OSRMTrafficCfgUpdateReq
   { jamBelowKmph :: Double,
     slowBelowKmph :: Double,
-    minSegmentLengthMeters :: Double
+    minSegmentLengthMeters :: Double,
+    tierThresholds :: Maybe (Map Maps.RoadTier OSRMTrafficThresholdsUpdateReq)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRMTrafficThresholdsUpdateReq = OSRMTrafficThresholdsUpdateReq
+  { jamBelowKmph :: Double,
+    slowBelowKmph :: Double
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mkOSRMTrafficConfig :: OSRMTrafficCfgUpdateReq -> Maps.OSRMTrafficConfig
-mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} = Maps.OSRMTrafficConfig {..}
+mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} =
+  Maps.OSRMTrafficConfig {tierThresholds = (fmap . fmap) mkOSRMTrafficThresholds tierThresholds, ..}
+
+mkOSRMTrafficThresholds :: OSRMTrafficThresholdsUpdateReq -> Maps.OSRMTrafficThresholds
+mkOSRMTrafficThresholds OSRMTrafficThresholdsUpdateReq {..} = Maps.OSRMTrafficThresholds {..}
 
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
@@ -755,7 +768,8 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    poolingMode :: Maybe SLT.PoolingMode
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -775,6 +789,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "render" form
       <*> parseMaybeInput "paymentModes" form
       <*> parseMaybeInput "fareSettlementType" form
+      <*> parseMaybeInput "poolingMode" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -798,7 +813,8 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
-    fareSettlementType :: Maybe SLT.FareSettlementType
+    fareSettlementType :: Maybe SLT.FareSettlementType,
+    poolingMode :: Maybe SLT.PoolingMode
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -817,7 +833,8 @@ data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     feeItems :: Maybe [GIT.GateFeeItem],
-    minBalanceRequired :: Maybe HighPrecMoney
+    minBalanceRequired :: Maybe HighPrecMoney,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -838,6 +855,7 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
       <*> parseMaybeInput "walkDescription" form
       <*> parseMaybeJsonInput "feeItems" form
       <*> parseMaybeInput "minBalanceRequired" form
+      <*> parseMaybeInput "maxRideSkipsBeforeQueueRemoval" form
 
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
@@ -853,7 +871,8 @@ data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     feeItems :: Maybe [GIT.GateFeeItem],
-    minBalanceRequired :: Maybe HighPrecMoney
+    minBalanceRequired :: Maybe HighPrecMoney,
+    maxRideSkipsBeforeQueueRemoval :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -296,6 +296,7 @@ Booking:
     supplierId: Maybe Text
     issuedByGstin: Maybe Text
     issuedByTaxNo: Maybe Text
+    issuedByLogoUrl: Maybe Text
 
   beamFields:
     estimatedDistance:

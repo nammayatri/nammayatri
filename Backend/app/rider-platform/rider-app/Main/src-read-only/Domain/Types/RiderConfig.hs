@@ -23,7 +23,6 @@ import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
@@ -101,6 +100,7 @@ data RiderConfig = RiderConfig
     enableOnlinePaymentRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePaymentRefunds :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePersonCallIdentity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableRentalStopUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableRewardsManagement :: Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableRideHailingOffers :: Kernel.Prelude.Bool,
@@ -132,7 +132,6 @@ data RiderConfig = RiderConfig
     includeVehiclesWithNoEta :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
-    invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.RiderInvoiceConfig,
     invoiceEmailEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     invoiceLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAvoidToll :: Kernel.Prelude.Bool,
@@ -258,7 +257,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BetterPointWalkDistanceSource
   = STRAIGHT_LINE
@@ -303,15 +302,6 @@ data ExternalSOSTriggerSource
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PassExtraConfig = PassExtraConfig {profilePhotoRefill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, profilePhotoRefillMaxSdkVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
-
-data RiderInvoiceConfig = RiderInvoiceConfig
-  { ledgerEmitEnabled :: Kernel.Prelude.Bool,
-    logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
-    supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    supplierVatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
-  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
@@ -375,12 +365,12 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BetterPointWalkDistanceSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BetterPointWalkDistanceSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedCabCallMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SharedCabCallMode))

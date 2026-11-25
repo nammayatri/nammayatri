@@ -1,11 +1,16 @@
 module Storage.Queries.DriverBankAccountExtra where
 
 import qualified Data.Aeson as A
+import Data.List (sortOn)
+import Data.List.Split (chunksOf)
+import qualified Data.Map as M
 import Domain.Types.DriverBankAccount
+import qualified Domain.Types.FleetDriverAssociation as DFDA
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person
 import qualified Domain.Types.Person as DP
+import Domain.Utils (mapConcurrently)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
@@ -15,7 +20,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverBankAccount as Beam
+import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
+import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
 getDriverBankAccounts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverBankAccount.DriverBankAccount])
@@ -101,14 +108,27 @@ updateFromWebhook chargesEnabled payoutsEnabled detailsSubmitted requirements fu
   syncBankAccountToPool driverId chargesEnabled Nothing
 
 syncBankAccountToPool ::
-  (MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Bool ->
   Maybe DMPM.PaymentMode ->
   m ()
-syncBankAccountToPool ownerId chargesEnabled mbPaymentMode =
-  LTSSync.syncDriverPoolDataToLTS (cast ownerId) $
-    LTSSync.emptyUpdate
-      { LTSSync.chargesEnabled = LTSSync.Set chargesEnabled,
-        LTSSync.bankAccountPaymentMode = maybe LTSSync.Unchanged (LTSSync.Set . Just) mbPaymentMode
-      }
+syncBankAccountToPool ownerId chargesEnabled mbPaymentMode = do
+  now <- getCurrentTime
+  let activeLink = [Se.Is BeamFDA.isActive $ Se.Eq True, Se.Is BeamFDA.associatedTill (Se.GreaterThan $ Just now)]
+  (ownerFleetLinks :: [DFDA.FleetDriverAssociation]) <- findAllWithKV [Se.And (Se.Is BeamFDA.driverId (Se.Eq ownerId.getId) : activeLink)]
+  (fleetDriverLinks :: [DFDA.FleetDriverAssociation]) <- findAllWithKV [Se.And (Se.Is BeamFDA.fleetOwnerId (Se.Eq ownerId.getId) : activeLink)]
+  (fleetDriversAllLinks :: [DFDA.FleetDriverAssociation]) <-
+    if null fleetDriverLinks
+      then pure []
+      else findAllWithKV [Se.And (Se.Is BeamFDA.driverId (Se.In (map (\l -> l.driverId.getId) fleetDriverLinks)) : activeLink)]
+  let newestFleetOwnerOf = M.fromList [(l.driverId, l.fleetOwnerId) | l <- sortOn (.createdAt) fleetDriversAllLinks]
+      fleetDriverIds = [l.driverId | l <- fleetDriverLinks, M.lookup l.driverId newestFleetOwnerOf == Just ownerId.getId]
+      driverIds = [ownerId | null ownerFleetLinks] <> fleetDriverIds
+      update =
+        LTSSync.emptyUpdate
+          { LTSSync.chargesEnabled = LTSSync.Set chargesEnabled,
+            LTSSync.bankAccountPaymentMode = maybe LTSSync.Unchanged (LTSSync.Set . Just) mbPaymentMode
+          }
+  forM_ (chunksOf 100 driverIds) $ \chunk ->
+    void $ mapConcurrently (\driverId -> LTSSync.syncDriverPoolDataToLTS (cast driverId) update) chunk

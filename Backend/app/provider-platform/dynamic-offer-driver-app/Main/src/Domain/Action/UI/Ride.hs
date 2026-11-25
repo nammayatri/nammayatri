@@ -62,6 +62,7 @@ import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.OnUpdate (RentalStop (..))
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
@@ -466,6 +467,13 @@ otpRideCreate driver otpCode booking clientId = do
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
+  mbStopListRide <- findStopListRide rideId
+  case mbStopListRide of
+    Just (ride, booking) -> Success <$ arriveAtRentalStop ride booking Nothing pt
+    Nothing -> arrivedAtBookedStop rideId pt
+
+arrivedAtBookedStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
+arrivedAtBookedStop rideId pt = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
@@ -482,8 +490,8 @@ arrivedAtStop rideId pt = do
     Just (stopLM, mbStopInfo) -> do
       when (isNothing mbStopInfo) $ do
         ensureDriverAt stopLM.locationId
-        void $ stopAction rideId pt stopLM.locationId ARRIVE
-      stopAction rideId pt stopLM.locationId DEPART
+        void $ bookedStopAction rideId pt stopLM.locationId ARRIVE
+      bookedStopAction rideId pt stopLM.locationId DEPART
     Nothing -> do
       unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
       case booking.stopLocationId of
@@ -508,6 +516,77 @@ arrivedAtStop rideId pt = do
 
 stopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
 stopAction rideId pt stopLocId action = do
+  mbStopListRide <- findStopListRide rideId
+  case (mbStopListRide, action) of
+    (Just (ride, booking), ARRIVE) -> Success <$ arriveAtRentalStop ride booking (Just stopLocId) pt
+    (Just (ride, _), DEPART) -> do
+      isDeparted <- isRentalStopDeparted ride stopLocId
+      if isDeparted then pure Success else bookedStopAction rideId pt stopLocId DEPART
+    (Nothing, _) -> bookedStopAction rideId pt stopLocId action
+
+findStopListRide :: Id DRide.Ride -> Flow (Maybe (DRide.Ride, DRB.Booking))
+findStopListRide rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  mbStopsVersion <- if isRentalTrip ride.tripCategory then RideCommon.getRentalStopsVersion ride.bookingId else pure Nothing
+  if isJust mbStopsVersion
+    then do
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      pure (Just (ride, booking))
+    else pure Nothing
+
+arriveAtRentalStop :: DRide.Ride -> DRB.Booking -> Maybe (Id DLoc.Location) -> LatLong -> Flow ()
+arriveAtRentalStop ride booking mbStopLocationId point = do
+  unless (ride.status == DRide.INPROGRESS) $
+    throwError (RideInvalidStatus $ "This ride " <> ride.id.getId <> " is not in progress")
+  stops <- RideCommon.getRentalStops ride.id
+  (stopIndex, nextStop) <- find (isNothing . (.reachedAt) . snd) (zip [0 :: Int ..] stops) & fromMaybeM (InvalidRequest $ "No stop present to be reached for ride " <> ride.id.getId)
+  whenJust mbStopLocationId $ \stopLocationId ->
+    unless (stopLocationId == nextStop.location.id) $
+      throwError (InvalidRequest $ "Only the next stop can be reached for ride " <> ride.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let distance = distanceBetweenInMeters point (LatLong nextStop.location.lat nextStop.location.lon)
+  unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $
+    throwError (InvalidRequest $ "Driver is not at stop location for ride " <> ride.id.getId)
+  now <- getCurrentTime
+  stopInfoId <- generateGUID
+  QSI.create
+    DSI.StopInformation
+      { id = stopInfoId,
+        stopLocId = nextStop.location.id,
+        stopOrder = nextStop.order,
+        waitingTimeStart = now,
+        waitingTimeEnd = Just now,
+        stopStartLatLng = point,
+        stopEndLatLng = Just point,
+        rideId = ride.id,
+        createdAt = now,
+        updatedAt = now,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId,
+        merchantId = ride.merchantId
+      }
+  mbStopsVersion <- RideCommon.getRentalStopsVersion booking.id
+  let newStops = map (\stop -> if stop.order == nextStop.order then stop {reachedAt = Just now} else stop) stops
+      mbNext = find (isNothing . (.reachedAt)) newStops
+      version = maybe 1 (+ 1) mbStopsVersion
+  RideCommon.setRentalStopsVersion booking.id version
+  QBooking.updateRentalStops booking.id ((.location.id.getId) <$> mbNext)
+  let lastIntermediateIndex = length stops - 2
+  when (stopIndex <= lastIntermediateIndex) $
+    fork "rental stops: Fleet Engine arrival" $ do
+      FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id stopIndex
+      FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id (if stopIndex < lastIntermediateIndex then Just (stopIndex + 1) else Nothing)
+  fork "rental stops: send list to BAP" $ BP.sendStopsUpdatedToBAP booking ride version newStops
+
+isRentalStopDeparted :: DRide.Ride -> Id DLoc.Location -> Flow Bool
+isRentalStopDeparted ride stopLocationId = do
+  unless (ride.status == DRide.INPROGRESS) $
+    throwError (RideInvalidStatus $ "This ride " <> ride.id.getId <> " is not in progress")
+  stopsInfo <- QSI.findAllByRideIdFromKVAndDB ride.id
+  stopInfo <- find (\info -> info.stopLocId == stopLocationId) stopsInfo & fromMaybeM (InvalidRequest $ "Stop " <> stopLocationId.getId <> " has not been reached for ride " <> ride.id.getId)
+  pure (isJust stopInfo.waitingTimeEnd)
+
+bookedStopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
+bookedStopAction rideId pt stopLocId action = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))

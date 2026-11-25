@@ -111,7 +111,9 @@ data InvoiceCreationParams = InvoiceCreationParams
     issuedByAddress :: Maybe Text,
     gstinOfParty :: Maybe Text,
     merchantGstin :: Maybe Text,
-    merchantShortId :: Text
+    merchantShortId :: Text,
+    supplierName :: Maybe Text,
+    supplierAddress :: Maybe Text
   }
   deriving (Show)
 
@@ -799,8 +801,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     issuedById = invoiceParams.issuedById,
                     issuedByName = invoiceParams.issuedByName,
                     issuedByAddress = invoiceParams.issuedByAddress,
-                    supplierName = Nothing,
-                    supplierAddress = Nothing,
+                    supplierName = invoiceParams.supplierName,
+                    supplierAddress = invoiceParams.supplierAddress,
                     supplierGSTIN = invoiceParams.merchantGstin,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,

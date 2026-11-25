@@ -53,10 +53,14 @@ data FinanceInvoiceListRes = FinanceInvoiceListRes {invoices :: [FinanceInvoiceI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FinanceInvoicePdfResp = FinanceInvoicePdfResp {invoiceNumber :: Kernel.Prelude.Text, pdfBase64 :: Kernel.Prelude.Text}
+data FinanceInvoicePdfResp = FinanceInvoicePdfResp {invoiceNumber :: Kernel.Prelude.Text, linkedInvoices :: [FinanceLinkedInvoicePdfs], pdfBase64 :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FinanceInvoicePdfUrlResp = FinanceInvoicePdfUrlResp {invoiceId :: Kernel.Prelude.Text, pdfUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceLinkedInvoicePdfs = FinanceLinkedInvoicePdfs {invoiceType :: Domain.Types.Invoice.InvoiceType, invoices :: [FinanceInvoicePdfResp]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

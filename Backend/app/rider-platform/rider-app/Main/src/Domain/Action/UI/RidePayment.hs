@@ -406,7 +406,11 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 -- ledger core (handled separately via createTipLedger), the
                 -- existing core entries won't be disturbed.
                 tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-                let tipLedgerCtx = (RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = person.firstName}
+                let tipLedgerCtx =
+                      RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                        (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                          { issuedToName = person.firstName
+                          }
                 let tipLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount tipLedgerCtx
                 mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo) False
                 case mbPaymentIntentResp of

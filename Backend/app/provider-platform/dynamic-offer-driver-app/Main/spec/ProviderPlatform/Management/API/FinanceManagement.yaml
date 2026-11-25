@@ -106,6 +106,7 @@ apis:
         fleetOwnerOrDriverId: Text
         issuedToType: IssuedToType
         issuedToTypes: [IssuedToType] # Added new query param to filter by multiple issuedToType values (IN clause)
+        referenceId: Text
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
@@ -584,6 +585,11 @@ types:
     - issuedByTaxNo: Maybe Text
     - recognizedRevenue: Maybe HighPrecMoney
     - deferredRevenue: Maybe HighPrecMoney
+    - linkedInvoices: "[LinkedInvoices]"
+
+  LinkedInvoices:
+    - invoiceType: InvoiceType
+    - invoices: "[InvoiceListItem]"
 
   # ----- Audit trail -----
   AuditListRes:

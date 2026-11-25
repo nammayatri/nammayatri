@@ -338,7 +338,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
   if isLocked
     then do
       finally
-        (endRideHandler handle rideId req)
+        (DUIRideCommon.waitForRideStopsLock rideId $ endRideHandler handle rideId req)
         ( do
             Redis.unlockRedis mkLockKey
             logDebug $ "End ride for RideId: " <> rideId.getId <> " Unlocked"

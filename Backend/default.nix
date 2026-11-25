@@ -166,6 +166,7 @@
           base32.jailbreak = true;
           cryptostore.check = false;
           cryptostore.jailbreak = true;
+          tls.check = false;
           # store-0.7.20's test suite references `CTimer`, which base-4.19
           # (GHC 9.8) dropped from Foreign.C.Types; the library itself builds.
           store.check = false;

@@ -43,6 +43,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Action.UI.Ride.Common (rentalNextAndLastStop)
 import qualified Domain.Action.UI.Ride.Common as DRideCommon
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -751,8 +752,8 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
-    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
-    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.Rental _ -> rentalNextAndLastStop ride booking
+    DTC.IntercityRental _ _ -> rentalNextAndLastStop ride booking
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
   let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
@@ -1049,24 +1050,6 @@ castTripCategory = \case
   DTC.CrossCity _ _ -> Common.CrossCity
   DTC.Ambulance _ -> Common.Ambulance
   _ -> Common.OneWay
-
-calculateLocations ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Id SRB.Booking ->
-  Maybe (Id DLoc.Location) ->
-  m (Maybe DLoc.Location, Maybe DLoc.Location)
-calculateLocations bookingId stopLocationId = do
-  maxOrder <- QLM.maxOrderByEntity bookingId.getId
-  case stopLocationId of
-    Nothing -> do
-      lastLoc <- if maxOrder == 0 then pure Nothing else mkLocationFromLocationMapping bookingId.getId maxOrder
-      return (Nothing, lastLoc)
-    Just nextStopId -> do
-      nextLoc <- QL.findById nextStopId
-      lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
-      return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity loc@DLoc.Location {..} = do

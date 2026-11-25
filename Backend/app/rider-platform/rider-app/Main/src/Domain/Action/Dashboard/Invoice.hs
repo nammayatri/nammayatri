@@ -157,18 +157,25 @@ getInvoiceFinanceList ::
   Maybe DInvoice.InvoiceType ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Maybe FInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow Common.FinanceInvoiceListRes
-getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
+getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbReferenceId mbStatus mbTo = do
   merchantOpCityId <- getMerchantOpCityId merchantShortId opCity
   let limit = min 100 . max 0 $ fromMaybe 20 mbLimit
       offset = max 0 $ fromMaybe 0 mbOffset
       inCity inv = inv.merchantOperatingCityId == merchantOpCityId && inv.issuedToType == DInvoice.RIDER
-  invoicesAll <- case (mbInvoiceId, mbInvoiceNumber) of
-    (Just invoiceId, _) -> filter inCity . maybeToList <$> QFinanceInvoice.findById (Id invoiceId)
-    (Nothing, Just invoiceNumber) -> filter inCity . maybeToList <$> QFinanceInvoice.findByNumber invoiceNumber
-    (Nothing, Nothing) ->
+  invoicesAll <- case (mbInvoiceId, mbInvoiceNumber, mbReferenceId) of
+    (Just invoiceId, _, _) -> filter inCity . maybeToList <$> QFinanceInvoice.findById (Id invoiceId)
+    (Nothing, Just invoiceNumber, _) -> filter inCity . maybeToList <$> QFinanceInvoice.findByNumber invoiceNumber
+    (Nothing, Nothing, Just referenceId) ->
+      filter inCity
+        <$> maybe
+          (QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback referenceId mbInvoiceType (Just DInvoice.RIDER))
+          (\status -> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId mbInvoiceType (Just DInvoice.RIDER) [status] Nothing Nothing)
+          mbStatus
+    (Nothing, Nothing, Nothing) ->
       QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
         merchantOpCityId
         mbFrom
@@ -186,7 +193,7 @@ getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber 
   let invoices = case mbStatus of
         Just _ -> invoicesAll
         Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) invoicesAll
-  items <- mapM buildFinanceInvoiceItem invoices
+  items <- forM invoices $ \invoice -> QFinanceInvoiceExtra.findLinkedInvoices invoice >>= (`buildFinanceInvoiceItem` invoice)
   let totalItems = Kernel.Prelude.length items
   pure $
     Common.FinanceInvoiceListRes
@@ -195,8 +202,11 @@ getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber 
         invoices = items
       }
   where
-    buildFinanceInvoiceItem :: FInvoice.Invoice -> Flow Common.FinanceInvoiceListItem
-    buildFinanceInvoiceItem invoice = do
+    buildFinanceInvoiceItem :: [(DInvoice.InvoiceType, [FInvoice.Invoice])] -> FInvoice.Invoice -> Flow Common.FinanceInvoiceListItem
+    buildFinanceInvoiceItem linkedGroups invoice = do
+      linkedInvoices <- forM linkedGroups $ \(linkedType, linked) -> do
+        linkedItems <- mapM (buildFinanceInvoiceItem []) linked
+        pure Common.FinanceLinkedInvoices {invoiceType = linkedType, invoices = linkedItems}
       mbTaxTxn <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
       mbPaymentMethod <- case invoice.entityReferenceId of
         Just orderId -> do
@@ -240,7 +250,8 @@ getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber 
             generatedAt = invoice.createdAt,
             taxRate = mbTaxTxn >>= (.taxRate),
             issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
-            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
+            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo),
+            linkedInvoices
           }
 
 getInvoiceFinancePdf :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.FinanceInvoicePdfRes

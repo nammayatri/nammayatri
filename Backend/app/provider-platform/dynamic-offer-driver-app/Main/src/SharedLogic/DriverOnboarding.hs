@@ -1617,7 +1617,8 @@ deleteVehicleWithAllAssociations ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Person.Person ->
   Maybe (Id Person.Person) ->
@@ -1668,7 +1669,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
       pure (hasDriverAssoc || hasFleetAssoc)
 
     endDriverAssociationIfPossibleForRc ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
       Id VehicleRegistrationCertificate ->
       m ()
     endDriverAssociationIfPossibleForRc rcId = do
@@ -1694,7 +1695,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
     deleteImagesLinkedWithRC = ImageQueryExtra.deleteByRcId
 
     deleteVehicleIfPossible ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
       Id Person.Person ->
       m ()
     deleteVehicleIfPossible driverId = do

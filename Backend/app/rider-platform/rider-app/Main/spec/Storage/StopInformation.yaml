@@ -32,6 +32,9 @@ StopInformation:
     findAllByRideId:
       kvFunction: findAllWithKVAndConditionalDB
       where: rideId
+    findAllByRideIdFromKVAndDB:
+      kvFunction: findAllWithKV
+      where: rideId
 
     updateByStopOrderAndRideId:
       kvFunction: updateOneWithKV

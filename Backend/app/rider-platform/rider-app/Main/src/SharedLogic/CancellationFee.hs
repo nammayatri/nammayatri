@@ -28,6 +28,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import Lib.Finance.FinanceM (FinanceCtx (issuedToName))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -61,7 +62,11 @@ settleCancellationFeeViaStripe ::
   m ()
 settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax (cancellationPaymentCharge, cancellationPaymentChargeTax) applicationFeeAmount currency syncCancellationLedger = do
   let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-      ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+      ledgerCtx =
+        RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+          (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
+            { issuedToName = personD.firstName
+            }
       cancellationTotal = cancellationBase + cancellationTax
   (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking personD
   driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")

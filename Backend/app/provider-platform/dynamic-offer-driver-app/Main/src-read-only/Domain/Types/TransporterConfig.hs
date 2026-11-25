@@ -329,6 +329,7 @@ data TransporterConfig = TransporterConfig
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rentalNextStopLockThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     requireFleetOwnerRegistrationForEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRcTakeoverPhoto :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,
@@ -405,7 +406,7 @@ data TransporterConfig = TransporterConfig
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data AnalyticsConfig = AnalyticsConfig
   { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
@@ -417,7 +418,7 @@ data AnalyticsConfig = AnalyticsConfig
     useDbForEarningAndMetrics :: Kernel.Prelude.Bool,
     weekStartMode :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -444,7 +445,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     vipEscort :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     vipOfficer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data CallingOption
   = AnonymousCall
@@ -466,13 +467,13 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshold :: Kernel.Prelude.Int, suspensionTimeInHours :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data ChargeFrequency
   = CHARGE_DAILY
@@ -492,7 +493,7 @@ data CommunicationChannelCharLimits = CommunicationChannelCharLimits
     smsBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     whatsappBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data ConnectChargeBearer
   = CONNECT_PLATFORM
@@ -500,7 +501,7 @@ data ConnectChargeBearer
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
@@ -512,7 +513,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     resultDurationMinutes :: Kernel.Prelude.Int,
     storeHotspotProductInMember :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data DriverWalletConfig = DriverWalletConfig
   { connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -539,10 +540,10 @@ data DriverWalletConfig = DriverWalletConfig
     payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
     requireBapSettlementConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data FleetLinkedDriverWalletView
   = FLEET_ACCOUNT
@@ -555,9 +556,9 @@ data GstBreakup = GstBreakup
     igstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
-data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data InvoiceConfig = InvoiceConfig
   { categoryOfServices :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -583,7 +584,7 @@ data InvoiceConfig = InvoiceConfig
     walletInvoiceSupplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walletInvoiceSupplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Eq))
 
 data LimitsConfig = LimitsConfig
   { cashRideSyncBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -595,7 +596,7 @@ data LimitsConfig = LimitsConfig
     maxVehiclesCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sendLegalPolicyUpdateEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data ManualTollChargeConfig = ManualTollChargeConfig
   { approvalTimeoutSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -603,7 +604,7 @@ data ManualTollChargeConfig = ManualTollChargeConfig
     maxApprovalAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tripCategories :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data PayoutChargeBearer
   = DRIVER_BEARER
@@ -617,7 +618,7 @@ data PayoutFeeConfig = PayoutFeeConfig
     fixedFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     percentageRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Read), (Eq))
 
 data PayoutFeeType
   = PERCENTAGE
@@ -630,12 +631,12 @@ data PickupDarkStage = PickupDarkStage
     chatSuggestions :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     overlayKey :: Kernel.Prelude.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data PickupNudgeChannel
   = OVERLAY
   | CHAT_MESSAGE
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
@@ -649,7 +650,7 @@ data PickupStallMonitoringConfig = PickupStallMonitoringConfig
     staleFixAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickIntervalSec :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data PickupStallStage = PickupStallStage
   { afterFaultSec :: Kernel.Prelude.Int,
@@ -658,13 +659,13 @@ data PickupStallStage = PickupStallStage
     overlayKey :: Kernel.Prelude.Text,
     terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data PickupStallTerminalAction
   = REALLOCATE_RIDE
   | RECORD_ONLY
   | REALLOCATE_SCHEDULED_RIDE
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data RideEvidenceConfig = RideEvidenceConfig
   { completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -672,12 +673,12 @@ data RideEvidenceConfig = RideEvidenceConfig
     linkExpirySeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxFilesPerRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data ScheduledPickupMonitoringMode
   = DISTANCE_BASED
   | TIME_BASED
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -690,7 +691,7 @@ data ScheduledRideConfig = ScheduledRideConfig
     scheduledRideVisibilityStages :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ScheduledRideVisibilityStage],
     topDriversFirstAdvanceTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
   { allowFavouriteDriversOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -702,7 +703,7 @@ data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
     requiresNearby :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requiresWalletBalance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage
   { rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules,
@@ -710,10 +711,10 @@ data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage
     untilRemainingMinutes :: Kernel.Prelude.Int,
     vehicleServiceTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data StclConfig = StclConfig
   { maxSharesPerDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -721,14 +722,14 @@ data StclConfig = StclConfig
     pricePerShare :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     subscriptionAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data SubscriptionConfig = SubscriptionConfig
   { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     vehicleCategoryScopedPrepaidEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data TakeoverScoring = TakeoverScoring
   { formulaVersion :: Kernel.Prelude.Text,
@@ -740,7 +741,7 @@ data TakeoverScoring = TakeoverScoring
     plateVisibleWeight :: Kernel.Prelude.Double,
     takeoverScoreThreshold :: Kernel.Prelude.Double
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
@@ -756,20 +757,20 @@ data TaxConfig = TaxConfig
     subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     taxRegime :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.Regime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
-data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CallingOption))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ChargeFrequency)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ChargeFrequency))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommissionAggregationFrequency)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommissionAggregationFrequency))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConnectChargeBearer)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ConnectChargeBearer))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetLinkedDriverWalletView)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FleetLinkedDriverWalletView))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutChargeBearer)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutChargeBearer))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutFeeType))

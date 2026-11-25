@@ -17,6 +17,7 @@ module SharedLogic.AirportEntryFee
     deductAirportEntryFeeAtStartRide,
     ensureDriverEnabledForAirportPickup,
     isAirportPickupArea,
+    isAirportSpecialLocation,
     requiredEntryFeeForBooking,
     requiredDriverWalletAmountForBooking,
   )
@@ -137,6 +138,9 @@ requiredDriverWalletAmountForBooking enabled mbGateId mbServiceTier mbFareSettle
           total = entryFee + gateFeeItemsTotal
       pure $ if total > 0 then Just total else Nothing
 
+isAirportSpecialLocation :: SL.SpecialLocation -> Bool
+isAirportSpecialLocation specialLocation = specialLocation.category == "SureAirport"
+
 isAirportPickupArea ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe SL.Area ->
@@ -145,7 +149,7 @@ isAirportPickupArea mbArea =
   case mbArea >>= SL.pickupSpecialZoneIdFromArea of
     Just specialLocationId -> do
       mbSpecialLocation <- QSpecialLocation.findById (Id specialLocationId)
-      pure $ maybe False (\specialLocation -> specialLocation.category == "SureAirport") mbSpecialLocation
+      pure $ maybe False isAirportSpecialLocation mbSpecialLocation
     Nothing -> pure False
 
 ensureDriverEnabledForAirportPickup ::

@@ -3790,6 +3790,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
             ..
           }
 
@@ -3849,7 +3850,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             defaultMaxDriverThreshold = mbGate >>= (.defaultMaxDriverThreshold),
             defaultDemandThreshold = mbGate >>= (.defaultDemandThreshold),
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
-            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            maxRideSkipsBeforeQueueRemoval = reqT.maxRideSkipsBeforeQueueRemoval <|> (mbGate >>= (.maxRideSkipsBeforeQueueRemoval)),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
@@ -4481,7 +4482,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit,
           cloudType = Nothing,
           cloudBaseUrl = Nothing,
-          gstin = req.gstin <|> baseCity.gstin
+          gstin = req.gstin <|> baseCity.gstin,
+          address = Nothing
         }
 
     buildIntelligentPoolConfig mId newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =

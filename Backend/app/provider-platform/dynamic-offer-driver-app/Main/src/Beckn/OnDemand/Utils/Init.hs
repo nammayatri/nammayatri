@@ -73,7 +73,7 @@ castPaymentInstrument collectedBy params mPaymentTags = do
         then return DMPM.UPI
         else do
           let fallbackInstrument = case collectedBy of
-                DMPM.BAP -> DMPM.UPI
+                DMPM.BAP -> DMPM.Online
                 _ -> DMPM.Cash
           logWarning $
             "castPaymentInstrument: no PAYMENT_INSTRUMENT tag and no VPA; defaulting to "
@@ -88,7 +88,10 @@ castPaymentInstrument collectedBy params mPaymentTags = do
 getPaymentInstrumentFromTags :: Maybe [Spec.TagGroup] -> Maybe DMPM.PaymentInstrument
 getPaymentInstrumentFromTags mTags = do
   tagValue <- Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT mTags
-  readMaybe $ T.unpack tagValue
+  -- Online is our own label for an unnamed instrument, so a tag carrying it counts as no tag.
+  case readMaybe $ T.unpack tagValue of
+    Just DMPM.Online -> Nothing
+    mbInstrument -> mbInstrument
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do

@@ -24,6 +24,7 @@ import Data.Maybe
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Time as DT
+import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Pass as DPass
 import qualified Domain.Action.UI.Ride as DRide
@@ -65,6 +66,7 @@ import qualified Kernel.Types.Geofencing as Fields
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError (..))
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
@@ -100,6 +102,19 @@ import qualified Tools.Fields as Fields
 data StopReq = StopReq
   { gps :: LatLong,
     address :: LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data UpdateStopsReq = UpdateStopsReq
+  { stopsVersion :: Maybe Int,
+    stops :: [UpdateStopsReqStop]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data UpdateStopsReqStop = UpdateStopsReqStop
+  { locationId :: Maybe (Id Location),
+    gps :: Maybe LatLong,
+    address :: Maybe LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -595,6 +610,60 @@ editStop (_, merchantId) bookingId req = do
   processStop bookingId req merchantId True
   pure Success
 
+updateStops :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> UpdateStopsReq -> Flow APISuccess
+updateStops (personId, merchantId) bookingId req = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  unless (booking.riderId == personId) $ throwError (InvalidRequest "Booking does not belong to this rider")
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  unless (fromMaybe False riderConfig.enableRentalStopUpdates) $
+    throwError (InvalidRequest "Changing stops during the ride is not enabled for this city")
+  case booking.bookingDetails of
+    SRB.RentalDetails _ -> pure ()
+    _ -> throwError (InvalidRequest "Stops can be changed during the ride only on rentals")
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  unless isValueAddNP $ throwError (InvalidRequest "Changing stops during the ride is not supported for non value add NP")
+  ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId:" <> booking.id.getId)
+  unless (ride.status == SRide.INPROGRESS) $
+    throwError (RideInvalidStatus "Stops can be changed only while the ride is in progress")
+  mbStopsVersion <- SRB.getRentalStopsVersion booking.id
+  unless (req.stopsVersion == mbStopsVersion) $
+    throwError (InvalidRequest "The stops changed since they were loaded. Refresh and try again.")
+  pendingStops <- filter (isNothing . (.reachedAt)) <$> SRB.getCurrentRentalStops booking ride
+  when (null req.stops) $
+    throwError (InvalidRequest "Keep at least one stop left to reach")
+  requestedStops <- forM req.stops $ \stop -> case (stop.locationId, stop.gps, stop.address) of
+    (Just locationId, _, _) -> do
+      keptStop <- find (\pendingStop -> pendingStop.location.id == locationId) pendingStops & fromMaybeM (InvalidRequest $ "Stop " <> locationId.getId <> " is not a stop left to reach")
+      pure ACL.UpdateStopsBuildStop {order = Just keptStop.order, location = keptStop.location}
+    (Nothing, Just gps, Just address) -> do
+      let stopReq = StopReq {gps, address}
+      validateStopCity booking stopReq merchant
+      location <- buildLocation merchantId booking.merchantOperatingCityId stopReq
+      pure ACL.UpdateStopsBuildStop {order = Nothing, location}
+    _ -> throwError (InvalidRequest "A stop needs a locationId, or gps and address")
+  DOnUpdate.stashRequestedStops booking.id [stop.location | stop <- requestedStops, isNothing stop.order]
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  messageId <- generateGUID
+  becknUpdateReq <-
+    ACL.buildUpdateReq
+      ACL.UpdateBuildReq
+        { bppId = booking.providerId,
+          bppUrl = booking.providerUrl,
+          transactionId = booking.transactionId,
+          merchant,
+          messageId,
+          city = merchant.defaultCity,
+          bppBookingId,
+          details = ACL.UUpdateStopsBuildReqDetails ACL.UpdateStopsBuildReqDetails {stopsVersion = req.stopsVersion, stops = requestedStops}
+        }
+  try @_ @BecknAPICallError (CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq) >>= \case
+    Right _ -> pure Success
+    Left (BecknAPICallError _ err) | Just reason <- err.message -> throwError (InvalidRequest reason)
+    Left exc -> throwM exc
+
 editLocationForBooking ::
   (Id Person.Person, Id Merchant.Merchant) ->
   Id SRB.Booking ->
@@ -766,6 +835,9 @@ processStop bookingId loc merchantId isEdit = do
 
 validateStopReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Bool -> StopReq -> Merchant.Merchant -> m ()
 validateStopReq booking isEdit loc merchant = do
+  mbStopsVersion <- SRB.getRentalStopsVersion booking.id
+  when (isJust mbStopsVersion) $
+    throwError (InvalidRequest "Update the app to change the stops of this ride")
   unless (booking.status `elem` SRB.activeBookingStatus) $ throwError (RideInvalidStatus $ "Cannot edit/add stop in this booking " <> booking.id.getId)
   case booking.bookingDetails of
     SRB.OneWayDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in static offer on demand rides"
@@ -781,7 +853,10 @@ validateStopReq booking isEdit loc merchant = do
     SRB.MeterRideDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in meter rides"
     -- Unlike Rental, EasyBooking has no mid-ride "planned stop" concept — reject like the others.
     SRB.EasyBookingDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in easy booking rides"
+  validateStopCity booking loc merchant
 
+validateStopCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> StopReq -> Merchant.Merchant -> m ()
+validateStopCity booking loc merchant = do
   nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
   fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
   let isIntercityRental = maybe False DTC.isIntercityRentalTrip booking.tripCategory
