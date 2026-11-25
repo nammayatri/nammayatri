@@ -855,6 +855,7 @@ library
       SharedLogic.RiderDetails
       SharedLogic.RSFLedger
       SharedLogic.RuleBasedTierUpgrade
+      SharedLogic.ScheduledBooking.OpsNote
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
