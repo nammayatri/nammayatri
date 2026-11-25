@@ -23,6 +23,7 @@ import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization as PO
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
@@ -40,6 +41,7 @@ import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context, throwError)
+import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrganization as CQPO
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Error
@@ -193,7 +195,34 @@ verifyPartnerOrganization ::
   ) =>
   APIKey ->
   m PartnerOrganization
-verifyPartnerOrganization apiKey = do
+verifyPartnerOrganization = findPartnerOrgByApiKey
+
+findPartnerOrgByApiKey :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => APIKey -> m PartnerOrganization
+findPartnerOrgByApiKey apiKey = do
   apiKeyHash <- getDbHash apiKey
   mbPartnerOrganization <- B.runInReplica $ CQPO.findByApiKeyHash apiKeyHash
-  mbPartnerOrganization & fromMaybeM (InvalidAPIKey apiKey)
+  mbPartnerOrganization & fromMaybeM (InvalidAPIKey "")
+
+type FleetSyncAPIKey = HeaderAuth "x-api-key" FleetSyncVerifyAPIKey
+
+data FleetSyncVerifyAPIKey = FleetSyncVerifyAPIKey
+
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (FleetSyncAPIKey :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance VerificationMethod FleetSyncVerifyAPIKey where
+  type VerificationResult FleetSyncVerifyAPIKey = (PartnerOrganization, DPOC.FleetSyncConfig)
+  verificationDescription = "Checks whether the api key belongs to a partner organization allowed to push fleet schedule changes."
+
+verifyFleetSyncAction :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => VerificationAction FleetSyncVerifyAPIKey m
+verifyFleetSyncAction = VerificationAction verifyFleetSync
+
+verifyFleetSync :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => APIKey -> m (PartnerOrganization, DPOC.FleetSyncConfig)
+verifyFleetSync apiKey = do
+  partnerOrg <- findPartnerOrgByApiKey apiKey
+  pOrgCfg <- CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.FLEET_SYNC >>= fromMaybeM (InvalidAPIKey "")
+  fleetSyncCfg <- DPOC.getFleetSyncConfig pOrgCfg.config
+  pure (partnerOrg, fleetSyncCfg)

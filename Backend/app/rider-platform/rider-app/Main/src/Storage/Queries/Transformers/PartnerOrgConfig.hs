@@ -21,6 +21,7 @@ getPOrgConfigFromTypeAndJson config = \case
   BPP_STATUS_CALL -> BPPStatusCall <$> parseCfgJSON config BPP_STATUS_CALL
   WALLET_CLASS_NAME -> WalletClassName <$> parseCfgJSON config WALLET_CLASS_NAME
   WALLET_QR_TYPE -> WalletQRType <$> parseCfgJSON config WALLET_QR_TYPE
+  FLEET_SYNC -> FleetSync <$> parseCfgJSON config FLEET_SYNC
   where
     parseCfgJSON cfg cfgType = do
       case A.fromJSON cfg of

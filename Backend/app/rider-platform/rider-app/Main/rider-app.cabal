@@ -110,6 +110,7 @@ library
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
+      API.UI.FleetSync
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot

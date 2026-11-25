@@ -12,14 +12,21 @@ module Domain.Action.UI.Dispatcher
     getFleetOverrideInfo,
     delFleetOverrideInfo,
     FleetOverrideScope (..),
+    FleetScheduleChangeReq (..),
+    postFleetSyncScheduleChange,
   )
 where
 
 import qualified API.Types.UI.Dispatcher
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import Data.Aeson (withObject, (.:), (.:?))
+import qualified Data.Time as Time
 import qualified Domain.Types.DepotManager as Fields
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PartnerOrgConfig as DPOC
+import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleActionHistory
 import qualified Environment
@@ -30,10 +37,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified SharedLogic.External.Nandi.Flow as Flow
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import Storage.Queries.DepotManager as QD
 import Storage.Queries.Person as QP
 import qualified Storage.Queries.VehicleActionHistory as QVAH
@@ -110,6 +120,75 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
   -- adding fleet override info in redis for waybill.
   Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceWaybillNo) 86400
   pure $ Kernel.Types.APISuccess.Success
+
+data FleetScheduleChangeReq = FleetScheduleChangeReq
+  { logsheetDate :: Time.Day,
+    schNo :: Text,
+    oldFleetNumber :: Text,
+    newFleetNumber :: Text,
+    driverCode :: Maybe Text,
+    conductorCode :: Maybe Text
+  }
+  deriving (Generic, Show, Kernel.Prelude.ToSchema)
+
+instance FromJSON FleetScheduleChangeReq where
+  parseJSON = withObject "FleetScheduleChangeReq" $ \o ->
+    FleetScheduleChangeReq
+      <$> o .: "logsheet_date"
+      <*> o .: "sch_no"
+      <*> o .: "old_fleet_number"
+      <*> (o .: "New_fleet_number" <|> o .: "new_fleet_number")
+      <*> o .:? "driver_code"
+      <*> o .:? "conductor_code"
+
+postFleetSyncScheduleChange :: (DPO.PartnerOrganization, DPOC.FleetSyncConfig) -> FleetScheduleChangeReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFleetSyncScheduleChange (partnerOrg, fleetSyncCfg) req = do
+  rateLimitCfg <- CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.RATE_LIMIT >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.RATE_LIMIT) >>= DPOC.getRateLimitConfig . (.config)
+  checkSlidingWindowLimitWithOptions ("BAP:FleetSync:PartnerOrgId:" <> partnerOrg.orgId.getId <> ":hitsCount") rateLimitCfg.rateLimitOptions
+  let merchantOperatingCityId = Kernel.Types.Id.Id fleetSyncCfg.merchantOperatingCityId
+  merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fleetSyncCfg.merchantOperatingCityId)
+  unless (merchantOperatingCity.merchantId == partnerOrg.merchantId) $ throwError (InvalidRequest "Partner organization is not configured for this city")
+  now <- getCurrentTime
+  let today = Time.utctDay (Time.addUTCTime 19800 now)
+  unless (req.logsheetDate == today) $ throwError (InvalidRequest $ "logsheet_date must be today (" <> show today <> ")")
+  when (req.oldFleetNumber == req.newFleetNumber) $ throwError (InvalidRequest "old_fleet_number and New_fleet_number are the same")
+  integratedBPPConfig <- SIBC.findBusIntegratedBPPConfig merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
+  newFleetInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig req.newFleetNumber >>= fromMaybeM (DepotFleetInfoNotFound req.newFleetNumber)
+  if newFleetInfo.schedule_no == Just req.schNo && isJust newFleetInfo.waybill_no
+    then do
+      logInfo $ "FleetSync: " <> req.newFleetNumber <> " already runs schedule " <> req.schNo <> " in GIMS, clearing overrides that still point at " <> req.oldFleetNumber
+      sharedOverride :: Maybe (Text, Text) <- Redis.withCrossAppRedis $ Redis.safeGet (sharedFleetOverrideKey req.newFleetNumber)
+      when ((fst <$> sharedOverride) == Just req.oldFleetNumber) $ Redis.withCrossAppRedis $ Redis.del (sharedFleetOverrideKey req.newFleetNumber)
+      legacyOverride :: Maybe (Text, Text) <- Redis.safeGet (fleetOverrideKey req.newFleetNumber)
+      when ((fst <$> legacyOverride) == Just req.oldFleetNumber) $ Redis.del (fleetOverrideKey req.newFleetNumber)
+    else do
+      oldFleetInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig req.oldFleetNumber >>= fromMaybeM (DepotFleetInfoNotFound req.oldFleetNumber)
+      unless (oldFleetInfo.schedule_no == Just req.schNo) $
+        throwError (InvalidRequest $ "Fleet " <> req.oldFleetNumber <> " is not running schedule " <> req.schNo)
+      oldWaybillNo <- oldFleetInfo.waybill_no & fromMaybeM (InvalidRequest $ "No active waybill for fleet " <> req.oldFleetNumber)
+      existing :: Maybe (Text, Text) <- Redis.withCrossAppRedis $ Redis.safeGet (sharedFleetOverrideKey req.newFleetNumber)
+      unless (existing == Just (req.oldFleetNumber, oldWaybillNo)) $ do
+        historyId <- generateGUID
+        QVAH.create
+          Domain.Types.VehicleActionHistory.VehicleActionHistory
+            { id = historyId,
+              dispatcherId = Kernel.Types.Id.cast partnerOrg.orgId,
+              action = Domain.Types.VehicleActionHistory.FLEET_SYNC,
+              currentVehicle = req.oldFleetNumber,
+              replacedVehicle = Just req.newFleetNumber,
+              driverCode = req.driverCode,
+              conductorCode = req.conductorCode,
+              merchantId = merchantOperatingCity.merchantId,
+              merchantOperatingCityId = merchantOperatingCityId,
+              depotId = Just oldFleetInfo.depot_id,
+              reasonTag = "FleetSync",
+              reasonContent = Just req.schNo,
+              createdAt = now,
+              updatedAt = now,
+              waybillNo = Just oldWaybillNo
+            }
+        Redis.withCrossAppRedis $ Redis.setExp (sharedFleetOverrideKey req.newFleetNumber) (req.oldFleetNumber, oldWaybillNo) 86400
+  pure Kernel.Types.APISuccess.Success
 
 -- | Which key an override was read from. While both apps' dispatchers are live the two keys can
 -- hold overrides for the same fleet, so the origin has to travel with the value: deleting both

@@ -61,4 +61,5 @@ run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
         :. verifyDashboardAction @(FlowR AppEnv)
         :. verifyDashboardUserAction @(FlowR AppEnv)
         :. verifyPartnerOrganizationAction @(FlowR AppEnv)
+        :. verifyFleetSyncAction @(FlowR AppEnv)
         :. EmptyContext
