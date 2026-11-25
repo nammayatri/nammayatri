@@ -75,6 +75,7 @@ import qualified API.UI.ChangeServiceTier as ChangeServiceTier
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
+import qualified API.UI.FleetSync as FleetSync
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
@@ -183,6 +184,7 @@ type API =
            :<|> FavouriteDriver.API
            :<|> BlackListDriver.API
            :<|> PartnerOrgFRFS.API
+           :<|> FleetSync.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
            :<|> AssetManifest.API
@@ -328,6 +330,7 @@ handler =
     :<|> FavouriteDriver.handler
     :<|> BlackListDriver.handler
     :<|> PartnerOrgFRFS.handler
+    :<|> FleetSync.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
     :<|> AssetManifest.handler
