@@ -33,20 +33,26 @@ import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Google.PolyLinePoints
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Price ()
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Settlement as Settlement
 import SharedLogic.Type
+import qualified Storage.CachedQueries.Translations as CQTranslations
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
     distanceToPickup :: Meters,
-    vehicleServiceTier :: Maybe Text,
+    vehicleServiceTier :: Maybe TranslatedText,
     baseFare :: Money,
     searchRequestValidTill :: UTCTime,
     distanceWithUnit :: Maybe Distance,
@@ -99,7 +105,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: DV.VehicleVariant,
-    vehicleServiceTier :: Maybe Text,
+    vehicleServiceTier :: Maybe TranslatedText,
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
     -- customerCancellationDues :: HighPrecMoney,   -- not used in the ui therefore removing both of these fields
@@ -221,7 +227,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           driverPickUpChargesWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverPickUpCharges',
           specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
-          vehicleServiceTier = nearbyReq.vehicleServiceTierName,
+          vehicleServiceTier = textAsReceived <$> nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollCharges = tollCharges',
@@ -259,6 +265,13 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
 
 mkSentEntityKey :: Id SearchRequestForDriver -> Text
 mkSentEntityKey sReqFDId = "SRFD:SentEntity:" <> sReqFDId.getId
+
+-- | The request's tier name in the driver's language; in a special zone (whose own tier name ops typed), the stored name.
+translatedTierName :: (CacheFlow m r, EsqDBFlow m r) => Language -> DSR.SearchRequest -> SearchRequestForDriver -> m (Maybe TranslatedText)
+translatedTierName language searchRequest sReqFD =
+  if fromMaybe SL.Default searchRequest.area == SL.Default
+    then forM sReqFD.vehicleServiceTierName (CQTranslations.findTranslatedText (Just sReqFD.merchantOperatingCityId) language (ServiceTier_Name sReqFD.vehicleServiceTier))
+    else pure (textAsReceived <$> sReqFD.vehicleServiceTierName)
 
 getSentEntity :: Redis.HedisFlow m r => SearchRequestForDriver -> m (Maybe SearchRequestForDriverAPIEntity)
 getSentEntity sReqFD = Redis.withCrossAppRedis $ Redis.safeGet (mkSentEntityKey sReqFD.id)

@@ -13,6 +13,7 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     mkDriverRideRes,
+    translatedTierName,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
     ResolvedCalling (..),
@@ -84,6 +85,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
 import Domain.Types.TranslationKeys (EarningsLabel (..), TranslationKey (..))
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
@@ -222,7 +224,7 @@ data DriverRideRes = DriverRideRes
     requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
-    vehicleServiceTierName :: Text,
+    vehicleServiceTierName :: TranslatedText,
     isVehicleAirConditioned :: Maybe Bool,
     vehicleCapacity :: Maybe Int,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
@@ -625,6 +627,12 @@ mkExoPhone mbExophone booking =
     (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone)
     mbExophone
 
+-- | The booking's tier name in the reader's language; with no language, or in a special zone (whose own tier name ops typed), the stored name.
+translatedTierName :: (CacheFlow m r, EsqDBFlow m r) => Maybe KET.Language -> DRB.Booking -> m TranslatedText
+translatedTierName mbLanguage booking = case mbLanguage of
+  Just language | fromMaybe SL.Default booking.area == SL.Default -> CQTranslations.findTranslatedText (Just booking.merchantOperatingCityId) language (ServiceTier_Name booking.vehicleServiceTier) booking.vehicleServiceTierName
+  _ -> pure (textAsReceived booking.vehicleServiceTierName)
+
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
@@ -766,6 +774,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
     Just earningsLabels -> do
       Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig)) mbDriverTaxRates ((.freeWaitingTime) <$> mbWaitingChargeInfo)
     Nothing -> pure Nothing
+  tierName <- translatedTierName (Just language) booking
 
   return $
     DriverRideRes
@@ -815,7 +824,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
-        vehicleServiceTierName = booking.vehicleServiceTierName,
+        vehicleServiceTierName = tierName,
         vehicleCapacity = booking.vehicleServiceTierSeatingCapacity,
         isVehicleAirConditioned = booking.isAirConditioned,
         driverGoHomeRequestId = goHomeReqId,

@@ -202,6 +202,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.StclMembership as DStclMembership
 import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKey (TranslatedText)
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
@@ -741,7 +742,7 @@ data BookingAPIEntity = BookingAPIEntity
     toLocation :: Maybe DLoc.Location,
     stops :: [DLoc.Location],
     vehicleServiceTier :: DVST.ServiceTierType,
-    vehicleServiceTierName :: Text,
+    vehicleServiceTierName :: TranslatedText,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
@@ -2078,8 +2079,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
       nowForWalletFlag <- getCurrentTime
       mbScheduledRideMinWalletBalance <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime nowForWalletFlag (pure $ scheduledRideMinWalletFloor farePolicy.conditionalCharges) driverId.getId
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      mbTierName <- USRD.translatedTierName (fromMaybe Maps.ENGLISH driver.language) searchRequest nearbyReq
       -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest Nothing) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest Nothing) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance, USRD.vehicleServiceTier = mbTierName}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -3572,7 +3575,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                             <$> withTryCatch "boardScheduledOverlap" (SBOC.isCandidateFeasible driver.merchantId cityId transporterConfig (SBOC.mkCandidateFromBooking scheduledBooking) committedIntervals)
                     filterM isBookingFeasibleForBoard stageVisibleBookings
               -- Offset and limit count the bookings that pass every filter.
-              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
+              bookings <- mapM (buildBookingAPIEntityFromBooking driver.language mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
               let sortedBookings = sortBookingsByDistance (catMaybes bookings)
               return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
@@ -3642,8 +3645,8 @@ returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset
     then Redis.hmGet redisKeyForHset nearbyBookings
     else pure []
 
-buildBookingAPIEntityFromBooking :: Maybe LatLong -> DRB.Booking -> Flow (Maybe ScheduleBooking)
-buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
+buildBookingAPIEntityFromBooking :: Maybe Maps.Language -> Maybe LatLong -> DRB.Booking -> Flow (Maybe ScheduleBooking)
+buildBookingAPIEntityFromBooking mbLanguage mbDriverLocation booking@DRB.Booking {..} = do
   let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
       distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
   mbQuote <- QQuote.findById (Id quoteId)
@@ -3659,7 +3662,8 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
           -- The policy lists the price of one bag. The driver is shown what this booking is charged.
           luggageChargeItem = mfilter (> 0) fareParams.luggageCharge >>= \luggageCharge -> mkBreakupItem currency luggageChargeCaption (show luggageCharge)
           fareDetails = catMaybes (filter (\item -> fmap (.title) item /= Just luggageChargeCaption) farePolicyBreakups) <> maybeToList luggageChargeItem
-      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} fareDetails
+      tierName <- RideCommon.translatedTierName mbLanguage booking
+      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', vehicleServiceTierName = tierName, isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} fareDetails
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
 mkBreakupItem currency title valueInText = do

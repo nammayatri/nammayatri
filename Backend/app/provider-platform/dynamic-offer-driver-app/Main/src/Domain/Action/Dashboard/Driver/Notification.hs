@@ -31,12 +31,15 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DSSL
+import Domain.Types.TranslationKey (TranslatedText)
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleVariant as DVeh
 import Domain.Utils (safeLast)
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -54,6 +57,7 @@ import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -151,7 +155,9 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
               dummyToLocation = transporterConfig.dummyToLocation
               dummyShowDriverAdditions = fromMaybe True transporterConfig.dummyShowDriverAdditions
               isValueAddNP = True
-          let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP transporterConfig.currency
+          let dummyServiceTier = DVeh.castVariantToServiceTier vehicle.variant
+          dummyServiceTierName <- CQTranslations.findTranslatedText (Just merchantOperatingCityId) (fromMaybe ENGLISH driver.language) (ServiceTier_Name dummyServiceTier) (show dummyServiceTier)
+          let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyServiceTierName dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP transporterConfig.currency
           notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId transporterConfig.timeDiffFromUtc driver.id driver.deviceToken driver.language entityData EmptyDynamicParam Nothing
           logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
           let otherMerchantIds = ["840327a8-f17c-4d7c-8199-a583cfaadc5f", "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9", "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2"] -- Array Contents are : [Dev/Master , UAT , Prod]
@@ -168,13 +174,14 @@ mkDummyNotificationEntityData ::
   Maybe (Id DMOC.MerchantOperatingCity) ->
   UTCTime ->
   DVeh.VehicleVariant ->
+  TranslatedText ->
   DLoc.DummyLocationInfo ->
   DLoc.DummyLocationInfo ->
   Bool ->
   Bool ->
   Currency ->
   USRD.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP currency =
+mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle tierName fromLocData toLocData dummyShowDriverAdditions isValueAddNP currency =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData
       toLocation = Just $ mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData
@@ -203,7 +210,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
           airConditioned = Nothing,
-          vehicleServiceTier = Just $ show $ DVeh.castVariantToServiceTier driverVehicle,
+          vehicleServiceTier = Just tierName,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,

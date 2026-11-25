@@ -886,11 +886,8 @@ rideInfo merchantId merchantOpCityId mbLanguage reqRideId mbFinanceData detailGr
   feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
   let mbFeedback = listToMaybe feedbacks
   -- With no reader's language (the issue flow, the ticket ride list) the stored texts are shown as
-  -- stored. A special zone's own tier name, typed by ops, is never replaced by the keyed name; a
-  -- badge without a key is the text the rider platform sent.
-  translatedTierName <- case mbLanguage of
-    Just language | fromMaybe SL.Default booking.area == SL.Default -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (ServiceTier_Name booking.vehicleServiceTier) booking.vehicleServiceTierName
-    _ -> pure (textAsReceived booking.vehicleServiceTierName)
+  -- stored; a badge without a key is the text the rider platform sent.
+  translatedTierName <- DRideCommon.translatedTierName mbLanguage booking
   translatedBadges <- forM feedbacks $ \feedback -> case (,) <$> mbLanguage <*> feedback.badgeKey of
     Just (language, badgeKey) -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FeedbackBadge_Name badgeKey) feedback.badge
     Nothing -> pure (textAsReceived feedback.badge)

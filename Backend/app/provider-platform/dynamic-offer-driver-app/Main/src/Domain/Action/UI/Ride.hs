@@ -455,7 +455,7 @@ otpRideCreate driver otpCode booking clientId = do
   callingOption <- effectiveCallingOption transporterConfig
   resolvedCalling <- resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest transporterConfig.enableManualArrival
+  RideCommon.mkDriverRideRes (fromMaybe L.ENGLISH driver.language) Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest transporterConfig.enableManualArrival
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc

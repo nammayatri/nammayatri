@@ -189,6 +189,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteTripStopMapping as Fields
+import Domain.Types.TranslationKey (translatedTextToText)
 import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import qualified Domain.Types.TripAlertRequest as Fields
@@ -4964,7 +4965,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
           -- Fleet sees all scheduled bookings; no location/reachability filter (unlike driver app listScheduledBookings)
           scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allServiceTiers Nothing transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
-          bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking Nothing) (catMaybes scheduledBookings)
+          bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking Nothing Nothing) (catMaybes scheduledBookings)
           fleetBookings <- mapM convertToFleetScheduledBooking (catMaybes bookings)
 
           pure $ Common.FleetScheduledBookingListRes {bookings = fleetBookings}
@@ -5004,7 +5005,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
             estimatedDuration = estimatedDuration,
             startTime = startTime,
             vehicleServiceTier = vehicleServiceTier,
-            vehicleServiceTierName = vehicleServiceTierName,
+            vehicleServiceTierName = translatedTextToText vehicleServiceTierName,
             tripCategory = tripCategory,
             distanceToPickup = distanceToPickup,
             isScheduled = isScheduled,
