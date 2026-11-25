@@ -73,6 +73,9 @@ data ServiceName
   | EventTrackingService EventTracking.EventTrackingService
   | FleetEngineService FleetEngineProvider
   | PartnerSdkService PartnerSdkProvider
+  | -- | Keys for Juspay's encrypted payout APIs. Optional: when a city has this row, Juspay payout
+    -- orders are created encrypted; when it has none, through the plain API.
+    JuspayPayoutEncryptionService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -108,6 +111,7 @@ instance Show ServiceName where
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show JuspayPayoutEncryptionService = "JuspayPayoutEncryption"
 
 instance Read ServiceName where
   readsPrec d' =
@@ -230,6 +234,9 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (JuspayPayoutEncryptionService, r1)
+                 | r1 <- stripPrefix "JuspayPayoutEncryption" r
+               ]
       )
     where
       app_prec = 10
@@ -265,6 +272,7 @@ data ServiceConfigD (s :: UsageSafety)
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | JuspayPayoutEncryptionServiceConfig !Payout.JuspayPayoutEncryptionConfig
   deriving (Generic)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -307,6 +315,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (JuspayPayoutEncryptionServiceConfig cfg) = "JuspayPayoutEncryptionServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
@@ -338,3 +347,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (JuspayPayoutEncryptionServiceConfig cfg) = "JuspayPayoutEncryptionServiceConfig " <> show cfg

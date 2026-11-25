@@ -107,6 +107,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.EventTrackingService EventTracking.Breeze -> Domain.EventTrackingServiceConfig . EventTrackingInterface.BreezeConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
+    Domain.JuspayPayoutEncryptionService -> Domain.JuspayPayoutEncryptionServiceConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -214,6 +215,7 @@ getServiceNameConfigJson = \case
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
+  Domain.JuspayPayoutEncryptionServiceConfig cfg -> (Domain.JuspayPayoutEncryptionService, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case

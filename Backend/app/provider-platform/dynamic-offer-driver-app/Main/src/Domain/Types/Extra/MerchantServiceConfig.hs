@@ -131,6 +131,9 @@ data ServiceName
   | BmsService BmsProvider
   | EventTrackingService EventTracking.EventTrackingService
   | GridService GridProvider
+  | -- | Keys for Juspay's encrypted payout APIs. Optional: when a city has this row, Juspay payout
+    -- orders are created encrypted; when it has none, through the plain API.
+    JuspayPayoutEncryptionService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -172,6 +175,7 @@ instance Show ServiceName where
   show (BmsService s) = "Bms_" <> show s
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (GridService s) = "Grid_" <> show s
+  show JuspayPayoutEncryptionService = "JuspayPayoutEncryption"
 
 instance Read ServiceName where
   readsPrec d' =
@@ -318,6 +322,9 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Grid_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (JuspayPayoutEncryptionService, r1)
+                 | r1 <- stripPrefix "JuspayPayoutEncryption" r
+               ]
       )
     where
       app_prec = 10
@@ -359,6 +366,7 @@ data ServiceConfigD (s :: UsageSafety)
   | BmsServiceConfig !BmsBackendConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | GridServiceConfig !GridTypes.GridCfg
+  | JuspayPayoutEncryptionServiceConfig !Payout.JuspayPayoutEncryptionConfig
   deriving (Generic, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe
