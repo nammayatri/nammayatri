@@ -312,12 +312,16 @@ applyTripTypes policy driverInfo driverTiers driverId = do
       mbInterCity = lockedToggle DDPP.InterCity policy
       mbIntraCity = lockedToggle DDPP.IntraCity policy
       (rental, interCity, intraCity) = SVST.resultingTripTypeSwitches driverInfo driverTiers mbRental mbInterCity mbIntraCity
-      holdOrKeep mbLocked stored result = case mbLocked of
-        Just v | result /= v -> stored
-        _ -> result
-      rental' = holdOrKeep mbRental driverInfo.canSwitchToRental rental
-      interCity' = holdOrKeep mbInterCity driverInfo.canSwitchToInterCity interCity
-      intraCity' = holdOrKeep mbIntraCity driverInfo.canSwitchToIntraCity intraCity
+      -- A frozen lock (no value) holds the stored value; a valued lock never moves away from its value.
+      isFrozen preference = isJust (DPP.lockFor preference policy) && isNothing (lockedToggle preference policy)
+      holdOrKeep preference mbLocked stored result
+        | isFrozen preference = stored
+        | otherwise = case mbLocked of
+          Just v | result /= v -> stored
+          _ -> result
+      rental' = holdOrKeep DDPP.Rental mbRental driverInfo.canSwitchToRental rental
+      interCity' = holdOrKeep DDPP.InterCity mbInterCity driverInfo.canSwitchToInterCity interCity
+      intraCity' = holdOrKeep DDPP.IntraCity mbIntraCity driverInfo.canSwitchToIntraCity intraCity
       lockedSwitches =
         [ (preference, v, stored, result)
           | (preference, Just v, stored, result) <-

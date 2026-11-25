@@ -1668,7 +1668,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   -- read fresh from the DB (not the city cache) so a just-saved lock applies at once. An association read error still
   -- fails the cash-ride and trip-distance checks; the preference policy fails open on it.
   fleetLookup <-
-    if isJust req.enableCashRide || legacyTierRebuildRequested || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
+    if isJust req.enableCashRide || legacyTierRebuildRequested || isJust req.canSwitchToIntraCity || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
       then DPP.tryDriverFleetContextFresh personId merchantOpCityId
       else pure (Right DPP.noDriverFleetContext)
   whenJust req.enableCashRide $ \_ ->
