@@ -85,12 +85,20 @@ data PendingOffer = PendingOffer
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+data NextStop = NextStop
+  { code :: Text,
+    name :: Text,
+    etaSec :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data SessionRoute = SessionRoute
   { code :: Text,
     name :: Text,
     direction :: Text,
     nextStops :: [Text],
-    nextStopCodes :: [Text]
+    nextStopCodes :: [Text],
+    nextStopEtas :: Maybe [NextStop]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
