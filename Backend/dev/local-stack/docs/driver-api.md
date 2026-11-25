@@ -501,6 +501,19 @@ That fallback is now dead weight worth keeping — and note its third code is
 history splits on it, because no driver cancellation has ever used either: all
 four on record say `OTHER`.
 
+### One active offer per driver, whatever the search — 2026-11-25
+
+Before it creates an offer, `respondQuote` (`Domain/Action/UI/Driver.hs`) asks
+`findActiveQuotesByDriverId` for every active quote of that driver, **across searches**,
+and refuses with `FOUND_ACTIVE_QUOTES` if there is one ("Failed to offer quote, there
+are other active quotes from this driver"). So a driver cannot hold two offers, and
+cannot be chosen by two passengers at once; the drivers' waiting list therefore shows
+ONE offer in flight and greys the others (the owner's decision D1, option 1, the same
+day). **Observed** on the live server: offering twice on the SAME request
+(`stack/simulate-driver.py`). **Read, not yet observed**: two different searches -- the
+source tree is newer than the running binary; `investigations/probe-driver-overlap.sql`
+and a real two-search test confirm it.
+
 ### Losing an offer — recorded by the server, exposed by nothing
 
 **This section said losing was silent, and that the server sends nothing. Both

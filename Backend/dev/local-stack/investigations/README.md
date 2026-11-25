@@ -32,3 +32,14 @@ maps-shim sends that only the live database can run -- and checked against it
 by `tests/probe-suggested-places.test.js`: change the shim's SQL and that test
 fails until the probe is regenerated. It writes to `pg_temp` only (a copy of
 the proposals table, gone when psql exits). Its header has the two commands.
+
+**`probe-driver-overlap.sql`** (2026-11-25, for the drivers' waiting list) -- how many
+requests a driver has open AT THE SAME TIME when a new one arrives, as a distribution.
+Read-only and aggregates only: no driver id, no search id, no place is printed. Its
+header has the two commands; the owner runs it (a production read). The pilot's data
+includes the simulated cars and the virtual passengers, so the answer is a floor for
+real traffic. Checked on a local PGlite database with known rows before it was handed
+over. Finding that goes with it: the server refuses a driver's offer while he has ANY
+other active quote (`FOUND_ACTIVE_QUOTES`, `Domain/Action/UI/Driver.hs`
+`thereAreActiveQuotes`, which asks by driver id whatever the search), so one offer at
+a time is the server's rule, not only the app's (`docs/driver-api.md`).
