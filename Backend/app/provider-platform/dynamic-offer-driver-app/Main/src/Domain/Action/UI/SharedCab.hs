@@ -21,6 +21,7 @@ module Domain.Action.UI.SharedCab
     getSharedCabCallStatus,
     sharedCabTrips,
     tripTargets,
+    getSharedCabRoutesSuggested,
     sharedCabTripActive,
     sharedCabFeedVersion,
     BookingAction (..),
@@ -31,6 +32,7 @@ where
 
 import API.Types.UI.SharedCab
 import qualified Data.Aeson as DA
+import qualified Data.Map.Strict as Map
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
@@ -130,6 +132,25 @@ sharedCabTrips personId merchantOpCityId mbDate mbLimit mbOffset = do
     (Nothing, Just limit) -> QVT.findAllByDriverId (Just (fromIntegral limit)) (fromIntegral <$> mbOffset) personId
     (Nothing, Nothing) -> throwError (InvalidRequest "day or limit is required")
   pure (map (tripSummary merchantOpCity.currency) trips)
+
+getSharedCabRoutesSuggested :: TokenAuthInfo -> Maybe Int -> Flow SharedCabSuggestedRoutesResp
+getSharedCabRoutesSuggested auth mbDays = requireDriver auth >>= (`suggestedRoutes` mbDays)
+
+defaultSuggestedRouteDays :: Int
+defaultSuggestedRouteDays = 7
+
+suggestedRoutes :: DriverAuthInfo -> Maybe Int -> Flow SharedCabSuggestedRoutesResp
+suggestedRoutes (personId, _merchantId, _merchantOpCityId) mbDays = do
+  _ <- validateDriver personId
+  now <- getCurrentTime
+  let days = max 1 (min 30 (fromMaybe defaultSuggestedRouteDays mbDays))
+      from = addUTCTime (negate (fromIntegral days * 86400)) now
+  trips <- QVT.findAllByDriverIdStartedBetween (Just 500) Nothing personId from now
+  let counts = Map.fromListWith (+) [(trip.routeCode, 1 :: Int) | trip <- trips, trip.status == DVT.COMPLETED, trip.endReason /= Just DVT.ROUTE_CHANGED]
+  pure
+    SharedCabSuggestedRoutesResp
+      { routes = [SharedCabSuggestedRoute {routeCode, tripCount} | (routeCode, tripCount) <- sortOn (\(c, n) -> (Down n, c)) (Map.toList counts)]
+      }
 
 sharedCabTripActive :: Id SP.Person -> Bool -> Maybe DVehicle.VehicleAPIEntity -> Flow (Maybe Bool)
 sharedCabTripActive personId isSharedCab = \case
