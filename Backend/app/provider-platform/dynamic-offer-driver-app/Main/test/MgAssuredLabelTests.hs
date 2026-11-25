@@ -164,5 +164,9 @@ tests =
               Object o -> sort (AKM.keys o)
               _ -> []
          in (keys (withMgAssuredFlag True tags), keys (withMgAssuredFlag False tags))
-              @?= (["FleetDriverEnabled", "MgAssured", "SafetyCohort"], ["FleetDriverEnabled", "SafetyCohort"])
+              @?= (["FleetDriverEnabled", "MgAssured", "SafetyCohort"], ["FleetDriverEnabled", "SafetyCohort"]),
+      testCase "rider driverTags: a driver-written MgAssured is dropped, and set only when the label is on" $
+        let tags = object ["MgAssured" .= ("true" :: Text), "FleetDriverEnabled" .= ("true" :: Text)]
+         in (withMgAssuredFlag False tags, withMgAssuredFlag True (object ["MgAssured" .= ("false" :: Text)]))
+              @?= (object ["FleetDriverEnabled" .= ("true" :: Text)], object ["MgAssured" .= ("true" :: Text)])
     ]

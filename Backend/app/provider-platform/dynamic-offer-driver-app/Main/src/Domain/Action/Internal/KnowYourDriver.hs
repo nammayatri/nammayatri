@@ -102,11 +102,12 @@ data DriverProfileRes = DriverProfileRes
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Rider-facing driverTags: the raw @IJCampaign:*@ membership keys (internal campaign ids) are dropped, and
--- @"MgAssured": "true"@ is added while the MG "Assured ride" label is on. Other tags (FleetDriverEnabled, ...) unchanged.
+-- @"MgAssured": "true"@ is added while the MG "Assured ride" label is on. Any stored @MgAssured@ key is dropped first, so a
+-- driver-written tag can't fake the label. Other tags (FleetDriverEnabled, ...) unchanged.
 withMgAssuredFlag :: Bool -> A.Value -> A.Value
 withMgAssuredFlag assured = \case
   A.Object o ->
-    let kept = AKM.filterWithKey (\k _ -> not (CampaignTag.isIjCampaignTagName (AKey.toText k))) o
+    let kept = AKM.delete "MgAssured" $ AKM.filterWithKey (\k _ -> not (CampaignTag.isIjCampaignTagName (AKey.toText k))) o
      in A.Object (if assured then AKM.insert "MgAssured" (A.String "true") kept else kept)
   other -> other
 
