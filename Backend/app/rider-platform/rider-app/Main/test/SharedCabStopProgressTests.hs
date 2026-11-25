@@ -132,7 +132,14 @@ tests =
           tripDelayMinutes 600 t0 (after (25 * 60)),
           tripDelayMinutes 600 t0 (after (- (5 * 60)))
         )
-          @?= (Nothing, Nothing, Just 10, Just 25, Nothing)
+          @?= (Nothing, Nothing, Just 10, Just 25, Nothing),
+      testCase "trip delayed: a start_time not after createdAt is the confirm-time fallback, not a timetable" $
+        ( timetabledBoardTime t0 (Just t0),
+          timetabledBoardTime t0 (Just (after (- 60))),
+          timetabledBoardTime t0 Nothing,
+          timetabledBoardTime t0 (Just (after (30 * 60)))
+        )
+          @?= (Nothing, Nothing, Nothing, Just (after (30 * 60)))
     ]
   where
     stage s from = AllocationState {vehicleNumber = "P1", timer = NoTimer, approachStage = Just s, approachFrom = from}

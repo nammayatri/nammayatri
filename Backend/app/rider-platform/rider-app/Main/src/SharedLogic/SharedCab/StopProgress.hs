@@ -196,11 +196,12 @@ feedIsTimetabled integratedBppConfigId =
     isTimetabled config = ((.schedule) <$> SharedRouteKnobs.demandKnobsOf config) == Just DSharedRoute.TIMETABLED
 
 -- | The rider's "trip delayed" push, once per booking: the cab's live ETA at the board stop is tripDelayedThresholdSec or more
--- past the booking's timetabled start_time. The condition is checked before the claim, so an on-time tick never spends it.
+-- past the booking's timetabled start_time; skipped when start_time is FRFSConfirm's unresolved fallback. The condition is checked
+-- before the claim, so an on-time tick never spends it.
 tripDelayStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe CabTrack -> Text -> DFTB.FRFSTicketBooking -> m ()
 tripDelayStep cfg _now freshTrack plate b =
   whenJust (freshTrack >>= etaAt b.fromStationCode) $ \eta ->
-    whenJust b.startTime $ \scheduled ->
+    whenJust (timetabledBoardTime b.createdAt b.startTime) $ \scheduled ->
       whenJust (tripDelayMinutes cfg.tripDelayedThresholdSec scheduled eta) $ \mins ->
         whenM (shared $ Redis.tryLockRedis (tripDelayedPushedKey b.id) tripDelayedClaimTtlSec) $
           Notify.notifyTripDelayed plate mins eta b

@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.StopProgress.Rules
     reachedDropStop,
     offRouteAction,
     tripDelayMinutes,
+    timetabledBoardTime,
   )
 where
 
@@ -115,6 +116,11 @@ offRouteAction cfg now offSince mbOffRoute = case (mbOffRoute, offSince) of
   _ -> OffRouteNoChange
   where
     elapsed = diffUTCTime now
+
+-- | The booking's timetabled time at its board stop, or Nothing when it was never resolved: FRFSConfirm falls back to its
+-- confirm time, which is also the booking's createdAt, so a start_time not after createdAt is that fallback, not a timetable.
+timetabledBoardTime :: UTCTime -> Maybe UTCTime -> Maybe UTCTime -- createdAt, startTime
+timetabledBoardTime createdAt = mfilter (> createdAt)
 
 -- | Minutes late when the live ETA at the board stop is at least the threshold past the timetabled time; Nothing otherwise.
 tripDelayMinutes :: Int -> UTCTime -> UTCTime -> Maybe Int -- thresholdSec, scheduled, eta
