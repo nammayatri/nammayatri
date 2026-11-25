@@ -7,6 +7,7 @@ module SharedLogic.ShuttlePass
     termBppConfig,
     slotCapacity,
     ridersOnSlot,
+    fullSlotDays,
     slotLockKey,
     ticketsForDay,
     recordIssued,
@@ -91,7 +92,7 @@ termBppConfig term = case term.passId of
       Just (pass :: DPass.Pass) -> Just <$> SIBC.findIntegratedBPPConfig Nothing term.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory pass.vehicleType) DIBC.MULTIMODAL
 
 -- | Seats ops set for a slot in the city. Nothing when not set.
-slotCapacity :: Id DMOC.MerchantOperatingCity -> Text -> Flow (Maybe Int)
+slotCapacity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Int)
 slotCapacity cityId slotTripId = fmap (\(row :: DShuttleSlotCapacity.ShuttleSlotCapacity) -> row.capacity) <$> QShuttleSlotCapacity.findByTripIdAndMerchantOperatingCityId slotTripId cityId
 
 -- | Riders holding a seat on the slot that day: every live term of the city that rides it then and has not skipped it,
@@ -106,6 +107,26 @@ ridersOnSlot cityId slotTripId day = go Nothing 0
       case listToMaybe (reverse terms) of
         Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) count'
         _ -> pure count'
+
+-- | The days among the given ones on which the slot has no free seat. Empty when ops have not set the slot's seats, as
+-- for unskip. One keyset scan of the terms overlapping the days, counted per day.
+fullSlotDays :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> [DT.Day] -> m [DT.Day]
+fullSlotDays _ _ [] = pure []
+fullSlotDays cityId slotTripId days =
+  slotCapacity cityId slotTripId >>= \case
+    Nothing -> pure []
+    Just capacity -> do
+      counts <- go Nothing (map (,0) days)
+      pure [day | (day, booked) <- counts, not (Rules.hasFreeSeat capacity booked)]
+  where
+    pageSize = 500
+    (fromDay, toDay) = (minimum days, maximum days)
+    go mbAfterId counts = do
+      terms <- QPPPExtra.findActiveShuttleTermsOverlapping cityId.getId fromDay toDay pageSize mbAfterId
+      let counts' = [(day, booked + length (filter (Rules.ridesSlotOn slotTripId day) terms)) | (day, booked) <- counts]
+      case listToMaybe (reverse terms) of
+        Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) counts'
+        _ -> pure counts'
 
 -- | Taken by every write that adds a rider to a slot's day (reschedule onto it, unskip on it), so two of them cannot
 -- both take its last seat.

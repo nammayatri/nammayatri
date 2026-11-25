@@ -208,3 +208,28 @@ findActiveShuttleTermsOnDay merchantOperatingCityId day limit mbAfterId =
     (Se.Asc Beam.id)
     (Just limit)
     Nothing
+
+-- | Active and pre-booked slotted terms of the city that overlap [fromDay, toDay], keyset paged by id like
+-- 'findActiveShuttleTermsOnDay'.
+findActiveShuttleTermsOverlapping ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Day ->
+  Int ->
+  Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findActiveShuttleTermsOverlapping merchantOperatingCityId fromDay toDay limit mbAfterId =
+  findAllWithOptionsDb
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.slotTripId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.startDate $ Se.LessThanOrEq toDay,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq fromDay
+        ]
+          <> [Se.Is Beam.id $ Se.GreaterThan afterId.getId | Just afterId <- [mbAfterId]]
+    ]
+    (Se.Asc Beam.id)
+    (Just limit)
+    Nothing

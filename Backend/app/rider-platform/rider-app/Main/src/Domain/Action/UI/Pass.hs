@@ -125,6 +125,7 @@ import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.PersonPTStats as SPUS
 import qualified SharedLogic.RoutePassPricing as RoutePassPricing
 import qualified SharedLogic.SharedCab as SharedCab
+import qualified SharedLogic.ShuttlePass as ShuttlePass
 import qualified SharedLogic.ShuttlePassReschedule as ShuttlePassReschedule
 import qualified SharedLogic.ShuttlePassSkipDays as ShuttlePassSkipDays
 import qualified SharedLogic.Utils as SLUtils
@@ -316,6 +317,13 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
       endDate = calculatePassEndDate startDate validityDays
       purchaseAmount = maybe pass.amount (.amount) mbRouteTerm
+  -- A slotted term takes a seat on its slot every day it covers, so refuse it when any of those days is already full.
+  -- Checked here, before payment: the seat is only counted once the term is active, so two riders paying at the same
+  -- moment can still both get the last one.
+  whenJust (mbRouteTerm >>= (.slotTripId)) $ \slot -> do
+    fullDays <- ShuttlePass.fullSlotDays pass.merchantOperatingCityId slot [startDate .. endDate]
+    whenJust (listToMaybe fullDays) $ \day ->
+      throwError (InvalidRequest $ "No seats left on this shuttle on " <> show day <> ", please choose another")
 
   let (benefitType, benefitValue) = case pass.benefit of
         Nothing -> (Nothing, Nothing)
