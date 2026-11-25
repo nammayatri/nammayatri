@@ -107,10 +107,20 @@ type API =
       :> Get
            '[JSON]
            Domain.Action.UI.Call.GetCallStatusRes
+      :<|> TokenAuth
+      :> "sharedCab"
+      :> "routes"
+      :> "suggested"
+      :> QueryParam
+           "days"
+           Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           API.Types.UI.SharedCab.SharedCabSuggestedRoutesResp
   )
 
 handler :: Environment.FlowServer API
-handler = getPublicTransportData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus
+handler = getPublicTransportData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> postSharedCabBookingCall :<|> postSharedCabBookingMessage :<|> getSharedCabCallStatus :<|> getSharedCabRoutesSuggested
 
 getPublicTransportData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -201,3 +211,13 @@ getSharedCabCallStatus ::
     Environment.FlowHandler Domain.Action.UI.Call.GetCallStatusRes
   )
 getSharedCabCallStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.getSharedCabCallStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getSharedCabRoutesSuggested ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.FlowHandler API.Types.UI.SharedCab.SharedCabSuggestedRoutesResp
+  )
+getSharedCabRoutesSuggested a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SharedCab.getSharedCabRoutesSuggested (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

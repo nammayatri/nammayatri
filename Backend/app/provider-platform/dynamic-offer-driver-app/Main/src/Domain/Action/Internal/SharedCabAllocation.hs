@@ -16,6 +16,7 @@ module Domain.Action.Internal.SharedCabAllocation where
 
 import API.Types.UI.SharedCabInternal (SharedCabCheckInReq)
 import qualified API.Types.UI.SharedCabInternal as Fields
+import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import Domain.Types.Person (Person)
 import Environment
 import EulerHS.Prelude
@@ -25,8 +26,11 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.GtfsDataServer.Types as Fields
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Fields as Fields
 import Tools.Notifications
@@ -42,8 +46,20 @@ sharedCabAllocationFCM req apiKey = do
 sharedCabCheckInFCM :: SharedCabCheckInReq -> Maybe Text -> Flow APISuccess
 sharedCabCheckInFCM req apiKey = do
   person <- verifiedDriver req.driverId apiKey
-  notifySharedCabCheckIn person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req.routeCode
+  routeName <- checkInRouteName person req.routeCode
+  notifySharedCabCheckIn person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) req.routeCode routeName
   pure Success
+
+checkInRouteName :: Person -> Text -> Flow Text
+checkInRouteName person routeCode =
+  either (const routeCode) (fromMaybe routeCode)
+    <$> withTryCatch
+      "sharedCabCheckInRouteName"
+      ( do
+          integratedBPPConfig <- findIntegratedBPPConfig Nothing person.merchantOperatingCityId "SHARED_CAB" APPLICATION
+          mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+          pure (mbRoute >>= \route -> route.longName <|> route.shortName)
+      )
 
 -- | Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
 -- unauthenticated caller cannot probe for existing driver ids (PersonNotFound vs AuthBlocked).
