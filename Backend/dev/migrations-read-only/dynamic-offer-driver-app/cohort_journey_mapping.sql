@@ -39,3 +39,8 @@ ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN control_fea
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN campaign_user_link_type text  default NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cohort_journey_mapping ADD COLUMN opt_in_period text  default NULL;

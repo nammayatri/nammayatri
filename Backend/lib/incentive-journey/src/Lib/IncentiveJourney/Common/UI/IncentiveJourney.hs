@@ -19,7 +19,6 @@ import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
-import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import qualified Lib.IncentiveJourney.RewardMetadata as RM
 import Servant
 
@@ -91,6 +90,8 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     name :: Text,
     optInStatus :: OptInStatus,
     optedInAt :: Maybe UTCTime,
+    -- | Campaign OptIn cadence from CJM (Daily/Weekly). Nothing for Assigned.
+    optInPeriod :: Maybe DCJM.OptInPeriod,
     -- | UCM invite / membership expiry — FE uses this for POST /optIn.validTill.
     validTill :: Maybe UTCTime,
     startDate :: UTCTime,
@@ -143,7 +144,8 @@ data IncentiveJourneyHistoryRes = IncentiveJourneyHistoryRes {history :: [Incent
 data OptInIncentiveJourneyReq = OptInIncentiveJourneyReq
   { cohortJourneyMappingId :: Id DCJM.CohortJourneyMapping,
     validTill :: UTCTime,
-    optInPeriod :: Maybe DUCM.OptInPeriod
+    -- | Optional; CJM.optInPeriod wins when set. Missing both → Daily.
+    optInPeriod :: Maybe DCJM.OptInPeriod
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

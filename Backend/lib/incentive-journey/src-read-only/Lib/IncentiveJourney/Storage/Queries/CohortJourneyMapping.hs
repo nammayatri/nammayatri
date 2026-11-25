@@ -18,33 +18,37 @@ import qualified Lib.IncentiveJourney.Storage.Beam.CohortJourneyMapping as Beam
 import Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as ReExport
 import qualified Sequelize as Se
 
-create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m ())
+create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m ()
 create = createWithKV
 
-createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping] -> m ())
+createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping] -> m ()
 createMany = traverse_ create
 
 findByCohortId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails -> m [Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping])
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortDetails.CohortDetails ->
+  m [Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping]
 findByCohortId cohortId = do findAllWithKV [Se.Is Beam.cohortId $ Se.Eq (Kernel.Types.Id.getId cohortId)]
 
 findById ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByJourneyId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney -> m [Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping])
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.IncentiveJourney.IncentiveJourney ->
+  m [Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping]
 findByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
 findByPrimaryKey ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m ())
+updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m ()
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -56,6 +60,7 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.Cohor
       Se.Set Beam.maxWaiveOffCount maxWaiveOffCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.optInPeriod optInPeriod,
       Se.Set Beam.parentId (Kernel.Types.Id.getId <$> parentId),
       Se.Set Beam.startDate startDate,
       Se.Set Beam.streakEndRewardExpirationAt streakEndRewardExpirationAt,
