@@ -29,6 +29,7 @@ derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
 derivePersistField "Domain.PaymentMode"
 derivePersistField "Domain.FareSettlementType"
+derivePersistField "Domain.PoolingMode"
 
 mkPersist
   defaultSqlSettings
@@ -54,6 +55,7 @@ mkPersist
       paymentModes (PostgresList Domain.PaymentMode) Maybe
       fareSettlementType Domain.FareSettlementType Maybe
       boothSpecificFleet Text Maybe
+      poolingMode Domain.PoolingMode Maybe
       geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
