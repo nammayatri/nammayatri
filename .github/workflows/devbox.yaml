@@ -216,6 +216,9 @@ jobs:
 
       - name: Stop
         if: env.ACTION == 'stop'
+        # A stop normally takes 1-4 min (9 at worst). Cap it so a hung ssh fails the
+        # run quickly; SCC's poller then retries the stop once on its own.
+        timeout-minutes: 15
         working-directory: tools/Backend/dev
         run: |
           python3 -m devbox_core stop --host "$DEVBOX_HOST" --user "$DEVBOX_USER" \
