@@ -22,6 +22,15 @@ types:
     lon: Double
     searching: Int
 
+  SharedRunPassenger:
+    ticketBookingId: Text
+    firstName: Text
+    seats: Int
+    boardStopCode: Text
+    dropStopCode: Text
+    boarded: Bool
+    fare: HighPrecMoney
+
   AffectedRider:
     bookingId: Text
     firstName: Text
@@ -116,6 +125,15 @@ apis:
         lon: Double
       response:
         type: "[NearbyStandDemand]"
+  - GET:
+      endpoint: /sharedCab/ride/{rideId}/passengers
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        rideId: Text
+      response:
+        type: "[SharedRunPassenger]"
   - POST:
       endpoint: /sharedCab/route/operations
       auth: NoAuth
@@ -125,17 +143,6 @@ apis:
         type: SharedCabRouteOperationReq
       response:
         type: SelectRouteResp
-  - GET:
-      endpoint: /sharedCab/session
-      auth: NoAuth
-      headers:
-        token: Text
-      mandatoryQuery:
-        driverId: Text
-        vehicleNumber: Text
-        agencyId: Text
-      response:
-        type: SharedCabSession
   - POST:
       endpoint: /sharedCab/session/operations
       auth: NoAuth

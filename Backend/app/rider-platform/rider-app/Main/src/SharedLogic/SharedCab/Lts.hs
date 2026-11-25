@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.Lts
     etaAt,
     stopEta,
     nextStopCode,
+    aheadStopCodes,
   )
 where
 
@@ -125,6 +126,9 @@ arrivalUtc e = posixSecondsToUTCTime (fromInteger e.arrivalTimeUnix)
 -- | The stop the cab stands at or heads to.
 nextStopCode :: CabTrack -> Maybe Text
 nextStopCode cab = (.stopCode) <$> listToMaybe cab.etas
+
+aheadStopCodes :: CabTrack -> [Text]
+aheadStopCodes cab = map (.stopCode) cab.etas
 
 routeKey :: (CacheFlow m r, EsqDBFlow m r) => Id DIBC.IntegratedBPPConfig -> Text -> m Text
 routeKey integratedBppConfigId routeCode = do

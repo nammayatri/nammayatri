@@ -2,9 +2,8 @@
 -- drop auto-end and off-route pause. Decisions live in `StopProgress.Rules`.
 module SharedLogic.SharedCab.StopProgress
   ( runStopProgress,
-    stepSessionCab,
     bookingsByPlate,
-    completeArrivedRides,
+    dropArrivedRiders,
   )
 where
 
@@ -13,7 +12,6 @@ import qualified Data.Aeson as A
 import Data.List (findIndex)
 import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
-import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -26,15 +24,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, eachIsolated, releaseSharedCabAllocation, releaseUnboarded)
-import SharedLogic.SharedCab.Allocation.Claim (liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), groupByKey, isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), ApproachStage (ApproachArrived), Blame (BlameNone), Timer (..), allocKeyTtl, blockingTimerDeadline, passedStopBlame, seatIsRiders)
-import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, plateBookings, readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (boardedTouchDue, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, rewriteAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
-import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePosition, readRoutePositions)
+import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), aheadStopCodes, nextStopCode, readRoutePosition, readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Seats (markDropped, routeStopRows)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -84,15 +81,6 @@ runStopProgress cityId live positionsByRoute = do
       (\s e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e)
       (\s -> stepCab cfg now (M.findWithDefault [] s.vehicleNumber byPlate) routeRead s)
       cabs
-
-stepSessionCab :: StopProgressFlow m r c => Session -> m ()
-stepSessionCab s = unless (s.status == ENDED) $ do
-  cfg <- Config.getTunables s.merchantOperatingCityId
-  now <- getCurrentTime
-  bookings <- plateBookings [s.vehicleNumber] [CONFIRMED] >>= liveBookingsOf
-  track <- readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
-  stops <- routeStopRows s.integratedBppConfigId s.routeCode
-  stepCab cfg now bookings (RouteRead (maybeToList track) stops) s
 
 -- | The tick's live bookings by their cab, built once per tick instead of a scan of all of them per cab.
 bookingsByPlate :: [LiveBooking] -> M.Map Text [LiveBooking]
@@ -194,32 +182,20 @@ dropStep cfg now mbCab plate b = do
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
       KeepWaiting -> pure ()
 
--- | Run (forked) on the driver's session poll: a boarded rider whose cab has reached their drop stop has the ride completed and the
--- journey ended now, instead of after the tick's drop clock. Needs a fresh fix, like the tick; a degraded booking is left to the
--- degraded sweep. markDropped only ends INPROGRESS tickets under the booking lock, so a rider not yet boarded, or a ride a concurrent
--- poll or the tick already ended, is untouched.
-completeArrivedRides :: StopProgressFlow m r c => Session -> m ()
-completeArrivedRides s = unless (s.status == ENDED) $ do
-  cfg <- Config.getTunables s.merchantOperatingCityId
-  now <- getCurrentTime
-  mbTrack <- mfilter (isFreshPosition now cfg.ltsMaxAgeSec) <$> readRoutePosition s.integratedBppConfigId s.routeCode plate
-  whenJust mbTrack $ \track -> do
-    cab <- (`cabFix` track) <$> routeStopRows s.integratedBppConfigId s.routeCode
-    arrived <- filter (reachedDropStop cfg cab . (.toStationCode)) <$> liveBookingsForVehicle plate
-    completed <- fmap catMaybes . forM arrived $ \b -> do
-      degraded <- isJust <$> shared (Redis.get @A.Value (degradedKey b.id))
-      if degraded
-        then pure Nothing
-        else do
+dropArrivedRiders :: StopProgressFlow m r c => [DFTB.FRFSTicketBooking] -> m ()
+dropArrivedRiders bookings =
+  whenJust (listToMaybe [(run, routeCode, plate) | run <- bookings, Just routeCode <- [run.routeCode], Just plate <- [run.vehicleNumber]]) $ \(run, routeCode, plate) -> do
+    cfg <- Config.getTunables run.merchantOperatingCityId
+    now <- getCurrentTime
+    mbTrack <- mfilter (isFreshPosition now cfg.ltsMaxAgeSec) <$> readRoutePosition run.integratedBppConfigId routeCode plate
+    whenJust mbTrack $ \track -> whenJust (nextStopCode track) $ \nextStop -> do
+      let ahead = aheadStopCodes track
+          reached stop = stop `notElem` ahead || (stop == nextStop && track.onStop == Just True)
+      forM_ (filter (reached . (.toStationCode)) bookings) $ \b -> do
+        degraded <- isJust <$> shared (Redis.get @A.Value (degradedKey b.id))
+        unless degraded $ do
           markDropped b
           Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
-          logInfo $ "shared-cab: completed ride " <> b.id.getId <> " on reaching drop stop " <> b.toStationCode <> " for " <> plate
-          pure (Just b)
-    unless (null completed) $ do
-      switched <- Session.applyQueuedRoute plate
-      when switched $ releaseUnboarded plate RouteChanged
-  where
-    plate = s.vehicleNumber
 
 -- | A driver who confirmed the route keeps the riders for one more `offRouteSec`, and is asked again within it.
 offRouteStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe Bool -> Session -> m ()

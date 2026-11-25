@@ -104,3 +104,15 @@ data SharedCabSessionOperationReq = SharedCabSessionOperationReq
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedRunPassenger = SharedRunPassenger
+  { boardStopCode :: Kernel.Prelude.Text,
+    boarded :: Kernel.Prelude.Bool,
+    dropStopCode :: Kernel.Prelude.Text,
+    fare :: Kernel.Types.Common.HighPrecMoney,
+    firstName :: Kernel.Prelude.Text,
+    seats :: Kernel.Prelude.Int,
+    ticketBookingId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

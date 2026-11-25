@@ -13,6 +13,7 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     mkDriverRideRes,
+    withSharedRunPassengers,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
     ResolvedCalling (..),
@@ -77,12 +78,15 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
+import Environment (Flow)
+import qualified Environment as Env
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
-import Kernel.Prelude (readMaybe, roundToIntegral)
+import Kernel.Prelude (asks, readMaybe, roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
@@ -90,7 +94,7 @@ import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Id
 import Kernel.Types.Price
 import qualified Kernel.Types.Time as Fields
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, logError, withTryCatch)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -100,6 +104,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Numeric
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.FareBreakup as SFB
 import SharedLogic.FareCalculator (fareSum)
@@ -290,6 +295,8 @@ data DriverRideRes = DriverRideRes
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
     enableManualArrival :: Maybe Bool,
+    routeCode :: Maybe Text,
+    sharedRunPassengers :: Maybe [CallBAPInternal.SharedRunPassenger],
     invoiceId ::
       Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
   }
@@ -886,6 +893,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
         enableManualArrival,
+        routeCode = ride.routeCode,
+        sharedRunPassengers = Nothing,
         invoiceId = mbInvoiceId
       }
 
@@ -903,6 +912,22 @@ pickSlabBy threshold value slabs = do
   case reverse $ NE.filter ((<= value) . threshold) sorted of
     slab : _ -> slab
     [] -> NE.head sorted
+
+withSharedRunPassengers :: Bool -> DRide.Ride -> DRB.Booking -> DriverRideRes -> Flow DriverRideRes
+withSharedRunPassengers fetch ride booking res
+  | fetch && DTC.isSharedRouteTrip booking.tripCategory && ride.status `elem` [DRide.NEW, DRide.INPROGRESS] = do
+    passengers <- fetchSharedRunPassengers ride.id
+    pure res {sharedRunPassengers = Just passengers}
+  | otherwise = pure res
+
+fetchSharedRunPassengers :: Id DRide.Ride -> Flow [CallBAPInternal.SharedRunPassenger]
+fetchSharedRunPassengers runRideId = do
+  bap <- asks (.appBackendBapInternal)
+  withTryCatch "sharedRunPassengers" (IM.withInMemCache ["SharedRunPassengers", runRideId.getId] 3 $ CallBAPInternal.getSharedRunPassengers bap.apiKey bap.url runRideId.getId) >>= \case
+    Right passengers -> pure passengers
+    Left err -> do
+      logError $ "Shared-run passengers failed for ride " <> runRideId.getId <> ": " <> T.pack (show err)
+      pure []
 
 -- calculateLocations moved from UI.Ride
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop

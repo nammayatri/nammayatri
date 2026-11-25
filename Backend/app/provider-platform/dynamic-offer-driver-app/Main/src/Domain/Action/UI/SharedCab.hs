@@ -12,13 +12,11 @@
 module Domain.Action.UI.SharedCab
   ( getPublicTransportData,
     postSharedCabRouteOperations,
-    getSharedCabSession,
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
     postSharedCabBookingCall,
     postSharedCabBookingMessage,
     getSharedCabCallStatus,
-    sharedCabTrips,
     tripTargets,
     sharedCabTripActive,
     sharedCabFeedVersion,
@@ -31,7 +29,6 @@ where
 
 import API.Types.UI.SharedCab
 import qualified Data.Aeson as DA
-import Data.Time (Day, UTCTime (..))
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Common as DCommon
@@ -51,7 +48,6 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
@@ -60,15 +56,12 @@ import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified SharedLogic.SharedCab.Trip as Trip
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleTrip as QVT
 import qualified Tools.Call as TCall
 import Tools.Error
-import qualified Tools.Fields as Fields
 
 type DriverAuthInfo = (Id SP.Person, Id Merchant, Id MerchantOperatingCity)
 
@@ -79,9 +72,6 @@ getPublicTransportData auth = requireDriver auth >>= routeData
 
 postSharedCabRouteOperations :: TokenAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 postSharedCabRouteOperations auth req = requireDriver auth >>= (`routeOperation` req)
-
-getSharedCabSession :: TokenAuthInfo -> Flow (Maybe SharedCabSession)
-getSharedCabSession auth = requireDriver auth >>= currentSession
 
 postSharedCabSessionOperations :: TokenAuthInfo -> SharedCabSessionOperationReq -> Flow SharedCabSession
 postSharedCabSessionOperations auth req = requireDriver auth >>= (`sessionOperation` req)
@@ -117,19 +107,6 @@ tripTargets tags cityTripTarget cityEarningsTarget =
         DA.Success (n :: Double) -> Just n
         _ -> Nothing
 
-sharedCabTrips :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id SP.Person -> Id MerchantOperatingCity -> Maybe Day -> Maybe Integer -> Maybe Integer -> m [SharedCabTripSummary]
-sharedCabTrips personId merchantOpCityId mbDate mbLimit mbOffset = do
-  _ <- validateDriver personId
-  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  trips <- case (mbDate, mbLimit) of
-    (Just day, _) -> do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let dayStart = addUTCTime (negate (fromIntegral transporterConfig.timeDiffFromUtc)) (UTCTime day 0)
-      QVT.findAllByDriverIdStartedBetween Nothing Nothing personId dayStart (addUTCTime 86400 dayStart)
-    (Nothing, Just limit) -> QVT.findAllByDriverId (Just (fromIntegral limit)) (fromIntegral <$> mbOffset) personId
-    (Nothing, Nothing) -> throwError (InvalidRequest "day or limit is required")
-  pure (map (tripSummary merchantOpCity.currency) trips)
-
 sharedCabTripActive :: Id SP.Person -> Bool -> Maybe DVehicle.VehicleAPIEntity -> Flow (Maybe Bool)
 sharedCabTripActive personId isSharedCab = \case
   Just vehicle
@@ -137,20 +114,6 @@ sharedCabTripActive personId isSharedCab = \case
       either (const Nothing) (Just . maybe False ((== personId) . (.driverId)))
         <$> withTryCatch "sharedCabTripActive" (QVT.findActiveByVehicleNumber vehicle.registrationNo)
   _ -> pure Nothing
-
-tripSummary :: Currency -> DVT.VehicleTrip -> SharedCabTripSummary
-tripSummary currency trip =
-  SharedCabTripSummary
-    { tripId = trip.id.getId,
-      routeCode = trip.routeCode,
-      fromStop = trip.fromStop,
-      toStop = trip.toStop,
-      status = trip.status,
-      startedAt = trip.startedAt,
-      endedAt = trip.endedAt,
-      earnings = fromMaybe 0 trip.earnings,
-      currency
-    }
 
 requireDriver :: TokenAuthInfo -> Flow DriverAuthInfo
 requireDriver (mbPersonId, merchantId, merchantOpCityId) = do
@@ -253,14 +216,6 @@ selectSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req routeCod
 -- | A select refused for riders on board answers with them instead of the session, which is unchanged.
 routeSession :: SelectRouteResp -> Maybe (Maybe SharedCabSession)
 routeSession resp = if isJust resp.affectedRiders then Nothing else Just resp.session
-
-currentSession :: DriverAuthInfo -> Flow (Maybe SharedCabSession)
-currentSession auth@(personId, _merchantId, merchantOpCityId) = do
-  vehicle <- validateSharedCabDriver personId
-  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-  bap <- bapInternal
-  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) Just $
-    SharedCabBAP.getSharedCabSession bap.apiKey bap.url personId.getId vehicle.registrationNo integratedBPPConfig.agencyKey
 
 endSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 endSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req = do

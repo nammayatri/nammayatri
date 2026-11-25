@@ -577,6 +577,12 @@ FRFSTicketBooking:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
+    findAllByRideIdAndStatuses:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - rideId
+          - in: [status]
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]

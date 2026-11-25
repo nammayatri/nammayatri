@@ -4,7 +4,6 @@ module API.Types.UI.SharedCab where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.SharedCabSession
-import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -80,20 +79,6 @@ data SharedCabSessionOperationReq = SharedCabSessionOperationReq
     operation :: SharedCabSessionOperation,
     version :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabTripSummary = SharedCabTripSummary
-  { currency :: Kernel.Types.Common.Currency,
-    earnings :: Kernel.Types.Common.HighPrecMoney,
-    endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    fromStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeCode :: Kernel.Prelude.Text,
-    startedAt :: Kernel.Prelude.UTCTime,
-    status :: Domain.Types.VehicleTrip.VehicleTripStatus,
-    toStop :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    tripId :: Kernel.Prelude.Text
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

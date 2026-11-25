@@ -3,18 +3,15 @@
 -- | driver-app -> rider-app client for the shared-cab internal API (/internal/sharedCab/*). Every call maps the rider app's
 -- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
-  ( SessionAPI,
-    BAPRouteOperationReq (..),
+  ( BAPRouteOperationReq (..),
     BAPSessionOperationReq (..),
     BAPBookingOperationReq (..),
-    sessionProbeClient,
     BAPDemandReq (..),
     getSharedCabRouteData,
     postSharedCabRoutesDemand,
     NearbyStandDemand (..),
     getSharedCabNearbyDemand,
     postRouteOperation,
-    getSharedCabSession,
     postSessionOperation,
     postBookingOperation,
     RiderCallNumberResp (..),
@@ -27,7 +24,6 @@ module SharedLogic.SharedCab.RiderClient
 where
 
 import API.Types.UI.SharedCab
-import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.Extra.SharedCab ()
 import Domain.Types.SharedCabSession
@@ -136,18 +132,6 @@ type NearbyDemandAPI =
 
 type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
 
--- | Parameterised on the response so the reconciler can probe the same endpoint without decoding the session. agencyId names the
--- rider-app merchant to ask for the plate's run if rider-app lost the session.
-type SessionAPI res =
-  InternalAPI
-    ( "session"
-        :> QueryParam' '[Required, Strict] "driverId" Text
-        :> QueryParam' '[Required, Strict] "vehicleNumber" Text
-        :> QueryParam' '[Required, Strict] "agencyId" Text
-        :> TokenHeader
-        :> Get '[JSON] res
-    )
-
 type SessionOperationAPI = InternalAPI ("session" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPSessionOperationReq :> Post '[JSON] SharedCabSession)
 
 type BookingOperationAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPBookingOperationReq :> Post '[JSON] SharedCabSession)
@@ -176,13 +160,6 @@ data BAPMessageReq = BAPMessageReq
   deriving anyclass (ToJSON)
 
 type MessageAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "message" :> TokenHeader :> ReqBody '[JSON] BAPMessageReq :> Post '[JSON] APISuccess)
-
-sessionClient :: Text -> Text -> Text -> Maybe Text -> EulerClient (Maybe SharedCabSession)
-sessionClient = client (Proxy @(SessionAPI (Maybe SharedCabSession)))
-
--- | The reconciler only asks whether a session exists, so it does not decode one.
-sessionProbeClient :: Text -> Text -> Text -> Maybe Text -> EulerClient Aeson.Value
-sessionProbeClient = client (Proxy @(SessionAPI Aeson.Value))
 
 callRider :: (BAPFlow m r, SanitizedUrl api, ToJSON a) => BaseUrl -> Text -> EulerClient a -> Proxy api -> m a
 callRider internalUrl desc eulerClient api = do
@@ -215,17 +192,6 @@ getSharedCabNearbyDemand apiKey internalUrl agencyId latitude longitude =
 postRouteOperation :: BAPFlow m r => Text -> BaseUrl -> BAPRouteOperationReq -> m SelectRouteResp
 postRouteOperation apiKey internalUrl req = do
   callRider internalUrl "SharedCabRouteOperation" (client (Proxy @RouteOperationAPI) (Just apiKey) req) (Proxy @RouteOperationAPI)
-
--- | No live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (not a bare status); every other error re-throws verbatim.
-getSharedCabSession :: BAPFlow m r => Text -> BaseUrl -> Text -> Text -> Text -> m (Maybe SharedCabSession)
-getSharedCabSession apiKey internalUrl driverId vehicleNumber agencyId = do
-  callRider internalUrl "GetSharedCabSession" (sessionClient driverId vehicleNumber agencyId (Just apiKey)) (Proxy @(SessionAPI (Maybe SharedCabSession)))
-    `catch` \case
-      BapProxyResponseError _ code _ _ | code == sessionNotFoundErrorCode -> pure Nothing
-      err -> throwError err
-
-sessionNotFoundErrorCode :: Text
-sessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
 
 postSessionOperation :: BAPFlow m r => Text -> BaseUrl -> BAPSessionOperationReq -> m SharedCabSession
 postSessionOperation apiKey internalUrl req = do

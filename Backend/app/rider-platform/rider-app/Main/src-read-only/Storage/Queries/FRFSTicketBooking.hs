@@ -30,6 +30,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ()
 createMany = traverse_ create
 
+findAllByRideIdAndStatuses ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  ([Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByRideIdAndStatuses rideId status = do findAllWithKV [Se.And [Se.Is Beam.rideId $ Se.Eq rideId, Se.Is Beam.status $ Se.In status]]
+
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking]
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 

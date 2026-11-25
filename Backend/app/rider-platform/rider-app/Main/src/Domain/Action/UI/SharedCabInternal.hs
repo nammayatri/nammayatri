@@ -2,10 +2,10 @@ module Domain.Action.UI.SharedCabInternal
   ( getSharedCabRoutesData,
     postSharedCabRoutesDemand,
     getSharedCabNearbyDemand,
+    getSharedCabRidePassengers,
     postSharedCabRouteOperations,
     postSharedCabSessionOperations,
     postSharedCabBookingOperations,
-    getSharedCabSession,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
     chatMessageBody,
@@ -19,9 +19,11 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -49,7 +51,6 @@ import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.RateLimit (enforceCallLimit, enforceChatMessageLimit)
-import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
@@ -139,6 +140,38 @@ getSharedCabNearbyDemand agencyId latitude longitude mbToken = do
   stands <- Demand.nearbyStandDemand cfg cityId.getId (LatLong latitude longitude)
   pure [API.NearbyStandDemand {stopCode = s.stopCode, lat = s.point.lat, lon = s.point.lon, searching = s.searching} | s <- stands]
 
+getSharedCabRidePassengers :: Text -> Maybe Text -> Environment.Flow [API.SharedRunPassenger]
+getSharedCabRidePassengers rideId mbToken = do
+  checkToken mbToken
+  bookings <- QFRFSTicketBooking.findAllByRideIdAndStatuses (Just rideId) passengerStatuses
+  if null bookings
+    then pure []
+    else do
+      fork "sharedRunDropArrived" (StopProgress.dropArrivedRiders bookings)
+      tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+      let statusByBooking = Map.fromList [(t.frfsTicketBookingId, t.status) | t <- tickets]
+      persons <- QPersonExtra.findAllByIds (map (.riderId) bookings)
+      parties <- Booking.partySizes bookings
+      pure
+        [ API.SharedRunPassenger
+            { ticketBookingId = b.id.getId,
+              firstName = riderFirstName persons b,
+              seats = Booking.bookingSeats (Booking.partyOf parties b) (maybeToList mbStatus),
+              boardStopCode = b.fromStationCode,
+              dropStopCode = b.toStationCode,
+              boarded = mbStatus == Just DFRFSTicket.INPROGRESS,
+              fare = b.totalPrice.amount
+            }
+          | b <- bookings,
+            let mbStatus = Map.lookup b.id statusByBooking
+        ]
+
+passengerStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]
+passengerStatuses = [DFRFSTicketBookingStatus.CONFIRMED]
+
+riderFirstName :: [DP.Person] -> DFTB.FRFSTicketBooking -> Text
+riderFirstName persons b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
+
 required :: Text -> Maybe a -> Environment.Flow a
 required field = fromMaybeM (InvalidRequest (field <> " is required for this operation"))
 
@@ -223,20 +256,6 @@ ownSession merchantId driver plate = Session.getSession merchantId plate >>= eit
 agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
 agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
 
--- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
-getSharedCabSession :: Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession agencyId driver plate mbToken = do
-  checkToken mbToken
-  merchantId <- agencyMerchant agencyId
-  s <- ownSession merchantId driver plate
-  -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
-  -- journey completed (the next poll shows it), then the cab's tick step runs
-  fork "sharedCabSessionStopProgress" $ do
-    withTryCatch "sharedCabCompleteArrivedRides" (StopProgress.completeArrivedRides s)
-      >>= either (\e -> logError $ "shared-cab: completing arrived rides failed for " <> s.vehicleNumber <> ": " <> show e) pure
-    StopProgress.stepSessionCab s
-  mkSessionRespFrom CachedCab s
-
 -- | Cab full: every unboarded allocation goes as SEAT_LOST, then walk-ups take the seats left, both under the plate lock; the releases'
 -- pushes and re-ticks go out after it.
 postSharedCabSessionOperations :: Maybe Text -> API.SharedCabSessionOperationReq -> Environment.Flow View.SharedCabSession
@@ -309,7 +328,7 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
       persons <- QPersonExtra.findAllByIds (map (.riderId) bookings)
       now <- getCurrentTime
       let pointsByCode = Map.fromList stopPoints
-          nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
+          nameOf = riderFirstName persons
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
           onThisTrip b = LegState.tripMatches b.vehicleTripId sessionTrip
       parties <- Booking.partySizes bookings
@@ -363,13 +382,8 @@ liveRiderRows cfg sessionTrip stopPoints polyline addresses plate = do
 
 -- | Until the tick lands: moving, next stops are the whole route. `available` is the seats free from the cab's next stop
 -- to the route's end: what walk-ups could still take.
-data CabReads = FreshCab | CachedCab
-
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
-mkSessionResp = mkSessionRespFrom FreshCab
-
-mkSessionRespFrom :: CabReads -> Session -> Environment.Flow View.SharedCabSession
-mkSessionRespFrom cabReads s = do
+mkSessionResp s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
   route <- sessionRoute integratedBppConfig s.routeCode
   stops <- routeStops integratedBppConfig s.routeCode
@@ -379,15 +393,8 @@ mkSessionRespFrom cabReads s = do
   addresses <- Booking.stopAddresses integratedBppConfig.merchantOperatingCityId (map (.stopCode) stops)
   shapePolyline <- (>>= (.polyline)) <$> OTPRest.getRouteByRouteId integratedBppConfig s.routeCode
   let polyline = maybe [] KEPP.decode shapePolyline
-  snapshotCab <- case cabReads of
-    CachedCab -> find ((== s.vehicleNumber) . (.session.vehicleNumber)) <$> RouteSnapshot.routeSnapshot s.merchantOperatingCityId s.routeCode
-    FreshCab -> pure Nothing
-  -- a cab missing from the snapshot (PAUSED, or not yet in it) is read fresh
-  (mbTrack, available) <- case snapshotCab of
-    Just c -> pure (c.track, Seats.freeOver c.seats (Seats.nextStopIdx c.seats c.track, Seats.routeEnd c.seats))
-    Nothing -> do
-      mbTrack <- Lts.readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
-      (mbTrack,) <$> Seats.freeAhead s mbTrack
+  mbTrack <- Lts.readRoutePosition s.integratedBppConfigId s.routeCode s.vehicleNumber
+  available <- Seats.freeAhead s mbTrack
   let vehicle = (.position) <$> mbTrack
       nextIdx = fromMaybe 0 (mbTrack >>= Lts.nextStopCode >>= \code -> findIndex ((== code) . (.stopCode)) stops)
       ahead = if atRouteEnd cfg.atStopRadiusM stops nextIdx mbTrack then [] else drop nextIdx stops

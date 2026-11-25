@@ -40,7 +40,6 @@ module Domain.Action.UI.Ride
   )
 where
 
-import API.Types.UI.SharedCab (SharedCabTripSummary)
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM hiding (filter)
@@ -53,7 +52,6 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
-import qualified Domain.Action.UI.SharedCab as SharedCab
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Location as DLoc
@@ -212,13 +210,11 @@ data ArrivedAtPickupReq = ArrivedAtPickupReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverRideListRes = DriverRideListRes
-  { list :: [RideCommon.DriverRideRes],
-    sharedCabTrips :: [SharedCabTripSummary]
+  { list :: [RideCommon.DriverRideRes]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Maybe Integer ->
@@ -229,7 +225,7 @@ listDriverRides ::
   Maybe Text ->
   Maybe Int ->
   Maybe Bool ->
-  m DriverRideListRes
+  Flow DriverRideListRes
 listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive rideStatuses mbDay mbFleetOwnerId mbNumOfDays mbFinanceData = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
   driverPerson <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -244,26 +240,21 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive rideStatuses mbDay 
     (False, Just True) -> return []
     _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive rideStatuses mbDay mbNumOfDays
 
-  driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
+  driverRideLis <- forM rides $ buildDriverRideResItem (mbOnlyActive == Just True) driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
       unless (isJust isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
       return $ filter (\ride -> ride.fleetOwnerId == (Just fleetOwnerId)) driverRideLis
     Nothing -> return driverRideLis
-  trips <-
-    if mbOnlyActive == Just True
-      then pure []
-      else SharedCab.sharedCabTrips driverId (fromMaybe driverPerson.merchantOperatingCityId mocId) mbDay mbLimit mbOffset
-  pure DriverRideListRes {list = sortOn (Down . (.bookingType)) filteredRides, sharedCabTrips = trips}
+  pure DriverRideListRes {list = sortOn (Down . (.bookingType)) filteredRides}
 
 getDriverRideById ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Id DRide.Ride ->
   Maybe Bool ->
-  m RideCommon.DriverRideRes
+  Flow RideCommon.DriverRideRes
 getDriverRideById driverId mocId rideId mbFinanceData = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
   driverPerson <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -276,18 +267,18 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking)
+  buildDriverRideResItem True driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking)
 
 buildDriverRideResItem ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  Bool ->
   Id DP.Person ->
   DDI.DriverInformation ->
   L.Language ->
   Maybe RideCommon.EarningsLabels ->
   Maybe DTC.TransporterConfig ->
   (DRide.Ride, DRB.Booking) ->
-  m RideCommon.DriverRideRes
-buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking) = do
+  Flow RideCommon.DriverRideRes
+buildDriverRideResItem fetchSharedRunPassengers driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking) = do
   rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
   rideRating <- runInReplica $ QR.findRatingForRide ride.id
   driverNumber <- RD.getDriverNumber rideDetail
@@ -304,6 +295,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
       then pure transporterConfig
       else getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest) (bookingCityConfig >>= DTC.enableManualArrival)
+    >>= RideCommon.withSharedRunPassengers fetchSharedRunPassengers ride booking
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
 arrivedAtPickup rideId req = do
