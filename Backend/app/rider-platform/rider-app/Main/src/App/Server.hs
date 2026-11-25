@@ -15,10 +15,13 @@
 module App.Server where
 
 import API
+import API.UI.Issue (castMOCityByMerchantShortIdAndCity)
 import App.CrossCloudProxy (crossCloudProxy)
 -- import Beckn.Core (logBecknRequest)
 import Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Common as IssueCommon
+import IssueManagement.Tools.LookupWhitelist (issueLookupGuard)
 import Kernel.Tools.Metrics.Init
 import qualified Kernel.Types.App as Fields
 import Kernel.Types.Flow
@@ -26,8 +29,10 @@ import Kernel.Utils.App
 import qualified Kernel.Utils.Servant.Server as BU
 import qualified Network.HTTP.Client as Http
 import Servant
+import Storage.Beam.IssueManagement ()
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth (verifyDashboardUserAction)
+import "lib-dashboard" Tools.Servant.HeaderAuth (guardVerification)
 
 run :: Http.Manager -> Env -> Application
 run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
@@ -59,6 +64,9 @@ run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
-        :. verifyDashboardUserAction @(FlowR AppEnv)
+        :. guardVerification issueLookupCheck (verifyDashboardUserAction @(FlowR AppEnv))
         :. verifyPartnerOrganizationAction @(FlowR AppEnv)
         :. EmptyContext
+    -- Chat lookups (requests carrying the issue lookup token) may only reach
+    -- endpoints whitelisted in this app's issue_config for the city.
+    issueLookupCheck (_, endpointId) = issueLookupGuard castMOCityByMerchantShortIdAndCity IssueCommon.CUSTOMER endpointId
