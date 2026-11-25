@@ -500,6 +500,7 @@ library
       Domain.Action.UI.SearchRoute
       Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabInternal
+      Domain.Action.UI.SharedRun
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -1433,6 +1434,7 @@ library
       API.Action.UI.SearchRoute
       API.Action.UI.SharedCab
       API.Action.UI.SharedCabInternal
+      API.Action.UI.SharedRun
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation

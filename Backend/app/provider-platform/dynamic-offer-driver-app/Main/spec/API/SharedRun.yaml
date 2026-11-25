@@ -1,0 +1,20 @@
+imports:
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+
+module: SharedRun
+
+types: {}
+
+apis:
+  # the assigned driver confirms they will drive this shared-route run (asked at the run's check-in time);
+  # idempotent, only on the caller's own UPCOMING run
+  - POST:
+      endpoint: /sharedRun/{rideId}/acknowledge
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: APISuccess
