@@ -256,10 +256,11 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
             platformType = DIBC.MULTIMODAL,
             requireNearbyBuses = True,
             requireRecentRide = False,
-            fetchAll = Nothing
+            fetchAll = Nothing,
+            serviceTier = Nothing
           }
 
-  nearbyBuses <- getSimpleNearbyBuses merchantOperatingCityId riderConfig nearbyBusesReq
+  nearbyBuses <- getSimpleNearbyBuses merchantOperatingCityId riderConfig Nothing nearbyBusesReq
   logDebug $ "NearbyDrivers: Got " <> show (length nearbyBuses) <> " nearby buses"
 
   -- Convert NearbyBus to PublicTransportInfo with distance calculation

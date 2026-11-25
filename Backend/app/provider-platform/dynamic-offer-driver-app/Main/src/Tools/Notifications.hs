@@ -765,7 +765,7 @@ notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
     lang
     Nothing
     (createFCMReq "SHARED_CAB_CHECK_IN" personId.getId FCM.Person identity)
-    (Just ())
+    (Just $ object ["routeCode" .= routeCode])
     [("routeCode", routeCode)]
     Nothing
 
