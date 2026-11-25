@@ -19,21 +19,25 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.StopInformation as Beam
 import qualified Storage.Queries.Transformers.Ride
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StopInformation.StopInformation -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.StopInformation.StopInformation -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.StopInformation.StopInformation] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.StopInformation.StopInformation] -> m ()
 createMany = traverse_ create
 
-findAllByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m [Domain.Types.StopInformation.StopInformation])
+findAllByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m [Domain.Types.StopInformation.StopInformation]
 findAllByRideId rideId = do findAllWithKVAndConditionalDB [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)] Nothing
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StopInformation.StopInformation -> m (Maybe Domain.Types.StopInformation.StopInformation))
+findAllByRideIdFromKVAndDB :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m [Domain.Types.StopInformation.StopInformation]
+findAllByRideIdFromKVAndDB rideId = do findAllWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.StopInformation.StopInformation -> m (Maybe Domain.Types.StopInformation.StopInformation)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateByStopLocIdAndRideId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Location.Location -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> (Kernel.Types.Id.Id Domain.Types.Location.Location -> (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())))
 updateByStopLocIdAndRideId waitingTimeEnd stopEndLatLng stopLocId rideId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -44,10 +48,10 @@ updateByStopLocIdAndRideId waitingTimeEnd stopEndLatLng stopLocId rideId = do
     ]
     [Se.And [Se.Is Beam.stopLocId $ Se.Eq (Kernel.Types.Id.getId stopLocId), Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StopInformation.StopInformation -> m (Maybe Domain.Types.StopInformation.StopInformation))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.StopInformation.StopInformation -> m (Maybe Domain.Types.StopInformation.StopInformation)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StopInformation.StopInformation -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.StopInformation.StopInformation -> m ()
 updateByPrimaryKey (Domain.Types.StopInformation.StopInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV

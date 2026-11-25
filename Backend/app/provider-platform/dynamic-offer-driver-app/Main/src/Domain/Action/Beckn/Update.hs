@@ -19,6 +19,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import Data.List (last)
+import qualified Data.List as List
 import Data.List.Split (chunksOf)
 import Data.Maybe
 import qualified Data.Set as Set
@@ -29,6 +30,7 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
+import qualified Domain.Action.UI.Ride.Common as RideCommon
 import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DBooking
@@ -54,11 +56,14 @@ import qualified Domain.Types.VehicleServiceTier as Fields
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Maps.HasCoordinates as HC
 import Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Notification.FCM.Types as CallAPIDetails (CallAPIDetails (..))
 import Kernel.External.Types
+import Kernel.Prelude (safeInit)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
@@ -109,6 +114,7 @@ data DUpdateReq
   | UEditLocationReq EditLocationReq
   | UAddStopReq AddStopReq
   | UEditStopReq EditStopReq
+  | UUpdateStopsReq UpdateStopsReq
   | UChangeServiceTierReq ChangeServiceTierReq
   | UAddBaggageReq AddBaggageReq
 
@@ -139,6 +145,17 @@ data EditStopReq = EditStopReq
     stops' :: [DL.Location']
   }
 
+data UpdateStopsReq = UpdateStopsReq
+  { bookingId :: Id DBooking.Booking,
+    stopsVersion :: Maybe Int,
+    stops :: [RequestedStop DL.Location']
+  }
+
+data RequestedStop location
+  = KeepStop Int
+  | AddStop location
+  deriving (Functor)
+
 data ChangeServiceTierReq = ChangeServiceTierReq
   { bookingId :: Id DBooking.Booking,
     newVehicleServiceTier :: DVST.ServiceTierType,
@@ -158,6 +175,7 @@ getBookingId (UPaymentCompletedReq req) = req.bookingId
 getBookingId (UEditLocationReq req) = req.bookingId
 getBookingId (UAddStopReq req) = req.bookingId
 getBookingId (UEditStopReq req) = req.bookingId
+getBookingId (UUpdateStopsReq req) = req.bookingId
 getBookingId (UChangeServiceTierReq req) = req.bookingId
 getBookingId (UAddBaggageReq req) = req.bookingId
 
@@ -198,6 +216,9 @@ handler (UEditStopReq EditStopReq {..}) = do
   case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc True
+handler (UUpdateStopsReq UpdateStopsReq {..}) = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  updateStopsFromRider booking stopsVersion (map (fmap (mkLocation booking.merchantOperatingCityId)) stops)
 handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.status == DBooking.NEW) $
@@ -784,10 +805,113 @@ processStop booking location isEdit = do
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()
 validateStopReq booking isEdit = do
+  mbStopsVersion <- RideCommon.getRentalStopsVersion booking.id
+  when (isJust mbStopsVersion) $ throwError (InvalidRequest $ "Stops of booking " <> booking.id.getId <> " are changed as a list now")
   unless (booking.status `elem` [DBooking.NEW, DBooking.TRIP_ASSIGNED]) $ throwError $ BookingInvalidStatus ("Cannot add stop in this booking " <> booking.id.getId) -- check for rental?
   if isEdit
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
+
+updateStopsFromRider :: DBooking.Booking -> Maybe Int -> [RequestedStop DL.Location] -> Flow ()
+updateStopsFromRider booking stopsVersion requestedStops = do
+  unless (DTC.isRentalTrip booking.tripCategory) $
+    throwError (InvalidRequest "Stops can be changed during the ride only on rentals")
+  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId:" <> booking.id.getId)
+  unless (ride.status == DRide.INPROGRESS) $
+    throwError (RideInvalidStatus "Stops can be changed only while the ride is in progress")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let maxPendingStops = 5 :: Int
+      nextStopLockThreshold = max (fromMaybe 1000 transporterConfig.rentalNextStopLockThreshold) (fromMaybe 500 transporterConfig.arrivedStopThreshold)
+  mbDriverLocation <- getDriverLocation ride
+  (newVersion, newStops, mbNextStop, hadPendingStop) <- RideCommon.withRideStopsLock 10 ride.id $ do
+    currentRide <- QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    unless (currentRide.status == DRide.INPROGRESS) $
+      throwError (RideInvalidStatus "Stops can be changed only while the ride is in progress")
+    currentBooking <- QRB.findById booking.id >>= fromMaybeM (BookingDoesNotExist booking.id.getId)
+    mbCurrentVersion <- RideCommon.getRentalStopsVersion booking.id
+    unless (stopsVersion == mbCurrentVersion) $ do
+      whenJust mbCurrentVersion $ \currentVersion -> do
+        currentStops <- RideCommon.getRentalStops ride.id
+        fork "rental stops: resend current list" $ sendStopsUpdatedToBAP currentBooking ride currentVersion currentStops
+      throwError (InvalidRequest "The stops changed since they were loaded. Refresh and try again.")
+    currentStops <- RideCommon.getCurrentRentalStops currentBooking ride
+    let (reachedStops, pendingStops) = List.partition (isJust . (.reachedAt)) currentStops
+        keptOrders = [keptOrder | KeepStop keptOrder <- requestedStops]
+    when (null requestedStops) $
+      throwError (InvalidRequest "Keep at least one stop left to reach")
+    when (length requestedStops > maxPendingStops) $
+      throwError (InvalidRequest $ "A rental ride can have at most " <> show maxPendingStops <> " stops left to reach")
+    unless (List.nub keptOrders == keptOrders) $
+      throwError (InvalidRequest "The same stop appears twice")
+    resolvedStops <- forM requestedStops $ \requestedStop -> case requestedStop of
+      KeepStop keptOrder -> Left <$> (find (\stop -> stop.order == keptOrder) pendingStops & fromMaybeM (InvalidRequest $ "Stop " <> show keptOrder <> " is not a stop left to reach"))
+      AddStop location -> pure (Right location)
+    let (mbKeptNextStop, toPlace) = case (pendingStops, resolvedStops) of
+          (nextStop : _, Left keptStop : rest) | keptStop.order == nextStop.order -> (Just nextStop, rest)
+          _ -> (Nothing, resolvedStops)
+    whenJust (listToMaybe pendingStops) $ \nextStop ->
+      when (isNothing mbKeptNextStop) $
+        checkDriverFarFromNextStop ride mbDriverLocation nextStop nextStopLockThreshold
+    maxOrder <- max <$> QLM.maxOrderByEntityWithKV ride.id.getId <*> QLM.maxOrderByEntityWithKV booking.id.getId
+    placedStops <- forM (zip [maxOrder + 1 ..] toPlace) $ \(order, resolvedStop) -> case resolvedStop of
+      Left keptStop -> pure keptStop {order}
+      Right location -> do
+        QL.create location
+        pure RentalStop {order, location, reachedAt = Nothing}
+    let newPendingStops = maybeToList mbKeptNextStop <> placedStops
+        stops = reachedStops <> newPendingStops
+        version = maybe 1 (+ 1) mbCurrentVersion
+        mbNext = listToMaybe newPendingStops
+    QRide.updateHasStops ride.id (Just True)
+    RideCommon.setRentalStopsVersion booking.id version
+    QRB.updateRentalStops booking.id ((.location.id.getId) <$> mbNext)
+    syncStopMappings ride currentBooking stops
+    logInfo $ "Rider changed the stops of booking " <> booking.id.getId <> ": version " <> show version <> ", orders " <> show (map (.order) stops)
+    pure (version, stops, mbNext, not (null pendingStops))
+  whenJust mbNextStop $ \nextStop ->
+    fork "rental stops: driver push" $ do
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      Notify.notifyStopModification ride.status driver (Notify.StopReq {bookingId = booking.id, stop = Just (DL.makeLocationAPIEntity nextStop.location), isEdit = hadPendingStop}) booking.tripCategory
+  fork "rental stops: Fleet Engine" $ updateFleetEngineStops ride newStops
+  fork "rental stops: send list to BAP" $ sendStopsUpdatedToBAP booking ride newVersion newStops
+
+getDriverLocation :: DRide.Ride -> Flow (Maybe Maps.LatLong)
+getDriverLocation ride = do
+  driverLocations <- withTryCatch "rental stops: driver location" (LTS.driversLocation [ride.driverId])
+  pure $ HC.getCoordinates <$> either (const Nothing) listToMaybe driverLocations
+
+checkDriverFarFromNextStop :: DRide.Ride -> Maybe Maps.LatLong -> RentalStop -> HighPrecMeters -> Flow ()
+checkDriverFarFromNextStop ride mbDriverLocation nextStop lockThreshold = case mbDriverLocation of
+  Nothing -> do
+    logWarning $ "No location for driver " <> ride.driverId.getId <> " of ride " <> ride.id.getId <> ": the next stop stays as it is"
+    throwError (InvalidRequest "Couldn't check how close the driver is to the next stop. Try again in a moment.")
+  Just driverLocation -> do
+    let distance = distanceBetweenInMeters driverLocation (Maps.LatLong nextStop.location.lat nextStop.location.lon)
+    when (distance <= lockThreshold) $
+      throwError (InvalidRequest "The driver is about to reach the next stop, so it can't be changed now. You can still change the stops after it.")
+
+syncStopMappings :: DRide.Ride -> DBooking.Booking -> [RentalStop] -> Flow ()
+syncStopMappings ride booking stops = do
+  syncEntity ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
+  syncEntity booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+  where
+    syncEntity entityId tag merchantId merchantOperatingCityId = do
+      currentMappings <- QLM.getLatestStopsByEntityId' entityId
+      forM_ stops $ \stop ->
+        unless (any (\mapping -> mapping.order == stop.order && mapping.locationId == stop.location.id) currentMappings) $
+          SLM.buildLocationMapping' stop.location.id entityId tag merchantId merchantOperatingCityId stop.order >>= QLM.create
+      forM_ (filter (\mapping -> mapping.order `notElem` map (.order) stops) currentMappings) $ \mapping ->
+        QLM.updatePastMappingVersions entityId mapping.order
+
+updateFleetEngineStops :: DRide.Ride -> [RentalStop] -> Flow ()
+updateFleetEngineStops ride stops =
+  whenJust (listToMaybe (reverse stops)) $ \dropStop -> do
+    let intermediateStops = safeInit stops
+    FleetEngine.notifyStopsChanged ride.merchantOperatingCityId ride.id (map stopLatLong intermediateStops)
+    FleetEngine.notifyDropoffChanged ride.merchantOperatingCityId ride.id (stopLatLong dropStop)
+    FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id (List.findIndex (isNothing . (.reachedAt)) intermediateStops)
+  where
+    stopLatLong stop = Maps.LatLong {lat = stop.location.lat, lon = stop.location.lon}
 
 buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> Seconds -> Maybe Seconds -> UTCTime -> Text -> Text -> Maybe Bool -> Maybe HighPrecMoney -> m DBUR.BookingUpdateRequest
 buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance estimatedDuration estimatedStaticDuration validTill mapsRouteReqInText routeInfoInText snapToRoadFailed discountAmount = do
