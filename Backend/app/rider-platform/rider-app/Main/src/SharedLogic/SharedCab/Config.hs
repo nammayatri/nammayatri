@@ -26,6 +26,9 @@ data SharedCabTunables = SharedCabTunables
     arrivingSoonRadiusM :: Int,
     -- | The rider's "on the way" push: the allocated cab this far from where it was when the rider was told of it.
     onTheWayM :: Int,
+    -- | The rider's "trip delayed" push (timetabled feeds only): the cab's live ETA at the board stop this far past the booking's
+    -- timetabled start_time.
+    tripDelayedThresholdSec :: Int,
     standTimerSec :: Int,
     movingTimerSec :: Int,
     maxAttempts :: Int,
@@ -81,6 +84,7 @@ defaultTunables =
       atStopRadiusM = 100,
       arrivingSoonRadiusM = 100,
       onTheWayM = 500,
+      tripDelayedThresholdSec = 600,
       standTimerSec = 180,
       movingTimerSec = 90,
       maxAttempts = 2,
@@ -125,6 +129,7 @@ tunablesOf busPingMaxAgeSec mbConfig =
       atStopRadiusM = pick (.atStopRadiusM) (.atStopRadiusM),
       arrivingSoonRadiusM = pickPositive (.arrivingSoonRadiusM) (.arrivingSoonRadiusM),
       onTheWayM = pickPositive (.onTheWayM) (.onTheWayM),
+      tripDelayedThresholdSec = pickPositive (.tripDelayedThresholdSec) (.tripDelayedThresholdSec),
       standTimerSec = pick (.standTimerSec) (.standTimerSec),
       movingTimerSec = pick (.movingTimerSec) (.movingTimerSec),
       maxAttempts = pick (.maxAttempts) (.maxAttempts),

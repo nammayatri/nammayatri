@@ -83,6 +83,7 @@ RiderConfig:
       atStopRadiusM: Maybe Int
       arrivingSoonRadiusM: Maybe Int # rider's "arriving soon" push when the allocated cab is within this of the board stop; null = 100
       onTheWayM: Maybe Int # rider's "on the way" push once the allocated cab has moved this far since the rider was told of it; null = 500
+      tripDelayedThresholdSec: Maybe Int # rider's "trip delayed" push when the cab's live ETA at the board stop is this much past the booking's timetabled start_time (timetabled feeds only); null = 600
       standTimerSec: Maybe Int
       movingTimerSec: Maybe Int
       maxAttempts: Maybe Int

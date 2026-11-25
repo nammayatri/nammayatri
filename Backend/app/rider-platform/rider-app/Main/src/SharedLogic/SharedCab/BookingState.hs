@@ -40,7 +40,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (AllocationState)
 import SharedLogic.SharedCab.Booking (shared)
-import SharedLogic.SharedCab.Keys (bookingStateKey, fallbackPushedKey, riderSkippedKey)
+import SharedLogic.SharedCab.Keys (bookingStateKey, fallbackPushedKey, riderSkippedKey, tripDelayedPushedKey)
 
 type BookingId = Id DFTB.FRFSTicketBooking
 
@@ -172,11 +172,12 @@ bookingStateFrom fields =
 readBookingState :: StateFlow m r => BookingId -> m BookingStateView
 readBookingState bookingId = bookingStateFrom <$> shared (Redis.hGetAll (bookingStateKey bookingId))
 
--- | The booking is done with allocation (cancelled or finished): the hash and the fallback-push flag go.
+-- | The booking is done with allocation (cancelled or finished): the hash and the fallback and trip-delayed push flags go.
 clearBookingState :: StateFlow m r => BookingId -> m ()
 clearBookingState bookingId = shared $ do
   Redis.del (bookingStateKey bookingId)
   Redis.del (fallbackPushedKey bookingId)
+  Redis.unlockRedis (tripDelayedPushedKey bookingId) -- claimed with tryLockRedis, which prefixes the key
   Redis.del (riderSkippedKey bookingId)
 
 -- | Seconds the hash has left, for a deadline when no timer is armed.
