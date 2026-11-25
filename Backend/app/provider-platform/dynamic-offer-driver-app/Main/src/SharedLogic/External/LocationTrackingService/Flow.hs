@@ -296,7 +296,7 @@ blockDriverLocationsTill merchantId driverId blockTill = do
 sharedCabStandby :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DP.Person -> Maybe Text -> m APISuccess
 sharedCabStandby driverId vehicleNumber = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
+  let url = localUrl ltsCfg
   let req = SharedCabStandbyReq {vehicleNumber}
   standbyResp <-
     withQuickRetry $
