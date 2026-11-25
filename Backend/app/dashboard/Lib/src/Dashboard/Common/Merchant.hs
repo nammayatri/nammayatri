@@ -24,6 +24,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
+import Data.Map.Strict (Map)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -267,13 +268,25 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
 data OSRMTrafficCfgUpdateReq = OSRMTrafficCfgUpdateReq
   { jamBelowKmph :: Double,
     slowBelowKmph :: Double,
-    minSegmentLengthMeters :: Double
+    minSegmentLengthMeters :: Double,
+    tierThresholds :: Maybe (Map Maps.RoadTier OSRMTrafficThresholdsUpdateReq)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRMTrafficThresholdsUpdateReq = OSRMTrafficThresholdsUpdateReq
+  { jamBelowKmph :: Double,
+    slowBelowKmph :: Double
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mkOSRMTrafficConfig :: OSRMTrafficCfgUpdateReq -> Maps.OSRMTrafficConfig
-mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} = Maps.OSRMTrafficConfig {..}
+mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} =
+  Maps.OSRMTrafficConfig {tierThresholds = (fmap . fmap) mkOSRMTrafficThresholds tierThresholds, ..}
+
+mkOSRMTrafficThresholds :: OSRMTrafficThresholdsUpdateReq -> Maps.OSRMTrafficThresholds
+mkOSRMTrafficThresholds OSRMTrafficThresholdsUpdateReq {..} = Maps.OSRMTrafficThresholds {..}
 
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
