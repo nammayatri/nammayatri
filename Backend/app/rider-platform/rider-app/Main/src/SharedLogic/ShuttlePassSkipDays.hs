@@ -57,17 +57,20 @@ unskipDays personId merchantId purchasedPassId days =
         unskipping = [day | (day, _) <- termDays, day `elem` skipped]
         updated = Rules.removeSkipDays payment.skipDays (map fst termDays)
         cityId = payment.merchantOperatingCityId
-    gated <- fmap catMaybes . forM unskipping $ \day -> case Rules.slotOn payment day of
-      Nothing -> pure Nothing
-      Just slot -> fmap (\capacity -> (slot, day, capacity)) <$> ShuttlePass.slotCapacity cityId slot
-    let checkAndWrite = do
-          forM_ gated $ \(slot, day, capacity) -> do
-            booked <- ShuttlePass.ridersOnSlot cityId slot day
-            unless (Rules.hasFreeSeat capacity booked) $
-              throwError (InvalidRequest $ "No seat left on your shuttle for " <> show day <> "; choose another shuttle for that day")
+        slotDays = [(slot, day) | day <- unskipping, Just slot <- [Rules.slotOn payment day]]
+        -- Capacity is read under the slot locks, so the seat check uses the value in force while they are held.
+        -- A slot with no capacity set is not gated, as before.
+        checkAndWrite = do
+          forM_ slotDays $ \(slot, day) ->
+            ShuttlePass.slotCapacity cityId slot >>= \case
+              Nothing -> pure ()
+              Just capacity -> do
+                booked <- ShuttlePass.ridersOnSlot cityId slot day
+                unless (Rules.hasFreeSeat capacity booked) $
+                  throwError (InvalidRequest $ "No seat left on your shuttle for " <> show day <> "; choose another shuttle for that day")
           when (length updated /= length payment.skipDays) $
             QPPP.updateSkipDaysById updated payment.id
-    foldr (\(slot, day, _) inner -> lockOrBusy (ShuttlePass.slotLockKey cityId slot day) inner) checkAndWrite gated
+    foldr (\(slot, day) inner -> lockOrBusy (ShuttlePass.slotLockKey cityId slot day) inner) checkAndWrite slotDays
 
 -- | Shared checks, then runs the update once per term, under that term's lock and on a fresh read of it.
 -- Each day is passed with its slot departure when the timetable knows it.

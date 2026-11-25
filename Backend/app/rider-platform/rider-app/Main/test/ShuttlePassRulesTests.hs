@@ -150,8 +150,10 @@ tests =
             R.rescheduleOpen (localAt day0 2 30) day0 (Just (localAt day0 7 30)) (localAt day0 9 30) day0 @?= False,
           testCase "closed when moving to an earlier slot within 5 hours" $
             R.rescheduleOpen (localAt day0 2 0) day0 (Just (localAt day0 9 30)) (localAt day0 6 30) day0 @?= False,
-          testCase "a later day is open with the current slot's time unknown" $
-            R.rescheduleOpen (localAt day0 20 0) day0 Nothing (localAt day1 9 30) day1 @?= True
+          testCase "closed when the current slot's time is unknown, even on a later day" $
+            R.rescheduleOpen (localAt day0 20 0) day0 Nothing (localAt day1 9 30) day1 @?= False,
+          testCase "a later day is open when both slots are known and far enough away" $
+            R.rescheduleOpen (localAt day0 20 0) day0 (Just (localAt day1 7 30)) (localAt day1 9 30) day1 @?= True
         ]
     ]
   where

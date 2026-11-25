@@ -49,11 +49,11 @@ issueShuttlePassTickets Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
   pure Complete
 
 issueForDay :: Seconds -> UTCTime -> Text -> DT.Day -> Flow Int
-issueForDay timeDiff now cityId day = go 0 0
+issueForDay timeDiff now cityId day = go Nothing 0
   where
     pageSize = 500
-    go offset count = do
-      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId day pageSize offset
+    go mbAfterId count = do
+      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId day pageSize mbAfterId
       results <- forM terms $ \term ->
         withTryCatch "IssueShuttlePassTickets:term" (issueForTerm timeDiff now term day) >>= \case
           Right issuedOne -> pure issuedOne
@@ -61,7 +61,9 @@ issueForDay timeDiff now cityId day = go 0 0
             logError $ "IssueShuttlePassTickets: could not issue term=" <> term.id.getId <> " day=" <> show day <> " err=" <> show err
             pure False
       let count' = count + length (filter identity results)
-      if length terms < pageSize then pure count' else go (offset + pageSize) count'
+      case listToMaybe (reverse terms) of
+        Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) count'
+        _ -> pure count'
 
 -- | True when a ticket was issued for this term and day.
 issueForTerm :: Seconds -> UTCTime -> DPPP.PurchasedPassPayment -> DT.Day -> Flow Bool

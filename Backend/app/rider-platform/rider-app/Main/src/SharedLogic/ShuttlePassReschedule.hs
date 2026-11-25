@@ -39,9 +39,6 @@ reschedule personId merchantId purchasedPassId day newSlot = do
     then pure ()
     else do
       validateSlot term newSlot
-      capacity <-
-        ShuttlePass.slotCapacity term.merchantOperatingCityId newSlot
-          >>= fromMaybeM (InvalidRequest "Seats for this shuttle are not set up yet, please choose another")
       -- Slot lock first (it guards the seat count), then the term lock skip/unskip and the issue job take.
       -- Both are try-locks: a busy one fails the request, never waits, so the two orders elsewhere cannot deadlock.
       withLock (ShuttlePass.slotLockKey term.merchantOperatingCityId newSlot day) $
@@ -61,6 +58,10 @@ reschedule personId merchantId purchasedPassId day newSlot = do
             tickets <- ShuttlePass.ticketsForDay timeDiff fresh day currentDeparture
             unless (null tickets) $
               throwError (InvalidRequest $ "A ticket is already issued for " <> show day <> "; cancel it instead")
+            -- Capacity is read under the slot lock too, so the seat check uses the value in force while the lock is held.
+            capacity <-
+              ShuttlePass.slotCapacity fresh.merchantOperatingCityId newSlot
+                >>= fromMaybeM (InvalidRequest "Seats for this shuttle are not set up yet, please choose another")
             booked <- ShuttlePass.ridersOnSlot fresh.merchantOperatingCityId newSlot day
             unless (Rules.hasFreeSeat capacity booked) $
               throwError (InvalidRequest "No seats left on this shuttle, please choose another")

@@ -157,7 +157,9 @@ hasFreeSeat :: Int -> Int -> Bool
 hasFreeSeat capacity booked = booked < capacity
 
 -- | A day can move to another slot while both the slot it rides now and the new one are before their change cutoff.
--- The new slot's departure must be known: a move onto a slot the timetable cannot place is never open.
+-- Both departures must be known: when the timetable cannot place the current slot, its cutoff cannot be checked, so
+-- the move is not open.
 rescheduleOpen :: UTCTime -> DT.Day -> Maybe UTCTime -> UTCTime -> DT.Day -> Bool
-rescheduleOpen now today mbCurrentDeparture newDeparture day =
-  dayOpenForChange now today mbCurrentDeparture day && now < issueTimeOn newDeparture
+rescheduleOpen now today mbCurrentDeparture newDeparture day = case mbCurrentDeparture of
+  Nothing -> False
+  Just currentDeparture -> dayOpenForChange now today (Just currentDeparture) day && now < issueTimeOn newDeparture

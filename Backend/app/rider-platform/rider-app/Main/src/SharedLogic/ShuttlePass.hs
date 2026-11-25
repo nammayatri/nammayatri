@@ -97,13 +97,15 @@ slotCapacity cityId slotTripId = fmap (\(row :: DShuttleSlotCapacity.ShuttleSlot
 -- | Riders holding a seat on the slot that day: every live term of the city that rides it then and has not skipped it,
 -- whether the slot is its own or it rescheduled onto it. Call under 'slotLockKey' when the count gates a write.
 ridersOnSlot :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Flow Int
-ridersOnSlot cityId slotTripId day = go 0 0
+ridersOnSlot cityId slotTripId day = go Nothing 0
   where
     pageSize = 500
-    go offset count = do
-      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId.getId day pageSize offset
+    go mbAfterId count = do
+      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId.getId day pageSize mbAfterId
       let count' = count + length (filter (Rules.ridesSlotOn slotTripId day) terms)
-      if length terms < pageSize then pure count' else go (offset + pageSize) count'
+      case listToMaybe (reverse terms) of
+        Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) count'
+        _ -> pure count'
 
 -- | Taken by every write that adds a rider to a slot's day (reschedule onto it, unskip on it), so two of them cannot
 -- both take its last seat.

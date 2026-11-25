@@ -190,18 +190,21 @@ findActiveShuttleTermsOnDay ::
   Text ->
   Day ->
   Int ->
-  Int ->
+  Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
   m [DPurchasedPassPayment.PurchasedPassPayment]
-findActiveShuttleTermsOnDay merchantOperatingCityId day limit offset =
+findActiveShuttleTermsOnDay merchantOperatingCityId day limit mbAfterId =
+  -- Keyset pages (id > the last one seen) rather than offsets: a term leaving the set mid-scan does not shift later
+  -- rows past the reader, so every term still in the set is read exactly once.
   findAllWithOptionsDb
-    [ Se.And
+    [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
           Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
           Se.Is Beam.slotTripId $ Se.Not $ Se.Eq Nothing,
           Se.Is Beam.startDate $ Se.LessThanOrEq day,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq day
         ]
+          <> [Se.Is Beam.id $ Se.GreaterThan afterId.getId | Just afterId <- [mbAfterId]]
     ]
     (Se.Asc Beam.id)
     (Just limit)
-    (Just offset)
+    Nothing
