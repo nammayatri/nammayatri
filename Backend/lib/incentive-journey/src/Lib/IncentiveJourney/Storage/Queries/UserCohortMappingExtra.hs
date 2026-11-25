@@ -69,15 +69,18 @@ upsertUserCohortMapping userId cohortMappingId enabled validTill = do
       pure updated
 
 -- | Mark an invite row as opted in for the current period.
+-- membershipValidTill / optedInAt / termsAcceptedAt must be city-local wall-clock (same as UCM.validTill).
+-- Do not shrink invite validTill below the existing invite end — period activity uses optedInAt + optInPeriod.
 markUserCohortMappingOptedIn ::
   (BeamFlow m r) =>
   Id Common.Person ->
   Id DCJM.CohortJourneyMapping ->
   DUCM.OptInPeriod ->
-  UTCTime ->
+  UTCTime -> -- req / invite validTill (membership stays max with existing)
+  UTCTime -> -- city-local optedInAt
   Text ->
   m DUCM.UserCohortMapping
-markUserCohortMappingOptedIn userId cohortMappingId optInPeriod validTill optedInBy = do
+markUserCohortMappingOptedIn userId cohortMappingId optInPeriod reqValidTill localOptedInAt optedInBy = do
   now <- getCurrentTime
   existing <-
     findOneWithKV
@@ -87,23 +90,24 @@ markUserCohortMappingOptedIn userId cohortMappingId optInPeriod validTill optedI
           ]
       ]
       >>= fromMaybeM (InvalidRequest "User cohort mapping invite not found; assign/invite first")
-  let updated =
+  let membershipValidTill = max existing.validTill reqValidTill
+      updated =
         existing
           { DUCM.enabled = True,
-            DUCM.validTill = validTill,
+            DUCM.validTill = membershipValidTill,
             DUCM.optInPeriod = Just optInPeriod,
-            DUCM.optedInAt = Just now,
+            DUCM.optedInAt = Just localOptedInAt,
             DUCM.optedInBy = Just optedInBy,
-            DUCM.termsAcceptedAt = Just now,
+            DUCM.termsAcceptedAt = Just localOptedInAt,
             DUCM.updatedAt = now
           }
   updateWithKV
     [ Se.Set Beam.enabled True,
-      Se.Set Beam.validTill validTill,
+      Se.Set Beam.validTill membershipValidTill,
       Se.Set Beam.optInPeriod (Just optInPeriod),
-      Se.Set Beam.optedInAt (Just now),
+      Se.Set Beam.optedInAt (Just localOptedInAt),
       Se.Set Beam.optedInBy (Just optedInBy),
-      Se.Set Beam.termsAcceptedAt (Just now),
+      Se.Set Beam.termsAcceptedAt (Just localOptedInAt),
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId existing.id)]
@@ -185,7 +189,7 @@ disableUserCohortMapping userId cohortMappingId = do
     ]
 
 -- | OptIn campaigns: clear opt-in for this period but keep the invite row enabled
--- so the driver can opt in again next period. Assignment filter requires optedInAt.
+-- so the driver can opt in again next period. Assignment filter requires period-active optedInAt.
 clearOptInUserCohortMapping ::
   (BeamFlow m r) =>
   Id Common.Person ->
@@ -205,3 +209,36 @@ clearOptInUserCohortMapping userId cohortMappingId = do
           Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId)
         ]
     ]
+
+-- | Clear opt-in only if stored optedInAt still equals the stamp classified as stale.
+-- Returns True when no live opt-in remains after the attempt (cleared here, or already
+-- cleared). Returns False when a newer opt-in won the race — caller must not drop membership.
+clearOptInUserCohortMappingIfOptedInAt ::
+  (BeamFlow m r) =>
+  Id Common.Person ->
+  Id DCJM.CohortJourneyMapping ->
+  UTCTime ->
+  m Bool
+clearOptInUserCohortMappingIfOptedInAt userId cohortMappingId expectedOptedInAt = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.optInPeriod Nothing,
+      Se.Set Beam.optedInAt Nothing,
+      Se.Set Beam.optedInBy Nothing,
+      Se.Set Beam.termsAcceptedAt Nothing,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.userId $ Se.Eq (getId userId),
+          Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId),
+          Se.Is Beam.optedInAt $ Se.Eq (Just expectedOptedInAt)
+        ]
+    ]
+  mbUcm <-
+    findOneWithKV
+      [ Se.And
+          [ Se.Is Beam.userId $ Se.Eq (getId userId),
+            Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId)
+          ]
+      ]
+  pure $ maybe True (isNothing . (.optedInAt)) mbUcm
