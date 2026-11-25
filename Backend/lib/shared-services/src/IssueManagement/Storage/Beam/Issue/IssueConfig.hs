@@ -34,6 +34,7 @@ data IssueConfigT f = IssueConfigT
     messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
     reopenCount :: B.C f Int,
     onIssueCloseMsgs :: B.C f [Text],
+    allowedLookupEndpoints :: B.C f (Maybe [Text]),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

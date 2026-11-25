@@ -42,6 +42,7 @@ import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
 import qualified IssueManagement.Tools.JsonLogic as JsonLogic
+import qualified IssueManagement.Tools.LookupGuard as LookupGuard
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -86,9 +87,10 @@ data ServiceHandle m = ServiceHandle
     getTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.SearchTicketByIdReq -> m [TIT.GetTicketStatusResp]),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
     mbGetRideCardInfoByRideIds :: Maybe ([Id Ride] -> m [(Id Ride, Common.IssueReportRideInfo)]),
-    -- | rider-app: resolves driver-app's dashboard base URL + dashboard token
-    -- for a merchant so InternalDriver lookups can call across; Nothing where
-    -- unsupported (driver-app itself, or deployments without the config).
+    -- | rider-app: resolves driver-app's base URL and the driver-side merchant
+    -- short id for a merchant, so InternalDriver lookups can call driver-app's
+    -- /direct-dashboard tree with the same lookup token; Nothing where
+    -- unsupported (driver-app itself, or a merchant without the mapping).
     mbCounterpartDashboardInfo :: Maybe (Id Merchant -> m (Maybe (BaseUrl, Text))),
     selfLookupToken :: m (Maybe Text),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
@@ -2336,21 +2338,6 @@ resolveApiCallSteps ::
   Int ->
   m ([(D.IssueMessage, D.DetailedTranslation, [Text])], Map.Map Text A.Value)
 resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language identifier issueHandle initialList maxHops = do
-  let builtins =
-        Map.fromList $
-          [ ("personId", A.String personId.getId),
-            ("categoryId", A.String categoryId.getId)
-          ]
-            <> maybe [] (\rideId -> [("rideId", A.String rideId.getId)]) mbRideId
-            <> maybe
-              []
-              ( \moCity ->
-                  [ ("merchantShortId", A.String moCity.merchantShortId.getShortId),
-                    ("city", A.String (show moCity.city)),
-                    ("merchantOperatingCityId", A.String moCity.id.getId)
-                  ]
-              )
-              mbMerchantOpCity
   -- Fast path: most steps have no lookup, so skip the Redis read of stored
   -- flow context entirely; the pure builtins are still available for {{var}}
   -- interpolation on ordinary messages.
@@ -2362,6 +2349,22 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
       -- anything a previously stored flow context happens to contain.
       go initialList maxHops (Map.union builtins storedCtx)
   where
+    builtins =
+      Map.fromList $
+        [ ("personId", A.String personId.getId),
+          ("categoryId", A.String categoryId.getId)
+        ]
+          <> maybe [] (\rideId -> [("rideId", A.String rideId.getId)]) mbRideId
+          <> maybe
+            []
+            ( \moCity ->
+                [ ("merchantShortId", A.String moCity.merchantShortId.getShortId),
+                  ("city", A.String (show moCity.city)),
+                  ("merchantOperatingCityId", A.String moCity.id.getId)
+                ]
+            )
+            mbMerchantOpCity
+
     go list hops ctx = case find (\(msg, _, _) -> msg.messageType == D.ApiCall) list of
       Nothing -> pure (list, ctx)
       Just (apiMsg, _, _)
@@ -2382,38 +2385,23 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
       mbIntegration <- QAI.findById (Id action.integrationId)
       case mbIntegration of
         Just integration | integration.isActive -> do
-          let params = buildParams action.paramMapping ctx
-              headers = maybe [] (map (\h -> (h.key, h.value))) (decodeJsonText =<< integration.headersJson :: Maybe [DAI.ApiHeaderSpec])
-              fields = maybe [] (map (\f -> (f.name, f.path))) (decodeJsonText integration.responseFieldsJson :: Maybe [DAI.ResponseFieldSpec])
+          let fields = maybe [] (map (\f -> (f.name, f.path))) (decodeJsonText integration.responseFieldsJson :: Maybe [DAI.ResponseFieldSpec])
           result <- case integration.kind of
-            DAI.External ->
-              Executor.executeIntegration (show integration.method) integration.urlTemplate headers integration.bodyTemplate integration.timeoutMs fields params
+            DAI.InternalRider -> case mbMerchantOpCity of
+              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
+              Just moCity -> do
+                selfBaseUrl <- asks (.selfBaseUrl)
+                runInternalLookup integration fields moCity.city selfBaseUrl moCity.merchantShortId.getShortId
             DAI.InternalDriver -> case mbMerchantOpCity of
               Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
               Just moCity -> do
                 counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
                 case counterpart of
-                  Nothing -> pure (internalFailure "Driver-side internal lookups are not configured on this deployment")
-                  Just (driverBase, driverToken) -> do
-                    let base = showBaseUrl driverBase
-                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                        url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                        internalHeaders = ("token", driverToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
-            DAI.InternalRider -> case mbMerchantOpCity of
-              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
-              Just moCity -> do
-                mbLookupToken <- issueHandle.selfLookupToken
-                case mbLookupToken of
-                  Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
-                  Just lookupToken -> do
-                    selfBaseUrl <- asks (.selfBaseUrl)
-                    let base = showBaseUrl selfBaseUrl
-                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                        url = basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                        -- The engine's token must win: drop any author-supplied token header.
-                        internalHeaders = ("token", lookupToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+                  Nothing -> pure (internalFailure "Driver-side lookups are not configured for this merchant")
+                  Just (driverBaseUrl, driverMerchantShortId) -> runInternalLookup integration fields moCity.city driverBaseUrl driverMerchantShortId
+            -- External calls let a flow author reach any URL from inside the
+            -- cluster; they are disabled outright.
+            DAI.External -> pure (internalFailure "External lookups are disabled; use an internal lookup")
           case result.errorMessage of
             Nothing -> do
               let extracted = Map.mapMaybe identity result.extractedFields
@@ -2427,6 +2415,26 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
           logError $ "ApiCall engine: integration " <> action.integrationId <> " missing or inactive"
           pure (action.onErrorNextOptionId, ctx)
 
+    -- Both internal kinds call a /direct-dashboard tree (rider-app's own, or
+    -- driver-app's) with the engine's lookup token. The URL is rendered from
+    -- the parsed template (built-ins only, safe path segments, encoded query)
+    -- and sent as GET with only that token: no author headers or body. Which
+    -- endpoint it reaches is then checked against the receiving app's
+    -- issue_config.allowed_lookup_endpoints by its dashboard auth.
+    runInternalLookup integration fields city baseUrl merchantShortId
+      | integration.method /= DAI.GET = pure (internalFailure "Internal lookups are GET-only")
+      | otherwise = do
+        mbLookupToken <- issueHandle.selfLookupToken
+        case mbLookupToken of
+          Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
+          Just lookupToken -> case LookupGuard.renderLookupTemplate (Map.map valueToParamText builtins) integration.urlTemplate of
+            Left err -> pure (internalFailure ("Lookup path rejected: " <> err))
+            Right endpointTail -> do
+              let base = showBaseUrl baseUrl
+                  basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                  url = basePadded <> "direct-dashboard/" <> merchantShortId <> "/" <> show city <> "/" <> endpointTail
+              Executor.executeIntegration "GET" url [("token", lookupToken)] Nothing integration.timeoutMs fields Map.empty
+
     internalFailure msg =
       Executor.ExecutionResult
         { statusCode = Nothing,
@@ -2435,10 +2443,6 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
           rawResponse = Nothing,
           errorMessage = Just msg
         }
-
-    buildParams mbMapping ctx = case mbMapping of
-      Nothing -> Map.map valueToParamText ctx
-      Just mapping -> Map.mapMaybe (\ctxKey -> valueToParamText <$> Map.lookup ctxKey ctx) mapping
 
     decodeJsonText :: A.FromJSON a => Text -> Maybe a
     decodeJsonText = A.decode . BSL.fromStrict . TE.encodeUtf8
