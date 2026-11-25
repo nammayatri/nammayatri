@@ -5,39 +5,10 @@ imports:
   CallStatus: Domain.Types.CallStatus
   SharedCabRouteDataResp: Domain.Types.SharedCabSession
   SharedCabSession: Domain.Types.SharedCabSession
-  HighPrecMoney: Kernel.Types.Common
 
 module: SharedCab
 
 types:
-  SelectRouteMode:
-    enum: "AfterLastDrop,Force"
-    derive': "Show, Eq, Generic, ToSchema"
-
-  SharedCabRouteOperation:
-    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
-
-  SharedCabRouteOperationReq:
-    operation: SharedCabRouteOperation
-    routeCode: Maybe Text
-    walkupCount: Maybe Int
-    mode: Maybe SelectRouteMode
-    atLastStop: Maybe Bool
-    forceEnd: Maybe Bool
-    derive': "Show, Eq, Generic, ToSchema"
-
-  AffectedRider:
-    bookingId: Text
-    dropStop: Text
-    firstName: Text
-    derive: "Show,Eq"
-
-  SelectRouteResp:
-    affectedRiders: Maybe [AffectedRider]
-    session: Maybe SharedCabSession
-    endedTripEarnings: Maybe HighPrecMoney
-    derive: "Show,Eq"
-
   # Mirrors rider-app's SharedCabInternal contract: BOARDED_WITH_OTP needs `otp`, NO_SHOW is the driver
   # giving up on a booked rider after the configured wait.
   SharedCabBookingOperation:
@@ -59,13 +30,6 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: SharedCabRouteDataResp
-  - POST:
-      endpoint: /sharedCab/route/operations
-      auth: TokenAuth PROVIDER_TYPE
-      request:
-        type: SharedCabRouteOperationReq
-      response:
-        type: SelectRouteResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: TokenAuth PROVIDER_TYPE

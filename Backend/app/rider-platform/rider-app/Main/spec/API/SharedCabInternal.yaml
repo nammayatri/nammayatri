@@ -1,6 +1,5 @@
 imports:
   ServiceTierType: BecknV2.FRFS.Enums
-  SelectRouteMode: SharedLogic.SharedCab.SessionState
   SharedCabRouteDataResp: SharedLogic.SharedCab.SessionView
   SharedCabDemandResp: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
@@ -30,37 +29,6 @@ types:
     dropStopCode: Text
     boarded: Bool
     fare: HighPrecMoney
-
-  AffectedRider:
-    bookingId: Text
-    firstName: Text
-    dropStop: Text
-
-  SelectRouteResp:
-    session: Maybe SharedCabSession
-    affectedRiders: Maybe [AffectedRider]
-    endedTripEarnings: Maybe HighPrecMoney
-
-  SharedCabRouteOperation:
-    enum: "SELECT_ROUTE,RETURN_TRIP,CHANGE_ROUTE,END_ROUTE"
-
-  # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency gtfsId of the feed
-  # (integrated_bpp_config.agency_key). The caller's own row id never leaves its database.
-  SharedCabRouteOperationReq:
-    operation: SharedCabRouteOperation
-    driverId: Text
-    vehicleNumber: Text
-    agencyId: Maybe Text
-    capacity: Maybe Int
-    routeCode: Maybe Text
-    walkupCount: Maybe Int
-    mode: Maybe SelectRouteMode
-    driverName: Maybe Text
-    vehicleModel: Maybe Text
-    atLastStop: Maybe Bool
-    forceEnd: Maybe Bool
-    # driver-app's id for the run a SELECT_ROUTE or RETURN_TRIP opens
-    vehicleTripId: Maybe Text
 
   # The driver's verbs on one passenger of their run, shared by every product on the shared-route spine.
   # BOARDED_WITH_OTP carries the rider's per-booking code in `otp` and is accepted only where the feed's
@@ -122,15 +90,6 @@ apis:
         rideId: Text
       response:
         type: "[SharedRunPassenger]"
-  - POST:
-      endpoint: /sharedCab/route/operations
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: SharedCabRouteOperationReq
-      response:
-        type: SelectRouteResp
   - POST:
       endpoint: /sharedCab/booking/{bookingId}/operations
       auth: NoAuth

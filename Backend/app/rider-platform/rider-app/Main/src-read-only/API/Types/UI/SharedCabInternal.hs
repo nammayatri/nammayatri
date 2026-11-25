@@ -7,27 +7,13 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
-import qualified SharedLogic.SharedCab.SessionState
-import qualified SharedLogic.SharedCab.SessionView
 import Tools.Auth
-
-data AffectedRider = AffectedRider {bookingId :: Kernel.Prelude.Text, dropStop :: Kernel.Prelude.Text, firstName :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NearbyStandDemand = NearbyStandDemand {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, searching :: Kernel.Prelude.Int, stopCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderCallNumberResp = RiderCallNumberResp {riderNumber :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SelectRouteResp = SelectRouteResp
-  { affectedRiders :: Kernel.Prelude.Maybe [AffectedRider],
-    endedTripEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    session :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession
-  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -57,32 +43,6 @@ data SharedCabDemandReq = SharedCabDemandReq {agencyId :: Kernel.Prelude.Text, r
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabMessageReq = SharedCabMessageReq {driverId :: Kernel.Prelude.Text, message :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabRouteOperation
-  = SELECT_ROUTE
-  | RETURN_TRIP
-  | CHANGE_ROUTE
-  | END_ROUTE
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabRouteOperationReq = SharedCabRouteOperationReq
-  { agencyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    atLastStop :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    driverId :: Kernel.Prelude.Text,
-    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    forceEnd :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    mode :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionState.SelectRouteMode,
-    operation :: SharedCabRouteOperation,
-    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleNumber :: Kernel.Prelude.Text,
-    vehicleTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    walkupCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

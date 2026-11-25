@@ -3,14 +3,12 @@
 -- | driver-app -> rider-app client for the shared-cab internal API (/internal/sharedCab/*). Every call maps the rider app's
 -- APIError envelope onto BapProxyError, so the driver app surfaces the rider app's errorCode and HTTP status unchanged.
 module SharedLogic.SharedCab.RiderClient
-  ( BAPRouteOperationReq (..),
-    BAPBookingOperationReq (..),
+  ( BAPBookingOperationReq (..),
     BAPDemandReq (..),
     getSharedCabRouteData,
     postSharedCabRoutesDemand,
     NearbyStandDemand (..),
     getSharedCabNearbyDemand,
-    postRouteOperation,
     postBookingOperation,
     RiderCallNumberResp (..),
     getRiderCallNumber,
@@ -23,7 +21,6 @@ where
 
 import API.Types.UI.SharedCab
 import qualified Data.HashMap.Strict as HM
-import Domain.Types.Extra.SharedCab ()
 import Domain.Types.SharedCabSession
 import EulerHS.Types (EulerClient, client)
 import qualified EulerHS.Types as ET
@@ -44,27 +41,6 @@ type BAPFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasRequestId r
   )
-
--- | Contract: `mode` is passed as null per the rider-app endpoint convention.
-data BAPRouteOperationReq = BAPRouteOperationReq
-  { operation :: SharedCabRouteOperation,
-    driverId :: Text,
-    vehicleNumber :: Text,
-    -- the SHARED_CAB config's agency_key (GTFS agency gtfsId like "<feed>:SHARED_CAB"), the one identity both
-    -- integrated_bpp_config rows share; rider-app looks its own row up by it
-    agencyId :: Maybe Text,
-    capacity :: Maybe Int,
-    routeCode :: Maybe Text,
-    walkupCount :: Maybe Int,
-    mode :: Maybe SelectRouteMode,
-    driverName :: Maybe Text,
-    vehicleModel :: Maybe Text,
-    atLastStop :: Maybe Bool,
-    forceEnd :: Maybe Bool,
-    vehicleTripId :: Maybe Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON)
 
 data BAPBookingOperationReq = BAPBookingOperationReq
   { operation :: SharedCabBookingOperation,
@@ -116,8 +92,6 @@ type NearbyDemandAPI =
         :> TokenHeader
         :> Get '[JSON] [NearbyStandDemand]
     )
-
-type RouteOperationAPI = InternalAPI ("route" :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPRouteOperationReq :> Post '[JSON] SelectRouteResp)
 
 type BookingOperationAPI = InternalAPI ("booking" :> Capture "bookingId" Text :> "operations" :> TokenHeader :> ReqBody '[JSON] BAPBookingOperationReq :> Post '[JSON] SharedCabSession)
 
@@ -173,10 +147,6 @@ postSharedCabRoutesDemand apiKey internalUrl req = do
 getSharedCabNearbyDemand :: BAPFlow m r => Text -> BaseUrl -> Text -> Double -> Double -> m [NearbyStandDemand]
 getSharedCabNearbyDemand apiKey internalUrl agencyId latitude longitude =
   callRider internalUrl "GetSharedCabNearbyDemand" (client (Proxy @NearbyDemandAPI) agencyId latitude longitude (Just apiKey)) (Proxy @NearbyDemandAPI)
-
-postRouteOperation :: BAPFlow m r => Text -> BaseUrl -> BAPRouteOperationReq -> m SelectRouteResp
-postRouteOperation apiKey internalUrl req = do
-  callRider internalUrl "SharedCabRouteOperation" (client (Proxy @RouteOperationAPI) (Just apiKey) req) (Proxy @RouteOperationAPI)
 
 postBookingOperation :: BAPFlow m r => Text -> BaseUrl -> Text -> BAPBookingOperationReq -> m SharedCabSession
 postBookingOperation apiKey internalUrl bookingId req = do

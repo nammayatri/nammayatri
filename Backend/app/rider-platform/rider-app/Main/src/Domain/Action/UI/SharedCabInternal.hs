@@ -3,7 +3,6 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabRoutesDemand,
     getSharedCabNearbyDemand,
     getSharedCabRidePassengers,
-    postSharedCabRouteOperations,
     postSharedCabBookingOperations,
     getSharedCabBookingCallNumber,
     postSharedCabBookingMessage,
@@ -12,7 +11,6 @@ module Domain.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
-import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (findIndex)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
@@ -21,7 +19,6 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Route as DRoute
@@ -37,7 +34,6 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
@@ -50,9 +46,7 @@ import qualified SharedLogic.SharedCab.LegState as LegState
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Offer as Offer
 import SharedLogic.SharedCab.RateLimit (enforceCallLimit, enforceChatMessageLimit)
-import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Seats as Seats
-import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified SharedLogic.SharedCab.StopProgress as StopProgress
@@ -62,7 +56,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -170,90 +163,6 @@ passengerStatuses = [DFRFSTicketBookingStatus.CONFIRMED]
 
 riderFirstName :: [DP.Person] -> DFTB.FRFSTicketBooking -> Text
 riderFirstName persons b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
-
-required :: Text -> Maybe a -> Environment.Flow a
-required field = fromMaybeM (InvalidRequest (field <> " is required for this operation"))
-
-postSharedCabRouteOperations :: Maybe Text -> API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
-postSharedCabRouteOperations mbToken req = do
-  checkToken mbToken
-  case req.operation of
-    API.SELECT_ROUTE -> selectRoute req
-    API.RETURN_TRIP -> do
-      tripId <- required "vehicleTripId" req.vehicleTripId
-      (earned, switched) <- Session.endRoute req.driverId req.vehicleNumber forced (StartReturn tripId)
-      ended earned . Just =<< (releasing AllocTypes.RouteChanged switched >>= mkSessionResp)
-    API.CHANGE_ROUTE -> do
-      merchantId <- agencyMerchant =<< required "agencyId" req.agencyId
-      ended Nothing . Just =<< (ownSession merchantId req.driverId req.vehicleNumber >>= mkSessionResp)
-    API.END_ROUTE -> do
-      (earned, closed) <- Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
-      void $ releasing AllocTypes.SessionClosed closed
-      ended earned Nothing
-  where
-    forced = req.forceEnd == Just True
-    ended endedTripEarnings session = pure API.SelectRouteResp {session, affectedRiders = Nothing, endedTripEarnings}
-
-selectRoute :: API.SharedCabRouteOperationReq -> Environment.Flow API.SelectRouteResp
-selectRoute req = do
-  agencyId <- required "agencyId" req.agencyId
-  routeCode <- required "routeCode" req.routeCode
-  walkupCount <- required "walkupCount" req.walkupCount
-  tripId <- required "vehicleTripId" req.vehicleTripId
-  integratedBppConfig <- getIntegratedBppConfigByAgency agencyId
-  -- opening or changing a route attaches it, which fails on an unknown one; a route queued for after the last drop is only saved
-  void $ OTPRest.getRouteByRouteId integratedBppConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
-  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSessionFresh integratedBppConfig.merchantId req.vehicleNumber
-  selected <-
-    Session.selectRoute
-      req.mode
-      tripId
-      OpenSessionReq
-        { driverId = req.driverId,
-          vehicleNumber = req.vehicleNumber,
-          merchantId = integratedBppConfig.merchantId,
-          merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
-          integratedBppConfigId = integratedBppConfig.id,
-          serviceTierType = Spec.SHARED_CAB,
-          capacity = fromMaybe defaultCapacity req.capacity,
-          routeCode = routeCode
-        }
-  case selected of
-    Left onBoard -> do
-      affected <- mapM affectedRider onBoard
-      pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected, endedTripEarnings = Nothing}
-    Right session -> do
-      void $ seeded session
-      Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
-      when (maybe False (/= session.routeCode) priorRoute) $ void $ releasing AllocTypes.RouteChanged session
-      session' <-
-        if walkupCount == session.walkupCount
-          then pure session
-          else Session.setWalkupCount req.driverId req.vehicleNumber session.version walkupCount
-      resp <- mkSessionResp session'
-      pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing, endedTripEarnings = Nothing}
-  where
-    affectedRider (booking :: DFTB.FRFSTicketBooking) = do
-      mbRider <- QPerson.findById booking.riderId
-      pure
-        API.AffectedRider
-          { bookingId = booking.id.getId,
-            firstName = fromMaybe "" (mbRider >>= (.firstName)),
-            dropStop = fromMaybe booking.toStationCode booking.toStationName
-          }
-
-seeded :: Session -> Environment.Flow Session
-seeded s = s <$ ensureAllocationTick s.merchantId s.merchantOperatingCityId
-
-releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
-releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
-
--- | `merchantId` is the rider-app merchant through which a session lost from Redis is rebuilt from driver-app's trip.
-ownSession :: Id DM.Merchant -> Text -> Text -> Environment.Flow Session
-ownSession merchantId driver plate = Session.getSession merchantId plate >>= either throwError pure . ownedSession driver
-
-agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
-agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
 
 -- | The driver answers the offer on a newly allocated rider. Accepting arms the claim's normal timer and tells the rider; declining closes the
 -- allocation (the plate is skipped for this booking) and the next tick offers the next cab.
