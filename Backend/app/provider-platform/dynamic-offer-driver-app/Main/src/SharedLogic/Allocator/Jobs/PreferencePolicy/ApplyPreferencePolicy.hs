@@ -224,7 +224,7 @@ fleetOps fleetOwnerId =
 
 -- | A campaign's TimeBound PreferencePolicy perk on its current members ('Campaign.campaignWindowPolicy' has the stop
 -- conditions; the mapping and controls are read fresh on every page). Members: the campaign's active
--- user_cohort_mapping rows (opted in, for an OptIn campaign). A member is applied only when the resolver says this
+-- user_cohort_mapping rows (opted in for the current Daily/Weekly period, for an OptIn campaign). A member is applied only when the resolver says this
 -- campaign is in charge of them with its preference perk active now and the policy in charge is this campaign's (the
 -- allocator's controls cache entry for the campaign is refreshed first, so the resolver sees the save).
 campaignOps :: PolicyJobFlow m r => ApplyPreferencePolicyJobData -> Id DCJM.CohortJourneyMapping -> PolicySourceOps m
@@ -241,7 +241,7 @@ campaignOps jobData cjmId =
           Nothing -> pure []
           Just st -> do
             let optedInOnly = st.controls.campaignUserLinkType == Just DCJM.OptIn
-            map cast <$> QUCMExtra.findActiveUserIdsByCohortMappingIdAfter cjmId st.localNow optedInOnly (cast <$> mbAfter) limit,
+            map cast <$> QUCMExtra.findActiveUserIdsByCohortMappingIdAfter cjmId st.localNow optedInOnly (Just st.mapping.startDate) (cast <$> mbAfter) limit,
       stillInCharge = \policy driverId -> do
         driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         context <- DPP.tryDriverFleetContext DPP.Cached driverId driver.merchantOperatingCityId >>= either throwM pure
