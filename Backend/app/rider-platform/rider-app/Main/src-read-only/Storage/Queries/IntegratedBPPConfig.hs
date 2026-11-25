@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
       Se.Set Beam.operatorConfig (Data.Aeson.toJSON <$> operatorConfig),
       Se.Set Beam.passOverrideApplicable passOverrideApplicable,
       Se.Set Beam.paymentGatewayReferenceId paymentGatewayReferenceId,
+      Se.Set Beam.passTicketOverlapWarningTime passTicketOverlapWarningTime,
       Se.Set Beam.platformType platformType,
       Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
       Se.Set Beam.providerName providerName,

@@ -31,6 +31,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     operatorConfig :: Kernel.Prelude.Maybe Domain.Types.Extra.IntegratedBPPConfig.OperatorConfig,
     passOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentGatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passTicketOverlapWarningTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
