@@ -50,13 +50,10 @@ type API =
              :> ReqBody '[JSON] DReg.TwoFaAdminResetReq
              :> Post '[JSON] DReg.TwoFaAdminResetRes
            -- SUPER_ADMIN only (checked in the handler; DashboardAuth has no tier for it).
-           :<|> "twoFaExempt"
+           :<|> "twoFaMode"
              :> DashboardAuth 'DASHBOARD_ADMIN
-             :> ReqBody '[JSON] DReg.TwoFaExemptReq
+             :> ReqBody '[JSON] DReg.TwoFaModeReq
              :> Post '[JSON] APISuccess
-           :<|> "twoFaDispatchDeadlineNotifications"
-             :> DashboardAuth 'DASHBOARD_USER
-             :> Post '[JSON] DReg.DispatchNotificationsRes
            :<|> "switchMerchant"
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
@@ -77,8 +74,7 @@ handler =
     :<|> verify2FASetup
     :<|> twoFaStatus
     :<|> twoFaAdminReset
-    :<|> twoFaExempt
-    :<|> twoFaDispatchDeadlineNotifications
+    :<|> setTwoFaMode
     :<|> switchMerchant
     :<|> switchMerchantAndCity
 
@@ -106,11 +102,8 @@ twoFaStatus = withDashboardDbFlowHandlerAPI . DReg.getTwoFaStatus
 twoFaAdminReset :: DashboardLoginFlow r => TokenInfo -> DReg.TwoFaAdminResetReq -> FlowHandlerR r DReg.TwoFaAdminResetRes
 twoFaAdminReset token = withDashboardDbFlowHandlerAPI . DReg.adminResetTwoFa token
 
-twoFaExempt :: DashboardLoginFlow r => TokenInfo -> DReg.TwoFaExemptReq -> FlowHandlerR r APISuccess
-twoFaExempt token = withDashboardDbFlowHandlerAPI . DReg.setTwoFaExempt token
-
-twoFaDispatchDeadlineNotifications :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DReg.DispatchNotificationsRes
-twoFaDispatchDeadlineNotifications = withDashboardDbFlowHandlerAPI . DReg.dispatchTwoFaDeadlineNotifications
+setTwoFaMode :: DashboardLoginFlow r => TokenInfo -> DReg.TwoFaModeReq -> FlowHandlerR r APISuccess
+setTwoFaMode token = withDashboardDbFlowHandlerAPI . DReg.setTwoFaMode token
 
 switchMerchant :: DashboardLoginFlow r => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandlerR r DReg.LoginRes
 switchMerchant token = withDashboardDbFlowHandlerAPI . DReg.switchMerchant token

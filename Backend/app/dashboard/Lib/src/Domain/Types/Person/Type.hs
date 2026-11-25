@@ -55,12 +55,13 @@ data PersonE e = Person
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
     language :: Maybe KET.Language,
+    -- | TOTP secret for the authenticator-app path. Nothing means the person has not yet enrolled;
+    -- its presence is the enrolment signal (there is no separate is2faEnabled flag).
     secretKey :: Maybe Text,
-    is2faEnabled :: Bool,
-    -- | Per-person 2FA exemption, alongside the role-level Role.twoFaExempt. Only a SUPER_ADMIN
-    -- may flip it (Registration.setTwoFaExempt, keyed by email). When True the person skips 2FA
-    -- even when is2faMandatory=True.
-    twoFaExempt :: Bool,
+    -- | Second-factor delivery for this person's dashboard login. AUTHENTICATOR_APP (default) uses
+    -- a TOTP authenticator app (enrolment recorded by secretKey); MOBILE_OTP sends a code to the
+    -- registered mobile number. Changed only by a SUPER_ADMIN (Registration.setTwoFaMode, by email).
+    twoFaMode :: DRole.TwoFaMode,
     tokenNo :: Maybe (EncryptedHashedField e Text),
     vpa :: Maybe (EncryptedHashedField e Text)
   }

@@ -16,7 +16,8 @@
 module Domain.Action.Dashboard.Registration where
 
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, sort, sortOn)
+import Data.List (groupBy, sortOn)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.DashboardActionType as DashAuth
@@ -123,17 +124,23 @@ data Pending2FASetupData = Pending2FASetupData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
+-- 2FA is always enforced. @twoFaMode@ tells the client which second factor applied:
+--   * MOBILE_OTP with @otpSent = True@ and an empty @authToken@: an OTP was texted; resubmit the
+--     same login request with the code in @otp@.
+--   * AUTHENTICATOR_APP with @requiresTwoFaSetup = True@ and an empty @authToken@: the person has
+--     no authenticator enrolled yet; route them through initiate2FaSetup / verify2FaSetup.
+--   * a non-empty @authToken@: login fully succeeded.
 -- The trailing Maybe fields keep the legacy email+password wire shape additive; tokenNo login
 -- populates them for the PT welcome screen. entityName is deprecated in favour of entityShortIds
 -- but stays on the wire so a frontend can be released after the backend.
 data LoginRes = LoginRes
   { authToken :: Text,
-    is2faMandatory :: Bool,
-    is2faEnabled :: Bool,
+    twoFaMode :: Maybe DRole.TwoFaMode,
+    otpSent :: Bool,
+    requiresTwoFaSetup :: Bool,
     message :: Text,
     city :: City.City,
     merchantId :: ShortId DMerchant.Merchant,
-    enforcementDeadline :: Maybe UTCTime,
     role :: Maybe Text,
     firstName :: Maybe Text,
     lastName :: Maybe Text,
@@ -143,12 +150,9 @@ data LoginRes = LoginRes
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data TwoFaStatusRes = TwoFaStatusRes
-  { is2faRequired :: Bool,
-    is2faEnabled :: Bool,
-    is2faExempt :: Bool,
-    enforcementDeadline :: Maybe UTCTime,
-    daysRemaining :: Maybe Int,
-    mustEnrollNow :: Bool
+  { twoFaMode :: DRole.TwoFaMode,
+    -- | Only meaningful for AUTHENTICATOR_APP: whether the person has enrolled a TOTP secret.
+    is2faEnrolled :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -186,14 +190,16 @@ data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET | BOAT_FLEET
 login ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
+    HasRequestId r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int],
     EncFlow m r
   ) =>
   LoginReq ->
@@ -276,8 +282,6 @@ switchMerchant ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -294,8 +298,6 @@ switchMerchantAndCity ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -310,11 +312,14 @@ switchMerchantAndCity authToken req = do
 generateLoginRes ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
+    HasRequestId r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -324,23 +329,22 @@ generateLoginRes ::
   m LoginRes
 generateLoginRes person merchant otp city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  twoFaRequired <- is2FARequired person
-  deadline <- asks (.twoFaEnforcementDeadline)
-  (isToken, msg) <- check2FA person twoFaRequired otp
+  mode <- resolve2FAMode person
+  (outcome, msg) <- check2FA person mode otp merchant city
   token <-
-    if isToken
+    if outcome == Authorized
       then generateToken person.id
       else pure ""
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
   pure
     LoginRes
       { authToken = token,
-        is2faMandatory = twoFaRequired,
-        is2faEnabled = person.is2faEnabled,
+        twoFaMode = Just mode,
+        otpSent = outcome == OtpChallengeSent,
+        requiresTwoFaSetup = outcome == SetupRequired,
         message = msg,
         city = city,
         merchantId = merchant.shortId,
-        enforcementDeadline = deadline,
         role = mbRoleName,
         firstName = Just person.firstName,
         lastName = Just person.lastName,
@@ -352,8 +356,6 @@ generateLoginResWithoutOtp ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -363,18 +365,17 @@ generateLoginResWithoutOtp ::
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   token <- generateToken person.id
-  twoFaRequired <- is2FARequired person
-  deadline <- asks (.twoFaEnforcementDeadline)
+  mode <- resolve2FAMode person
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
   pure
     LoginRes
       { authToken = token,
-        is2faMandatory = twoFaRequired,
-        is2faEnabled = person.is2faEnabled,
+        twoFaMode = Just mode,
+        otpSent = False,
+        requiresTwoFaSetup = False,
         message = "Logged in successfully",
         city = city,
         merchantId = merchant.shortId,
-        enforcementDeadline = deadline,
         role = mbRoleName,
         firstName = Just person.firstName,
         lastName = Just person.lastName,
@@ -398,49 +399,169 @@ lookupRoleAndEntities person merchantId = do
         <> T.intercalate ", " (missingEntityIds <&> (.getId))
   pure (mbRole <&> (.name), filter (not . (.deleted)) personEntities)
 
--- 2FA is required for a person when the deployment enforces it (is2faMandatory)
--- AND neither the person (person.twoFaExempt) nor their role (role.twoFaExempt)
--- is exempt. Both are flipped through POST /user/twoFaExempt, SUPER_ADMIN only.
-is2FARequired ::
-  ( BeamFlow m r,
-    HasFlowEnv m r '["is2faMandatory" ::: Bool]
-  ) =>
+-- 2FA is always enforced. 'resolve2FAMode' picks the second factor: MOBILE_OTP (an SMS code) when
+-- either the person or their role is set to MOBILE_OTP; otherwise AUTHENTICATOR_APP (TOTP), the
+-- default. Both are changed through POST /user/twoFaMode, SUPER_ADMIN only.
+resolve2FAMode ::
+  BeamFlow m r =>
   DP.Person ->
-  m Bool
-is2FARequired person = do
-  mandatory <- asks (.is2faMandatory)
-  if not mandatory || person.twoFaExempt
-    then pure False
+  m DRole.TwoFaMode
+resolve2FAMode person =
+  if person.twoFaMode == DRole.MOBILE_OTP
+    then pure DRole.MOBILE_OTP
     else do
       mbRole <- QRole.findById person.roleId
-      pure $ maybe True (not . (.twoFaExempt)) mbRole
+      pure $
+        if maybe False ((== DRole.MOBILE_OTP) . (.twoFaMode)) mbRole
+          then DRole.MOBILE_OTP
+          else DRole.AUTHENTICATOR_APP
+
+-- | Outcome of the login-time 2FA check.
+data TwoFaOutcome
+  = -- | Second factor satisfied; mint a session token.
+    Authorized
+  | -- | MOBILE_OTP: a code was just texted; the client must resubmit login with it.
+    OtpChallengeSent
+  | -- | AUTHENTICATOR_APP: no authenticator enrolled yet; the client must run 2FA setup first.
+    SetupRequired
+  | -- | The supplied second factor was wrong or expired.
+    TwoFaRejected
+  deriving (Eq)
 
 check2FA ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    HasRequestId r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int]
+  ) =>
+  DP.Person ->
+  DRole.TwoFaMode ->
+  Maybe Text ->
+  DMerchant.Merchant ->
+  City.City ->
+  m (TwoFaOutcome, Text)
+check2FA person mode otp merchant city =
+  case mode of
+    DRole.AUTHENTICATOR_APP ->
+      case person.secretKey of
+        Just _ -> do
+          (ok, msg) <- handle2FA person.id person.secretKey otp
+          pure (if ok then Authorized else TwoFaRejected, msg)
+        Nothing ->
+          pure (SetupRequired, "Two-factor authentication setup required. Please enrol your authenticator app before logging in.")
+    DRole.MOBILE_OTP ->
+      case otp of
+        Nothing -> do
+          sendMobileLoginOtp person merchant city
+          pure (OtpChallengeSent, "An OTP has been sent to your registered mobile number.")
+        Just userOtp -> do
+          ok <- verifyMobileLoginOtp person userOtp
+          pure $ if ok then (Authorized, "Logged in successfully") else (TwoFaRejected, "Invalid or expired OTP")
+
+-- Redis keys for the MOBILE_OTP login challenge.
+make2FALoginOtpKey :: Id DP.Person -> Text
+make2FALoginOtpKey personId = "Dashboard:2FA:LoginOtp:" <> personId.getId
+
+make2FALoginOtpAttemptsKey :: Id DP.Person -> Text
+make2FALoginOtpAttemptsKey personId = "Dashboard:2FA:LoginOtp:Attempts:" <> personId.getId
+
+make2FALoginOtpSendLockKey :: Id DP.Person -> Text
+make2FALoginOtpSendLockKey personId = "Dashboard:2FA:LoginOtp:SendLock:" <> personId.getId
+
+-- Short self-releasing lock so concurrent logins for the same person can't fan out into multiple
+-- SMS. A failed send stores no code, so once this window lapses a retry can send again.
+twoFaLoginOtpSendLockSecs :: Int
+twoFaLoginOtpSendLockSecs = 30
+
+-- | Text an OTP to the person's registered mobile number and cache it for verification.
+-- If an unexpired code is already outstanding we do NOT send another, so repeated login attempts
+-- cannot be used to flood the number with SMS. The downstream /internal/sendSMS generates the OTP
+-- (reusing the SEND_OTP template driver login uses) and returns it; we only persist it.
+sendMobileLoginOtp ::
   ( EncFlow m r,
     Redis.HedisFlow m r,
     MonadFlow m,
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
-    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int]
+    HasRequestId r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int]
   ) =>
   DP.Person ->
-  Bool ->
-  Maybe Text ->
-  m (Bool, Text)
-check2FA person twoFaRequired otp =
-  case (twoFaRequired, person.is2faEnabled) of
-    (True, True) -> handle2FA person.id person.secretKey otp
-    (True, False) -> do
-      -- Grace period: if the enforcement deadline is still in the future, let
-      -- the user log in without 2FA. Frontend will route them into the setup
-      -- flow (skippable). After the deadline (or if no deadline is set), block.
-      now <- getCurrentTime
-      deadline <- asks (.twoFaEnforcementDeadline)
-      let inGrace = maybe False (>= now) deadline
-      if inGrace
-        then pure (True, "Two-factor authentication not yet enabled. Please enrol before the enforcement date.")
-        else pure (False, "2 Factor authentication is not enabled, it is mandatory for this deployment")
-    _ -> pure (True, "Logged in successfully")
+  DMerchant.Merchant ->
+  City.City ->
+  m ()
+sendMobileLoginOtp person merchant city = do
+  existing <- Redis.get @Text (make2FALoginOtpKey person.id)
+  case existing of
+    Just _ -> pure () -- an unexpired code is still valid; don't re-send
+    Nothing -> do
+      -- Atomically claim a short send slot before contacting the SMS service. Concurrent logins
+      -- for the same person lose this race and skip, so a burst can't trigger multiple texts; the
+      -- lock's short TTL self-releases, so a failed send (which stores no code) can retry once it
+      -- lapses -- no explicit release needed.
+      claimed <- Redis.setNxExpire (make2FALoginOtpSendLockKey person.id) twoFaLoginOtpSendLockSecs True
+      when claimed $ do
+        mobile <- decrypt person.mobileNumber
+        let phoneNumber = person.mobileCountryCode <> mobile
+            smsReq =
+              InternalClient.SendSMSReq
+                { phoneNumber = phoneNumber,
+                  messageKey = "SEND_OTP",
+                  templateVars = Map.fromList [("hash", "")],
+                  isOtp = Just True
+                }
+            -- Route by the merchant short-id suffix, as the email-OTP flow does: `_PARTNER` is the
+            -- driver-app's own short id (BPP); everything else is rider-app (BAP).
+            callInternalSendSMS =
+              if "_PARTNER" `T.isSuffixOf` getShortId merchant.shortId
+                then InternalClient.callBPPInternalSendSMS
+                else InternalClient.callBAPInternalSendSMS
+        smsRes <- callInternalSendSMS (getShortId merchant.shortId) city smsReq
+        otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from internal SMS service")
+        otpTTL <- fromMaybe 900 <$> asks (.twoFaOtpTTLInSecs)
+        Redis.setExp (make2FALoginOtpKey person.id) otpCode otpTTL
+        Redis.del (make2FALoginOtpAttemptsKey person.id)
+        logInfo $ "2FA login OTP sent for person: " <> person.id.getId
+
+-- | Verify a submitted mobile OTP against the cached code, enforcing an attempt cap.
+verifyMobileLoginOtp ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int]
+  ) =>
+  DP.Person ->
+  Text ->
+  m Bool
+verifyMobileLoginOtp person userOtp = do
+  maxAttempts <- fromMaybe 5 <$> asks (.twoFaMaxOtpVerifyAttempts)
+  -- Atomic increment so concurrent attempts can't under-count against the cap; set the expiry on
+  -- the first increment so the counter still lapses with the OTP.
+  attempts <- Redis.incr (make2FALoginOtpAttemptsKey person.id)
+  when (attempts == 1) $ do
+    otpTTL <- fromMaybe 900 <$> asks (.twoFaOtpTTLInSecs)
+    Redis.expire (make2FALoginOtpAttemptsKey person.id) otpTTL
+  if attempts > fromIntegral maxAttempts
+    then do
+      Redis.del (make2FALoginOtpKey person.id)
+      pure False
+    else do
+      mbStored <- Redis.get @Text (make2FALoginOtpKey person.id)
+      case mbStored of
+        Nothing -> pure False
+        Just stored
+          | stored == T.strip userOtp -> do
+            Redis.del (make2FALoginOtpKey person.id)
+            Redis.del (make2FALoginOtpAttemptsKey person.id)
+            pure True
+          | otherwise -> pure False
 
 -- 2FA verify rate limit: 5 failed attempts in 5 min, then locked out for 15 min.
 twoFaVerifyMaxFailures :: Int
@@ -831,8 +952,7 @@ buildFleetOwner req pid roleId dashboardAccessType merchantId = do
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False,
-        twoFaExempt = False,
+        twoFaMode = DRole.AUTHENTICATOR_APP,
         tokenNo = Nothing,
         vpa = Nothing
       }
@@ -945,35 +1065,22 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False,
-        twoFaExempt = False,
+        twoFaMode = DRole.AUTHENTICATOR_APP,
         tokenNo = Nothing,
         vpa = Nothing
       }
 
--- 2FA status endpoint - used by frontend banner + post-login modal to show
--- countdown and route to enrollment.
+-- 2FA status endpoint - surfaces the person's second-factor mode and, for the authenticator path,
+-- whether they have enrolled a TOTP secret yet.
 
 getTwoFaStatus ::
-  ( BeamFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime]
-  ) =>
+  BeamFlow m r =>
   TokenInfo ->
   m TwoFaStatusRes
 getTwoFaStatus tokenInfo = do
   person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  is2faRequired <- is2FARequired person
-  enforcementDeadline <- asks (.twoFaEnforcementDeadline)
-  now <- getCurrentTime
-  let daysRemaining =
-        enforcementDeadline <&> \deadline ->
-          floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
-      pastGrace = maybe True (< now) enforcementDeadline
-      is2faEnabled = person.is2faEnabled
-      is2faExempt = person.twoFaExempt
-      mustEnrollNow = is2faRequired && pastGrace && not is2faEnabled
+  twoFaMode <- resolve2FAMode person
+  let is2faEnrolled = isJust person.secretKey
   pure TwoFaStatusRes {..}
 
 -- Admin reset - lets a DASHBOARD_ADMIN invalidate someone else's TOTP so they
@@ -984,76 +1091,77 @@ data TwoFaAdminResetReq = TwoFaAdminResetReq
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
--- | One switch for both exemption levels. Exactly one of email (a person) or roleName (every
--- holder of the role) must be given. Keyed by the natural identifier an operator has to hand,
--- not by id, so no list/search round-trip is needed first.
-data TwoFaExemptReq = TwoFaExemptReq
+-- | One switch for both levels. Exactly one of email (a person) or roleName (every holder of the
+-- role) must be given. Keyed by the natural identifier an operator has to hand, not by id, so no
+-- list/search round-trip is needed first.
+data TwoFaModeReq = TwoFaModeReq
   { email :: Maybe Text,
     roleName :: Maybe Text,
-    exempt :: Bool
+    mode :: DRole.TwoFaMode
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
--- | What gets written to the transaction audit row. The request body is not stored as-is
--- because it carries the email (PII); the target id plus the flag is enough to tell a grant
--- from a revocation and which level it applied to.
-data TwoFaExemptAudit = TwoFaExemptAudit
+-- | What gets written to the transaction audit row. The request body is not stored as-is because
+-- it carries the email (PII); the target id plus the mode is enough to tell what changed.
+data TwoFaModeAudit = TwoFaModeAudit
   { personId :: Maybe (Id DP.Person),
     roleId :: Maybe (Id DRole.Role),
-    exempt :: Bool
+    mode :: DRole.TwoFaMode
   }
   deriving (Generic, ToJSON)
 
--- | Flip the 2FA exemption for a person or for a whole role. SUPER_ADMIN only: this is a
--- deliberate hole in a deployment-wide security control, so the DASHBOARD_ADMIN tier the
--- route requires is not enough. There is no DashboardAuth tier for SUPER_ADMIN (it is an
--- admin_tier, not a DashboardAccessType), hence the explicit isSuperAdmin check, done before
--- any lookup so a non-super-admin cannot probe which emails or role names exist.
+-- | Set the second-factor mode for a person or for a whole role. SUPER_ADMIN only: switching the
+-- second factor is a sensitive security control, so the DASHBOARD_ADMIN tier the route requires is
+-- not enough. There is no DashboardAuth tier for SUPER_ADMIN (it is an admin_tier, not a
+-- DashboardAccessType), hence the explicit isSuperAdmin check, done before any lookup so a
+-- non-super-admin cannot probe which emails or role names exist.
 --
--- Revoking must take effect on the next request, not whenever the session lapses: the
--- affected persons' cached and registration tokens are dropped so they go back through
--- login and 2FA. Granting changes nothing about an already-authenticated session.
-setTwoFaExempt ::
+-- A mode change must take effect on the next request, not whenever the session lapses: the affected
+-- persons' cached and registration tokens are dropped so they re-authenticate with the new factor.
+setTwoFaMode ::
   ( BeamFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
-  TwoFaExemptReq ->
+  TwoFaModeReq ->
   m APISuccess
-setTwoFaExempt tokenInfo req = do
+setTwoFaMode tokenInfo req = do
   unlessM (isSuperAdmin tokenInfo.personId) $
     throwError AccessDenied
   affected <- case (req.email, req.roleName) of
     (Just emailRaw, Nothing) -> do
-      runRequestValidation validateTwoFaExemptEmail emailRaw
+      runRequestValidation validateTwoFaModeEmail emailRaw
       let email = T.toLower emailRaw
       person <- QP.findByEmail email >>= fromMaybeM (PersonDoesNotExist email)
-      QP.updatePersonTwoFaExempt person.id req.exempt
-      recordExemptChange TwoFaExemptAudit {personId = Just person.id, roleId = Nothing, exempt = req.exempt}
+      QP.updatePersonTwoFaMode person.id req.mode
+      recordModeChange TwoFaModeAudit {personId = Just person.id, roleId = Nothing, mode = req.mode}
       pure [person]
     (Nothing, Just roleName) -> do
       role <- QRole.findByName roleName >>= fromMaybeM (RoleNotFound roleName)
-      QRole.updateRoleTwoFaExempt role.id req.exempt
-      recordExemptChange TwoFaExemptAudit {personId = Nothing, roleId = Just role.id, exempt = req.exempt}
-      QP.findAllByRole role.id
+      QRole.updateRoleTwoFaMode role.id req.mode
+      recordModeChange TwoFaModeAudit {personId = Nothing, roleId = Just role.id, mode = req.mode}
+      -- Force re-auth for every holder regardless of dashboard type: QP.findAllByRole is
+      -- DEFAULT_DASHBOARD-only, so fetch TICKET_DASHBOARD holders too, else they keep a session
+      -- under the old second factor until it lapses.
+      defaultHolders <- QP.findAllByRoleWithType @'PT.DefaultDashboard role.id
+      ticketHolders <- QP.findAllByRoleWithType @'PT.TicketDashboard role.id
+      pure (defaultHolders <> ticketHolders)
     _ -> throwError $ InvalidRequest "Exactly one of email or roleName must be provided"
-  unless req.exempt $
-    forM_ affected $ \person -> do
-      Auth.cleanCachedTokens person.id
-      QR.deleteAllByPersonId person.id
+  forM_ affected $ \person -> do
+    Auth.cleanCachedTokens person.id
+    QR.deleteAllByPersonId person.id
   pure Success
   where
-    recordExemptChange audit = do
-      -- Identity token: attribute the super-admin's exempt change to their home
-      -- merchant when set (the token no longer names one).
+    recordModeChange audit = do
+      -- Identity token: attribute the super-admin's change to their home merchant when set.
       mbRequestor <- QP.findById tokenInfo.personId
       transaction <- STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorExemptChange :: DT.Endpoint DashAuth.DashboardActionType) tokenInfo.personId (mbRequestor >>= (.merchantId))
       QT.createDashboardTransaction transaction {DT.request = Just $ encodeToText audit}
 
-validateTwoFaExemptEmail :: Validate Text
-validateTwoFaExemptEmail email = validateField "email" email P.email
+validateTwoFaModeEmail :: Validate Text
+validateTwoFaModeEmail email = validateField "email" email P.email
 
 newtype TwoFaAdminResetRes = TwoFaAdminResetRes
   { message :: Text
@@ -1083,88 +1191,3 @@ adminResetTwoFa tokenInfo TwoFaAdminResetReq {..} = do
   STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorAdminReset :: DT.Endpoint DashAuth.DashboardActionType) requestor.id requestor.merchantId >>= QT.createDashboardTransaction
   logInfo $ "2FA admin reset: requestor=" <> requestor.id.getId <> " target=" <> target.id.getId
   pure $ TwoFaAdminResetRes "2FA reset for target user. They must re-enroll on next login."
-
--- Deadline notification dispatch. Cron-triggered (external scheduler hits the
--- admin-authenticated endpoint below). Sends email nudges at 30/14/7/2/1 days
--- before the merchant's enforcementDeadline. Idempotent per (person, bucket)
--- via a Redis key that lives until the deadline passes.
-
-data DispatchNotificationsRes = DispatchNotificationsRes
-  { emailsSent :: Int,
-    skipped :: Int
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
--- Buckets we dispatch at (days before deadline). Ordered largest-first so
--- if a user has been skipped, they get the tightest applicable warning today.
-twoFaNotificationBuckets :: [Int]
-twoFaNotificationBuckets = [30, 14, 7, 2, 1]
-
-make2FANotifyKey :: Id DP.Person -> Int -> Text
-make2FANotifyKey personId bucket = "Dashboard:2FA:Notify:" <> personId.getId <> ":" <> show bucket
-
-pickBucket :: Int -> Maybe Int
-pickBucket daysRemaining = find (\b -> daysRemaining <= b) (reverse (sort twoFaNotificationBuckets))
-
-dispatchTwoFaDeadlineNotifications ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    EncFlow m r
-  ) =>
-  TokenInfo ->
-  m DispatchNotificationsRes
-dispatchTwoFaDeadlineNotifications tokenInfo = do
-  requestor <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  unless (requestor.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
-    throwError AccessDenied
-  is2faMandatory <- asks (.is2faMandatory)
-  enforcementDeadline <- asks (.twoFaEnforcementDeadline)
-  unless is2faMandatory $ pure ()
-  case enforcementDeadline of
-    Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
-    Just deadline -> do
-      now <- getCurrentTime
-      let daysRemaining = floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
-      case pickBucket daysRemaining of
-        Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
-        Just bucket -> do
-          -- Any merchant will do for BAP-vs-BPP routing on the internal SendEmailOTP
-          -- call — 2FA state is deployment-wide, but the internal email endpoint
-          -- lives on a specific downstream service.
-          merchants <- QMerchant.findAllMerchants
-          case find (\m -> m.enabled == Just True) merchants of
-            Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
-            Just anyMerchant -> do
-              accessRows <- QAccess.findAllUserAccountForMerchant anyMerchant.id
-              foldM
-                ( \acc access -> do
-                    mbPerson <- QP.findById access.personId
-                    case mbPerson of
-                      Nothing -> pure acc
-                      Just person
-                        | person.is2faEnabled -> pure acc
-                        | otherwise -> do
-                          let notifyKey = make2FANotifyKey person.id bucket
-                          alreadyNotified <- Redis.get @Bool notifyKey
-                          case alreadyNotified of
-                            Just True -> pure acc {skipped = acc.skipped + 1}
-                            _ -> case person.email of
-                              Nothing -> pure acc {skipped = acc.skipped + 1}
-                              Just encEmail -> do
-                                email <- decrypt encEmail
-                                let emailReq = InternalClient.SendEmailOTPReq {email = email}
-                                let callInternalSendEmail =
-                                      if DTServer.APP_BACKEND `elem` anyMerchant.serverNames
-                                        then InternalClient.callBAPInternalSendEmailOTP
-                                        else InternalClient.callBPPInternalSendEmailOTP
-                                _ <- callInternalSendEmail (getShortId anyMerchant.shortId) access.operatingCity emailReq
-                                Redis.setExp notifyKey True (86400 * 35)
-                                logInfo $ "2FA deadline notification sent: person=" <> person.id.getId <> " bucket=" <> show bucket
-                                pure acc {emailsSent = acc.emailsSent + 1}
-                )
-                (DispatchNotificationsRes 0 0)
-                accessRows

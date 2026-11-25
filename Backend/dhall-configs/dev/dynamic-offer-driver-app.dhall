@@ -361,6 +361,7 @@ let AllocatorJobType =
       | ProcessEndRideFinance
       | WalletIntegrityCheck
       | ChargeWalletPenalty
+      | MaterialiseSharedRuns
       >
 
 let jobRetryOnExceptionMapx =
@@ -641,8 +642,6 @@ in  { esqDBCfg
     , loginRateLimitOptions = dashboardLoginRateLimitOptions
     , merchantUserAccountNumber = +100
     , enforceStrongPasswordPolicy = False
-    , is2faMandatory = False
-    , twoFaEnforcementDeadlineText = Some "2026-08-15T00:00:00Z"
     , twoFaOtpTTLInSecs = Some +900
     , twoFaMaxOtpVerifyAttempts = Some +5
     , totpStepSize = Some +30
