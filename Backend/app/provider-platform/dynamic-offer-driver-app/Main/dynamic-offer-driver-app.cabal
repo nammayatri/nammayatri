@@ -867,6 +867,7 @@ library
       SharedLogic.Settlement
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SharedCab.Trip
+      SharedLogic.SharedRun.Acknowledgement
       SharedLogic.SharedRun.Assign
       SharedLogic.SharedRun.Fare
       SharedLogic.SharedRun.Knobs
