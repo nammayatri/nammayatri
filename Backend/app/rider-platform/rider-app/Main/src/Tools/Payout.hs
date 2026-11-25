@@ -49,7 +49,29 @@ createPayoutOrder ::
   Maybe Text ->
   DPayment.CreatePayoutServiceReq ->
   m Payout.CreatePayoutOrderResp
-createPayoutOrder = runWithServiceConfigAndName Payout.createPayoutOrder (.createPayoutOrder) DPayment.mkCreatePayoutOrderReq
+createPayoutOrder clientSdkVersion merchantId merchantOperatingCityId =
+  runWithServiceConfigAndName createWithEncryptionIfConfigured (.createPayoutOrder) DPayment.mkCreatePayoutOrderReq clientSdkVersion merchantId merchantOperatingCityId
+  where
+    -- Encryption is opt-in per city: only a JuspayPayoutEncryption row switches Juspay to the encrypted API.
+    createWithEncryptionIfConfigured serviceConfig req = do
+      mbEncryptionConfig <- case serviceConfig of
+        Payout.JuspayConfig _ -> getJuspayPayoutEncryptionConfig merchantId merchantOperatingCityId
+        _ -> pure Nothing
+      Payout.createPayoutOrderWithEncryption mbEncryptionConfig serviceConfig req
+
+-- | The city's Juspay payout encryption config, if it has one.
+getJuspayPayoutEncryptionConfig ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Payout.JuspayPayoutEncryptionConfig)
+getJuspayPayoutEncryptionConfig merchantId merchantOperatingCityId = do
+  mbMerchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just DMSC.JuspayPayoutEncryptionService}) Nothing
+  case (.serviceConfig) <$> mbMerchantServiceConfig of
+    Nothing -> pure Nothing
+    Just (DMSC.JuspayPayoutEncryptionServiceConfig cfg) -> pure (Just cfg)
+    Just _ -> throwError $ InternalError "Unexpected service config shape for JuspayPayoutEncryptionService"
 
 payoutOrderStatus ::
   ServiceFlow m r =>

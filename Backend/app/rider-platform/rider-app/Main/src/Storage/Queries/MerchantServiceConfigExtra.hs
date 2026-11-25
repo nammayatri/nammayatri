@@ -228,3 +228,4 @@ getServiceNameConfigJSON = \case
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
+  Domain.JuspayPayoutEncryptionServiceConfig cfg -> (Domain.JuspayPayoutEncryptionService, toJSON cfg)

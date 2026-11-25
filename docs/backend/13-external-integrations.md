@@ -28,6 +28,54 @@ Key functions:
 - `createRefundService` — Process refund
 - `createPayoutService` — Driver payout
 
+#### Juspay payout: encrypted order create
+
+Juspay payout orders go to the plain `POST /payout/merchant/v1/orders` by default. Encryption is a separate,
+optional `merchant_service_config` row with service name **`JuspayPayoutEncryption`**, in addition to the
+`Payout_Juspay` / `Payout_AAJuspay` row. The `Payout_Juspay` config itself is unchanged.
+
+- **Row present** for the city: `Tools.Payout.createPayoutOrder` (rider and driver) passes the row to
+  shared-kernel `Payout.createPayoutOrderWithEncryption`, which follows the four steps of Juspay's
+  [encryption guide](https://juspay.io/in/docs/payout/docs/resources/encryption-guide):
+  1. Stringify the order JSON.
+  2. Encrypt it to Juspay's public key as a compact JWE. The defaults are `RSA-OAEP-256` + `A128CBC-HS256`,
+     and the header `kid` is `juspayKeyId`.
+  3. Sign the JWE with our private key as a compact JWS (`RS256`, header `kid` = `merchantKeyId`). This is on
+     by default; `signRequest: false` skips it and sends the bare JWE.
+  4. `POST /payout/merchant/v1.1/orders` ([encrypted API](https://juspay.io/in/docs/payout/docs/integration/order-create-encrypted))
+     with `{"payload": <jws or jwe>, "kid": juspayKeyId, "sid": merchantKeyId, "format": "compact"}`.
+
+  `UPI_ID` beneficiaries are sent the same way.
+- **Row absent:** no encryption; the plain `v1` API, exactly as before.
+- **Response:** Juspay answers the encrypted API with the plain order JSON (confirmed on the sandbox). Encrypted
+  responses are not supported; one would fail as an undecodable response.
+- Only order create is affected. Order status is still read from the plain `v1` API.
+- The row is looked up with the same dimensions as the payout row: by city and merchant in the rider app, and
+  by city only in the driver app. One row covers every Juspay payout of that city
+  (`Payout_`, `RentalPayout_` and `RidePayout_` in the driver app).
+
+`config_json` of the `JuspayPayoutEncryption` row:
+
+```json
+{
+  "juspayPublicKey": "<passetto-encrypted PEM of Juspay's public key>",
+  "juspayKeyId": "<kid issued by Juspay>",
+  "merchantKeyId": "<sid issued by Juspay for our public key>",
+  "merchantPrivateKey": "<passetto-encrypted PEM of the key pair whose public half was shared with Juspay>",
+  "signRequest": true,
+  "keyWrapAlgorithm": "RSA_OAEP_256",
+  "contentEncryption": "A128CBC_HS256"
+}
+```
+
+- `merchantPrivateKey` is required while `signRequest` is on (the default).
+- `keyWrapAlgorithm` (`RSA_OAEP_256` | `RSA_OAEP`) and `contentEncryption` (`A128CBC_HS256` | `A256CBC_HS512` |
+  `A256GCM`) are optional and default to what the guide names (`RSA_OAEP_256`, `A128CBC_HS256`). Store them with `_`
+  exactly as written here; the JWE header sent to Juspay still uses the standard names (`RSA-OAEP-256`, `A128CBC-HS256`).
+  Juspay's own samples disagree with the guide (`RSA-OAEP`, and `A256CBC-HS512` on the attempt API), so confirm the
+  values, and whether to sign, with Juspay when the keys are exchanged.
+- Delete the row to go back to the plain API. No code change or deploy is needed.
+
 ## Maps & Routing
 
 ### Google Maps / OSRM

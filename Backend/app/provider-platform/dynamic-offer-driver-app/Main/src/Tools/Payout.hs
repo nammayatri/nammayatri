@@ -69,7 +69,24 @@ createPayoutOrder payoutServiceName merchantOperatingCityId personId mbPersonBan
       >>= either (throwError . PayoutNotSent . show) pure
   case serviceConfig of
     Payout.HdfcCbxConfig _ -> throwError $ PayoutNotSent "HDFC CBX has no single-order API; use submitBulkPayout"
+    Payout.JuspayConfig _ -> do
+      -- Encryption is opt-in per city: only a JuspayPayoutEncryption row switches Juspay to the encrypted API.
+      mbEncryptionConfig <- getJuspayPayoutEncryptionConfig merchantOperatingCityId
+      callWithServiceConfig (Payout.createPayoutOrderWithEncryption mbEncryptionConfig) DPayment.mkCreatePayoutOrderReq payoutServiceName personId mbPersonBankAccount serviceConfig serviceReq
     _ -> callWithServiceConfig Payout.createPayoutOrder DPayment.mkCreatePayoutOrderReq payoutServiceName personId mbPersonBankAccount serviceConfig serviceReq
+
+-- | The city's Juspay payout encryption config, if it has one.
+getJuspayPayoutEncryptionConfig ::
+  ServiceFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Payout.JuspayPayoutEncryptionConfig)
+getJuspayPayoutEncryptionConfig merchantOperatingCityId = do
+  mbMerchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just DMSC.JuspayPayoutEncryptionService}) Nothing
+  case (.serviceConfig) <$> mbMerchantServiceConfig of
+    Nothing -> pure Nothing
+    Just (DMSC.JuspayPayoutEncryptionServiceConfig cfg) -> pure (Just cfg)
+    Just _ -> throwError $ InternalError "Unexpected service config shape for JuspayPayoutEncryptionService"
 
 payoutOrderStatus ::
   ServiceFlow m r =>
