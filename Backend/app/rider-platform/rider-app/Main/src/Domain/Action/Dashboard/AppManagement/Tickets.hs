@@ -384,6 +384,6 @@ getTicketPlaceBookings ::
   Maybe API.Types.UI.TicketService.ParkingEntryStatus ->
   Domain.Types.TicketBooking.BookingStatus ->
   Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
-getTicketPlaceBookings merchantShortId _opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
+getTicketPlaceBookings merchantShortId opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlaceBookingsDashboard m.id placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status
+  Domain.Action.UI.TicketService.getTicketPlaceBookingsDashboard m.id merchantShortId opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status

@@ -50,6 +50,7 @@ import qualified Kernel.Prelude as Kernel.Prelude
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Time
@@ -542,12 +543,15 @@ parkingStay row = do
   chain@(root, paid) <- parkingChain row
   pure $ (\(start, end) -> ParkingStay root start end (sum ((.amount.amount) <$> paid))) <$> parkingChainWindow chain
 
--- True when the plate typed in is not the booked one. Spaces, dashes and case do not count ("od 02-ab 1234" = "OD02AB1234").
--- (The parking check refuses a request with no plate before this runs.) A booking with no plate stored has nothing to compare.
+-- A plate as it is compared: capitals, letters and digits only, so spaces, dashes and case do not count ("od 02-ab 1234" = "OD02AB1234").
+-- A plate of only punctuation ("-") is therefore empty: it is neither a plate nor a match.
+normalizePlate :: Text -> Text
+normalizePlate = T.filter Data.Char.isAlphaNum . T.toUpper
+
+-- True when the plate typed in is not the booked one. The parking check refuses a request whose plate is empty once normalized
+-- before this runs, so an empty typed plate never reaches the comparison as a match. A booking with no plate stored has nothing to compare.
 plateTypedDiffers :: Maybe Text -> Maybe Text -> Bool
-plateTypedDiffers (Just typed) (Just booked) | not (T.null (plateKey typed)) = plateKey typed /= plateKey booked
-  where
-    plateKey = T.filter Data.Char.isAlphaNum . T.toUpper
+plateTypedDiffers (Just typed) (Just booked) = normalizePlate typed /= normalizePlate booked
 plateTypedDiffers _ _ = False
 
 -- | Marshal check of a parking QR (original or extension): valid for the whole paid stay, and can be checked any number of times.
@@ -1209,9 +1213,12 @@ getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset book
               }
 
 -- | The dashboard's list of a place's bookings. A PARKING place gets its own listing (a date range, a zone, entered or not,
--- the plate); every other place goes through `getTicketPlaceBookings` exactly as before, and the parking-only filters are ignored.
+-- the plate), and only for a cluster of the merchant and city of the request; every other place goes through
+-- `getTicketPlaceBookings` exactly as before, and the parking-only filters are ignored.
 getTicketPlaceBookingsDashboard ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
   Maybe Int ->
   Maybe Int ->
@@ -1221,15 +1228,36 @@ getTicketPlaceBookingsDashboard ::
   Maybe ParkingEntryStatus ->
   Domain.Types.TicketBooking.BookingStatus ->
   Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
-getTicketPlaceBookingsDashboard merchantId placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
+getTicketPlaceBookingsDashboard merchantId merchantShortId opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
   mbPlace <- QTicketPlace.findById placeId
   case mbPlace of
-    Just place | isParkingPlace place -> getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status
+    Just place
+      | isParkingPlace place -> do
+        -- The cluster must belong to the merchant and city of the request, as on every other parking route: the dashboard's
+        -- access check only says the user may use that merchant and city, not that this place is theirs.
+        city <-
+          CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+        unless (place.merchantOperatingCityId == city.id) $ throwError $ InvalidRequest "Parking cluster not found"
+        -- Only `Booked` has anything to list (unpaid and failed rows are not stays), so any other status is answered at once.
+        if status == DTTB.Booked
+          then getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry
+          else pure emptyParkingBookings
     _ -> getTicketPlaceBookings (Nothing, merchantId) placeId mbLimit mbOffset status
 
+-- | The longest date range one bookings request may ask for. Every request loads and works out each stay in the range, so an
+-- unbounded range would make every page request expensive.
+maxParkingBookingsRangeDays :: Int
+maxParkingBookingsRangeDays = 31
+
+-- | What a parking place lists for a status that has no stays: nothing, with zero counts.
+emptyParkingBookings :: API.Types.UI.TicketService.TicketPlaceBookingList
+emptyParkingBookings =
+  TicketPlaceBookingList {bookings = [], parkingCounts = Just ParkingBookingCounts {booked = 0, entered = 0, notEntered = 0}, summary = Common.Summary {totalCount = 0, count = 0}}
+
 -- | Paid parking stays of a cluster whose window overlaps [from, to) (default: today in the city), newest first.
--- Only `Booked` has anything to list: unpaid and failed rows are not stays. The counts cover the whole range and zone,
--- whatever `entryStatus` narrows the rows to. An extension is part of its stay, not a row of its own.
+-- The counts cover the whole range and zone, whatever `entryStatus` narrows the rows to. An extension is part of its stay,
+-- not a row of its own. Called for `Booked` only (see `getTicketPlaceBookingsDashboard`).
 getParkingPlaceBookings ::
   Domain.Types.TicketPlace.TicketPlace ->
   Maybe Int ->
@@ -1238,9 +1266,8 @@ getParkingPlaceBookings ::
   Maybe UTCTime ->
   Maybe (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService) ->
   Maybe ParkingEntryStatus ->
-  Domain.Types.TicketBooking.BookingStatus ->
   Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
-getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
+getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry = do
   tz <- cityTimeZone place.merchantOperatingCityId
   now <- getCurrentTime
   let dayStart d = addUTCTime (negate (secondsToNominalDiffTime tz)) (UTCTime d 0)
@@ -1248,6 +1275,8 @@ getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry stat
       from = fromMaybe (dayStart today) mbFrom
       to = fromMaybe (dayStart (Data.Time.Calendar.addDays 1 today)) mbTo
   when (to <= from) $ throwError $ InvalidRequest "to must be after from"
+  when (diffUTCTime to from > fromIntegral maxParkingBookingsRangeDays * 86400) $
+    throwError $ InvalidRequest ("The date range can be at most " <> show maxParkingBookingsRangeDays <> " days.")
   allZones <- filter ((== Domain.Types.TicketService.TimeWindow) . (.bookingMode)) <$> QTicketService.getTicketServicesByPlaceId place.id.getId
   zones <- case mbZoneId of
     Nothing -> pure allZones
@@ -1269,53 +1298,50 @@ getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry stat
         Nothing -> stays
       newestFirst = sortOn (\(_, _, stay) -> Down stay.stayStart) shown
       page = maybe id take mbLimit (drop (fromMaybe 0 mbOffset) newestFirst)
-  if status /= DTTB.Booked
-    then pure TicketPlaceBookingList {bookings = [], parkingCounts = Just ParkingBookingCounts {booked = 0, entered = 0, notEntered = 0}, summary = Common.Summary {totalCount = 0, count = 0}}
-    else do
-      bookings <- forM page $ \(zone, root, stay) -> do
-        booking <- QTB.findById root.ticketBookingId >>= fromMaybeM (InternalError $ "Ticket booking missing: " <> root.ticketBookingId.getId)
-        person <- QP.findById booking.personId >>= fromMaybeM (InvalidRequest "Person not found")
-        customerPhoneNumber <- mapM decrypt person.mobileNumber
-        category <- maybe (pure Nothing) QSC.findById root.serviceCategoryId
-        let paid = mkPrice (Just root.amount.currency) stay.stayPaid
-        pure
-          TicketBookingDetails
-            { amount = stay.stayPaid,
-              amountWithCurrency = mkPriceAPIEntity paid,
-              customerName = person.firstName,
-              customerPhoneNumber,
-              lat = 0.0,
-              lon = 0.0,
-              personId = booking.personId.getId,
-              refundDetails = [],
-              services =
-                [ TicketBookingServiceDetails
-                    { allowCancellation = False,
-                      amount = stay.stayPaid,
-                      amountWithCurrency = mkPriceAPIEntity paid,
-                      businessHourId = root.bHourId,
-                      categories = [],
-                      expiryDate = Just stay.stayEnd,
-                      noteInfo = Nothing,
-                      paymentMethod = booking.paymentMethod,
-                      slot = Nothing,
-                      startTime = Just stay.stayStart,
-                      status = root.status,
-                      ticketServiceName = zone.service,
-                      ticketServiceShortId = root.shortId.getShortId,
-                      vehicleNumber = root.vehicleNumber,
-                      vehicleType = (.name) <$> category,
-                      verificationCount = root.verificationCount
-                    }
-                ],
-              status = booking.status,
-              ticketPlaceId = place.id.getId,
-              ticketPlaceName = place.name,
-              ticketShortId = booking.shortId.getShortId,
-              ticketSubPlaceId = Nothing,
-              visitDate = booking.visitDate
-            }
-      pure TicketPlaceBookingList {bookings, parkingCounts = Just counts, summary = Common.Summary {totalCount = length shown, count = length bookings}}
+  bookings <- forM page $ \(zone, root, stay) -> do
+    booking <- QTB.findById root.ticketBookingId >>= fromMaybeM (InternalError $ "Ticket booking missing: " <> root.ticketBookingId.getId)
+    person <- QP.findById booking.personId >>= fromMaybeM (InvalidRequest "Person not found")
+    customerPhoneNumber <- mapM decrypt person.mobileNumber
+    category <- maybe (pure Nothing) QSC.findById root.serviceCategoryId
+    let paid = mkPrice (Just root.amount.currency) stay.stayPaid
+    pure
+      TicketBookingDetails
+        { amount = stay.stayPaid,
+          amountWithCurrency = mkPriceAPIEntity paid,
+          customerName = person.firstName,
+          customerPhoneNumber,
+          lat = 0.0,
+          lon = 0.0,
+          personId = booking.personId.getId,
+          refundDetails = [],
+          services =
+            [ TicketBookingServiceDetails
+                { allowCancellation = False,
+                  amount = stay.stayPaid,
+                  amountWithCurrency = mkPriceAPIEntity paid,
+                  businessHourId = root.bHourId,
+                  categories = [],
+                  expiryDate = Just stay.stayEnd,
+                  noteInfo = Nothing,
+                  paymentMethod = booking.paymentMethod,
+                  slot = Nothing,
+                  startTime = Just stay.stayStart,
+                  status = root.status,
+                  ticketServiceName = zone.service,
+                  ticketServiceShortId = root.shortId.getShortId,
+                  vehicleNumber = root.vehicleNumber,
+                  vehicleType = (.name) <$> category,
+                  verificationCount = root.verificationCount
+                }
+            ],
+          status = booking.status,
+          ticketPlaceId = place.id.getId,
+          ticketPlaceName = place.name,
+          ticketShortId = booking.shortId.getShortId,
+          ticketSubPlaceId = Nothing,
+          visitDate = booking.visitDate
+        }
+  pure TicketPlaceBookingList {bookings, parkingCounts = Just counts, summary = Common.Summary {totalCount = length shown, count = length bookings}}
 
 postTicketBookingsVerify :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Maybe Text -> Maybe Text -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
 postTicketBookingsVerify _ = processBookingService
@@ -1516,8 +1542,9 @@ verifyTicketBookingV2 viaParkingCluster = processBookingService
       | bookingService.ticketServiceId /= ticketServiceId = createVerificationResp DifferentService Nothing (Just ticketService) Nothing
       | ticketService.bookingMode == Domain.Types.TicketService.TimeWindow = do
         unless viaParkingCluster $ throwError parkingOnlyViaCluster
-        -- A parking check always needs the plate the marshal sees on the vehicle (other services never send one).
-        when (maybe True (T.null . T.strip) req.vehicleNumber) $ throwError $ InvalidRequest "vehicleNumber is required to verify a parking ticket"
+        -- A parking check always needs the plate the marshal sees on the vehicle (other services never send one). It is judged as it is
+        -- compared, so a plate of only spaces or punctuation counts as missing.
+        when (maybe True (T.null . normalizePlate) req.vehicleNumber) $ throwError $ InvalidRequest "vehicleNumber is required to verify a parking ticket"
         -- A different plate is refused BEFORE the entry is marked, and the booked plate is not sent back
         -- (it would let the marshal copy it instead of checking the vehicle).
         if plateTypedDiffers req.vehicleNumber bookingService.vehicleNumber
