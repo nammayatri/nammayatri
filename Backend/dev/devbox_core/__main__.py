@@ -8,7 +8,7 @@ import subprocess
 import sys
 from typing import Callable
 
-from . import cc, data, deploy, fleet, flow, ssh, stack, workspace
+from . import cc, data, deploy, fleet, flow, output, ssh, stack, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -139,6 +139,16 @@ def _stack_status(args, t, wdir) -> dict:
     return res
 
 
+def _stack_wait(args, t, wdir) -> dict:
+    # On failure, add a GitHub error annotation (top of the run) before letting
+    # _stack_cmd print the JSON error line that SCC's poller reads.
+    try:
+        return stack.wait_ready(t, args.name, wdir, timeout=args.timeout, until=args.until)
+    except RuntimeError as e:
+        output.annotate("Build failed" if args.until == "services" else "Start failed", str(e))
+        raise
+
+
 def cmd_versions(args: argparse.Namespace) -> int:
     versions, err = data.published_versions(_target(args), args.source)
     if err:
@@ -197,7 +207,6 @@ def cmd_cc_start(args: argparse.Namespace) -> int:
 
 
 def cmd_result(args: argparse.Namespace) -> int:
-    from . import output
     try:
         fields = flow.result_fields(_target(args), args.name, args.devbox, args.url_host)
     except RuntimeError as e:
@@ -299,7 +308,7 @@ def main(argv: list | None = None) -> int:
          lambda a, t, w: stack.start(t, w)),
         ("stack-status", "running? which stage? (--tail N shows the last log lines)", _stack_status),
         ("stack-wait", "follow the stack until rider-app and driver-app answer",
-         lambda a, t, w: stack.wait_ready(t, a.name, w, timeout=a.timeout, until=a.until)),
+         _stack_wait),
         ("stack-stop", "stop the stack and everything running in the workspace folder",
          lambda a, t, w: stack.stop(t, w)),
     ):

@@ -24,6 +24,15 @@ def result(fields: dict) -> None:
     print("DEVBOX_RESULT " + json.dumps(fields), flush=True)
 
 
+def annotate(title: str, msg: str) -> None:
+    """A GitHub Actions error annotation (shown at the top of the run) plus the
+    full message in the log. The first line becomes the annotation title/summary,
+    which is also the line SCC's poller reads back for the release page."""
+    first = (msg.splitlines() or [title])[0]
+    print(f"::error title={title}::{first}", flush=True)
+    print(msg, flush=True)
+
+
 class Stage:
     """with Stage("sync"): …  → prints started, then done or failed (with ms)."""
 
