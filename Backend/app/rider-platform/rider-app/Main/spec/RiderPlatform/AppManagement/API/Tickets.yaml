@@ -8,6 +8,8 @@ imports:
   TicketServiceVerificationResp: API.Types.UI.TicketService
   TicketFleetVehicleResp: API.Types.UI.TicketService
   TicketPlaceBookingList: API.Types.UI.TicketService
+  ParkingEntryStatus: API.Types.UI.TicketService
+  UTCTime: Kernel.Prelude
   TicketServiceVerificationReq: API.Types.UI.TicketService
   TicketService: Domain.Types.TicketService
   TicketBookingService: Domain.Types.TicketBookingService
@@ -338,6 +340,11 @@ apis:
       query:
         - limit: Int
         - offset: Int
+        # parking places only; ignored for every other kind of place
+        - from: UTCTime
+        - to: UTCTime
+        - serviceId: Id TicketService
+        - entryStatus: ParkingEntryStatus
       mandatoryQuery:
         status: BookingStatus
       response:

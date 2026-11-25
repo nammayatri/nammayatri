@@ -181,6 +181,11 @@ types:
     expiryDate : Maybe UTCTime
     categories : [TicketBookingCategoryDetails]
     noteInfo: Maybe Text
+    # parking only (Nothing for every other kind of place): the stay behind this row
+    vehicleNumber: Maybe Text
+    vehicleType: Maybe Text
+    startTime: Maybe UTCTime
+    paymentMethod: Maybe PaymentMethod
 
   TicketBookingCategoryDetails:
     id : Id TicketBookingServiceCategory
@@ -238,6 +243,7 @@ types:
 
   TicketServiceVerificationReq:
     assignments: "Maybe [SharedLogic.CallBPPInternal.BookingAssignment]"
+    vehicleNumber: Maybe Text # parking: required for a parking check (the plate the marshal sees); must match the booked one. Ignored by other services
 
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
@@ -256,7 +262,7 @@ types:
     vehicleNumber: Maybe Text # parking: the marshal compares this with the parked car
 
   TicketVerificationStatus:
-    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking"
+    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking,VehicleMismatch"
 
   PeopleCategoriesVerificationRes:
     id: Id ServicePeopleCategory
@@ -295,6 +301,15 @@ types:
   TicketPlaceBookingList:
     - bookings: [API.Types.UI.TicketService.TicketBookingDetails]
     - summary: Summary
+    - parkingCounts: Maybe ParkingBookingCounts # parking only: over the whole date range, whatever entryStatus filters
+
+  ParkingBookingCounts:
+    booked: Int
+    entered: Int
+    notEntered: Int
+
+  ParkingEntryStatus:
+    enum: "Entered,NotEntered"
 
 apis:
   # GET /ticket/places

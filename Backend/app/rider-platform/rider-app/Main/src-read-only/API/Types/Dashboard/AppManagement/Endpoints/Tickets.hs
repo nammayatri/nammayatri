@@ -349,6 +349,14 @@ type GetTicketPlaceBookings =
            "limit"
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam "from" Kernel.Prelude.UTCTime
+      :> QueryParam "to" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "serviceId"
+           (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
+      :> QueryParam
+           "entryStatus"
+           API.Types.UI.TicketService.ParkingEntryStatus
       :> MandatoryQueryParam
            "status"
            Domain.Types.TicketBooking.BookingStatus
@@ -388,7 +396,7 @@ data TicketsAPIs = TicketsAPIs
     getAllTicketBookings :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketBookingAPIEntityV2],
     postTicketBookingCashCollect :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postTicketPlacesDirectBook :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.TicketService.DirectTicketBookingReq -> EulerHS.Types.EulerClient API.Types.UI.TicketService.DirectTicketBookingResp,
-    getTicketPlaceBookings :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketPlaceBookingList
+    getTicketPlaceBookings :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService) -> Kernel.Prelude.Maybe API.Types.UI.TicketService.ParkingEntryStatus -> Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketPlaceBookingList
   }
 
 mkTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> TicketsAPIs)
