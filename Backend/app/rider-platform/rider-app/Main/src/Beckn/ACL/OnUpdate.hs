@@ -27,6 +27,7 @@ import qualified BecknV2.Utils as Utils
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
+import Domain.Types.LocationAddress (LocationAddress (..))
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -119,6 +120,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
         "PHONE_CALL_COMPLETED" -> return $ DOnUpdate.OUPhoneCallCompletedEventReq $ DOnUpdate.PhoneCallCompletedEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
+        "STOPS_UPDATED" -> parseStopsUpdatedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "DRIVER_NEAR_PICKUP" -> parseDriverNearPickupEvent order
@@ -217,6 +219,47 @@ parseStopArrivedEvent transactionId order = do
       DOnUpdate.StopArrivedReq
         { bppRideId = Id bppRideId,
           transactionId
+        }
+
+parseStopsUpdatedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseStopsUpdatedEvent order = do
+  fulfillment <- order.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "fulfillment is not present in StopsUpdated Event.")
+  bppRideId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "fulfillment_id is not present in StopsUpdated Event.")
+  stopsVersion <- Utils.getTag Tag.STOPS_VERSION order.orderTags >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "stops_version tag is not present in StopsUpdated Event.")
+  stops <- forM (fromMaybe [] fulfillment.fulfillmentStops) $ \stop -> do
+    stopOrder <- stop.stopId >>= readMaybe & fromMaybeM (InvalidRequest "stop id is not present in StopsUpdated Event.")
+    location <- stop.stopLocation & fromMaybeM (InvalidRequest "stop location is not present in StopsUpdated Event.")
+    gps <- location.locationGps & fromMaybeM (InvalidRequest "stop gps is not present in StopsUpdated Event.") >>= Utils.parseLatLong
+    pure
+      DOnUpdate.UpdatedStop
+        { order = stopOrder,
+          gps,
+          address = mkOneLineAddress location,
+          reachedAt = stop.stopTime >>= (.timeTimestamp)
+        }
+  pure $
+    DOnUpdate.OUStopsUpdatedReq $
+      DOnUpdate.StopsUpdatedReq
+        { bppRideId = Id bppRideId,
+          stopsVersion,
+          stops
+        }
+  where
+    mkOneLineAddress location =
+      LocationAddress
+        { street = Nothing,
+          door = Nothing,
+          city = location.locationCity >>= (.cityName),
+          state = location.locationState >>= (.stateName),
+          country = location.locationCountry >>= (.countryName),
+          building = Nothing,
+          areaCode = location.locationAreaCode,
+          area = location.locationAddress,
+          ward = Nothing,
+          placeId = Nothing,
+          instructions = Nothing,
+          title = Nothing,
+          extras = Nothing
         }
 
 parseEditDestinationSoftUpdate :: (MonadFlow m, CacheFlow m r) => Text -> Spec.Order -> Text -> m DOnUpdate.OnUpdateReq

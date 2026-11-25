@@ -329,6 +329,7 @@ data TransporterConfig = TransporterConfig
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rentalNextStopLockThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     requireFleetOwnerRegistrationForEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRcTakeoverPhoto :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requireRouteMappingInVehicle :: Kernel.Prelude.Bool,

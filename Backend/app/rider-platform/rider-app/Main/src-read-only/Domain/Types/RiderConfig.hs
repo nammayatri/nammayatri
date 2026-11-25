@@ -101,6 +101,7 @@ data RiderConfig = RiderConfig
     enableOnlinePaymentRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePaymentRefunds :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePersonCallIdentity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableRentalStopUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableRewardsManagement :: Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableRideHailingOffers :: Kernel.Prelude.Bool,

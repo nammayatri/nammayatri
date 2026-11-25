@@ -46,6 +46,7 @@ data OnUpdateBuildReq
   | PhoneCallRequestBuildReq DPhoneCallRequestReq
   | PhoneCallCompletedBuildReq DPhoneCallCompletedReq
   | StopArrivedBuildReq DStopArrivedBuildReq
+  | StopsUpdatedBuildReq DStopsUpdatedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
@@ -67,6 +68,18 @@ newtype DParcelImageUploadedReq = DParcelImageUploadedReq
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
   { bookingDetails :: BookingDetails
+  }
+
+data DStopsUpdatedBuildReq = DStopsUpdatedBuildReq
+  { bookingDetails :: BookingDetails,
+    stopsVersion :: Int,
+    stops :: [RentalStop]
+  }
+
+data RentalStop = RentalStop
+  { order :: Int,
+    location :: DL.Location,
+    reachedAt :: Maybe UTCTime
   }
 
 data DEstimateRepetitionReq = DEstimateRepetitionReq

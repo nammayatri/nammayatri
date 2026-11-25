@@ -323,6 +323,7 @@ data TransporterConfigT f = TransporterConfigT
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
     reminderSystemEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    rentalNextStopLockThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     requireFleetOwnerRegistrationForEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requireRcTakeoverPhoto :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requireRouteMappingInVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

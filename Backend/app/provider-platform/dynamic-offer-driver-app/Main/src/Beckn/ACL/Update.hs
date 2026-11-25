@@ -74,6 +74,7 @@ parseEvent merchantId reqMsg context = do
       parseEditLocationEvent bookingId fulfillment mbRideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
+    "UPDATE_STOPS" -> parseUpdateStopsEvent bookingId fulfillment
     "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent bookingId fulfillment
     "ADD_BAGGAGE" -> parseAddBaggageEvent bookingId
     _ -> throwError (InvalidRequest "Invalid event type")
@@ -96,6 +97,20 @@ parseEvent merchantId reqMsg context = do
           DUpdate.EditStopReq
             { bookingId,
               stops'
+            }
+
+    parseUpdateStopsEvent bookingId fulfillment = do
+      stops <- forM (fromMaybe [] fulfillment.fulfillmentStops) $ \stop -> case stop.stopId of
+        Just orderText -> DUpdate.KeepStop <$> (Kernel.Prelude.readMaybe orderText & fromMaybeM (InvalidRequest $ "Invalid stop id: " <> show orderText))
+        Nothing -> DUpdate.AddStop <$> Utils.buildLocation' merchantId stop
+      stopsVersion <- forM (Utils.getTag Tag.STOPS_VERSION reqMsg.updateReqMessageOrder.orderTags) $ \versionText ->
+        Kernel.Prelude.readMaybe (toString versionText) & fromMaybeM (InvalidRequest $ "Invalid stops_version: " <> versionText)
+      pure $
+        DUpdate.UUpdateStopsReq $
+          DUpdate.UpdateStopsReq
+            { bookingId,
+              stopsVersion,
+              stops
             }
 
     parseEditLocationEvent bookingId fulfillment mbRideId = do

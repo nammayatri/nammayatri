@@ -98,6 +98,7 @@ data RiderConfigT f = RiderConfigT
     enableOnlinePaymentRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePaymentRefunds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePersonCallIdentity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableRentalStopUpdates :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRewardsManagement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideEndOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideHailingOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

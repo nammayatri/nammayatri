@@ -427,6 +427,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.referralLinkPassword referralLinkPassword,
       Se.Set Beam.refillVehicleModel refillVehicleModel,
       Se.Set Beam.reminderSystemEnabled reminderSystemEnabled,
+      Se.Set Beam.rentalNextStopLockThreshold rentalNextStopLockThreshold,
       Se.Set Beam.requireFleetOwnerRegistrationForEnablement requireFleetOwnerRegistrationForEnablement,
       Se.Set Beam.requireRcTakeoverPhoto requireRcTakeoverPhoto,
       Se.Set Beam.requireRouteMappingInVehicle (Just requireRouteMappingInVehicle),

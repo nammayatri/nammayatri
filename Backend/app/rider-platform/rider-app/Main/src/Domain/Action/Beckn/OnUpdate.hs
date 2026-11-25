@@ -30,6 +30,9 @@ module Domain.Action.Beckn.OnUpdate
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
+    StopsUpdatedReq (..),
+    UpdatedStop (..),
+    stashRequestedStops,
     ValidatedOnUpdateReq (..),
     EditDestSoftUpdateReq (..),
     EditDestConfirmUpdateReq (..),
@@ -52,6 +55,7 @@ module Domain.Action.Beckn.OnUpdate
     ValidatedPhoneCallRequestEventReq (..),
     ValidatedPhoneCallCompletedEventReq (..),
     ValidatedStopArrivedReq (..),
+    ValidatedStopsUpdatedReq (..),
     ValidatedEditDestSoftUpdateReq (..),
     ValidatedEditDestConfirmUpdateReq (..),
     ValidatedTollCrossedEventReq (..),
@@ -73,6 +77,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Booking.API (RentalStop (..), getRentalStops, getRentalStopsVersion, setRentalStopsVersion)
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingPartiesLink as DBookingPartiesLink
 import qualified Domain.Types.BookingStatus as DRB
@@ -81,6 +86,8 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.Location as DL
+import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DPerson
@@ -90,8 +97,10 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.StopInformation as DSI
 import Domain.Types.VehicleVariant
 import Environment
+import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Types as DLanguage
@@ -99,6 +108,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -133,6 +143,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.StopInformation as QSI
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -156,6 +167,7 @@ data OnUpdateReq
   | OUNewMessageReq NewMessageReq
   | OUSafetyAlertReq SafetyAlertReq
   | OUStopArrivedReq StopArrivedReq
+  | OUStopsUpdatedReq StopsUpdatedReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
@@ -184,6 +196,7 @@ data ValidatedOnUpdateReq
   | OUValidatedNewMessageReq ValidatedNewMessageReq
   | OUValidatedSafetyAlertReq ValidatedSafetyAlertReq
   | OUValidatedStopArrivedReq ValidatedStopArrivedReq
+  | OUValidatedStopsUpdatedReq ValidatedStopsUpdatedReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
@@ -341,6 +354,26 @@ data ValidatedStopArrivedReq = ValidatedStopArrivedReq
   { bppRideId :: Id DRide.BPPRide,
     booking :: DRB.Booking,
     ride :: DRide.Ride
+  }
+
+data StopsUpdatedReq = StopsUpdatedReq
+  { bppRideId :: Id DRide.BPPRide,
+    stopsVersion :: Int,
+    stops :: [UpdatedStop]
+  }
+
+data ValidatedStopsUpdatedReq = ValidatedStopsUpdatedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    stopsVersion :: Int,
+    stops :: [UpdatedStop]
+  }
+
+data UpdatedStop = UpdatedStop
+  { order :: Int,
+    gps :: LatLong,
+    address :: LocationAddress,
+    reachedAt :: Maybe UTCTime
   }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -662,6 +695,8 @@ onUpdate = \case
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing Nothing
     Notify.notifyOnStopReached booking ride
+  OUValidatedStopsUpdatedReq ValidatedStopsUpdatedReq {..} ->
+    applyStopsUpdated booking ride stopsVersion stops
   OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..} -> do
     let currentPointLat = (.lat) <$> currentPoint
         currentPointLon = (.lon) <$> currentPoint
@@ -840,6 +875,12 @@ validateRequest = \case
       DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
+  OUStopsUpdatedReq StopsUpdatedReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+    unless (ride.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $
+      throwError $ RideInvalidStatus ("Stops can't be updated for ride " <> ride.id.getId <> " in status " <> show ride.status)
+    return $ OUValidatedStopsUpdatedReq ValidatedStopsUpdatedReq {..}
   OUEditDestSoftUpdateReq EditDestSoftUpdateReq {..} -> do
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     booking <- QRB.findById bookingUpdateRequest.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateRequest.bookingId.getId)
@@ -925,3 +966,96 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         createdAt = now,
         updatedAt = now
       }
+
+requestedStopsKey :: Id DRB.Booking -> Text
+requestedStopsKey bookingId = "RentalStops:Requested:BookingId-" <> bookingId.getId
+
+stashRequestedStops :: Id DRB.Booking -> [DL.Location] -> Flow ()
+stashRequestedStops bookingId locations =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+    forM_ locations $ \location -> Hedis.hSetExp (requestedStopsKey bookingId) location.id.getId location 3600
+
+applyStopsUpdated :: DRB.Booking -> DRide.Ride -> Int -> [UpdatedStop] -> Flow ()
+applyStopsUpdated booking ride stopsVersion updatedStops =
+  Hedis.withWaitAndLockMasterCloudCrossAppRedis "rentalStops" "waitForStopsUpdatedLock" ("RentalStops:StopsUpdated:BookingId-" <> booking.id.getId) 10 100000 $ do
+    currentBooking <- QRB.findById booking.id >>= fromMaybeM (BookingDoesNotExist booking.id.getId)
+    mbCurrentVersion <- getRentalStopsVersion booking.id
+    if maybe False (>= stopsVersion) mbCurrentVersion
+      then logInfo $ "Skipping stops version " <> show stopsVersion <> " of booking " <> booking.id.getId <> ", already at " <> show mbCurrentVersion
+      else do
+        currentStops <- getRentalStops ride.id
+        requestedLocations <- map snd <$> Hedis.runInMasterCloudRedisCellWithCrossAppRedis (Hedis.hGetAll (requestedStopsKey booking.id))
+        stops <- resolveStops currentBooking currentStops requestedLocations updatedStops
+        syncStopMappings currentBooking ride stops
+        stopsInfo <- QSI.findAllByRideIdFromKVAndDB ride.id
+        let newlyReachedStops = [(stop, reachedAt) | stop <- stops, Just reachedAt <- [stop.reachedAt], stop.order `notElem` map (.stopOrder) stopsInfo]
+        forM_ newlyReachedStops $ \(stop, reachedAt) -> do
+          stopInfoId <- generateGUID
+          now <- getCurrentTime
+          QSI.create
+            DSI.StopInformation
+              { id = stopInfoId,
+                rideId = ride.id,
+                stopId = stop.location.id,
+                stopOrder = stop.order,
+                waitingTimeStart = reachedAt,
+                waitingTimeEnd = Just reachedAt,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = ride.merchantId,
+                merchantOperatingCityId = ride.merchantOperatingCityId
+              }
+        QRB.updateRentalStops booking.id ((.location.id) <$> find (isNothing . (.reachedAt)) stops)
+        setRentalStopsVersion booking.id stopsVersion
+        unless (null newlyReachedStops) $ Notify.notifyOnStopReached currentBooking ride
+
+resolveStops :: DRB.Booking -> [RentalStop] -> [DL.Location] -> [UpdatedStop] -> Flow [RentalStop]
+resolveStops booking currentStops = go []
+  where
+    go _ _ [] = pure []
+    go usedLocationIds requestedLocations (updatedStop : rest) = do
+      let isAt location =
+            abs (location.lat - updatedStop.gps.lat) < 1.0e-6
+              && abs (location.lon - updatedStop.gps.lon) < 1.0e-6
+              && location.id `notElem` usedLocationIds
+          mbCurrentStop =
+            listToMaybe $
+              [stop | stop <- currentStops, stop.order == updatedStop.order, isAt stop.location]
+                <> [stop | stop <- currentStops, isNothing stop.reachedAt, isAt stop.location]
+      (location, remainingRequested) <- case (mbCurrentStop, find isAt requestedLocations) of
+        (Just currentStop, _) -> pure (currentStop.location, requestedLocations)
+        (Nothing, Just requestedLocation) -> do
+          whenNothingM_ (QL.findById requestedLocation.id) $ QL.create requestedLocation
+          pure (requestedLocation, filter (\requested -> requested.id /= requestedLocation.id) requestedLocations)
+        (Nothing, Nothing) -> do
+          location <- buildLocation updatedStop
+          QL.create location
+          pure (location, requestedLocations)
+      (RentalStop {order = updatedStop.order, location, reachedAt = updatedStop.reachedAt} :) <$> go (location.id : usedLocationIds) remainingRequested rest
+    buildLocation updatedStop = do
+      locationId <- generateGUID
+      now <- getCurrentTime
+      pure
+        DL.Location
+          { id = locationId,
+            lat = updatedStop.gps.lat,
+            lon = updatedStop.gps.lon,
+            address = updatedStop.address,
+            createdAt = now,
+            updatedAt = now,
+            merchantId = Just booking.merchantId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId
+          }
+
+syncStopMappings :: DRB.Booking -> DRide.Ride -> [RentalStop] -> Flow ()
+syncStopMappings booking ride stops = do
+  syncEntity booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  syncEntity ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+  where
+    syncEntity entityId tag merchantId merchantOperatingCityId = do
+      currentMappings <- QLM.getLatestStopsByEntityId' entityId
+      forM_ stops $ \stop ->
+        unless (any (\mapping -> mapping.order == stop.order && mapping.locationId == stop.location.id) currentMappings) $
+          SLM.buildLocationMapping' stop.location.id entityId tag merchantId merchantOperatingCityId stop.order >>= QLM.create
+      forM_ (filter (\mapping -> mapping.order `notElem` map (.order) stops) currentMappings) $ \mapping ->
+        QLM.updatePastMappingVersions entityId mapping.order

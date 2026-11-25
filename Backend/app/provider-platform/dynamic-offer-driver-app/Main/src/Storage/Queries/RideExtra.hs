@@ -572,6 +572,15 @@ updateDestinationArrival rideId now = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateHasStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Maybe Bool -> m ()
+updateHasStops rideId hasStops = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.hasStops hasStops,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
     rideCreatedAt :: UTCTime,

@@ -26,6 +26,11 @@ maxOrderByEntity entityId = do
     [] -> pure 0
     _ -> pure $ maximum orders
 
+maxOrderByEntityWithKV :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+maxOrderByEntityWithKV entityId = do
+  lms <- findAllWithKV [Se.Is BeamLM.entityId $ Se.Eq entityId]
+  pure $ maximum (0 : map order lms)
+
 findByEntityIdOrderAndVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m [LocationMapping]
 findByEntityIdOrderAndVersion entityId order version =
   findAllWithKVAndConditionalDB
