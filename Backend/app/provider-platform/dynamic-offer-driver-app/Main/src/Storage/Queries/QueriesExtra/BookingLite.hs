@@ -130,6 +130,7 @@ data BookingLite = BookingLite
     createdAt :: Kernel.Prelude.UTCTime,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
+    specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     numberOfPassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfCheckInBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfCabinBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int
@@ -162,6 +163,7 @@ instance FromTType' BookingLiteTable BookingLite where
             createdAt = createdAt,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             area = area,
+            specialLocationTag = specialLocationTag,
             numberOfPassengers = numberOfPassengers,
             numberOfCheckInBags = numberOfCheckInBags,
             numberOfCabinBags = numberOfCabinBags
