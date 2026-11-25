@@ -64,7 +64,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
-import "rider-app" SharedLogic.Scheduler.Jobs.IssueShuttlePassTickets
+import "rider-app" SharedLogic.Scheduler.Jobs.IssueSharedCabPassTickets
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -187,7 +187,7 @@ schedulerHandle flowRt env appEnv =
           & putJobHandlerInListWrapper flowRt env sharedCabAllocationTick
           & putJobHandlerInListWrapper flowRt env sharedCabSessionExpiry
           & putJobHandlerInListWrapper flowRt env sharedCabDegradedSweep
-          & putAppJobHandlerInListWrapper flowRt appEnv issueShuttlePassTickets
+          & putAppJobHandlerInListWrapper flowRt appEnv issueSharedCabPassTickets
     }
 
 runRiderAppScheduler ::

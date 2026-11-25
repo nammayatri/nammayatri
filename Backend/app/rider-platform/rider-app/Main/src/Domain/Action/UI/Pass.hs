@@ -125,9 +125,9 @@ import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.PersonPTStats as SPUS
 import qualified SharedLogic.RoutePassPricing as RoutePassPricing
 import qualified SharedLogic.SharedCab as SharedCab
-import qualified SharedLogic.ShuttlePass as ShuttlePass
-import qualified SharedLogic.ShuttlePassReschedule as ShuttlePassReschedule
-import qualified SharedLogic.ShuttlePassSkipDays as ShuttlePassSkipDays
+import qualified SharedLogic.SharedCabPass as SharedCabPass
+import qualified SharedLogic.SharedCabPassReschedule as SharedCabPassReschedule
+import qualified SharedLogic.SharedCabPassSkipDays as SharedCabPassSkipDays
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
@@ -321,7 +321,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   -- Checked here, before payment: the seat is only counted once the term is active, so two riders paying at the same
   -- moment can still both get the last one.
   whenJust (mbRouteTerm >>= (.slotTripId)) $ \slot -> do
-    fullDays <- ShuttlePass.fullSlotDays pass.merchantOperatingCityId slot [startDate .. endDate]
+    fullDays <- SharedCabPass.fullSlotDays pass.merchantOperatingCityId slot [startDate .. endDate]
     whenJust (listToMaybe fullDays) $ \day ->
       throwError (InvalidRequest $ "No seats left on this shuttle on " <> show day <> ", please choose another")
 
@@ -2497,7 +2497,7 @@ postMultimodalPassSkipDays ::
   )
 postMultimodalPassSkipDays (mbCallerPersonId, merchantId) purchasedPassId req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  ShuttlePassSkipDays.skipDays personId merchantId purchasedPassId req.days req.reason
+  SharedCabPassSkipDays.skipDays personId merchantId purchasedPassId req.days req.reason
   pure APISuccess.Success
 
 postMultimodalPassUnskipDays ::
@@ -2510,7 +2510,7 @@ postMultimodalPassUnskipDays ::
   )
 postMultimodalPassUnskipDays (mbCallerPersonId, merchantId) purchasedPassId req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  ShuttlePassSkipDays.unskipDays personId merchantId purchasedPassId req.days
+  SharedCabPassSkipDays.unskipDays personId merchantId purchasedPassId req.days
   pure APISuccess.Success
 
 postMultimodalPassCalculateFare ::
@@ -2569,7 +2569,7 @@ postMultimodalPassReschedule ::
   )
 postMultimodalPassReschedule (mbCallerPersonId, merchantId) purchasedPassId req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  ShuttlePassReschedule.reschedule personId merchantId purchasedPassId req.day req.slotTripId
+  SharedCabPassReschedule.reschedule personId merchantId purchasedPassId req.day req.slotTripId
   pure APISuccess.Success
 
 getMultimodalPassSlotAvailability ::
@@ -2583,4 +2583,4 @@ getMultimodalPassSlotAvailability ::
   )
 getMultimodalPassSlotAvailability (mbCallerPersonId, merchantId) purchasedPassId day slotTripId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  ShuttlePassReschedule.slotAvailability personId merchantId purchasedPassId day slotTripId
+  SharedCabPassReschedule.slotAvailability personId merchantId purchasedPassId day slotTripId

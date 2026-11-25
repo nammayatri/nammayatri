@@ -4,13 +4,13 @@ imports:
 
 # Shuttle subscription: seats on one timetable trip (a slot), set by ops. A rider can reschedule a day onto a slot only
 # while the riders booked on it for that day are fewer than this. One row per (city, trip); the dashboard upsert keeps it so.
-ShuttleSlotCapacity:
-  tableName: shuttle_slot_capacity
+SharedCabSlotCapacity:
+  tableName: shared_cab_slot_capacity
 
   derives: "Show, Generic, ToJSON, FromJSON, Eq"
 
   fields:
-    id: Id ShuttleSlotCapacity
+    id: Id SharedCabSlotCapacity
     tripId: Text
     capacity: Int
     merchantId: Id Merchant

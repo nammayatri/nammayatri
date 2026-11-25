@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Beam.ShuttleSlotCapacity where
+module Storage.Beam.SharedCabSlotCapacity where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -10,7 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data ShuttleSlotCapacityT f = ShuttleSlotCapacityT
+data SharedCabSlotCapacityT f = SharedCabSlotCapacityT
   { capacity :: (B.C f Kernel.Prelude.Int),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
@@ -21,12 +21,12 @@ data ShuttleSlotCapacityT f = ShuttleSlotCapacityT
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table ShuttleSlotCapacityT where
-  data PrimaryKey ShuttleSlotCapacityT f = ShuttleSlotCapacityId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = ShuttleSlotCapacityId . id
+instance B.Table SharedCabSlotCapacityT where
+  data PrimaryKey SharedCabSlotCapacityT f = SharedCabSlotCapacityId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = SharedCabSlotCapacityId . id
 
-type ShuttleSlotCapacity = ShuttleSlotCapacityT Identity
+type SharedCabSlotCapacity = SharedCabSlotCapacityT Identity
 
-$(enableKVPG (''ShuttleSlotCapacityT) [('id)] [[('tripId)]])
+$(enableKVPG (''SharedCabSlotCapacityT) [('id)] [[('tripId)]])
 
-$(mkTableInstances (''ShuttleSlotCapacityT) "shuttle_slot_capacity")
+$(mkTableInstances (''SharedCabSlotCapacityT) "shared_cab_slot_capacity")

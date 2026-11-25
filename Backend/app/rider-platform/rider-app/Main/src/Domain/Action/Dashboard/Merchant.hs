@@ -144,7 +144,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), ExecuteCashRideCashbackPayoutJobData (..), IssueShuttlePassTicketsJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, ExecuteCashRideCashbackPayout, IssueShuttlePassTickets, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster, SendLegalPolicyNotification), SendLegalPolicyNotificationJobData (..))
+import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), ExecuteCashRideCashbackPayoutJobData (..), IssueSharedCabPassTicketsJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, ExecuteCashRideCashbackPayout, IssueSharedCabPassTickets, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster, SendLegalPolicyNotification), SendLegalPolicyNotificationJobData (..))
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.TollDashboard
 import qualified SharedLogic.TollUpsert as TU
@@ -2175,14 +2175,14 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
                   }
           createJobIn @_ @'DailyPassStatusUpdate (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
-        Just Common.IssueShuttlePassTicketsTrigger -> do
+        Just Common.IssueSharedCabPassTicketsTrigger -> do
           let jobData =
-                IssueShuttlePassTicketsJobData
+                IssueSharedCabPassTicketsJobData
                   { merchantId = merchant.id,
                     merchantOperatingCityId = merchantOpCity.id,
                     autoSchedule = True
                   }
-          createJobIn @_ @'IssueShuttlePassTickets (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          createJobIn @_ @'IssueSharedCabPassTickets (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Just Common.PassExpiryReminderMasterTrigger -> do
           let jobData = PassExpiryReminderMasterJobData {cursor = Just 0}

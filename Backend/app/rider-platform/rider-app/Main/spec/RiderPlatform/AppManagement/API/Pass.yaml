@@ -247,11 +247,11 @@ types:
     derive: "'HideSecrets"
 
   # Shuttle subscription: seats on one timetable trip (slot). Riders can reschedule a day onto a slot only while it has room.
-  ShuttleSlotCapacityItem:
+  SharedCabSlotCapacityItem:
     tripId: Text
     capacity: Int
 
-  ShuttleSlotCapacityUpsertReq:
+  SharedCabSlotCapacityUpsertReq:
     tripId: Text
     capacity: Int
     derive: "'HideSecrets"
@@ -537,20 +537,20 @@ apis:
         capability: city-operations.pass.execute
 
   - GET:
-      endpoint: /shuttleSlotCapacity/list
-      name: ListShuttleSlotCapacity
+      endpoint: /sharedCabSlotCapacity/list
+      name: ListSharedCabSlotCapacity
       auth: ApiAuthV2
       response:
-        type: "[ShuttleSlotCapacityItem]"
+        type: "[SharedCabSlotCapacityItem]"
       migrate:
         capability: city-operations.pass.read
 
   - POST:
-      endpoint: /shuttleSlotCapacity/upsert
-      name: UpsertShuttleSlotCapacity
+      endpoint: /sharedCabSlotCapacity/upsert
+      name: UpsertSharedCabSlotCapacity
       auth: ApiAuthV2
       request:
-        type: ShuttleSlotCapacityUpsertReq
+        type: SharedCabSlotCapacityUpsertReq
       response:
         type: APISuccess
       migrate:

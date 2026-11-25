@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
--- | Boundaries of the shuttle subscription rules (SharedLogic.ShuttlePassRules): the 5-hour change cutoff,
+-- | Boundaries of the shuttle subscription rules (SharedLogic.SharedCabPassRules): the 5-hour change cutoff,
 -- the ticket issue window, when the boarding OTP goes out, skip-day merging and the OTP compare.
-module ShuttlePassRulesTests (tests) where
+module SharedCabPassRulesTests (tests) where
 
 import qualified Data.Text as T
 import qualified Data.Time as DT
@@ -12,7 +12,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DStatus
 import qualified "rider-app" Domain.Types.PurchasedPassPayment as DPPP
 import "mobility-core" Kernel.Prelude
 import "mobility-core" Kernel.Types.Common (Seconds (..))
-import qualified "rider-app" SharedLogic.ShuttlePassRules as R
+import qualified "rider-app" SharedLogic.SharedCabPassRules as R
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Prelude as P

@@ -49,8 +49,8 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 ------- SQL updates -------
 
--- {"api":"ListShuttleSlotCapacity","migration":"capability","param":"city-operations.pass.read","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/LIST_SHUTTLE_SLOT_CAPACITY' ) ON CONFLICT DO NOTHING;
+-- {"api":"ListSharedCabSlotCapacity","migration":"capability","param":"city-operations.pass.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/LIST_SHARED_CAB_SLOT_CAPACITY' ) ON CONFLICT DO NOTHING;
 
--- {"api":"UpsertShuttleSlotCapacity","migration":"capability","param":"city-operations.pass.write","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/UPSERT_SHUTTLE_SLOT_CAPACITY' ) ON CONFLICT DO NOTHING;
+-- {"api":"UpsertSharedCabSlotCapacity","migration":"capability","param":"city-operations.pass.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/UPSERT_SHARED_CAB_SLOT_CAPACITY' ) ON CONFLICT DO NOTHING;

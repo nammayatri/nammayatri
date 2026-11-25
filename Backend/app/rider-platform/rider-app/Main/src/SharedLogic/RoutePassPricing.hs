@@ -30,7 +30,7 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
 import qualified SharedLogic.FRFSUtils as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified SharedLogic.ShuttlePassRules as ShuttlePassRules
+import qualified SharedLogic.SharedCabPassRules as SharedCabPassRules
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error (PassError (..))
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -144,7 +144,7 @@ validateSlotTrip integratedBPPConfig sourceStopCode destinationStopCode slotTrip
   destinationCodes <- OTPRest.getEquivalentStopCodes destinationStopCode integratedBPPConfig
   -- A stop may occur more than once in a trip; every occurrence counts.
   let sequencesOf codes = [stop.sequenceNum | (stop :: NandiTypes.StopInfo) <- tripInfo.stops, stop.stopCode `elem` codes]
-  unless (ShuttlePassRules.servesInOrder (sequencesOf sourceCodes) (sequencesOf destinationCodes)) $
+  unless (SharedCabPassRules.servesInOrder (sequencesOf sourceCodes) (sequencesOf destinationCodes)) $
     throwError (InvalidRequest "The selected slot does not run from sourceStopCode to destinationStopCode")
 
 resolveTripCount :: MonadFlow m => PassTicketBenefitConfig -> Maybe Int -> m Int

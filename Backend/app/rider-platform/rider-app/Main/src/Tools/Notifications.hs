@@ -2519,21 +2519,21 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
 -- FULFILLMENT_SUCCESS push; returns False for non-shuttle bookings (caller sends the generic push).
 -- Best-effort; never throws.
 -- | Shuttle subscription: the rider's boarding OTP, an hour before departure, with the driver and vehicle when
--- they are assigned. Template key SHUTTLE_BOARDING_OTP (merchant_push_notification), vars: otp, vehicleNumber,
+-- they are assigned. Template key SHARED_CAB_BOARDING_OTP (merchant_push_notification), vars: otp, vehicleNumber,
 -- driverName, driverPhone, pickupTime, source, destination.
-notifyShuttleBoardingOtp ::
+notifySharedCabBoardingOtp ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Seconds ->
   UTCTime ->
   Text ->
   DFRFSTicketBooking.FRFSTicketBooking ->
   m ()
-notifyShuttleBoardingOtp timeDiffFromUtc departure otp booking = do
+notifySharedCabBoardingOtp timeDiffFromUtc departure otp booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "SHUTTLE_BOARDING_OTP" identity)
+    (createNotificationReq "SHARED_CAB_BOARDING_OTP" identity)
     EmptyDynamicParam
     entity
     Nothing

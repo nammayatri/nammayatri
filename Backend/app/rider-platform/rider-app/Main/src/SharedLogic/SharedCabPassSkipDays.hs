@@ -3,7 +3,7 @@
 -- The days live on the term's payment row ('skipDays'); the ticket issue job does not issue a ticket for them.
 -- The pass trip counter is not touched: it holds the trips still unused and drops only when a ticket is
 -- booked, so a skipped day (no ticket) already keeps its trip.
-module SharedLogic.ShuttlePassSkipDays
+module SharedLogic.SharedCabPassSkipDays
   ( skipDays,
     unskipDays,
   )
@@ -23,8 +23,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.ShuttlePass as ShuttlePass
-import qualified SharedLogic.ShuttlePassRules as Rules
+import qualified SharedLogic.SharedCabPass as SharedCabPass
+import qualified SharedLogic.SharedCabPassRules as Rules
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPPP
 import Tools.Error
@@ -38,7 +38,7 @@ skipDays personId merchantId purchasedPassId days reason = do
       throwError (InvalidRequest $ "reason must be at most " <> show Rules.maxReasonLength <> " characters")
   forEachTerm personId merchantId purchasedPassId days $ \timeDiff payment termDays -> do
     forM_ termDays $ \(day, mbDeparture) -> do
-      tickets <- ShuttlePass.ticketsForDay timeDiff payment day mbDeparture
+      tickets <- SharedCabPass.ticketsForDay timeDiff payment day mbDeparture
       unless (null tickets) $
         throwError (InvalidRequest $ "A ticket is already issued for " <> show day <> "; cancel it instead")
     let updated = Rules.addSkipDays payment.skipDays (map fst termDays) reason
@@ -62,15 +62,15 @@ unskipDays personId merchantId purchasedPassId days =
         -- A slot with no capacity set is not gated, as before.
         checkAndWrite = do
           forM_ slotDays $ \(slot, day) ->
-            ShuttlePass.slotCapacity cityId slot >>= \case
+            SharedCabPass.slotCapacity cityId slot >>= \case
               Nothing -> pure ()
               Just capacity -> do
-                booked <- ShuttlePass.ridersOnSlot cityId slot day
+                booked <- SharedCabPass.ridersOnSlot cityId slot day
                 unless (Rules.hasFreeSeat capacity booked) $
                   throwError (InvalidRequest $ "No seat left on your shuttle for " <> show day <> "; choose another shuttle for that day")
           when (length updated /= length payment.skipDays) $
             QPPP.updateSkipDaysById updated payment.id
-    foldr (\(slot, day) inner -> lockOrBusy (ShuttlePass.slotLockKey cityId slot day) inner) checkAndWrite slotDays
+    foldr (\(slot, day) inner -> lockOrBusy (SharedCabPass.slotLockKey cityId slot day) inner) checkAndWrite slotDays
 
 -- | Shared checks, then runs the update once per term, under that term's lock and on a fresh read of it.
 -- Each day is passed with its slot departure when the timetable knows it.
@@ -88,7 +88,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
     throwError (InvalidRequest $ "At most " <> show Rules.maxDaysPerRequest <> " days per request")
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId && purchasedPass.merchantId == merchantId) $ throwError AccessDenied
-  timeDiff <- ShuttlePass.cityTimeDiff purchasedPass.merchantOperatingCityId
+  timeDiff <- SharedCabPass.cityTimeDiff purchasedPass.merchantOperatingCityId
   now <- getCurrentTime
   let today = Rules.localDay timeDiff now
   whenJust (find (< today) days) $ \day ->
@@ -99,7 +99,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
   termByDay <- forM days $ \day ->
     case find (\term -> term.startDate <= day && day <= term.endDate) terms of
       Just term -> do
-        mbDeparture <- ShuttlePass.slotDepartureOn timeDiff term day
+        mbDeparture <- SharedCabPass.slotDepartureOn timeDiff term day
         unless (Rules.dayOpenForChange now today mbDeparture day) $
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
         pure (term.id, [(day, mbDeparture)])
@@ -107,7 +107,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
   -- 60s: far longer than the fresh reads and one write it covers, so it cannot lapse mid-update and let the issue job
   -- in. It is released as soon as the update finishes, so the length only matters if this process dies holding it.
   forM_ (Map.toList $ Map.fromListWith (<>) termByDay) $ \(termId, termDays) ->
-    lockOrBusy (ShuttlePass.termLockKey termId) (updateFresh timeDiff termId termDays)
+    lockOrBusy (SharedCabPass.termLockKey termId) (updateFresh timeDiff termId termDays)
   where
     -- Under the lock: a fresh clock (the departure lookups above take time, and the cutoff may have passed
     -- meanwhile) and a fresh read of the term.

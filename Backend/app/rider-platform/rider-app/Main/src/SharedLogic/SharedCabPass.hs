@@ -1,6 +1,6 @@
 -- | IO side of the shuttle subscription: the slot's departure on a day, the day's issued ticket, and the OTP.
--- The rules themselves (cutoffs, windows, skip-day merging) are pure, in "SharedLogic.ShuttlePassRules".
-module SharedLogic.ShuttlePass
+-- The rules themselves (cutoffs, windows, skip-day merging) are pure, in "SharedLogic.SharedCabPassRules".
+module SharedLogic.SharedCabPass
   ( cityTimeDiff,
     slotDepartureOn,
     slotDepartureFor,
@@ -28,7 +28,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RiderConfig as DRC
-import qualified Domain.Types.ShuttleSlotCapacity as DShuttleSlotCapacity
+import qualified Domain.Types.SharedCabSlotCapacity as DSharedCabSlotCapacity
 import Environment (Flow)
 import qualified Environment
 import Kernel.Prelude
@@ -39,14 +39,14 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified SharedLogic.ShuttlePassRules as Rules
+import qualified SharedLogic.SharedCabPassRules as Rules
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingExtra as QBookingExtra
 import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
-import qualified Storage.Queries.ShuttleSlotCapacity as QShuttleSlotCapacity
+import qualified Storage.Queries.SharedCabSlotCapacity as QSharedCabSlotCapacity
 import System.Random (randomRIO)
 
 cityTimeDiff :: Id DMOC.MerchantOperatingCity -> Flow Seconds
@@ -64,10 +64,10 @@ slotDepartureOn timeDiff term day = maybe (pure Nothing) (\slot -> slotDeparture
 slotDepartureFor :: Seconds -> DPPP.PurchasedPassPayment -> Text -> DT.Day -> Flow (Maybe UTCTime)
 slotDepartureFor timeDiff term slotTripId day = case term.sourceStopCode of
   Just pickupStopCode ->
-    withTryCatch "ShuttlePass:slotDepartureFor" (lookupDeparture pickupStopCode) >>= \case
+    withTryCatch "SharedCabPass:slotDepartureFor" (lookupDeparture pickupStopCode) >>= \case
       Right mbDeparture -> pure mbDeparture
       Left err -> do
-        logWarning $ "ShuttlePass: departure lookup failed term=" <> term.id.getId <> " slot=" <> slotTripId <> " day=" <> show day <> " err=" <> show err
+        logWarning $ "SharedCabPass: departure lookup failed term=" <> term.id.getId <> " slot=" <> slotTripId <> " day=" <> show day <> " err=" <> show err
         pure Nothing
   Nothing -> pure Nothing
   where
@@ -93,7 +93,7 @@ termBppConfig term = case term.passId of
 
 -- | Seats ops set for a slot in the city. Nothing when not set.
 slotCapacity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Int)
-slotCapacity cityId slotTripId = fmap (\(row :: DShuttleSlotCapacity.ShuttleSlotCapacity) -> row.capacity) <$> QShuttleSlotCapacity.findByTripIdAndMerchantOperatingCityId slotTripId cityId
+slotCapacity cityId slotTripId = fmap (\(row :: DSharedCabSlotCapacity.SharedCabSlotCapacity) -> row.capacity) <$> QSharedCabSlotCapacity.findByTripIdAndMerchantOperatingCityId slotTripId cityId
 
 -- | Riders holding a seat on the slot that day: every live term of the city that rides it then and has not skipped it,
 -- whether the slot is its own or it rescheduled onto it. Call under 'slotLockKey' when the count gates a write.
@@ -102,7 +102,7 @@ ridersOnSlot cityId slotTripId day = go Nothing 0
   where
     pageSize = 500
     go mbAfterId count = do
-      terms <- QPPPExtra.findActiveShuttleTermsOnDay cityId.getId day pageSize mbAfterId
+      terms <- QPPPExtra.findActiveSharedCabTermsOnDay cityId.getId day pageSize mbAfterId
       let count' = count + length (filter (Rules.ridesSlotOn slotTripId day) terms)
       case listToMaybe (reverse terms) of
         Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) count'
@@ -122,7 +122,7 @@ fullSlotDays cityId slotTripId days =
     pageSize = 500
     (fromDay, toDay) = (minimum days, maximum days)
     go mbAfterId counts = do
-      terms <- QPPPExtra.findActiveShuttleTermsOverlapping cityId.getId fromDay toDay pageSize mbAfterId
+      terms <- QPPPExtra.findActiveSharedCabTermsOverlapping cityId.getId fromDay toDay pageSize mbAfterId
       let counts' = [(day, booked + length (filter (Rules.ridesSlotOn slotTripId day) terms)) | (day, booked) <- counts]
       case listToMaybe (reverse terms) of
         Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) counts'
@@ -131,7 +131,7 @@ fullSlotDays cityId slotTripId days =
 -- | Taken by every write that adds a rider to a slot's day (reschedule onto it, unskip on it), so two of them cannot
 -- both take its last seat.
 slotLockKey :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Text
-slotLockKey cityId slotTripId day = "ShuttlePass:slot:" <> cityId.getId <> ":" <> slotTripId <> ":" <> show day
+slotLockKey cityId slotTripId day = "SharedCabPass:slot:" <> cityId.getId <> ":" <> slotTripId <> ":" <> show day
 
 -- | The term's live tickets for a day. The booking the issue job recorded comes first (it does not depend on
 -- the ticket's startTime); otherwise a startTime window around the departure, or around the whole day when the
@@ -150,12 +150,12 @@ recordIssued :: DPPP.PurchasedPassPayment -> DT.Day -> Id DBooking.FRFSTicketBoo
 recordIssued term day bookingId = Hedis.setExp (issuedKey term.id day) bookingId.getId (2 * 86400)
 
 issuedKey :: Id DPPP.PurchasedPassPayment -> DT.Day -> Text
-issuedKey termId day = "ShuttlePass:issued:" <> termId.getId <> ":" <> show day
+issuedKey termId day = "SharedCabPass:issued:" <> termId.getId <> ":" <> show day
 
 -- | The lock both the skip/unskip request and the issue job take for a term, so a day cannot be skipped and
 -- ticketed at the same time.
 termLockKey :: Id DPPP.PurchasedPassPayment -> Text
-termLockKey termId = "ShuttlePass:term:" <> termId.getId
+termLockKey termId = "SharedCabPass:term:" <> termId.getId
 
 plainOtp :: DBooking.FRFSTicketBooking -> Maybe Text
 plainOtp booking = DBoardingOtp.getBoardingOtp <$> booking.boardingOtp
@@ -189,7 +189,7 @@ storedBoardingOtp :: (CacheFlow m r, MonadFlow m) => Id DBooking.FRFSTicketBooki
 storedBoardingOtp bookingId = Hedis.safeGet (otpKey bookingId)
 
 otpKey :: Id DBooking.FRFSTicketBooking -> Text
-otpKey bookingId = "ShuttlePass:otp:" <> bookingId.getId
+otpKey bookingId = "SharedCabPass:otp:" <> bookingId.getId
 
 -- | Three days: longer than any ticket from issue to departure.
 otpTtl :: Int

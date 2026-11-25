@@ -1,6 +1,6 @@
 -- | Pure rules of the shuttle subscription, kept apart from IO so they can be unit-tested
--- (hunit-tests/src/ShuttlePassRulesTests.hs).
-module SharedLogic.ShuttlePassRules
+-- (hunit-tests/src/SharedCabPassRulesTests.hs).
+module SharedLogic.SharedCabPassRules
   ( changeCutoff,
     otpLeadTime,
     otpLastCall,

@@ -185,14 +185,14 @@ updateAvailableTripCountIfLowerById availableTripCount id = do
 
 -- | Shuttle subscription terms of a city that cover the given day: Active or PreBooked, with a slot, startDate <= day <= endDate.
 -- Read by the ticket issue job; paged on id.
-findActiveShuttleTermsOnDay ::
+findActiveSharedCabTermsOnDay ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
   Day ->
   Int ->
   Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
   m [DPurchasedPassPayment.PurchasedPassPayment]
-findActiveShuttleTermsOnDay merchantOperatingCityId day limit mbAfterId =
+findActiveSharedCabTermsOnDay merchantOperatingCityId day limit mbAfterId =
   -- Keyset pages (id > the last one seen) rather than offsets: a term leaving the set mid-scan does not shift later
   -- rows past the reader, so every term still in the set is read exactly once.
   findAllWithOptionsDb
@@ -210,8 +210,8 @@ findActiveShuttleTermsOnDay merchantOperatingCityId day limit mbAfterId =
     Nothing
 
 -- | Active and pre-booked slotted terms of the city that overlap [fromDay, toDay], keyset paged by id like
--- 'findActiveShuttleTermsOnDay'.
-findActiveShuttleTermsOverlapping ::
+-- 'findActiveSharedCabTermsOnDay'.
+findActiveSharedCabTermsOverlapping ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
   Day ->
@@ -219,7 +219,7 @@ findActiveShuttleTermsOverlapping ::
   Int ->
   Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
   m [DPurchasedPassPayment.PurchasedPassPayment]
-findActiveShuttleTermsOverlapping merchantOperatingCityId fromDay toDay limit mbAfterId =
+findActiveSharedCabTermsOverlapping merchantOperatingCityId fromDay toDay limit mbAfterId =
   findAllWithOptionsDb
     [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,

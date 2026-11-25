@@ -4,7 +4,7 @@
 -- The change lives on the term's payment row ('slotChanges'); the ticket issue job books that day on the new slot, and
 -- the change cutoff, skip and the OTP timing all follow it. Seats are counted from the terms riding the slot that day
 -- (its own riders and those who moved onto it, less skipped days) against the capacity ops set for the slot.
-module SharedLogic.ShuttlePassReschedule
+module SharedLogic.SharedCabPassReschedule
   ( reschedule,
     slotAvailability,
   )
@@ -23,8 +23,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.RoutePassPricing as RoutePassPricing
-import qualified SharedLogic.ShuttlePass as ShuttlePass
-import qualified SharedLogic.ShuttlePassRules as Rules
+import qualified SharedLogic.SharedCabPass as SharedCabPass
+import qualified SharedLogic.SharedCabPassRules as Rules
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPPP
 import Tools.Error
@@ -41,33 +41,33 @@ reschedule personId merchantId purchasedPassId day newSlot = do
       validateSlot term newSlot
       -- Slot lock first (it guards the seat count), then the term lock skip/unskip and the issue job take.
       -- Both are try-locks: a busy one fails the request, never waits, so the two orders elsewhere cannot deadlock.
-      withLock (ShuttlePass.slotLockKey term.merchantOperatingCityId newSlot day) $
-        withLock (ShuttlePass.termLockKey term.id) $ do
+      withLock (SharedCabPass.slotLockKey term.merchantOperatingCityId newSlot day) $
+        withLock (SharedCabPass.termLockKey term.id) $ do
           -- Under the locks: a fresh read of the term and a fresh clock, since another change may have landed and the
           -- cutoff may have passed while the checks above ran.
           fresh <- QPPP.findByPrimaryKey term.id >>= fromMaybeM (InvalidRequest $ "Term not found: " <> term.id.getId)
           let wasSkipped = day `elem` map (.day) fresh.skipDays
           unless (Rules.slotOn fresh day == Just newSlot && not wasSkipped) $ do
-            currentDeparture <- ShuttlePass.slotDepartureOn timeDiff fresh day
+            currentDeparture <- SharedCabPass.slotDepartureOn timeDiff fresh day
             newDeparture <-
-              ShuttlePass.slotDepartureFor timeDiff fresh newSlot day
+              SharedCabPass.slotDepartureFor timeDiff fresh newSlot day
                 >>= fromMaybeM (InvalidRequest "This shuttle does not stop at your pickup")
             now <- getCurrentTime
             unless (Rules.rescheduleOpen now (Rules.localDay timeDiff now) currentDeparture newDeparture day) $
               throwError (InvalidRequest $ "Changes for " <> show day <> " close 5 hours before departure")
-            tickets <- ShuttlePass.ticketsForDay timeDiff fresh day currentDeparture
+            tickets <- SharedCabPass.ticketsForDay timeDiff fresh day currentDeparture
             unless (null tickets) $
               throwError (InvalidRequest $ "A ticket is already issued for " <> show day <> "; cancel it instead")
             -- Capacity is read under the slot lock too, so the seat check uses the value in force while the lock is held.
             capacity <-
-              ShuttlePass.slotCapacity fresh.merchantOperatingCityId newSlot
+              SharedCabPass.slotCapacity fresh.merchantOperatingCityId newSlot
                 >>= fromMaybeM (InvalidRequest "Seats for this shuttle are not set up yet, please choose another")
-            booked <- ShuttlePass.ridersOnSlot fresh.merchantOperatingCityId newSlot day
+            booked <- SharedCabPass.ridersOnSlot fresh.merchantOperatingCityId newSlot day
             unless (Rules.hasFreeSeat capacity booked) $
               throwError (InvalidRequest "No seats left on this shuttle, please choose another")
             QPPP.updateSlotChangesById (Rules.setSlotChange fresh.slotTripId fresh.slotChanges day newSlot) fresh.id
             when wasSkipped $ QPPP.updateSkipDaysById (Rules.removeSkipDays fresh.skipDays [day]) fresh.id
-            logInfo $ "ShuttlePass: rescheduled term=" <> fresh.id.getId <> " day=" <> show day <> " slot=" <> newSlot <> " seats=" <> show (booked + 1) <> "/" <> show capacity
+            logInfo $ "SharedCabPass: rescheduled term=" <> fresh.id.getId <> " day=" <> show day <> " slot=" <> newSlot <> " seats=" <> show (booked + 1) <> "/" <> show capacity
 
 -- | What the app shows before the rider moves a day: the slot's departure from their pickup, its seats, and whether the
 -- move would be accepted now. A read without locks, so a seat shown free can still be taken before the reschedule.
@@ -75,10 +75,10 @@ slotAvailability :: Id DP.Person -> Id DM.Merchant -> Id DPurchasedPass.Purchase
 slotAvailability personId merchantId purchasedPassId day slot = do
   (timeDiff, term) <- termOnDay personId merchantId purchasedPassId day
   validateSlot term slot
-  mbDeparture <- ShuttlePass.slotDepartureFor timeDiff term slot day
-  currentDeparture <- ShuttlePass.slotDepartureOn timeDiff term day
-  capacity <- ShuttlePass.slotCapacity term.merchantOperatingCityId slot
-  booked <- ShuttlePass.ridersOnSlot term.merchantOperatingCityId slot day
+  mbDeparture <- SharedCabPass.slotDepartureFor timeDiff term slot day
+  currentDeparture <- SharedCabPass.slotDepartureOn timeDiff term day
+  capacity <- SharedCabPass.slotCapacity term.merchantOperatingCityId slot
+  booked <- SharedCabPass.ridersOnSlot term.merchantOperatingCityId slot day
   now <- getCurrentTime
   let availableSeats = (\c -> max 0 (c - booked)) <$> capacity
       open = maybe False (\departure -> Rules.rescheduleOpen now (Rules.localDay timeDiff now) currentDeparture departure day) mbDeparture
@@ -100,7 +100,7 @@ termOnDay :: Id DP.Person -> Id DM.Merchant -> Id DPurchasedPass.PurchasedPass -
 termOnDay personId merchantId purchasedPassId day = do
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId && purchasedPass.merchantId == merchantId) $ throwError AccessDenied
-  timeDiff <- ShuttlePass.cityTimeDiff purchasedPass.merchantOperatingCityId
+  timeDiff <- SharedCabPass.cityTimeDiff purchasedPass.merchantOperatingCityId
   now <- getCurrentTime
   let today = Rules.localDay timeDiff now
   when (day < today) $ throwError (InvalidRequest $ "Past days cannot be changed: " <> show day)
@@ -117,7 +117,7 @@ validateSlot :: DPPP.PurchasedPassPayment -> Text -> Flow ()
 validateSlot term slot = do
   sourceStopCode <- term.sourceStopCode & fromMaybeM (InvalidRequest "Term has no source stop")
   destinationStopCode <- term.destinationStopCode & fromMaybeM (InvalidRequest "Term has no destination stop")
-  integratedBPPConfig <- ShuttlePass.termBppConfig term >>= fromMaybeM (InvalidRequest "Pass not found for this term")
+  integratedBPPConfig <- SharedCabPass.termBppConfig term >>= fromMaybeM (InvalidRequest "Pass not found for this term")
   RoutePassPricing.validateSlotTrip integratedBPPConfig sourceStopCode destinationStopCode slot
 
 -- | 60s: far longer than the reads and the one write it covers; released as soon as they finish.
