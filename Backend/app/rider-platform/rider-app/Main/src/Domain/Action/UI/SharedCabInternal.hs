@@ -36,6 +36,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
+import qualified SharedLogic.SharedCab.Approach as Approach
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
@@ -268,7 +269,8 @@ sessionRoute integratedBppConfig code = do
         name = maybe code (.longName) mbRoute,
         direction = routeDirection stops,
         nextStops = map (.stopName) stops,
-        nextStopCodes = map (.stopCode) stops
+        nextStopCodes = map (.stopCode) stops,
+        nextStopEtas = Just [View.NextStop {code = st.stopCode, name = st.stopName, etaSec = Nothing} | st <- stops]
       }
 
 -- | The plate's live bookings as rider rows; status/ETA/deadline come from the booking's real state.
@@ -368,9 +370,10 @@ mkSessionRespFrom cabReads s = do
   now <- getCurrentTime
   checkIn <- if s.status == ACTIVE then (>>= CheckIn.checkInView now) <$> CheckIn.readCheckIn s.vehicleNumber else pure Nothing
   tripEarnings <- Booking.tripEarnings s.vehicleTripId
+  let stopEtaSec st = Approach.plausibleEtaFrom now cfg st.stopCode st.stopPoint =<< mbTrack
   pure
     View.SharedCabSession
-      { route = route {View.nextStops = map (.stopName) ahead, View.nextStopCodes = map (.stopCode) ahead},
+      { route = route {View.nextStops = map (.stopName) ahead, View.nextStopCodes = map (.stopCode) ahead, View.nextStopEtas = Just [View.NextStop {code = st.stopCode, name = st.stopName, etaSec = stopEtaSec st} | st <- ahead]},
         tripId = s.vehicleTripId,
         gtfsId = integratedBppConfig.feedKey,
         queuedRoute,
