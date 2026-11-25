@@ -365,7 +365,8 @@ data SharedCabConfig = SharedCabConfig
     skipCancelCountTtlSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     skipMinEtaSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     standTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    tickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    tickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    tripDelayedThresholdSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

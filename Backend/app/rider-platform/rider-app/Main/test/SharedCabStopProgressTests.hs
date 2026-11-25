@@ -124,7 +124,15 @@ tests =
           approachUpdate cfg (fix 25.6195 [stopAt 5 False]) "S5" ((assigned Nothing) {timer = OfferTimer (after 30), approachStage = Nothing}),
           push (fix 25.6205 [stopAt 5 True, stopAt 6 False]) (stage ApproachOnTheWay (Just (LatLong 25.61 91.88)))
         )
-          @?= (Nothing, Nothing, Nothing, Nothing)
+          @?= (Nothing, Nothing, Nothing, Nothing),
+      testCase "trip delayed: the live ETA at the board stop at least 10 min past the timetabled time, in whole minutes; never when on time or early" $
+        ( tripDelayMinutes 600 t0 t0,
+          tripDelayMinutes 600 t0 (after (9 * 60)),
+          tripDelayMinutes 600 t0 (after (10 * 60)),
+          tripDelayMinutes 600 t0 (after (25 * 60)),
+          tripDelayMinutes 600 t0 (after (- (5 * 60)))
+        )
+          @?= (Nothing, Nothing, Just 10, Just 25, Nothing)
     ]
   where
     stage s from = AllocationState {vehicleNumber = "P1", timer = NoTimer, approachStage = Just s, approachFrom = from}

@@ -987,3 +987,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_keep_journey_confirmed_until_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_person_call_identity boolean ;
+
+
+------- SQL updates -------
+

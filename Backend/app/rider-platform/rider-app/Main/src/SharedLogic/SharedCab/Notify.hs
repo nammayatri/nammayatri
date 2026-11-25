@@ -13,6 +13,7 @@ module SharedLogic.SharedCab.Notify
     notifyBookingCancelled,
     notifyFindingTimeout,
     notifyRouteChange,
+    notifyTripDelayed,
   )
 where
 
@@ -24,10 +25,12 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), ApproachPush (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Fields as Fields
-import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
+import Tools.Notifications (createNotificationReq, dynamicNotifyPerson, showLocalTime)
 
 data SharedCabNotificationType
   = SHARED_CAB_ASSIGNED
@@ -39,6 +42,7 @@ data SharedCabNotificationType
   | SHARED_CAB_FINDING_TIMEOUT
   | SHARED_CAB_ON_THE_WAY
   | SHARED_CAB_ARRIVING_SOON
+  | SHARED_CAB_TRIP_DELAYED
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 data ReassignReason = SEAT_LOST | TIMEOUT | CAB_PULLED
@@ -147,3 +151,17 @@ notifyFindingTimeout = send SHARED_CAB_FINDING_TIMEOUT Nothing Nothing Nothing [
 
 notifyRouteChange :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> DFTB.FRFSTicketBooking -> m ()
 notifyRouteChange routeCode = send SHARED_CAB_ROUTE_CHANGE (Just routeCode) Nothing Nothing []
+
+-- | The cab's live ETA at the board stop is `delayMinutes` past the booking's timetabled start_time; `newEta` is that ETA, shown in the
+-- city's local time like the other rider pushes (rider_config.timeDiffFromUtc, IST when the city has no row or the read fails).
+notifyTripDelayed :: (ServiceFlow m r, MonadFlow m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> Int -> UTCTime -> DFTB.FRFSTicketBooking -> m ()
+notifyTripDelayed plate delayMinutes newEta booking = do
+  mbRiderConfig <- either (const Nothing) identity <$> withTryCatch "sharedCab:tripDelayed:riderConfig" (getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing)
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  send
+    SHARED_CAB_TRIP_DELAYED
+    Nothing
+    Nothing
+    (Just plate)
+    [("vehicleLast4", T.takeEnd 4 plate), ("delayMinutes", show delayMinutes), ("newEta", showLocalTime timeDiffFromUtc newEta)]
+    booking

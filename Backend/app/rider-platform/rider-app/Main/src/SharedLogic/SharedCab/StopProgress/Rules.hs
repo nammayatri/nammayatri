@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.StopProgress.Rules
     dropAction,
     reachedDropStop,
     offRouteAction,
+    tripDelayMinutes,
   )
 where
 
@@ -114,3 +115,9 @@ offRouteAction cfg now offSince mbOffRoute = case (mbOffRoute, offSince) of
   _ -> OffRouteNoChange
   where
     elapsed = diffUTCTime now
+
+-- | Minutes late when the live ETA at the board stop is at least the threshold past the timetabled time; Nothing otherwise.
+tripDelayMinutes :: Int -> UTCTime -> UTCTime -> Maybe Int -- thresholdSec, scheduled, eta
+tripDelayMinutes thresholdSec scheduled eta =
+  let lateSec = floor (diffUTCTime eta scheduled) :: Int
+   in guard (lateSec >= thresholdSec) $> (lateSec `div` 60)

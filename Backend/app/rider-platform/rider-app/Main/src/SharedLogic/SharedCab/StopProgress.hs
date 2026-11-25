@@ -15,8 +15,10 @@ import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (CONFIRMED))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RouteStopMapping as DRSM
+import qualified Domain.Types.SharedRoute as DSharedRoute
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -33,13 +35,15 @@ import SharedLogic.SharedCab.Booking (boardedTouchDue, liveBookingsForVehicle, p
 import SharedLogic.SharedCab.BookingState (readAlloc, rewriteAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.CheckIn as CheckIn
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey)
-import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), nextStopCode, readRoutePosition, readRoutePositions)
+import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, livePlatesKey, offRouteKey, sessionKey, tripDelayedPushedKey)
+import SharedLogic.SharedCab.Lts (CabTrack (..), RouteRead (..), etaAt, nextStopCode, readRoutePosition, readRoutePositions)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Seats (markDropped, routeStopRows)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionFlow, SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
+import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Tools.Fields as Fields
@@ -116,6 +120,8 @@ stepCab cfg now bookings routeRead s = do
       onBoard = [lb.booking | lb <- bookings, DFRFSTicket.INPROGRESS `elem` lb.ticketStatuses]
   -- an offered booking is not the rider's yet: the cab passing its stop is nobody's miss
   unoffered <- filterM (fmap seatIsRiders . readAlloc . (.id)) awaiting
+  -- the feed's knob, once per cab: only a timetabled run can be late against its timetable
+  timetabled <- feedIsTimetabled s.integratedBppConfigId
   forM_ unoffered $ \b ->
     if any (boardStopPassed b.fromStationCode) mbCab
       then do
@@ -129,6 +135,7 @@ stepCab cfg now bookings routeRead s = do
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
         movingTimerStep (allocKeyTtl cfg) cfg now freshCab plate b mbState
         approachStep cfg freshCab plate b mbState
+        when timetabled $ tripDelayStep cfg now freshTrack plate b
   forM_ onBoard $ dropStep cfg now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep cfg now ((.offRoute) <$> freshTrack) s
 
@@ -177,6 +184,29 @@ approachStep cfg freshCab plate b mbState =
             pure push
         _ -> pure Nothing
     whenJust due $ \stage -> Notify.notifyApproach plate stage b
+
+-- | The feed runs to a timetable (`sharedKnobs.schedule = TIMETABLED`); on-demand feeds and feeds without knobs have nothing to be
+-- late against. The cached lookup the tick's LTS reads use; a failed or missing lookup reads as not timetabled, so the tick goes on.
+feedIsTimetabled :: StopProgressFlow m r c => Id DIBC.IntegratedBPPConfig -> m Bool
+feedIsTimetabled integratedBppConfigId =
+  withTryCatch "sharedCabTripDelayedKnob" (CQIBC.findById integratedBppConfigId) >>= \case
+    Right mbConfig -> pure $ any isTimetabled mbConfig
+    Left e -> False <$ logError ("shared-cab trip delayed: feed lookup failed for " <> integratedBppConfigId.getId <> ": " <> show e)
+  where
+    isTimetabled config = ((.schedule) <$> SharedRouteKnobs.demandKnobsOf config) == Just DSharedRoute.TIMETABLED
+
+-- | The rider's "trip delayed" push, once per booking: the cab's live ETA at the board stop is tripDelayedThresholdSec or more
+-- past the booking's timetabled start_time. The condition is checked before the claim, so an on-time tick never spends it.
+tripDelayStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe CabTrack -> Text -> DFTB.FRFSTicketBooking -> m ()
+tripDelayStep cfg _now freshTrack plate b =
+  whenJust (freshTrack >>= etaAt b.fromStationCode) $ \eta ->
+    whenJust b.startTime $ \scheduled ->
+      whenJust (tripDelayMinutes cfg.tripDelayedThresholdSec scheduled eta) $ \mins ->
+        whenM (shared $ Redis.tryLockRedis (tripDelayedPushedKey b.id) tripDelayedClaimTtlSec) $
+          Notify.notifyTripDelayed plate mins eta b
+  where
+    -- one service day: the claim outlives any run, and clearBookingState drops it sooner
+    tripDelayedClaimTtlSec = 24 * 60 * 60 :: Int
 
 dropStep :: StopProgressFlow m r c => Config.SharedCabTunables -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 dropStep cfg now mbCab plate b = do
