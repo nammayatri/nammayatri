@@ -10,6 +10,7 @@ module Types.DBSync
     StateRef (..),
     DBSyncConfig (..),
     DBCommand (..),
+    dbCommandRowKey,
     CreateDBCommand (..),
     UpdateDBCommand (..),
     DeleteDBCommand (..),
@@ -86,6 +87,12 @@ data DBCommand
 
 instance FromJSON DBCommand where
   parseJSON = genericParseJSON dbCommandOptions
+
+dbCommandRowKey :: DBCommand -> Tag
+dbCommandRowKey = \case
+  Create obj -> obj.tag
+  Update obj -> obj.tag
+  Delete obj -> obj.tag
 
 dbCommandOptions :: A.Options
 dbCommandOptions =
