@@ -2,6 +2,7 @@
 
 module Lib.Finance.Settlement.Transformer
   ( toPgPaymentSettlementReport,
+    toPgPaymentSettlementReportWithId,
     mapTxnType,
   )
 where
@@ -25,9 +26,22 @@ toPgPaymentSettlementReport ::
   (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   Ext.PaymentSettlementReport ->
   m Dom.PgPaymentSettlementReport
-toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType mbBankCode resolveOrderType report = do
+toPgPaymentSettlementReport = toPgPaymentSettlementReportWithId Nothing
+
+toPgPaymentSettlementReportWithId ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Maybe Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
+  Ext.PaymentSettlementReport ->
+  m Dom.PgPaymentSettlementReport
+toPgPaymentSettlementReportWithId mbDeterministicId merchantId merchantOperatingCityId referenceId referenceType mbBankCode resolveOrderType report = do
   now <- getCurrentTime
-  reportId <- generateGUID
+  reportId <- maybe generateGUID pure mbDeterministicId
   (orderType, isValidSubscriptionPurchase, mbSubscriptionPurchaseId) <- resolveOrderType report.orderId
   actorInfo <- asks (.actorInfo)
   let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of

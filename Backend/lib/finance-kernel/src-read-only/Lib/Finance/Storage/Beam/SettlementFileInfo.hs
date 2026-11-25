@@ -18,6 +18,7 @@ data SettlementFileInfoT f = SettlementFileInfoT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     paymentGatewayName :: B.C f Kernel.Prelude.Text,
+    retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

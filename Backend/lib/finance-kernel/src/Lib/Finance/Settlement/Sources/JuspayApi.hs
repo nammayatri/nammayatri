@@ -18,6 +18,7 @@
 -- failures re-run against the same tracker id.
 module Lib.Finance.Settlement.Sources.JuspayApi
   ( fetchSettlementFile,
+    fetchSettlementFileWithLookback,
     yesterdayIstUtcBounds,
     buildQueryPayload,
   )
@@ -89,9 +90,17 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config
           <> " trackedFileId="
           <> getId row.id
       pure $ Right ("", Nothing)
+    Just row | row.status == FAILED -> do
+      logInfo $
+        "JuspayApi.fetchSettlementFile: window FAILED (terminal), skipping. "
+          <> "fileName="
+          <> trackerFileName
+          <> " trackedFileId="
+          <> getId row.id
+      pure $ Right ("", Nothing)
     Just row -> do
       logInfo $
-        "JuspayApi.fetchSettlementFile: reusing PENDING tracker "
+        "JuspayApi.fetchSettlementFile: reusing tracker "
           <> "fileName="
           <> trackerFileName
           <> " trackedFileId="
@@ -107,8 +116,9 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config
               { id = sfId,
                 paymentGatewayName,
                 fileName = trackerFileName,
-                status = PENDING,
+                status = LANDED,
                 lastProcessedIndex = -1,
+                retryCount = Just 0,
                 merchantId,
                 merchantOperatingCityId,
                 createdAt = now,
@@ -122,6 +132,35 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config
           <> " trackedFileId="
           <> getId sfId
       pullAndReturn config startUtc endUtc sfId
+
+fetchSettlementFileWithLookback ::
+  (BeamFlow m r, EncFlow m r, MonadIO m) =>
+  Text ->
+  Text ->
+  Text ->
+  JuspayApiConfig ->
+  [Int] ->
+  m [(Text, Either Text (LBS.ByteString, Maybe SftpFetchMeta))]
+fetchSettlementFileWithLookback merchantId merchantOperatingCityId paymentGatewayName config lookbackDays = do
+  now <- getCurrentTime
+  let ist = TimeZone 330 False "IST"
+      todayIst = localDay' (utcToLocalTime ist now)
+      windows =
+        map
+          ( \d ->
+              let day = addDays (negate $ fromIntegral d) todayIst
+                  s = localTimeToUTC ist (LocalTime day (TimeOfDay 0 0 0))
+                  e = localTimeToUTC ist (LocalTime (addDays 1 day) (TimeOfDay 0 0 0))
+               in (d, s, e)
+          )
+          lookbackDays
+  forM windows $ \(d, startUtc, endUtc) -> do
+    let label = "T-" <> T.pack (show d)
+    logInfo $ "JuspayApi lookback: fetching " <> label
+    result <- fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config (Just startUtc) (Just endUtc)
+    pure (label, result)
+  where
+    localDay' (LocalTime d _) = d
 
 pullAndReturn ::
   (EncFlow m r, MonadIO m) =>

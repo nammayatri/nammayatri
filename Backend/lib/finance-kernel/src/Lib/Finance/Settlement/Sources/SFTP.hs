@@ -65,16 +65,35 @@ fetchSettlementFile ::
   SFTPConfig ->
   m (Either Text (LBS.ByteString, SftpFetchMeta, SplitSettlementCustomerType))
 fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbParserTypeMap config = do
+  landedRows <-
+    QSFI.findAllByPaymentGatewayMerchantCityAndStatus
+      paymentGatewayName
+      merchantId
+      merchantOperatingCityId
+      LANDED
+  inProgressRows <-
+    QSFI.findAllByPaymentGatewayMerchantCityAndStatus
+      paymentGatewayName
+      merchantId
+      merchantOperatingCityId
+      IN_PROGRESS
   pendingRows <-
     QSFI.findAllByPaymentGatewayMerchantCityAndStatus
       paymentGatewayName
       merchantId
       merchantOperatingCityId
       PENDING
-  case List.sortOn (.fileName) pendingRows of
+  transientFailedRows <-
+    QSFI.findAllByPaymentGatewayMerchantCityAndStatus
+      paymentGatewayName
+      merchantId
+      merchantOperatingCityId
+      TRANSIENT_FAILED
+  let resumeRows = landedRows <> inProgressRows <> pendingRows <> transientFailedRows
+  case List.sortOn (.fileName) resumeRows of
     (row : _) -> do
       logInfo $
-        "fetchSettlementFile: PENDING resume fast-path file=" <> row.fileName
+        "fetchSettlementFile: resume fast-path file=" <> row.fileName
           <> " trackedFileId="
           <> Kernel.Types.Id.getId row.id
           <> " lastProcessedIndex="
@@ -90,7 +109,7 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbPars
             (row.lastProcessedIndex + 1)
             config.csvChunkRowLimit
     [] -> do
-      logInfo "fetchSettlementFile: no PENDING resume; running DFS fresh-discovery"
+      logInfo "fetchSettlementFile: no resumable files; running DFS fresh-discovery"
       freshDiscovery
   where
     freshDiscovery = do
@@ -113,8 +132,9 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbPars
                       { id = sfId,
                         paymentGatewayName,
                         fileName = norm,
-                        status = PENDING,
+                        status = LANDED,
                         lastProcessedIndex = -1,
+                        retryCount = Just 0,
                         merchantId,
                         merchantOperatingCityId,
                         createdAt = now,
@@ -122,7 +142,7 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbPars
                       }
               QSFI.create row
               logInfo $
-                "fetchSettlementFile: fresh-discovery created PENDING row trackedFileId="
+                "fetchSettlementFile: fresh-discovery created LANDED row trackedFileId="
                   <> Kernel.Types.Id.getId sfId
                   <> " fileName="
                   <> norm
