@@ -869,6 +869,7 @@ library
       SharedLogic.SharedCab.Trip
       SharedLogic.SharedRun.Acknowledgement
       SharedLogic.SharedRun.Assign
+      SharedLogic.SharedRun.Coverage.Rules
       SharedLogic.SharedRun.Fare
       SharedLogic.SharedRun.Knobs
       SharedLogic.SharedRun.Materialise
@@ -2716,6 +2717,7 @@ test-suite driver-app-test
   main-is: Main.hs
   other-modules:
       SharedCabProxyTests
+      SharedRunCoverageTests
       SharedRunTests
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
