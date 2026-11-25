@@ -365,6 +365,9 @@ types:
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
     - campaignUserLinkType: Maybe CampaignUserLinkType
     - controlFeatures: Maybe Value
+    # Ad-hoc rewards JSON (see CohortJourneyMapping.additionalRewards), e.g.
+    # {"riderCancellationCompensation":{"enabled":true,"payout":30}}.
+    - additionalRewards: Maybe Value
     - periodDays: Maybe Int
     - derive: "'HideSecrets"
 
@@ -383,6 +386,9 @@ types:
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
     - campaignUserLinkType: Maybe CampaignUserLinkType
     - controlFeatures: Maybe Value
+    # Ad-hoc rewards JSON (see CohortJourneyMapping.additionalRewards). Full replace when Just;
+    # omit/Nothing keeps existing. e.g. {"riderCancellationCompensation":{"enabled":true,"payout":30}}.
+    - additionalRewards: Maybe Value
     - periodDays: Maybe Int
     - derive: "'HideSecrets"
 
@@ -408,6 +414,8 @@ types:
     - journeyType: IncentiveJourneyType
     - campaignUserLinkType: CampaignUserLinkType
     - controlFeatures: Maybe Value
+    # Ad-hoc rewards JSON (CohortJourneyMapping.additionalRewards), e.g. riderCancellationCompensation — read-back for ops.
+    - additionalRewards: Maybe Value
     - periodDays: Maybe Int
     - maxWaiveOffCount: Maybe Int
     - startDate: UTCTime

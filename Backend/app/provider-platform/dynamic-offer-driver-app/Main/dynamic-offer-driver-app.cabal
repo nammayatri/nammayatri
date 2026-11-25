@@ -698,6 +698,8 @@ library
       SharedLogic.CancellationFault
       SharedLogic.CancellationOrchestrator
       SharedLogic.CancellationSignals
+      SharedLogic.CohortCancellationCompensation
+      SharedLogic.CohortCancellationCompensation.Resolve
       SharedLogic.DashboardAlert
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty

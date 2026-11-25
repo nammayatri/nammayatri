@@ -567,6 +567,7 @@ postIncentiveJourneyCohortJourneyCreate handle merchantShortId opCity req = do
       streakMetaWithPeriod
       campaignUserLinkType
       req.controlFeatures
+      req.additionalRewards
   pure Common.CreateCohortJourneyMappingRes {cohortJourneyMappingId = ID.cast cjm.id}
 
 postIncentiveJourneyCohortJourneyRoll ::
@@ -651,6 +652,7 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
           then Nothing
           else req.periodDays <|> RM.streakMetaPeriodDays streakEndRewardMetadata <|> RM.streakMetaPeriodDays cjm.streakEndRewardMetadata
       controlFeatures = req.controlFeatures <|> cjm.controlFeatures
+      additionalRewards = req.additionalRewards <|> cjm.additionalRewards
       campaignUserLinkType = (toDomainCampaignUserLinkType <$> req.campaignUserLinkType) <|> cjm.campaignUserLinkType
       streakMetaFinal =
         if clearPeriodDays
@@ -671,7 +673,8 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
           DCJM.streakEndRewardExpirationAt = streakEndRewardExpirationAt,
           DCJM.streakEndRewardMetadata = streakMetaFinal,
           DCJM.campaignUserLinkType = campaignUserLinkType,
-          DCJM.controlFeatures = controlFeatures
+          DCJM.controlFeatures = controlFeatures,
+          DCJM.additionalRewards = additionalRewards
          }
   handle.clearAssignmentCacheByCohortMappingId cjmId
   pure Success
@@ -721,6 +724,7 @@ toCohortJourneyMappingListItem cjm cohort journey =
           journeyType = toApiJourneyType journeyType,
           campaignUserLinkType = toApiCampaignUserLinkType (fromMaybe DCJM.Assigned cjm.campaignUserLinkType),
           controlFeatures = cjm.controlFeatures,
+          additionalRewards = cjm.additionalRewards,
           periodDays = RM.streakMetaPeriodDays cjm.streakEndRewardMetadata,
           maxWaiveOffCount = cjm.maxWaiveOffCount,
           startDate = cjm.startDate,

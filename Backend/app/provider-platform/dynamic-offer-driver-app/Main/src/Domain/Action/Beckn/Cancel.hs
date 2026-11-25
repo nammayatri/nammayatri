@@ -54,6 +54,7 @@ import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
+import qualified SharedLogic.CohortCancellationCompensation as CohortCancellationCompensation
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -173,6 +174,11 @@ cancel req merchant booking mbActiveSearchTry = do
           -- Campaign dxCancel/dafCancel bumps live in applyImmediateConsequences
           -- (cancellation behaviour framework) — do not re-publish here.
           Orchestrator.applyImmediateConsequences consequenceCtx Nothing
+          -- Cohort perk (additive): credit the driver a wallet compensation when this is a
+          -- rider-fault (CustomerAtFault) cancel and the driver is in a cohort with
+          -- riderCancellationCompensation enabled. Guards against double-pay vs the matrix.
+          fork "cohort rider-cancellation compensation" $
+            CohortCancellationCompensation.tryAwardCohortCancellationCompensation consequenceCtx
           pure consequenceCtx
 
     whenJust mbRide $ \ride -> do

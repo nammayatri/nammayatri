@@ -17,7 +17,8 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
     pure $
       Just
         Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping
-          { campaignUserLinkType = campaignUserLinkType,
+          { additionalRewards = additionalRewards,
+            campaignUserLinkType = campaignUserLinkType,
             cohortId = Kernel.Types.Id.Id cohortId,
             controlFeatures = controlFeatures,
             createdAt = createdAt,
@@ -40,7 +41,8 @@ instance FromTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.
 instance ToTType' Beam.CohortJourneyMapping Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping where
   toTType' (Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping {..}) = do
     Beam.CohortJourneyMappingT
-      { Beam.campaignUserLinkType = campaignUserLinkType,
+      { Beam.additionalRewards = additionalRewards,
+        Beam.campaignUserLinkType = campaignUserLinkType,
         Beam.cohortId = Kernel.Types.Id.getId cohortId,
         Beam.controlFeatures = controlFeatures,
         Beam.createdAt = createdAt,

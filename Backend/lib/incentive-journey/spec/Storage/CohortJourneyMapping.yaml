@@ -47,6 +47,9 @@ CohortJourneyMapping:
     #   AllDay    — perk while membership active (ignore milestone peaks)
     #   TimeBound — perk only inside first-milestone timeBounds (default when omitted)
     controlFeatures: Maybe Value
+    # Namespaced ad-hoc rewards layered on the campaign beyond milestone/streak rewards.
+    # One key per reward, e.g. {"riderCancellationCompensation":{"enabled":true,"payout":30}}.
+    additionalRewards: Maybe Value
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -60,10 +63,12 @@ CohortJourneyMapping:
     streakEndRewardMetadata: "NULL"
     campaignUserLinkType: "NULL"
     controlFeatures: "NULL"
+    additionalRewards: "NULL"
 
   sqlType:
     streakEndRewardMetadata: json
     controlFeatures: json
+    additionalRewards: json
 
   constraints:
     id: PrimaryKey

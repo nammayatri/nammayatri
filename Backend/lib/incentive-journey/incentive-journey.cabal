@@ -46,6 +46,7 @@ library
       Lib.IncentiveJourney.Domain.Action.Evaluate
       Lib.IncentiveJourney.Domain.Action.StatsSync
       Lib.IncentiveJourney.Domain.Action.UI.IncentiveJourney
+      Lib.IncentiveJourney.Domain.Types.AdditionalRewards
       Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3
       Lib.IncentiveJourney.Domain.Types.Common
       Lib.IncentiveJourney.Eval
