@@ -471,7 +471,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               _ -> return (srcPt :| (stopLatLongs ++ [dropLatLong]), Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
-              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (mbRide <&> (.id.getId)) $
+              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id (mbRide <&> ((<> editDestinationSnapEntityIdSuffix) . (.id.getId))) $
                 Maps.GetRoutesReq
                   { waypoints = pickedWaypoints,
                     mode = Just Maps.CAR,

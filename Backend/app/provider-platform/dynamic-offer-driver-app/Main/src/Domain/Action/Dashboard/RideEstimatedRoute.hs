@@ -25,12 +25,14 @@ import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Beam.Functions (runInReplica)
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Google
 import qualified Kernel.External.Maps.Google.PolyLinePoints as PolyLinePoints
 import qualified Kernel.External.Maps.OSRM.RoadsClient as OSRM
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.Common
+import Lib.LocationUpdates (editDestinationSnapEntityIdSuffix)
 import Storage.Clickhouse.ExternalApiCallLogs (decodePayload)
 import qualified Storage.Clickhouse.ExternalApiCallLogs as CHExternalApiCallLogs
 import qualified Storage.Queries.Booking as QBooking
@@ -59,12 +61,37 @@ getRideEstimatedRoute ride = do
       (addUTCTime (negate searchLookback) booking.createdAt)
       (addUTCTime searchLookahead booking.createdAt)
       maxCalls
+  now <- getCurrentTime
+  editRows <-
+    CHExternalApiCallLogs.findAllByEntityIdAndApiNames
+      [ride.id.getId <> editDestinationSnapEntityIdSuffix]
+      routeApiNames
+      ride.createdAt
+      (fromMaybe now ride.tripEndTime)
+      maxCalls
   pure
     Common.RideEstimatedRouteRes
       { transactionId = booking.transactionId,
         estimatedDistance = booking.estimatedDistance,
-        calls = mapMaybe toCall rows
+        calls = mapMaybe toCall rows,
+        editDestinations = mapMaybe toEditDestinationRoute editRows
       }
+
+toEditDestinationRoute :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.EditDestinationRoute
+toEditDestinationRoute row = do
+  call <- toCall row
+  payload <- row.requestPayload
+  pure Common.EditDestinationRoute {requestedWaypoints = parseWaypoints call.apiName payload, call}
+
+parseWaypoints :: Text -> Text -> [Maps.LatLong]
+parseWaypoints apiName payload = case apiName of
+  "advancedDirectionsAPI" ->
+    foldMap
+      (\req -> map fromWayPointV2 ([req.origin] <> fromMaybe [] req.intermediates <> [req.destination]))
+      (decodePayload @Google.AdvancedDirectionsReq payload)
+  _ -> foldMap (toList . (.waypoints)) (decodePayload @Maps.GetRoutesReq payload)
+  where
+    fromWayPointV2 wayPoint = Maps.LatLong wayPoint.location.latLng.latitude wayPoint.location.latLng.longitude
 
 toCall :: CHExternalApiCallLogs.ExternalApiCallLogs -> Maybe Common.MapsRouteCall
 toCall row = do
