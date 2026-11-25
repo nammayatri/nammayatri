@@ -2299,6 +2299,7 @@ test-suite rider-app-test
       SharedCabSessionTests
       SharedCabStopProgressTests
       SharedCabWalkUpTests
+      SharedRouteManifestTests
       Paths_rider_app
   hs-source-dirs:
       test

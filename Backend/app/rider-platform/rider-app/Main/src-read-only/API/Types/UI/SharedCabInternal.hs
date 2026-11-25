@@ -43,6 +43,8 @@ data SharedCabBookingOperationReq = SharedCabBookingOperationReq
     operation :: SharedCabBookingOperation,
     otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    runDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    runTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
