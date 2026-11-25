@@ -106,7 +106,7 @@ postIncentiveJourneyOptIn handle (mbPersonId, merchantId, merchantOpCityId) req 
       >>= fromMaybeM (InvalidRequest "User cohort mapping invite not found; assign/invite first")
   unless inviteUcm.enabled $
     throwError (InvalidRequest "Invite is disabled; contact support or wait for a new invite")
-  let optInPeriod = fromMaybe DUCM.Daily req.optInPeriod
+  let optInPeriod = IJ.resolveCampaignOptInPeriod cjm req.optInPeriod
   ucm <- QUCMExtra.markUserCohortMappingOptedIn personId cjm.id optInPeriod req.validTill localTime "driver"
   handle.clearAssignmentCacheByPersonId personId
   -- Tag: min(campaign end, period end, stored UCM.validTill). Mark keeps max(existing, req).
@@ -245,6 +245,7 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                     enabled = cjm.enabled,
                     optInStatus = mkUiOptInStatus localTime cjm mbUcm,
                     optedInAt = mbUcm >>= (.optedInAt),
+                    optInPeriod = IJ.listOptInPeriod cjm,
                     validTill = (.validTill) <$> mbUcm,
                     milestones = items
                   }

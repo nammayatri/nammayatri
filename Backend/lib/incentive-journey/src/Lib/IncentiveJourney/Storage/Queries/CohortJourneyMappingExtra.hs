@@ -32,9 +32,10 @@ createCohortJourneyMapping ::
   Maybe Int ->
   Maybe Value ->
   Maybe DCJM.CampaignUserLinkType ->
+  Maybe DCJM.OptInPeriod ->
   Maybe Value ->
   m DCJM.CohortJourneyMapping
-createCohortJourneyMapping merchantId merchantOperatingCityId cohortId journeyId startDate streakRange enabled parentId maxWaiveOffCount streakEndRewardType streakEndRewardValue streakEndRewardExpirationAt streakEndRewardMetadata campaignUserLinkType controlFeatures = do
+createCohortJourneyMapping merchantId merchantOperatingCityId cohortId journeyId startDate streakRange enabled parentId maxWaiveOffCount streakEndRewardType streakEndRewardValue streakEndRewardExpirationAt streakEndRewardMetadata campaignUserLinkType optInPeriod controlFeatures = do
   now <- getCurrentTime
   mappingId <- generateGUID
   let row =
@@ -54,6 +55,7 @@ createCohortJourneyMapping merchantId merchantOperatingCityId cohortId journeyId
             streakEndRewardExpirationAt = streakEndRewardExpirationAt,
             streakEndRewardMetadata = streakEndRewardMetadata,
             campaignUserLinkType = campaignUserLinkType,
+            optInPeriod = optInPeriod,
             controlFeatures = controlFeatures,
             createdAt = now,
             updatedAt = now
@@ -78,6 +80,7 @@ updateCohortJourneyMappingFields updated = do
       Se.Set Beam.streakEndRewardExpirationAt row.streakEndRewardExpirationAt,
       Se.Set Beam.streakEndRewardMetadata row.streakEndRewardMetadata,
       Se.Set Beam.campaignUserLinkType row.campaignUserLinkType,
+      Se.Set Beam.optInPeriod row.optInPeriod,
       Se.Set Beam.controlFeatures row.controlFeatures,
       Se.Set Beam.updatedAt now
     ]
@@ -155,6 +158,7 @@ upsertCohortJourneyMapping merchantId merchantOperatingCityId cohortId journeyId
         streakEndRewardValue
         streakEndRewardExpirationAt
         streakEndRewardMetadata
+        Nothing
         Nothing
         Nothing
     Just existing ->
