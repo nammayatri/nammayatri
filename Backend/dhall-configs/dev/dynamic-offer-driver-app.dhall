@@ -361,6 +361,8 @@ let AllocatorJobType =
       | ProcessEndRideFinance
       | WalletIntegrityCheck
       | ChargeWalletPenalty
+      | CompleteStaleNudgeRide
+      | NudgeRidePayout
       >
 
 let jobRetryOnExceptionMapx =
@@ -478,6 +480,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckBetterDriverSearchProximity
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.CompleteStaleNudgeRide, mapValue = True }
+      , { mapKey = AllocatorJobType.NudgeRidePayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

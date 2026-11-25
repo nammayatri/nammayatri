@@ -2,7 +2,7 @@ module Domain.Action.Internal.StopDetection where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Booking as Fields
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
@@ -74,7 +74,9 @@ stopDetection StopDetectionReq {..} = do
                 DTC.InterCity _ _ -> logDebug $ "Skipping safety alert for intercity ride with id" <> rideId.getId
                 -- a run halts at every stop by design, and there is no BAP booking to alert
                 DTC.SharedRoute _ -> logDebug $ "Skipping safety alert for shared route run with id" <> rideId.getId
-                _ -> BP.sendSafetyAlertToBAP booking ride Enums.RIDE_STOPPAGE driver vehicle
+                _ ->
+                  unless (booking.bookingType == DRB.NudgeRide) $
+                    BP.sendSafetyAlertToBAP booking ride Enums.RIDE_STOPPAGE driver vehicle
               _ -> logDebug $ "Either condition not met or no merchant PN for driver with id" <> driverId.getId
           _ -> logDebug $ "Ride status for rideId:" <> rideId.getId
       _ -> logDebug $ "Configs are empty to send stop detection alert to driver with id" <> driverId.getId

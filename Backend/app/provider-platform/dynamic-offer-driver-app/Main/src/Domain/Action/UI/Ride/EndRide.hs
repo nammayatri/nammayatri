@@ -75,6 +75,7 @@ import qualified Kernel.External.Encryption as Fields
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.Types (SchedulerFlow)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Clickhouse.Config
@@ -97,10 +98,11 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
-import Lib.Scheduler.Environment (JobCreator)
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.Allocator (AllocatorJobType (..), NudgeRidePayoutJobData (..))
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -109,6 +111,7 @@ import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.NudgeRide as NudgeRide
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (validateRideLocation)
@@ -276,6 +279,9 @@ type EndRideFlow m r =
     -- the shared-route run's fare is read from the rider platform, whose client wants the request id
     HasRequestId r,
     JobCreator r m,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "blackListedJobs" r [Text],
+    SchedulerFlow r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     Esq.EsqDBReplicaFlow m r,
@@ -667,8 +673,21 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    notifyCompleteToBAPFork <-
+      awaitableFork "endRide->notifyCompleteToBAP" $
+        withTimeAPI "endRide" "notifyCompleteToBAP" $
+          unless (booking.bookingType == SRB.NudgeRide) $
+            notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
+
+    when (booking.bookingType == SRB.NudgeRide) $ do
+      Redis.del (NudgeRide.nudgeRideRedisKey driverId)
+      Redis.setExp (NudgeRide.nudgeRideCleanupDoneKey updRide.id) True (NudgeRide.nudgeRideTtlSeconds + 300)
+      QAllJ.createJobByTime @_ @'NudgeRidePayout
+        (Just booking.providerId)
+        (Just updRide.merchantOperatingCityId)
+        now
+        NudgeRidePayoutJobData {rideId = updRide.id, driverId = driverId}
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 
