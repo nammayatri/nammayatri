@@ -243,6 +243,8 @@ recomputePostOfferAmount mbCtx offer = case mbCtx of
       -- rescaled. This is why the saving exceeds the offer's face value, and it
       -- must match what the BPP captures.
       pure (fst b - uncurry FB.clampDiscount b offer.discountAmount)
+    | otherwise ->
+      pure (fst b)
   Nothing | offer.discountAmount > 0 -> do
     logWarning $
       "recomputePostOfferAmount: offer " <> offer.offerId
