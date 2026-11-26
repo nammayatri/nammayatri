@@ -79,6 +79,7 @@ import SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck (payoutStatusCheckJob
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
 import SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress (checkDriverPickupProgress)
+import SharedLogic.Allocator.Jobs.PreferencePolicy.ApplyPreferencePolicy (applyPreferencePolicyJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (runReconciliationJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler (runReconciliationSchedulerJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep (runReconciliationSweepJob)
@@ -232,6 +233,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env walletIntegrityCheck
           & putJobHandlerInListWrapper flowRt env chargeWalletPenaltyJob
           & putJobHandlerInListWrapper flowRt env materialiseSharedRuns
+          & putJobHandlerInListWrapper flowRt env applyPreferencePolicyJob
     }
 
 runDriverOfferAllocator ::

@@ -537,6 +537,7 @@ library
       Domain.Types.DocumentOnboardingStage
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
+      Domain.Types.DriverPreferencePolicy
       Domain.Types.DriverWallet
       Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
@@ -631,6 +632,7 @@ library
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
       SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress
+      SharedLogic.Allocator.Jobs.PreferencePolicy.ApplyPreferencePolicy
       SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep
@@ -731,6 +733,9 @@ library
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverPreferencePolicy
+      SharedLogic.DriverPreferencePolicy.Apply
+      SharedLogic.DriverPreferencePolicy.Context
       SharedLogic.DriverSupplyCounter
       SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth

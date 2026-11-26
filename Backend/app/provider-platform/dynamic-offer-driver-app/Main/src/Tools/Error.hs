@@ -597,6 +597,10 @@ instance IsAPIError RideCancellationError
 data FleetDriverSettingsError
   = AreaPreferenceDisabledByFleet
   | NoAutoAcceptTierForVehicle
+  | PreferenceLockedByFleet
+  | ServiceTierLockedByFleet
+  | InvalidPreferencePolicy Text
+  | FleetAutoAssignControlledByCampaign
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetDriverSettingsError
@@ -605,14 +609,26 @@ instance IsBaseError FleetDriverSettingsError where
   toMessage = \case
     AreaPreferenceDisabledByFleet -> Just "Area preference is disabled by your fleet"
     NoAutoAcceptTierForVehicle -> Just "The driver's vehicle serves no tier with auto-accept in this city"
+    PreferenceLockedByFleet -> Just "Your fleet manages this setting"
+    ServiceTierLockedByFleet -> Just "Your fleet manages this tier"
+    InvalidPreferencePolicy reason -> Just reason
+    FleetAutoAssignControlledByCampaign -> Just "This driver is in a campaign; the campaign controls auto-assign"
 
 instance IsHTTPError FleetDriverSettingsError where
   toErrorCode = \case
     AreaPreferenceDisabledByFleet -> "AREA_PREFERENCE_DISABLED_BY_FLEET"
     NoAutoAcceptTierForVehicle -> "NO_AUTO_ACCEPT_TIER_FOR_VEHICLE"
+    PreferenceLockedByFleet -> "PREFERENCE_LOCKED_BY_FLEET"
+    ServiceTierLockedByFleet -> "SERVICE_TIER_LOCKED_BY_FLEET"
+    InvalidPreferencePolicy _ -> "INVALID_PREFERENCE_POLICY"
+    FleetAutoAssignControlledByCampaign -> "FLEET_AUTO_ASSIGN_CONTROLLED_BY_CAMPAIGN"
   toHttpCode = \case
     AreaPreferenceDisabledByFleet -> E400
     NoAutoAcceptTierForVehicle -> E400
+    PreferenceLockedByFleet -> E400
+    ServiceTierLockedByFleet -> E400
+    InvalidPreferencePolicy _ -> E400
+    FleetAutoAssignControlledByCampaign -> E400
 
 instance IsAPIError FleetDriverSettingsError
 

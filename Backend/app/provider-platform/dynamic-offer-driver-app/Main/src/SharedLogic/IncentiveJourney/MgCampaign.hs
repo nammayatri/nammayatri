@@ -38,7 +38,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.TransporterConfig (TransporterConfig (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -399,8 +398,7 @@ resolveMgPerkSource ::
   ( MonadFlow m,
     BeamFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r
+    CacheFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe DI.DriverInformation ->

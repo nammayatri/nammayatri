@@ -4,6 +4,7 @@
 module Domain.Types.FleetConfig where
 
 import Data.Aeson
+import qualified Domain.Types.DriverPreferencePolicy
 import qualified Domain.Types.FleetPoolingPriority
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -25,6 +26,7 @@ data FleetConfig = FleetConfig
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority,
+    preferencePolicy :: Kernel.Prelude.Maybe Domain.Types.DriverPreferencePolicy.PreferencePolicy,
     rideEndApproval :: Kernel.Prelude.Bool,
     unlinkDriverAndVehicleOnTripTermination :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
