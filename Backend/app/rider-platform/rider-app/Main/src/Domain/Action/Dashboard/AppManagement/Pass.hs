@@ -624,24 +624,24 @@ listSharedCabSlotCapacity :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 listSharedCabSlotCapacity merchantShortId opCity = do
   merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
   rows <- QSharedCabSlotCapacity.findAllByMerchantOperatingCityId merchantOperatingCity.id
-  pure [API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityItem {tripId = row.tripId, capacity = row.capacity} | row <- rows]
+  pure [API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityItem {routeId = row.routeId, capacity = row.capacity} | row <- rows]
 
 -- | Sets a slot's seats in the city, creating its row the first time. Lowering it below the riders already on a day
 -- does not move anyone; it only stops further reschedules (and unskips) onto that slot until seats free up.
 upsertSharedCabSlotCapacity :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityUpsertReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 upsertSharedCabSlotCapacity merchantShortId opCity req = do
-  let tripId = T.strip req.tripId
-  when (T.null tripId) $ throwError (InvalidRequest "tripId is required")
+  let routeId = T.strip req.routeId
+  when (T.null routeId) $ throwError (InvalidRequest "routeId is required")
   unless (req.capacity >= 0 && req.capacity <= 1000) $ throwError (InvalidRequest "capacity must be between 0 and 1000")
   merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
-  -- One row per (city, trip): the lock keeps two concurrent first upserts from creating two.
-  let lockKey = "SharedCabSlotCapacity:upsert:" <> merchantOperatingCity.id.getId <> ":" <> tripId
-  Redis.whenWithLockRedisAndReturnValue lockKey 30 (upsert merchantOperatingCity tripId) >>= \case
+  -- One row per (city, route): the lock keeps two concurrent first upserts from creating two.
+  let lockKey = "SharedCabSlotCapacity:upsert:" <> merchantOperatingCity.id.getId <> ":" <> routeId
+  Redis.whenWithLockRedisAndReturnValue lockKey 30 (upsert merchantOperatingCity routeId) >>= \case
     Left _ -> throwError (InvalidRequest "This slot is being updated, please try again")
     Right () -> pure Kernel.Types.APISuccess.Success
   where
-    upsert merchantOperatingCity tripId =
-      QSharedCabSlotCapacity.findByTripIdAndMerchantOperatingCityId tripId merchantOperatingCity.id >>= \case
+    upsert merchantOperatingCity routeId =
+      QSharedCabSlotCapacity.findByRouteIdAndMerchantOperatingCityId routeId merchantOperatingCity.id >>= \case
         Just row -> QSharedCabSlotCapacity.updateCapacityById req.capacity row.id
         Nothing -> do
           id <- generateGUID
@@ -649,7 +649,7 @@ upsertSharedCabSlotCapacity merchantShortId opCity req = do
           QSharedCabSlotCapacity.create
             DSharedCabSlotCapacity.SharedCabSlotCapacity
               { id,
-                tripId,
+                routeId,
                 capacity = req.capacity,
                 merchantId = merchantOperatingCity.merchantId,
                 merchantOperatingCityId = merchantOperatingCity.id,

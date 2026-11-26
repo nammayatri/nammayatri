@@ -93,7 +93,7 @@ data PassAPIEntity = PassAPIEntity
 data PassCalculateFareReq = PassCalculateFareReq
   { destinationStopCode :: Data.Text.Text,
     roundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
-    slotTripId :: Data.Maybe.Maybe Data.Text.Text,
+    routeId :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopCode :: Data.Text.Text,
     tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int
@@ -125,7 +125,7 @@ data PassInfoAPIEntity = PassInfoAPIEntity {dynamicPasses :: [PassAPIEntity], pa
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassRescheduleReq = PassRescheduleReq {day :: Data.Time.Day, slotTripId :: Data.Text.Text}
+data PassRescheduleReq = PassRescheduleReq {day :: Data.Time.Day, routeId :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -135,7 +135,7 @@ data PassSelectReq = PassSelectReq
     passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     roundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
-    slotTripId :: Data.Maybe.Maybe Data.Text.Text,
+    routeId :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
     startDate :: Data.Time.Day,
     tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -162,7 +162,7 @@ data PassSlotAvailabilityResp = PassSlotAvailabilityResp
     capacity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     day :: Data.Time.Day,
     departureTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
-    slotTripId :: Data.Text.Text
+    routeId :: Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -268,9 +268,9 @@ data RefundAPIEntity = RefundAPIEntity
 data RoutePassAPIEntity = RoutePassAPIEntity
   { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
     destinationStopName :: Data.Maybe.Maybe Data.Text.Text,
+    routeId :: Data.Maybe.Maybe Data.Text.Text,
     skipDays :: [Domain.Types.PurchasedPassPayment.SkipDay],
     slotChanges :: [Domain.Types.PurchasedPassPayment.SlotChange],
-    slotTripId :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
     sourceStopName :: Data.Maybe.Maybe Data.Text.Text
   }

@@ -94,7 +94,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
   whenJust (find (< today) days) $ \day ->
     throwError (InvalidRequest $ "Past days cannot be changed: " <> show day)
   terms <-
-    filter (isJust . (.slotTripId))
+    filter (isJust . (.routeId))
       <$> QPPP.findAllByPurchasedPassIdAndStatus Nothing Nothing purchasedPassId [DPurchasedPass.Active, DPurchasedPass.PreBooked] today
   termByDay <- forM days $ \day ->
     case find (\term -> term.startDate <= day && day <= term.endDate) terms of

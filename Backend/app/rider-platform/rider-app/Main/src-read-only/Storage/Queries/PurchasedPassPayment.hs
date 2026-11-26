@@ -193,7 +193,7 @@ updateSdkVersionByOrderId clientSdkVersion orderId = do
 updateSkipDaysById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PurchasedPassPayment.SkipDay] -> (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
 updateSkipDaysById skipDays id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.skipDays (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.skipDays ((Kernel.Prelude.Just (Data.Aeson.toJSON skipDays))), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateSlotChangesById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -201,7 +201,7 @@ updateSlotChangesById ::
   (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
 updateSlotChangesById slotChanges id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.slotChanges (Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.slotChanges ((Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges))), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusAndDatesById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -253,7 +253,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
-      Se.Set Beam.overrideBenefitConfigJson (Data.Aeson.toJSON <$> overrideBenefitConfigJson),
+      Se.Set Beam.overrideBenefitConfigJson ((Data.Aeson.toJSON <$> overrideBenefitConfigJson)),
       Se.Set Beam.passCode passCode,
       Se.Set Beam.passEnum passEnum,
       Se.Set Beam.passId (Kernel.Types.Id.getId <$> passId),
@@ -263,9 +263,9 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
-      Se.Set Beam.skipDays (Kernel.Prelude.Just (Data.Aeson.toJSON skipDays)),
-      Se.Set Beam.slotChanges (Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges)),
-      Se.Set Beam.slotTripId slotTripId,
+      Se.Set Beam.routeId routeId,
+      Se.Set Beam.skipDays ((Kernel.Prelude.Just (Data.Aeson.toJSON skipDays))),
+      Se.Set Beam.slotChanges ((Kernel.Prelude.Just (Data.Aeson.toJSON slotChanges))),
       Se.Set Beam.sourceStopCode sourceStopCode,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,

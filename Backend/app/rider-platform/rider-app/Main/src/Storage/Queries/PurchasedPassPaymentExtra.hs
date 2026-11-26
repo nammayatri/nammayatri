@@ -199,7 +199,7 @@ findActiveSharedCabTermsOnDay merchantOperatingCityId day limit mbAfterId =
     [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
           Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
-          Se.Is Beam.slotTripId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.routeId $ Se.Not $ Se.Eq Nothing,
           Se.Is Beam.startDate $ Se.LessThanOrEq day,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq day
         ]
@@ -224,7 +224,7 @@ findActiveSharedCabTermsOverlapping merchantOperatingCityId fromDay toDay limit 
     [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
           Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
-          Se.Is Beam.slotTripId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.routeId $ Se.Not $ Se.Eq Nothing,
           Se.Is Beam.startDate $ Se.LessThanOrEq toDay,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq fromDay
         ]

@@ -123,28 +123,28 @@ otpMatches mbStored presented = case T.strip <$> mbStored of
   Just stored -> not (T.null stored) && stored == T.strip presented
   Nothing -> False
 
--- | Whether a trip serves pickup then drop, given the sequence numbers at which each stop occurs. GTFS lets a stop
+-- | Whether a slot route serves pickup then drop, given the stop positions at which each stop occurs. GTFS lets a stop
 -- occur more than once in a trip, so any drop occurrence after any pickup occurrence counts.
 servesInOrder :: [Int] -> [Int] -> Bool
 servesInOrder pickupSequences dropSequences = any (\pickup -> any (> pickup) dropSequences) pickupSequences
 
--- | The trip the term rides on a day: the day's reschedule when there is one, else the term's own slot.
+-- | The slot route the term rides on a day: the day's reschedule when there is one, else the term's own route.
 slotOn :: DPPP.PurchasedPassPayment -> DT.Day -> Maybe Text
-slotOn term = slotFor term.slotTripId term.slotChanges
+slotOn term = slotFor term.routeId term.slotChanges
 
 slotFor :: Maybe Text -> [DPPP.SlotChange] -> DT.Day -> Maybe Text
-slotFor ownSlot changes day = maybe ownSlot (Just . (.slotTripId)) (find ((== day) . (.day)) changes)
+slotFor ownSlot changes day = maybe ownSlot (Just . (.routeId)) (find ((== day) . (.day)) changes)
 
 -- | Moves a day onto a slot, replacing any earlier reschedule of that day. Moving it back to the term's own slot
 -- leaves no entry, so the list only ever holds real changes.
 setSlotChange :: Maybe Text -> [DPPP.SlotChange] -> DT.Day -> Text -> [DPPP.SlotChange]
 setSlotChange ownSlot existing day slot =
-  filter ((/= day) . (.day)) existing <> [DPPP.SlotChange {day, slotTripId = slot} | Just slot /= ownSlot]
+  filter ((/= day) . (.day)) existing <> [DPPP.SlotChange {day, routeId = slot} | Just slot /= ownSlot]
 
 -- | Whether the term takes a seat on this slot that day: it covers the day, rides this slot then, and has not skipped it.
 -- One seat per term (the issue job books quantity 1).
 ridesSlotOn :: Text -> DT.Day -> DPPP.PurchasedPassPayment -> Bool
-ridesSlotOn slot day term = ridesSlot slot day (term.startDate, term.endDate) term.slotTripId term.slotChanges term.skipDays
+ridesSlotOn slot day term = ridesSlot slot day (term.startDate, term.endDate) term.routeId term.slotChanges term.skipDays
 
 ridesSlot :: Text -> DT.Day -> (DT.Day, DT.Day) -> Maybe Text -> [DPPP.SlotChange] -> [DPPP.SkipDay] -> Bool
 ridesSlot slot day (startDate, endDate) ownSlot changes skips =

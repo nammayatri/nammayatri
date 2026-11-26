@@ -15,7 +15,7 @@ data SharedCabSlotCapacityT f = SharedCabSlotCapacityT
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    tripId :: (B.C f Kernel.Prelude.Text),
+    routeId :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
@@ -27,6 +27,6 @@ instance B.Table SharedCabSlotCapacityT where
 
 type SharedCabSlotCapacity = SharedCabSlotCapacityT Identity
 
-$(enableKVPG (''SharedCabSlotCapacityT) [('id)] [[('tripId)]])
+$(enableKVPG (''SharedCabSlotCapacityT) [('id)] [[('routeId)]])
 
 $(mkTableInstances (''SharedCabSlotCapacityT) "shared_cab_slot_capacity")

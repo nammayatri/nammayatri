@@ -65,7 +65,7 @@ reschedule personId merchantId purchasedPassId day newSlot = do
             booked <- SharedCabPass.ridersOnSlot fresh.merchantOperatingCityId newSlot day
             unless (Rules.hasFreeSeat capacity booked) $
               throwError (InvalidRequest "No seats left on this shuttle, please choose another")
-            QPPP.updateSlotChangesById (Rules.setSlotChange fresh.slotTripId fresh.slotChanges day newSlot) fresh.id
+            QPPP.updateSlotChangesById (Rules.setSlotChange fresh.routeId fresh.slotChanges day newSlot) fresh.id
             when wasSkipped $ QPPP.updateSkipDaysById (Rules.removeSkipDays fresh.skipDays [day]) fresh.id
             logInfo $ "SharedCabPass: rescheduled term=" <> fresh.id.getId <> " day=" <> show day <> " slot=" <> newSlot <> " seats=" <> show (booked + 1) <> "/" <> show capacity
 
@@ -86,7 +86,7 @@ slotAvailability personId merchantId purchasedPassId day slot = do
       canReschedule = open && not alreadyRiding && maybe False (> 0) availableSeats
   pure
     PassAPI.PassSlotAvailabilityResp
-      { slotTripId = slot,
+      { routeId = slot,
         day,
         departureTime = mbDeparture,
         capacity,
@@ -105,7 +105,7 @@ termOnDay personId merchantId purchasedPassId day = do
   let today = Rules.localDay timeDiff now
   when (day < today) $ throwError (InvalidRequest $ "Past days cannot be changed: " <> show day)
   terms <-
-    filter (isJust . (.slotTripId))
+    filter (isJust . (.routeId))
       <$> QPPP.findAllByPurchasedPassIdAndStatus Nothing Nothing purchasedPassId [DPurchasedPass.Active, DPurchasedPass.PreBooked] today
   term <-
     find (\t -> t.startDate <= day && day <= t.endDate) terms
@@ -118,7 +118,7 @@ validateSlot term slot = do
   sourceStopCode <- term.sourceStopCode & fromMaybeM (InvalidRequest "Term has no source stop")
   destinationStopCode <- term.destinationStopCode & fromMaybeM (InvalidRequest "Term has no destination stop")
   integratedBPPConfig <- SharedCabPass.termBppConfig term >>= fromMaybeM (InvalidRequest "Pass not found for this term")
-  RoutePassPricing.validateSlotTrip integratedBPPConfig sourceStopCode destinationStopCode slot
+  RoutePassPricing.validateSlotRoute integratedBPPConfig sourceStopCode destinationStopCode slot
 
 -- | 60s: far longer than the reads and the one write it covers; released as soon as they finish.
 withLock :: Text -> Flow () -> Flow ()

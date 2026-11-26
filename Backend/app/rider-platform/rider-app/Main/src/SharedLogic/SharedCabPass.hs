@@ -4,6 +4,7 @@ module SharedLogic.SharedCabPass
   ( cityTimeDiff,
     slotDepartureOn,
     slotDepartureFor,
+    slotRouteTripId,
     termBppConfig,
     slotCapacity,
     ridersOnSlot,
@@ -60,14 +61,15 @@ cityTimeDiff cityId = do
 slotDepartureOn :: Seconds -> DPPP.PurchasedPassPayment -> DT.Day -> Flow (Maybe UTCTime)
 slotDepartureOn timeDiff term day = maybe (pure Nothing) (\slot -> slotDepartureFor timeDiff term slot day) (Rules.slotOn term day)
 
--- | When the given trip leaves the term's pickup stop on that day. Failure-safe, as 'slotDepartureOn'.
+-- | When the given slot route leaves the term's pickup stop on that day. Each departure time is its own route, so the
+-- route's one trip gives the time. Failure-safe, as 'slotDepartureOn'.
 slotDepartureFor :: Seconds -> DPPP.PurchasedPassPayment -> Text -> DT.Day -> Flow (Maybe UTCTime)
-slotDepartureFor timeDiff term slotTripId day = case term.sourceStopCode of
+slotDepartureFor timeDiff term routeId day = case term.sourceStopCode of
   Just pickupStopCode ->
     withTryCatch "SharedCabPass:slotDepartureFor" (lookupDeparture pickupStopCode) >>= \case
       Right mbDeparture -> pure mbDeparture
       Left err -> do
-        logWarning $ "SharedCabPass: departure lookup failed term=" <> term.id.getId <> " slot=" <> slotTripId <> " day=" <> show day <> " err=" <> show err
+        logWarning $ "SharedCabPass: departure lookup failed term=" <> term.id.getId <> " route=" <> routeId <> " day=" <> show day <> " err=" <> show err
         pure Nothing
   Nothing -> pure Nothing
   where
@@ -75,12 +77,19 @@ slotDepartureFor timeDiff term slotTripId day = case term.sourceStopCode of
       termBppConfig term >>= \case
         Nothing -> pure Nothing
         Just integratedBPPConfig -> do
-          mbTripInfo <- OTPRest.getNandiTripInfo integratedBPPConfig slotTripId
+          mbTrip <- OTPRest.getExampleTrip integratedBPPConfig routeId
           pickupCodes <- OTPRest.getEquivalentStopCodes pickupStopCode integratedBPPConfig
           pure $ do
-            tripInfo <- mbTripInfo
-            stop <- find (\(s :: NandiTypes.StopSchedule) -> s.stopCode `elem` pickupCodes) tripInfo.schedule
-            pure $ Rules.departureAt timeDiff day stop.departureTime
+            trip <- mbTrip
+            stop <- find (\(s :: NandiTypes.TripStopDetail) -> s.stopCode `elem` pickupCodes) trip.stops
+            pure $ Rules.departureAt timeDiff day stop.scheduledDeparture
+
+-- | The timetable trip of a slot route, which the day's ticket is booked on. Nothing when the pass or the route is gone.
+slotRouteTripId :: DPPP.PurchasedPassPayment -> Text -> Flow (Maybe Text)
+slotRouteTripId term routeId =
+  termBppConfig term >>= \case
+    Nothing -> pure Nothing
+    Just integratedBPPConfig -> fmap (.tripId) <$> OTPRest.getExampleTrip integratedBPPConfig routeId
 
 -- | The timetable config of the term's pass (its vehicle type, in the term's city). Nothing when the pass is gone.
 termBppConfig :: DPPP.PurchasedPassPayment -> Flow (Maybe DIBC.IntegratedBPPConfig)
@@ -93,17 +102,17 @@ termBppConfig term = case term.passId of
 
 -- | Seats ops set for a slot in the city. Nothing when not set.
 slotCapacity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Int)
-slotCapacity cityId slotTripId = fmap (\(row :: DSharedCabSlotCapacity.SharedCabSlotCapacity) -> row.capacity) <$> QSharedCabSlotCapacity.findByTripIdAndMerchantOperatingCityId slotTripId cityId
+slotCapacity cityId routeId = fmap (\(row :: DSharedCabSlotCapacity.SharedCabSlotCapacity) -> row.capacity) <$> QSharedCabSlotCapacity.findByRouteIdAndMerchantOperatingCityId routeId cityId
 
 -- | Riders holding a seat on the slot that day: every live term of the city that rides it then and has not skipped it,
 -- whether the slot is its own or it rescheduled onto it. Call under 'slotLockKey' when the count gates a write.
 ridersOnSlot :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Flow Int
-ridersOnSlot cityId slotTripId day = go Nothing 0
+ridersOnSlot cityId routeId day = go Nothing 0
   where
     pageSize = 500
     go mbAfterId count = do
       terms <- QPPPExtra.findActiveSharedCabTermsOnDay cityId.getId day pageSize mbAfterId
-      let count' = count + length (filter (Rules.ridesSlotOn slotTripId day) terms)
+      let count' = count + length (filter (Rules.ridesSlotOn routeId day) terms)
       case listToMaybe (reverse terms) of
         Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) count'
         _ -> pure count'
@@ -112,8 +121,8 @@ ridersOnSlot cityId slotTripId day = go Nothing 0
 -- for unskip. One keyset scan of the terms overlapping the days, counted per day.
 fullSlotDays :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> [DT.Day] -> m [DT.Day]
 fullSlotDays _ _ [] = pure []
-fullSlotDays cityId slotTripId days =
-  slotCapacity cityId slotTripId >>= \case
+fullSlotDays cityId routeId days =
+  slotCapacity cityId routeId >>= \case
     Nothing -> pure []
     Just capacity -> do
       counts <- go Nothing (map (,0) days)
@@ -123,7 +132,7 @@ fullSlotDays cityId slotTripId days =
     (fromDay, toDay) = (minimum days, maximum days)
     go mbAfterId counts = do
       terms <- QPPPExtra.findActiveSharedCabTermsOverlapping cityId.getId fromDay toDay pageSize mbAfterId
-      let counts' = [(day, booked + length (filter (Rules.ridesSlotOn slotTripId day) terms)) | (day, booked) <- counts]
+      let counts' = [(day, booked + length (filter (Rules.ridesSlotOn routeId day) terms)) | (day, booked) <- counts]
       case listToMaybe (reverse terms) of
         Just lastTerm | length terms == pageSize -> go (Just lastTerm.id) counts'
         _ -> pure counts'
@@ -131,7 +140,7 @@ fullSlotDays cityId slotTripId days =
 -- | Taken by every write that adds a rider to a slot's day (reschedule onto it, unskip on it), so two of them cannot
 -- both take its last seat.
 slotLockKey :: Id DMOC.MerchantOperatingCity -> Text -> DT.Day -> Text
-slotLockKey cityId slotTripId day = "SharedCabPass:slot:" <> cityId.getId <> ":" <> slotTripId <> ":" <> show day
+slotLockKey cityId routeId day = "SharedCabPass:slot:" <> cityId.getId <> ":" <> routeId <> ":" <> show day
 
 -- | The term's live tickets for a day. The booking the issue job recorded comes first (it does not depend on
 -- the ticket's startTime); otherwise a startTime window around the departure, or around the whole day when the

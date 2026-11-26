@@ -320,7 +320,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   -- A slotted term takes a seat on its slot every day it covers, so refuse it when any of those days is already full.
   -- Checked here, before payment: the seat is only counted once the term is active, so two riders paying at the same
   -- moment can still both get the last one.
-  whenJust (mbRouteTerm >>= (.slotTripId)) $ \slot -> do
+  whenJust (mbRouteTerm >>= (.routeId)) $ \slot -> do
     fullDays <- SharedCabPass.fullSlotDays pass.merchantOperatingCityId slot [startDate .. endDate]
     whenJust (listToMaybe fullDays) $ \day ->
       throwError (InvalidRequest $ "No seats left on this shuttle on " <> show day <> ", please choose another")
@@ -445,7 +445,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             destinationStopCode = (.destinationStopCode) <$> mbRouteTerm,
             maximumOverrideableFarePerTicket = (.referenceFare) <$> mbRouteTerm,
             validityDays,
-            slotTripId = mbRouteTerm >>= (.slotTripId),
+            routeId = mbRouteTerm >>= (.routeId),
             skipDays = [],
             slotChanges = [],
             createdAt = now,
@@ -577,7 +577,7 @@ postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
           tripCount = req.tripCount,
           validityDays = req.validityDays,
           roundTrip = req.roundTrip,
-          slotTripId = req.slotTripId
+          routeId = req.routeId
         }
 
 -- Generate Redis lock key for pass purchase
@@ -2089,7 +2089,7 @@ buildRoutePassAPIEntity mbPass payment
             destinationStopCode = payment.destinationStopCode,
             sourceStopName,
             destinationStopName,
-            slotTripId = payment.slotTripId,
+            routeId = payment.routeId,
             skipDays = payment.skipDays,
             slotChanges = payment.slotChanges
           }
@@ -2546,7 +2546,7 @@ postMultimodalPassCalculateFare (mbPersonId, merchantId) passId req = do
           tripCount = req.tripCount,
           validityDays = req.validityDays,
           roundTrip = req.roundTrip,
-          slotTripId = req.slotTripId
+          routeId = req.routeId
         }
   pure
     PassAPI.PassCalculateFareResp
@@ -2569,7 +2569,7 @@ postMultimodalPassReschedule ::
   )
 postMultimodalPassReschedule (mbCallerPersonId, merchantId) purchasedPassId req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  SharedCabPassReschedule.reschedule personId merchantId purchasedPassId req.day req.slotTripId
+  SharedCabPassReschedule.reschedule personId merchantId purchasedPassId req.day req.routeId
   pure APISuccess.Success
 
 getMultimodalPassSlotAvailability ::
@@ -2581,6 +2581,6 @@ getMultimodalPassSlotAvailability ::
     Text ->
     Environment.Flow PassAPI.PassSlotAvailabilityResp
   )
-getMultimodalPassSlotAvailability (mbCallerPersonId, merchantId) purchasedPassId day slotTripId = do
+getMultimodalPassSlotAvailability (mbCallerPersonId, merchantId) purchasedPassId day routeId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  SharedCabPassReschedule.slotAvailability personId merchantId purchasedPassId day slotTripId
+  SharedCabPassReschedule.slotAvailability personId merchantId purchasedPassId day routeId

@@ -2,8 +2,8 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
-# Shuttle subscription: seats on one timetable trip (a slot), set by ops. A rider can reschedule a day onto a slot only
-# while the riders booked on it for that day are fewer than this. One row per (city, trip); the dashboard upsert keeps it so.
+# Shuttle subscription: seats on one slot route (one route per departure time, e.g. A-B 7:30), set by ops. A rider can reschedule a day onto a slot only
+# while the riders booked on it for that day are fewer than this. One row per (city, route); the dashboard upsert keeps it so.
 SharedCabSlotCapacity:
   tableName: shared_cab_slot_capacity
 
@@ -11,21 +11,21 @@ SharedCabSlotCapacity:
 
   fields:
     id: Id SharedCabSlotCapacity
-    tripId: Text
+    routeId: Text
     capacity: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     id: PrimaryKey
-    tripId: SecondaryKey
+    routeId: SecondaryKey
 
   queries:
-    findByTripIdAndMerchantOperatingCityId:
+    findByRouteIdAndMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where:
         and:
-          - tripId
+          - routeId
           - merchantOperatingCityId
 
     findAllByMerchantOperatingCityId:

@@ -248,11 +248,11 @@ types:
 
   # Shuttle subscription: seats on one timetable trip (slot). Riders can reschedule a day onto a slot only while it has room.
   SharedCabSlotCapacityItem:
-    tripId: Text
+    routeId: Text
     capacity: Int
 
   SharedCabSlotCapacityUpsertReq:
-    tripId: Text
+    routeId: Text
     capacity: Int
     derive: "'HideSecrets"
 

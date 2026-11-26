@@ -276,11 +276,11 @@ data PurchasedPassSelectReq = PurchasedPassSelectReq {startDay :: Kernel.Prelude
 instance Kernel.Types.HideSecrets.HideSecrets PurchasedPassSelectReq where
   hideSecrets = Kernel.Prelude.identity
 
-data SharedCabSlotCapacityItem = SharedCabSlotCapacityItem {capacity :: Kernel.Prelude.Int, tripId :: Kernel.Prelude.Text}
+data SharedCabSlotCapacityItem = SharedCabSlotCapacityItem {capacity :: Kernel.Prelude.Int, routeId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabSlotCapacityUpsertReq = SharedCabSlotCapacityUpsertReq {capacity :: Kernel.Prelude.Int, tripId :: Kernel.Prelude.Text}
+data SharedCabSlotCapacityUpsertReq = SharedCabSlotCapacityUpsertReq {capacity :: Kernel.Prelude.Int, routeId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

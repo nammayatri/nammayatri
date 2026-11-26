@@ -141,10 +141,10 @@ PurchasedPassPayment:
       reason: Maybe Text
       derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
 
-    # A day of a shuttle term moved to another slot (reschedule): the daily issue job books that day on this trip.
+    # A day of a shuttle term moved to another slot (reschedule): the daily issue job books that day on this route.
     SlotChange:
       day: Day
-      slotTripId: Text
+      routeId: Text
       derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
 
   fields:
@@ -177,12 +177,13 @@ PurchasedPassPayment:
     destinationStopCode: Maybe Text
     maximumOverrideableFarePerTicket: Maybe HighPrecMoney
     validityDays: Maybe Int
-    # Shuttle subscription: the timetable trip (route_stop_time_table.trip_id) this term rides daily. On the payment row
+    # Shared cab subscription: the slot route this term rides daily. Each departure time is its own route (A-B 7:30 and
+    # A-B 8:30 have different route ids), so the route fixes the time. On the payment row
     # (one row per term) beside sourceStopCode/destinationStopCode, so a renewal can pick a different slot.
-    slotTripId: Maybe Text
+    routeId: Maybe Text
     # Days of this term the rider skipped/paused; read whole by the daily issue job. Small per-term list, so json not a table.
     skipDays: "[SkipDay]"
-    # Days of this term moved to another slot; any other day rides slotTripId.
+    # Days of this term moved to another slot; any other day rides routeId.
     slotChanges: "[SlotChange]"
 
   beamType:

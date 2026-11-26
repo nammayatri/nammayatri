@@ -58,7 +58,7 @@ types:
     destinationStopCode: Maybe Text
     sourceStopName: Maybe Text
     destinationStopName: Maybe Text
-    slotTripId: Maybe Text
+    routeId: Maybe Text
     skipDays: "[SkipDay]"
     slotChanges: "[SlotChange]"
     derive: "Show"
@@ -69,7 +69,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
-    slotTripId: Maybe Text
+    routeId: Maybe Text
     derive: "Show"
 
   PassCalculateFareResp:
@@ -155,7 +155,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
-    slotTripId: Maybe Text
+    routeId: Maybe Text
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
@@ -261,11 +261,11 @@ types:
   # Shuttle subscription: ride another slot (e.g. 9:30 instead of 7:30) on one day of the term, if it has a free seat.
   PassRescheduleReq:
     day: Day
-    slotTripId: Text
+    routeId: Text
     derive: "Show"
 
   PassSlotAvailabilityResp:
-    slotTripId: Text
+    routeId: Text
     day: Day
     departureTime: Maybe UTCTime
     capacity: Maybe Int
@@ -453,7 +453,7 @@ apis:
         purchasedPassId: Id PurchasedPass
       mandatoryQuery:
         day: Day
-        slotTripId: Text
+        routeId: Text
       response:
         type: PassSlotAvailabilityResp
 

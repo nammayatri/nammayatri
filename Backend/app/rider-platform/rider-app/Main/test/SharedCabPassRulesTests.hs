@@ -158,5 +158,5 @@ tests =
     ]
   where
     skip day reason = DPPP.SkipDay {day, reason}
-    move day slotTripId = DPPP.SlotChange {day, slotTripId}
+    move day routeId = DPPP.SlotChange {day, routeId}
     rides slot changes skips = R.ridesSlot slot day0 (dayPrev, day1) (Just "T0730") changes skips

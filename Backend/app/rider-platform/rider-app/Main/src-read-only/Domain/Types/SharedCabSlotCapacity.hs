@@ -15,7 +15,7 @@ data SharedCabSlotCapacity = SharedCabSlotCapacity
     id :: Kernel.Types.Id.Id Domain.Types.SharedCabSlotCapacity.SharedCabSlotCapacity,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    tripId :: Kernel.Prelude.Text,
+    routeId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

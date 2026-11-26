@@ -15,7 +15,7 @@
 -- | The passengers of one shared-route run and the driver's verbs on them. A run is the driver platform's ride; its
 -- passengers are the CONFIRMED ticket bookings placed on it (frfs_ticket_booking.ride_id). Nothing here is a new state:
 -- a board flips the booking's tickets to INPROGRESS, a drop to USED, a no-show counts on the booking, exactly the
--- transitions the shared cab uses, and 'passengerStateOf' reads them back. The driver platform reads and acts on them
+-- transitions the shared cab uses, and 'passengerStateOf' reads them back. A drop that leaves nothing to board ends the journey. The driver platform reads and acts on them
 -- through the shared cab's session and booking-operation endpoints.
 module SharedLogic.SharedRoute.Manifest
   ( RunPassenger (..),
@@ -31,11 +31,13 @@ import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.Journey as DJourney
 import Domain.Types.SharedRoute (SharedDemandKnobs (..), SharedPassengerState)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import SharedLogic.FRFSCancelJourney (endJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedRoute.Knobs as Knobs
 import SharedLogic.SharedRoute.Passenger (passengerStateOf)
@@ -105,9 +107,13 @@ applyRunAction rideId booking action vehicleNumber = do
       | otherwise -> QFRFSTicketBooking.updateSharedCabNoShowsById (booking.sharedCabNoShows + 1) booking.id
     Drop
       | not boarded -> throwError (InvalidRequest $ "booking " <> booking.id.getId <> " has not boarded")
-      | otherwise ->
+      | otherwise -> do
         forM_ (filter ((== DFRFSTicketStatus.INPROGRESS) . (.status)) tickets) $ \ticket ->
           QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicketStatus.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+        -- the ride is over once no ticket is left to board: end the rider's journey, as the shared cab's drop does
+        unless (DFRFSTicketStatus.ACTIVE `elem` statuses) $
+          withTryCatch "sharedRoute:drop:endJourney" (endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId)
+            >>= either (\e -> logError $ "shared-route journey not ended for dropped booking " <> booking.id.getId <> ": " <> show e) pure
   where
     board tickets = do
       forM_ (filter ((== DFRFSTicketStatus.ACTIVE) . (.status)) tickets) $ \ticket ->

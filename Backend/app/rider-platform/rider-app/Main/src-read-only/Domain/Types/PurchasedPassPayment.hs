@@ -46,9 +46,9 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    routeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     skipDays :: [Domain.Types.PurchasedPassPayment.SkipDay],
     slotChanges :: [Domain.Types.PurchasedPassPayment.SlotChange],
-    slotTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
@@ -58,6 +58,6 @@ data PurchasedPassPayment = PurchasedPassPayment
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SkipDay = SkipDay {day :: Data.Time.Calendar.Day, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+data SkipDay = SkipDay {day :: Data.Time.Calendar.Day, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON), (ToSchema))
 
-data SlotChange = SlotChange {day :: Data.Time.Calendar.Day, slotTripId :: Kernel.Prelude.Text} deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+data SlotChange = SlotChange {day :: Data.Time.Calendar.Day, routeId :: Kernel.Prelude.Text} deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON), (ToSchema))

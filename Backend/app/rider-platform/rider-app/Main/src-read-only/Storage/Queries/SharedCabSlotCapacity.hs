@@ -28,14 +28,14 @@ findAllByMerchantOperatingCityId ::
   m [Domain.Types.SharedCabSlotCapacity.SharedCabSlotCapacity]
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-findByTripIdAndMerchantOperatingCityId ::
+findByRouteIdAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.SharedCabSlotCapacity.SharedCabSlotCapacity))
-findByTripIdAndMerchantOperatingCityId tripId merchantOperatingCityId = do
+findByRouteIdAndMerchantOperatingCityId routeId merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.tripId $ Se.Eq tripId,
+        [ Se.Is Beam.routeId $ Se.Eq routeId,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
@@ -56,7 +56,7 @@ updateByPrimaryKey (Domain.Types.SharedCabSlotCapacity.SharedCabSlotCapacity {..
     [ Se.Set Beam.capacity capacity,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.tripId tripId,
+      Se.Set Beam.routeId routeId,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -70,7 +70,7 @@ instance FromTType' Beam.SharedCabSlotCapacity Domain.Types.SharedCabSlotCapacit
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            tripId = tripId,
+            routeId = routeId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -82,7 +82,7 @@ instance ToTType' Beam.SharedCabSlotCapacity Domain.Types.SharedCabSlotCapacity.
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.tripId = tripId,
+        Beam.routeId = routeId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

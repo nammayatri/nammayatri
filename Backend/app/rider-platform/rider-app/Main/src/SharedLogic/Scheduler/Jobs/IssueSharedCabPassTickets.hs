@@ -17,6 +17,8 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Types.FRFSTicketBooking as DBooking
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.PassOverrideConfig as DPassOverride
 import qualified Domain.Types.PurchasedPassPayment as DPPP
 import Environment (Flow)
 import qualified Environment
@@ -27,13 +29,19 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
+import qualified SharedLogic.SharedCab.TripClient as TripClient
 import qualified SharedLogic.SharedCabPass as SharedCabPass
 import qualified SharedLogic.SharedCabPassRules as Rules
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
 import qualified Storage.Queries.PurchasedPassPayment as QPPP
 import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
+import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as Notify
 
 issueSharedCabPassTickets :: Job 'IssueSharedCabPassTickets -> Flow ExecutionResult
@@ -88,6 +96,7 @@ issueForTerm timeDiff now term day
                 otp <- SharedCabPass.ensureBoardingOtp booking
                 when (Rules.otpDue now departure (isJust booking.vehicleNumber)) $
                   sendOtpOnce timeDiff departure booking otp
+                stampRunPlate day booking
               pure issued
   where
     -- A fresh read of the term: a skip may have landed since the page of terms was read.
@@ -125,17 +134,20 @@ book :: DPPP.PurchasedPassPayment -> DT.Day -> Flow (Maybe DBooking.FRFSTicketBo
 book term day = do
   sourceStopCode <- term.sourceStopCode & fromMaybeM (InvalidRequest "Term has no source stop")
   destinationStopCode <- term.destinationStopCode & fromMaybeM (InvalidRequest "Term has no destination stop")
+  -- The day's reschedule when there is one, else the term's own slot route; the ticket rides that route's trip.
+  let mbRouteId = Rules.slotOn term day
+  mbTripId <- maybe (pure Nothing) (SharedCabPass.slotRouteTripId term) mbRouteId
   let req =
         FRFSTicketService.FRFSPassInstantBookReq
           { purchasedPassPaymentId = term.id,
             sourceStopCode,
             destinationStopCode,
             quantity = Just 1,
-            serviceTier = Nothing,
-            routeCode = Nothing,
+            -- The tier the pass was sold on (e.g. SHUTTLE): check-in admits a bus of the ticket's tier only.
+            serviceTier = term.overrideBenefitConfigJson >>= DPassOverride.firstEntry >>= DPassOverride.entryPricing <&> (.primaryServiceTier),
+            routeCode = mbRouteId,
             vehicleNumber = Nothing,
-            -- The day's reschedule when there is one, else the term's own slot.
-            tripId = Rules.slotOn term day,
+            tripId = mbTripId,
             seatIds = Nothing,
             platformType = Nothing
           }
@@ -149,6 +161,30 @@ book term day = do
       SharedCabPass.recordIssued term day bookingId
       logInfo $ "IssueSharedCabPassTickets: issued term=" <> term.id.getId <> " day=" <> show day <> " booking=" <> bookingId.getId
       QFRFSTicketBooking.findById bookingId
+
+-- | Shows the rider their bus before boarding: the plate driver-app assigned to the run of the ticket's trip that day goes on the
+-- journey leg, as its fleetNo. Each run of the job re-reads it until departure, so a later assignment or a vehicle swap lands too.
+-- Left alone once the rider boarded (check-in wrote the plate they actually boarded) and when the run is not assigned yet.
+stampRunPlate :: DT.Day -> DBooking.FRFSTicketBooking -> Flow ()
+stampRunPlate day booking = case booking.tripId of
+  Just tripId
+    | isNothing booking.vehicleNumber ->
+      withTryCatch "IssueSharedCabPassTickets:stampRunPlate" (stamp tripId) >>= \case
+        Right () -> pure ()
+        Left err -> logWarning $ "IssueSharedCabPassTickets: run plate not stamped booking=" <> booking.id.getId <> " err=" <> show err
+  _ -> pure ()
+  where
+    stamp tripId =
+      QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= \case
+        Nothing -> pure ()
+        Just leg -> do
+          integratedBppConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
+          city <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "City not found: " <> booking.merchantOperatingCityId.getId)
+          mbPlate <- TripClient.runVehicle booking.merchantId city.city integratedBppConfig.feedKey tripId day
+          whenJust mbPlate $ \plate ->
+            when (Just plate /= leg.finalBoardedBusNumber) $ do
+              QJourneyLegExtra.updateFinalBoardedBusById (Just plate) leg.busTagNumber leg.busVehicleVariant leg.id
+              logInfo $ "IssueSharedCabPassTickets: run plate " <> plate <> " on booking=" <> booking.id.getId
 
 -- | One next run per city per 15 minutes, however many times this run is triggered.
 scheduleNext :: IssueSharedCabPassTicketsJobData -> Flow ()
