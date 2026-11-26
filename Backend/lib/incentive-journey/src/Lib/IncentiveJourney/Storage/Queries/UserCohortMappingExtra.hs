@@ -10,6 +10,7 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logWarning
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
+import Lib.IncentiveJourney.OptIn (isOptInActiveForLocalTime)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Beam.UserCohortMapping as Beam
 import Lib.IncentiveJourney.Storage.Queries.OrphanInstances.UserCohortMapping ()
@@ -128,6 +129,45 @@ findActiveByUserId userId now =
           Se.Is Beam.validTill $ Se.GreaterThanOrEq now
         ]
     ]
+
+-- | Current members of one campaign, a page at a time in user-id order after the cursor: enabled rows with validTill
+-- >= now (pass city-local now, as 'findActiveByUserId'), and for an OptIn campaign only rows opted in this period
+-- ('isOptInActiveForLocalTime' anchored at the campaign startDate: the same gate as the assignment lookup). Uses the
+-- cohortMappingId index. The period rule is applied in Haskell, so raw pages are read until 'limit' members are found
+-- or the rows run out: a short result still means the last page, and the last id returned is a valid cursor.
+-- Members that come only from a city auto-apply row have no user_cohort_mapping row and are not listed.
+findActiveUserIdsByCohortMappingIdAfter ::
+  (BeamFlow m r) =>
+  Id DCJM.CohortJourneyMapping ->
+  UTCTime ->
+  Bool ->
+  Maybe UTCTime ->
+  Maybe (Id Common.Person) ->
+  Int ->
+  m [Id Common.Person]
+findActiveUserIdsByCohortMappingIdAfter cohortMappingId now optedInOnly mbCampaignStartDate mbAfterUserId0 limit =
+  go mbAfterUserId0 []
+  where
+    go mbAfterUserId acc = do
+      rows <-
+        findAllWithOptionsKV
+          [ Se.And $
+              [ Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId),
+                Se.Is Beam.enabled $ Se.Eq True,
+                Se.Is Beam.validTill $ Se.GreaterThanOrEq now
+              ]
+                <> [Se.Is Beam.optedInAt $ Se.Not $ Se.Eq Nothing | optedInOnly]
+                <> [Se.Is Beam.userId $ Se.GreaterThan afterUserId.getId | Just afterUserId <- [mbAfterUserId]]
+          ]
+          (Se.Asc Beam.userId)
+          (Just limit)
+          Nothing
+      let kept = if optedInOnly then filter (isOptInActiveForLocalTime now mbCampaignStartDate) rows else rows
+          acc' = acc <> map (.userId) kept
+      case listToMaybe (reverse rows) of
+        Just lastRow
+          | length rows >= limit && length acc' < limit -> go (Just lastRow.userId) acc'
+        _ -> pure (take limit acc')
 
 insertUserCohortMappingIgnoringConflict ::
   (BeamFlow m r) =>

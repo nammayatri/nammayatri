@@ -361,6 +361,29 @@ getActiveDriverIdsByFleetOwnerId fleetOwnerId = do
       ]
   pure $ map (.driverId) associations
 
+-- | One page of the fleet's active driver ids in driver-id order, after the given id (keyset paging for batch jobs).
+findActiveDriverIdsByFleetOwnerIdAfter ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  Maybe (Id Person) ->
+  Int ->
+  m [Id Person]
+findActiveDriverIdsByFleetOwnerIdAfter fleetOwnerId mbAfterDriverId limit = do
+  now <- getCurrentTime
+  associations <-
+    findAllWithOptionsKV
+      [ Se.And $
+          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
+            Se.Is BeamFDVA.isActive $ Se.Eq True,
+            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+            <> [Se.Is BeamFDVA.driverId $ Se.GreaterThan afterDriverId.getId | Just afterDriverId <- [mbAfterDriverId]]
+      ]
+      (Se.Asc BeamFDVA.driverId)
+      (Just limit)
+      Nothing
+  pure $ map (.driverId) associations
+
 findActiveDriverLinksByFleetOwnerIds ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Text] ->

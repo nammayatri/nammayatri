@@ -130,6 +130,9 @@ types:
     enableForAirport: AirportRestrictionType
     airConditioned: Maybe AirConditionedTier
     autoAcceptLockedByFleet: Maybe Bool
+    acLockedByFleet: Maybe Bool
+    intraCityLockedByFleet: Maybe Bool
+    lockMessage: Maybe Text
   AirConditionedTier:
       isWorking: Bool
       usageRestrictionType: AirConditionedRestrictionType
@@ -149,6 +152,7 @@ types:
     isSelected: Bool
     priority: Maybe Int
     autoAcceptance: Maybe AutoAcceptanceInfo
+    lockedByFleet: Maybe Bool
   AutoAcceptanceInfo:
     minWalletBalanceRequired: Maybe HighPrecMoney
     mode: Maybe AutoAcceptanceMode

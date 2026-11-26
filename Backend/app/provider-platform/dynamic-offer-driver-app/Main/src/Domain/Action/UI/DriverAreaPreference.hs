@@ -17,6 +17,7 @@ where
 import qualified API.Types.UI.DriverAreaPreference as APIT
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
+import qualified Domain.Types.DriverPreferencePolicy as DDPP
 import qualified Domain.Types.FleetConfig as Fields
 import qualified Domain.Types.GeohashArea as Fields
 import qualified Domain.Types.Merchant
@@ -31,6 +32,7 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.GeohashArea as CQGA
@@ -50,8 +52,14 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
-  pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
+  -- One fleet read: "ignore preferences", and the policy hiding AreaPreference (which also greys it out in the app).
+  fleetContext <- DPP.getDriverFleetContext DPP.Cached personId merchantOpCityId
+  let fleetDisablesPreference = maybe False (.disableDriverAreaAndDistancePreference) (DPP.contextAutoAssign fleetContext)
+      hiddenByFleet = maybe False (DPP.isHidden DDPP.AreaPreference) (DPP.contextPolicy fleetContext)
+      res = buildInfoRes fleetDisablesPreference minCells person.driverTag
+      locked = fleetDisablesPreference || hiddenByFleet
+  -- lockMessage: who manages it ('DPP.contextLockMessage': the source in charge), only when locked.
+  pure res{APIT.lockedByFleet = Just locked, APIT.lockMessage = DPP.contextLockMessage fleetContext locked}
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -79,7 +87,12 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
            in retained <> newTags
       updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
-  pure $ buildInfoRes fleetDisablesPreference minCells (Just updatedTags)
+  -- Locked here only by "ignore preferences": the source in charge is read only then, for its lockMessage.
+  lockMessage <-
+    if fleetDisablesPreference
+      then (`DPP.contextLockMessage` True) <$> DPP.getDriverFleetContext DPP.Cached personId merchantOpCityId
+      else pure Nothing
+  pure (buildInfoRes fleetDisablesPreference minCells (Just updatedTags)) {APIT.lockMessage = lockMessage}
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
       (name : _) -> Just name
@@ -140,14 +153,15 @@ validateSelection merchantOpCityId minCells = \case
 buildInfoRes :: Bool -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
 buildInfoRes fleetDisablesPreference minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
-    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetDisablesPreference}
+    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetDisablesPreference, lockMessage = Nothing}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [],
           radiusArea = Just APIT.RadiusAreaSelection {center = center, radiusMeters = radiusMeters},
           minCells = minCells,
           enabled = enabled,
-          lockedByFleet = Just fleetDisablesPreference
+          lockedByFleet = Just fleetDisablesPreference,
+          lockMessage = Nothing
         }
     Just (AreaPref.PreferredGeohashCells cells) ->
       APIT.AreaPreferenceInfoRes
@@ -155,7 +169,8 @@ buildInfoRes fleetDisablesPreference minCells mbTags =
           radiusArea = Nothing,
           minCells = minCells,
           enabled = enabled,
-          lockedByFleet = Just fleetDisablesPreference
+          lockedByFleet = Just fleetDisablesPreference,
+          lockMessage = Nothing
         }
   where
     enabled = not fleetDisablesPreference && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

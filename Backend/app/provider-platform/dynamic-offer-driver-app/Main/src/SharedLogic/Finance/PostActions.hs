@@ -35,6 +35,7 @@ import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.VehicleServiceTier as SVST
@@ -135,8 +136,14 @@ runPostActionsForAccount walletGateEnabled mbWalletCityConfig account = do
           WalletFloor.enforceWalletFloorForOwner transporterConfig FAccount.DRIVER driverId
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
-      (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->
+      (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) -> do
         SVST.checkAndAutoDisableWalletGatedTiers (Id driverIdText) (Id account.merchantOperatingCityId)
+        -- Fleet preference policy (ServiceTier locked to AutoAssignTiers): a protected tier the wallet covers again comes
+        -- back. Every posting, not only a credit (the account carries no direction, and a transfer credit collects no
+        -- entry id); it writes nothing when nothing changes, and stops at the person read for a driver without the
+        -- AutoAssign tag.
+        fork "restoreServiceTierLockOnWalletPosting" $
+          PolicyApply.restoreServiceTierLockOnWalletPosting (Id driverIdText) (Id account.merchantOperatingCityId)
       _ -> pure ()
 
 isDriverWallet :: Finance.AffectedAccount -> Bool

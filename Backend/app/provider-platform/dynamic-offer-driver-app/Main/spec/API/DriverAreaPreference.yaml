@@ -29,6 +29,7 @@ types:
     minCells: Int
     enabled: Bool
     lockedByFleet: Maybe Bool
+    lockMessage: Maybe Text
 
   GeohashAreaItem:
     geohash: Text

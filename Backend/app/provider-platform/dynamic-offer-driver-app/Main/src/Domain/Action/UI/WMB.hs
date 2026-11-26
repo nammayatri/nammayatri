@@ -65,6 +65,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import qualified SharedLogic.DriverPreferencePolicy.Apply as PolicyApply
 import qualified SharedLogic.FleetDriverSettings as FDS
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
@@ -538,7 +539,9 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
     FDV.updateByPrimaryKey (pendingInvite {isActive = True})
     SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DDI.FLEET_DRIVER
-    fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
+    fork "applyFleetSettings" $ do
+      FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
+      PolicyApply.applyFleetPolicyToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig

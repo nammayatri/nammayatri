@@ -331,6 +331,22 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
 
+-- | The (rental, intercity, intracity) switches a service-tier update ends up writing. At least one intercity/rental
+-- non usage restricted service tier should be selected for getting respective rides, and intracity is forced on unless
+-- the vehicle is a car with intercity or rental on. Shared by the driver's service-tier update and the fleet
+-- preference-policy apply (SharedLogic.DriverPreferencePolicy.Apply).
+resultingTripTypeSwitches :: DI.DriverInformation -> [(DVST.VehicleServiceTier, Bool)] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> (Bool, Bool, Bool)
+resultingTripTypeSwitches driverInfo driverVehicleServiceTierTypes mbRental mbInterCity mbIntraCity =
+  (rental, interCity, intraCity)
+  where
+    eligible = [serviceTier | (serviceTier, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted]
+    interCity = any (\st -> fromMaybe driverInfo.canSwitchToInterCity mbInterCity && fromMaybe True st.isIntercityEnabled) eligible
+    rental = any (\st -> fromMaybe driverInfo.canSwitchToRental mbRental && fromMaybe True st.isRentalsEnabled) eligible
+    intraCity =
+      if any (\(st, _) -> st.vehicleCategory == Just VC.CAR) driverVehicleServiceTierTypes && (interCity || rental)
+        then fromMaybe driverInfo.canSwitchToIntraCity mbIntraCity
+        else True
+
 -- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
 selectedServiceTiersLockKey :: Id DP.Person -> Text
 selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId

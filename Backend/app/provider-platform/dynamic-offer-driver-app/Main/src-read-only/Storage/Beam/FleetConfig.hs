@@ -25,6 +25,7 @@ data FleetConfigT f = FleetConfigT
     endRideDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fleetOwnerId :: B.C f Data.Text.Text,
     fleetPoolingPriority :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    preferencePolicy :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rideEndApproval :: B.C f Kernel.Prelude.Bool,
     unlinkDriverAndVehicleOnTripTermination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),

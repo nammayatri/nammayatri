@@ -167,6 +167,7 @@ import qualified Domain.Types.DriverOperatorAssociation as Fields
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.DriverPoolConfig as Fields
+import qualified Domain.Types.DriverPreferencePolicy as DDPP
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
@@ -310,6 +311,7 @@ import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -319,7 +321,6 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
-import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Merchant as SMerchant
@@ -1663,9 +1664,16 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       unless (mp `elem` supported) $ throwError $ InvalidRequest "Map provider not supported by merchant"
   -- Cash ride preference of a fleet driver is controlled by the fleet (see postDriverFleetCashRideUpdate), so the driver cannot change it.
   -- Checked before any write so a rejected request does not leave a partial update.
-  whenJust req.enableCashRide $ \_ -> do
-    mbActiveFda <- QFDA.findByDriverId personId True
-    when (isJust mbActiveFda) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet"
+  -- The driver's fleet (association + config) is read once, and only when a field below needs it, with the fleet config
+  -- read fresh from the DB (not the city cache) so a just-saved lock applies at once. An association read error still
+  -- fails the cash-ride and trip-distance checks; the preference policy fails open on it.
+  fleetLookup <-
+    if isJust req.enableCashRide || legacyTierRebuildRequested || isJust req.canSwitchToIntraCity || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
+      then DPP.tryDriverFleetContext DPP.Fresh personId merchantOpCityId
+      else pure (Right DPP.noDriverFleetContext)
+  whenJust req.enableCashRide $ \_ ->
+    either throwM (\context -> when (isJust context.fleet) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet") fleetLookup
+  fleetContext <- DPP.failOpen personId fleetLookup
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1682,6 +1690,17 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
             req.availableUpiApps <|> driverInfo.availableUpiApps
           )
       _ -> pure (driverInfo.canDowngradeToSedan, driverInfo.canDowngradeToHatchback, driverInfo.canDowngradeToTaxi, driverInfo.canSwitchToRental, driverInfo.canSwitchToInterCity, driverInfo.canSwitchToIntraCity, driverInfo.availableUpiApps)
+  -- Fleet preference locks (validation only), before any write. The switches are compared as this update would write them.
+  whenJust (DPP.contextPolicy fleetContext) $ \policy -> do
+    let source = fleetContext.controlSource
+    DPP.validateToggle source policy DDPP.Rental driverInfo.canSwitchToRental (Just canSwitchToRental)
+    DPP.validateToggle source policy DDPP.InterCity driverInfo.canSwitchToInterCity (Just canSwitchToInterCity)
+    DPP.validateToggle source policy DDPP.IntraCity driverInfo.canSwitchToIntraCity (Just canSwitchToIntraCity)
+    whenJust mVehicle $ \vehicle ->
+      when (DPP.isLocked DDPP.ServiceTier policy && legacyTierRebuildRequested) $ do
+        driverTiers <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing Nothing personId merchantOpCityId
+        now <- getCurrentTime
+        DPP.validateLegacyTierRebuild source policy (DPP.protectedTiers now (fromMaybe [] person.driverTag) driverTiers)
   whenJust mVehicle $ \vehicle -> do
     when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
       let selectedServiceTiers =
@@ -1766,7 +1785,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let distanceTag = LYT.TagNameValue AreaPref.distancePreferenceEnabledTagName
   clearDistanceTag <-
     if (isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold) && Yudhishthira.elemTagName distanceTag tag
-      then not . maybe False (.disableDriverAreaAndDistancePreference) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
+      then not . maybe False (.disableDriverAreaAndDistancePreference) . DPP.contextAutoAssign <$> either throwM pure fleetLookup
       else pure False
   let updatedTag = if clearDistanceTag then Yudhishthira.removeTagName (Just tag) distanceTag else tag
   unless (Just (Yudhishthira.showRawTags updatedTag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
@@ -1794,6 +1813,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity updatedDriverInfo org driverReferralCode driverStats driverGoHomeInfo updPerson.driverTag Nothing Nothing Nothing operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda Nothing
   where
+    legacyTierRebuildRequested = isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
       when

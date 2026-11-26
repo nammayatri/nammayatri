@@ -38,6 +38,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as Fields
 import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.DriverPanCard as DPC
+import qualified Domain.Types.DriverPreferencePolicy as DDPP
 import qualified Domain.Types.DriverRCAssociation as Fields
 import Domain.Types.DriverSSN
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
@@ -103,12 +104,12 @@ import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverPreferencePolicy as DPP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.Prepaid as SFPrepaid
 import qualified SharedLogic.Finance.Wallet as SFWallet
-import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
@@ -492,6 +493,9 @@ postDriverUpdateAirCondition ::
   )
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  -- Fleet preference lock (validation only), before any write.
+  fleetContext <- DPP.getDriverFleetContext DPP.Fresh personId merchantOperatingCityId
+  whenJust (DPP.contextPolicy fleetContext) $ \policy -> validateAirConditionedLock fleetContext.controlSource policy personId (Just isAirConditioned)
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   SDO.checkAndUpdateAirConditioned False isAirConditioned personId merchantOperatingCityId cityVehicleServiceTiers Nothing True
   now <- getCurrentTime
@@ -526,7 +530,15 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
-  autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
+  fleetContext <- DPP.getDriverFleetContext DPP.Cached personId merchantOpCityId
+  let autoAcceptLockedByFleet = maybe False (not . (.allowDriverToToggle)) (DPP.contextAutoAssign fleetContext)
+      mbPolicy = DPP.contextPolicy fleetContext
+  tiersNow <- getCurrentTime
+  let policyLocks preference = maybe False (DPP.isLocked preference) mbPolicy
+      fleetLockedTiers =
+        if policyLocks DDPP.ServiceTier
+          then DPP.protectedTiers tiersNow (fromMaybe [] person.driverTag) driverVehicleServiceTierTypes
+          else []
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
@@ -545,6 +557,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
                       mode = Just cfg.mode,
                       isSelected = Just $ serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
                     },
+              lockedByFleet = Just $ serviceTierType `elem` fleetLockedTiers,
               ..
             }
 
@@ -598,7 +611,14 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
         enableForAirport = effectiveAirport,
         airConditioned = mbAirConditioned,
-        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet
+        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet,
+        acLockedByFleet = Just $ policyLocks DDPP.AirConditioned,
+        intraCityLockedByFleet = Just $ policyLocks DDPP.IntraCity,
+        -- Who manages the locks above ('DPP.contextLockMessage': the source in charge), when any is on; the booleans stay
+        -- for older apps.
+        lockMessage =
+          DPP.contextLockMessage fleetContext $
+            autoAcceptLockedByFleet || policyLocks DDPP.AirConditioned || policyLocks DDPP.IntraCity || not (null fleetLockedTiers)
       }
   where
     getDriverCurrentSpecialLocationId personId' =
@@ -660,10 +680,13 @@ postDriverUpdateServiceTiers ::
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
     Environment.Flow APISuccess
   )
-postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
+postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) req@API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
+  -- Fleet preference locks (validation only), before any write: checkAndUpdateAirConditioned below writes AC.
+  fleetContext <- DPP.getDriverFleetContext DPP.Fresh personId merchantOperatingCityId
+  whenJust (DPP.contextPolicy fleetContext) $ \policy -> validateServiceTiersLocks fleetContext.controlSource policy personId merchantOperatingCityId cityVehicleServiceTiers req
 
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -681,7 +704,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
     -- A fleet that doesn't let its drivers toggle auto-assign keeps its auto-accept tiers as they are.
-    fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggle)) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOperatingCityId
+    let fleetLocksAutoAssign = maybe False (not . (.allowDriverToToggle)) (DPP.contextAutoAssign fleetContext)
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
     tierResults <-
@@ -725,30 +748,8 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId
 
-    {- Atleast one intercity/rental/airport non usage restricted service tier should be selected for getting respective rides -}
-    let canSwitchToInterCity' =
-          foldl
-            ( \canSwitchToInterCityForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-                if isUsageRestricted
-                  then canSwitchToInterCityForAnyServiceTierSoFar
-                  else canSwitchToInterCityForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToInterCity canSwitchToInterCity && fromMaybe True selectedServiceTier.isIntercityEnabled)
-            )
-            False
-            driverVehicleServiceTierTypes
-        canSwitchToRental' =
-          foldl
-            ( \canSwitchToRentalsForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-                if isUsageRestricted
-                  then canSwitchToRentalsForAnyServiceTierSoFar
-                  else canSwitchToRentalsForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToRental canSwitchToRental && fromMaybe True selectedServiceTier.isRentalsEnabled)
-            )
-            False
-            driverVehicleServiceTierTypes
-
-        canSwitchToIntraCity' =
-          if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
-            then fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity
-            else True
+    let (canSwitchToRental', canSwitchToInterCity', canSwitchToIntraCity') =
+          resultingTripTypeSwitches driverInfo driverVehicleServiceTierTypes canSwitchToRental canSwitchToInterCity canSwitchToIntraCity
 
     QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
     unless (enableForAirport == DI.BLOCKED || enableForAirport == driverInfo.enableForAirport) $
@@ -764,6 +765,47 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
         Just minBalance -> do
           mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
           pure $ maybe False (>= minBalance) mbBalance
+
+-- | AC lock, stored value as the tier GET shows it (unknown counts as on).
+validateAirConditionedLock :: DPP.ControlSource -> DDPP.PreferencePolicy -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Bool -> Environment.Flow ()
+validateAirConditionedLock source policy personId mbRequested =
+  when (isJust mbRequested && DPP.isLocked DDPP.AirConditioned policy) $ do
+    driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+    vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+    DPP.validateAirConditioned source policy driverInfo (vehicle.airConditioned /= Just False) mbRequested
+
+-- | Fleet locks on a Booking Preferences save: tiers + auto-accept, AC, intercity, rental and the resulting intracity.
+validateServiceTiersLocks ::
+  DPP.ControlSource ->
+  DDPP.PreferencePolicy ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  [VehicleServiceTier] ->
+  API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
+  Environment.Flow ()
+validateServiceTiersLocks source policy personId merchantOpCityId cityVehicleServiceTiers req =
+  when (any (`DPP.isLocked` policy) [DDPP.ServiceTier, DDPP.AirConditioned, DDPP.IntraCity, DDPP.InterCity, DDPP.Rental]) $ do
+    validateAirConditionedLock source policy personId ((.isWorking) <$> req.airConditioned)
+    driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+    DPP.validateToggle source policy DDPP.InterCity driverInfo.canSwitchToInterCity req.canSwitchToInterCity
+    DPP.validateToggle source policy DDPP.Rental driverInfo.canSwitchToRental req.canSwitchToRental
+    when (DPP.isLocked DDPP.ServiceTier policy || DPP.isLocked DDPP.IntraCity policy) $ do
+      vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+      driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+      when (DPP.isLocked DDPP.ServiceTier policy) $ do
+        person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        now <- getCurrentTime
+        let protected = DPP.protectedTiers now (fromMaybe [] person.driverTag) driverVehicleServiceTierTypes
+        DPP.validateServiceTierChanges
+          source
+          policy
+          protected
+          vehicle
+          [ DPP.TierChangeRequest {tier = t.serviceTierType, isSelected = t.isSelected, autoAccept = t.autoAcceptance >>= (.isSelected)}
+            | t <- req.tiers
+          ]
+      let (_, _, resultingIntraCity) = resultingTripTypeSwitches driverInfo driverVehicleServiceTierTypes req.canSwitchToRental req.canSwitchToInterCity req.canSwitchToIntraCity
+      DPP.validateToggle source policy DDPP.IntraCity driverInfo.canSwitchToIntraCity (Just resultingIntraCity)
 
 postDriverRegisterSsn ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -17,6 +17,8 @@ module Domain.Action.Internal.KnowYourDriver where
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AKey
+import qualified Data.Aeson.KeyMap as AKM
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -38,9 +40,12 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (logWarning)
 import Kernel.Utils.Error
+import qualified Lib.IncentiveJourney.CampaignTag as CampaignTag
 import Lib.Yudhishthira.Tools.Utils (accessTagKey, convertTags)
 import Lib.Yudhishthira.Types (TagName (..))
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
@@ -96,6 +101,16 @@ data DriverProfileRes = DriverProfileRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Rider-facing driverTags: the raw @IJCampaign:*@ membership keys (internal campaign ids) are dropped, and
+-- @"MgAssured": "true"@ is added while the MG "Assured ride" label is on. Any stored @MgAssured@ key is dropped first, so a
+-- driver-written tag can't fake the label. Other tags (FleetDriverEnabled, ...) unchanged.
+withMgAssuredFlag :: Bool -> A.Value -> A.Value
+withMgAssuredFlag assured = \case
+  A.Object o ->
+    let kept = AKM.delete "MgAssured" $ AKM.filterWithKey (\k _ -> not (CampaignTag.isIjCampaignTagName (AKey.toText k))) o
+     in A.Object (if assured then AKM.insert "MgAssured" (A.String "true") kept else kept)
+  other -> other
+
 knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
 knowYourDriver rideId withImages apiKey = do
   QRLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -137,6 +152,11 @@ getDriverProfile withImages person = do
   let mbSafetyScoreFromTag = accessTagKey (TagName "SafetyScore") driverTagsJson
   let mbSafetyCohort = accessTagKey (TagName "SafetyCohort") driverTagsJson
   let driverSafetyScore = mbSafetyScoreFromTag <|> getSafetyScoreFromSafetyCohort mbSafetyCohort
+  -- MG campaign "Assured ride" label (ShowAssuredLabel + an active AutoAssign / PoolingPriority perk). A failure here
+  -- must not break the rider's driver profile: no label.
+  mgAssured <-
+    withTryCatch "knowYourDriver:resolveMgAssuredLabel" (MgCampaign.resolveMgAssuredLabel person.merchantOperatingCityId person.driverTag)
+      >>= either (\err -> logWarning ("MgAssured label check failed for driver " <> person.id.getId <> ": " <> show err) $> False) pure
   pure $
     DriverProfileRes
       { certificates = map show $ mapMaybe (fmap (.category)) modules,
@@ -156,7 +176,7 @@ getDriverProfile withImages person = do
         profileImage = profileImage,
         topReviews = topFeedbacks,
         driverSafetyScore = driverSafetyScore,
-        driverTags = Just driverTagsJson
+        driverTags = Just (withMgAssuredFlag mgAssured driverTagsJson)
       }
   where
     fetchLegacyProfileImage personId =

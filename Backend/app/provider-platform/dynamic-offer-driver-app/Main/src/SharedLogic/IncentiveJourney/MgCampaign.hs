@@ -21,6 +21,10 @@ module SharedLogic.IncentiveJourney.MgCampaign
     mgAutoAssignValue,
     mgAutoAssignConfig,
     mgAutoAssignConfigFromSnapshot,
+    mgPreferencePolicyValue,
+    isAssuredLabelActive,
+    assuredLabelFromTagsAt,
+    resolveMgAssuredLabel,
     -- Legacy alias used by older call sites during transition.
     syncMgCampaignSnapshot,
   )
@@ -38,7 +42,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.TransporterConfig (TransporterConfig (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -67,7 +70,9 @@ data MgPerkSource
         perksActive :: Bool,
         cancelPerkActive :: Bool,
         autoAssignPerkActive :: Bool,
-        poolingPerkActive :: Bool
+        poolingPerkActive :: Bool,
+        -- | PreferencePolicy perk: membership active and its enableIn window open.
+        preferencePolicyPerkActive :: Bool
       }
   deriving (Show)
 
@@ -341,7 +346,10 @@ resolveFromControls localTime membership optedIn = \case
                 autoAssign = controls.autoAssign,
                 autoAssignEnableIn = controls.autoAssignEnableIn,
                 poolingPriority = controls.poolingPriority,
-                poolingEnableIn = controls.poolingEnableIn
+                poolingEnableIn = controls.poolingEnableIn,
+                preferencePolicy = controls.preferencePolicy,
+                preferencePolicyEnableIn = controls.preferencePolicyEnableIn,
+                showAssuredLabel = controls.showAssuredLabel
               }
           -- Membership (fleet slot) once startDate <= now; enableIn gates each perk separately.
           membershipActive =
@@ -352,21 +360,23 @@ resolveFromControls localTime membership optedIn = \case
           cancelPerkActive = membershipActive && windowOk snap.cancelEnableIn
           autoAssignPerkActive = membershipActive && windowOk snap.autoAssignEnableIn
           poolingPerkActive = membershipActive && windowOk snap.poolingEnableIn
+          preferencePolicyPerkActive = membershipActive && windowOk snap.preferencePolicyEnableIn
        in CampaignMember
             { snapshot = snap,
               perksActive = membershipActive,
               cancelPerkActive = cancelPerkActive,
               autoAssignPerkActive = autoAssignPerkActive,
-              poolingPerkActive = poolingPerkActive
+              poolingPerkActive = poolingPerkActive,
+              preferencePolicyPerkActive = preferencePolicyPerkActive
             }
 
--- | Merge multi-campaign perk sources: cancel forbidden if any forbids; first AA / pooling wins.
+-- | Merge multi-campaign perk sources: cancel forbidden if any forbids; first AA / pooling / preference policy wins.
 mergePerkSources :: MgPerkSource -> MgPerkSource -> MgPerkSource
 mergePerkSources UseNoCampaign other = other
 mergePerkSources other UseNoCampaign = other
 mergePerkSources
-  (CampaignMember a activeA cancelA aaA poolA)
-  (CampaignMember b activeB cancelB aaB poolB) =
+  (CampaignMember a activeA cancelA aaA poolA prefA)
+  (CampaignMember b activeB cancelB aaB poolB prefB) =
     let active = activeA || activeB
         allowCancel =
           case (cancelA, cancelB) of
@@ -382,14 +392,17 @@ mergePerkSources
               Mg.poolingPriority = (if poolA then a.poolingPriority else Nothing) <|> (if poolB then b.poolingPriority else Nothing) <|> a.poolingPriority <|> b.poolingPriority,
               Mg.cancelEnableIn = if cancelA then a.cancelEnableIn else if cancelB then b.cancelEnableIn else a.cancelEnableIn,
               Mg.autoAssignEnableIn = if aaA then a.autoAssignEnableIn else if aaB then b.autoAssignEnableIn else a.autoAssignEnableIn,
-              Mg.poolingEnableIn = if poolA then a.poolingEnableIn else if poolB then b.poolingEnableIn else a.poolingEnableIn
+              Mg.poolingEnableIn = if poolA then a.poolingEnableIn else if poolB then b.poolingEnableIn else a.poolingEnableIn,
+              Mg.preferencePolicy = (if prefA then a.preferencePolicy else Nothing) <|> (if prefB then b.preferencePolicy else Nothing) <|> a.preferencePolicy <|> b.preferencePolicy,
+              Mg.preferencePolicyEnableIn = if prefA then a.preferencePolicyEnableIn else if prefB then b.preferencePolicyEnableIn else a.preferencePolicyEnableIn
             }
      in CampaignMember
           { snapshot = snap,
             perksActive = active,
             cancelPerkActive = cancelA || cancelB,
             autoAssignPerkActive = aaA || aaB,
-            poolingPerkActive = poolA || poolB
+            poolingPerkActive = poolA || poolB,
+            preferencePolicyPerkActive = prefA || prefB
           }
 
 resolveMgPerkSourceAt :: UTCTime -> Maybe DI.DriverInformation -> MgPerkSource
@@ -399,8 +412,7 @@ resolveMgPerkSource ::
   ( MonadFlow m,
     BeamFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r
+    CacheFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe DI.DriverInformation ->
@@ -410,23 +422,62 @@ resolveMgPerkSource merchantOpCityId mbInfo = do
     Nothing -> pure UseNoCampaign
     Just info -> do
       mbPerson <- QPerson.findById info.driverId
-      transporterConfig <-
-        getOneConfig
-          (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
-          Nothing
-      now <- getCurrentTime
-      localTime <- case transporterConfig of
-        Just tc -> getLocalCurrentTime tc.timeDiffFromUtc
-        Nothing -> pure now
       case mbPerson >>= (.driverTag) of
-        Just tags -> do
-          -- Drop expired IJCampaign tags (Assigned must be written with UCM/streak expiry).
-          let memberships = membershipsFromTags (YUtils.filterExpiredTags' now tags)
-          sources <- forM memberships $ \membership -> do
-            mbControls <- getCampaignControls (Id membership.cjmId)
-            pure $ resolveFromControls localTime membership True mbControls
-          pure $ foldl' mergePerkSources UseNoCampaign sources
+        Just tags -> foldl' mergePerkSources UseNoCampaign <$> membershipPerkSources merchantOpCityId tags
         Nothing -> pure UseNoCampaign
+
+-- | One source per unexpired IJCampaign membership tag, before merging (city-local clock from the transporter config).
+-- 'resolveMgPerkSource' merges them; the assured label looks at each campaign on its own.
+membershipPerkSources ::
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  [LYT.TagNameValueExpiry] ->
+  m [MgPerkSource]
+membershipPerkSources merchantOpCityId tags = do
+  transporterConfig <-
+    getOneConfig
+      (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      Nothing
+  now <- getCurrentTime
+  localTime <- case transporterConfig of
+    Just tc -> getLocalCurrentTime tc.timeDiffFromUtc
+    Nothing -> pure now
+  -- Drop expired IJCampaign tags (Assigned must be written with UCM/streak expiry).
+  let memberships = membershipsFromTags (YUtils.filterExpiredTags' now tags)
+  forM memberships $ \membership -> do
+    mbControls <- getCampaignControls (Id membership.cjmId)
+    pure $ resolveFromControls localTime membership True mbControls
+
+-- | The rider "Assured ride" label for ONE campaign membership: the campaign has ShowAssuredLabel and its AutoAssign
+-- or PoolingPriority perk is active right now. Built on the same per-membership resolution as the perks
+-- ('resolveFromControls': campaign enabled, started, membership tag unexpired (OptIn tags exist only after opt-in),
+-- that perk's enableIn window open in city-local time), so the label cannot disagree with dispatch / pooling.
+isAssuredLabelActive :: MgPerkSource -> Bool
+isAssuredLabelActive = \case
+  UseNoCampaign -> False
+  CampaignMember {snapshot, autoAssignPerkActive, poolingPerkActive} ->
+    snapshot.showAssuredLabel
+      && ( (autoAssignPerkActive && isJust snapshot.autoAssign)
+             || (poolingPerkActive && isJust snapshot.poolingPriority)
+         )
+
+-- | Pure core of 'resolveMgAssuredLabel': @now@ (UTC, for tag expiry), @localTime@ (city-local wall clock, for windows),
+-- the person's tags and the campaign controls by cjm id. True when any membership shows the label.
+assuredLabelFromTagsAt :: UTCTime -> UTCTime -> [LYT.TagNameValueExpiry] -> (Text -> Maybe CampaignControls) -> Bool
+assuredLabelFromTagsAt now localTime tags controlsFor =
+  any
+    (\membership -> isAssuredLabelActive (resolveFromControls localTime membership True (controlsFor membership.cjmId)))
+    (membershipsFromTags (YUtils.filterExpiredTags' now tags))
+
+-- | Whether the rider should see the "Assured ride" label for this driver now (any of their campaign memberships).
+resolveMgAssuredLabel ::
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe [LYT.TagNameValueExpiry] ->
+  m Bool
+resolveMgAssuredLabel merchantOpCityId = \case
+  Nothing -> pure False
+  Just tags -> any isAssuredLabelActive <$> membershipPerkSources merchantOpCityId tags
 
 mgForbidsDriverCancellation :: MgPerkSource -> Maybe Bool
 mgForbidsDriverCancellation = \case
@@ -446,6 +497,15 @@ mgAutoAssignValue = \case
   UseNoCampaign -> Nothing
   CampaignMember {autoAssignPerkActive, snapshot}
     | autoAssignPerkActive -> snapshot.autoAssign
+    | otherwise -> Nothing
+
+-- | The campaign's PreferencePolicy perk config (raw JSON) while its enableIn window is open, else Nothing. Decoded
+-- by 'SharedLogic.DriverPreferencePolicy.Context' with the normal JSON decode.
+mgPreferencePolicyValue :: MgPerkSource -> Maybe A.Value
+mgPreferencePolicyValue = \case
+  UseNoCampaign -> Nothing
+  CampaignMember {preferencePolicyPerkActive, snapshot}
+    | preferencePolicyPerkActive -> snapshot.preferencePolicy
     | otherwise -> Nothing
 
 -- | Decode AutoAssign from snapshot regardless of perk window. Used when *applying*

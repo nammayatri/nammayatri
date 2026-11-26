@@ -23,6 +23,8 @@ module Lib.IncentiveJourney.MgCampaign
     encodeSnapshot,
     cjmHasControlFeatures,
     valueHasControlFeatures,
+    isAssuredLabelEntry,
+    assuredLabelWithoutPerk,
     parseControlFeatures,
     defaultParsedControlFeatures,
   )
@@ -65,7 +67,15 @@ data ParsedControlFeatures = ParsedControlFeatures
     autoAssign :: Maybe Value,
     autoAssignEnableIn :: ControlFeatureEnableIn,
     poolingPriority :: Maybe Value,
-    poolingEnableIn :: ControlFeatureEnableIn
+    poolingEnableIn :: ControlFeatureEnableIn,
+    -- | PreferencePolicy perk: the raw policy JSON (@{"locked": [...], "hidden": [...]}@). Decoded by the driver app
+    -- (its preference-policy types live there), not here.
+    preferencePolicy :: Maybe Value,
+    preferencePolicyEnableIn :: ControlFeatureEnableIn,
+    -- | @{"feature":"ShowAssuredLabel","config":true}@: the rider sees an "Assured ride" label while the campaign's
+    -- AutoAssign or PoolingPriority perk is active for the driver. A display switch, not a perk: it does not occupy the
+    -- one-campaign-with-perks slot ('valueHasControlFeatures').
+    showAssuredLabel :: Bool
   }
   deriving (Generic, Show, Eq)
 
@@ -77,7 +87,10 @@ defaultParsedControlFeatures =
       autoAssign = Nothing,
       autoAssignEnableIn = TimeBound,
       poolingPriority = Nothing,
-      poolingEnableIn = TimeBound
+      poolingEnableIn = TimeBound,
+      preferencePolicy = Nothing,
+      preferencePolicyEnableIn = TimeBound,
+      showAssuredLabel = False
     }
 
 data MgCampaignSnapshot = MgCampaignSnapshot
@@ -94,7 +107,12 @@ data MgCampaignSnapshot = MgCampaignSnapshot
     autoAssign :: Maybe Value,
     autoAssignEnableIn :: ControlFeatureEnableIn,
     poolingPriority :: Maybe Value,
-    poolingEnableIn :: ControlFeatureEnableIn
+    poolingEnableIn :: ControlFeatureEnableIn,
+    -- | Raw PreferencePolicy perk config (see 'ParsedControlFeatures').
+    preferencePolicy :: Maybe Value,
+    preferencePolicyEnableIn :: ControlFeatureEnableIn,
+    -- | ShowAssuredLabel (see 'ParsedControlFeatures').
+    showAssuredLabel :: Bool
   }
   deriving (Generic, Show, Eq)
 
@@ -111,7 +129,10 @@ instance ToJSON MgCampaignSnapshot where
         "autoAssign" A..= autoAssign,
         "autoAssignEnableIn" A..= autoAssignEnableIn,
         "poolingPriority" A..= poolingPriority,
-        "poolingEnableIn" A..= poolingEnableIn
+        "poolingEnableIn" A..= poolingEnableIn,
+        "preferencePolicy" A..= preferencePolicy,
+        "preferencePolicyEnableIn" A..= preferencePolicyEnableIn,
+        "showAssuredLabel" A..= showAssuredLabel
       ]
 
 instance FromJSON MgCampaignSnapshot where
@@ -127,13 +148,31 @@ instance FromJSON MgCampaignSnapshot where
     autoAssignEnableIn <- o A..:? "autoAssignEnableIn" A..!= TimeBound
     poolingPriority <- o A..:? "poolingPriority"
     poolingEnableIn <- o A..:? "poolingEnableIn" A..!= TimeBound
+    preferencePolicy <- o A..:? "preferencePolicy"
+    preferencePolicyEnableIn <- o A..:? "preferencePolicyEnableIn" A..!= TimeBound
+    showAssuredLabel <- o A..:? "showAssuredLabel" A..!= False
     pure MgCampaignSnapshot {..}
 
+-- | Any controlFeatures entry other than ShowAssuredLabel is a real control feature and occupies the perk slot:
+-- CanDxCancelBooking, AutoAssign, PoolingPriority and PreferencePolicy (a locks-only campaign too). ShowAssuredLabel is a
+-- display switch, so a list holding only that has no perks.
 valueHasControlFeatures :: Maybe Value -> Bool
 valueHasControlFeatures = \case
-  Just (A.Array xs) -> not (V.null xs)
+  Just (A.Array xs) -> any (not . isAssuredLabelEntry) (V.toList xs)
   Just _ -> True
   Nothing -> False
+
+-- | A @{"feature":"ShowAssuredLabel", ...}@ controlFeatures entry.
+isAssuredLabelEntry :: Value -> Bool
+isAssuredLabelEntry = \case
+  A.Object o -> AKM.lookup (AKey.fromText "feature") o == Just (A.String "ShowAssuredLabel")
+  _ -> False
+
+-- | ShowAssuredLabel switched on without any real perk next to it (the label would never show). Create / update
+-- reject it.
+assuredLabelWithoutPerk :: Maybe Value -> Bool
+assuredLabelWithoutPerk mbFeatures =
+  (parseControlFeatures mbFeatures).showAssuredLabel && not (valueHasControlFeatures mbFeatures)
 
 cjmHasControlFeatures :: DCJM.CohortJourneyMapping -> Bool
 cjmHasControlFeatures cjm = valueHasControlFeatures cjm.controlFeatures
@@ -159,7 +198,10 @@ mkSnapshotFromCjm journeyIdText cjm mbTimeBounds optedIn validTill =
           autoAssign = parsed.autoAssign,
           autoAssignEnableIn = parsed.autoAssignEnableIn,
           poolingPriority = parsed.poolingPriority,
-          poolingEnableIn = parsed.poolingEnableIn
+          poolingEnableIn = parsed.poolingEnableIn,
+          preferencePolicy = parsed.preferencePolicy,
+          preferencePolicyEnableIn = parsed.preferencePolicyEnableIn,
+          showAssuredLabel = parsed.showAssuredLabel
         }
 
 parseEnableIn :: Maybe Value -> ControlFeatureEnableIn
@@ -207,6 +249,19 @@ parseControlFeatures = \case
                   acc{poolingPriority = config <|> acc.poolingPriority,
                       poolingEnableIn = enableIn
                      }
+                -- {"feature":"PreferencePolicy","config":{"locked":[...],"hidden":[...]},"enableIn":"AllDay"|"TimeBound"}
+                "PreferencePolicy" ->
+                  acc{preferencePolicy = config <|> acc.preferencePolicy,
+                      preferencePolicyEnableIn = enableIn
+                     }
+                -- {"feature":"ShowAssuredLabel","config":true} (or {"enabled": true}); no enableIn of its own: the label
+                -- follows the AutoAssign / PoolingPriority perk windows.
+                "ShowAssuredLabel" ->
+                  let showLabel = case config of
+                        Just (A.Bool b) -> b
+                        Just (A.Object co) -> AKM.lookup (AKey.fromText "enabled") co == Just (A.Bool True)
+                        _ -> False
+                   in acc{showAssuredLabel = showLabel}
                 _ -> acc
         _ -> acc
 

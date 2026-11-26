@@ -38,10 +38,10 @@ import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.DriverPreferencePolicy.Context as Context
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -72,18 +72,14 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
 -- returns snapshot AutoAssign even outside the perk window so reconcile/apply can
 -- install tags at opt-in; silent-assign still gates on perksActive at dispatch.
 -- Lives in SharedLogic (not query Extra) to avoid PersonExtra ↔ FleetDriverAssociationExtra ↔ MgCampaign cycle.
+-- A thin wrapper over the shared resolver 'Context.tryDriverFleetContext' (same lookup, same "throws on a read
+-- error" semantics).
 getDriverFleetAutoAssignConfig ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId = do
-  mbInfo <- QDI.findById driverId
-  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbInfo
-  case mgSource of
-    MgCampaign.CampaignMember {snapshot} -> pure $ MgCampaign.mgAutoAssignConfigFromSnapshot snapshot
-    MgCampaign.UseNoCampaign ->
-      QFDA.findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> QFDA.getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = (.autoAssignConfig) <$> (Context.tryDriverFleetContext Context.Cached driverId merchantOpCityId >>= either throwM pure)
 
 -- | Applies the driver's fleet settings to the driver and this vehicle, one after another on the same tags: auto-assign
 -- on the vehicle's auto-accept tiers when the fleet has it on by default (or 'forceAutoAssign', the fleet's per-driver
@@ -97,9 +93,9 @@ applyFleetSettings ::
   DV.Vehicle ->
   m ()
 applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
-  mbInfo <- QDI.findById driver.id
-  mgSource <- MgCampaign.resolveMgPerkSource driver.merchantOperatingCityId mbInfo
-  mbFleetAutoAssign <- getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
+  context <- Context.tryDriverFleetContext Context.Cached driver.id driver.merchantOperatingCityId >>= either throwM pure
+  let mgSource = context.mgPerkSource
+      mbFleetAutoAssign = context.autoAssignConfig
   -- Active IJ membership (incl. behaviour-only) owns the perk slot: do not force-install fleet AA.
   let allowForceFleet = case mgSource of
         MgCampaign.UseNoCampaign -> True
@@ -203,7 +199,8 @@ restoreFleetAutoAssignOrKeep driverId =
       Just _ -> rewriteAutoAssignFromCurrentConfig driverId
       Nothing -> pure ()
 
--- | The fleet's per-driver switch turned off: these tiers come off the AutoAssign tag and the vehicle's auto-accept tiers.
+-- | The fleet's per-driver switch turned off: the whole AutoAssign tag goes, and auto-accept comes off these tiers and
+-- every tier that was on the tag (also one of another vehicle, or one the wallet strip unselected).
 removeAutoAssign ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   [ServiceTierType] ->
@@ -212,13 +209,11 @@ removeAutoAssign ::
   m ()
 removeAutoAssign tiers driver vehicle = do
   let oldTags = fromMaybe [] driver.driverTag
-      remaining = filter (`notElem` map show tiers) (autoAssignedTiers oldTags)
-      newTags =
-        if null remaining
-          then Yudhishthira.removeTagName (Just oldTags) (LYT.TagNameValue autoAssignTagName)
-          else setTag autoAssignTagName (LYT.ArrayValue remaining) oldTags
+      tagTiers = autoAssignedTiers oldTags
+      newTags = Yudhishthira.removeTagName (Just oldTags) (LYT.TagNameValue autoAssignTagName)
+      offTier tier = tier `elem` tiers || show tier `elem` tagTiers
   when (newTags /= oldTags) $ QPerson.updateDriverTag (Just newTags) driver.id
-  updateAutoAcceptTiers vehicle (filter (`notElem` tiers) (fromMaybe [] vehicle.selectedAutoAcceptTiers))
+  updateAutoAcceptTiers vehicle (filter (not . offTier) (fromMaybe [] vehicle.selectedAutoAcceptTiers))
 
 setTag :: Text -> LYT.TagValue -> [LYT.TagNameValueExpiry] -> [LYT.TagNameValueExpiry]
 setTag name value tags =
