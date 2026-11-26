@@ -30,6 +30,7 @@ Invoice:
     issuedToId: Text
     issuedToName: Maybe Text # SENSITIVE
     issuedToAddress: Maybe Text # SENSITIVE
+    issuedToGstin: Maybe Text
     issuedByType: Text
     issuedById: Text
     issuedByName: Maybe Text

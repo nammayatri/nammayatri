@@ -126,6 +126,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.issuedByName issuedByName,
       Se.Set Beam.issuedByType issuedByType,
       Se.Set Beam.issuedToAddress issuedToAddress,
+      Se.Set Beam.issuedToGstin issuedToGstin,
       Se.Set Beam.issuedToId issuedToId,
       Se.Set Beam.issuedToName issuedToName,
       Se.Set Beam.issuedToType issuedToType,
