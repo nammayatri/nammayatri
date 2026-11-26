@@ -131,6 +131,7 @@ data SpecialLocation = SpecialLocation
     fareSettlementType :: Maybe FareSettlementType,
     boothSpecificFleet :: Maybe Text,
     poolingMode :: Maybe PoolingMode,
+    skipQueue :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
