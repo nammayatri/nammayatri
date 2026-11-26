@@ -111,14 +111,12 @@ campaignWindowPolicy mbVersion st
         | Apply.policyHasValues policy -> Right policy
         | otherwise -> Left "has a PreferencePolicy perk without locked values"
   where
+    -- updatedAt round-trips through KV (full precision) and Postgres (microseconds): equal to the millisecond.
+    sameVersion a b = abs (diffUTCTime a b) < 0.001
     isBounded = \case
       Just TB.Unbounded -> False
       Just _ -> True
       Nothing -> False
-
--- | updatedAt round-trips through KV (full precision) and Postgres (microseconds): equal to the millisecond.
-sameVersion :: UTCTime -> UTCTime -> Bool
-sameVersion a b = abs (diffUTCTime a b) < 0.001
 
 -- | The campaign is live and its first milestone window is open now.
 campaignWindowOpenNow :: CampaignPolicyState -> Bool

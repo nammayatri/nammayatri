@@ -152,7 +152,7 @@ applyFleetPolicyToDriver driverId merchantOpCityId = do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       applyPreferencePolicy policy driver
 
--- | Applies the policy of whoever is in charge of the driver now ('DPP.contextApplyPolicy': a campaign's PreferencePolicy
+-- | Applies the policy of whoever is in charge of the driver now ('applyPolicy': a campaign's PreferencePolicy
 -- perk, else the fleet's). The campaign hooks call it, forked, after the campaign's work: a membership sync (assign,
 -- opt-in, the list ensure that gains a controls campaign) and a membership clear (the fleet's policy, if any, returns).
 -- No-op when that source has no policy values. @reason@ only labels the log line.
@@ -165,7 +165,7 @@ applyCurrentPolicyToDriver reason driverId =
   QPerson.findById driverId >>= mapM_ \driver -> do
     context <- DPP.getDriverFleetContext DPP.Cached driverId driver.merchantOperatingCityId
     let source = if DPP.isCampaignControlled context then "campaign" else "fleet" :: Text
-    case find policyHasValues (DPP.contextApplyPolicy context) of
+    case find policyHasValues context.applyPolicy of
       Nothing -> logDebug $ "Preference policy (" <> reason <> ") for driver " <> driverId.getId <> ": the " <> source <> " has no policy values, nothing to apply"
       Just policy -> do
         logInfo $ "Preference policy (" <> reason <> ") for driver " <> driverId.getId <> ": applying the " <> source <> "'s policy"
@@ -203,10 +203,10 @@ restoreServiceTierLockOnWalletPosting driverId merchantOpCityId = do
         if null (missingAutoAssignTiers liveTags cityTiers vehicle)
           then logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": no protected tier missing, fast path (no lock, no wallet read)"
           else do
-            -- The policy of the source in charge ('DPP.contextApplyPolicy'): the campaign's PreferencePolicy perk when a
+            -- The policy of the source in charge ('applyPolicy'): the campaign's PreferencePolicy perk when a
             -- campaign is in charge (none: nothing to restore), else the fleet's.
             context <- DPP.getDriverFleetContext DPP.Cached driverId merchantOpCityId
-            let mbPolicy = DPP.contextApplyPolicy context
+            let mbPolicy = context.applyPolicy
             when (isNothing mbPolicy && DPP.isCampaignControlled context) $
               logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": a campaign is in charge, no policy to restore"
             when (maybe False locksAutoAssignTiers mbPolicy) $

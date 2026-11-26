@@ -62,9 +62,7 @@ module SharedLogic.DriverPreferencePolicy.Context
     noDriverFleetContext,
     contextPolicy,
     sourceName,
-    lockMessageFor,
     contextLockMessage,
-    contextApplyPolicy,
     contextAutoAssign,
     isCampaignControlled,
   )
@@ -114,7 +112,7 @@ data DriverFleetContext = DriverFleetContext
     autoAssignConfig :: Maybe DFC.AutoAssignConfig,
     -- | The preference policy that applies to the driver ('sourcePolicy'): validation and the GET lock flags.
     preferencePolicy :: Maybe DDPP.PreferencePolicy,
-    -- | The policy whose locked values the apply paths write ('sourceApplyPolicy'): as 'preferencePolicy', except that a
+    -- | The policy whose locked values the apply paths write (@sourceApplyPolicy@): as 'preferencePolicy', except that a
     -- campaign's perk counts whatever its enableIn window, so the values are in place when the window opens (as the
     -- campaign's AutoAssign is installed at opt-in: 'MgCampaign.mgAutoAssignConfigFromSnapshot').
     applyPolicy :: Maybe DDPP.PreferencePolicy
@@ -153,6 +151,11 @@ resolveDriverFleetContextWith configRead driverId merchantOpCityId = do
             applyPolicy = Nothing
           }
   pure context {preferencePolicy = sourcePolicy context, applyPolicy = sourceApplyPolicy context}
+  where
+    -- 'sourcePolicy' for the apply paths: a campaign's PreferencePolicy perk whatever its enableIn window.
+    sourceApplyPolicy context = case context.controlSource of
+      CampaignSource snapshot -> snapshot.preferencePolicy >>= Kernel.Utils.JSON.valueToMaybe
+      _ -> sourcePolicy context
 
 sourceAutoAssign :: ControlSource -> Maybe DFC.AutoAssignConfig
 sourceAutoAssign = \case
@@ -174,12 +177,6 @@ sourcePolicy context = case context.controlSource of
   CampaignSource _ -> MgCampaign.mgPreferencePolicyValue context.mgPerkSource >>= Kernel.Utils.JSON.valueToMaybe
   FleetSource link -> link.fleetConfig >>= (.preferencePolicy)
   NoSource -> Nothing
-
--- | 'sourcePolicy' for the apply paths: a campaign's PreferencePolicy perk whatever its enableIn window.
-sourceApplyPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
-sourceApplyPolicy context = case context.controlSource of
-  CampaignSource snapshot -> snapshot.preferencePolicy >>= Kernel.Utils.JSON.valueToMaybe
-  _ -> sourcePolicy context
 
 readFleetLink :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigRead -> Id Person -> Id MerchantOperatingCity -> m (Maybe FleetLink)
 readFleetLink configRead driverId merchantOpCityId = do
@@ -229,7 +226,7 @@ failOpen driverId = \case
 contextPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
 contextPolicy = (.preferencePolicy)
 
--- | Who manages a locked setting, in the driver-facing wording (the lock messages: 'lockMessageFor', and the 400s in
+-- | Who manages a locked setting, in the driver-facing wording (the lock messages: 'contextLockMessage', and the 400s in
 -- 'SharedLogic.DriverPreferencePolicy'). A new source (city, ops) adds a case here. The error codes stay
 -- PREFERENCE_LOCKED_BY_FLEET / SERVICE_TIER_LOCKED_BY_FLEET for every source.
 sourceName :: ControlSource -> Text
@@ -237,18 +234,14 @@ sourceName = \case
   CampaignSource _ -> "campaign"
   _ -> "fleet"
 
--- | The GET responses' 'lockMessage' (set only when a lock flag in the response is true).
-lockMessageFor :: ControlSource -> Maybe Text
-lockMessageFor = \case
-  NoSource -> Nothing
-  source -> Just $ "Managed by your " <> sourceName source
-
--- | 'lockMessageFor' the source in charge when @anyLocked@, else Nothing.
+-- | The GET responses' 'lockMessage' for the source in charge when @anyLocked@ (set only when a lock flag in the
+-- response is true), else Nothing.
 contextLockMessage :: DriverFleetContext -> Bool -> Maybe Text
 contextLockMessage context anyLocked = if anyLocked then lockMessageFor context.controlSource else Nothing
-
-contextApplyPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
-contextApplyPolicy = (.applyPolicy)
+  where
+    lockMessageFor = \case
+      NoSource -> Nothing
+      source -> Just $ "Managed by your " <> sourceName source
 
 contextAutoAssign :: DriverFleetContext -> Maybe DFC.AutoAssignConfig
 contextAutoAssign = (.autoAssignConfig)

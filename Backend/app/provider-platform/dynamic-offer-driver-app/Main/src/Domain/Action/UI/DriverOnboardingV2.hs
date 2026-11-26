@@ -614,7 +614,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         autoAcceptLockedByFleet = Just autoAcceptLockedByFleet,
         acLockedByFleet = Just $ policyLocks DDPP.AirConditioned,
         intraCityLockedByFleet = Just $ policyLocks DDPP.IntraCity,
-        -- Who manages the locks above ('DPP.lockMessageFor' the source in charge), when any is on; the booleans stay
+        -- Who manages the locks above ('DPP.contextLockMessage': the source in charge), when any is on; the booleans stay
         -- for older apps.
         lockMessage =
           DPP.contextLockMessage fleetContext $

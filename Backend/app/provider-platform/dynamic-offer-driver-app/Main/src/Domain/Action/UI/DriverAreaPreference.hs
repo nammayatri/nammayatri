@@ -58,7 +58,7 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
       hiddenByFleet = maybe False (DPP.isHidden DDPP.AreaPreference) (DPP.contextPolicy fleetContext)
       res = buildInfoRes fleetDisablesPreference minCells person.driverTag
       locked = fleetDisablesPreference || hiddenByFleet
-  -- lockMessage: who manages it ('DPP.lockMessageFor' the source in charge), only when locked.
+  -- lockMessage: who manages it ('DPP.contextLockMessage': the source in charge), only when locked.
   pure res{APIT.lockedByFleet = Just locked, APIT.lockMessage = DPP.contextLockMessage fleetContext locked}
 
 postDriverAreaPreferenceUpdateInfo ::
