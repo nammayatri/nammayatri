@@ -412,6 +412,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           mbPassSearch <- QFRFSSearch.findById passQuote.searchId
           unless (FRFSPassOverride.passOfferAllowed integratedBppConfig (mbPassSearch >>= (.enforceFRFSPass))) $
             throwError (InvalidRequest $ "Passes are not offered on this search, purchasedPassPaymentId=" <> paymentId.getId)
+          adultBaseUnitPrice <- maybe adultUnitPriceForOverride (.price) . find (\category -> category.category == ADULT) <$> QFRFSQuoteCategory.findAllByQuoteId passQuote.id
           resolved <-
             FRFSPassOverride.resolvePassOverride
               integratedBppConfig
@@ -419,6 +420,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               vehicleType
               bookingStartTime
               mbServiceTierType
+              adultBaseUnitPrice
               adultUnitPriceForOverride
               (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems)
               (\applicablePasses -> FRFSUtils.passLegStops integratedBppConfig applicablePasses passQuote.fromStationCode passQuote.toStationCode)
