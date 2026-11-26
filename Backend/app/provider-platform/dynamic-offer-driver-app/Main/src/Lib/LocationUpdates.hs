@@ -460,13 +460,14 @@ performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> Bool -> m (
 performSafetyCheck ride booking isOndcScheduledRideSupportEnabled = do
   let rideId = ride.id
   logInfo $ "Performing safety check for rideId: " <> getId rideId
-  when (not ride.safetyAlertTriggered) $ do
-    riderId <-
-      booking.riderId
-        & fromMaybeM (BookingFieldNotPresent "riderId")
-    riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
-    void $ QRide.updateSafetyAlertTriggered ride.id
-    when (riderDetails.nightSafetyChecks || isOndcScheduledRideSupportEnabled) $ do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-      BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle
+  when (not ride.safetyAlertTriggered) $
+    unless (booking.bookingType == NudgeRide) $ do
+      riderId <-
+        booking.riderId
+          & fromMaybeM (BookingFieldNotPresent "riderId")
+      riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
+      void $ QRide.updateSafetyAlertTriggered ride.id
+      when (riderDetails.nightSafetyChecks || isOndcScheduledRideSupportEnabled) $ do
+        driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+        BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle

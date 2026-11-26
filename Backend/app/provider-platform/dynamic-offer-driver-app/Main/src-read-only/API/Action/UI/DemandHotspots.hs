@@ -16,6 +16,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -23,10 +24,16 @@ import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "demandHotspots" :> Get '[JSON] API.Types.UI.DemandHotspots.GetDemandHotspotsResp)
+type API =
+  ( TokenAuth :> "driver" :> "demandHotspots" :> Get '[JSON] API.Types.UI.DemandHotspots.GetDemandHotspotsResp :<|> TokenAuth :> "driver" :> "demandHotspot"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DemandHotspots.DemandNudgeReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 handler :: Environment.FlowServer API
-handler = getDriverDemandHotspots
+handler = getDriverDemandHotspots :<|> postDriverDemandHotspot
 
 getDriverDemandHotspots ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -36,3 +43,13 @@ getDriverDemandHotspots ::
     Environment.FlowHandler API.Types.UI.DemandHotspots.GetDemandHotspotsResp
   )
 getDriverDemandHotspots a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DemandHotspots.getDriverDemandHotspots (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postDriverDemandHotspot ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DemandHotspots.DemandNudgeReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverDemandHotspot a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DemandHotspots.postDriverDemandHotspot (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

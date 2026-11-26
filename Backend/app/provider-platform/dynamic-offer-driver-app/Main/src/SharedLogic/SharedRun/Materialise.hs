@@ -95,6 +95,7 @@ import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.Transformers.Booking as TBooking
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRouteMapping as QVRM
 import Tools.Error
@@ -453,6 +454,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
                 reconciliationStatus = Nothing,
                 ledgerWriteMode = Nothing,
                 financeInvoiceId = Nothing,
+                bookingType = TBooking.getBookingTypeFromTripCategory tripCategory,
                 createdAt = now,
                 updatedAt = now
               }

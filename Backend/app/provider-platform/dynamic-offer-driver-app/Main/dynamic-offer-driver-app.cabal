@@ -623,6 +623,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection
+      SharedLogic.Allocator.Jobs.NudgeRide.CompleteStaleNudgeRide
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
@@ -823,6 +824,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
+      SharedLogic.NudgeRide
       SharedLogic.OndcCancellationReason
       SharedLogic.OneShotAssign
       SharedLogic.OTP

@@ -384,6 +384,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.SearchRequest as QSR
@@ -582,7 +583,8 @@ data DriverInformationRes = DriverInformationRes
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
     preferredMapProvider :: Maybe DriverInfo.MapProvider,
-    mobileNumberRequired :: Bool
+    mobileNumberRequired :: Bool,
+    onNudgeRide :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -825,7 +827,8 @@ data DriverRespondReq = DriverRespondReq
     response :: SearchRequestForDriverResponse,
     notificationSource :: Maybe NotificationSource,
     renderedAt :: Maybe UTCTime,
-    respondedAt :: Maybe UTCTime
+    respondedAt :: Maybe UTCTime,
+    nudgeRideId :: Maybe (Id DRide.Ride)
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -1968,6 +1971,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   hasActiveRc <- isJust <$> QRCAssociation.findActiveAssociationByDriver id True
   availableForRidesInfo <- AvailableForRides.getAvailableForRidesInfo merchantConfig id personTags
   activeProfileWarnings <- BT.readProfileWarnings BTT.DRIVER id.getId
+  mbNudgeRide <- Redis.safeGet ("nudgeRide:" <> id.getId)
+  let nudgeRideActive = isJust (mbNudgeRide :: Maybe Text)
   getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
@@ -2030,6 +2035,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,
           sharedCabTripActive = Nothing,
+          onNudgeRide = nudgeRideActive,
           ..
         }
 
@@ -2090,11 +2096,86 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  void $ respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
+  void $ respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, nudgeRideId = Nothing, ..}
   pure Success
 
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow DriverRespondRes
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
+  case req.nudgeRideId of
+    Just nudgeRideId -> do
+      let lockKey = "NudgeRideRespond:RID:-" <> nudgeRideId.getId
+      isLocked <- Redis.tryLockRedis lockKey 30
+      if not isLocked
+        then do
+          logInfo $ "NudgeRide respond already in progress for rideId: " <> nudgeRideId.getId
+          pure DriverRespondRes {result = "Success", ride = Nothing}
+        else flip finally (Redis.unlockRedis lockKey) $ do
+          nudgeRide <- Ride.findById nudgeRideId >>= fromMaybeM (RideDoesNotExist nudgeRideId.getId)
+          unless (nudgeRide.driverId == driverId) $ throwError (RideDoesNotExist nudgeRideId.getId)
+          booking <- QBooking.findById nudgeRide.bookingId >>= fromMaybeM (BookingNotFound nudgeRide.bookingId.getId)
+          mbRideRes <- case nudgeRide.status of
+            DRide.NEW -> do
+              mbAcceptedRideRes <- case req.response of
+                Accept -> do
+                  driverLocs <- LTF.driversLocation [driverId]
+                  let (lat, lon) = maybe (0.0, 0.0) (\l -> (l.lat, l.lon)) (listToMaybe driverLocs)
+                  Ride.updateStartTimeAndLoc nudgeRide.id (LatLong lat lon)
+                  Ride.updateStatus nudgeRide.id DRide.INPROGRESS
+                  QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
+                  Redis.setExp ("nudgeRide:" <> driverId.getId) nudgeRide.id.getId (2 * 60 * 60 :: Int)
+                  void $ LTF.rideStart nudgeRide.id lat lon booking.providerId driverId Nothing
+                  acceptedRide <- Ride.findById nudgeRide.id >>= fromMaybeM (RideDoesNotExist nudgeRide.id.getId)
+                  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                  driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+                  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+                  rideDetails <- QRideDetails.findById nudgeRide.id >>= fromMaybeM (RideNotFound nudgeRide.id.getId)
+                  rideResResult <-
+                    withTryCatch "nudgeRideAccept:driverRideRes" $
+                      OneShot.buildAssignedDriverRideRes driver driverInfo transporterConfig booking acceptedRide rideDetails
+                  case rideResResult of
+                    Right res -> pure (Just res)
+                    Left err -> do
+                      logError $ "NudgeRide accept: building ride response failed: " <> show err
+                      pure Nothing
+                _ -> do
+                  Ride.updateStatus nudgeRide.id DRide.CANCELLED
+                  QBooking.updateStatus booking.id DRB.CANCELLED
+                  pure Nothing
+              logInfo $ "NudgeRide " <> show req.response <> " for rideId: " <> nudgeRide.id.getId <> ", driverId: " <> driverId.getId
+              pure mbAcceptedRideRes
+            DRide.INPROGRESS -> do
+              -- Repair any writes that did not commit in a previous partial attempt.
+              when (booking.status /= DRB.TRIP_ASSIGNED) $ do
+                logWarning $ "NudgeRide INPROGRESS with booking " <> show booking.status <> " for ride " <> nudgeRide.id.getId <> " — repairing"
+                QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
+              mbNudgeKey <- Redis.safeGet ("nudgeRide:" <> driverId.getId)
+              when (isNothing (mbNudgeKey :: Maybe Text)) $
+                Redis.setExp ("nudgeRide:" <> driverId.getId) nudgeRide.id.getId (2 * 60 * 60 :: Int)
+              driverLocs <- LTF.driversLocation [driverId]
+              let (lat, lon) = maybe (0.0, 0.0) (\l -> (l.lat, l.lon)) (listToMaybe driverLocs)
+              void $ LTF.rideStart nudgeRide.id lat lon booking.providerId driverId Nothing
+              driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+              driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+              transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+              rideDetails <- QRideDetails.findById nudgeRide.id >>= fromMaybeM (RideNotFound nudgeRide.id.getId)
+              rideResResult <-
+                withTryCatch "nudgeRideAccept:driverRideRes" $
+                  OneShot.buildAssignedDriverRideRes driver driverInfo transporterConfig booking nudgeRide rideDetails
+              logInfo $ "NudgeRide INPROGRESS repair for ride: " <> nudgeRide.id.getId <> ", driverId: " <> driverId.getId
+              case rideResResult of
+                Right res -> pure (Just res)
+                Left err -> do
+                  logError $ "NudgeRide accept: building ride response failed: " <> show err
+                  pure Nothing
+            _ -> do
+              logInfo $ "NudgeRide already processed for rideId: " <> nudgeRide.id.getId
+              pure Nothing
+          pure DriverRespondRes {result = "Success", ride = mbRideRes}
+    Nothing ->
+      respondNormalQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req
+
+respondNormalQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow DriverRespondRes
+respondNormalQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id

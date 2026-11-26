@@ -4,6 +4,8 @@ imports:
   Int: Kernel.Prelude
   Text: Kernel.Prelude
   Bool: Kernel.Prelude
+  Double: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
 
 module: DemandHotspots
 types:
@@ -20,10 +22,20 @@ types:
     tripOption: Text
     isScheduled: Bool
     frequency: Int
-
+  DemandNudgeReq:
+    lat: Double
+    lon: Double
+    timestamp: UTCTime
 apis:
   - GET:
       endpoint: /driver/demandHotspots
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: GetDemandHotspotsResp
+  - POST:
+      endpoint: /driver/demandHotspot
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DemandNudgeReq
+      response:
+        type: APISuccess

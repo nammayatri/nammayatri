@@ -17,6 +17,7 @@ module SharedLogic.Ride where
 import Control.Applicative ((<|>))
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -314,6 +315,24 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
   fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
+
+  fork "endNudgeRideOnNewAssign" $ do
+    let nudgeRideRedisKey = "nudgeRide:" <> driver.id.getId
+    mbNudgeRideId <- Redis.safeGet @Text nudgeRideRedisKey
+    Redis.del nudgeRideRedisKey
+    whenJust mbNudgeRideId $ \nudgeRideIdText -> do
+      let nudgeRideId = Id nudgeRideIdText
+      mbNudgeRide <- QRide.findById nudgeRideId
+      whenJust mbNudgeRide $ \nudgeRide -> do
+        mbNudgeBooking <- QRB.findById nudgeRide.bookingId
+        whenJust mbNudgeBooking $ \nudgeBooking ->
+          when (nudgeBooking.bookingType == DBooking.NudgeRide) $ do
+            locResp <- LF.driverLocation nudgeRideId nudgeBooking.providerId nudgeRide.driverId
+            let mbLastPoint = listToMaybe locResp.loc <&> \l -> LatLong {lat = l.lat, lon = l.lon}
+            shandle <- RideEnd.buildEndRideHandle nudgeBooking.providerId nudgeRide.merchantOperatingCityId (Just nudgeRideId) False
+            void $
+              RideEnd.cronJobEndRide shandle nudgeRideId $
+                RideEnd.CronJobEndRideReq {point = mbLastPoint, merchantId = nudgeBooking.providerId}
 
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
