@@ -1585,6 +1585,7 @@ TransporterConfig:
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
+    smsOtpAllowedCountryCodes: Maybe [Text]
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
@@ -2098,6 +2099,7 @@ TransporterConfig:
     communicationChannelCharLimits: json
     tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
+    smsOtpAllowedCountryCodes: "text[]"
     stclConfig: json
     takeoverScoring: json
     defaultOnboardingAs: character varying(255)

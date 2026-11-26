@@ -109,6 +109,7 @@ import qualified Lib.GtfsDataServer.Types as Fields
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
@@ -472,29 +473,27 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
 
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  whenJust mbClientIP $ \clientIP ->
+    fork "Driver Auth IP Fraud Check" $
+      checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
+  -- Below the IP counters, so requests rejected here still count towards the IP limit.
+  when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
+    whenJust req.mobileCountryCode $ validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes
+
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
   -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
   -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
   unless (isJust person.useFakeOtp) $
     whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
-      transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
       mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
       whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
       updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
   when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
-    whenJust req.email $ \email -> do
-      transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      SSL.enforceEmailOtpLimit email transporterConfig
-  whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
+    whenJust req.email $ \email -> SSL.enforceEmailOtpLimit email transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
@@ -513,6 +512,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       person.id
       person.merchantId
       merchantOpCityId
+      transporterConfig
       req.mobileCountryCode
       req.mobileNumber
       req.email
@@ -944,13 +944,17 @@ resend tokenId mbSenderHash = do
   let receiverEmail = person.email
 
   -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
-  unless (isJust person.useFakeOtp) $
+  unless (isJust person.useFakeOtp) $ do
+    transporterConfig <-
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     SOTP.sendOTP
       otpChannel
       otpCode
       person.id
       person.merchantId
       merchantOpCityId
+      transporterConfig
       person.mobileCountryCode
       mobileNumber
       receiverEmail

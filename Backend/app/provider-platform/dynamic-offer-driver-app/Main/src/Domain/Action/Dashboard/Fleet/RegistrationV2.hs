@@ -61,6 +61,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -472,6 +473,8 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
   let merchantOpCityId = merchantOpCity.id
   mobileNumberHash <- getDbHash mobileNumber
   mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
+  when (isNothing (mbPerson >>= (.useFakeOtp))) $
+    validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes countryCode
   fleetOwnerPerson <- case mbPerson of
     Just existingPerson -> pure existingPerson
     Nothing -> do

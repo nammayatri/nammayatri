@@ -217,6 +217,7 @@ data RiderConfigT f = RiderConfigT
     sharedCabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     silentReallocationWindowSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     singleModeWalkSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    smsOtpAllowedCountryCodes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     sosTrackingLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),
     specialLocationTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

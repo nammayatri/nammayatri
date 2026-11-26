@@ -1353,3 +1353,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_cab_dail
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN takeover_scoring json ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_rc_takeover_photo boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN sms_otp_allowed_country_codes text[] ;

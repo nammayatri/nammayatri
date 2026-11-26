@@ -348,6 +348,7 @@ data TransporterConfigT f = TransporterConfigT
     sharedCabDailyTripTarget :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabTripEarningsTarget :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     showRoutePerRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    smsOtpAllowedCountryCodes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     snapToRoadConfidenceThreshold :: B.C f Kernel.Prelude.Double,
     specialDrivers :: B.C f [Kernel.Prelude.Text],
     specialLocationTags :: B.C f [Kernel.Prelude.Text],
