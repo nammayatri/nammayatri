@@ -15,13 +15,13 @@ import qualified Data.Text
 import qualified Domain.Action.UI.TicketService as TicketService
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as Fields
-import qualified Domain.Types.ServiceCategory as Fields
-import qualified Domain.Types.TicketBooking as Fields
-import qualified Domain.Types.TicketService as Fields
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.ServiceCategory as Fields
+import qualified Domain.Types.TicketBooking as Fields
 import qualified Domain.Types.TicketBookingService as DTB
+import qualified Domain.Types.TicketService as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -317,8 +317,8 @@ postTicketBookingExtend auth bookingServiceId req = do
   (_, stayEnd) <- fromMaybeM (InvalidRequest "Only a paid parking booking can be extended") (TicketService.parkingChainWindow chain)
   service <- QTicketService.findById root.ticketServiceId >>= fromMaybeM (TicketServiceNotFound root.ticketServiceId.getId)
   (businessHourId, category, peopleCategoryId) <-
-    find (\(_, c, _) -> Just c.id == root.serviceCategoryId) <$> TicketService.parkingVehicleTypes service
-      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId)
+    TicketService.parkingVehicleTypes service
+      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId) . find (\(_, c, _) -> Just c.id == root.serviceCategoryId)
   tz <- TicketService.cityTimeZone booking.merchantOperatingCityId
   TicketService.postTicketPlacesBook auth booking.ticketPlaceId $
     TicketAPI.TicketBookingReq
@@ -349,15 +349,16 @@ postTicketBookingStop (mbPersonId, _) bookingServiceId = do
   now <- getCurrentTime
   when (stayStart > now) $ throwError $ InvalidRequest "Booking has not started yet"
   unless (stayEnd > now) $ throwError $ InvalidRequest "This booking has already ended"
+  -- price the stop before shortening anything, so a missing tariff leaves the stay untouched
+  service <- QTicketService.findById root.ticketServiceId >>= fromMaybeM (TicketServiceNotFound root.ticketServiceId.getId)
+  (_, _, peopleCategoryId) <-
+    TicketService.parkingVehicleTypes service
+      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId) . find (\(_, c, _) -> Just c.id == root.serviceCategoryId)
+  tz <- TicketService.cityTimeZone booking.merchantOperatingCityId
+  tariff <- TicketService.parkingTariff peopleCategoryId (TWB.localDay tz stayStart)
   forM_ paid $ \r ->
     whenJust r.expiryDate $ \end ->
       when (end > now) $ QTBS.updateExpiryDateById (Just (max now (fromMaybe now r.startTime))) r.id
-  service <- QTicketService.findById root.ticketServiceId >>= fromMaybeM (TicketServiceNotFound root.ticketServiceId.getId)
-  (_, _, peopleCategoryId) <-
-    find (\(_, c, _) -> Just c.id == root.serviceCategoryId) <$> TicketService.parkingVehicleTypes service
-      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId)
-  tz <- TicketService.cityTimeZone booking.merchantOperatingCityId
-  tariff <- TicketService.parkingTariff peopleCategoryId (TWB.localDay tz stayStart)
   pure
     API.Types.UI.ParkingBooking.ParkingStopResp
       { finalAmount = TWB.calculateFee tz tariff stayStart now,

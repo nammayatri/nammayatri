@@ -28,7 +28,6 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.TimeWindowBooking as TWB
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.TicketBooking as QTB
 import qualified Storage.Queries.TicketBookingService as QTBS
@@ -89,14 +88,11 @@ getParkingOccupancy :: ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Be
 getParkingOccupancy merchantShortId opCity clusterId zoneId = do
   city <- operatingCity merchantShortId opCity
   (_, zone) <- zoneInCluster city clusterId zoneId
-  tz <- TicketService.cityTimeZone city.id
   now <- getCurrentTime
-  let lookbackDays = (TWB.effectiveMaxMinutes zone.maxDurationMinutes + 1439) `div` 1440
-      today = TWB.localDay tz now
-      coversNow r = maybe False (\(s, e) -> s <= now && now < e) ((,) <$> r.startTime <*> r.expiryDate)
-  rows <- filter coversNow <$> QTBS.findTimeWindowCandidatesByServiceId zone.id [Data.Time.addDays (negate (fromIntegral lookbackDays) - 1) today .. today]
+  rows <- QTBS.findTimeWindowOverlapping zone.id now (addUTCTime 1 now)
+  hold <- TicketService.cityParkingHold city.id
   let (unpaid, paid) = partition ((== DTB.Pending) . (.status)) rows
-      held = filter ((> addUTCTime (-300) now) . (.createdAt)) unpaid
+      held = filter ((> addUTCTime (negate hold) now) . (.createdAt)) unpaid
   vehicleTypes <- TicketService.parkingVehicleTypes zone
   let perType =
         [ API.ParkingVehicleTypeOccupancy

@@ -185,7 +185,7 @@ getTicketPlacesServices _ placeId mbDate mbDuration mbStart mbSubPlaceId = do
     if isParkingPlace place
       then do
         tz <- cityTimeZone place.merchantOperatingCityId
-        let start = fromMaybe now mbStart
+        let start = TWB.snapBookingStart now mbStart
         pure $ Just (place, tz, start, maybe (addUTCTime 1 start) (\d -> addUTCTime (fromIntegral d * 60) start) mbDuration)
       else pure Nothing
   ticketServices <-
@@ -193,8 +193,9 @@ getTicketPlacesServices _ placeId mbDate mbDuration mbStart mbSubPlaceId = do
       then QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
       else QTicketService.getTicketServicesByPlaceId placeId.getId
 
-  let bookingDate = fromMaybe (utctDay now) mbDate
-  context <- TicketRule.getCurrentContext 330 mbDate Nothing
+  -- parking rules (closures, tariffs) apply on the stay's local start date, as the capacity window does
+  let bookingDate = fromMaybe (maybe (utctDay now) (\(_, tz, start, _) -> TWB.localDay tz start) mbParking) mbDate
+  context <- TicketRule.getCurrentContext 330 (bookingDate <$ mbParking <|> mbDate) Nothing
   let ruledTicketServices = filter (\s -> not s.isClosed && (isNothing mbParking || s.bookingMode == Domain.Types.TicketService.TimeWindow)) $ (TicketRule.processEntity context) <$> ticketServices
   mkTicketServiceListRes now mbParking ruledTicketServices bookingDate placeId
   where
@@ -299,7 +300,9 @@ getTicketPlacesServices _ placeId mbDate mbDuration mbStart mbSubPlaceId = do
           Nothing -> pure False
       mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId bDate_
       peopleCategories <- mapM (mkPeopleCategoriesRes bDate_) serviceCategory.peopleCategory
-      held <- forM mbParking $ \(_, tz, start, end) -> TWB.peakOverlap start end <$> heldParkingWindows service serviceCatId (TWB.localDay tz end) now
+      held <- forM mbParking $ \(place, _, start, end) -> do
+        hold <- cityParkingHold place.merchantOperatingCityId
+        TWB.peakOverlap start end <$> heldParkingWindows service serviceCatId hold start end now
       pure $
         ( CategoriesResp
             { name = serviceCategory.name,
@@ -342,6 +345,7 @@ postTicketPlacesBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), 
 postTicketPlacesBook auth placeId req = do
   place <- QTicketPlace.findById placeId >>= fromMaybeM (TicketPlaceNotFound placeId.getId)
   zones <- mapM (\s -> QTicketService.findById s.serviceId >>= fromMaybeM (TicketServiceNotFound s.serviceId.getId)) req.services
+  when (isParkingPlace place && any ((/= placeId.getId) . (.placesId)) zones) $ throwError $ InvalidRequest "This parking zone is not in the selected cluster"
   unless (all (parkingZoneOpen place) zones) $ throwError $ InvalidRequest "This parking zone is not open for booking"
   bookTicketPlace auth placeId req
 
@@ -350,15 +354,16 @@ parkingZoneOpen :: Domain.Types.TicketPlace.TicketPlace -> Domain.Types.TicketSe
 parkingZoneOpen place zone = not (isParkingPlace place) || (place.status == Domain.Types.TicketPlace.Active && not zone.isClosed)
 
 bookTicketPlace :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-bookTicketPlace (mbPersonId, merchantId) placeId req = do
+bookTicketPlace auth placeId req = fst <$> bookTicketPlaceWithBooking auth placeId req
+
+-- | Books and creates the payment order; also returns the booking it created.
+bookTicketPlaceWithBooking :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow (Kernel.External.Payment.Interface.Types.CreateOrderResp, DTTB.TicketBooking)
+bookTicketPlaceWithBooking (mbPersonId, merchantId) placeId req = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
-  forM_ (mapMaybe (.extendsBookingServiceId) req.services) $ \parentId -> do
-    parent <- QTicketBookingService.findById parentId >>= fromMaybeM (InvalidRequest "Booking to extend not found")
-    parentBooking <- QTB.findById parent.ticketBookingId >>= fromMaybeM (InvalidRequest "Booking to extend not found")
-    unless (parentBooking.personId == personId_) $ throwError $ InvalidRequest "Booking to extend not found"
+  checkExtensionsOwnedBy personId_ req
   (timeWindowServiceIds, requestedUnitsCount) <- splitTimeWindowServices req
 
   -- Redis blocking starts here --
@@ -430,11 +435,19 @@ bookTicketPlace (mbPersonId, merchantId) placeId req = do
   let createWalletCall = Wallet.createWallet merchantId merchantOpCity.id
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing False
   case mCreateOrderRes of
-    Just createOrderRes -> return createOrderRes
+    Just createOrderRes -> return (createOrderRes, ticketBooking)
     Nothing -> do
       throwError $ InternalError "Failed to create order"
 
 -- Helper functions for ticket booking operations
+
+-- | A rider can extend only their own parking stays.
+checkExtensionsOwnedBy :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow ()
+checkExtensionsOwnedBy personId req =
+  forM_ (mapMaybe (.extendsBookingServiceId) req.services) $ \parentId -> do
+    parent <- QTicketBookingService.findById parentId >>= fromMaybeM (InvalidRequest "Booking to extend not found")
+    parentBooking <- QTB.findById parent.ticketBookingId >>= fromMaybeM (InvalidRequest "Booking to extend not found")
+    unless (parentBooking.personId == personId) $ throwError $ InvalidRequest "Booking to extend not found"
 
 -- TimeWindow services skip the per-day seat pool; their capacity is checked against overlapping bookings in resolveTimeWindow.
 -- Returns the TimeWindow service ids (sorted, for lock order) and the day-pool units for the other services.
@@ -468,31 +481,34 @@ parkingTariff peopleCategoryId visitDate = do
     Just (A.Error e) -> throwError $ InternalError $ "Invalid durationTariff on people category " <> peopleCategoryId.getId <> ": " <> T.pack e
     Nothing -> throwError $ InvalidRequest "No tariff set for this vehicle type"
 
--- | Windows holding a space of one vehicle type in a zone, for stays that can still be running on or before lastDay.
--- An unpaid booking holds its space for 5 minutes; a later payment is re-checked by parkingStillFits.
+-- | Windows holding a space of one vehicle type in a zone that overlap [start, end), whatever day they began.
+-- An unpaid booking holds its space for `hold` seconds; a later payment is re-checked by parkingStillFits.
 heldParkingWindows ::
   Domain.Types.TicketService.TicketService ->
   Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory ->
-  Data.Time.Calendar.Day ->
+  NominalDiffTime ->
+  Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.UTCTime ->
   Kernel.Prelude.UTCTime ->
   Environment.Flow [(Kernel.Prelude.UTCTime, Kernel.Prelude.UTCTime)]
-heldParkingWindows ticketService categoryId lastDay now = do
-  let lookbackDays = (TWB.effectiveMaxMinutes ticketService.maxDurationMinutes + 1439) `div` 1440
-      startDates = [addDays (negate (fromIntegral lookbackDays) - 1) lastDay .. lastDay]
-      holdsCapacity r = r.serviceCategoryId == Just categoryId && (r.status /= DTB.Pending || r.createdAt > addUTCTime (-300) now)
-  candidates <- QTicketBookingService.findTimeWindowCandidatesByServiceId ticketService.id startDates
+heldParkingWindows ticketService categoryId hold start end now = do
+  let holdsCapacity r = r.serviceCategoryId == Just categoryId && (r.status /= DTB.Pending || r.createdAt > addUTCTime (negate hold) now)
+  candidates <- QTicketBookingService.findTimeWindowOverlapping ticketService.id start end
   pure $ mapMaybe (\r -> (,) <$> r.startTime <*> r.expiryDate) (filter holdsCapacity candidates)
 
 -- | A zone's vehicle types: each category under its business hour, with the people category that carries its tariff.
 parkingVehicleTypes ::
   Domain.Types.TicketService.TicketService ->
   Environment.Flow [(Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour, Domain.Types.ServiceCategory.ServiceCategory, Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory)]
-parkingVehicleTypes ticketService = case ticketService.businessHours of
-  (bhId : _) -> do
-    categoryIds <- maybe [] (.categoryId) <$> QBH.findById bhId
-    categories <- catMaybes <$> mapM QSC.findById categoryIds
-    pure [(bhId, category, pcat) | category <- categories, Just pcat <- [Kernel.Prelude.listToMaybe category.peopleCategory]]
-  [] -> pure []
+parkingVehicleTypes ticketService = fmap concat . forM ticketService.businessHours $ \bhId -> do
+  categoryIds <- maybe [] (.categoryId) <$> QBH.findById bhId
+  categories <- catMaybes <$> mapM QSC.findById categoryIds
+  pure [(bhId, category, pcat) | category <- categories, Just pcat <- [Kernel.Prelude.listToMaybe category.peopleCategory]]
+
+cityParkingHold :: Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow NominalDiffTime
+cityParkingHold cityId =
+  TWB.parkingHoldSeconds . (.parkingConfig)
+    <$> (getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist cityId.getId))
 
 -- | A parking booking's original row and its paid rows (the original plus paid extensions).
 parkingChain :: DTB.TicketBookingService -> Environment.Flow (DTB.TicketBookingService, [DTB.TicketBookingService])
@@ -510,21 +526,31 @@ parkingChainWindow (root, paid) = (,) <$> root.startTime <*> (maximum <$> nonEmp
 seatRows :: [DTB.TicketBookingService] -> [DTB.TicketBookingService]
 seatRows = filter (isNothing . (.startTime))
 
--- | A parking row paid after its 5-minute hold lapsed may have lost its space or its vehicle's slot meanwhile.
+-- | Whether a Pending parking row can still be confirmed: its vehicle has no other paid stay then (another zone's
+-- order for the plate may have been paid meanwhile), an extension still continues its stay (a stop leaves a gap),
+-- and a row paid after its hold lapsed still has a space.
 parkingStillFits :: DTB.TicketBookingService -> Environment.Flow Bool
 parkingStillFits row = do
   now <- getCurrentTime
   case (row.startTime, row.expiryDate, row.vehicleNumber) of
-    (Just start, Just end, Just plate) | row.status == DTB.Pending && row.createdAt <= addUTCTime (-300) now -> do
-      ticketService <- QTicketService.findById row.ticketServiceId >>= fromMaybeM (TicketServiceNotFound row.ticketServiceId.getId)
+    (Just start, Just end, Just plate) | row.status == DTB.Pending -> do
       plateBookings <- QTicketBookingService.findPaidTimeWindowByVehicleNumber plate
       let plateFree = not $ any (TWB.overlaps start end) [w | r <- plateBookings, r.id /= row.id, Just w <- [(,) <$> r.startTime <*> r.expiryDate]]
-      mbCategory <- maybe (pure Nothing) QSC.findById row.serviceCategoryId
-      spaceFree <- case (mbCategory, mbCategory >>= (.availableSeats)) of
-        -- this row is Pending and past its hold, so heldParkingWindows leaves it out
-        (Just category, Just capacity) -> (< capacity) . TWB.peakOverlap start end <$> heldParkingWindows ticketService category.id (addDays 1 (utctDay end)) now
-        _ -> pure True
-      pure (plateFree && spaceFree)
+      continuesStay <- case row.parentBookingServiceId of
+        Nothing -> pure True
+        Just _ -> (== Just start) . fmap snd . parkingChainWindow <$> parkingChain row
+      hold <- cityParkingHold row.merchantOperatingCityId
+      spaceFree <-
+        if row.createdAt > addUTCTime (negate hold) now
+          then pure True
+          else do
+            ticketService <- QTicketService.findById row.ticketServiceId >>= fromMaybeM (TicketServiceNotFound row.ticketServiceId.getId)
+            mbCategory <- maybe (pure Nothing) QSC.findById row.serviceCategoryId
+            case (mbCategory, mbCategory >>= (.availableSeats)) of
+              -- this row is Pending and past its hold, so heldParkingWindows leaves it out
+              (Just category, Just capacity) -> (< capacity) . TWB.peakOverlap start end <$> heldParkingWindows ticketService category.id hold start end now
+              _ -> pure True
+      pure (plateFree && continuesStay && spaceFree)
     _ -> pure True
 
 -- | A paid parking stay: the original booking, its current window (paid extensions included) and the total paid.
@@ -577,6 +603,10 @@ resolveTimeWindow merchantOperatingCityId visitDate ticketService req now = do
   (categoryId, peopleCategoryId) <- case req.categories of
     [category] | [peopleCategory] <- category.peopleCategories, peopleCategory.numberOfUnits == 1 -> pure (category.categoryId, peopleCategory.peopleCategoryId)
     _ -> throwError $ InvalidRequest "A time-window booking is for one vehicle: one category with one unit"
+  vehicleTypes <- parkingVehicleTypes ticketService
+  -- only the people category parkingVehicleTypes picks, so extend and stop later price with the same tariff
+  unless (any (\(_, c, p) -> c.id == categoryId && p == peopleCategoryId) vehicleTypes) $
+    throwError $ InvalidRequest "This vehicle type is not offered in this zone"
   tariff <- parkingTariff peopleCategoryId visitDate
   let tz = riderConfig.timeDiffFromUtc
       maxMinutes = TWB.effectiveMaxMinutes ticketService.maxDurationMinutes
@@ -612,7 +642,7 @@ resolveTimeWindow merchantOperatingCityId visitDate ticketService req now = do
 
   serviceCategory <- QSC.findById categoryId >>= fromMaybeM (ServiceCategoryNotFound categoryId.getId)
   whenJust serviceCategory.availableSeats $ \capacity -> do
-    held <- heldParkingWindows ticketService categoryId (TWB.localDay tz end) now
+    held <- heldParkingWindows ticketService categoryId (TWB.parkingHoldSeconds riderConfig.parkingConfig) start end now
     when (TWB.peakOverlap start end held >= capacity) $
       throwError $ InvalidRequest "Zone is full for the selected time"
 
@@ -1632,8 +1662,8 @@ applyTicketPaymentStatus merchantId person _shortId paymentStatus =
                           Nothing -> return (LockBookingSuccess Nothing)
               case res' of
                 LockBookingSuccess _ -> do
-                  QTB.updateStatusByShortId DTTB.Booked _shortId
                   QTicketBookingService.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
+                  QTB.updateStatusByShortId DTTB.Booked _shortId
                 LockBookingFailed -> pure ()
               pure res'
             case res of
@@ -1691,26 +1721,20 @@ postTicketPlacesDirectBook (_mbPersonId, merchantId) mbRequestorId placeId req =
       return $
         API.Types.UI.TicketService.DirectTicketBookingResp
           { bookingShortId = ticketBooking.shortId,
-            bookingStatus = DTTB.Booked,
+            bookingStatus = ticketBooking.status,
             orderResponse = Nothing,
-            message = "Booking confirmed successfully with cash payment"
+            message = if ticketBooking.status == DTTB.Booked then "Booking confirmed successfully with cash payment" else "Booking failed: no space left for this booking"
           }
     DTTB.ONLINE -> do
       -- For online payment, use existing booking flow
-      createOrderResp <- bookTicketPlace (Just personId, merchantId) placeId ticketBookingReq
-      -- Get the booking details to return booking short id
-      merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
-      ticketBookings <- QTB.getAllBookingsByPersonIdAndStatus (Just 1) (Just 0) personId merchantOpCity.id DTTB.Pending
-      case ticketBookings of
-        (latestBooking : _) ->
-          return $
-            API.Types.UI.TicketService.DirectTicketBookingResp
-              { bookingShortId = latestBooking.shortId,
-                bookingStatus = DTTB.Pending,
-                orderResponse = Just createOrderResp,
-                message = "Booking created successfully. Please complete payment to confirm."
-              }
-        [] -> throwError $ InternalError "Failed to retrieve created booking"
+      (createOrderResp, ticketBooking) <- bookTicketPlaceWithBooking (Just personId, merchantId) placeId ticketBookingReq
+      return $
+        API.Types.UI.TicketService.DirectTicketBookingResp
+          { bookingShortId = ticketBooking.shortId,
+            bookingStatus = DTTB.Pending,
+            orderResponse = Just createOrderResp,
+            message = "Booking created successfully. Please complete payment to confirm."
+          }
 
 -- Find or create person for direct booking, following Registration.hs patterns
 findOrCreatePersonForDirectBooking ::
@@ -1777,6 +1801,7 @@ createDirectBookingForCash ::
 createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
+  checkExtensionsOwnedBy personId req
 
   -- Setup seat management and block seats
   (timeWindowServiceIds, requestedUnitsCount) <- splitTimeWindowServices req
@@ -1881,9 +1906,9 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
                 updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc visitDate
             )
             allServiceCategories
-          -- Update booking and service statuses to success
-          QTB.updateStatusByShortId DTTB.Booked ticketBooking.shortId
+          -- Update service statuses, then the booking, to success
           QTicketBookingService.updateAllStatusByBookingId DTB.Confirmed ticketBooking.id
+          QTB.updateStatusByShortId DTTB.Booked ticketBooking.shortId
         LockBookingFailed -> do
           -- Update booking and service statuses to failed using correct shortId
           QTB.updateStatusByShortId DTTB.Failed ticketBooking.shortId

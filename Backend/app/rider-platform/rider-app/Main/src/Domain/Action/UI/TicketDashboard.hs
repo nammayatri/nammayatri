@@ -548,7 +548,13 @@ validateParkingService svc = when (svc.bookingMode == DTicketService.TimeWindow)
 validateDurationTariff :: ServicePeopleCategoryDetails -> Environment.Flow ()
 validateDurationTariff spc = case (A.fromJSON <$> spc.durationTariff :: Maybe (A.Result TWB.DurationTariff)) of
   Just (A.Error e) -> throwError $ InvalidRequest $ "Invalid durationTariff for " <> spc.name <> ": " <> T.pack e
+  Just (A.Success tariff) | hasNegative tariff -> throwError $ InvalidRequest $ "Invalid durationTariff for " <> spc.name <> ": amounts and rates can't be negative"
   _ -> pure ()
+  where
+    hasNegative = \case
+      TWB.FlatTariff amount -> amount < 0
+      TWB.ProgressiveTariff baseFare slabs -> baseFare < 0 || any ((< 0) . snd) slabs
+      TWB.TimeBasedTariff bands -> any (\(_, _, rate) -> rate < 0) bands
 
 postUpsertTicketPlaceDashboardDetails :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketPlaceDashboardDetails -> Maybe Text -> Maybe MO.RequestorRole -> Environment.Flow ()
 postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetails requestorId requestorRole = do

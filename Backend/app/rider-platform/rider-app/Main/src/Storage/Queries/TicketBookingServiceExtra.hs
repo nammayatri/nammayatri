@@ -58,6 +58,23 @@ findTimeWindowCandidatesByServiceId (Id.Id ticketServiceId) visitDates =
           ]
       ]
 
+-- | TimeWindow rows of a service that may hold capacity and overlap [start, end); a stay ending at start does not.
+findTimeWindowOverlapping ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id.Id DTS.TicketService ->
+  UTCTime ->
+  UTCTime ->
+  m [DTBS.TicketBookingService]
+findTimeWindowOverlapping (Id.Id ticketServiceId) start end =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamR.ticketServiceId $ Se.Eq ticketServiceId,
+          Se.Is BeamR.status $ Se.In [DTBS.Pending, DTBS.Confirmed, DTBS.Verified],
+          Se.Is BeamR.startTime $ Se.LessThan (Just end),
+          Se.Is BeamR.expiryDate $ Se.GreaterThan (Just start)
+        ]
+    ]
+
 -- | Paid TimeWindow rows for a plate, in any place.
 findPaidTimeWindowByVehicleNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

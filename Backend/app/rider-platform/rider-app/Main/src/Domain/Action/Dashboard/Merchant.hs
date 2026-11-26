@@ -1396,7 +1396,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           case existingPlace of
             Just oldPlace -> do
               mapM_ (upsertService oldPlace.id.getId) serviceGroups
-              SQTP.updateByPrimaryKey place{id = oldPlace.id}
+              SQTP.updateByPrimaryKey place{id = oldPlace.id, geomGeoJson = oldPlace.geomGeoJson}
             Nothing -> do
               newPlaceId <- generateGUID
               mapM_ (upsertService newPlaceId) serviceGroups
@@ -1412,7 +1412,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
             Nothing -> do
               newServiceId <- generateGUID
               SQTS.create service{id = newServiceId, placesId = placeId, businessHours = processedBusinessHours}
-            Just existingSvc -> SQTS.updateByPrimaryKey service{placesId = placeId, id = existingSvc.id, businessHours = processedBusinessHours}
+            -- the CSV has no parking settings, so an update keeps the stored ones
+            Just existingSvc -> SQTS.updateByPrimaryKey service{placesId = placeId, id = existingSvc.id, businessHours = processedBusinessHours, bookingMode = existingSvc.bookingMode, maxDurationMinutes = existingSvc.maxDurationMinutes, lat = existingSvc.lat, lon = existingSvc.lon, geomGeoJson = existingSvc.geomGeoJson}
 
         upsertBusinessHour businessHourIds (businessHour, categoryGroups) = do
           existingBH <- SQBHE.findByBtypeAndId businessHour.btype businessHourIds
@@ -1452,7 +1453,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
               SQSPC.create peopleCategory{id = newPeopleCategoryId}
               return newPeopleCategoryId
             Just pc -> do
-              SQSPC.updateByPrimaryKey peopleCategory{id = pc.id}
+              SQSPC.updateByPrimaryKey peopleCategory{id = pc.id, durationTariff = pc.durationTariff}
               return pc.id
 
     makeTicketConfigs :: DMOC.MerchantOperatingCity -> Int -> TicketConfigCSVRow -> Flow (TicketPlace, TicketService, BusinessHour, ServiceCategory, ServicePeopleCategory)
@@ -1469,6 +1470,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
       name <- cleanCSVField idx row.name "Name"
       allowSameDayBooking :: Bool <- readCSVField idx row.allowSameDayBooking "Allow same day booking"
       placeType :: PlaceType <- readCSVField idx row.placeType "Place Type"
+      -- a CSV service is DayVisit and can't carry parking settings, so parking clusters come from the parking dashboard
+      when (placeType == Parking) $ throwError $ InvalidRequest $ "Row " <> show idx <> ": Parking places can't be imported by CSV; set them up from the parking dashboard"
       shortDesc <- cleanCSVField idx row.shortDesc "Short Description"
       gallery :: [Text] <- readCSVField idx row.gallery "Gallery"
       status :: PlaceStatus <- readCSVField idx row.status "Status"

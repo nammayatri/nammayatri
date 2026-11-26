@@ -1182,8 +1182,11 @@ ticketBookingOrderStatusHandler orderId merchantId paymentStatusResp =
     Just booking -> do
       person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
       TicketService.applyTicketPaymentStatus merchantId person booking.shortId paymentStatusResp
+      status <- DPayment.getTransactionStatus paymentStatusResp
       updated <- QTB.findById booking.id >>= fromMaybeM (TicketBookingNotFound booking.shortId.getShortId)
       case updated.status of
+        -- a refund reports as refunded whatever state the booking is in
+        _ | status == Payment.AUTO_REFUNDED -> SPayment.fallbackOrderStatusHandler paymentStatusResp
         DTB.Booked -> pure (DPayment.FulfillmentSucceeded, Just booking.id.getId, Nothing)
         DTB.RefundInitiated -> pure (DPayment.FulfillmentRefundInitiated, Just booking.id.getId, Nothing)
         _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp

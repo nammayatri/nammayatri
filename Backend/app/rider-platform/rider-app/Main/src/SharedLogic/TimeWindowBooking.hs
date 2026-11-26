@@ -4,9 +4,11 @@ module SharedLogic.TimeWindowBooking
   ( DurationTariff (..),
     calculateFee,
     resolveBookingStart,
+    snapBookingStart,
     checkBookingWindow,
     effectiveMaxMinutes,
     advanceBookingMaxDays,
+    parkingHoldSeconds,
     overlaps,
     peakOverlap,
     localDay,
@@ -90,6 +92,10 @@ localMinuteOfDay (Seconds tz) t = ((floor (utcTimeToPOSIXSeconds t) + tz) `div` 
 localDay :: Seconds -> UTCTime -> Day
 localDay (Seconds tz) t = utctDay (addUTCTime (fromIntegral tz) t)
 
+-- | A start within 120 seconds of now (or none) means now; quote and booking both use this rule.
+snapBookingStart :: UTCTime -> Maybe UTCTime -> UTCTime
+snapBookingStart now = maybe now (\start -> if abs (diffUTCTime start now) <= 120 then now else start)
+
 -- | Omitted, or within 2 minutes of now, means start now. Otherwise the start must be in the future
 -- and before local midnight ending today + advanceDays. Start-time granularity is left to the client.
 resolveBookingStart :: Seconds -> Int -> UTCTime -> Maybe UTCTime -> Either Text UTCTime
@@ -118,6 +124,10 @@ effectiveMaxMinutes = \case
 -- | rider_config.parkingConfig.advanceBookingMaxDays, default 0 (today only).
 advanceBookingMaxDays :: Maybe A.Value -> Int
 advanceBookingMaxDays mbCfg = max 0 . fromMaybe 0 $ mbCfg >>= A.parseMaybe (A.withObject "parkingConfig" (A..: "advanceBookingMaxDays"))
+
+-- | rider_config.parkingConfig.holdSeconds: how long an unpaid booking holds its space, default 300.
+parkingHoldSeconds :: Maybe A.Value -> NominalDiffTime
+parkingHoldSeconds mbCfg = fromIntegral . max 0 . fromMaybe (300 :: Int) $ mbCfg >>= A.parseMaybe (A.withObject "parkingConfig" (A..: "holdSeconds"))
 
 -- | An empty window (a stopped booking that never started) overlaps nothing.
 overlaps :: UTCTime -> UTCTime -> (UTCTime, UTCTime) -> Bool
