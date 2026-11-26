@@ -15,7 +15,8 @@
 -- | The passengers of one shared-route run and the driver's verbs on them. A run is named by its feed and 'RunRef' (the
 -- GTFS trip and its first departure), not by the driver platform's ride, which only exists once a driver is assigned
 -- and changes on every re-assignment; its passengers are the CONFIRMED ticket bookings with that @trip_id@ on that feed
--- and a @start_time@ inside 'runTicketWindow' ('onRun'). @ride_id@ is not read. Nothing here is a new state:
+-- and a @start_time@ inside 'runTicketWindow' ('onRun'). A feed is every integrated_bpp_config row of it (one per
+-- platform type, sharing the agency key), since a ticket may carry any of them. @ride_id@ is not read. Nothing here is a new state:
 -- a board flips the booking's tickets to INPROGRESS, a drop to USED, a no-show counts on the booking, exactly the
 -- transitions the shared cab uses, and 'passengerStateOf' reads them back. The driver platform reads and acts on them
 -- through the shared cab's session and booking-operation endpoints.
@@ -58,10 +59,10 @@ data RunPassenger = RunPassenger
   }
 
 -- | Every passenger of the run, by booking, with where they stand; cancelled bookings are not on it.
-runPassengers :: Id DIBC.IntegratedBPPConfig -> RunRef -> Environment.Flow [RunPassenger]
-runPassengers integratedBppConfigId ref = do
+runPassengers :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> Environment.Flow [RunPassenger]
+runPassengers feedConfigIds ref = do
   let (from, to) = runTicketWindow ref
-  bookings <- QFRFSTicketBooking.findAllConfirmedByTripIdInWindow integratedBppConfigId ref.tripId from to
+  bookings <- if null feedConfigIds then pure [] else QFRFSTicketBooking.findAllConfirmedByTripIdInWindow feedConfigIds ref.tripId from to
   tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
   persons <- if null bookings then pure [] else QPersonExtra.findAllByIds (map (.riderId) bookings)
   pure
@@ -85,18 +86,18 @@ data RunAction
   deriving (Show, Eq)
 
 -- | The booking is on the run: same feed, same GTFS trip, start time inside the run's ticket window.
-onRun :: Id DIBC.IntegratedBPPConfig -> RunRef -> DFTB.FRFSTicketBooking -> Bool
-onRun integratedBppConfigId ref booking = isOnRun integratedBppConfigId ref booking.integratedBppConfigId booking.tripId booking.startTime
+onRun :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> DFTB.FRFSTicketBooking -> Bool
+onRun feedConfigIds ref booking = isOnRun feedConfigIds ref booking.integratedBppConfigId booking.tripId booking.startTime
 
--- | 'onRun' on the booking's feed, trip id and start time.
-isOnRun :: Id DIBC.IntegratedBPPConfig -> RunRef -> Id DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe UTCTime -> Bool
-isOnRun runFeed ref ticketFeed mbTripId mbStartTime = ticketFeed == runFeed && ticketOnRun ref mbTripId mbStartTime
+-- | 'onRun' on the booking's feed config, trip id and start time.
+isOnRun :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> Id DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe UTCTime -> Bool
+isOnRun feedConfigIds ref ticketFeed mbTripId mbStartTime = ticketFeed `elem` feedConfigIds && ticketOnRun ref mbTripId mbStartTime
 
 -- | The booking must be live on this run. A repeated board or drop is a no-op; a no-show after boarding is refused.
 -- @vehicleNumber@ is what the ticket records as the scanning vehicle, as a conductor's scan would.
-applyRunAction :: Id DIBC.IntegratedBPPConfig -> RunRef -> DFTB.FRFSTicketBooking -> RunAction -> Text -> Environment.Flow ()
-applyRunAction integratedBppConfigId ref booking action vehicleNumber = do
-  unless (onRun integratedBppConfigId ref booking) $
+applyRunAction :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> DFTB.FRFSTicketBooking -> RunAction -> Text -> Environment.Flow ()
+applyRunAction feedConfigIds ref booking action vehicleNumber = do
+  unless (onRun feedConfigIds ref booking) $
     throwError (InvalidRequest $ "booking " <> booking.id.getId <> " is not on run " <> ref.tripId <> " departing " <> show ref.departure)
   unless (booking.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError (InvalidRequest $ "booking " <> booking.id.getId <> " is not live")
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id

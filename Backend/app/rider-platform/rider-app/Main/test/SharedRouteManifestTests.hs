@@ -13,8 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
 
-feed, otherFeed :: Id DIBC.IntegratedBPPConfig
+feed, otherRowOfFeed, otherFeed :: Id DIBC.IntegratedBPPConfig
 feed = Id "feed-shuttle"
+otherRowOfFeed = Id "feed-shuttle-multimodal"
 otherFeed = Id "feed-bus"
 
 -- | 07:30 UTC on 2026-11-25
@@ -34,18 +35,20 @@ tests =
     [ testCase "the ticket window is 12 hours either side of the first departure" $
         runTicketWindow run @?= (hours (-12), hours 12),
       testCase "same feed and trip, that day's ticket: a passenger" $
-        isOnRun feed run feed (Just "T-0730") (Just (hours (-5))) @?= True,
+        isOnRun [feed] run feed (Just "T-0730") (Just (hours (-5))) @?= True,
       testCase "same feed and trip, a rider boarding mid-run: a passenger" $
-        isOnRun feed run feed (Just "T-0730") (Just (hours 2)) @?= True,
+        isOnRun [feed] run feed (Just "T-0730") (Just (hours 2)) @?= True,
       testCase "same feed and trip, the next day's ticket: not a passenger" $
-        isOnRun feed run feed (Just "T-0730") (Just (hours 24)) @?= False,
+        isOnRun [feed] run feed (Just "T-0730") (Just (hours 24)) @?= False,
       testCase "same feed and trip, the previous day's ticket: not a passenger" $
-        isOnRun feed run feed (Just "T-0730") (Just (hours (-24))) @?= False,
+        isOnRun [feed] run feed (Just "T-0730") (Just (hours (-24))) @?= False,
       testCase "another feed with the same trip id: not a passenger" $
-        isOnRun feed run otherFeed (Just "T-0730") (Just firstDeparture) @?= False,
+        isOnRun [feed] run otherFeed (Just "T-0730") (Just firstDeparture) @?= False,
       testCase "another trip on the same feed: not a passenger" $
-        isOnRun feed run feed (Just "T-0800") (Just firstDeparture) @?= False,
+        isOnRun [feed] run feed (Just "T-0800") (Just firstDeparture) @?= False,
+      testCase "the feed's other config row (MULTIMODAL vs APPLICATION) with the same trip: a passenger" $
+        isOnRun [feed, otherRowOfFeed] run otherRowOfFeed (Just "T-0730") (Just (hours (-1))) @?= True,
       testCase "a ticket with no trip or no start time: not a passenger" $ do
-        isOnRun feed run feed Nothing (Just firstDeparture) @?= False
-        isOnRun feed run feed (Just "T-0730") Nothing @?= False
+        isOnRun [feed] run feed Nothing (Just firstDeparture) @?= False
+        isOnRun [feed] run feed (Just "T-0730") Nothing @?= False
     ]

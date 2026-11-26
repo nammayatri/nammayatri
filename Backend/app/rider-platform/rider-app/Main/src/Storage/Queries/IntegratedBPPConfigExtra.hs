@@ -24,6 +24,13 @@ findAllByMerchantOperatingCityId ::
 findAllByMerchantOperatingCityId merchantOperatingCityId =
   findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+-- | Every config row of one feed (one per platform type: MULTIMODAL, APPLICATION, ...), which share its agency key.
+findAllByAgencyKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig]
+findAllByAgencyKey agencyKey = findAllWithKV [Se.Is Beam.agencyKey $ Se.Eq agencyKey]
+
 findAllByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
