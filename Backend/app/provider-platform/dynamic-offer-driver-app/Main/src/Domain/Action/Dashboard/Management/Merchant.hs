@@ -5745,19 +5745,27 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
   messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
   channel <- traverse (\c -> readMaybe (T.unpack c) & fromMaybeM (InvalidRequest $ "Invalid channel: " <> c)) req.channel
   domain <- traverse (\d -> readMaybe (T.unpack d) & fromMaybeM (InvalidRequest $ "Invalid domain: " <> d)) req.domain
-  mbExisting <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory
+  let language = fromMaybe ENGLISH req.language
+  mbExisting <- QMM.findByMerchantOpCityIdMessageKeyLanguageVehicleCategory merchantOpCity.id messageKey language req.vehicleCategory
   now <- getCurrentTime
   case mbExisting of
     Nothing -> do
+      -- A new language row carries the link template and media of the key's English row unless the
+      -- request sets them; the builders read them from the row of the recipient's language.
+      mbEnglish <-
+        if language == ENGLISH || (isJust req.jsonData && isJust req.mediaUrl)
+          then pure Nothing
+          else QMM.findByMerchantOpCityIdMessageKeyLanguageVehicleCategory merchantOpCity.id messageKey ENGLISH req.vehicleCategory
       parsedJsonData <-
         case req.jsonData of
-          Nothing -> pure def
+          Nothing -> pure $ maybe def (.jsonData) mbEnglish
           Just v -> DAT.parseMaybe A.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
       let merchantMessage =
             DMM.MerchantMessage
               { merchantId = merchant.id,
                 merchantOperatingCityId = merchantOpCity.id,
                 messageKey = messageKey,
+                language = language,
                 message = req.message,
                 templateId = req.templateId,
                 containsUrlButton = req.containsUrlButton,
@@ -5768,7 +5776,7 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
                 senderHeader = req.senderHeader,
                 templateName = req.templateName,
                 vehicleCategory = req.vehicleCategory,
-                mediaUrl = req.mediaUrl,
+                mediaUrl = req.mediaUrl <|> (mbEnglish >>= (.mediaUrl)),
                 senderEmail = Nothing,
                 title = Nothing,
                 createdAt = now,
@@ -5776,6 +5784,7 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+      CQMM.clearCacheById merchantOpCity.id
     Just existing -> do
       parsedJsonData <-
         case req.jsonData of
@@ -5799,6 +5808,7 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
       CQMM.clearCache merchantOpCity.id messageKey existing.vehicleCategory
       when (req.vehicleCategory /= existing.vehicleCategory) $
         CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+      CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 deleteMerchantMerchantMessage ::
@@ -5811,9 +5821,13 @@ deleteMerchantMerchantMessage merchantShortId opCity messageKeyText mbVehicleCat
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
-  _ <- CQMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  -- A row in any language, of the vehicle category or else the general one: the delete removes the
+  -- key in every language.
+  rows <- concat <$> mapM (QMM.findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory merchantOpCity.id messageKey) (mbVehicleCategory : [Nothing | isJust mbVehicleCategory])
+  when (null rows) $ throwError (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
   QMM.deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory
   CQMM.clearCache merchantOpCity.id messageKey mbVehicleCategory
+  CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 getMerchantCityList ::

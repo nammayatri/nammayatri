@@ -15,6 +15,7 @@
 module SharedLogic.Scheduler.Jobs.PostRideSafetyNotification where
 
 import qualified Domain.Types.Ride as Fields
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Notification
 import Kernel.External.Types (SchedulerFlow)
@@ -53,7 +54,8 @@ postRideSafetyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (isNothing ride.wasRideSafe && isNothing ride.rideRating) $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-    let entityData = NotifReq {title = "Did you have a safe journey?", message = "Thank you for riding with us. Please share your ride experience."}
+    (title, message) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language RiderPush_Safety_PostRideCheck [] ("Did you have a safe journey?", "Thank you for riding with us. Please share your ride experience.")
+    let entityData = NotifReq {title, message}
     logDebug "Triggering notification for post ride safety check"
     notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK Nothing
     let scheduleAfter = riderConfig.ivrTriggerDelay

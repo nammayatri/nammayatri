@@ -16,6 +16,7 @@ data TranslationsT f = TranslationsT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Data.Text.Text,
     language :: B.C f Kernel.External.Types.Language,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     message :: B.C f Data.Text.Text,
     messageKey :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

@@ -25,6 +25,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import Control.Applicative ((<|>))
+import qualified Data.Char as Char
 import qualified Data.List as DL
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -36,6 +37,7 @@ import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DocumentVerificationStagesConfig as DVSC
 import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as Fields
@@ -55,7 +57,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKeys (DocumentRejectReason (..), TranslationKey (..), documentRejectReasonText)
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
@@ -67,7 +69,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (Language, VerificationFlow)
+import Kernel.External.Types (Language (..), VerificationFlow)
 import qualified Kernel.External.Verification.Idfy.Types.Response as Fields
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
@@ -91,9 +93,9 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -110,7 +112,6 @@ import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.ImageExtra as ImageQueryExtra
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
@@ -216,7 +217,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
     countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
     let phoneNumber = countryCode <> mobileNumber
     merchantMessage <-
-      QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing Nothing
+      QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM driver.language Nothing Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
     result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton) merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
@@ -583,6 +584,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = mbRejectReason,
+        rejectReasonKey = show (DocumentReason_Text NonTransportVehicle) <$ mbRejectReason,
         createdAt = now,
         unencryptedCertificateNumber = input.registrationNumber,
         approved = Nothing,
@@ -610,7 +612,7 @@ validateRCStatus input rcconfigs now expiry = do
       let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
       let vehicleTypeValid = rcconfigs.allowNonTransportVehicle /= Just False || input.rcVehicleType /= Just VT.NonTransport
       let finalStatus = if expiryCheck && isCOVValid && validInsurance && vehicleTypeValid then Documents.VALID else Documents.INVALID
-      let rejectReason = if not vehicleTypeValid then Just "Non Transport vehicles are not allowed" else Nothing
+      let rejectReason = if not vehicleTypeValid then Just (documentRejectReasonText NonTransportVehicle) else Nothing
       logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ", vehicleTypeValid=" <> show vehicleTypeValid <> ")"
       pure (finalStatus, reviewRequired, variant, mbVehicleModel, rejectReason)
     _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing, Nothing)
@@ -806,32 +808,54 @@ filterInCompatibleFlows ::
   [documentVerificationConfigAPIEntity]
 filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
 
-mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
-  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
-  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
-  return $
-    API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-      { title = maybe title (.message) mbTitle,
-        description = maybe description (Just . (.message)) mbDescription,
-        applicableTo = API.Types.ProviderPlatform.Fleet.Onboarding.FLEET,
-        filterForOldApks = Nothing,
-        rcNumberPrefixList = [],
-        documentType = castDocumentType documentType,
-        dependencyDocumentType = map castDocumentType dependencyDocumentType,
-        documentCategory = castDocumentCategory <$> documentCategory,
-        isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
-        documentFields = fmap (map castDocumentFieldInfo) documentFields,
-        documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
-        documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
-        isReminderSupported = Nothing,
-        isApprovalSupported = Nothing,
-        rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
-        doNotValidateDuringOnboarding = Nothing,
-        doStrictVerification = doStrictVerifcation,
-        onboardingStage = find (\stage -> Just stage.stage == (castDocumentOnboardingStage <$> documentOnboardingStage)) onboardingStages,
-        ..
-      }
+-- | The keys of every text leaf of a document's form fields: the registry lists them and
+-- the onboarding config response reads them. The field id is its request key, else its name; a
+-- non-image field without a request key is identified by its name, so its label has no key.
+documentFieldKeys :: Domain.Types.DocumentVerificationConfig.DocumentType -> [Domain.Types.DocumentVerificationConfig.FieldInfo] -> [TranslationKey]
+documentFieldKeys documentType = concatMap keysOf
+  where
+    keysOf field =
+      let fieldId = fromMaybe field.name field.requestKey
+       in [DocumentField_Label documentType fieldId | field._type == Domain.Types.DocumentVerificationConfig.FieldImage || isJust field.requestKey]
+            <> [DocumentField_Hint documentType fieldId | isJust field.hint]
+            <> [DocumentField_Placeholder documentType fieldId | isJust field.placeholder]
+            <> [DocumentField_Description documentType fieldId | isJust field.description]
+            <> concat [DocumentField_ImageTitle documentType fieldId name : [DocumentField_ImageText documentType fieldId name | isJust image.text] | (Just name, image) <- keyedByTitle field.images]
+            <> maybe [] (concatMap keysOf) field.fields
+
+-- | Items listed by ops (a field's sample images, a stage's Do's/Don'ts and media), each with the
+-- name its keys carry: its English title made key-safe ('textKeyName'). A title with no letter or
+-- digit has no keys, and of items sharing a name only the first has them, so a repeated title keeps
+-- its configured text.
+keyedByTitle :: HasField "title" item Text => Maybe [item] -> [(Maybe Text, item)]
+keyedByTitle = snd . DL.mapAccumL nameOf Set.empty . fromMaybe []
+  where
+    nameOf seen item =
+      let name = textKeyName item.title
+       in if T.null name || Set.member name seen then (seen, (Nothing, item)) else (Set.insert name seen, (Just name, item))
+
+-- | A key name segment from an English text typed by ops: apostrophes dropped, every other
+-- character that is not a letter or digit splits words, each word capitalised and the words
+-- joined ("Owner's copy (front)" -> "OwnersCopyFront").
+textKeyName :: Text -> Text
+textKeyName = T.concat . map capitalise . T.words . T.map (\c -> if Char.isAlphaNum c then c else ' ') . T.filter (`notElem` ['\'', '\x2019'])
+  where
+    capitalise word = maybe word (\(c, rest) -> T.cons (Char.toUpper c) rest) (T.uncons word)
+
+-- | The document's display name in the reader's language, else English, else the raw type.
+translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Language -> DVC.DocumentType -> m Text
+translateDocumentType merchantOpCityId language documentType =
+  fromMaybe (show documentType) <$> CQTranslations.findTextByKey (Just merchantOpCityId) language (Document_Name documentType)
+
+-- | The keys of a stage's text read off its config: its hint, and each Do's/Don'ts and media
+-- item's title and text, named by its English title like a field's sample images.
+stageTextKeys :: DVSC.DocumentVerificationStagesConfig -> [TranslationKey]
+stageTextKeys config =
+  [OnboardingStage_Hint stage | isJust config.hint]
+    <> concat [OnboardingStage_GuidelineTitle stage name : [OnboardingStage_GuidelineText stage name | isJust guideline.text] | (Just name, guideline) <- keyedByTitle config.guidelines]
+    <> concat [OnboardingStage_MediaTitle stage name : [OnboardingStage_MediaDescription stage name | isJust item.description] | (Just name, item) <- keyedByTitle config.media]
+  where
+    stage = config.documentOnboardingStage
 
 castPersonRoleToDashboardAccessType :: Role -> Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType
 castPersonRoleToDashboardAccessType FLEET_OWNER = Just API.Types.ProviderPlatform.Management.Endpoints.Account.FLEET_OWNER
@@ -850,32 +874,6 @@ castDocumentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlow
 castDocumentFlowGrouping = \case
   Domain.Types.DocumentVerificationConfig.COMMON -> API.Types.ProviderPlatform.Fleet.Onboarding.COMMON
   Domain.Types.DocumentVerificationConfig.STANDARD -> API.Types.ProviderPlatform.Fleet.Onboarding.STANDARD
-
-castDocumentFieldInfo :: Domain.Types.DocumentVerificationConfig.FieldInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldInfo
-castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
-  API.Types.ProviderPlatform.Fleet.Onboarding.FieldInfo
-    { name = name,
-      _type = castDocumentFieldType _type,
-      isMandatory = isMandatory,
-      regexValidation = regexValidation,
-      description = description,
-      placeholder = placeholder,
-      hint = hint,
-      dropdownValues = dropdownValues,
-      fieldConstraints = fieldConstraints,
-      requestKey = requestKey,
-      descriptionUrl = descriptionUrl,
-      fields = fmap (map castDocumentFieldInfo) fields,
-      images = fmap (map castImageInfo) images
-    }
-
-castImageInfo :: Domain.Types.DocumentVerificationConfig.ImageInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.ImageInfo
-castImageInfo Domain.Types.DocumentVerificationConfig.ImageInfo {..} =
-  API.Types.ProviderPlatform.Fleet.Onboarding.ImageInfo
-    { title = title,
-      text = text,
-      imageUrl = imageUrl
-    }
 
 castDocumentFieldType :: Domain.Types.DocumentVerificationConfig.FieldType -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldType
 castDocumentFieldType = \case
@@ -1237,7 +1235,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
               Right FMFail -> do
                 let mbReason = toMessage FaceMatchFailed
                 case docType of
-                  ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) docImg.id
+                  ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) Nothing docImg.id
                   ODC.PanCard -> DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
                   ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
                   _ -> pure ()
@@ -1253,7 +1251,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
           whenJust mbDL $ \dl ->
             when (dl.documentImageId1 == docImg.id && dl.verificationStatus == Documents.PENDING) $ do
               rejectImage
-              DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Document archived" mbReason) docImg.id
+              DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Document archived" mbReason) Nothing docImg.id
         ODC.PanCard -> do
           mbPan <- DPQuery.findByDriverId person.id
           whenJust mbPan $ \pan ->

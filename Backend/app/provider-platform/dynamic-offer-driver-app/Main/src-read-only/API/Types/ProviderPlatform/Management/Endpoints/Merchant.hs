@@ -982,7 +982,8 @@ data UpsertMerchantMessageReq = UpsertMerchantMessageReq
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory
+    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
+    language :: Kernel.Prelude.Maybe Kernel.External.Types.Language
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

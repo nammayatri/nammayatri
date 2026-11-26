@@ -89,6 +89,7 @@ sendDriverPayoutSms mId mocId scheduledPayout amount = do
   (mbSender, message, templateId, msgType) <-
     MessageBuilder.buildDriverPayoutMessage
       mocId
+      driver.language
       (MessageBuilder.BuildDriverPayoutMessageReq {payoutAmount = amountText, bookingId = booking.displayBookingId})
   SMS.sendSMS mId mocId (SMS.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= SMS.checkSmsResult
 

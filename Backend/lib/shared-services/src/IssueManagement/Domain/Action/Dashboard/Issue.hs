@@ -520,6 +520,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
                 messageId = notifId,
                 senderType = "STATUS_UPDATE",
                 snippet = snippet,
+                status = Just newStatus,
                 hasMedia = False,
                 timestamp = now
               }
@@ -2252,6 +2253,7 @@ sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identi
               messageId = chatMsg.id.getId,
               senderType = show chatMsg.senderType,
               snippet = T.take 120 chatMsg.message,
+              status = Nothing,
               hasMedia = not (null chatMsg.mediaFileIds),
               timestamp = chatMsg.createdAt
             }

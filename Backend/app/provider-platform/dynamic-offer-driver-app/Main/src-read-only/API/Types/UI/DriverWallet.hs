@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified Domain.Types.TranslationKey
 import qualified Domain.Types.WalletTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -99,7 +100,7 @@ data WalletBalanceResponse = WalletBalanceResponse
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WalletItem = WalletItem
-  { itemName :: Kernel.Prelude.Text,
+  { itemName :: Domain.Types.TranslationKey.TranslatedText,
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
     nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
@@ -149,7 +150,7 @@ data WalletLedgerEntryItem = WalletLedgerEntryItem
     isCredit :: Kernel.Prelude.Bool,
     isDisplayOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReversal :: Kernel.Prelude.Bool,
-    itemName :: Kernel.Prelude.Text,
+    itemName :: Domain.Types.TranslationKey.TranslatedText,
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
     reversalOf :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
@@ -247,7 +248,7 @@ data WalletSummaryResponse = WalletSummaryResponse
 data WalletTransactionHistoryItem = WalletTransactionHistoryItem
   { date :: Data.Time.UTCTime,
     isCredit :: Kernel.Prelude.Bool,
-    itemName :: Kernel.Prelude.Text,
+    itemName :: Domain.Types.TranslationKey.TranslatedText,
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
     payment :: Kernel.Prelude.Maybe WalletPaymentInfo,

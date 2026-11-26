@@ -7,6 +7,7 @@ import Domain.Types.EmptyDynamicParam (EmptyDynamicParam (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import EulerHS.Prelude hiding (pass)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
@@ -67,7 +68,7 @@ sendPassExpiryReminderBatch merchantId merchantOperatingCityId mbCursor = do
               daysRemaining = maybe daysToExpire (fromIntegral . flip Time.diffDays todayLocal) mbEndDate
               entity = Notification.Entity Notification.Product person.id.getId (PassExpiryReminderEntityData {notificationKey = "PASS_EXPIRY_REMINDER"})
               templateParams = [("days", show daysRemaining)]
-          TNotifications.dynamicNotifyPerson person (TNotifications.createNotificationReq "PASS_EXPIRY_REMINDER" identity) EmptyDynamicParam entity Nothing templateParams Nothing Nothing
+          TNotifications.dynamicNotifyPerson person (TNotifications.createKeyedNotificationReq RiderPush_Pass_ExpiryReminder identity) EmptyDynamicParam entity Nothing templateParams Nothing Nothing
       let processed = length passes
       pure $
         if processed < batchSize

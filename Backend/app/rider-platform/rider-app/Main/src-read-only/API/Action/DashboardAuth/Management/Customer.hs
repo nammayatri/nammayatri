@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management.Customer
 import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Customer
+import qualified Domain.Action.DashboardAuth.Management.Customer
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -181,7 +182,7 @@ postCustomerOffersList a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_OFFERS_LIST" a2 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Customer.postCustomerOffersList a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Customer.postCustomerOffersList a4 a3 a2 a1
     )
 
 postCustomerApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Customer.ApplyCustomerOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

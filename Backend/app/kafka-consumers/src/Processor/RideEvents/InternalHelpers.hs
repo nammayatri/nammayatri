@@ -14,7 +14,6 @@ module Processor.RideEvents.InternalHelpers
   )
 where
 
-import qualified Data.Text as T
 import Data.Time
   ( Day,
     LocalTime (..),
@@ -43,6 +42,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.PayoutConfig as DPC
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RiderDetails as RD
+import "dynamic-offer-driver-app" Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as Fields
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as Fields
@@ -89,7 +89,7 @@ import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRD
 import qualified "dynamic-offer-driver-app" Storage.Queries.Vehicle as QV
 import "dynamic-offer-driver-app" Tools.Error
-import "dynamic-offer-driver-app" Tools.Notifications (NotifReq (..), notifyDriverOnEvents, sendNotificationToDriver)
+import "dynamic-offer-driver-app" Tools.Notifications (buildMerchantPNContentWithFallback, mkNotifReq, notifyDriverOnEvents, pushContentOfRow, sendNotificationToDriver)
 
 ------------------------------------------------------------
 -- Default reference time
@@ -129,9 +129,8 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
         Just referredDriverId -> do
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
-            let referralMessage = "Congratulations!"
-                referralTitle = "Your referred customer has completed their first ride"
-            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
+            content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Referral_CustomerFirstRide [] ("Your referred customer has completed their first ride", "Congratulations!")
+            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED content driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
               DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) Nothing
           mbVehicle <- QV.findById referredDriverId
@@ -153,15 +152,13 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
     updateReferralStats referredCustomerId referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig referredDriver = do
       driverInfo <- QDI.findById (cast referredDriverId) >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       when (isNothing driverInfo.payoutVpa) do
-        mbMerchantPN_ <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_VPA_ALERT" Nothing Nothing driver.language Nothing
+        mbMerchantPN_ <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Payout_VpaAlert Nothing Nothing driver.language Nothing
         whenJust mbMerchantPN_ $ \merchantPN_ -> do
-          let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN_.title
-              entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN_.body}
+          let entityData = mkNotifReq referredDriverId.getId (pushContentOfRow merchantPN_ [("rewardAmount", show payoutConfig.referralRewardAmountPerRide)])
           notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" Nothing Nothing driver.language Nothing
+      mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOpCityId DriverPush_Payout_ReferralReward Nothing Nothing driver.language Nothing
       whenJust mbMerchantPN $ \merchantPN -> do
-        let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
-            entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN.body}
+        let entityData = mkNotifReq referredDriverId.getId (pushContentOfRow merchantPN [("rewardAmount", show payoutConfig.referralRewardAmountPerRide)])
         notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
       let baseReferralAmount = payoutConfig.referralRewardAmountPerRide
           (deltaReferralEarnings, newPayoutStatus) =
@@ -287,9 +284,8 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
           QRide.updateReferralFlagReason mbFlagReason ride.id
           pure isValid
     when passedFraudCheck $ do
-      let referralMessage = "Congratulations!"
-          referralTitle = "Your referred driver has completed their first ride"
-      sendNotificationToDriver referringDriver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage referringDriver referringDriver.deviceToken
+      content <- buildMerchantPNContentWithFallback referringDriver.merchantOperatingCityId referringDriver.language DriverPush_Referral_DriverFirstRide [] ("Your referred driver has completed their first ride", "Congratulations!")
+      sendNotificationToDriver referringDriver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED content referringDriver referringDriver.deviceToken
       mbVehicle <- QV.findById referringDriverId
       let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
       payoutConfig <- CPC.findByPrimaryKey referringDriver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) referringDriver.merchantOperatingCityId.getId)

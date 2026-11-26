@@ -16,6 +16,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 postDriverDocumentRegister ::
@@ -41,7 +42,9 @@ getDriverDocumentGet ::
   Maybe Common.EntityType ->
   Environment.Flow Common.GetDocumentResponse
 getDriverDocumentGet (mbPersonId, merchantId, merchantOpCityId) entityId mbDocType mbEntityType = do
-  void $ mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  -- only a document, not an image, carries a reject reason to show in the driver's language
+  mbLanguage <- if mbEntityType == Just Common.DocumentEntity then (>>= (.language)) <$> QPerson.findById personId else pure Nothing
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   moc <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  DR.getDriverRegistrationGetDocument merchant.shortId moc.city entityId (SDO.castDocumentType <$> mbDocType) mbEntityType
+  DR.getDriverRegistrationGetDocument merchant.shortId moc.city mbLanguage entityId (SDO.castDocumentType <$> mbDocType) mbEntityType

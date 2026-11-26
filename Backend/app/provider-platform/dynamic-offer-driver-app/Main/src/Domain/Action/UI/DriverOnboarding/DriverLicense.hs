@@ -560,6 +560,7 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
       failedRules = [],
       dateOfIssue,
       rejectReason = Nothing,
+      rejectReasonKey = Nothing,
       vehicleCategory,
       consent = True,
       createdAt = now,

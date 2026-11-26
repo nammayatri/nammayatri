@@ -34,6 +34,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -369,12 +370,14 @@ notifyBulkPayoutOutcome ::
 notifyBulkPayoutOutcome person order kind mbFailureDetail =
   when (person.role `notElem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $ do
     let amount = order.amount.amount
-        (notificationTitle, notificationMessage, notificationType) = case kind of
+        (pushKey, defaultTitle, defaultMessage, notificationType) = case kind of
           BulkPushPaid ->
-            ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+            (DriverPush_Payout_Completed, "Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
           BulkPushFailed ->
-            ( "Payout Failed",
+            ( maybe DriverPush_Payout_Failed (const DriverPush_Payout_FailedWithDetail) mbFailureDetail,
+              "Payout Failed",
               "Your payout of Rs." <> show amount <> " has failed" <> maybe "" (": " <>) mbFailureDetail <> ". Please retry or contact support.",
               FCM.PAYOUT_FAILED
             )
-    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+    content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language pushKey [("amount", show amount), ("failureDetail", fromMaybe "" mbFailureDetail)] (defaultTitle, defaultMessage)
+    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType content person person.deviceToken

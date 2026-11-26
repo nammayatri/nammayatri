@@ -24,6 +24,7 @@ imports:
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   Toll: Toll.Domain.Types.Toll
   City: Kernel.Types.Beckn.Context
+  Language: Kernel.External.Types
   ToParamSchema: Kernel.Prelude
   FromHttpApiData: Servant
   ToHttpApiData: Servant
@@ -406,7 +407,7 @@ apis:
 
 types:
   MerchantUpdateReq:
-    - name: Maybe Text
+    - name: "Maybe !Text"
     - exoPhones: Maybe (NonEmpty ExophoneReq)
     - fcmConfig: Maybe FCMConfigUpdateReq
     - gatewayUrl: Maybe BaseUrl
@@ -416,20 +417,22 @@ types:
     - file: FilePath
     - derive: "'HideSecrets"
   UpsertTicketConfigResp:
-    - unprocessedTicketConfigs: [Text]
-    - success: Text
+    # operator-only upload result lines
+    - unprocessedTicketConfigs: "[!Text]"
+    - success: "!Text"
   SchedulerTriggerReq:
     - scheduledAt: Maybe UTCTime
     - jobName: Maybe JobName
-    - jobData: Text
+    - jobData: "!Text"
     - derive: "'HideSecrets"
   ReviveSchedulerJobsReq:
     - recordType: NewType
-    - jobIds: [Text]
+    - jobIds: "[!Text]"
     - derive: "'HideSecrets"
   ReviveSchedulerJobsRes:
     - recordType: NewType
-    - list: [Either Text Text]
+    # operator-only per-job result lines
+    - list: "[Either !Text !Text]"
     - derive: "'HideSecrets"
   TollListResp:
     - recordType: Type
@@ -446,10 +449,10 @@ types:
     - recordType: Type
     - type: [GeometryAPIEntity]
   GeometryAPIEntity:
-    - region: Text
+    - region: "!Text"
     - state: IndianState
     - city: City
-    - geom: Maybe Text
+    - geom: "Maybe !Text"
     - platform: Platform
   JobName:
     - enum: "NyRegularMasterTrigger, PartnerInvoiceDataExportTrigger, DailyPassStatusUpdateTrigger, PassExpiryReminderMasterTrigger, CashRideCashbackPayoutTrigger, SendLegalPolicyNotificationTrigger"
@@ -463,10 +466,10 @@ types:
     - noOfRideRequestsConfig: Maybe Int
     - derive: "'HideSecrets"
   PaymentMethodChargeAPIEntity:
-    - id: Text
-    - paymentType: Text
-    - paymentInstrument: Text
-    - collectedBy: Text
+    - id: "!Text"
+    - paymentType: "!Text"
+    - paymentInstrument: "!Text"
+    - collectedBy: "!Text"
     - priority: Int
     - paymentChargeType: Maybe PaymentChargeType
     - paymentCharge: Maybe HighPrecMoney
@@ -489,16 +492,17 @@ types:
     - mode: CallingMode
     - derive: "'HideSecrets"
   RiderMerchantMessageCatalogResp:
-    - values: "[Text]"
+    - values: "[!Text]"
   UpsertRiderMerchantMessageReq:
-    - messageKey: Text
-    - message: Text
-    - templateId: Text
+    - messageKey: "!Text"
+    - message: "!Text"
+    - templateId: "!Text"
     - containsUrlButton: Bool
     - jsonData: Maybe Value
-    - messageType: Maybe Text
-    - senderHeader: Maybe Text
-    - mediaUrl: Maybe Text
+    - messageType: "Maybe !Text"
+    - senderHeader: "Maybe !Text"
+    - mediaUrl: "Maybe !Text"
+    - language: Maybe Language
     - derive: "'HideSecrets"
 
 extraOperations:

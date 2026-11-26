@@ -1778,7 +1778,7 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
       case mobileNumber of
         Just mNumber -> do
           let phoneNumber = countryCode <> mNumber
-          buildSmsReq <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
+          buildSmsReq <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId person.language $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
           Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
             >>= Sms.checkSmsResult
         _ -> logDebug $ "Could n't send Ticket Booking Cancellation SMS : " <> person.id.getId
@@ -2257,6 +2257,7 @@ postTicketDashboardLoginAuth merchant req = do
           buildSmsRes <-
             MessageBuilder.buildSendOTPMessage
               merchantOperatingCityId
+              person.language
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash
@@ -2337,6 +2338,7 @@ postTicketDashboardSendVerifyOtp merchant req = do
           buildSmsRes <-
             MessageBuilder.buildSendOTPMessage
               merchantOperatingCityId
+              Nothing
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash

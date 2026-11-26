@@ -492,6 +492,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               person.id
               person.merchantId
               merchantOperatingCityId
+              person.language
               req.mobileCountryCode
               req.mobileNumber
               req.email
@@ -1216,6 +1217,7 @@ resend tokenId mbSenderHash = do
       person.id
       person.merchantId
       person.merchantOperatingCityId
+      person.language
       person.mobileCountryCode
       mobileNumber
       receiverEmail

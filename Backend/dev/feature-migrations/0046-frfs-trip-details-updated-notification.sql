@@ -77,4 +77,4 @@ SELECT
     CURRENT_TIMESTAMP
 FROM atlas_app.merchant_operating_city moc
 WHERE moc.id = 'da7e19c8-2d86-66ea-039c-edfd8e34ebdc'
-ON CONFLICT (merchant_operating_city_id, message_key) DO NOTHING;
+ON CONFLICT DO NOTHING;

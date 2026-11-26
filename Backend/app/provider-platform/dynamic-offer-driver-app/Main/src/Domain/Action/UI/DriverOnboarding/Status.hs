@@ -93,7 +93,7 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' Nothing person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
 
   -- Re-pull the latest provider status for any doc whose verification webhook was dropped, at the point
   -- its status is rendered. Shared with the dashboard status endpoint via 'pullPendingDocStatuses'.

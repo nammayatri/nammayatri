@@ -12,6 +12,7 @@ import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
 import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
@@ -20,6 +21,8 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import Domain.Types.VehicleCategory as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -27,6 +30,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import Kernel.External.Payment.Interface.Types
+import Kernel.External.Types (Language)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Logging (withDynamicLogLevel)
@@ -57,6 +61,7 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Settlement as Settlement
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -676,10 +681,33 @@ getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
       forM_ rows $ \rr ->
         unless (rr.personId == personId) $
           throwError $ InvalidRequest "Person is not the owner of the ride"
+      mbPerson <- if any (isJust . defaultRefundDescriptionOf . (.description)) rows then QPerson.findById personId else pure Nothing
       items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
         evidence <- fetchEvidenceFromS3 rr
-        pure $ mkRefundRequestResp rideId rr evidence
+        description <- case mbPerson of
+          Just person -> refundDescriptionText person.merchantOperatingCityId person.language rr.description
+          Nothing -> pure (textAsReceived rr.description)
+        pure $ mkRefundRequestResp rideId rr description evidence
       pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
+
+-- | The description an admin- or agent-initiated refund is saved with when none is typed, and the key
+-- the refund screens read it by.
+defaultRefundDescription :: Bool -> (RiderTranslationKey, Text)
+defaultRefundDescription autoApprove =
+  if autoApprove
+    then (Refund_Description_AdminInitiated, "Admin-initiated refund")
+    else (Refund_Description_AgentInitiated, "Agent-initiated refund")
+
+-- | The key and English of a stored description that reads as one of the defaults; Nothing for any other.
+defaultRefundDescriptionOf :: Text -> Maybe (RiderTranslationKey, Text)
+defaultRefundDescriptionOf description = find ((== description) . snd) (map defaultRefundDescription [True, False])
+
+-- | A refund's description as the translatable text of an API field: a default one by its key in the
+-- reader's language, a typed one as typed.
+refundDescriptionText :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Maybe Language -> Text -> Environment.Flow TranslatedText
+refundDescriptionText merchantOperatingCityId mbLanguage description = case defaultRefundDescriptionOf description of
+  Just (key, english) -> CQTranslations.findTranslatedText merchantOperatingCityId mbLanguage key english
+  Nothing -> pure (textAsReceived description)
 
 -- | Per-component fare+tax breakdown for a ride — the refundable options feeding
 --   refundRequest/create. Reuses 'buildLedgerInfoFromBreakups' with appFee=0, so RideFare is the
@@ -736,11 +764,13 @@ getFareBreakupForRide rideId booking = do
 mkRefundRequestResp ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   DRefundRequest.RefundRequest ->
+  TranslatedText ->
   Maybe Text ->
   API.Types.UI.RidePayment.RefundRequestResp
-mkRefundRequestResp rideId DRefundRequest.RefundRequest {..} evidence =
+mkRefundRequestResp rideId DRefundRequest.RefundRequest {..} translatedDescription evidence =
   API.Types.UI.RidePayment.RefundRequestResp
     { rideId = rideId,
+      description = translatedDescription,
       refundsAmount = mkRoundedPriceAPIEntity . mkPrice (Just currency) <$> refundsAmount,
       requestedAmount = mkRoundedPriceAPIEntity . mkPrice (Just currency) <$> requestedAmount,
       transactionAmount = mkRoundedPriceAPIEntity (mkPrice (Just currency) transactionAmount),

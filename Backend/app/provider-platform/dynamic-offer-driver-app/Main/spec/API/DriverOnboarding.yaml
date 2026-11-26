@@ -6,10 +6,8 @@ imports:
   DocumentApplicableType: Domain.Types.DocumentVerificationConfig
   DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
   DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
-  MediaInfo: Domain.Types.DocumentVerificationStagesConfig
-  ImageInfo: Domain.Types.DocumentVerificationConfig
   FieldType: Domain.Types.DocumentVerificationConfig
-  FieldInfo: Domain.Types.DocumentVerificationConfig
+  FieldConstraints: Domain.Types.DocumentFieldConstraints
   ServiceTierType: Domain.Types.Common
   AutoAcceptanceMode: Dashboard.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
@@ -48,8 +46,8 @@ module: DriverOnboardingV2
 types:
   # No Show: image is a base64 photo.
   RCTakeoverPhotoReq:
-    rcNo: Text
-    image: Text # base64 JPEG, PNG or WebP; a data: URI prefix is allowed
+    rcNo: "!Text"
+    image: "!Text" # base64 JPEG, PNG or WebP; a data: URI prefix is allowed
   RCTakeoverPhotoResult:
     enum: "VALID,INVALID"
   RCTakeoverPhotoResp:
@@ -57,8 +55,9 @@ types:
     # Optional detail on the check; older apps read only result.
     takeoverScore: Maybe Double
     inputs: Maybe RCTakeoverPhotoScores
-    vehicleType: Maybe Text # auto / cab / bike / other / no_vehicle
-    reason: Maybe Text # why it is INVALID
+    vehicleType: "Maybe !Text" # auto / cab / bike / other / no_vehicle
+    # reason is a diagnostic detail of the check, not translatable text
+    reason: "Maybe !Text" # why it is INVALID
   RCTakeoverPhotoScores:
     plateVisible: Double
     plateMatchesRc: Double
@@ -84,31 +83,55 @@ types:
     stage: DocumentOnboardingStage
     vehicleCategory: VehicleCategory
     applicableTo: DocumentApplicableType
-    title: Text
-    description: Maybe Text
-    hint: Maybe Text
+    title: TranslatedText
+    description: Maybe TranslatedText
+    hint: Maybe TranslatedText
     order: Int
     stageDependency: '[DocumentOnboardingStage]'
     media: Maybe [MediaInfo]
     guidelines: Maybe [ImageInfo]
+  MediaInfo:
+    title: TranslatedText
+    description: Maybe TranslatedText
+    url: "Maybe !Text"
+    thumbnailUrl: "Maybe !Text"
+  ImageInfo:
+    title: TranslatedText
+    text: Maybe TranslatedText
+    imageUrl: "Maybe !Text"
+  FieldInfo:
+    name: TranslatedText
+    _type: FieldType
+    isMandatory: Bool
+    regexValidation: "Maybe !Text"
+    description: Maybe TranslatedText
+    descriptionUrl: "Maybe !Text"
+    placeholder: Maybe TranslatedText
+    hint: Maybe TranslatedText
+    # dropdownValues are also the values the form submits
+    dropdownValues: "Maybe [!Text]"
+    fieldConstraints: Maybe FieldConstraints
+    requestKey: "Maybe !Text"
+    fields: Maybe [FieldInfo]
+    images: Maybe [ImageInfo]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
     onboardingStage: Maybe DocumentOnboardingStageAPIEntity
-    title: Text
-    description: Maybe Text
+    title: TranslatedText
+    description: Maybe TranslatedText
     isMandatory: Bool
     isMandatoryForEnabling: Bool
     isDisabled: Bool
-    disableWarning: Maybe Text
+    disableWarning: Maybe TranslatedText
     isHidden: Bool
     dependencyDocumentType: '[DocumentType]'
     checkExtraction: Bool
     checkExpiry: Bool
     # Legacy fallback for RC format checks when regexValidation is unavailable.
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[!Text]"
     filterForOldApks: Maybe Bool
     applicableTo: DocumentApplicableType
     # For RC: regex should be supplied via FieldInfo.regexValidation.
@@ -133,13 +156,13 @@ types:
   AirConditionedTier:
       isWorking: Bool
       usageRestrictionType: AirConditionedRestrictionType
-      restrictionMessage: Maybe Text
+      restrictionMessage: Maybe TranslatedText
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
-    name: Text
+    name: TranslatedText
     isUsageRestricted: Maybe Bool
-    shortDescription: Maybe Text
-    longDescription: Maybe Text
+    shortDescription: Maybe TranslatedText
+    longDescription: Maybe TranslatedText
     seatingCapacity: Maybe Int
     airConditioned: Maybe Double
     luggageCapacity: Maybe Int
@@ -154,12 +177,12 @@ types:
     mode: Maybe AutoAcceptanceMode
     isSelected: Maybe Bool
   RateCardItem:
-    title: Text
+    title: "!Text"
     price: Money
     priceWithCurrency: PriceAPIEntity
     derive: Show
   SSNReq:
-    ssn: Text
+    ssn: "!Text"
   FarePolicyHour:
     enum: "Peak,NonPeak,Night"
   RateCardResp:
@@ -173,32 +196,32 @@ types:
     farePolicyHour: FarePolicyHour
     rateCardItems: [RateCardItem]
   DriverPanReq:
-    panNumber: Text
+    panNumber: "!Text"
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
     consent: Bool
-    nameOnCard: Maybe Text
+    nameOnCard: "Maybe !Text"
     dateOfBirth: Maybe UTCTime
     consentTimestamp: Maybe UTCTime
     validationStatus: Maybe ValidationStatus
     verifiedBy: Maybe VerifiedBy
-    transactionId: Maybe Text
-    nameOnGovtDB: Maybe Text
+    transactionId: "Maybe !Text"
+    nameOnGovtDB: "Maybe !Text"
     docType: Maybe PanType
   GetLiveSelfieResp:
     recordType: NewType
-    image: Text
+    image: "!Text"
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)
     aadhaarBackImageId: Maybe (Id Image)
-    maskedAadhaarNumber: Maybe Text
-    nameOnCard: Maybe Text
-    dateOfBirth: Maybe Text
-    address: Maybe Text
+    maskedAadhaarNumber: "Maybe !Text"
+    nameOnCard: "Maybe !Text"
+    dateOfBirth: "Maybe !Text"
+    address: "Maybe !Text"
     consent: Bool
     consentTimestamp: UTCTime
     validationStatus: ValidationStatus
-    transactionId: Text
+    transactionId: "!Text"
   BankAccountLinkResp:
     chargesEnabled: Bool
     payoutsEnabled: Maybe Bool
@@ -213,47 +236,47 @@ types:
     paymentMode: PaymentMode
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
-    stripeLegalEntityName: Maybe Text
-    bankName: Maybe Text
-    bankAccountLast4: Maybe Text
+    stripeLegalEntityName: "Maybe !Text"
+    bankName: "Maybe !Text"
+    bankAccountLast4: "Maybe !Text"
   FleetInfo:
-    id: Text
-    ownerName: Text
-    fleetName: Maybe Text
-    phoneNumber: Maybe Text
+    id: "!Text"
+    ownerName: "!Text"
+    fleetName: "Maybe !Text"
+    phoneNumber: "Maybe !Text"
     address: Maybe Address
-    requestReason: Maybe Text
-    responseReason: Maybe Text
+    requestReason: "Maybe !Text"
+    responseReason: "Maybe !Text"
     chargesEnabled: Maybe Bool
     createdAt: UTCTime
     isActive: Bool
     isAssociated: Bool
     associatedTill: Maybe UTCTime
   HVSdkCallLogReq:
-    txnId: Text
-    hvFlowId: Maybe Text
+    txnId: "!Text"
+    hvFlowId: "Maybe !Text"
     docType: Maybe DocumentType
-    status : Maybe Text
-    callbackResponse : Maybe Text
-    failureReason : Maybe Text
+    status : "Maybe !Text"
+    callbackResponse : "Maybe !Text"
+    failureReason : "Maybe !Text"
   CommonDocumentReq:
     documentType: DocumentType
-    documentData: Text  # JSON string containing all document data
+    documentData: "!Text"  # JSON string containing all document data
     imageId: Maybe (Id Image)  # Optional image for documents that need it
-    registrationNo: Maybe Text  # Set for vehicle documents so the doc is scoped to that RC
+    registrationNo: "Maybe !Text"  # Set for vehicle documents so the doc is scoped to that RC
   VehiclePhotosResp:
-    left: [Text]
-    right: [Text]
-    front: [Text]
-    back: [Text]
-    frontInterior: [Text]
-    backInterior: [Text]
-    odometer: [Text]
+    left: "[!Text]"
+    right: "[!Text]"
+    front: "[!Text]"
+    back: "[!Text]"
+    frontInterior: "[!Text]"
+    backInterior: "[!Text]"
+    odometer: "[!Text]"
   DriverGstinReq:
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
-    gstNumber : Text
-    transactionId : Maybe Text
+    gstNumber : "!Text"
+    transactionId : "Maybe !Text"
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
   FleetRCListRes:
@@ -261,7 +284,7 @@ types:
     rcs: "[LinkedRC]"
   # Vehicle-only RC verify-status: recompute RC.verified from all mandatory vehicle docs (person-independent).
   RcVerifyStatusResp:
-    registrationNo: Text
+    registrationNo: "!Text"
     verified: Bool
     approved: Maybe Bool
     documents: "[DocumentStatusItem]"
@@ -270,40 +293,41 @@ types:
     fleetOwnerId: Id Person
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
-    requestReason: Maybe Text
+    requestReason: "Maybe !Text"
   ShareLinkRes:
-    link: Text
+    link: "!Text"
     expiresAt: UTCTime
   DigiLockerInitiateReq:
     vehicleCategory: VehicleCategory
   DigiLockerInitiateResp:
-    authorizationUrl: Text
+    authorizationUrl: "!Text"
   PullDocumentReq:
     docType: DocumentType
-    drivingLicenseNumber: Text
+    drivingLicenseNumber: "!Text"
   VerifyBankAccReq:
-      - bankAccountNo : Text
-      - bankIfscCode : Text
+      - bankAccountNo : "!Text"
+      - bankIfscCode : "!Text"
   # TDS Certificate validation types
   TDSInvoiceEntry:
-    invoiceId: Text
+    invoiceId: "!Text"
     invoiceDate: UTCTime
-    invoiceNumber: Text
+    invoiceNumber: "!Text"
     baseValue: HighPrecMoney
     gst: HighPrecMoney
     invoiceValue: HighPrecMoney
     tdsAmountAgainstInvoice: HighPrecMoney
-    tanNumber: Maybe Text
-    tdsCertificateNumber: Maybe Text
-    quarter: Text
-    assessmentYear: Text
+    tanNumber: "Maybe !Text"
+    tdsCertificateNumber: "Maybe !Text"
+    quarter: "!Text"
+    assessmentYear: "!Text"
   TDSCertificateData:
     tdsCertificates: '[TDSInvoiceEntry]'
     overallTdsAmount: HighPrecMoney
   TDSCertificateValidationError:
-    field: Text
-    invoiceId: Text
-    errorMessage: Text
+    field: "!Text"
+    invoiceId: "!Text"
+    # errorMessage is validation error text; errors are not keyed
+    errorMessage: "!Text"
 
 apis:
   - GET:

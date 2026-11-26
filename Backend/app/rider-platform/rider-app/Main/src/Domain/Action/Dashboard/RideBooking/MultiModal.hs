@@ -96,7 +96,7 @@ notifyCustomerFromDashboard customerId req = do
   case req.channel of
     API.Types.Dashboard.RideBooking.MultiModal.WHATSAPP -> do
       whenJust req.messageKey $ \messageKey -> do
-        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing
         whenJust mbMerchantMessage $ \merchantMessage -> do
           mbPhoneNumber <- decrypt `mapM` person.mobileNumber
           whenJust mbPhoneNumber $ \phoneNumber -> do
@@ -104,7 +104,7 @@ notifyCustomerFromDashboard customerId req = do
             void $ Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId variables Nothing Nothing merchantMessage.mediaUrl)
     API.Types.Dashboard.RideBooking.MultiModal.SMS -> do
       whenJust req.messageKey $ \messageKey -> do
-        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing
         whenJust mbMerchantMessage $ \merchantMessage -> do
           mbPhoneNumber <- decrypt `mapM` person.mobileNumber
           whenJust mbPhoneNumber $ \phoneNumber -> do
