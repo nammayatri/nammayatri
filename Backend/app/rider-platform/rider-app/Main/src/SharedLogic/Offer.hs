@@ -171,7 +171,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
       rider = Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
-  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
+  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
   offerListResp <-
     if useDomainOffers
