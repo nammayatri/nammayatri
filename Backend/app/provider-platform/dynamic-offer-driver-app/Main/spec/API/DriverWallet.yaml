@@ -133,6 +133,7 @@ types:
     totalAmount: HighPrecMoney
     redeemableAmount: HighPrecMoney
     nonRedeemableAmount: HighPrecMoney
+    items: "[WalletItem]"
   WalletLedgerEntryItem:
     entryId: Id LedgerEntry
     itemReference: Text

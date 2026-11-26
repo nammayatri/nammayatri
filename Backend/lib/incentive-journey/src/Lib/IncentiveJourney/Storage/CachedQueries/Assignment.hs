@@ -20,14 +20,15 @@ import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as Fie
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
+import Lib.IncentiveJourney.OptIn (isOptInActiveForLocalTime)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as QUCMExtra
 import Lib.IncentiveJourney.Types.Actor (JourneyActor (..), actorCachePrefix)
 
--- | Eval / driver UI: OptIn rows only when optedInAt is set.
--- Pass city-local now — UCM.validTill is local wall-clock stored as UTCTime.
+-- | Eval / driver UI: OptIn rows only when opted-in for the current local period.
+-- Pass city-local now — UCM.validTill / optedInAt are local wall-clock stored as UTCTime.
 findAssignmentsByUserId ::
   (BeamFlow m r) =>
   JourneyActor ->
@@ -56,7 +57,7 @@ findUcmAssignments actor personId now requireOptIn = do
   ucms <- findUserCohortMappingsByPersonId actor personId now
   cjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
   let pairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms cjms]
-      selectedPairs = if requireOptIn then filterOptInActive pairs else pairs
+      selectedPairs = if requireOptIn then filterOptInActive now pairs else pairs
   pure $
     [ Assignment.JourneyAssignment
         { userCohortMapping = Just ucm,
@@ -111,8 +112,8 @@ findDriverAssignments actor personId merchantId merchantOperatingCityId mbVehicl
   ucms <- findUserCohortMappingsByPersonId actor personId now
   ucmCjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
   let ucmPairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms ucmCjms]
-      activeUcmPairs = filterOptInActive ucmPairs
-      -- Listing may include pending OptIn invites; allowIfNoMapping still keys off opted-in / Assigned only.
+      activeUcmPairs = filterOptInActive now ucmPairs
+      -- Listing may include pending OptIn invites; allowIfNoMapping still keys off period-active / Assigned only.
       selectedUcmPairs = if requireOptIn then activeUcmPairs else ucmPairs
       ucmAssignments =
         [ Assignment.JourneyAssignment
@@ -148,15 +149,16 @@ findDriverAssignments actor personId merchantId merchantOperatingCityId mbVehicl
         _ -> pure Nothing
   pure $ nubBy sameCohortJourneyMapping (ucmAssignments <> autoAssignments)
 
--- | OptIn campaigns require optedInAt; Assigned (or missing / null campaignUserLinkType) stay active.
+-- | OptIn campaigns require period-active opt-in; Assigned (or missing link type) stay active.
 filterOptInActive ::
+  UTCTime ->
   [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)] ->
   [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)]
-filterOptInActive =
+filterOptInActive localNow =
   filter
     ( \(ucm, cjm) ->
         case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
-          DCJM.OptIn -> isJust ucm.optedInAt
+          DCJM.OptIn -> isOptInActiveForLocalTime localNow (Just cjm.startDate) ucm
           DCJM.Assigned -> True
     )
 

@@ -174,6 +174,29 @@ data DeprecatedTripCategory
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DestinationEditInfo = DestinationEditInfo
+  { bookingUpdateRequestId :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    validTill :: Kernel.Prelude.UTCTime,
+    previousDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    newDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    driverLocationAtEdit :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    oldMaxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    oldEstimatedFare :: Kernel.Types.Common.PriceAPIEntity,
+    estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
+    estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    snapToRoadFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    oldFareParamsId :: Kernel.Prelude.Text,
+    fareParamsId :: Kernel.Prelude.Text,
+    farePolicyId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverEdaKafka = DriverEdaKafka
   { driver_id :: Kernel.Prelude.String,
     rid :: Kernel.Prelude.Maybe Kernel.Prelude.String,
@@ -190,6 +213,10 @@ data DriverEdaKafka = DriverEdaKafka
     partition_date :: Kernel.Prelude.String,
     date :: Kernel.Prelude.String
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data EditDestinationRoute = EditDestinationRoute {requestedWaypoints :: [Kernel.External.Maps.Types.LatLong], call :: MapsRouteCall}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -417,6 +444,10 @@ data PaymentMode
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data PickupEditInfo = PickupEditInfo {editedAt :: Kernel.Prelude.UTCTime, previousPickupLocation :: Kernel.Prelude.Maybe LocationAPIEntity, newPickupLocation :: Kernel.Prelude.Maybe LocationAPIEntity}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RideCallCountRes = RideCallCountRes {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, callCount :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -434,7 +465,12 @@ data RideDetailGroup
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data RideEstimatedRouteRes = RideEstimatedRouteRes {transactionId :: Kernel.Prelude.Text, estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, calls :: [MapsRouteCall]}
+data RideEstimatedRouteRes = RideEstimatedRouteRes
+  { transactionId :: Kernel.Prelude.Text,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    calls :: [MapsRouteCall],
+    editDestinations :: [EditDestinationRoute]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -633,7 +669,9 @@ data RideInfoRes = RideInfoRes
     recomputeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     finalFarePolicyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    pickupEdits :: Kernel.Prelude.Maybe [PickupEditInfo],
+    destinationEdits :: Kernel.Prelude.Maybe [DestinationEditInfo]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

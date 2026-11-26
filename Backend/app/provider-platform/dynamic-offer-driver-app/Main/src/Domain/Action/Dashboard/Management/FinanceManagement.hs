@@ -459,7 +459,7 @@ calculateRevenueRecognized subId = do
 
 -- | Fetch invoices using the shared filter logic for invoice list / pdf endpoints.
 -- When @mbIssuedToTypes@ is supplied and non-empty, it overrides the singular
--- @mbIssuedToType@: the singular CUSTOMER default is skipped, the list is used
+-- @mbIssuedToType@: the list is used
 -- as an IN-clause filter on issued_to_type, and the BAP-side statusIn auto-filter
 -- is not applied (caller can still pass ?status= explicitly).
 fetchInvoicesByFilters ::
@@ -473,19 +473,19 @@ fetchInvoicesByFilters ::
   Maybe [IssuedToType] -> -- issuedToTypes (multi-value IN filter)
   Int -> -- limit
   Int -> -- offset
+  Maybe Text -> -- referenceId
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow [FinanceInvoice.Invoice]
-fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo = do
+fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbReferenceId mbStatus mbTo = do
   let issuedToTypeList = fromMaybe [] mbIssuedToTypes
       useTypeList = not (null issuedToTypeList)
-      issuedToType = fromMaybe CUSTOMER mbIssuedToType
-      isBapIssuedToType = issuedToType == RIDER || issuedToType == CUSTOMER
+      isBapOrUnfilteredIssuedToType = maybe True (`Kernel.Prelude.elem` [RIDER, CUSTOMER]) mbIssuedToType
       statusIn =
         if useTypeList
           then []
           else
-            if isBapIssuedToType
+            if isBapOrUnfilteredIssuedToType
               then [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid]
               else []
   when (isJust mbIssuedToType && useTypeList) $
@@ -500,30 +500,38 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
         QFinanceInvoice.findByNumber invoiceNumber >>= \case
           Just inv -> pure [inv]
           Nothing -> pure []
-      Nothing -> do
-        let mbIssuedToId =
-              case mbInvoiceType of
-                Just Ride -> Nothing
-                Just Refund -> Nothing
-                _ -> mbFleetOwnerOrDriverId
-            mbSupplierId =
-              case mbInvoiceType of
-                Just Ride -> mbFleetOwnerOrDriverId
-                Just Refund -> mbFleetOwnerOrDriverId
-                _ -> Nothing
-        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-          merchantOpCityId.getId
-          mbFrom
-          mbTo
-          mbInvoiceType
-          mbStatus
-          mbIssuedToId
-          mbSupplierId
-          (if useTypeList then Nothing else Just issuedToType)
-          issuedToTypeList
-          statusIn
-          (Just limit)
-          (Just offset)
+      Nothing -> case mbReferenceId of
+        Just referenceId -> do
+          let mbRefIssuedToType = if useTypeList then Nothing else mbIssuedToType
+          filter (\i -> not useTypeList || i.issuedToType `Kernel.Prelude.elem` issuedToTypeList)
+            <$> maybe
+              (QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback referenceId mbInvoiceType mbRefIssuedToType)
+              (\status -> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId mbInvoiceType mbRefIssuedToType [status] Nothing Nothing)
+              mbStatus
+        Nothing -> do
+          let mbIssuedToId =
+                case mbInvoiceType of
+                  Just Ride -> Nothing
+                  Just Refund -> Nothing
+                  _ -> mbFleetOwnerOrDriverId
+              mbSupplierId =
+                case mbInvoiceType of
+                  Just Ride -> mbFleetOwnerOrDriverId
+                  Just Refund -> mbFleetOwnerOrDriverId
+                  _ -> Nothing
+          QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+            merchantOpCityId.getId
+            mbFrom
+            mbTo
+            mbInvoiceType
+            mbStatus
+            mbIssuedToId
+            mbSupplierId
+            (if useTypeList then Nothing else mbIssuedToType)
+            issuedToTypeList
+            statusIn
+            (Just limit)
+            (Just offset)
 
 -- | Get invoice list with filters
 getFinanceManagementInvoiceList ::
@@ -538,17 +546,19 @@ getFinanceManagementInvoiceList ::
   Maybe [IssuedToType] ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLimit mbOffset mbReferenceId mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
+  mbResolvedReferenceId <- forM mbReferenceId $ \referenceId -> maybe referenceId (.bookingId.getId) <$> QRide.findById (Id referenceId)
+  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbResolvedReferenceId mbStatus mbTo
 
   -- Default (no status filter): hide Voided/Cancelled. Caller can request
   -- explicitly via ?status=Voided / ?status=Cancelled.
@@ -556,7 +566,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
         Just _ -> invoicesAll
         Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
-  items <- mapM buildInvoiceItem invoices
+  items <- forM invoices $ \invoice -> QFinanceInvoiceExtra.findLinkedInvoices invoice >>= (`buildInvoiceItem` invoice)
 
   let totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
@@ -568,8 +578,11 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
         invoices = items
       }
   where
-    buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.InvoiceListItem
-    buildInvoiceItem invoice = do
+    buildInvoiceItem :: [(InvoiceType, [FinanceInvoice.Invoice])] -> FinanceInvoice.Invoice -> Flow API.InvoiceListItem
+    buildInvoiceItem linkedGroups invoice = do
+      linkedInvoices <- forM linkedGroups $ \(linkedType, linked) -> do
+        linkedItems <- mapM (buildInvoiceItem []) linked
+        pure API.LinkedInvoices {invoiceType = linkedType, invoices = linkedItems}
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
 
@@ -669,7 +682,8 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             issuedToTaxNo = mbIssuedToTaxNo,
             issuedByTaxNo = mbIssuedByTaxNo,
             recognizedRevenue = recognizedRevenue,
-            deferredRevenue = deferredRevenue
+            deferredRevenue = deferredRevenue,
+            linkedInvoices = linkedInvoices
           }
 
 -- Alias for generated API
@@ -685,6 +699,7 @@ getFinanceManagementFinanceInvoiceList ::
   Maybe [IssuedToType] ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
@@ -1814,7 +1829,7 @@ getFinanceManagementFinanceInvoicePdf ::
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLanguage mbLimit mbOffset mbRideId mbStatus mbTo = do
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLanguage mbLimit mbOffset mbReferenceId mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1823,11 +1838,8 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoicesAll <- case (mbInvoiceId, mbInvoiceNumber, mbRideId) of
-    (Nothing, Nothing, Just rideId) -> do
-      ride <- QRide.findById (Id rideId) >>= fromMaybeM (InvalidRequest $ "Ride not found: " <> rideId)
-      QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId mbInvoiceType mbIssuedToType (maybe [] pure mbStatus) (Just limit) (Just offset)
-    _ -> fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
+  mbResolvedReferenceId <- forM mbReferenceId $ \referenceId -> maybe referenceId (.bookingId.getId) <$> QRide.findById (Id referenceId)
+  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbResolvedReferenceId mbStatus mbTo
 
   -- When no explicit status filter is sent, exclude Voided/Cancelled rows so
   -- the PDF endpoint never renders a dead invoice. Caller can request these

@@ -382,6 +382,7 @@ MerchantOperatingCity:
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
     gstin: Maybe Text
+    address: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -1591,6 +1592,7 @@ TransporterConfig:
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
+    smsOtpAllowedCountryCodes: Maybe [Text]
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
@@ -1672,6 +1674,7 @@ TransporterConfig:
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
     enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
+    rentalNextStopLockThreshold: Maybe HighPrecMeters
 
   beamType:
     currency: Maybe Currency
@@ -2114,11 +2117,13 @@ TransporterConfig:
     communicationChannelCharLimits: json
     tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
+    smsOtpAllowedCountryCodes: "text[]"
     stclConfig: json
     takeoverScoring: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
+    rentalNextStopLockThreshold: double precision
 
   default:
     enableLegalComplianceDocuments: "false"
@@ -2381,6 +2386,10 @@ TransporterConfig:
       where: merchantOperatingCityId
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+    updateCallingMode:
+      kvFunction: updateOneWithKV
+      params: [callingMode, driverCallingOption, forceDirectCalling]
       where: merchantOperatingCityId
   extraOperations:
     - EXTRA_QUERY_FILE

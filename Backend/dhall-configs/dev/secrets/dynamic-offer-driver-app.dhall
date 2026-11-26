@@ -23,6 +23,7 @@ in  { dbUserId = "atlas_driver_offer_bpp_user"
     , encHashSalt =
         "How wonderful it is that nobody need wait a single moment before starting to improve the world"
     , dashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"
+    , issueLookupToken = "some-secret-issue-lookup-token-for-rider-app"
     , cloudSwitchPassword = Some "test-cloud-switch-password"
     , appBackendToken = "some-secret-dashboard-token-for-rider-app"
     , driverOfferBppToken = "some-secret-dashboard-token-for-driver-offer-bpp"

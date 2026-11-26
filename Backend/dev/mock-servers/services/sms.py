@@ -63,6 +63,11 @@ def handle(handler, path, body):
     with _LOCK:
         _MESSAGES[recipient].append(payload)
 
+    msg_id = f"mock-{recipient}-{len(_MESSAGES[recipient])}"
     return handler._json({
-        "data": {"message": [{"id": f"mock-{recipient}-{len(_MESSAGES[recipient])}", "status": "SUCCESS"}]},
+        # MyValueFirst reads data.message[]; Pinbix (/sms/SMSApi/send) reads the top-level status.
+        "data": {"message": [{"id": msg_id, "status": "SUCCESS"}]},
+        "status": "success",
+        "statusCode": "200",
+        "msgId": msg_id,
     })

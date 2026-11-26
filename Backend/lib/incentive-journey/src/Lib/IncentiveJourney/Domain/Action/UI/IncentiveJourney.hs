@@ -106,15 +106,59 @@ postIncentiveJourneyOptIn handle (mbPersonId, merchantId, merchantOpCityId) req 
       >>= fromMaybeM (InvalidRequest "User cohort mapping invite not found; assign/invite first")
   unless inviteUcm.enabled $
     throwError (InvalidRequest "Invite is disabled; contact support or wait for a new invite")
-  let optInPeriod = fromMaybe DUCM.Daily req.optInPeriod
-  void $ QUCMExtra.markUserCohortMappingOptedIn personId cjm.id optInPeriod req.validTill "driver"
+  let optInPeriod = IJ.resolveCampaignOptInPeriod cjm req.optInPeriod
+  ucm <- QUCMExtra.markUserCohortMappingOptedIn personId cjm.id optInPeriod req.validTill localTime "driver"
   handle.clearAssignmentCacheByPersonId personId
+  -- Tag: min(campaign end, period end, stored UCM.validTill). Mark keeps max(existing, req).
+  let tagValidTill =
+        min endDate $
+          min ucm.validTill $
+            IJ.optInPeriodExclusiveEnd localTime optInPeriod (Just cjm.startDate)
   whenJust handle.syncCampaignMembership $ \sync -> do
     milestones <- sortOn (.order) <$> handle.getMilestonesByJourneyId journey.id
-    case CampaignSync.mkHotPathSync localTime journey cjm milestones True (Just req.validTill) of
+    case CampaignSync.mkHotPathSync localTime journey cjm milestones True (Just tagValidTill) of
       Nothing -> pure ()
       Just payload -> sync personId (Just payload)
   pure Success
+
+mkUiOptInStatus :: UTCTime -> DCJM.CohortJourneyMapping -> Maybe DUCM.UserCohortMapping -> API.OptInStatus
+mkUiOptInStatus localNow cjm mbUcm =
+  case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
+    DCJM.Assigned -> API.NotRequired
+    DCJM.OptIn ->
+      if maybe False (IJ.isOptInActiveForLocalTime localNow (Just cjm.startDate)) mbUcm
+        then API.OptedIn
+        else API.Pending
+
+-- | Clear period-stale OptIn rows so list returns Pending and tags drop. True if anything cleared.
+lazyClearStaleOptIns ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  Id IJC.Person ->
+  UTCTime ->
+  [IJ.JourneyAssignment] ->
+  m Bool
+lazyClearStaleOptIns handle personId localTime assignments = do
+  let stale =
+        [ (cjm, optedInAt)
+          | a <- assignments,
+            let cjm = a.cohortJourneyMapping,
+            fromMaybe DCJM.Assigned cjm.campaignUserLinkType == DCJM.OptIn,
+            Just ucm <- [a.userCohortMapping],
+            IJ.hasStaleOptIn localTime (Just cjm.startDate) ucm,
+            Just optedInAt <- [ucm.optedInAt]
+        ]
+  if null stale
+    then pure False
+    else do
+      -- CAS on optedInAt so a concurrent POST opt-in is not wiped; only drop tag if clear won.
+      forM_ stale $ \(cjm, staleOptedInAt) -> do
+        didClear <- QUCMExtra.clearOptInUserCohortMappingIfOptedInAt personId cjm.id staleOptedInAt
+        when didClear $
+          whenJust handle.clearCampaignMembership $ \clear -> clear personId cjm.id
+      handle.clearAssignmentCacheByPersonId personId
+      -- Always re-fetch after attempting (even if all CAS lost) so list does not serve the stale snapshot.
+      pure True
 
 getIncentiveJourneyList ::
   BeamFlow m r =>
@@ -126,19 +170,19 @@ getIncentiveJourneyList ::
   Maybe Int ->
   Maybe Int ->
   m API.IncentiveJourneyListRes
-mkUiOptInStatus :: DCJM.CohortJourneyMapping -> Maybe DUCM.UserCohortMapping -> API.OptInStatus
-mkUiOptInStatus cjm mbUcm =
-  case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
-    DCJM.Assigned -> API.NotRequired
-    DCJM.OptIn ->
-      if isJust (mbUcm >>= (.optedInAt)) then API.OptedIn else API.Pending
 getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimit mbOffset = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
-  localTime <- getLocalCurrentTime timeDiffFromUtc
   -- Include pending OptIn invites so FE can surface the opt-in popup (cjmId / validTill).
-  -- Eval / settle / tags keep using findAssignmentsByUserId (optedInAt required for OptIn).
-  assignments <- handle.findDashboardAssignmentsByUserId driverId
+  -- Eval / settle / tags keep using findAssignmentsByUserId (period-active OptIn).
+  assignments0 <- handle.findDashboardAssignmentsByUserId driverId
+  -- Capture after fetch so a same-request period-boundary opt-in stamp is not treated as stale.
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  cleared <- lazyClearStaleOptIns handle driverId localTime assignments0
+  assignments <-
+    if cleared
+      then handle.findDashboardAssignmentsByUserId driverId
+      else pure assignments0
   let mappedJourneyIds = map ((.journeyId) . (.cohortJourneyMapping)) assignments
   if null mappedJourneyIds
     then pure API.IncentiveJourneyListRes {journeys = []}
@@ -199,8 +243,9 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                     endDate = endDate,
                     streakRange = cjm.streakRange,
                     enabled = cjm.enabled,
-                    optInStatus = mkUiOptInStatus cjm mbUcm,
+                    optInStatus = mkUiOptInStatus localTime cjm mbUcm,
                     optedInAt = mbUcm >>= (.optedInAt),
+                    optInPeriod = IJ.listOptInPeriod cjm,
                     validTill = (.validTill) <$> mbUcm,
                     milestones = items
                   }

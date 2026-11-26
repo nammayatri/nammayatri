@@ -124,8 +124,7 @@ customerIssueHandle =
       mbGetRideCardInfoByRideIds = Just castRideCardInfoByRideIds,
       mbCounterpartDashboardInfo = Just $ \merchantId -> do
         mbMerchant <- CQM.findById (cast merchantId)
-        mbToken <- asks (.driverDashboardToken)
-        pure $ (,) <$> (mbMerchant <&> (.driverOfferBaseUrl)) <*> mbToken,
+        pure $ mbMerchant >>= \merchant -> (merchant.driverOfferBaseUrl,) <$> merchant.driverOfferMerchantShortId,
       selfLookupToken = asks (.issueLookupToken),
       mbReportACIssue = Just reportACIssue,
       mbReportIssue = Just reportIssue,

@@ -4987,6 +4987,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
     castPaymentInstrumentToCommon DMPM.NetBanking = BecknPI.NetBanking
     castPaymentInstrumentToCommon DMPM.Cash = BecknPI.Cash
     castPaymentInstrumentToCommon DMPM.BoothOnline = BecknPI.BoothOnline
+    castPaymentInstrumentToCommon DMPM.Online = BecknPI.Online
 
     convertBookingAPIEntity :: UIDriver.BookingAPIEntity -> Flow Common.FleetBookingAPIEntity
     convertBookingAPIEntity UIDriver.BookingAPIEntity {..} = do

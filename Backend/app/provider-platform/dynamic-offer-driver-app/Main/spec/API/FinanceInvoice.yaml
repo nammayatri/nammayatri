@@ -50,6 +50,10 @@ types:
   FinanceInvoicePdfResp:
     pdfBase64: Text
     invoiceNumber: Text
+    linkedInvoices: "[FinanceLinkedInvoicePdfs]"
+  FinanceLinkedInvoicePdfs:
+    invoiceType: InvoiceType
+    invoices: "[FinanceInvoicePdfResp]"
   FinanceInvoicePdfUrlResp:
     invoiceId: Text
     pdfUrl: Maybe Text

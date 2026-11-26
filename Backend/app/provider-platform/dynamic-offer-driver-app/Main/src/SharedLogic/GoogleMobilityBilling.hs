@@ -75,4 +75,5 @@ toRegionCode country = case country of
   Context.USA -> "US"
   Context.Netherlands -> "NL"
   Context.Finland -> "FI"
+  Context.Jordan -> "JO"
   _ -> "IN"

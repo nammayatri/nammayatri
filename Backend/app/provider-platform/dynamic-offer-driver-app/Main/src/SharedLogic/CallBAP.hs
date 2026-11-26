@@ -22,6 +22,7 @@ module SharedLogic.CallBAP
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
+    sendStopsUpdatedToBAP,
     sendDestinationArrivalUpdateToBAP,
     sendDriverNearPickupUpdateToBAP,
     sendReturnTripStartedUpdateToBAP,
@@ -1329,6 +1330,31 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = unlessSharedRun booking
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
+
+sendStopsUpdatedToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  Int ->
+  [DOU.RentalStop] ->
+  m ()
+sendStopsUpdatedToBAP booking ride stopsVersion stops = do
+  mbBookingDetails <- buildBookingDetails booking ride
+  whenJust mbBookingDetails $ \bookingDetails -> do
+    let stopsUpdatedBuildReq = ACL.StopsUpdatedBuildReq ACL.DStopsUpdatedBuildReq {..}
+    stopsUpdatedMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing stopsUpdatedBuildReq
+    retryConfig <- asks (.shortDurationRetryCfg)
+    void $ callOnUpdateV2 stopsUpdatedMsgV2 retryConfig bookingDetails.merchant.id
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,

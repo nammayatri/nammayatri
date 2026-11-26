@@ -268,12 +268,14 @@ data AssignmentView = AssignmentView
     assignedAt :: UTCTime
   }
 
-mkAssignmentOptInStatus :: DCJM.CohortJourneyMapping -> Maybe DUCM.UserCohortMapping -> AssignmentOptInStatus
-mkAssignmentOptInStatus cjm mbUcm =
+mkAssignmentOptInStatus :: UTCTime -> DCJM.CohortJourneyMapping -> Maybe DUCM.UserCohortMapping -> AssignmentOptInStatus
+mkAssignmentOptInStatus localNow cjm mbUcm =
   case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
     DCJM.Assigned -> NotRequired
     DCJM.OptIn ->
-      if isJust (mbUcm >>= (.optedInAt)) then OptedIn else Pending
+      if maybe False (IJ.isOptInActiveForLocalTime localNow (Just cjm.startDate)) mbUcm
+        then OptedIn
+        else Pending
 
 listAssignmentViews ::
   BeamFlow m r =>
@@ -286,17 +288,20 @@ listAssignmentViews handle merchantShortId opCity personId = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   -- Pending OptIn invites must appear here; eval / driver UI keep using
   -- findAssignmentsByUserId (opt-in filtered).
+  timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
+  localTime <- getLocalCurrentTime timeDiffFromUtc
   assignments <- handle.findDashboardAssignmentsByUserId personId
-  items <- mapMaybeM (toAssignmentView (ID.cast merchant.id) (ID.cast merchantOpCityId)) assignments
+  items <- mapMaybeM (toAssignmentView localTime (ID.cast merchant.id) (ID.cast merchantOpCityId)) assignments
   pure $ sortOn (Down . (.assignedAt)) items
 
 toAssignmentView ::
   BeamFlow m r =>
+  UTCTime ->
   ID.Id DIJC.Merchant ->
   ID.Id DIJC.MerchantOperatingCity ->
   IJ.JourneyAssignment ->
   m (Maybe AssignmentView)
-toAssignmentView merchantId merchantOpCityId assignment = do
+toAssignmentView localTime merchantId merchantOpCityId assignment = do
   let cjm = assignment.cohortJourneyMapping
   mbJourney <- QJourney.findById cjm.journeyId
   case mbJourney of
@@ -324,7 +329,7 @@ toAssignmentView merchantId merchantOpCityId assignment = do
                 enabled = cjm.enabled,
                 userEnabled = maybe True (.enabled) mbUcm,
                 campaignUserLinkType = linkType,
-                optInStatus = mkAssignmentOptInStatus cjm mbUcm,
+                optInStatus = mkAssignmentOptInStatus localTime cjm mbUcm,
                 optedInAt = mbUcm >>= (.optedInAt),
                 startDate = cjm.startDate,
                 endDate = IJ.displayStreakEndDate cjm.startDate cjm.streakRange journeyType,
@@ -368,20 +373,27 @@ assignUser handle merchantShortId opCity personId cjmId enabled validTill notFou
   ucm <- QUCMExtra.upsertUserCohortMapping personId cjmId enabled validTill
   handle.clearAssignmentCacheByPersonId personId
   -- Disabled UCM: clear tag. Unassign also clears optedInAt — re-invite starts Pending.
-  -- Re-enable with enabled=True only syncs tag when optedInAt is set (post opt-in / Assigned).
+  -- Re-enable with enabled=True: OptIn tag only when period-active; Assigned still syncs via mkHotPathSync.
   if not ucm.enabled
     then whenJust handle.clearCampaignMembership $ \clear -> clear personId cjmId
     else do
       -- Cap tag expiry at campaign end so a stale UCM.validTill cannot extend perks.
-      let snapshotOptedIn = isJust ucm.optedInAt
+      let snapshotOptedIn = IJ.isOptInActiveForLocalTime localTime (Just cjm.startDate) ucm
           snapshotValidTill =
             if snapshotOptedIn
-              then Just (min ucm.validTill endDate)
+              then -- Missing optInPeriod → Daily (same default as isOptInActiveForLocalTime).
+
+                let periodEnd =
+                      IJ.optInPeriodExclusiveEnd
+                        localTime
+                        (fromMaybe DCJM.Daily ucm.optInPeriod)
+                        (Just cjm.startDate)
+                 in Just (min endDate (min ucm.validTill periodEnd))
               else Nothing
-      syncMgMembershipSnapshot handle personId journey cjm snapshotOptedIn snapshotValidTill
+      syncMgMembershipSnapshot handle personId journey cjm snapshotOptedIn snapshotValidTill localTime
 
 -- | Opt-in for OptIn cohorts. Requires an existing invite UCM row.
--- validTill should be the period end (caller computes from terms / daily|weekly).
+-- Cadence comes from CJM.optInPeriod (request optional fallback; default Daily).
 optInUser ::
   BeamFlow m r =>
   ServiceHandle m ->
@@ -389,13 +401,13 @@ optInUser ::
   Kernel.Types.Beckn.Context.City ->
   ID.Id DIJC.Person ->
   ID.Id DCJM.CohortJourneyMapping ->
-  DUCM.OptInPeriod ->
+  Maybe DCJM.OptInPeriod ->
   UTCTime ->
   Text ->
   Text ->
   Text ->
   m ()
-optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill optedInBy notFoundMessage cityMessage = do
+optInUser handle merchantShortId opCity personId cjmId mbReqOptInPeriod validTill optedInBy notFoundMessage cityMessage = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   person <- handle.findPersonById personId >>= fromMaybeM (InvalidRequest notFoundMessage)
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
@@ -411,6 +423,7 @@ optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill opt
   timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let endDate = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+      optInPeriod = IJ.resolveCampaignOptInPeriod cjm mbReqOptInPeriod
   when (localTime >= endDate) $
     throwError (InvalidRequest "Cohort journey mapping has expired")
   when (validTill > endDate) $
@@ -418,9 +431,14 @@ optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill opt
   when (validTill <= localTime) $
     throwError (InvalidRequest "validTill must be in the future")
   assertControlFeaturesSlotAvailable handle personId cjm
-  void $ QUCMExtra.markUserCohortMappingOptedIn personId cjmId optInPeriod validTill optedInBy
+  ucm <- QUCMExtra.markUserCohortMappingOptedIn personId cjmId optInPeriod validTill localTime optedInBy
   handle.clearAssignmentCacheByPersonId personId
-  syncMgMembershipSnapshot handle personId journey cjm True (Just validTill)
+  -- Tag: min(campaign end, period end, stored UCM.validTill). Mark keeps max(existing, req).
+  let tagValidTill =
+        min endDate $
+          min ucm.validTill $
+            IJ.optInPeriodExclusiveEnd localTime optInPeriod (Just cjm.startDate)
+  syncMgMembershipSnapshot handle personId journey cjm True (Just tagValidTill) localTime
 
 unassignUser ::
   BeamFlow m r =>
@@ -473,12 +491,12 @@ syncMgMembershipSnapshot ::
   DCJM.CohortJourneyMapping ->
   Bool ->
   Maybe UTCTime ->
+  UTCTime -> -- city-local now (window / tag gates)
   m ()
-syncMgMembershipSnapshot handle personId journey cjm optedIn mbValidTill =
+syncMgMembershipSnapshot handle personId journey cjm optedIn mbValidTill localTime =
   whenJust handle.syncCampaignMembership $ \sync -> do
     milestones <- sortOn (.order) <$> handle.getMilestonesByJourneyId journey.id
-    now <- getCurrentTime
-    case CampaignSync.mkHotPathSync now journey cjm milestones optedIn mbValidTill of
+    case CampaignSync.mkHotPathSync localTime journey cjm milestones optedIn mbValidTill of
       Nothing ->
         -- Clear this CJM from the tag when invite-only OptIn or journey no longer needs tracking.
         when (fromMaybe DCJM.Assigned cjm.campaignUserLinkType == DCJM.OptIn && not optedIn) $
@@ -595,6 +613,7 @@ rollCohortJourneyMapping handle merchantId merchantOpCityId previousId newStartD
       previous.streakEndRewardExpirationAt
       previous.streakEndRewardMetadata
       previous.campaignUserLinkType
+      previous.optInPeriod
       previous.controlFeatures
   rolloverAutoApplyMappings handle previous rolled
   handle.clearAssignmentCacheByCohortMappingId previous.id

@@ -22,7 +22,6 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock (utctDay)
-import "beckn-spec" Domain.Types.Invoice (IssuedToType (CUSTOMER))
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import Kernel.Types.Id (Id)
@@ -46,7 +45,7 @@ generateB2CQRForInvoice transporterConfig invoiceId = do
   let qrEnabled = fromMaybe False (transporterConfig.invoiceConfig >>= (.enableB2CUnsignedQR))
   mbInvoice <- if qrEnabled then QFInvoice.findById invoiceId else pure Nothing
   whenJust mbInvoice $ \invoice ->
-    when (invoice.issuedToType == CUSTOMER && isNothing invoice.unsignedQRCode) $ do
+    when (isNothing invoice.unsignedQRCode) $ do
       mbTaxTxn <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
       -- Nothing when the seller GSTIN is missing — we never persist a QR without
       -- it (a non-compliant QR reads as "done" later, which is worse than none).

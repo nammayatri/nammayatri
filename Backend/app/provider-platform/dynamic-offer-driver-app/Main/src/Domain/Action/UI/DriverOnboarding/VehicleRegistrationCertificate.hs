@@ -985,7 +985,7 @@ endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
     forM_ rcs $ \rc ->
       Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
 
-removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 removeVehicle isTaxiBoothRequest driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide

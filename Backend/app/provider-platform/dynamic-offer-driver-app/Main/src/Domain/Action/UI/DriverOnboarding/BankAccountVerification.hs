@@ -117,5 +117,6 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
 deleteBankAccount :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
 deleteBankAccount (personId, _merchantId, _merchantOpCityId) = do
   QDBA.deleteById personId
+  QDBA.syncBankAccountToPool personId False Nothing
   QDI.updateDriverBankAccountDetails Nothing personId
   pure Success

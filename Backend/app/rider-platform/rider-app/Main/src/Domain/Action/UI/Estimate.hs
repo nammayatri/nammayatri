@@ -121,7 +121,7 @@ mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP
       offer = (\offers -> (offers {SOffer.offerListResp = map grossOffer offers.offerListResp} :: SOffer.CumulativeOfferResp)) <$> mbOffer
   return
     EstimateAPIEntity
-      { agencyName = providerName,
+      { agencyName = bppDetails.name,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = [],

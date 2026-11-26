@@ -883,7 +883,7 @@ emptyLedgerEntriesResponse =
       groups = []
     }
   where
-    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0}
+    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0, items = []}
 
 isWalletPayoutEntry :: FLedgerEntry.LedgerEntry -> Bool
 isWalletPayoutEntry e = e.referenceType == walletReferencePayout
@@ -893,7 +893,8 @@ toLedgerTotal itemGroup =
   DriverWallet.WalletLedgerTotal
     { totalAmount = itemGroup.totalAmount,
       redeemableAmount = sum (map (.redeemableBalance) itemGroup.items),
-      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items)
+      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items),
+      items = itemGroup.items
     }
 
 groupEntriesByReference :: [FLedgerEntry.LedgerEntry] -> [(Text, UTCTime, [FLedgerEntry.LedgerEntry])]
@@ -1343,15 +1344,19 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
       mShortId = Just merchant.shortId.getShortId
       address =
         Just $
-          show merchantOpCity.city
-            <> ", "
-            <> show merchantOpCity.state
-            <> ", "
-            <> show merchantOpCity.country
+          fromMaybe
+            ( show merchantOpCity.city
+                <> ", "
+                <> show merchantOpCity.state
+                <> ", "
+                <> show merchantOpCity.country
+            )
+            merchantOpCity.address
       supplierName = (mbInvoiceConfig >>= (.walletInvoiceSupplierName)) <|> mName
       supplierAddress = (mbInvoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> address
-      supplierGSTIN = merchantOpCity.gstin <|> merchant.gstin
-      supplierId = Nothing
+      merchantGstin = merchantOpCity.gstin <|> merchant.gstin
+      supplierId = Just merchantId.getId
+  (issuedToName, _) <- driverInvoiceParty mocId driverId Nothing
   pure
     FinanceCtx
       { merchantId = merchantId.getId,
@@ -1368,18 +1373,18 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
         merchantShortId = mShortId,
         issuedByAddress = address,
         supplierName = supplierName,
-        supplierGSTIN = supplierGSTIN,
-        merchantGstin = Nothing,
-        supplierVatNumber = Nothing,
+        supplierGSTIN = merchantGstin,
+        merchantGstin = merchantGstin,
+        supplierVatNumber = merchant.vatNumber,
         supplierAddress = supplierAddress,
-        merchantVatNumber = Nothing,
+        merchantVatNumber = merchant.vatNumber,
         supplierId = supplierId,
         panOfParty = Nothing,
         panType = Nothing,
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing,
+        issuedToName = issuedToName,
         enableWalletGatedTierCheck = walletGateEnabled,
         buyerCounterpartyId = Nothing,
         initialSettlementStatus = Nothing

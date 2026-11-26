@@ -15,7 +15,8 @@ import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data MerchantOperatingCity = MerchantOperatingCity
-  { city :: Kernel.Types.Beckn.Context.City,
+  { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    city :: Kernel.Types.Beckn.Context.City,
     cloudBaseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     country :: Kernel.Types.Beckn.Context.Country,
@@ -33,4 +34,4 @@ data MerchantOperatingCity = MerchantOperatingCity
     supportEmails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
+  deriving (Generic, (FromJSON), (ToJSON), (Show), (Eq), (ToSchema))

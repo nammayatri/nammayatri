@@ -8,20 +8,20 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 
 data UserCohortMappingT f = UserCohortMappingT
-  { cohortMappingId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    enabled :: B.C f Kernel.Prelude.Bool,
-    id :: B.C f Kernel.Prelude.Text,
-    optInPeriod :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.OptInPeriod),
-    optedInAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    optedInBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    termsAcceptedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    userId :: B.C f Kernel.Prelude.Text,
-    validTill :: B.C f Kernel.Prelude.UTCTime
+  { cohortMappingId :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    enabled :: (B.C f Kernel.Prelude.Bool),
+    id :: (B.C f Kernel.Prelude.Text),
+    optInPeriod :: (B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.OptInPeriod)),
+    optedInAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    optedInBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    termsAcceptedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    userId :: (B.C f Kernel.Prelude.Text),
+    validTill :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table UserCohortMappingT where
 
 type UserCohortMapping = UserCohortMappingT Identity
 
-$(enableKVPG ''UserCohortMappingT ['id] [['cohortMappingId], ['userId]])
+$(enableKVPG (''UserCohortMappingT) [('id)] [[('cohortMappingId)], [('userId)]])
 
-$(mkTableInstancesGenericSchema ''UserCohortMappingT "user_cohort_mapping")
+$(mkTableInstancesGenericSchema (''UserCohortMappingT) "user_cohort_mapping")

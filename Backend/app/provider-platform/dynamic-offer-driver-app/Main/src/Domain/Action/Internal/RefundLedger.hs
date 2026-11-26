@@ -19,7 +19,6 @@ import Control.Applicative ((<|>))
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
-import qualified Domain.Types.Person as DP
 import Domain.Types.Ride (Ride (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
@@ -119,9 +118,8 @@ refundLedger rideId req apiKey = do
             postLegs ctx Settled legs req.refundRequestId
         -- the fleet/driver-visible refund invoice + (if driver-deducted) the negative Commission invoice, once per refund
         unless alreadyDone $ do
-          createRefundInvoice ctx (customerRefundParty booking) req.refundRequestId (fromMaybe [] req.refundComponents)
-          when deductFromDriver $ do
-            createRefundInvoice ctx (driverRefundParty ride mbDriver) req.refundRequestId (map (driverCancellationShare totals) (fromMaybe [] req.refundComponents))
+          createRefundInvoice ctx ride booking req.refundRequestId (fromMaybe [] req.refundComponents)
+          when deductFromDriver $
             createCommissionRefundInvoice ctx req totals ride booking rideCommission cancellationCommissionGross
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
@@ -275,64 +273,40 @@ getRefundRequestLegs = LedgerSvc.getEntriesByEntityReference LE.RefundRequest
 refundLedgerLockKey :: Text -> Text
 refundLedgerLockKey refundRequestId = "refundLedger:" <> refundRequestId
 
-data RefundInvoiceParty = RefundInvoiceParty
-  { issuedToType :: IssuedToType,
-    issuedToId :: Text,
-    issuedToName :: Maybe Text,
-    issuedToAddress :: Maybe Text
-  }
-
-customerRefundParty :: DBooking.Booking -> RefundInvoiceParty
-customerRefundParty booking =
-  RefundInvoiceParty
-    { issuedToType = CUSTOMER,
-      issuedToId = maybe "" (.getId) booking.riderId,
-      issuedToName = booking.riderName,
-      issuedToAddress = booking.fromLocation.address.fullAddress
-    }
-
-driverRefundParty :: Ride -> Maybe DP.Person -> RefundInvoiceParty
-driverRefundParty ride mbDriver =
-  RefundInvoiceParty
-    { issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
-      issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-      issuedToName = if isJust ride.fleetOwnerId then Nothing else (.firstName) <$> mbDriver,
-      issuedToAddress = Nothing
-    }
-
 createRefundInvoice ::
   FinanceCtx ->
-  RefundInvoiceParty ->
+  Ride ->
+  DBooking.Booking ->
   Text ->
   [RefundLedgerComponent] ->
   Flow ()
-createRefundInvoice ctx party refundsRequestId comps = do
+createRefundInvoice ctx ride booking refundsRequestId comps = do
   let referenceId = ctx.referenceId -- booking.id
       lineItems = concatMap mkRefundInvoiceLineItems comps
       anyVat = any (\c -> c.taxAmount > 0) comps
-  mbParentRideInvoice <-
-    listToMaybe
-      <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Ride) (Just party.issuedToType) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
+      issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+      parentInvoiceType = if booking.status == DBooking.CANCELLED then BeckInvoice.RideCancellation else BeckInvoice.Ride
+  mbParentInvoice <- listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just parentInvoiceType) (Just issuedToType) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
   createRes <-
     InvoiceSvc.createInvoice
       InvoiceI.InvoiceInput
         { invoiceType = BeckInvoice.Refund,
           entityReferenceId = Just refundsRequestId,
-          referenceInvoiceNumber = (\inv -> inv.invoiceNumber) <$> mbParentRideInvoice,
-          issuedToType = party.issuedToType,
-          issuedToId = party.issuedToId,
-          issuedToName = party.issuedToName,
-          issuedToAddress = party.issuedToAddress,
+          referenceInvoiceNumber = (.invoiceNumber) <$> mbParentInvoice,
+          issuedToType = issuedToType,
+          issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+          issuedToName = booking.riderName,
+          issuedToAddress = booking.fromLocation.address.fullAddress,
           issuedByType = "BUYER",
           issuedById = ctx.merchantId,
           issuedByName = ctx.merchantName,
           issuedByAddress = ctx.issuedByAddress,
           supplierName = ctx.supplierName,
           supplierAddress =
-            (mbParentRideInvoice >>= (.supplierAddress))
+            (mbParentInvoice >>= (.supplierAddress))
               <|> (if anyVat then ctx.supplierAddress <|> ctx.issuedByAddress else ctx.supplierAddress),
           supplierGSTIN = ctx.supplierGSTIN,
-          supplierTaxNo = Nothing,
+          supplierTaxNo = if anyVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
           supplierId = ctx.supplierId,
           merchantGstin = ctx.merchantGstin,
           referenceId = Just referenceId,
@@ -353,15 +327,15 @@ createRefundInvoice ctx party refundsRequestId comps = do
           merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
           isVat = anyVat,
           issuedToTaxNo = Nothing,
-          issuedByTaxNo = Nothing,
+          issuedByTaxNo = if anyVat then ctx.merchantVatNumber else ctx.merchantGstin,
           paymentMode = Nothing
         }
       []
   case createRes of
-    Left err -> logError $ "createRefundInvoice: failed to create BPP " <> show party.issuedToType <> " refund invoice for booking " <> referenceId <> ": " <> show err
+    Left err -> logError $ "createRefundInvoice: failed to create BPP " <> show issuedToType <> " refund invoice for booking " <> referenceId <> ": " <> show err
     Right newInv -> do
       InvoiceSvc.updateInvoiceStatus newInv.id FInvoice.Paid
-      logInfo $ "createRefundInvoice: created BPP " <> show party.issuedToType <> " refund invoice " <> newInv.id.getId <> " for booking " <> referenceId <> " refundRequest " <> refundsRequestId
+      logInfo $ "createRefundInvoice: created BPP " <> show issuedToType <> " refund invoice " <> newInv.id.getId <> " for booking " <> referenceId <> " refundRequest " <> refundsRequestId
 
 -- | Per-component BPP refund invoice lines (negative Fare + inline Tax, shared groupId).
 --   Ride fare and cancellation fee are regular taxable lines; toll/parking are flagged
@@ -414,16 +388,18 @@ createCommissionRefundInvoice ctx req totals ride booking rideCommission cancell
     -- by refundRequestId, so they don't collide here); Nothing if none found.
     mbParentCommissionInvoice <-
       listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId (Just BeckInvoice.Commission) Nothing [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
+    (partyName, partyAddress) <- Wallet.driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
+    let commissionIsVat = fromMaybe False booking.fareParams.isVatTaxType
     createRes <-
       InvoiceSvc.createInvoice
         InvoiceI.InvoiceInput
-          { invoiceType = BeckInvoice.Commission,
-            entityReferenceId = Nothing,
+          { invoiceType = BeckInvoice.CommissionRefund,
+            entityReferenceId = Just req.refundRequestId,
             referenceInvoiceNumber = (\inv -> inv.invoiceNumber) <$> mbParentCommissionInvoice,
             issuedToType = issuedToType',
             issuedToId = issuedToId',
-            issuedToName = Nothing,
-            issuedToAddress = Nothing,
+            issuedToName = partyName,
+            issuedToAddress = partyAddress,
             issuedByType = "BUYER",
             issuedById = ctx.merchantId,
             issuedByName = ctx.merchantName,
@@ -432,10 +408,10 @@ createCommissionRefundInvoice ctx req totals ride booking rideCommission cancell
             -- Mirror the parent commission invoice so both documents name the same supplier address.
             supplierAddress = (mbParentCommissionInvoice >>= (.supplierAddress)) <|> ctx.issuedByAddress,
             supplierGSTIN = ctx.supplierGSTIN,
-            supplierTaxNo = Nothing,
+            supplierTaxNo = if commissionIsVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
             supplierId = ctx.supplierId,
             merchantGstin = ctx.merchantGstin,
-            referenceId = Just req.refundRequestId,
+            referenceId = Just booking.id.getId,
             gstinOfParty = Nothing,
             panOfParty = Nothing,
             panType = Nothing,
@@ -451,9 +427,9 @@ createCommissionRefundInvoice ctx req totals ride booking rideCommission cancell
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId,
             merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
-            isVat = fromMaybe False booking.fareParams.isVatTaxType,
+            isVat = commissionIsVat,
             issuedToTaxNo = Nothing,
-            issuedByTaxNo = Nothing,
+            issuedByTaxNo = if commissionIsVat then ctx.merchantVatNumber else ctx.merchantGstin,
             paymentMode = Nothing
           }
         []

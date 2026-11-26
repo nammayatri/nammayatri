@@ -607,7 +607,8 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
             (pure Nothing)
             ( \loc ->
                 fmap (.id.getId)
-                  <$> QSpecialLocation.findPickupSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
+                  -- Queue polygon: drivers queued from the outer ring get the zone's tier names.
+                  <$> QSpecialLocation.findQueueSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
             )
       )
         `C.catchAll` \err -> do

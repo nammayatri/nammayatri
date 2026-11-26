@@ -302,6 +302,7 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
     currencyText EUR = "EUR"
     currencyText INR = "INR"
     currencyText USD = "USD"
+    currencyText JOD = "JOD"
 
 -- | Flatten an Object to @[(dot.path, value)]@ pairs; Arrays skipped
 -- (handled by 'renderLineItemsHtml').

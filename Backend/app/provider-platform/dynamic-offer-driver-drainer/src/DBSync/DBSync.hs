@@ -235,16 +235,24 @@ process dbStreamKey count = do
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      let updateEntries = mapMaybe filterUpdateCommands commands
-          deleteEntries = mapMaybe filterDeleteCommands commands
-          createDataEntries = mapMaybe filterCreateCommands commands
+      let segments = splitBeforeRecreate commands
+      when (length segments > 1) $
+        EL.logInfo ("DELETE_THEN_CREATE_SPLIT" :: Text) ("read of " <> show (length commands) <> " commands runs as " <> show (length segments) <> " segments")
+      runSegments 0 segments
+
+    runSegments :: Int -> [[(EL.KVDBStreamEntryID, DBCommand, ByteString)]] -> Flow Int
+    runSegments done [] = pure done
+    runSegments done (segment : rest) = do
+      let updateEntries = mapMaybe filterUpdateCommands segment
+          deleteEntries = mapMaybe filterDeleteCommands segment
+          createDataEntries = mapMaybe filterCreateCommands segment
 
       dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries
       case dbsyncOperationsOutput of
         Left cnt -> do
           stopDrainer
-          pure cnt
-        Right cnt -> pure cnt
+          pure (done + cnt)
+        Right cnt -> runSegments (done + cnt) rest
 
 startDBSync :: Bool -> Flow ()
 startDBSync isCritical = do

@@ -125,6 +125,23 @@ updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItem
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateCallingMode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m ()
+updateCallingMode callingMode driverCallingOption forceDirectCalling merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.callingMode callingMode,
+      Se.Set Beam.driverCallingOption driverCallingOption,
+      Se.Set Beam.forceDirectCalling forceDirectCalling,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TransporterConfig.TransporterConfig -> m ()
 updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime
@@ -158,7 +175,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.allowPanReupload allowPanReupload,
       Se.Set Beam.allowRcUnlinkWhenDriverOffline allowRcUnlinkWhenDriverOffline,
       Se.Set Beam.allowedPaymentInstrumentForPayout allowedPaymentInstrumentForPayout,
-      Se.Set Beam.allowedReferralEntities (Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)),
+      Se.Set Beam.allowedReferralEntities ((Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities))),
       Se.Set Beam.analyticsConfig ((Just . Data.Aeson.toJSON) analyticsConfig),
       Se.Set Beam.areaPreferenceMinCells areaPreferenceMinCells,
       Se.Set Beam.arrivalTimeBufferOfVehicle (Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle),
@@ -192,7 +209,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.bookAnyVehicleDowngradeLevel bookAnyVehicleDowngradeLevel,
       Se.Set Beam.bulkWaiveOffLimit (Just bulkWaiveOffLimit),
       Se.Set Beam.cacheOfferListByDriverId cacheOfferListByDriverId,
-      Se.Set Beam.cachedDevicesOSForSearchRequest (Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)),
+      Se.Set Beam.cachedDevicesOSForSearchRequest ((Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest))),
       Se.Set Beam.callingMode callingMode,
       Se.Set Beam.canAddCancellationFee canAddCancellationFee,
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
@@ -336,7 +353,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.freeTrialDays freeTrialDays,
       Se.Set Beam.generateReferralCodeForFleet generateReferralCodeForFleet,
       Se.Set Beam.generateReferralCodeForOperator generateReferralCodeForOperator,
-      Se.Set Beam.gpsTollBehaviorWindowDays gpsTollBehaviorWindowDays,
+      Se.Set Beam.gpsTollBehaviorWindowDays (gpsTollBehaviorWindowDays),
       Se.Set Beam.graceTimeForScheduledRidePickup (Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds graceTimeForScheduledRidePickup),
       Se.Set Beam.includeDriverCurrentlyOnRide includeDriverCurrentlyOnRide,
       Se.Set Beam.individualPANCheck individualPANCheck,
@@ -427,6 +444,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.referralLinkPassword referralLinkPassword,
       Se.Set Beam.refillVehicleModel refillVehicleModel,
       Se.Set Beam.reminderSystemEnabled reminderSystemEnabled,
+      Se.Set Beam.rentalNextStopLockThreshold rentalNextStopLockThreshold,
       Se.Set Beam.requireFleetOwnerRegistrationForEnablement requireFleetOwnerRegistrationForEnablement,
       Se.Set Beam.requireRcTakeoverPhoto requireRcTakeoverPhoto,
       Se.Set Beam.requireRouteMappingInVehicle (Just requireRouteMappingInVehicle),
@@ -455,6 +473,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.sharedCabTripEarningsTarget sharedCabTripEarningsTarget,
       Se.Set Beam.sharedRunConfig (Kernel.Prelude.toJSON <$> sharedRunConfig),
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
+      Se.Set Beam.smsOtpAllowedCountryCodes smsOtpAllowedCountryCodes,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,
       Se.Set Beam.specialLocationTags specialLocationTags,
@@ -493,7 +512,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
       Se.Set Beam.validNameComparePercentage validNameComparePercentage,
       Se.Set Beam.variantsToEnableForSubscription variantsToEnableForSubscription,
-      Se.Set Beam.vehicleCategoryExcludedFromVerification ((Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification),
+      Se.Set Beam.vehicleCategoryExcludedFromVerification (((Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification)),
       Se.Set Beam.videoFileSizeUpperLimit videoFileSizeUpperLimit,
       Se.Set Beam.volunteerSmsSendingLimit (Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit),
       Se.Set Beam.weeklyConditionCooldownTimeHours weeklyConditionCooldownTimeHours,

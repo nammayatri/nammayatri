@@ -1361,3 +1361,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN events_window_s
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_arrival boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_run_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rental_next_stop_lock_threshold double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN sms_otp_allowed_country_codes text[] ;

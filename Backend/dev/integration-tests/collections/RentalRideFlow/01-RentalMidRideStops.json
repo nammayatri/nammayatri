@@ -1,0 +1,2059 @@
+{
+  "info": {
+    "name": "NY Rental Mid-Ride Stops (Bangalore, Auto Rickshaw)",
+    "description": "Rider changes stops while a rental ride is in progress (updateStops):\n  Driver onboard -> Rider auth -> Rental search -> Confirm -> Driver accepts -> Driver starts ->\n  add A, B -> old version refused -> add C before B -> moving next stop A refused with the driver 800 m from it ->\n  driver 4 km away: A moved behind C -> far-away arrival refused -> arrive C -> out-of-turn arrival refused ->\n  arrive A, B -> single-stop add refused -> end ride.\n\nNeeds rider_config.enable_rental_stop_updates = true for the city (see dev/local-testing-data/rental-mid-ride-stops.sql).\nOnboarding to start comes from the rental collection removed in 3f8663259d.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Rental Driver\", \"colour\": \"White\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "{{plan_id}}",
+            "subscribe"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Rental Switch (Driver Profile)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('canSwitchToRental set to true');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"canSwitchToRental\": true}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/profile",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "profile"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Set Driver Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search (Rental, 4hr/40km)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var startTs = new Date(Date.now() + 30 * 1000).toISOString(); pm.environment.set('_rental_start_time', startTs);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('searchId', d.searchId); console.log('Rental Search ID:', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); const w=parseInt(pm.environment.get('search_wait_ms')||'8000',10); while(Date.now()-s<w){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"RENTAL\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Rental Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"isSourceManuallyMoved\": false, \"startTime\": \"{{_rental_start_time}}\", \"estimatedRentalDistance\": {{rental_distance_meters}}, \"estimatedRentalDuration\": {{rental_duration_seconds}}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Rental Quotes",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<3000){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var quotes = d.quotes || [];",
+              "var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+              "var pick = null;",
+              "for (var i=0; i<quotes.length; i++) {",
+              "  var inner = quotes[i].onRentalCab || quotes[i].onDemandCab;",
+              "  if (!inner) continue;",
+              "  if (inner.vehicleVariant === want) { pick = inner; break; }",
+              "}",
+              "if (!pick && quotes.length > 0) pick = quotes[0].onRentalCab || quotes[0].onDemandCab;",
+              "if (pick) { pm.environment.set('quoteId', pick.id); console.log('Rental Quote:', pick.id, 'variant:', pick.vehicleVariant, 'fare:', pick.estimatedTotalFare); console.log('All quotes:', quotes.map(function(q){var i=q.onRentalCab||q.onDemandCab; return i?i.vehicleVariant+'='+i.estimatedTotalFare:'?';}).join(', ')); }",
+              "pm.test('Has rental quotes', function () { pm.expect(pm.environment.get('quoteId')).to.be.a('string').that.is.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Confirm Rental Quote",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<5000){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/quotes/{{quoteId}}/confirm",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "quotes",
+            "{{quoteId}}",
+            "confirm"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<2000){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got rental search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "} else {",
+              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Rental Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver accepted rental ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Verify Rental, Extract OTP)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<5000){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.list && d.list.length > 0) {",
+              "  var booking = d.list[0];",
+              "  pm.environment.set('customer_bookingId', booking.id);",
+              "  var otp = booking.rideOtp;",
+              "  if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "    otp = booking.rideList[0].rideOtp;",
+              "  }",
+              "  pm.environment.set('ride_otp', otp || '');",
+              "  console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', otp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
+              "  pm.test('Booking is rental', function () { pm.expect(JSON.stringify(booking.tripCategory)).to.include('Rental'); });",
+              "  pm.test('Has rideOtp', function () { pm.expect(pm.environment.get('ride_otp')).to.be.a('string').that.is.not.empty; });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Rental Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Start Rental Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Rental ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"odometer\": {\"value\": 0, \"fileId\": \"test-odometer-start\"}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Booking (No Stops Yet)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var rideStatus = (d.rideList && d.rideList.length > 0) ? d.rideList[0].status : null;",
+              "var tries = parseInt(pm.collectionVariables.get('_poll_started') || '0', 10);",
+              "if (rideStatus !== 'INPROGRESS' && tries < 20) {",
+              "  pm.collectionVariables.set('_poll_started', String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('Ride in progress for the rider', function () { pm.expect(rideStatus).to.eql('INPROGRESS'); });",
+              "  pm.test('Rider can change stops (rentalStops set)', function () { pm.expect(d.rentalStops).to.be.an('array'); });",
+              "  pm.test('No stops yet', function () { pm.expect(d.rentalStops).to.have.lengthOf(0); });",
+              "  pm.test('Never changed (stopsVersion null)', function () { pm.expect(d.stopsVersion).to.eql(null); });",
+              "  pm.test('maxPendingRentalStops set', function () { pm.expect(d.maxPendingRentalStops).to.be.a('number'); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Update Stops (Add A, B)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/updateStops",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "updateStops"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"stopsVersion\": null, \"stops\": [{\"gps\": {\"lat\": {{stop_a_lat}}, \"lon\": {{stop_a_lon}}}, \"address\": {\"area\": \"Test Stop A\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\", \"title\": \"Stop A\"}}, {\"gps\": {\"lat\": {{stop_b_lat}}, \"lon\": {{stop_b_lon}}}, \"address\": {\"area\": \"Test Stop B\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\", \"title\": \"Stop B\"}}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Booking (Version 1: A next, then B)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var key = '_poll_v1';",
+              "var tries = parseInt(pm.collectionVariables.get(key) || '0', 10);",
+              "if (d.stopsVersion !== 1 && tries < 20) {",
+              "  pm.collectionVariables.set(key, String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  var stops = d.rentalStops || [];",
+              "  console.log('stopsVersion', d.stopsVersion, 'rentalStops', JSON.stringify(stops.map(function (s) { return {id: s.location.id, lat: s.location.lat, lon: s.location.lon, reachedAt: s.reachedAt}; })));",
+              "  function at(stop, letter) { return Math.abs(stop.location.lat - parseFloat(pm.environment.get('stop_' + letter + '_lat'))) < 1e-6 && Math.abs(stop.location.lon - parseFloat(pm.environment.get('stop_' + letter + '_lon'))) < 1e-6; }",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('stopsVersion is 1', function () { pm.expect(d.stopsVersion).to.eql(1); });",
+              "",
+              "  pm.test('Two stops: A then B', function () { pm.expect(stops).to.have.lengthOf(2); pm.expect(at(stops[0], 'a')).to.be.true; pm.expect(at(stops[1], 'b')).to.be.true; });",
+              "  pm.test('None reached', function () { pm.expect(stops.every(function (s) { return !s.reachedAt; })).to.be.true; });",
+              "  pm.test('Full address kept', function () { pm.expect(stops[0].location.title).to.eql('Stop A'); });",
+              "  pm.environment.set('stop_a_id', stops[0].location.id);",
+              "  pm.environment.set('stop_b_id', stops[1].location.id);",
+              "",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Ride (Next Stop A, Drop B)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var ride = pm.response.json().list[0];",
+              "console.log('next', JSON.stringify(ride.nextStopLocation), 'to', JSON.stringify(ride.toLocation), 'stops', JSON.stringify(ride.stops));",
+              "pm.test('Next stop is A', function () { pm.expect(ride.nextStopLocation.lat).to.be.closeTo(parseFloat(pm.environment.get('stop_a_lat')), 1e-6); });",
+              "pm.test('Drop is B', function () { pm.expect(ride.toLocation.lat).to.be.closeTo(parseFloat(pm.environment.get('stop_b_lat')), 1e-6); });",
+              "pm.test('Stops before the drop: A', function () { pm.expect(ride.stops).to.have.lengthOf(1); pm.expect(ride.stops[0].stopInfo).to.eql(null); });",
+              "pm.environment.set('driver_stop_b_id', ride.toLocation.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Update Stops (Old Version Refused)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/updateStops",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "updateStops"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"stopsVersion\": null, \"stops\": [{\"gps\": {\"lat\": {{stop_c_lat}}, \"lon\": {{stop_c_lon}}}, \"address\": {\"area\": \"Test Stop C\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\", \"title\": \"Stop C\"}}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A change based on an old list is refused', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+              "console.log('Refused as expected:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Update Stops (Add C Before B)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/updateStops",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "updateStops"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"stopsVersion\": 1, \"stops\": [{\"locationId\": \"{{stop_a_id}}\"}, {\"gps\": {\"lat\": {{stop_c_lat}}, \"lon\": {{stop_c_lon}}}, \"address\": {\"area\": \"Test Stop C\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\", \"title\": \"Stop C\"}}, {\"locationId\": \"{{stop_b_id}}\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Booking (Version 2: A, C, B)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var key = '_poll_v2';",
+              "var tries = parseInt(pm.collectionVariables.get(key) || '0', 10);",
+              "if (d.stopsVersion !== 2 && tries < 20) {",
+              "  pm.collectionVariables.set(key, String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  var stops = d.rentalStops || [];",
+              "  console.log('stopsVersion', d.stopsVersion, 'rentalStops', JSON.stringify(stops.map(function (s) { return {id: s.location.id, lat: s.location.lat, lon: s.location.lon, reachedAt: s.reachedAt}; })));",
+              "  function at(stop, letter) { return Math.abs(stop.location.lat - parseFloat(pm.environment.get('stop_' + letter + '_lat'))) < 1e-6 && Math.abs(stop.location.lon - parseFloat(pm.environment.get('stop_' + letter + '_lon'))) < 1e-6; }",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('stopsVersion is 2', function () { pm.expect(d.stopsVersion).to.eql(2); });",
+              "",
+              "  pm.test('Three stops: A, C, B', function () { pm.expect(stops).to.have.lengthOf(3); pm.expect(at(stops[0], 'a')).to.be.true; pm.expect(at(stops[1], 'c')).to.be.true; pm.expect(at(stops[2], 'b')).to.be.true; });",
+              "  pm.test('A is the same stop', function () { pm.expect(stops[0].location.id).to.eql(pm.environment.get('stop_a_id')); });",
+              "  pm.test('B kept its location', function () { pm.expect(stops[2].location.id).to.eql(pm.environment.get('stop_b_id')); });",
+              "  pm.environment.set('stop_c_id', stops[1].location.id);",
+              "",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Update Stops (Next Stop A Locked, Driver 800 m Away)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/updateStops",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "updateStops"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"stopsVersion\": 2, \"stops\": [{\"locationId\": \"{{stop_c_id}}\"}, {\"locationId\": \"{{stop_a_id}}\"}, {\"locationId\": \"{{stop_b_id}}\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Changing the next stop near the driver is refused', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+              "pm.test('The rider is told why', function () { pm.expect(pm.response.json().errorMessage).to.include('about to reach the next stop'); });",
+              "console.log('Refused as expected:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Location Update (4 km From Stop A)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{driver_far_lat}}, \"lon\": {{driver_far_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Update Stops (Next Stop Moved, Driver Far)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/updateStops",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "updateStops"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"stopsVersion\": 2, \"stops\": [{\"locationId\": \"{{stop_c_id}}\"}, {\"locationId\": \"{{stop_a_id}}\"}, {\"locationId\": \"{{stop_b_id}}\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Booking (Version 3: C, A, B)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var key = '_poll_v3';",
+              "var tries = parseInt(pm.collectionVariables.get(key) || '0', 10);",
+              "if (d.stopsVersion !== 3 && tries < 20) {",
+              "  pm.collectionVariables.set(key, String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  var stops = d.rentalStops || [];",
+              "  console.log('stopsVersion', d.stopsVersion, 'rentalStops', JSON.stringify(stops.map(function (s) { return {id: s.location.id, lat: s.location.lat, lon: s.location.lon, reachedAt: s.reachedAt}; })));",
+              "  function at(stop, letter) { return Math.abs(stop.location.lat - parseFloat(pm.environment.get('stop_' + letter + '_lat'))) < 1e-6 && Math.abs(stop.location.lon - parseFloat(pm.environment.get('stop_' + letter + '_lon'))) < 1e-6; }",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('stopsVersion is 3', function () { pm.expect(d.stopsVersion).to.eql(3); });",
+              "  pm.test('Three stops: C, A, B', function () { pm.expect(stops).to.have.lengthOf(3); pm.expect(at(stops[0], 'c')).to.be.true; pm.expect(at(stops[1], 'a')).to.be.true; pm.expect(at(stops[2], 'b')).to.be.true; });",
+              "  pm.test('Every stop kept its location', function () { pm.expect([stops[0].location.id, stops[1].location.id, stops[2].location.id]).to.eql([pm.environment.get('stop_c_id'), pm.environment.get('stop_a_id'), pm.environment.get('stop_b_id')]); });",
+              "",
+              "",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Ride (Next Stop C, Drop B)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var ride = pm.response.json().list[0];",
+              "console.log('next', JSON.stringify(ride.nextStopLocation), 'to', JSON.stringify(ride.toLocation));",
+              "pm.test('Next stop is C', function () { pm.expect(ride.nextStopLocation.lat).to.be.closeTo(parseFloat(pm.environment.get('stop_c_lat')), 1e-6); });",
+              "pm.test('Drop is B', function () { pm.expect(ride.toLocation.lat).to.be.closeTo(parseFloat(pm.environment.get('stop_b_lat')), 1e-6); });",
+              "pm.environment.set('driver_stop_b_id', ride.toLocation.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Arrived At Stop C From Far Away (Refused)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/stop",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{stop_b_lat}}, \"lon\": {{stop_b_lon}}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Arriving away from the next stop is refused', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+              "console.log('Refused as expected:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Arrived At Stop C",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/stop",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{stop_c_lat}}, \"lon\": {{stop_c_lon}}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver arrived at stop C');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Booking (Version 4: C Reached)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var key = '_poll_v4';",
+              "var tries = parseInt(pm.collectionVariables.get(key) || '0', 10);",
+              "if (d.stopsVersion !== 4 && tries < 20) {",
+              "  pm.collectionVariables.set(key, String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  var stops = d.rentalStops || [];",
+              "  console.log('stopsVersion', d.stopsVersion, 'rentalStops', JSON.stringify(stops.map(function (s) { return {id: s.location.id, lat: s.location.lat, lon: s.location.lon, reachedAt: s.reachedAt}; })));",
+              "  function at(stop, letter) { return Math.abs(stop.location.lat - parseFloat(pm.environment.get('stop_' + letter + '_lat'))) < 1e-6 && Math.abs(stop.location.lon - parseFloat(pm.environment.get('stop_' + letter + '_lon'))) < 1e-6; }",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('stopsVersion is 4', function () { pm.expect(d.stopsVersion).to.eql(4); });",
+              "",
+              "  pm.test('C reached, A and B not', function () { pm.expect(stops[0].reachedAt).to.be.a('string'); pm.expect(stops[1].reachedAt).to.eql(null); pm.expect(stops[2].reachedAt).to.eql(null); });",
+              "",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Arrived At Drop B Out Of Turn (Refused)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/{{driver_stop_b_id}}/stop",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "{{driver_stop_b_id}}",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{stop_b_lat}}, \"lon\": {{stop_b_lon}}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Reaching a stop other than the next one is refused', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+              "console.log('Refused as expected:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Arrived At Stop A",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/stop",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{stop_a_lat}}, \"lon\": {{stop_a_lon}}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver arrived at stop A');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Arrived At Drop B",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/stop",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{stop_b_lat}}, \"lon\": {{stop_b_lon}}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver arrived at stop B');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Booking (Version 6: All Reached)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var key = '_poll_v6';",
+              "var tries = parseInt(pm.collectionVariables.get(key) || '0', 10);",
+              "if (d.stopsVersion !== 6 && tries < 20) {",
+              "  pm.collectionVariables.set(key, String(tries + 1));",
+              "  var s = Date.now(); while (Date.now() - s < 1000) {}",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  var stops = d.rentalStops || [];",
+              "  console.log('stopsVersion', d.stopsVersion, 'rentalStops', JSON.stringify(stops.map(function (s) { return {id: s.location.id, lat: s.location.lat, lon: s.location.lon, reachedAt: s.reachedAt}; })));",
+              "  function at(stop, letter) { return Math.abs(stop.location.lat - parseFloat(pm.environment.get('stop_' + letter + '_lat'))) < 1e-6 && Math.abs(stop.location.lon - parseFloat(pm.environment.get('stop_' + letter + '_lon'))) < 1e-6; }",
+              "  pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('stopsVersion is 6', function () { pm.expect(d.stopsVersion).to.eql(6); });",
+              "",
+              "  pm.test('All three reached', function () { pm.expect(stops).to.have.lengthOf(3); pm.expect(stops.every(function (s) { return !!s.reachedAt; })).to.be.true; });",
+              "",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Ride (No Next Stop)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var ride = pm.response.json().list[0];",
+              "pm.test('No next stop', function () { pm.expect(ride.nextStopLocation).to.eql(null); });",
+              "pm.test('Last stop reached is B', function () { pm.expect(ride.lastStopLocation.lat).to.be.closeTo(parseFloat(pm.environment.get('stop_b_lat')), 1e-6); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Add Stop On Old Flow (Refused)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/addStop",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "{{customer_bookingId}}",
+            "addStop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gps\": {\"lat\": {{stop_c_lat}}, \"lon\": {{stop_c_lon}}}, \"address\": {\"area\": \"Test Stop C\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\", \"title\": \"Stop C\"}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('The single-stop add on a ride with a stop list is refused', function () { pm.expect(pm.response.code).to.be.within(400, 499); });",
+              "console.log('Refused as expected:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "End Rental Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<1500){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Rental ride ended');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{stop_b_lat}}, \"lon\": {{stop_b_lon}}}, \"odometer\": {\"value\": 40, \"fileId\": \"test-odometer-end\"}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Booking Completed (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<3000){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); }); pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); }); console.log('Rental flow done! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "v2",
+            "{{customer_bookingId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import Kernel.Prelude
-import Kernel.Types.Common (Currency (..), HighPrecMeters (..), HighPrecMoney (..))
+import Kernel.Types.Common (Currency (..), HighPrecMeters (..), HighPrecMoney (..), getDisplayAccuracy)
 import Lib.Finance.Invoice.RenderTemplate (buildTemplateChecked, escHtml)
 import Text.Printf (printf)
 
@@ -146,13 +146,15 @@ formatEmailDistance meters =
 
 formatEmailMoney :: Currency -> HighPrecMoney -> Text
 formatEmailMoney currency amount =
-  currencySymbol currency <> " " <> T.pack (printf "%.2f" (realToFrac (getHighPrecMoney amount) :: Double))
+  let decimals = getDisplayAccuracy currency
+   in currencySymbol currency <> " " <> T.pack (printf "%.*f" decimals (realToFrac (getHighPrecMoney amount) :: Double))
 
 currencySymbol :: Currency -> Text
 currencySymbol = \case
   EUR -> "€"
   INR -> "₹"
   USD -> "$"
+  JOD -> "JD"
 
 renderInvoiceEmail :: Text -> Text -> InvoiceEmailData -> RenderedInvoiceEmail
 renderInvoiceEmail subjectTemplate htmlTemplate emailData =

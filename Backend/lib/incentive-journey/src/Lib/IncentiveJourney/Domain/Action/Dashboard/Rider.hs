@@ -37,7 +37,6 @@ import qualified Lib.IncentiveJourney.Domain.Types.Common as DIJC
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
-import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import qualified Lib.IncentiveJourney.Evaluation as Evaluation
 import qualified Lib.IncentiveJourney.RewardMetadata as RM
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
@@ -260,6 +259,10 @@ postIncentiveJourneyCohortJourneyCreate handle merchantShortId opCity req = do
     when (req.streakRange `mod` d /= 0) $
       throwError (InvalidRequest "periodDays must evenly divide streakRange")
   let campaignUserLinkType = Just $ maybe DCJM.Assigned toDomainCampaignUserLinkType req.campaignUserLinkType
+      optInPeriod =
+        case fromMaybe DCJM.Assigned campaignUserLinkType of
+          DCJM.Assigned -> Nothing
+          DCJM.OptIn -> Just $ maybe DCJM.Daily toDomainOptInPeriod req.optInPeriod
       streakMeta = RM.injectPeriodDaysIntoStreakMeta req.periodDays Nothing
   Core.assertNoExistingCohortJourneyMapping (ID.cast merchantOpCityId) cohortId journeyId
   cjm <-
@@ -278,6 +281,7 @@ postIncentiveJourneyCohortJourneyCreate handle merchantShortId opCity req = do
       req.streakEndRewardExpirationAt
       streakMeta
       campaignUserLinkType
+      optInPeriod
       req.controlFeatures
   pure Common.CreateCohortJourneyMappingRes {cohortJourneyMappingId = ID.cast cjm.id}
 
@@ -329,6 +333,13 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
         req.periodDays <|> RM.streakMetaPeriodDays cjm.streakEndRewardMetadata
       controlFeatures = req.controlFeatures <|> cjm.controlFeatures
       campaignUserLinkType = (toDomainCampaignUserLinkType <$> req.campaignUserLinkType) <|> cjm.campaignUserLinkType
+      optInPeriod =
+        case fromMaybe DCJM.Assigned campaignUserLinkType of
+          DCJM.Assigned -> Nothing
+          DCJM.OptIn ->
+            Just $
+              fromMaybe DCJM.Daily $
+                (toDomainOptInPeriod <$> req.optInPeriod) <|> cjm.optInPeriod
       streakMetaFinal = RM.injectPeriodDaysIntoStreakMeta periodDays cjm.streakEndRewardMetadata
   whenJust periodDays $ \d -> do
     when (d <= 0) $ throwError (InvalidRequest "periodDays must be > 0")
@@ -345,6 +356,7 @@ putIncentiveJourneyCohortJourneyUpdate handle merchantShortId opCity req = do
           DCJM.streakEndRewardExpirationAt = streakEndRewardExpirationAt,
           DCJM.streakEndRewardMetadata = streakMetaFinal,
           DCJM.campaignUserLinkType = campaignUserLinkType,
+          DCJM.optInPeriod = optInPeriod,
           DCJM.controlFeatures = controlFeatures
          }
   handle.clearAssignmentCacheByCohortMappingId cjmId
@@ -393,6 +405,7 @@ toCohortJourneyMappingListItem cjm cohort journey =
           isActive = cjm.enabled,
           journeyType = toApiJourneyType journeyType,
           campaignUserLinkType = toApiCampaignUserLinkType (fromMaybe DCJM.Assigned cjm.campaignUserLinkType),
+          optInPeriod = toApiOptInPeriod <$> IJ.listOptInPeriod cjm,
           controlFeatures = cjm.controlFeatures,
           periodDays = RM.streakMetaPeriodDays cjm.streakEndRewardMetadata,
           maxWaiveOffCount = cjm.maxWaiveOffCount,
@@ -443,7 +456,7 @@ postIncentiveJourneyOptIn handle merchantShortId opCity req = do
     opCity
     (ID.cast @Dashboard.Common.Person @DIJC.Person req.personId)
     (ID.cast @Dashboard.Common.CohortJourneyMapping @DCJM.CohortJourneyMapping req.cohortJourneyMappingId)
-    (toDomainOptInPeriod $ fromMaybe Common.OptInDaily req.optInPeriod)
+    (toDomainOptInPeriod <$> req.optInPeriod)
     req.validTill
     (fromMaybe "dashboard" req.optedInBy)
     "Person not found"
@@ -662,10 +675,15 @@ toApiOptInStatus = \case
   Core.Pending -> Common.Pending
   Core.OptedIn -> Common.OptedIn
 
-toDomainOptInPeriod :: Common.OptInPeriod -> DUCM.OptInPeriod
+toDomainOptInPeriod :: Common.OptInPeriod -> DCJM.OptInPeriod
 toDomainOptInPeriod = \case
-  Common.OptInDaily -> DUCM.Daily
-  Common.OptInWeekly -> DUCM.Weekly
+  Common.OptInDaily -> DCJM.Daily
+  Common.OptInWeekly -> DCJM.Weekly
+
+toApiOptInPeriod :: DCJM.OptInPeriod -> Common.OptInPeriod
+toApiOptInPeriod = \case
+  DCJM.Daily -> Common.OptInDaily
+  DCJM.Weekly -> Common.OptInWeekly
 
 toDomainConditionType :: Common.MilestoneConditionType -> DIJM.MilestoneConditionType
 toDomainConditionType = \case

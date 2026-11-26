@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "SMS OTP Country Restriction - restore rollouts",
+    "description": "Writes back the rollouts captured by SnapshotSmsOtpRollouts. run-tests.sh runs it after the auth suite, because newman --bail stops a failing run before the suite's own restore steps. It is only run with an environment exported from a successful snapshot.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Restore RiderConfig Rollout (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_rider_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RiderConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restore TransporterConfig Rollout (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_driver_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TransporterConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

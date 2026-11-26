@@ -10,6 +10,7 @@ import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Text.Encoding as DTE
@@ -121,6 +122,17 @@ filterUpdateCommands _ = Nothing
 filterDeleteCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
 filterDeleteCommands (id, Delete {}, val) = Just (id, val)
 filterDeleteCommands _ = Nothing
+
+splitBeforeRecreate :: [(L.KVDBStreamEntryID, DBCommand, ByteString)] -> [[(L.KVDBStreamEntryID, DBCommand, ByteString)]]
+splitBeforeRecreate = go HS.empty [] []
+  where
+    go _ current done [] = reverse (close current done)
+    go deleted current done (cmd@(_, dbCommand, _) : rest) = case dbCommand of
+      Delete {} -> go (HS.insert (dbCommandRowKey dbCommand) deleted) (cmd : current) done rest
+      Create {}
+        | dbCommandRowKey dbCommand `HS.member` deleted -> go HS.empty [cmd] (close current done) rest
+      _ -> go deleted (cmd : current) done rest
+    close current done = if null current then done else reverse current : done
 
 getStreamName :: Text -> Flow (Maybe Text)
 getStreamName streamName = do

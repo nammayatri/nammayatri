@@ -65,6 +65,19 @@ data VerificationActionWithPayload verify m = VerificationMethodWithPayload veri
     runVerifyMethodWithPayload :: VerificationPayloadType verify -> [Text] -> Text -> m (VerificationResult verify)
   }
 
+-- | Run an extra check, with the verifier's own arguments, before the
+-- verifier itself. The check can only reject (throw); on success the original
+-- verification runs unchanged.
+guardVerification ::
+  Monad m =>
+  (VerificationPayloadType verify -> [Text] -> Text -> m ()) ->
+  VerificationActionWithPayload verify m ->
+  VerificationActionWithPayload verify m
+guardVerification check (VerificationActionWithPayload verify) =
+  VerificationActionWithPayload $ \payload pathSegments token -> do
+    check payload pathSegments token
+    verify payload pathSegments token
+
 -- -- | This server part implementation accepts token in @token@header,
 -- -- verifies it and puts @'VerificationResult'@to your endpoint.
 instance

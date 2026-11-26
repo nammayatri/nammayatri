@@ -177,7 +177,12 @@ data WalletLedgerRideInfo = WalletLedgerRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletLedgerTotal = WalletLedgerTotal {nonRedeemableAmount :: Kernel.Types.Common.HighPrecMoney, redeemableAmount :: Kernel.Types.Common.HighPrecMoney, totalAmount :: Kernel.Types.Common.HighPrecMoney}
+data WalletLedgerTotal = WalletLedgerTotal
+  { items :: [WalletItem],
+    nonRedeemableAmount :: Kernel.Types.Common.HighPrecMoney,
+    redeemableAmount :: Kernel.Types.Common.HighPrecMoney,
+    totalAmount :: Kernel.Types.Common.HighPrecMoney
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
