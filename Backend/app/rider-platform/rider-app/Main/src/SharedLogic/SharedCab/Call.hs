@@ -74,8 +74,8 @@ exophoneCandidates dialled = [stripped, "0" <> stripped]
   where
     stripped = T.dropWhile (== '0') dialled
 
-findExophoneByDialled :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findExophoneByDialled dialled = firstJustM CQExophone.findByPhone (exophoneCandidates dialled)
+findExophoneByDialled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> m (Maybe Exophone)
+findExophoneByDialled merchantOperatingCityId dialled = firstJustM (CQExophone.findByPhone merchantOperatingCityId) (exophoneCandidates dialled)
 
 -- | The city's ExoPhone that cab riders dial. The lowest by number rather than the cache's first, so the webhook can tell it apart from
 -- a ride-hailing booking's (randomly picked) ExoPhone whatever order the city's list comes back in.
