@@ -211,30 +211,23 @@ postMerchantUpdate merchantShortId city req = do
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
 
-  mbAllExophones <- forM req.exoPhones $ \exophones -> do
-    allExophones <- CQExophone.findAllExophones
-    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantOperatingCityId /= merchantOperatingCity.id) allExophones
-    let reqPhones = getAllPhones $ toList exophones
-    let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
-    unless (null busyPhones) $ do
-      throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
-    pure allExophones
+  mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
-  whenJust req.exoPhones \exophones -> do
+  mbNewExophones <- forM req.exoPhones $ \exophones -> do
     CQExophone.deleteByMerchantOperatingCityId merchantOperatingCity.id
-    forM_ exophones $ \exophoneReq -> do
+    forM (toList exophones) $ \exophoneReq -> do
       exophone <- buildExophone merchant.id merchantOperatingCity.id now exophoneReq
       CQExophone.create exophone
+      pure exophone
 
   CQM.clearCache updMerchant
-  whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id) allExophones
-    CQExophone.clearCache merchantOperatingCity.id oldExophones
+  let oldExophones = maybe [] (filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id)) mbAllExophones
+  let newExophones = fromMaybe [] mbNewExophones
+  unless (null oldExophones && null newExophones) $
+    CQExophone.clearCache merchantOperatingCity.id (oldExophones <> newExophones)
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
-  where
-    getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
 
 buildExophone :: MonadGuid m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
 buildExophone merchantId merchantOperatingCityId now req = do
@@ -904,11 +897,6 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       let (Context.City cityText) = newOperatingCity.city
       mbMappingError <- City.validateAndAppendCityStdCodeMapping cityText stdCode
       whenJust mbMappingError $ \mappingError -> throwError $ InvalidRequest mappingError
-
-  -- Reject before any DB write if the requested exophone number is already in use by another operating city
-  existingExophones <- CQExophone.findAllByPhone req.exophone
-  unless (all (\e -> e.merchantOperatingCityId == newMerchantOperatingCityId) existingExophones) $
-    throwError $ InvalidRequest $ "Exophone number " <> req.exophone <> " is already in use by another operating city"
 
   finally
     ( do

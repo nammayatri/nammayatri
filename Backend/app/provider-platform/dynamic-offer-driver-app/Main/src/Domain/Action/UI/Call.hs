@@ -350,24 +350,29 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
       to = dropFirstZero to_
 
   mobileNumberHash <- getDbHash callFrom
-  exophone <-
-    CQExophone.findByPhone to >>= \case
-      Nothing -> CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
-      Just phone -> return phone
+  byTo <- CQExophone.findAllByPhone to
+  allCandidates <- case byTo of
+    [] -> CQExophone.findAllByPhone callTo
+    _ -> pure byTo
+  let callCandidates = [e | e <- allCandidates, e.exophoneType `elem` [DExophone.CALL_RIDE, DExophone.CALL_DELIVERY_RECEIVER, DExophone.CALL_DELIVERY_SENDER]]
+  tentativeExophone <- case callCandidates of
+    (x : _) -> pure x
+    [] -> throwError (ExophoneDoesNotExist callTo)
 
   (driver, dtmfNumberUsed) <-
-    runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash exophone.merchantId Person.DRIVER) >>= \case
+    runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash tentativeExophone.merchantId Person.DRIVER) >>= \case
       Just entity -> return (entity, Nothing)
       Nothing -> do
         number <- maybe (throwError (PersonWithPhoneNotFound $ show dtmfNumber_)) pure dtmfNumber_
         let dtmfNumber = dropFirstZero $ removeQuotes number
         dtmfMobileHash <- getDbHash dtmfNumber
         person <-
-          runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash exophone.merchantId Person.DRIVER)
+          runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash tentativeExophone.merchantId Person.DRIVER)
             >>= maybe (throwError (PersonWithPhoneNotFound dtmfNumber)) pure
         return (person, Just dtmfNumber)
 
   activeRide <- runInReplica (QRide.getLatestActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  let exophone = fromMaybe tentativeExophone (find (\e -> e.merchantOperatingCityId == activeRide.merchantOperatingCityId) callCandidates)
   ensureCallStatusExists id' callSid activeRide.id callStatus dtmfNumberUsed activeRide.merchantOperatingCityId
 
   activeBooking <-
