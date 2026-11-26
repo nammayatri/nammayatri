@@ -144,14 +144,17 @@ slotLockKey cityId routeId day = "SharedCabPass:slot:" <> cityId.getId <> ":" <>
 
 -- | The term's live tickets for a day. The booking the issue job recorded comes first (it does not depend on
 -- the ticket's startTime); otherwise a startTime window around the departure, or around the whole day when the
--- departure is unknown.
+-- departure is unknown. The window around an early departure reaches into the evening before, so a booking the job
+-- recorded for the day before or after is not this day's ticket.
 ticketsForDay :: Seconds -> DPPP.PurchasedPassPayment -> DT.Day -> Maybe UTCTime -> Flow [DBooking.FRFSTicketBooking]
 ticketsForDay timeDiff term day mbDeparture = do
   mbRecorded <- Hedis.safeGet (issuedKey term.id day) :: Flow (Maybe Text)
   recorded <- maybe (pure Nothing) (QFRFSTicketBooking.findById . Id) mbRecorded
   let (from, to) = maybe (Rules.dayTicketWindow timeDiff day) Rules.liveTicketWindow mbDeparture
-  windowed <- QBookingExtra.findAllByOverrideAppliedEntityIdAndStartTimeRange term.id.getId from to
-  let all' = maybe windowed (\b -> b : filter ((/= b.id) . (.id)) windowed) recorded
+  windowedAll <- QBookingExtra.findAllByOverrideAppliedEntityIdAndStartTimeRange term.id.getId from to
+  otherDays <- catMaybes <$> mapM (\d -> Hedis.safeGet (issuedKey term.id d) :: Flow (Maybe Text)) [DT.addDays (-1) day, DT.addDays 1 day]
+  let windowed = filter (\(b :: DBooking.FRFSTicketBooking) -> b.id.getId `notElem` otherDays) windowedAll
+      all' = maybe windowed (\b -> b : filter ((/= b.id) . (.id)) windowed) recorded
   pure $ filter (\(booking :: DBooking.FRFSTicketBooking) -> Rules.isLiveStatus booking.status) all'
 
 -- | Remembers which booking the job issued for a term's day (two days, longer than any issue window).

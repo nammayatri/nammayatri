@@ -109,16 +109,17 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
   forM_ (Map.toList $ Map.fromListWith (<>) termByDay) $ \(termId, termDays) ->
     lockOrBusy (SharedCabPass.termLockKey termId) (updateFresh timeDiff termId termDays)
   where
-    -- Under the lock: a fresh clock (the departure lookups above take time, and the cutoff may have passed
-    -- meanwhile) and a fresh read of the term.
+    -- Under the lock: a fresh read of the term, each day's departure recomputed from it (a reschedule may have moved
+    -- the day to another slot since the check above), and a fresh clock (the cutoff may have passed meanwhile).
     updateFresh timeDiff termId termDays = do
+      term <- QPPP.findByPrimaryKey termId >>= fromMaybeM (InvalidRequest $ "Term not found: " <> termId.getId)
+      freshDays <- forM termDays $ \(day, _) -> (\d -> (day, d)) <$> SharedCabPass.slotDepartureOn timeDiff term day
       now <- getCurrentTime
       let today = Rules.localDay timeDiff now
-      forM_ termDays $ \(day, mbDeparture) ->
+      forM_ freshDays $ \(day, mbDeparture) ->
         unless (Rules.dayOpenForChange now today mbDeparture day) $
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
-      term <- QPPP.findByPrimaryKey termId >>= fromMaybeM (InvalidRequest $ "Term not found: " <> termId.getId)
-      update timeDiff term termDays
+      update timeDiff term freshDays
 
 -- | Try-lock for 60s (see above); a busy lock fails the request rather than waiting.
 lockOrBusy :: Text -> Flow () -> Flow ()

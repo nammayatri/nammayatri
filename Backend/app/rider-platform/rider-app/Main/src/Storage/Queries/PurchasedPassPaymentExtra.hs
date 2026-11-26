@@ -3,6 +3,7 @@
 
 module Storage.Queries.PurchasedPassPaymentExtra where
 
+import qualified Data.Aeson
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
@@ -233,3 +234,15 @@ findActiveSharedCabTermsOverlapping merchantOperatingCityId fromDay toDay limit 
     (Se.Asc Beam.id)
     (Just limit)
     Nothing
+
+-- | A reschedule's slot change and its un-skip of the day, in one row update, so the day cannot end up moved but still
+-- skipped (or the reverse) when one of two separate writes fails.
+updateSlotChangesAndSkipDaysById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DPurchasedPassPayment.SlotChange] -> [DPurchasedPassPayment.SkipDay] -> Id DPurchasedPassPayment.PurchasedPassPayment -> m ()
+updateSlotChangesAndSkipDaysById slotChanges skipDays id = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.slotChanges (Just (Data.Aeson.toJSON slotChanges)),
+      Se.Set Beam.skipDays (Just (Data.Aeson.toJSON skipDays)),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId id)]

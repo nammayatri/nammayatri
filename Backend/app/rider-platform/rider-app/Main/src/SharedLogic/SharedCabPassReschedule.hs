@@ -27,6 +27,7 @@ import qualified SharedLogic.SharedCabPass as SharedCabPass
 import qualified SharedLogic.SharedCabPassRules as Rules
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPPP
+import qualified Storage.Queries.PurchasedPassPaymentExtra as QPPPExtra
 import Tools.Error
 
 -- | Moves the day onto the slot. Refused when the day is already ticketed, when either slot is past its change cutoff,
@@ -46,6 +47,9 @@ reschedule personId merchantId purchasedPassId day newSlot = do
           -- Under the locks: a fresh read of the term and a fresh clock, since another change may have landed and the
           -- cutoff may have passed while the checks above ran.
           fresh <- QPPP.findByPrimaryKey term.id >>= fromMaybeM (InvalidRequest $ "Term not found: " <> term.id.getId)
+          -- The term may have ended or been cut short (e.g. terminated from the dashboard) since it was first read.
+          unless (fresh.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && fresh.startDate <= day && day <= fresh.endDate) $
+            throwError (InvalidRequest $ "No shuttle term of this pass covers " <> show day)
           let wasSkipped = day `elem` map (.day) fresh.skipDays
           unless (Rules.slotOn fresh day == Just newSlot && not wasSkipped) $ do
             currentDeparture <- SharedCabPass.slotDepartureOn timeDiff fresh day
@@ -65,8 +69,10 @@ reschedule personId merchantId purchasedPassId day newSlot = do
             booked <- SharedCabPass.ridersOnSlot fresh.merchantOperatingCityId newSlot day
             unless (Rules.hasFreeSeat capacity booked) $
               throwError (InvalidRequest "No seats left on this shuttle, please choose another")
-            QPPP.updateSlotChangesById (Rules.setSlotChange fresh.routeId fresh.slotChanges day newSlot) fresh.id
-            when wasSkipped $ QPPP.updateSkipDaysById (Rules.removeSkipDays fresh.skipDays [day]) fresh.id
+            let slotChanges = Rules.setSlotChange fresh.routeId fresh.slotChanges day newSlot
+            if wasSkipped
+              then QPPPExtra.updateSlotChangesAndSkipDaysById slotChanges (Rules.removeSkipDays fresh.skipDays [day]) fresh.id
+              else QPPP.updateSlotChangesById slotChanges fresh.id
             logInfo $ "SharedCabPass: rescheduled term=" <> fresh.id.getId <> " day=" <> show day <> " slot=" <> newSlot <> " seats=" <> show (booked + 1) <> "/" <> show capacity
 
 -- | What the app shows before the rider moves a day: the slot's departure from their pickup, its seats, and whether the

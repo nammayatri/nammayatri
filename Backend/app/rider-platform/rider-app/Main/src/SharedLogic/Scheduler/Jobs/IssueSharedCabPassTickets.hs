@@ -48,13 +48,19 @@ issueSharedCabPassTickets :: Job 'IssueSharedCabPassTickets -> Flow ExecutionRes
 issueSharedCabPassTickets Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
       cityId = jobData.merchantOperatingCityId
-  timeDiff <- SharedCabPass.cityTimeDiff cityId
-  now <- getCurrentTime
-  let today = Rules.localDay timeDiff now
-  issued <- sum <$> mapM (issueForDay timeDiff now cityId.getId) [today, DT.addDays 1 today]
-  logInfo $ "IssueSharedCabPassTickets: issued=" <> show issued
+  -- A failure outside the per-term handlers (the city's config, a page query) must not end the city's chain: the
+  -- successor is scheduled whatever this run's outcome, and the next run tries again.
+  withTryCatch "IssueSharedCabPassTickets:run" (issueCity cityId) >>= \case
+    Right issued -> logInfo $ "IssueSharedCabPassTickets: issued=" <> show issued
+    Left err -> logError $ "IssueSharedCabPassTickets: run failed city=" <> cityId.getId <> " err=" <> show err
   when jobData.autoSchedule $ scheduleNext jobData
   pure Complete
+  where
+    issueCity cityId = do
+      timeDiff <- SharedCabPass.cityTimeDiff cityId
+      now <- getCurrentTime
+      let today = Rules.localDay timeDiff now
+      sum <$> mapM (issueForDay timeDiff now cityId.getId) [today, DT.addDays 1 today]
 
 issueForDay :: Seconds -> UTCTime -> Text -> DT.Day -> Flow Int
 issueForDay timeDiff now cityId day = go Nothing 0
@@ -94,7 +100,9 @@ issueForTerm timeDiff now term day
             Right (issued, tickets) -> do
               forM_ tickets $ \booking -> do
                 otp <- SharedCabPass.ensureBoardingOtp booking
-                when (Rules.otpDue now departure (isJust booking.vehicleNumber)) $
+                -- A fresh clock: a long run can reach this ticket well after it started.
+                nowTicket <- getCurrentTime
+                when (Rules.otpDue nowTicket departure (isJust booking.vehicleNumber)) $
                   sendOtpOnce timeDiff departure booking otp
                 stampRunPlate day booking
               pure issued
