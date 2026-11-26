@@ -21,6 +21,7 @@ module SharedLogic.FRFSPassOverride
     resolvePassOverride,
     refundPassOverrideTrip,
     hasPendingTripRefund,
+    hasReleasedTrip,
     hasUnreleasedDebit,
     releasePassOverrideTripOnFailure,
     maxTripCountFromPass,
@@ -762,6 +763,11 @@ migrateTripDebitMarker fromSearchId toSearchId = do
       clearTripMarker "TripReleased" toSearchId
       clearTripMarker "TripConsumed" fromSearchId
       logInfo $ "FRFSPassOverride:migrateTripDebitMarker moved the trip debit searchId=" <> fromSearchId.getId <> " -> " <> toSearchId.getId
+
+hasReleasedTrip :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
+hasReleasedTrip searchId = do
+  mbReleased :: Maybe Bool <- Redis.get (tripMarkerKey "TripReleased" searchId)
+  pure (isJust mbReleased)
 
 hasPendingTripRefund :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
 hasPendingTripRefund searchId = do

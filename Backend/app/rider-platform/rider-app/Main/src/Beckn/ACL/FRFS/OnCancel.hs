@@ -45,7 +45,8 @@ buildOnCancelReq onCancelReq = do
                   baseFare,
                   orderStatus,
                   cancelledBy,
-                  cancellationTime
+                  cancellationTime,
+                  operatorCancellation = Nothing
                 }
         return $ Just dOnCancel
       Left err -> throwError $ InvalidBecknSchema $ "on_cancel error:-" <> show err

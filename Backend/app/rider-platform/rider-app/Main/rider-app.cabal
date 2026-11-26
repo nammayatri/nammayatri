@@ -596,6 +596,7 @@ library
       SharedLogic.DriverNumber
       SharedLogic.DummySignatureAuth
       SharedLogic.EditLocationThrottle
+      SharedLogic.EntityValueLog
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.Sos
@@ -629,6 +630,7 @@ library
       SharedLogic.FRFSSeller.Common
       SharedLogic.FRFSSeller.QuoteStore
       SharedLogic.FRFSStatus
+      SharedLogic.FRFSTripCancel
       SharedLogic.FRFSUtils
       SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
@@ -689,6 +691,7 @@ library
       SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
+      SharedLogic.Scheduler.Jobs.FRFSTripCancel
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -898,6 +901,7 @@ library
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
       Storage.Queries.EDCMachineMappingExtra
+      Storage.Queries.EntityValueLogExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
       Storage.Queries.ExophoneExtra
@@ -1826,6 +1830,7 @@ library
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability
       Storage.Queries.OrphanInstances.EDCMachineMapping
+      Storage.Queries.OrphanInstances.EntityValueLog
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup

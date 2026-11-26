@@ -585,7 +585,8 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
         baseFare = baseFare,
         cancellationCharges = Just charges,
         cancelledBy = Nothing,
-        cancellationTime = Nothing
+        cancellationTime = Nothing,
+        operatorCancellation = Nothing
       }
 
 calculateCancellationCharges ::

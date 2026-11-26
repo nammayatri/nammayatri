@@ -491,6 +491,8 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       parentBookingId = Nothing,
       rescheduleCount = Nothing,
       sharedCabNoShows = 0,
+      cancellationReason = Nothing,
+      cancellationOperationId = Nothing,
       vehicleTripId = Nothing,
       rideId = Nothing,
       _type = journeyType.quoteType,

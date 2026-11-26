@@ -2175,3 +2175,21 @@ findGatewayReferenceIdForPaymentOrder paymentOrderId = do
       mbBooking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId
       maybe (pure Nothing) (\booking -> SIBC.findGatewayReferenceId [booking.integratedBppConfigId]) mbBooking
     _ -> pure Nothing
+
+bookedQuantityLookup ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DFRFSTicketBooking.FRFSTicketBooking] ->
+  m (DFRFSTicketBooking.FRFSTicketBooking -> Int)
+bookedQuantityLookup bookings = do
+  let ticketGenPaymentIds = mapMaybe (.frfsTicketBookingPaymentIdForTicketGeneration) bookings
+  paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentIds (Id <$> ticketGenPaymentIds)
+  let paidQuantityByPaymentId = M.fromListWith (+) $ map (\(pc :: DTBPC.FRFSTicketBookingPaymentCategory) -> (pc.frfsTicketBookingPaymentId.getId, pc.selectedQuantity)) paymentCategories
+      paidQuantityOf b = b.frfsTicketBookingPaymentIdForTicketGeneration >>= (`M.lookup` paidQuantityByPaymentId)
+      quoteFallbackIds = [b.quoteId | b <- bookings, isNothing (paidQuantityOf b)]
+  quotedQuantityByQuoteId <-
+    if null quoteFallbackIds
+      then pure M.empty
+      else do
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteIds quoteFallbackIds
+        pure $ M.fromListWith (+) $ map (\(qc :: DFRFSQuoteCategory.FRFSQuoteCategory) -> (qc.quoteId, qc.selectedQuantity)) quoteCategories
+  pure $ \b -> fromMaybe (fromMaybe 0 (M.lookup b.quoteId quotedQuantityByQuoteId)) (paidQuantityOf b)

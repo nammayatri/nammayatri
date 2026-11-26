@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnUpdate where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Types.Beckn.FRFS.OnCancel as DOnCancel
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import Domain.Types.Merchant as Merchant
@@ -59,7 +60,7 @@ onUpdate merchant booking' dOnUpdate = do
   case dOnUpdate.orderStatus of
     _ | dOnUpdate.isRefundAck -> logInfo $ "FRFS on_update refund acknowledgement received for booking " <> booking.id.getId
     Spec.CANCELLED -> do
-      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId DOnCancel.RiderOrSystemCancel
       FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

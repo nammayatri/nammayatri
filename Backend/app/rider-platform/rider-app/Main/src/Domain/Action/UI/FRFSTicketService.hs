@@ -32,7 +32,6 @@ import qualified Domain.Types.FRFSTicket as Fields
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFeedback
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
-import qualified Domain.Types.FRFSTicketBookingPaymentCategory as Fields
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.FRFSVehicleServiceTier as Fields
@@ -153,7 +152,6 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
@@ -2122,22 +2120,12 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
   let riderIds = map (.riderId) bookings
   persons <- JMU.measureLatency (QP.findAllByIds riderIds) "findAllByIds"
   let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-  let ticketGenPaymentIds = mapMaybe (.frfsTicketBookingPaymentIdForTicketGeneration) bookings
   -- Booked ticket quantity is the quantity that was actually paid for and ticketed, which lives on the payment
   -- categories of the booking's ticket-generation payment (frfsTicketBookingPaymentIdForTicketGeneration). On a
   -- multi-init re-order the quote categories are overwritten to the latest order and can diverge from what was
   -- paid, so we prefer payment categories -- mirroring ticket generation in SharedLogic.FRFSStatus -- and fall
   -- back to quote categories only for the (rare) confirmed booking that has no payment categories.
-  paymentCategories <- JMU.measureLatency (QFRFSTicketBookingPaymentCategory.findAllByPaymentIds (Kernel.Types.Id.Id <$> ticketGenPaymentIds)) "findAllByPaymentIds"
-  let paidQuantityByPaymentId = Map.fromListWith (+) $ map (\pc -> (pc.frfsTicketBookingPaymentId.getId, pc.selectedQuantity)) paymentCategories
-      paidQuantityOf b = b.frfsTicketBookingPaymentIdForTicketGeneration >>= (`Map.lookup` paidQuantityByPaymentId)
-      quoteFallbackIds = [b.quoteId | b <- bookings, isNothing (paidQuantityOf b)]
-  quotedQuantityByQuoteId <-
-    if null quoteFallbackIds
-      then pure Map.empty
-      else do
-        quoteCategories <- JMU.measureLatency (QFRFSQuoteCategory.findAllByQuoteIds quoteFallbackIds) "findAllByQuoteIds"
-        pure $ Map.fromListWith (+) $ map (\qc -> (qc.quoteId, qc.selectedQuantity)) quoteCategories
+  quantityOf <- JMU.measureLatency (FRFSUtils.bookedQuantityLookup bookings) "bookedQuantityLookup"
   passengerData <- forM bookings $ \booking ->
     case Map.lookup booking.riderId personMap of
       Nothing -> pure Nothing
@@ -2146,9 +2134,7 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
         let frfsTickets = fromMaybe [] (Map.lookup booking.id ticketMap)
         let isCheckedIn = any (\t -> t.status == DFRFSTicket.USED) frfsTickets
         let pName = Data.Text.intercalate " " $ catMaybes [person.firstName, person.lastName]
-        let bookingQuantity = case paidQuantityOf booking of
-              Just paidQty -> paidQty
-              Nothing -> fromMaybe 0 (Map.lookup booking.quoteId quotedQuantityByQuoteId)
+        let bookingQuantity = quantityOf booking
         let pInfo =
               PassengerInfo
                 { personId = person.id,
