@@ -54,6 +54,7 @@ library
       Lib.IncentiveJourney.JsonLogic
       Lib.IncentiveJourney.MetricBagRedis
       Lib.IncentiveJourney.MgCampaign
+      Lib.IncentiveJourney.OptIn
       Lib.IncentiveJourney.Period
       Lib.IncentiveJourney.Reward
       Lib.IncentiveJourney.RewardMetadata

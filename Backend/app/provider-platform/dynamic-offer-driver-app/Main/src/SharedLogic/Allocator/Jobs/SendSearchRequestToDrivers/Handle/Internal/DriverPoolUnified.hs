@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Queries.GateInfo
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as Fields
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -46,7 +47,6 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified SharedLogic.FarePolicy as SFarePolicy
 import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
 import Storage.Beam.SpecialZone ()
@@ -179,12 +179,18 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-      mbFareSettlementTypeForPool <- SFarePolicy.getFareSettlementTypeForSpecialZone (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+      let mbPickupSpecialLocationId = Id <$> (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+      mbPickupSpecialLocation <- maybe (pure Nothing) QSpecialLocation.findById mbPickupSpecialLocationId
+      let mbFareSettlementTypeForPool = mbPickupSpecialLocation >>= (.fareSettlementType)
+          isAirportRequest = maybe False AirportEntryFee.isAirportSpecialLocation mbPickupSpecialLocation
+          poolType =
+            case mbPickupSpecialLocation >>= (.poolingMode) of
+              Just SL.QueuePooling | (mbPickupSpecialLocation >>= (.isQueueEnabled)) == Just True -> SpecialZoneQueuePool
+              _ -> NormalPool
       airportEntryFee <-
         if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
           then pure Nothing
           else AirportEntryFee.requiredDriverWalletAmountForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId (listToMaybe tripQuoteDetails <&> (.vehicleServiceTier)) mbFareSettlementTypeForPool (Just searchReq.currency)
-      isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId
       riderCorrelations <- maybe (pure []) QFavDrivers.findAllCorrelationsForRider searchReq.riderId
@@ -194,21 +200,25 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- Blocklisted drivers are excluded at LTS-level inside calculateDriverPoolWithActualDist;
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
-      (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool poolType transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      let queueRank = Map.fromList (zip ((.driverPoolResult.driverId) <$> allDriversNotOnRideBeforeTollFilter) [0 :: Int ..])
+          restoreQueueOrder pool = case poolType of
+            SpecialZoneQueuePool -> DL.sortOn (\dp -> Map.lookup dp.driverPoolResult.driverId queueRank) pool
+            _ -> pool
       when (dispatchMode == ScheduledTopDriversDispatch) $ reportTopDriversBatch transporterConfig allDriversNotOnRideBeforeTollFilter
       (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
       let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
           -1 -> do
-            gateTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGateTags" $ assignDriverGateTags searchReq newFilteredDriversWithFavourites
+            gateTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGateTags" $ assignDriverGateTags poolType searchReq newFilteredDriversWithFavourites
             goHomeTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGoHomeTags" $ assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
-            withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig goHomeTaggedDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
+            withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig poolType (restoreQueueOrder (bookAnyFilters transporterConfig goHomeTaggedDrivers)) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
           _ -> do
             allNearbyNonGoHomeDrivers <- withTimeAPI "driverPooling" "filterM getDriverGoHomeRequestInfo" $ excludeActiveGoHomeDrivers merchantOpCityId newFilteredDriversWithFavourites
             logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
-            withTimeAPI "driverPooling" "calculateNormalBatch" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
+            withTimeAPI "driverPooling" "calculateNormalBatch" $ calculateNormalBatch merchantOpCityId transporterConfig poolType (restoreQueueOrder (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers)) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
       cacheBatch driverPoolNotOnRide Nothing
       cacheBatch driverPoolOnRide (Just True)
       let (poolNotOnRide, poolOnRide) =
@@ -217,9 +227,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
             )
       (poolWithSpecialZoneInfoNotOnRide, poolWithSpecialZoneInfoOnRide) <-
         if isJust searchReq.specialLocationTag
-          then (,) <$> addSpecialZonePickupInfo poolNotOnRide <*> addSpecialZonePickupInfo poolOnRide
+          then (,) <$> addSpecialZonePickupInfo poolType poolNotOnRide <*> addSpecialZonePickupInfo poolType poolOnRide
           else pure (poolNotOnRide, poolOnRide)
-      pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide NormalPool Nothing poolWithSpecialZoneInfoOnRide
+      pure $ SDP.PrepareDriverPoolBatchEntity poolWithSpecialZoneInfoNotOnRide poolType Nothing poolWithSpecialZoneInfoOnRide
       where
         -- Logs the top-drivers batch: how many drivers passed the rules, and the rules in force.
         reportTopDriversBatch transporterConfig qualifiedDrivers = do
@@ -244,9 +254,11 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               <> show usedDefaults
               <> ")"
 
-        addSpecialZonePickupInfo pool = do
-          (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool
-          pure $ restDrivers <> addSpecialZoneInfo searchReq.driverDefaultExtraFee driversFromGate
+        addSpecialZonePickupInfo poolType pool = case poolType of
+          SpecialZoneQueuePool -> pure $ map (\dp -> if dp.pickupZone then (dp :: DriverPoolWithActualDistResult) {specialZoneExtraTip = searchReq.driverDefaultExtraFee} else dp) pool
+          _ -> do
+            (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool
+            pure $ restDrivers <> addSpecialZoneInfo searchReq.driverDefaultExtraFee driversFromGate
 
         splitDriverFromGateAndRest pool =
           case searchReq.pickupZoneGateId of
@@ -276,6 +288,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
               parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching
+              pickupSpecialLocationId = Id <$> (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
               driverPoolReq =
                 CalculateDriverPoolReq
                   { poolStage = DriverSelection,
@@ -300,20 +313,20 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum dispatchMode
 
-        calculateNormalBatch mOCityId transporterConfig onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
+        calculateNormalBatch mOCityId transporterConfig poolType onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
           logDebug $ "calculateNormalBatch txnId " <> show txnId'
           -- Resolve the POOLING version once, on the first pool, then reuse it for the on-ride pool.
           -- Both pools used to read searchReq.poolingLogicVersion independently; while that snapshot
           -- is Nothing (the batch that pins it) each call re-tossed the rollout, so the two halves of
           -- a single batch could be scored by different versions and then sorted against each other
           -- on incomparable scales.
-          (mbPoolingVersion, normalBatchNotOnRide) <- withTimeAPI "driverPooling" "getDriverPoolNotOnRide" $ getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers
+          (mbPoolingVersion, normalBatchNotOnRide) <- withTimeAPI "driverPooling" "getDriverPoolNotOnRide" $ getDriverPoolNotOnRide mOCityId transporterConfig poolType onlyNewNormalDrivers
           logDebug $ "NormalBatchNotOnRide-" <> show normalBatchNotOnRide <> " and txnId " <> show txnId'
-          normalBatchOnRide <- getDriverPoolOnRide mOCityId transporterConfig NormalPool onRidePoolResults airportEntryFee isAirportRequest mbPoolingVersion
+          normalBatchOnRide <- getDriverPoolOnRide mOCityId transporterConfig poolType onRidePoolResults airportEntryFee isAirportRequest mbPoolingVersion
           pure (normalBatchNotOnRide, normalBatchOnRide)
 
-        getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers =
-          withTimeAPI "driverPooling" "mkDriverPoolBatch" $ mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False searchReq.poolingLogicVersion
+        getDriverPoolNotOnRide mOCityId transporterConfig poolType onlyNewNormalDrivers =
+          withTimeAPI "driverPooling" "mkDriverPoolBatch" $ mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False poolType searchReq.poolingLogicVersion
 
         filtersForNormalBatch mOCityId transporterConfig normalDriverPool = do
           allNearbyNonGoHomeDrivers <- excludeActiveGoHomeDrivers mOCityId normalDriverPool
@@ -330,7 +343,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType transporterConfig batchNum allDriverPoolResults airportEntryFee isAirportRequest
               logDebug $ "NormalDriverPoolBatchOnRideCurrentlyOnRide-" <> show allNearbyDriversCurrentlyOnRide
               onlyNewNormalDriversOnRide <- filtersForNormalBatch mOCityId transporterConfig allNearbyDriversCurrentlyOnRide
-              (_, normalDriverPoolBatchOnRide) <- withTimeAPI "driverPooling" "mkDriverPoolBatchOnRide" $ mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True mbPoolingVersion
+              (_, normalDriverPoolBatchOnRide) <- withTimeAPI "driverPooling" "mkDriverPoolBatchOnRide" $ mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True poolType mbPoolingVersion
               validDriversFromPreviousBatch <-
                 filterM
                   ( \dpr -> do
@@ -368,7 +381,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry mbRiderDetails
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool poolType mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool poolType searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry mbRiderDetails
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
           addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit
@@ -439,6 +452,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
                   parkingCharge = listToMaybe tripQuoteDetails >>= (.driverParkingCharge)
               let currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching
+                  pickupSpecialLocationId = Id <$> (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
               let driverPoolReq =
                     CalculateDriverPoolReq
                       { poolStage = DriverSelection,
@@ -509,21 +523,25 @@ assignDriverGateTags ::
     CacheFlow m r,
     LT.HasLocationService m r
   ) =>
+  PoolType ->
   DSR.SearchRequest ->
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-assignDriverGateTags searchReq pool = do
+assignDriverGateTags poolType searchReq pool = do
   case searchReq.pickupZoneGateId of
     Just pickupZoneGateId -> do
       (onGateDrivers', outSideDrivers) <-
-        partitionM
-          ( \dd -> do
-              mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
-              pure $ case mbDriverGate of
-                Just driverGate -> driverGate.id.getId == pickupZoneGateId
-                Nothing -> False
-          )
-          pool
+        case poolType of
+          SpecialZoneQueuePool -> pure (DL.partition (.pickupZone) pool)
+          _ ->
+            partitionM
+              ( \dd -> do
+                  mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
+                  pure $ case mbDriverGate of
+                    Just driverGate -> driverGate.id.getId == pickupZoneGateId
+                    Nothing -> False
+              )
+              pool
       let onGateDrivers'' =
             map
               ( \(dp :: DriverPoolWithActualDistResult) ->

@@ -55,7 +55,8 @@ data IffcoTokioConfig = IffcoTokioConfig
     insuredAddress :: Text,
     insuredEmail :: Text,
     fcmNotificationTitle :: Text,
-    fcmNotificationMessage :: Text
+    fcmNotificationMessage :: Text,
+    endpointPath :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON)

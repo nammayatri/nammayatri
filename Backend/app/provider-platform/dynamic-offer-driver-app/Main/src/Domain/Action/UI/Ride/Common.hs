@@ -12,8 +12,8 @@ module Domain.Action.UI.Ride.Common
     RideEarnings (..),
     EarningsLabels (..),
     fetchEarningsLabels,
-    resolveLabel,
     mkDriverRideRes,
+    translatedTierName,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
     ResolvedCalling (..),
@@ -22,6 +22,13 @@ module Domain.Action.UI.Ride.Common
     DeliveryPersonDetailsAPIEntity (..),
     mkLocationFromLocationMapping,
     calculateLocations,
+    rentalNextAndLastStop,
+    getRentalStops,
+    getCurrentRentalStops,
+    withRideStopsLock,
+    waitForRideStopsLock,
+    getRentalStopsVersion,
+    setRentalStopsVersion,
     makeStop,
     getWaitingChargeInfo,
   )
@@ -31,17 +38,18 @@ import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponent (..), FareUIComponentType (..), FareUISection (..), FareUISubItem (..), computeFareBreakupLines)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
-import Control.Monad (mfilter)
+import Control.Monad (forM, mfilter, unless)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import qualified Data.ByteString.Lazy as LBS
+import Data.Either (fromRight)
 import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, mapMaybe, maybeToList)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
@@ -68,13 +76,17 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import Domain.Types.OnUpdate (RentalStop (..))
 import qualified Domain.Types.ParcelType as DParcel
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
+import Domain.Types.TranslationKeys (EarningsLabel (..), TranslationKey (..))
 import qualified Domain.Types.Translations as Fields
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -82,17 +94,18 @@ import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
-import Kernel.Prelude (readMaybe, roundToIntegral)
+import Kernel.Prelude (MonadMask, finally, readMaybe, roundToIntegral, safeInit, threadDelay)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, MonadFlow, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Id
 import Kernel.Types.Price
 import qualified Kernel.Types.Time as Fields
-import Kernel.Utils.Common (fromMaybeM)
-import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Kernel.Utils.Common (fromMaybeM, throwError, withTryCatch)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfoExtra as DGI
@@ -111,7 +124,7 @@ import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Settlement (driverTaxRates, netTaxExclusive, netTaxInclusive, netTotalTaxInclusive)
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -120,9 +133,9 @@ import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
-import qualified Storage.Queries.Translations as QTranslations
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.DynamicLogic (getAppDynamicLogic)
-import Tools.Error (LocationMappingError (..))
+import Tools.Error (GenericError (InvalidRequest), LocationMappingError (..))
 import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
@@ -211,7 +224,7 @@ data DriverRideRes = DriverRideRes
     requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
-    vehicleServiceTierName :: Text,
+    vehicleServiceTierName :: TranslatedText,
     isVehicleAirConditioned :: Maybe Bool,
     vehicleCapacity :: Maybe Int,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
@@ -397,23 +410,23 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
       fillTaxRates label = foldr (\(name, mbRate) acc -> maybe acc (\rate -> T.replace ("{#" <> name <> "#}") rate acc) mbRate) label placeholderRates
       taxInclusiveLabel key fallback mbCfg =
         if isJust (rateOf mbCfg)
-          then (<|> fallback) <$> resolveLabel lang (key <> "_INCL_TAX")
+          then (<|> fallback) <$> resolveLabel ride.merchantOperatingCityId lang key
           else pure fallback
       mkConfiguredSubItem line = do
-        label <- fmap fillTaxRates <$> resolveLabel lang line.key
+        label <- fmap fillTaxRates <$> resolveConfiguredLabel lang line.key
         kids <- mapM mkConfiguredSubItem line.subItems
         let lineType = if line.amount < 0 then Deduction else Earning
         pure FareUISubItem {title = line.key, price = PriceAPIEntity (abs line.amount) cur, uiTranslation = label, _type = lineType, subItems = kids}
       chargeBorneByDriver = customerBearsCharge || driverBearsCharge
-  taxLabel <- resolveLabel lang "TAX"
-  commissionLabel <- taxInclusiveLabel "COMMISSION" lblCommission commissionTax
-  paymentChargeLabel <- taxInclusiveLabel "PAYMENT_CHARGE" lblPaymentCharge paymentChargeTax
+  taxLabel <- resolveLabel ride.merchantOperatingCityId lang Tax
+  commissionLabel <- taxInclusiveLabel CommissionInclTax lblCommission commissionTax
+  paymentChargeLabel <- taxInclusiveLabel PaymentChargeInclTax lblPaymentCharge paymentChargeTax
   farePaidComponentSubItems <-
     mapM mkConfiguredSubItem $
       case mbCancellationDues of
         Just dues -> computeFareBreakupLines cur (fromMaybe [] mbFarePaidSubItemsConfig) (Map.fromList [(CustomerCancellationChargeComponent, dues.cancellationAmount), (PaymentChargePaidByCustomerComponent, customerPaymentCharge)])
         Nothing -> SFB.computeFareBreakup cur (fromMaybe [] mbFarePaidSubItemsConfig) (fromMaybe estimatedFareParam finalFareParam)
-  buyerDiscountLabel <- resolveLabel lang "BUYER_DISCOUNT"
+  buyerDiscountLabel <- resolveLabel ride.merchantOperatingCityId lang BuyerDiscount
   let farePaidSubItems =
         farePaidComponentSubItems
           <> [ FareUISubItem {title = "BUYER_DISCOUNT", price = PriceAPIEntity (roundAmountByCurrency' cur discount) cur, uiTranslation = buyerDiscountLabel <|> lblDiscount, _type = Deduction, subItems = []}
@@ -505,8 +518,8 @@ buildFootnotes lang booking ride estimatedFareParams finalFareParams mbFreeWaiti
                   Just (UiTrByKey k _) -> [k]
                   Nothing -> [raw.title]
                   _ -> []
-          preferredRows <- catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))) allKeys
-          fallbackRows <- if lang == KET.ENGLISH then pure [] else catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just KET.ENGLISH}) (Just (QTranslations.findByErrorAndLanguage key KET.ENGLISH))) allKeys
+          preferredRows <- catMaybes <$> mapM (CQTranslations.findByOpsKey (Just ride.merchantOperatingCityId) lang) allKeys
+          fallbackRows <- if lang == KET.ENGLISH then pure [] else catMaybes <$> mapM (CQTranslations.findByOpsKey (Just ride.merchantOperatingCityId) KET.ENGLISH) allKeys
           let rows = preferredRows <> fallbackRows
               (preferred, fallbacks) = partition (\t -> t.language == lang) rows
               txMap =
@@ -554,10 +567,20 @@ valueToText = \case
 
 resolveLabel ::
   (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  KET.Language ->
+  EarningsLabel ->
+  m (Maybe Text)
+resolveLabel merchantOpCityId lang key = CQTranslations.findTextByKey (Just merchantOpCityId) lang (Earnings_Label key)
+
+-- | A configured fare-breakup sub-item key is typed by ops into the transporter config, so its
+-- label is read by that text, from the shared rows.
+resolveConfiguredLabel ::
+  (CacheFlow m r, EsqDBFlow m r) =>
   KET.Language ->
   Text ->
   m (Maybe Text)
-resolveLabel lang key = fmap (fmap (.message)) $ getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))
+resolveConfiguredLabel lang key = fmap (.message) <$> CQTranslations.findByOpsKey Nothing lang key
 
 data EarningsLabels = EarningsLabels
   { lblAmountPaid :: Maybe Text,
@@ -576,23 +599,26 @@ data EarningsLabels = EarningsLabels
 
 fetchEarningsLabels ::
   (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
   KET.Language ->
   m EarningsLabels
-fetchEarningsLabels lang =
+fetchEarningsLabels merchantOpCityId lang =
   EarningsLabels
     -- TODO MAKE THIS AMOUNT PAID BY CUST TO KEEP IT BACKWARD COMPATIBLE.. WE WILL CHANGBE IN DB.
-    <$> resolveLabel lang "FARE_PAID_BY_CUSTOMER"
-    <*> resolveLabel lang "DISCOUNT"
-    <*> resolveLabel lang "TIPS"
-    <*> resolveLabel lang "COMMISSION"
-    <*> resolveLabel lang "NET_DRIVER_EARNINGS"
-    <*> resolveLabel lang "FARE"
-    <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
-    <*> resolveLabel lang "SERVICE_CHARGE"
-    <*> resolveLabel lang "PAYMENT_CHARGE"
-    <*> resolveLabel lang "PAYMENT_CHARGE_VAT"
-    <*> resolveLabel lang "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
-    <*> resolveLabel lang "TOLL_CHARGES"
+    <$> label FarePaidByCustomer
+    <*> label Discount
+    <*> label Tips
+    <*> label Commission
+    <*> label NetDriverEarnings
+    <*> label Fare
+    <*> label AirportConvenienceFee
+    <*> label ServiceCharge
+    <*> label PaymentCharge
+    <*> label PaymentChargeVat
+    <*> label PaymentChargePaidByCustomer
+    <*> label TollCharges
+  where
+    label = resolveLabel merchantOpCityId lang
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
@@ -600,6 +626,12 @@ mkExoPhone mbExophone booking =
     booking.primaryExophone
     (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone)
     mbExophone
+
+-- | The booking's tier name in the reader's language; with no language, or in a special zone (whose own tier name ops typed), the stored name.
+translatedTierName :: (CacheFlow m r, EsqDBFlow m r) => Maybe KET.Language -> DRB.Booking -> m TranslatedText
+translatedTierName mbLanguage booking = case mbLanguage of
+  Just language | fromMaybe SL.Default booking.area == SL.Default -> CQTranslations.findTranslatedText (Just booking.merchantOperatingCityId) language (ServiceTier_Name booking.vehicleServiceTier) booking.vehicleServiceTierName
+  _ -> pure (textAsReceived booking.vehicleServiceTierName)
 
 mkDriverRideRes ::
   ( EncFlow m r,
@@ -663,10 +695,9 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       cancelledRideAmount = max 0 (fromMaybe 0 cancellationCompensationNet)
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
-    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
-    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.Rental _ -> rentalNextAndLastStop ride booking
+    DTC.IntercityRental _ _ -> rentalNextAndLastStop ride booking
     _ -> return (Nothing, Nothing)
-  -- Rental stops come from the ride, fixed at assignment, which is also what stopAction checks.
   -- The booking's list picks up destinations reached and replaced mid-ride, which have no stop record.
   let rideStopLocations =
         QLM.getLatestStopsByEntityId ride.id.getId
@@ -739,10 +770,11 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
                 DMPM.Cash -> if offer > 0 then Just offer else Nothing
                 _ -> computedFareNet
 
-  mbRideEarningsVal <- case mbEarningsLabels of
+  mbRideEarningsVal <- case mfilter (const (not (isCancelled && cancelledRideAmount == 0))) mbEarningsLabels of
     Just earningsLabels -> do
       Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig)) mbDriverTaxRates ((.freeWaitingTime) <$> mbWaitingChargeInfo)
     Nothing -> pure Nothing
+  tierName <- translatedTierName (Just language) booking
 
   return $
     DriverRideRes
@@ -792,7 +824,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
-        vehicleServiceTierName = booking.vehicleServiceTierName,
+        vehicleServiceTierName = tierName,
         vehicleCapacity = booking.vehicleServiceTierSeatingCapacity,
         isVehicleAirConditioned = booking.isAirConditioned,
         driverGoHomeRequestId = goHomeReqId,
@@ -911,6 +943,86 @@ makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
 makeStop stopsInfo stop =
   let stopInfo = find (\s -> s.stopLocId == stop.id) stopsInfo
    in Stop (DLocUI.makeLocationAPIEntity stop) stopInfo
+
+rentalNextAndLastStop ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DRide.Ride ->
+  DRB.Booking ->
+  m (Maybe DLoc.Location, Maybe DLoc.Location)
+rentalNextAndLastStop ride booking = do
+  mbStopsVersion <- getRentalStopsVersion booking.id
+  if isJust mbStopsVersion
+    then do
+      (reachedStops, pendingStops) <- partition (isJust . (.reachedAt)) <$> getRentalStops ride.id
+      pure ((.location) <$> listToMaybe pendingStops, (.location) <$> listToMaybe (reverse reachedStops))
+    else calculateLocations booking.id booking.stopLocationId
+
+getRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m [RentalStop]
+getRentalStops rideId = do
+  mappings <- QLM.getLatestStopsByEntityId' rideId.getId
+  stopsInfo <- QSI.findAllByRideIdFromKVAndDB rideId
+  forM mappings $ \mapping -> do
+    location <- QLoc.findById mapping.locationId >>= fromMaybeM (StopsLocationNotFound mapping.locationId.getId)
+    let reachedAt = (.waitingTimeStart) <$> find (\stopInfo -> stopInfo.stopOrder == mapping.order) stopsInfo
+    pure RentalStop {order = mapping.order, location, reachedAt}
+
+getCurrentRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRB.Booking -> DRide.Ride -> m [RentalStop]
+getCurrentRentalStops booking ride = do
+  rideStops <- getRentalStops ride.id
+  mbStopsVersion <- getRentalStopsVersion booking.id
+  if isJust mbStopsVersion
+    then pure rideStops
+    else do
+      let reachedStops = filter (isJust . (.reachedAt)) rideStops
+          bookedPendingStops = if ride.hasStops == Just True then filter (isNothing . (.reachedAt)) (safeInit rideStops) else []
+          isListed stopLocationId = any (\stop -> stop.location.id == stopLocationId) (reachedStops <> bookedPendingStops)
+      singlePendingStop <- case booking.stopLocationId of
+        Nothing -> pure Nothing
+        Just stopLocationId
+          | isListed stopLocationId -> pure Nothing
+          | Just stop <- find (\stop -> stop.location.id == stopLocationId) rideStops -> pure (Just stop)
+          | otherwise -> do
+            bookingStops <- QLM.getLatestStopsByEntityId' booking.id.getId
+            forM (find (\mapping -> mapping.locationId == stopLocationId) bookingStops) $ \mapping -> do
+              location <- QLoc.findById stopLocationId >>= fromMaybeM (StopsLocationNotFound stopLocationId.getId)
+              pure RentalStop {order = mapping.order, location, reachedAt = Nothing}
+      pure $ reachedStops <> bookedPendingStops <> maybeToList singlePendingStop
+
+withRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r, MonadMask m) => Int -> Id DRide.Ride -> m a -> m a
+withRideStopsLock attempts rideId action = do
+  isLocked <- tryRideStopsLock attempts rideId
+  unless isLocked $ throwError (InvalidRequest "Stop update already in progress for this ride")
+  finally action (unlockRideStops rideId)
+
+waitForRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r, MonadMask m) => Id DRide.Ride -> m a -> m a
+waitForRideStopsLock rideId action = do
+  isLocked <- fromRight False <$> withTryCatch "ride stops lock" (tryRideStopsLock 10 rideId)
+  if isLocked then finally action (unlockRideStops rideId) else action
+
+tryRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r) => Int -> Id DRide.Ride -> m Bool
+tryRideStopsLock attemptsLeft rideId = do
+  isLocked <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.tryLockRedis (rideStopsLockKey rideId) 30
+  if isLocked || attemptsLeft <= 1
+    then pure isLocked
+    else threadDelay 200000 >> tryRideStopsLock (attemptsLeft - 1) rideId
+
+unlockRideStops :: (MonadFlow m, Redis.HedisFlow m r) => Id DRide.Ride -> m ()
+unlockRideStops rideId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (rideStopsLockKey rideId)
+
+rideStopsLockKey :: Id DRide.Ride -> Text
+rideStopsLockKey rideId = "RideStopUpdate:RideId:" <> rideId.getId
+
+getRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id DRB.Booking -> m (Maybe Int)
+getRentalStopsVersion bookingId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get (rentalStopsVersionKey bookingId)
+
+setRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id DRB.Booking -> Int -> m ()
+setRentalStopsVersion bookingId version = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setExp (rentalStopsVersionKey bookingId) version (2 * 24 * 60 * 60)
+
+rentalStopsVersionKey :: Id DRB.Booking -> Text
+rentalStopsVersionKey bookingId = "RentalStops:Version:BookingId-" <> bookingId.getId
 
 calculateLocations ::
   ( CacheFlow m r,

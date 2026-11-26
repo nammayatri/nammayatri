@@ -223,7 +223,7 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP,DOCUMENT_VALID,DRIVER_ONBOARDING_DEEPLINK_MESSAGE,FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE,ONBOARDING_APPROVED,VEHICLE_APPROVED,SEND_WHATSAPP_OTP,DASHBOARD_WELCOME_EMAIL
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP,DOCUMENT_VALID,DRIVER_ONBOARDING_DEEPLINK_MESSAGE,FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE,ONBOARDING_APPROVED,VEHICLE_APPROVED,SEND_WHATSAPP_OTP,DASHBOARD_WELCOME_EMAIL,TDS_CERTIFICATE_EMAIL
       derive: "Bounded, Enum"
 
     MediaChannel:
@@ -238,6 +238,7 @@ MerchantMessage:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     messageKey: MessageKey
+    language: Language
     message: Text
     templateId: Text
     messageType: Maybe Text
@@ -267,17 +268,21 @@ MerchantMessage:
     senderEmail: character varying(255)
   default:
     containsUrlButton: "false"
+    language: "'ENGLISH'"
   beamType:
     templateId: Maybe Text
     messageType: Maybe Text
     jsonData: Maybe Data.Aeson.Value
+    language: Maybe Language
 
   toTType:
     templateId: Just templateId|E
     jsonData: Just $ Data.Aeson.toJSON jsonData|E
+    language: Just language|E
 
   fromTType:
     templateId: fromMaybe "" templateId|E
+    language: fromMaybe Kernel.External.Types.ENGLISH language|E
     jsonData: fromMaybe Data.Default.Class.def
       (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<<
       jsonData)|E
@@ -285,11 +290,12 @@ MerchantMessage:
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
+    language: PrimaryKey
 
   extraIndexes:
-    - columns: [merchantOperatingCityId, domain, channel]
+    - columns: [merchantOperatingCityId, domain, channel, language]
       unique: true
-    - columns: [merchantOperatingCityId, messageKey, vehicleCategory]
+    - columns: [merchantOperatingCityId, messageKey, language, vehicleCategory]
       unique: true
 
   excludedDefaultQueries:
@@ -298,14 +304,18 @@ MerchantMessage:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+    findByMerchantOpCityIdMessageKeyLanguageVehicleCategory:
       kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, language, vehicleCategory]
+    findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, messageKey, vehicleCategory]
-    findByMerchantOpCityIdDomainAndChannel:
+    findByMerchantOpCityIdDomainChannelAndLanguage:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, domain, channel]
+        and: [merchantOperatingCityId, domain, channel, language]
     deleteByMerchantOpCityIdAndMessageKeyVehicleCategory:
       kvFunction: deleteWithKV
       where:
@@ -382,6 +392,7 @@ MerchantOperatingCity:
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
     gstin: Maybe Text
+    address: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -1447,8 +1458,8 @@ TransporterConfig:
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
     arrivingPickupThreshold: HighPrecMeters
-    # Assigned driver inside this ⇒ abort any stand-by better-driver search.
-    betterDriverProximityAbortRadiusMeters: Maybe HighPrecMeters
+    # Share (0-1) of the gap between the driver's starting distance and the search radius he must cover before a better-driver search stops (default 0.5).
+    betterDriverProximityAbortRadiusMeters: Maybe Double
     # Ceiling on a stand-by better-driver search's own pool radius.
     betterDriverSearchMaxRadiusMeters: Maybe HighPrecMeters
     specialDrivers: "[Text]"
@@ -1592,6 +1603,7 @@ TransporterConfig:
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
+    smsOtpAllowedCountryCodes: Maybe [Text]
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
@@ -1673,6 +1685,7 @@ TransporterConfig:
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
     enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
+    rentalNextStopLockThreshold: Maybe HighPrecMeters
 
   beamType:
     currency: Maybe Currency
@@ -2120,11 +2133,13 @@ TransporterConfig:
     communicationChannelCharLimits: json
     tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
+    smsOtpAllowedCountryCodes: "text[]"
     stclConfig: json
     takeoverScoring: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
+    rentalNextStopLockThreshold: double precision
 
   default:
     enableLegalComplianceDocuments: "false"
@@ -2387,6 +2402,10 @@ TransporterConfig:
       where: merchantOperatingCityId
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+    updateCallingMode:
+      kvFunction: updateOneWithKV
+      params: [callingMode, driverCallingOption, forceDirectCalling]
       where: merchantOperatingCityId
   extraOperations:
     - EXTRA_QUERY_FILE

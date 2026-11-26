@@ -105,6 +105,8 @@ data FulfillmentState
   | EDIT_LOCATION -- Custom type only used for on-us transaction
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
+  | UPDATE_STOPS
+  | STOPS_UPDATED
   | CHANGE_SERVICE_TIER -- Custom type only used for on-us transaction
   | ADD_BAGGAGE -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
@@ -365,6 +367,16 @@ instance Read SafetyReasonCode where
     "DEVIATION" -> [(DEVIATION, "")]
     "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
     _ -> []
+
+-- | Why the provider refused a destination edit; sent as the on_update error code so the
+-- consumer side can word it for the rider.
+data EditDestinationError
+  = DRIVER_HAS_UPCOMING_RIDE
+  | DECLINED_BY_DRIVER
+  | UNANSWERED_BY_DRIVER
+  | NOT_POSSIBLE_NOW
+  | TOLL_NOT_ALLOWED
+  deriving (Show, Read, Eq, Ord, Generic, Bounded, Enum)
 
 data TLMethod
   = HttpGet

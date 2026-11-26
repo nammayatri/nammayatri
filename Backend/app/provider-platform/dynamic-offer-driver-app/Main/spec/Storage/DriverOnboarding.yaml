@@ -255,6 +255,7 @@ DriverLicense:
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
   excludedFields: [merchantOperatingCityId]
 
   constraints:
@@ -330,6 +331,7 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     isNew: Maybe Bool
@@ -728,7 +730,7 @@ DocumentVerificationConfig:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
       enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails,TermsAndConditions,LedgerAdjustmentProof"
-      derive: "HttpInstance"
+      derive: "HttpInstance, Bounded, Enum"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
@@ -962,6 +964,7 @@ VehicleInsurance:
     limitsOfLiability: Maybe Text
     verificationStatus: VerificationStatus
     rejectReason: Maybe Text
+    rejectReasonKey: Maybe Text
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
@@ -983,7 +986,7 @@ VehicleInsurance:
       where: documentImageId
     updateVerificationStatusAndRejectReasonByRcId:
       kvFunction: updateWithKV
-      params: [verificationStatus, rejectReason]
+      params: [verificationStatus, rejectReason, rejectReasonKey]
       where: rcId
     findByImageId:
       kvFunction: findOneWithKV

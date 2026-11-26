@@ -52,6 +52,7 @@ data InvoiceContext = InvoiceContext
     hasAdjustments :: Bool,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,
+    issuedToGstin :: Maybe Text,
     supplierName :: Maybe Text,
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
@@ -255,6 +256,7 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
       hasAdjustments = containsAdjustments lineItems,
       issuedToName = invoice.issuedToName,
       issuedToAddress = invoice.issuedToAddress,
+      issuedToGstin = invoice.issuedToGstin,
       supplierName = invoice.supplierName,
       supplierAddress = invoice.supplierAddress,
       supplierGSTIN = invoice.supplierGSTIN,
@@ -302,6 +304,7 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
     currencyText EUR = "EUR"
     currencyText INR = "INR"
     currencyText USD = "USD"
+    currencyText JOD = "JOD"
 
 -- | Flatten an Object to @[(dot.path, value)]@ pairs; Arrays skipped
 -- (handled by 'renderLineItemsHtml').

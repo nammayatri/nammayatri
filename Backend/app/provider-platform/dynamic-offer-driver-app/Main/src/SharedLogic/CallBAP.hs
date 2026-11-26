@@ -15,6 +15,7 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    betterDriverCutoffRadius,
     sendRideEnroutePickupStatusToBAP,
     notifyDriverOnScheduledRideAssigned,
     sendRideStartedUpdateToBAP,
@@ -22,6 +23,7 @@ module SharedLogic.CallBAP
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
+    sendStopsUpdatedToBAP,
     sendDestinationArrivalUpdateToBAP,
     sendDriverNearPickupUpdateToBAP,
     sendReturnTripStartedUpdateToBAP,
@@ -119,6 +121,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
@@ -177,6 +180,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
+import qualified Storage.Queries.SearchRequestForDriverExtra as QSRDE
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -652,7 +656,7 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
             if isUpgrade then (.name) <$> mbAssignedCfg else Nothing
           )
       _ -> pure (False, Nothing, Nothing)
-  let betterDriverAbortRadiusMeters = highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
+  betterDriverAbortRadiusMeters <- forM (mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters)) $ \searchRadius -> highPrecMetersToMeters <$> betterDriverCutoffRadius searchRadius (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters)) booking ride.driverId
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
@@ -878,7 +882,8 @@ notifyDriverOnScheduledRideAssigned ::
   m ()
 notifyDriverOnScheduledRideAssigned booking ride driver = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message transporterConfig.timeDiffFromUtc booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+  content <- Notify.buildMerchantPNContentWithFallback booking.merchantOperatingCityId driver.language DriverPush_Ride_Assigned [("startTime", Notify.showLocalTime transporterConfig.timeDiffFromUtc booking.startTime)] (notificationTitle, message transporterConfig.timeDiffFromUtc booking)
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType content driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -1330,6 +1335,31 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = unlessSharedRun booking
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig merchant.id
 
+sendStopsUpdatedToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  Int ->
+  [DOU.RentalStop] ->
+  m ()
+sendStopsUpdatedToBAP booking ride stopsVersion stops = do
+  mbBookingDetails <- buildBookingDetails booking ride
+  whenJust mbBookingDetails $ \bookingDetails -> do
+    let stopsUpdatedBuildReq = ACL.StopsUpdatedBuildReq ACL.DStopsUpdatedBuildReq {..}
+    stopsUpdatedMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing stopsUpdatedBuildReq
+    retryConfig <- asks (.shortDurationRetryCfg)
+    void $ callOnUpdateV2 stopsUpdatedMsgV2 retryConfig bookingDetails.merchant.id
+
 sendNewMessageToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -1421,16 +1451,16 @@ sendUpdateEditDestErrToBAP ::
   ) =>
   DRB.Booking ->
   Text ->
-  Text ->
+  Enums.EditDestinationError ->
   Text ->
   m ()
-sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorCode errorMessage = unlessSharedRun booking "sendUpdateEditDestErrToBAP" $ do
+sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId errorReason errorMessage = unlessSharedRun booking "sendUpdateEditDestErrToBAP" $ do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    let errorObject = DOU.DErrorObject {..}
+    let errorObject = DOU.DErrorObject {errorCode = show errorReason, errorMessage}
     retryConfig <- asks (.shortDurationRetryCfg)
     updateEditDestErrToBAP <- ACL.buildOnUpdateError merchant booking (Just bapBookingUpdateRequestId) errorObject
     void $ callOnUpdateV2 updateEditDestErrToBAP retryConfig merchant.id
@@ -1895,3 +1925,14 @@ callBecknAPIUnsigned action baseUrl body = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   let urlWithAction = baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/" <> T.unpack action}
   Beckn.callBecknAPI Nothing Nothing action fabricUnsignedAPI urlWithAction internalEndPointHashMap body
+
+betterDriverCutoffRadius :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMeters -> Maybe Double -> DRB.Booking -> Id DP.Person -> m HighPrecMeters
+betterDriverCutoffRadius searchRadius mbProgressFraction booking driverId = do
+  mbInitialDistance <- case booking.searchTryId of
+    Nothing -> pure Nothing
+    Just searchTryId -> fmap (metersToHighPrecMeters . (.straightLineDistanceToPickup)) . listToMaybe <$> QSRDE.findAllByDriverAndSearchTryId driverId searchTryId
+  pure $ case mbInitialDistance of
+    Just initialDistance | initialDistance > searchRadius -> initialDistance - realToFrac progressFraction * (initialDistance - searchRadius)
+    _ -> searchRadius
+  where
+    progressFraction = max 0 . min 1 $ fromMaybe 0.5 mbProgressFraction

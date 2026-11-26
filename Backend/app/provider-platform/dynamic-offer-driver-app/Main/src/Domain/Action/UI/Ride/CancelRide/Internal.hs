@@ -349,7 +349,7 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
       taxOnCancellation = Tax.taxTotal cancellationFeeTax
   case riderId of
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
-    Just rid -> do
+    Just _ -> do
       let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
       -- One wallet's postings must not interleave (balance update is read-modify-write).
       withOwnerLock driverOrFleetPersonId.getId $ do
@@ -445,13 +445,13 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
                   if customerBearsPayment then mkPair "Payment Charge" PaymentCharge Fare paymentChargeAmt else Nothing,
                   if customerBearsPayment then mkPair "Payment Charge VAT" PaymentChargeTax Tax paymentChargeVatAmt else Nothing
                 ]
-            cancellationInvoiceConfig issuedToType issuedToId issuedToName issuedToAddress =
+            cancellationInvoiceConfig =
               InvoiceConfig
                 { invoiceType = RideCancellation,
-                  issuedToType = issuedToType,
-                  issuedToId = issuedToId,
-                  issuedToName = issuedToName,
-                  issuedToAddress = issuedToAddress,
+                  issuedToType = driverIssuedToType,
+                  issuedToId = driverOrFleetPersonId.getId,
+                  issuedToName = booking.riderName,
+                  issuedToAddress = booking.fromLocation.address.fullAddress,
                   gstBreakdown = rideGstBreakdown,
                   lineItems = cancellationLines,
                   referenceId = Just booking.id.getId,
@@ -473,7 +473,7 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
             whenJust mbTdsAmount $ \tdsAmount ->
               void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
             cancellationChargeTransfers booking (mbPendingDues >>= (.cancellationCommission)) (mbPendingDues >>= (.cancellationCommissionTaxBreakup)) mbPendingDues
-          invoice (cancellationInvoiceConfig CUSTOMER rid.getId booking.riderName booking.fromLocation.address.fullAddress)
+          invoice cancellationInvoiceConfig
         case result of
           Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
           Right (mbInvoiceId, _) ->
@@ -491,11 +491,6 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
               when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
                 createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
                   GenerateInvoicePdfJobData {invoiceId = invId.getId}
-        when (baseCancellation + taxOnCancellation > 0 && maybe True (fromMaybe True . (.enableDriverInvoice)) transporterConfig.invoiceConfig) $ do
-          driverInvoiceResult <- runFinance ctx $ invoice (cancellationInvoiceConfig driverIssuedToType driverOrFleetPersonId.getId (Just driver.firstName) Nothing)
-          case driverInvoiceResult of
-            Left err -> logError $ "Failed to create driver cancellation invoice: " <> show err
-            Right (mbDriverInvoiceId, _) -> whenJust mbDriverInvoiceId $ QFInvoice.updatePlaceOfSupply (gstPlaceOfSupply booking.fromLocation) Nothing Nothing
         logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show taxOnCancellation <> " tds=" <> show mbTdsAmount
         whenJust mbRideCreditDebit $ \creditDebit ->
           SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig
@@ -615,7 +610,7 @@ settleCancellationLedger booking ride transporterConfig =
       let ccBase = Kernel.Prelude.sum [e.amount | e <- commissionEntries, e.referenceType == walletReferenceCancellationCommission]
           ccVat = Kernel.Prelude.sum [e.amount | e <- commissionEntries, e.referenceType /= walletReferenceCancellationCommission]
       unless (Kernel.Prelude.null commissionEntries && driverPaymentCharge + driverPaymentChargeTax <= 0) $ do
-        driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        (partyName, partyAddress) <- driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
         ctx <- buildCancellationFinanceCtx booking ride transporterConfig
         commissionResult <- runFinance ctx $ do
           includeEntryIds ((.id) <$> commissionEntries)
@@ -624,8 +619,8 @@ settleCancellationLedger booking ride transporterConfig =
               { invoiceType = Commission,
                 issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
                 issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-                issuedToName = Just driver.firstName,
-                issuedToAddress = Nothing,
+                issuedToName = partyName,
+                issuedToAddress = partyAddress,
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes

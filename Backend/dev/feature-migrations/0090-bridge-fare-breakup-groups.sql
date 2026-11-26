@@ -6,17 +6,20 @@
 --    because it is the same amount as RideVatComponent, so listing both would count the VAT twice. EXTERNAL holds
 --    the charges paid on to a third party (toll, parking, airport). Rows that are 0 are not sent.
 --    Only cities without a value yet are set, as in 0084.
--- 2. Labels, looked up as FARE_BREAKUP_<key> in the language the API is asked for, else in English. These keys are
---    new, so they never change the wording of the driver app's ride earnings card (translations are shared by every
---    merchant, keyed by message_key + language). The ADJUSTMENTS group and its rows are built by the API itself,
---    not by the config. Languages: the ones the Bridge and Lynx control centers offer. The non-English texts are
+-- 2. Labels, as shared rows (no city), read in the dashboard user's language, else in English. The config's groups
+--    and rows are keys ops type into the config, read as FARE_BREAKUP_<key>. The adjustments group and its rows are
+--    built by the API itself, not by the config, so their keys are code-owned: FareBreakup.Adjustment.<name>
+--    (Domain.Types.TranslationKeys). All these keys are new, so they never change the wording of the driver app's
+--    ride earnings card. Languages: the ones the Bridge and Lynx control centers offer. The non-English texts are
 --    machine-written and should be checked by a native speaker.
 --
 -- Rollback:
 --   UPDATE atlas_driver_offer_bpp.transporter_config SET customer_payable_fare_breakup_sub_items_dashboard_config = NULL
 --   WHERE merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city
 --     WHERE merchant_short_id IN ('BRIDGE_CABS_PARTNER', 'BRIDGE_FINLAND_PARTNER', 'BRIDGE_NETHERLANDS_PARTNER'));
---   DELETE FROM atlas_driver_offer_bpp.translations WHERE message_key LIKE 'FARE\_BREAKUP\_%';
+--   DELETE FROM atlas_driver_offer_bpp.translations
+--   WHERE merchant_operating_city_id IS NULL
+--     AND (message_key LIKE 'FARE\_BREAKUP\_%' OR message_key LIKE 'FareBreakup.Adjustment.%');
 
 UPDATE atlas_driver_offer_bpp.transporter_config tc
 SET customer_payable_fare_breakup_sub_items_dashboard_config = '[
@@ -448,56 +451,56 @@ FROM (VALUES
   ('FARE_BREAKUP_RETURN_FEE', 'FINNISH', 'Paluumaksu'),
   ('FARE_BREAKUP_RETURN_FEE', 'ARABIC', 'رسوم العودة'),
   ('FARE_BREAKUP_RETURN_FEE', 'SOMALI', 'Khidmadda soo noqoshada'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'ENGLISH', 'Adjustments'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'DUTCH', 'Aanpassingen'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'SWEDISH', 'Justeringar'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'GERMAN', 'Anpassungen'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'FRENCH', 'Ajustements'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'FINNISH', 'Oikaisut'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'ARABIC', 'التعديلات'),
-  ('FARE_BREAKUP_ADJUSTMENTS', 'SOMALI', 'Hagaajinno'),
-  ('FARE_BREAKUP_DISCOUNT', 'ENGLISH', 'Discount'),
-  ('FARE_BREAKUP_DISCOUNT', 'DUTCH', 'Korting'),
-  ('FARE_BREAKUP_DISCOUNT', 'SWEDISH', 'Rabatt'),
-  ('FARE_BREAKUP_DISCOUNT', 'GERMAN', 'Rabatt'),
-  ('FARE_BREAKUP_DISCOUNT', 'FRENCH', 'Remise'),
-  ('FARE_BREAKUP_DISCOUNT', 'FINNISH', 'Alennus'),
-  ('FARE_BREAKUP_DISCOUNT', 'ARABIC', 'الخصم'),
-  ('FARE_BREAKUP_DISCOUNT', 'SOMALI', 'Qiimo dhimis'),
-  ('FARE_BREAKUP_COMMISSION', 'ENGLISH', 'Commission'),
-  ('FARE_BREAKUP_COMMISSION', 'DUTCH', 'Commissie'),
-  ('FARE_BREAKUP_COMMISSION', 'SWEDISH', 'Provision'),
-  ('FARE_BREAKUP_COMMISSION', 'GERMAN', 'Provision'),
-  ('FARE_BREAKUP_COMMISSION', 'FRENCH', 'Commission'),
-  ('FARE_BREAKUP_COMMISSION', 'FINNISH', 'Provisio'),
-  ('FARE_BREAKUP_COMMISSION', 'ARABIC', 'العمولة'),
-  ('FARE_BREAKUP_COMMISSION', 'SOMALI', 'Komishan'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'ENGLISH', 'Personal Discount'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'DUTCH', 'Persoonlijke korting'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'SWEDISH', 'Personlig rabatt'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'GERMAN', 'Persönlicher Rabatt'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'FRENCH', 'Remise personnelle'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'FINNISH', 'Henkilökohtainen alennus'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'ARABIC', 'خصم شخصي'),
-  ('FARE_BREAKUP_PERSONAL_DISCOUNT', 'SOMALI', 'Qiimo dhimis shakhsi ah'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'ENGLISH', 'Business Discount'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'DUTCH', 'Zakelijke korting'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'SWEDISH', 'Företagsrabatt'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'GERMAN', 'Geschäftsrabatt'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'FRENCH', 'Remise entreprise'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'FINNISH', 'Yritysalennus'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'ARABIC', 'خصم الأعمال'),
-  ('FARE_BREAKUP_BUSINESS_DISCOUNT', 'SOMALI', 'Qiimo dhimis ganacsi'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'ENGLISH', 'Fare Adjustment'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'DUTCH', 'Tariefcorrectie'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'SWEDISH', 'Prisjustering'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'GERMAN', 'Preiskorrektur'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'FRENCH', 'Ajustement du tarif'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'FINNISH', 'Hinnan oikaisu'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'ARABIC', 'تعديل الأجرة'),
-  ('FARE_BREAKUP_NEGATIVE_FARE_ADJUSTMENT', 'SOMALI', 'Hagaajinta qiimaha')
+  ('FareBreakup.Adjustment.Adjustments', 'ENGLISH', 'Adjustments'),
+  ('FareBreakup.Adjustment.Adjustments', 'DUTCH', 'Aanpassingen'),
+  ('FareBreakup.Adjustment.Adjustments', 'SWEDISH', 'Justeringar'),
+  ('FareBreakup.Adjustment.Adjustments', 'GERMAN', 'Anpassungen'),
+  ('FareBreakup.Adjustment.Adjustments', 'FRENCH', 'Ajustements'),
+  ('FareBreakup.Adjustment.Adjustments', 'FINNISH', 'Oikaisut'),
+  ('FareBreakup.Adjustment.Adjustments', 'ARABIC', 'التعديلات'),
+  ('FareBreakup.Adjustment.Adjustments', 'SOMALI', 'Hagaajinno'),
+  ('FareBreakup.Adjustment.RideDiscount', 'ENGLISH', 'Discount'),
+  ('FareBreakup.Adjustment.RideDiscount', 'DUTCH', 'Korting'),
+  ('FareBreakup.Adjustment.RideDiscount', 'SWEDISH', 'Rabatt'),
+  ('FareBreakup.Adjustment.RideDiscount', 'GERMAN', 'Rabatt'),
+  ('FareBreakup.Adjustment.RideDiscount', 'FRENCH', 'Remise'),
+  ('FareBreakup.Adjustment.RideDiscount', 'FINNISH', 'Alennus'),
+  ('FareBreakup.Adjustment.RideDiscount', 'ARABIC', 'الخصم'),
+  ('FareBreakup.Adjustment.RideDiscount', 'SOMALI', 'Qiimo dhimis'),
+  ('FareBreakup.Adjustment.RideCommission', 'ENGLISH', 'Commission'),
+  ('FareBreakup.Adjustment.RideCommission', 'DUTCH', 'Commissie'),
+  ('FareBreakup.Adjustment.RideCommission', 'SWEDISH', 'Provision'),
+  ('FareBreakup.Adjustment.RideCommission', 'GERMAN', 'Provision'),
+  ('FareBreakup.Adjustment.RideCommission', 'FRENCH', 'Commission'),
+  ('FareBreakup.Adjustment.RideCommission', 'FINNISH', 'Provisio'),
+  ('FareBreakup.Adjustment.RideCommission', 'ARABIC', 'العمولة'),
+  ('FareBreakup.Adjustment.RideCommission', 'SOMALI', 'Komishan'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'ENGLISH', 'Personal Discount'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'DUTCH', 'Persoonlijke korting'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'SWEDISH', 'Personlig rabatt'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'GERMAN', 'Persönlicher Rabatt'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'FRENCH', 'Remise personnelle'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'FINNISH', 'Henkilökohtainen alennus'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'ARABIC', 'خصم شخصي'),
+  ('FareBreakup.Adjustment.PersonalDiscount', 'SOMALI', 'Qiimo dhimis shakhsi ah'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'ENGLISH', 'Business Discount'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'DUTCH', 'Zakelijke korting'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'SWEDISH', 'Företagsrabatt'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'GERMAN', 'Geschäftsrabatt'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'FRENCH', 'Remise entreprise'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'FINNISH', 'Yritysalennus'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'ARABIC', 'خصم الأعمال'),
+  ('FareBreakup.Adjustment.BusinessDiscount', 'SOMALI', 'Qiimo dhimis ganacsi'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'ENGLISH', 'Fare Adjustment'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'DUTCH', 'Tariefcorrectie'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'SWEDISH', 'Prisjustering'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'GERMAN', 'Preiskorrektur'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'FRENCH', 'Ajustement du tarif'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'FINNISH', 'Hinnan oikaisu'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'ARABIC', 'تعديل الأجرة'),
+  ('FareBreakup.Adjustment.NegativeFareAdjustment', 'SOMALI', 'Hagaajinta qiimaha')
 ) AS t(message_key, language, message)
 WHERE NOT EXISTS (
   SELECT 1 FROM atlas_driver_offer_bpp.translations existing
-  WHERE existing.message_key = t.message_key AND existing.language = t.language
+  WHERE existing.message_key = t.message_key AND existing.language = t.language AND existing.merchant_operating_city_id IS NULL
 );

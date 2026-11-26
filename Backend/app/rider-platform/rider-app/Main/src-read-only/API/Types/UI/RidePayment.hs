@@ -8,6 +8,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
@@ -107,7 +108,7 @@ data RefundRequestReq = RefundRequestReq
 data RefundRequestResp = RefundRequestResp
   { code :: Domain.Types.RefundRequest.RefundRequestCode,
     createdAt :: Kernel.Prelude.UTCTime,
-    description :: Kernel.Prelude.Text,
+    description :: Domain.Types.TranslationKey.TranslatedText,
     evidence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundPurpose :: Domain.Types.RefundRequest.RefundPurpose,
     refundsAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,

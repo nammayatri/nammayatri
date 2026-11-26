@@ -22,9 +22,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
-import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
-import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -138,10 +137,6 @@ getInvoice (mbPersonId, merchantId) from to = do
            in if Kernel.Prelude.null parts then notAvailableText else T.intercalate ", " parts
     notAvailableText = "N/A"
 
--- | List finance-kernel invoices (Ride, RideCancellation) for the authenticated rider.
---   Optional 'mbReferenceId' narrows results to a specific ride: we look up all
---   ledger entries with that reference_id and keep only invoices linked to them
---   via 'finance_invoice_ledger_link'.
 getInvoiceList ::
   (Maybe (Id DP.Person), Id DM.Merchant) ->
   Maybe InvoiceType ->
@@ -154,27 +149,25 @@ getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
   let riderIdText = personId.getId
       limit = min 20 . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  allInvoices <- InvoiceSvc.findByIssuedTo RIDER riderIdText
-  filteredByRef <- case mbReferenceId of
-    Nothing -> pure allInvoices
-    Just refId -> do
-      entries <- RidePaymentFinance.findRidePaymentEntries refId
-      linkedInvoices <- catMaybes <$> mapM (InvoiceSvc.getInvoiceForEntry . (.id)) entries
-      let linkedIds = [inv.id | inv <- linkedInvoices]
-      pure $ Kernel.Prelude.filter (\i -> i.id `Kernel.Prelude.elem` linkedIds) allInvoices
-  let invoices = Kernel.Prelude.take limit . Kernel.Prelude.drop offset $
-        case mbInvoiceType of
-          Just invType -> Kernel.Prelude.filter (\i -> i.invoiceType == invType) filteredByRef
-          Nothing -> filteredByRef
-  let items = Kernel.Prelude.map buildInvoiceItem invoices
+  matchingInvoices <- case mbReferenceId of
+    Just refId -> Kernel.Prelude.filter (\i -> i.issuedToId == riderIdText) <$> QInvoiceExtra.findByReferenceIdWithStatusFallback refId mbInvoiceType (Just RIDER)
+    Nothing ->
+      Kernel.Prelude.filter
+        ( \i ->
+            i.status `Kernel.Prelude.elem` [FinanceInvoice.Paid, FinanceInvoice.Issued, FinanceInvoice.Draft]
+              && maybe True (== i.invoiceType) mbInvoiceType
+        )
+        <$> InvoiceSvc.findByIssuedTo RIDER riderIdText
+  let invoices = Kernel.Prelude.take limit . Kernel.Prelude.drop offset $ matchingInvoices
+  items <- forM invoices $ \inv -> buildInvoiceItem inv <$> QInvoiceExtra.findLinkedInvoices inv
   pure $
     DTInvoice.FinanceInvoiceListRes
       { invoices = items,
         totalItems = Kernel.Prelude.length items
       }
   where
-    buildInvoiceItem :: FinanceInvoice.Invoice -> DTInvoice.FinanceInvoiceItem
-    buildInvoiceItem inv =
+    buildInvoiceItem :: FinanceInvoice.Invoice -> [(InvoiceType, [FinanceInvoice.Invoice])] -> DTInvoice.FinanceInvoiceItem
+    buildInvoiceItem inv linkedGroups =
       let taxAmount = inv.totalAmount - inv.subtotal
        in DTInvoice.FinanceInvoiceItem
             { invoiceNumber = inv.invoiceNumber,
@@ -191,7 +184,8 @@ getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
               issuedByAddress = inv.issuedByAddress,
               taxRate = Nothing,
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              linkedInvoices = [DTInvoice.FinanceLinkedInvoices {invoiceType = linkedType, invoices = Kernel.Prelude.map (`buildInvoiceItem` []) linked} | (linkedType, linked) <- linkedGroups]
             }
 
 taxBreakupItems :: Text -> [(Text, Text)]

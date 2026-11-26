@@ -12,6 +12,7 @@ import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Payment.Interface.Types
@@ -409,7 +410,7 @@ data GetDocumentResponse = GetDocumentResponse
     status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     metadata :: Kernel.Prelude.Maybe Data.Aeson.Value
   }
   deriving stock (Generic)

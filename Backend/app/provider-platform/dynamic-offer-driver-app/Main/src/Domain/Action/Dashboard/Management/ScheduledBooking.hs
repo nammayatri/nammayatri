@@ -32,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), utctDay)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
@@ -60,7 +61,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIssueReport
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QComment
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import Kernel.Beam.Functions (runInDashboardDb)
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps (getCoordinates)
 import qualified Kernel.External.Maps.Types as KEMT
 import Kernel.External.Types (Language (ENGLISH))
@@ -159,6 +160,10 @@ getScheduledBookingList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Common.AssignmentStatus ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Bool ->
   Maybe Int ->
@@ -166,7 +171,7 @@ getScheduledBookingList ::
   Maybe Text ->
   Maybe UTCTime ->
   Flow Common.ScheduledBookingListRes
-getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHistory mbLimit mbOffset mbPickupArea mbTo = do
+getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbCustomerPhoneNo mbDriverCountryCode mbDriverPhoneNo mbDropCategory mbFrom mbIsHistory mbLimit mbOffset mbPickupArea mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -188,6 +193,8 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
     throwError (InvalidRequest $ "from cannot be older than " <> show (maxLookbackSeconds `div` (24 * 60 * 60)) <> " days")
   when (isHistory && isJust mbPickupArea) $
     throwError (InvalidRequest "pickupArea filters the live view only")
+  when (isHistory && any isJust [mbCustomerPhoneNo, mbDriverPhoneNo, mbDropCategory]) $
+    throwError (InvalidRequest "customerPhoneNo, driverPhoneNo and dropCategory filter the live view only")
   mbPickupFilter <- forM mbPickupArea $ \pickupArea -> case readMaybe (T.unpack pickupArea) of
     Just filterArea@(SL.Pickup _ _) -> pure filterArea
     _ -> throwError (InvalidRequest $ "pickupArea must be Pickup_<specialLocationId>[_Gate_<gateId>], got: " <> pickupArea)
@@ -206,18 +213,22 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
         pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite pageTxnIds
         pure (latestBookingPerTransaction pageTxnBookings pageTxnIds, length txnIds > limit, pageTxnBookings, Nothing)
       else do
+        liveFilters <- resolveLiveFilters merchant.id mbCustomerPhoneNo mbDriverCountryCode mbDriverPhoneNo mbDropCategory
         let windowStatuses = if isJust mbPickupFilter then liveStatuses else statuses
             atSpecialLocation b = all (\filterArea -> (SL.stripGateId <$> pickupAreaOf b) == Just (SL.stripGateId filterArea)) mbPickupFilter
             atPickupArea b = all (\filterArea -> not (SL.hasGateId filterArea) || pickupAreaOf b == Just filterArea) mbPickupFilter
         scheduledBookings <-
-          filter atSpecialLocation
-            <$> QBookingLite.findScheduledBookingsInWindowLite merchantOpCity.id (windowStatuses <> [SRB.CANCELLED, SRB.REALLOCATED]) fromTime toTime
+          if liveFilters.matchesNothing
+            then pure []
+            else
+              filter (\b -> atSpecialLocation b && liveFilters.byTransaction b)
+                <$> QBookingLite.findScheduledBookingsInWindowLite merchantOpCity.id (windowStatuses <> [SRB.CANCELLED, SRB.REALLOCATED]) fromTime toTime
         let scheduledTxnIds = nub $ map (.transactionId) scheduledBookings
         allTxnBookings <- QBookingLite.findAllByTransactionIdsLite scheduledTxnIds
         let latestRows = latestBookingPerTransaction allTxnBookings scheduledTxnIds
             liveRows =
               sortOn (\b -> (b.startTime, b.id.getId))
-                . filter (\b -> b.status `elem` statuses && atPickupArea b)
+                . filter (\b -> b.status `elem` statuses && atPickupArea b && liveFilters.byLatestBooking b)
                 $ latestRows
             pageRows = take limit $ drop offset liveRows
         pure (pageRows, length liveRows > offset + limit, allTxnBookings, mkSpecialLocationSummary latestRows <$ mbPickupFilter)
@@ -277,11 +288,41 @@ getScheduledBookingCityWiseCount merchantShortId _opCity mbFrom mbTo mbRequestor
         }
   pure Common.ScheduledBookingCityWiseCountRes {cities = cities}
 
+data LiveFilters = LiveFilters
+  { byTransaction :: QBookingLite.BookingLite -> Bool,
+    byLatestBooking :: QBookingLite.BookingLite -> Bool,
+    matchesNothing :: Bool
+  }
+
+resolveLiveFilters :: Id DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow LiveFilters
+resolveLiveFilters merchantId mbCustomerPhoneNo mbDriverCountryCode mbDriverPhoneNo mbDropCategory = do
+  mbRiderIds <- forM mbCustomerPhoneNo $ \phoneNo -> do
+    phoneHash <- getDbHash phoneNo
+    map (.id) <$> QRiderDetails.findAllByMobileNumberHashesAndMerchant [phoneHash] merchantId
+  mbDriverBookingIds <- forM mbDriverPhoneNo $ \phoneNo -> do
+    let countryCode = fromMaybe "+91" (DCommon.appendPlusInMobileCountryCode mbDriverCountryCode)
+    mbDriver <- QPerson.findByRoleAndMobileNumberAndMerchantId DP.DRIVER countryCode phoneNo merchantId
+    maybe (pure []) (fmap (map (.bookingId)) . QRideLite.findAllActiveByDriverIdLite . (.id)) mbDriver
+  pure
+    LiveFilters
+      { byTransaction = \b ->
+          all (\riderIds -> maybe False (`elem` riderIds) b.riderId) mbRiderIds
+            && all (`hasDropCategory` b) mbDropCategory,
+        byLatestBooking = \b -> all (b.id `elem`) mbDriverBookingIds,
+        matchesNothing = mbRiderIds == Just [] || mbDriverBookingIds == Just []
+      }
+
+hasDropCategory :: Text -> QBookingLite.BookingLite -> Bool
+hasDropCategory category booking = maybe False (("_" <> category <> "_Priority") `T.isInfixOf`) booking.specialLocationTag
+
 pickupAreaOf :: QBookingLite.BookingLite -> Maybe SL.Area
 pickupAreaOf booking = do
   bookingArea <- booking.area
   slId <- SL.pickupSpecialZoneIdFromArea bookingArea
   pure $ SL.Pickup (Id slId) (SL.pickupGateIdFromArea bookingArea)
+
+dropAreaOf :: QBookingLite.BookingLite -> Maybe SL.Area
+dropAreaOf booking = SL.Drop . Id <$> (SL.dropSpecialZoneIdFromArea =<< booking.area)
 
 -- | Assigned and unassigned counts over a special location's live transactions, overall and per pickup area (gate).
 mkSpecialLocationSummary :: [QBookingLite.BookingLite] -> Common.ScheduledBookingSpecialLocationSummary
@@ -402,6 +443,7 @@ buildListItem ctx booking =
           cancellationReasonCode = cancellationReasonCodeText =<< mbCancellation,
           cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation,
           pickupArea = SL.areaToText <$> pickupAreaOf booking,
+          dropArea = SL.areaToText <$> dropAreaOf booking,
           numberOfPassengers = booking.numberOfPassengers,
           numberOfCheckInBags = booking.numberOfCheckInBags,
           numberOfCabinBags = booking.numberOfCabinBags

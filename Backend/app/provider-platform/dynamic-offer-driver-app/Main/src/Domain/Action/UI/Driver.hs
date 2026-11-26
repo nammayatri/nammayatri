@@ -202,6 +202,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.StclMembership as DStclMembership
 import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKey (TranslatedText)
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
@@ -284,6 +285,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers as SSRD
 import qualified SharedLogic.Analytics as Analytics
@@ -308,6 +310,7 @@ import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -739,7 +742,7 @@ data BookingAPIEntity = BookingAPIEntity
     toLocation :: Maybe DLoc.Location,
     stops :: [DLoc.Location],
     vehicleServiceTier :: DVST.ServiceTierType,
-    vehicleServiceTierName :: Text,
+    vehicleServiceTierName :: TranslatedText,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
@@ -1135,7 +1138,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         let driverId = cast personId
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-        when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
+        let isGoingOnline = isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))
+        when isGoingOnline $ do
           when (PolicyDoc.isGoOnlineBlockerActive transporterConfig) $ do
             blockingDocs <- PolicyDoc.findBlockingUnacceptedPolicies person
             unless (null blockingDocs) $
@@ -1223,6 +1227,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive && not driverInfo.active) $
           fork "FleetEngine:notifyDriverOnline" $
             FleetEngine.notifyDriverOnline merchantOpCityId personId
+        when isGoingOnline $
+          fork "setActivity:rebuildDriverPoolDataIfStale" $
+            DPDBuilder.rebuildDriverPoolDataIfStale driverId
         pure APISuccess.Success
     )
     ( do
@@ -1564,7 +1571,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
 
     epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, HasField "ltsHedisEnv" r Redis.HedisEnv) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, Redis.HedisLTSFlowEnv r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -2072,8 +2079,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       -- Scheduled rides: when this driver is short of the minimum balance, send that minimum so the app can guide them to recharge.
       nowForWalletFlag <- getCurrentTime
       mbScheduledRideMinWalletBalance <- FWallet.getScheduledRideMinBalanceIfShort transporterConfig searchTry.isScheduled searchTry.startTime nowForWalletFlag (pure $ scheduledRideMinWalletFloor farePolicy.conditionalCharges) driverId.getId
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      mbTierName <- USRD.translatedTierName (fromMaybe Maps.ENGLISH driver.language) searchRequest nearbyReq
       -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest Nothing) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance}
+      return $ (USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) (estimate >>= (.fareParams) >>= (.govtCharges)) (Just farePolicy) transporterConfig.taxConfig.taxRegime mbRiderDetails transporterConfig.showRoutePerRequest Nothing) {USRD.scheduledRideMinWalletBalance = mbScheduledRideMinWalletBalance, USRD.vehicleServiceTier = mbTierName}
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2172,6 +2181,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             when (sReqFD.hasAvailableForRidesTag == Just True) $ AvailableForRides.resetRejectionStreak driverId
+            when sReqFD.pickupZone $
+              whenJust (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) $ \specialLocationId ->
+                SpecialZoneDriverDemand.resetQueueSkipCount specialLocationId driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
             -- City bt: + campaign ij:bm rrAccepted (policy in Lib.BehaviorTracker.CampaignQuote).
@@ -2237,7 +2249,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
         searchReq <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId (searchTry.id.getId <> ":" <> driverId.getId)
+        SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show sReqFD.vehicleVariant) driverId merchantId (searchTry.id.getId <> ":" <> driverId.getId)
       unlockRedisQuoteKeys
       pure Nothing
     Pulled -> do
@@ -2827,15 +2839,16 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole phoneNumber.mobileCountryCode mobileNumberHash person.merchantId SP.DRIVER
   deleteOldPersonCheck <- case mbPerson of
     Nothing -> return False
     Just oldPerson -> do
       when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       DeleteDriverOnCheck.validateDriver merchant oldPerson (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
   logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
+  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes phoneNumber.mobileCountryCode
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
   otpCode <- maybe generateOTPCode (return . show) useFakeOtpM
@@ -2844,7 +2857,7 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     withLogTag ("personId_" <> getId person.id) $ do
       (mbSender, message, templateId, messageType) <-
-        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
@@ -2916,6 +2929,9 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
     return $ fromMaybe 0 res
   logDebug $ "attemptsLeft" <> show attemptsLeft
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes req.mobileCountryCode
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   smsCfg <- asks (.smsCfg)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
@@ -2932,7 +2948,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
       altphoneNumber = counCode <> altNumber
   withLogTag ("personId_" <> getId personId) $ do
     (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
@@ -3559,7 +3575,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                             <$> withTryCatch "boardScheduledOverlap" (SBOC.isCandidateFeasible driver.merchantId cityId transporterConfig (SBOC.mkCandidateFromBooking scheduledBooking) committedIntervals)
                     filterM isBookingFeasibleForBoard stageVisibleBookings
               -- Offset and limit count the bookings that pass every filter.
-              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
+              bookings <- mapM (buildBookingAPIEntityFromBooking driver.language mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
               let sortedBookings = sortBookingsByDistance (catMaybes bookings)
               return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
@@ -3629,8 +3645,8 @@ returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset
     then Redis.hmGet redisKeyForHset nearbyBookings
     else pure []
 
-buildBookingAPIEntityFromBooking :: Maybe LatLong -> DRB.Booking -> Flow (Maybe ScheduleBooking)
-buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
+buildBookingAPIEntityFromBooking :: Maybe Maps.Language -> Maybe LatLong -> DRB.Booking -> Flow (Maybe ScheduleBooking)
+buildBookingAPIEntityFromBooking mbLanguage mbDriverLocation booking@DRB.Booking {..} = do
   let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
       distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
   mbQuote <- QQuote.findById (Id quoteId)
@@ -3646,7 +3662,8 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
           -- The policy lists the price of one bag. The driver is shown what this booking is charged.
           luggageChargeItem = mfilter (> 0) fareParams.luggageCharge >>= \luggageCharge -> mkBreakupItem currency luggageChargeCaption (show luggageCharge)
           fareDetails = catMaybes (filter (\item -> fmap (.title) item /= Just luggageChargeCaption) farePolicyBreakups) <> maybeToList luggageChargeItem
-      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} fareDetails
+      tierName <- RideCommon.translatedTierName mbLanguage booking
+      return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', vehicleServiceTierName = tierName, isInsured = Just isInsured, taxRates = (\tc -> driverTaxRates tc (quote.farePolicy >>= (.rideTaxConfig)) (quote.farePolicy >>= (.tollTaxConfig)) (quote.farePolicy >>= (.parkingTaxConfig)) (quote.farePolicy >>= (.commissionTaxConfig)) paymentChargeDetails) <$> mbTransporterConfig, estimatedFareNet = Just (netTotalTaxInclusive (if fromMaybe False fareParams.isVatTaxType then Tax.VAT else Tax.GST) (Just (fromMaybe 0 commission + fromMaybe 0 cancellationDuesCommission)) paymentCharge mbBearer (sum (map (fromMaybe 0) ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))) (estimatedFare - (if mbBearer == Just DPCB.PAYMENT_CUSTOMER then fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax else 0))), ..} fareDetails
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
 mkBreakupItem currency title valueInText = do

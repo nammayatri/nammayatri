@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -45,12 +46,12 @@ findAllByMerchantOpCityId ::
   m [Domain.Types.MerchantMessage.MerchantMessage]
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
+findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage)))
-findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
-  findOneWithKV
+  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.MerchantMessage.MerchantMessage]))
+findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.messageKey $ Se.Eq messageKey,
@@ -58,16 +59,31 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messa
         ]
     ]
 
-findByMerchantOpCityIdDomainAndChannel ::
+findByMerchantOpCityIdDomainChannelAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage)))
-findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = do
+  (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> (Kernel.External.Types.Language -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))))
+findByMerchantOpCityIdDomainChannelAndLanguage merchantOperatingCityId domain channel language = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.channel $ Se.Eq channel
+          Se.Is Beam.channel $ Se.Eq channel,
+          Se.Is Beam.language $ Se.Eq (Just language)
+        ]
+    ]
+
+findByMerchantOpCityIdMessageKeyLanguageVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.External.Types.Language -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))))
+findByMerchantOpCityIdMessageKeyLanguageVehicleCategory merchantOperatingCityId messageKey language vehicleCategory = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.language $ Se.Eq (Just language),
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 
@@ -91,7 +107,12 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleCategory vehicleCategory
     ]
-    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
+    [ Se.And
+        [ Se.Is Beam.language $ Se.Eq (Just language),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey
+        ]
+    ]
 
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
@@ -103,6 +124,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             createdAt = createdAt,
             domain = domain,
             jsonData = fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData),
+            language = fromMaybe Kernel.External.Types.ENGLISH language,
             mediaUrl = mediaUrl,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -126,6 +148,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.createdAt = createdAt,
         Beam.domain = domain,
         Beam.jsonData = Just $ Data.Aeson.toJSON jsonData,
+        Beam.language = Just language,
         Beam.mediaUrl = mediaUrl,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

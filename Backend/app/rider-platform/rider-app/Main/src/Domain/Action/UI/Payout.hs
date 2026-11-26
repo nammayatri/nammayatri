@@ -20,6 +20,7 @@ import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.PayoutConfig as DPayoutConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions as B (runInReplica)
 import qualified Kernel.External.Payout.Interface.Types as IPayout
@@ -197,12 +198,12 @@ runRiderPayoutSettlementWith repoll merchantId merchantOperatingCityId payoutSta
               coveredIds
               (show payoutStatus)
             when (isPayoutOrderSuccess payoutStatus) $ do
-              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_COMPLETED" payoutOrder.amount.amount
+              Notify.notifyRiderPayoutStatus person RiderPush_OfferCashback_Completed payoutOrder.amount.amount
               fork "event_tracking: offer_cashback_credited" $
                 ET.trackEvent merchantId merchantOperatingCityId $
                   ET.OfferCashbackCredited payoutOrder.customerId payoutReq.id.getId payoutOrder.amount.amount
             when (isPayoutOrderFailed payoutStatus) $
-              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" payoutOrder.amount.amount
+              Notify.notifyRiderPayoutStatus person RiderPush_OfferCashback_Failed payoutOrder.amount.amount
         fork "Update Payout Status and Transactions for RideOfferCashback" $
           repollPartner payoutOrder payoutConfig person
       _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
@@ -279,8 +280,8 @@ callPayoutService payoutOrder payoutConfig person = do
 
 notifyPersonOnAmountCredit :: (PayoutSettlementFlow m r) => DP.Person -> m ()
 notifyPersonOnAmountCredit person = do
-  let pnKey = "REFERRAL_BONUS_EARNED"
-  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
+  let pnKey = RiderPush_Referral_BonusEarned
+  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey person.merchantOperatingCityId pnKey Nothing Nothing person.language []
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
     Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)

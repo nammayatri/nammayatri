@@ -48,6 +48,8 @@ module Domain.Action.Dashboard.Merchant
     postMerchantRiderConfigEstimatesOrderUpdate,
     getMerchantConfigPaymentMethodList,
     postMerchantConfigPaymentMethodPaymentChargeUpdate,
+    getMerchantRiderConfigCalling,
+    postMerchantRiderConfigCallingUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
@@ -107,6 +109,7 @@ import Kernel.External.Call (CallService (Exotel))
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Hedis as Redis
@@ -214,16 +217,18 @@ postMerchantUpdate merchantShortId city req = do
   mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
-  whenJust req.exoPhones \exophones -> do
+  mbNewExophones <- forM req.exoPhones $ \exophones -> do
     CQExophone.deleteByMerchantOperatingCityId merchantOperatingCity.id
-    forM_ exophones $ \exophoneReq -> do
+    forM (toList exophones) $ \exophoneReq -> do
       exophone <- buildExophone merchant.id merchantOperatingCity.id now exophoneReq
       CQExophone.create exophone
+      pure exophone
 
   CQM.clearCache updMerchant
-  whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id) allExophones
-    CQExophone.clearCache merchantOperatingCity.id oldExophones
+  let oldExophones = maybe [] (filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id)) mbAllExophones
+  let newExophones = fromMaybe [] mbNewExophones
+  unless (null oldExophones && null newExophones) $
+    CQExophone.clearCache merchantOperatingCity.id (oldExophones <> newExophones)
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
 
@@ -444,6 +449,9 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
+            skipQueue = mbExistingSpLoc >>= (.skipQueue),
             ..
           }
 
@@ -504,7 +512,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             defaultMaxDriverThreshold = mbGate >>= (.defaultMaxDriverThreshold),
             defaultDemandThreshold = mbGate >>= (.defaultDemandThreshold),
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
-            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            maxRideSkipsBeforeQueueRemoval = reqT.maxRideSkipsBeforeQueueRemoval <|> (mbGate >>= (.maxRideSkipsBeforeQueueRemoval)),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
@@ -1927,7 +1935,10 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
-                boothSpecificFleet = Nothing
+                boothSpecificFleet = Nothing,
+                poolingMode = Nothing,
+                queueGeomGeoJson = Nothing,
+                skipQueue = Nothing
               }
           gateInfo =
             DGI.GateInfo
@@ -2026,7 +2037,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
           DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
-          DSL.paymentModes = new.paymentModes <|> old.paymentModes
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+          DSL.skipQueue = new.skipQueue <|> old.skipQueue
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
@@ -2351,6 +2363,52 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
   logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
   pure Success
 
+getMerchantRiderConfigCalling ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderCallingConfigRes
+getMerchantRiderConfigCalling merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  pure
+    Common.RiderCallingConfigRes
+      { enableShareNumberWithDriver = fromMaybe False riderConfig.enableShareNumberWithDriver,
+        pushConsentToBpp = fromMaybe False riderConfig.pushConsentToBpp
+      }
+
+postMerchantRiderConfigCallingUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateRiderCallingConfigReq ->
+  Flow APISuccess
+postMerchantRiderConfigCallingUpdate merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  _ <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  let setRiderFlags enabled = do
+        QRiderConfig.updateCallingConfig (Just enabled) (Just enabled) merchantOperatingCity.id
+        QRC.clearCache merchantOperatingCity.id
+        invalidateConfigInMem LYT.RiderConfig
+  case req.mode of
+    Common.CLOUD_CALLING -> setRiderFlags False
+    Common.DIRECT_CALLING_WITH_CONSENT -> setRiderFlags True
+    -- Forced direct calling is decided on the driver side and ignores rider consent, so the rider flags stay as they are.
+    Common.FORCED_DIRECT_CALLING -> pure ()
+
+  logTagInfo "dashboard -> postMerchantRiderConfigCallingUpdate : " (show merchantOperatingCity.id <> " mode: " <> show req.mode)
+  pure Success
+
 -- Type conversion helpers for VehicleServiceTierOrderConfig
 toCommonVehicleServiceTierOrderConfig :: DRC.VehicleServiceTierOrderConfig -> Common.VehicleServiceTierOrderConfig
 toCommonVehicleServiceTierOrderConfig domainConfig =
@@ -2395,31 +2453,40 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
-  mbExisting <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing
+  let language = fromMaybe ENGLISH req.language
+  mbExisting <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOpCity.id messageKey language
   now <- getCurrentTime
   case mbExisting of
     Nothing -> do
+      -- A new language row carries the link template and media of the key's English row unless the
+      -- request sets them; the builders read them from the row of the recipient's language.
+      mbEnglish <-
+        if language == ENGLISH || (isJust req.jsonData && isJust req.mediaUrl)
+          then pure Nothing
+          else QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOpCity.id messageKey ENGLISH
       parsedJsonData <-
         case req.jsonData of
-          Nothing -> pure def
+          Nothing -> pure $ maybe def (.jsonData) mbEnglish
           Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
       let merchantMessage =
             DMM.MerchantMessage
               { merchantId = merchant.id,
                 merchantOperatingCityId = merchantOpCity.id,
                 messageKey = messageKey,
+                language = language,
                 message = req.message,
                 templateId = req.templateId,
                 containsUrlButton = req.containsUrlButton,
                 jsonData = parsedJsonData,
                 messageType = req.messageType,
                 senderHeader = req.senderHeader,
-                mediaUrl = req.mediaUrl,
+                mediaUrl = req.mediaUrl <|> (mbEnglish >>= (.mediaUrl)),
                 createdAt = now,
                 updatedAt = now
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey
+      CQMM.clearCacheById merchantOpCity.id
     Just existing -> do
       parsedJsonData <-
         case req.jsonData of
@@ -2437,6 +2504,7 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
               }
       QMM.updateByPrimaryKey updated
       CQMM.clearCache merchantOpCity.id messageKey
+      CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 deleteMerchantMerchantMessage ::
@@ -2447,9 +2515,12 @@ deleteMerchantMerchantMessage ::
 deleteMerchantMerchantMessage merchantShortId city messageKeyText = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
-  _ <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  -- A row in any language: the delete removes the key in every language.
+  rows <- QMM.findAllByMerchantOpCityIdAndMessageKey merchantOpCity.id messageKey
+  when (null rows) $ throwError (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
   QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
   CQMM.clearCache merchantOpCity.id messageKey
+  CQMM.clearCacheById merchantOpCity.id
   pure Success
 
 postMerchantCloudUpdate ::

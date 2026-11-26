@@ -14,7 +14,7 @@
 -- merchant short id + city name.
 --
 -- Idempotent: support_emails is only filled when empty; the template insert
--- is ON CONFLICT DO NOTHING on the primary key.
+-- is ON CONFLICT DO NOTHING.
 
 ------------------------------------------------------------
 -- support_emails (first entry is used as the support contact in the email)
@@ -66,4 +66,4 @@ In case of any queries, please email us at {#supportEmail#}$body$,
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
 WHERE (moc.merchant_short_id = 'BRIDGE_CABS_PARTNER' AND moc.city = 'Amsterdam')
    OR (moc.merchant_short_id = 'BRIDGE_FINLAND_PARTNER' AND moc.city = 'Helsinki')
-ON CONFLICT (merchant_operating_city_id, message_key) DO NOTHING;
+ON CONFLICT DO NOTHING;

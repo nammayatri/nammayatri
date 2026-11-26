@@ -11,6 +11,7 @@ import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -21,6 +22,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     createdAt :: Kernel.Prelude.UTCTime,
     domain :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    language :: Kernel.External.Types.Language,
     mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -43,13 +45,13 @@ data MediaChannel
   | OVERLAY
   | ALERT
   | EMAIL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data MessageDomain
   = FLEET
   | RIDE_HAILING
   | GENERAL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data MessageKey
   = SEND_OTP
@@ -110,9 +112,10 @@ data MessageKey
   | VEHICLE_APPROVED
   | SEND_WHATSAPP_OTP
   | DASHBOARD_WELCOME_EMAIL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  | TDS_CERTIFICATE_EMAIL
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
-type MerchantMessage = MerchantMessageD 'Safe
+type MerchantMessage = MerchantMessageD ('Safe)
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -122,8 +125,8 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaChannel))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageDomain)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageDomain))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))

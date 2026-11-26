@@ -154,4 +154,5 @@ autoComplete merchantId merchantOpCityId entityId AutoCompleteReq {..} = do
       Context.USA -> Maps.USA
       Context.Netherlands -> Maps.Netherlands
       Context.Finland -> Maps.Finland
+      Context.Jordan -> Maps.Jordan
       Context.AnyCountry -> Maps.India

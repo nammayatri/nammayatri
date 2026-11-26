@@ -1,11 +1,13 @@
 module SharedLogic.DriverPool.DriverPoolDataBuilder
   ( getOrBuildDriverPoolDataBatch,
     buildDriverPoolDataFromDB,
+    rebuildDriverPoolDataIfStale,
   )
 where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import Data.Ord (Down (..))
 import qualified Domain.Types.DriverBankAccount as Fields
 import qualified Domain.Types.FleetDriverAssociation as Fields
 import qualified Domain.Types.FleetOwnerInformation as Fields
@@ -19,6 +21,7 @@ import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverPool.DriverPoolData
 import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -69,6 +72,35 @@ getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
         mapM_ (setDriverPoolDataByCloud deploymentCloudType) b
         pure b
   pure $ migratedEntries <> builtFromDB
+
+rebuildDriverPoolDataIfStale ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Driver ->
+  m ()
+rebuildDriverPoolDataIfStale driverId = do
+  let key = driverPoolDataKey driverId
+  deploymentCloudType <- asks (.cloudType)
+  Redis.withWaitAndLockRedisWithTimeout (LTSSync.driverPoolSyncLockKey driverId) 3 10 50000 $ do
+    mbDriverInfo <- QDI.findById driverId
+    primaryCopy <- Redis.withLTSRedis $ Redis.safeGet key
+    peerCopies <- Redis.runOnAllPeerLTSRedis $ Redis.safeGet key
+    let copies = catMaybes (primaryCopy : peerCopies)
+        mbLatest :: Maybe DriverPoolData
+        mbLatest = listToMaybe $ DL.sortOn (Down . (.lastUpdatedAt)) copies
+    whenJust mbDriverInfo $ \driverInfo ->
+      whenJust mbLatest $ \latest -> do
+        let isStale :: DriverPoolData -> Bool
+            isStale dpd = dpd.enabled /= driverInfo.enabled || dpd.blocked /= driverInfo.blocked || dpd.subscribed /= driverInfo.subscribed
+        when (any isStale copies) $ do
+          logError $ "rebuildDriverPoolDataIfStale: LTS enabled/blocked/subscribed differs from DB, rebuilding for driver " <> driverId.getId
+          now <- getClockTimeInMs
+          Redis.withLTSRedis $ Redis.del key
+          void $ Redis.runOnAllPeerLTSRedis $ Redis.del key
+          setDriverPoolDataByCloud deploymentCloudType latest {enabled = driverInfo.enabled, blocked = driverInfo.blocked, subscribed = driverInfo.subscribed, lastUpdatedAt = Just now}
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
 -- Always fetches: driver_information, vehicle, person, fleet_driver_association

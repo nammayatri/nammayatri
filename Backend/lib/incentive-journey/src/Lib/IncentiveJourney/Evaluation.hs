@@ -114,8 +114,6 @@ mergeCurrentMetrics mbExisting bag =
       merged =
         foldl'
           ( \acc (k, v) ->
-              -- Campaign behaviour bag keys are flat (rrAccepted, …). Tick path writes
-              -- *InsideTimebound — keep both in sync so rates never see Inside=4, flat=2.
               let targets =
                     if k `elem` campaignBehaviorMetricBaseNames
                       then [k, metricInsideKey k]
@@ -179,9 +177,9 @@ bumpMetricCountInCurrentMetrics mbExisting baseName insideTimeBound delta =
 bumpMetricCountInCurrentMetricsWithRedisFloor :: Maybe A.Value -> Text -> Bool -> Int -> Int -> Maybe A.Value
 bumpMetricCountInCurrentMetricsWithRedisFloor mbExisting baseName insideTimeBound delta redisFloor
   | insideTimeBound && redisFloor > 0 =
-      ensureMetricInsideAtLeast mbExisting baseName redisFloor
+    ensureMetricInsideAtLeast mbExisting baseName redisFloor
   | otherwise =
-      bumpMetricCountInCurrentMetrics mbExisting baseName insideTimeBound delta
+    bumpMetricCountInCurrentMetrics mbExisting baseName insideTimeBound delta
 
 -- | Raise InsideTimebound to at least redisFloor (Redis ij:bm SoT), keep flat base in sync,
 -- then refresh rates. Flat keys from ride-end merges must not lag Inside (acceptanceRate 200%).

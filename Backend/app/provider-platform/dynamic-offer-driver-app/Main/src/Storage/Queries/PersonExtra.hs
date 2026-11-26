@@ -612,7 +612,7 @@ updateMobileNumberAndCode person = do
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
+updatePersonDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisLTSFlowEnv r) => Person -> m ()
 updatePersonDetails person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -628,6 +628,8 @@ updatePersonDetails person = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+  LTSSync.syncDriverPoolDataToLTS (cast person.id) $
+    LTSSync.emptyUpdate {LTSSync.gender = LTSSync.Set person.gender}
 
 updateFleetOwnerDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Id Person -> Person -> m ()
 updateFleetOwnerDetails (Id personId) req = do

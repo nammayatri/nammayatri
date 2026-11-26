@@ -67,6 +67,7 @@ import qualified Domain.Types.PersonDisability as PersonDisability
 import qualified Domain.Types.PersonPTStats as Fields
 import qualified Domain.Types.PersonStats as Fields
 import qualified Domain.Types.RiderConfig as DRC
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
 import Environment
@@ -101,6 +102,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
 import qualified Safety.Domain.Types.SafetySettings as Fields
@@ -687,7 +689,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
         }
   let filterNewContacts personDEN = return $ not $ personDEN.mobileNumber `elem` oldList
   newlyAddedContacts <- filterM filterNewContacts newList
-  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts Nothing
+  SPDEN.notifyEmergencyContacts person RiderPush_Safety_EmergencyContactAdded [("userName", SLP.getName person)] ("Emergency Contact Added", notificationMessage person) Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts Nothing
   where
     notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 
@@ -961,6 +963,9 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
                 email = emailVal,
                 otp = otpHash
               }
+      -- Checked before the pending record is replaced, so a rejected request leaves an OTP already sent usable.
+      when (otpChannel' == SOTP.SMS && isNothing person'.useFakeOtp) $
+        whenJust req'.mobileCountryCode $ validateSmsOtpCountryCode riderConfig'.smsOtpAllowedCountryCodes
       let redisKey = makeUpdateAuthRedisKey identifierType' (getId personId')
       let expirySeconds = smsCfg'.sessionConfig.authExpiry * 60
       Redis.setExp redisKey authData expirySeconds
@@ -971,10 +976,12 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
           personId'
           person'.merchantId
           person'.merchantOperatingCityId
+          person'.language
           req'.mobileCountryCode
           req'.mobileNumber
           req'.email
           riderConfig'.emailOtpConfig
+          riderConfig'.smsOtpAllowedCountryCodes
           Nothing
 
 data VerifyUpdateAuthOTPReq = VerifyUpdateAuthOTPReq

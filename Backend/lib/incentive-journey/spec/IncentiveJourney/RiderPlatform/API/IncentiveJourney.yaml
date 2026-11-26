@@ -364,6 +364,7 @@ types:
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
     - campaignUserLinkType: Maybe CampaignUserLinkType
+    - optInPeriod: Maybe OptInPeriod
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
     - derive: "'HideSecrets"
@@ -382,6 +383,7 @@ types:
     - streakEndRewardExpirationAt: Maybe Int
     - streakEndSubscriptionWaiveOff: Maybe SubscriptionWaiveOffConfig
     - campaignUserLinkType: Maybe CampaignUserLinkType
+    - optInPeriod: Maybe OptInPeriod
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
     - derive: "'HideSecrets"
@@ -407,6 +409,7 @@ types:
     - isActive: Bool
     - journeyType: IncentiveJourneyType
     - campaignUserLinkType: CampaignUserLinkType
+    - optInPeriod: Maybe OptInPeriod
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
     - maxWaiveOffCount: Maybe Int

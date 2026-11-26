@@ -24,20 +24,20 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Person as Person
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import qualified Email.Flow as Email
 import Email.Types (EmailServiceConfig)
 import qualified EulerHS.Language as L
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
-import qualified Tools.Fields as Fields
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
 
@@ -59,12 +59,14 @@ sendOTP ::
   Id Person.Person ->
   Id Merchant.Merchant ->
   Id MOC.MerchantOperatingCity ->
+  TransporterConfig ->
+  Maybe Language ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   m ()
-sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash = do
+sendOTP otpChannel otpCode personId merchantId merchantOpCityId transporterConfig mbLanguage mbCountryCode mbMobileNumber mbEmail mbSenderHash = do
   smsCfg <- asks (.smsCfg)
   let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
 
@@ -72,10 +74,11 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
     SMS -> do
       countryCode <- mbCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for SMS OTP channel")
+      validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes countryCode
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildSendOTPMessage merchantOpCityId $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId mbLanguage $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
@@ -88,14 +91,13 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for WHATSAPP OTP channel")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
-        mbWhatsappOtpMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.SEND_WHATSAPP_OTP Nothing Nothing
+        mbWhatsappOtpMessage <- QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.SEND_WHATSAPP_OTP mbLanguage Nothing Nothing
         void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId (Whatsapp.OptApiReq {phoneNumber = phoneNumber, method = Whatsapp.OPT_IN})
         result <- Whatsapp.whatsAppOtpApi merchantOpCityId (Whatsapp.SendOtpApiReq {sendTo = phoneNumber, var1 = otpCode, templateId = (.templateId) <$> mbWhatsappOtpMessage})
         logDebug $ "Whatsapp OTP result: " <> show result
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "Email OTP config not found for merchantOperatingCityId:- " <> merchantOpCityId.getId)
       emailServiceConfig <- asks (.emailServiceConfig)
       withLogTag ("personId_" <> getId personId) $ do
@@ -114,16 +116,18 @@ sendOTPByIdentifierType ::
   Id Person.Person ->
   Id Merchant.Merchant ->
   Id MOC.MerchantOperatingCity ->
+  TransporterConfig ->
+  Maybe Language ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   m ()
-sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash = do
+sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId transporterConfig mbLanguage mbCountryCode mbMobileNumber mbEmail mbSenderHash = do
   otpChannel <- case identifierType of
     Person.MOBILENUMBER -> pure SMS
     Person.EMAIL -> pure EMAIL
     Person.AADHAAR -> pure SMS -- Default to SMS, though this will fail anyway
     Person.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "OTP not applicable for GIMS_EMAIL_PASSWORD authentication"
     Person.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "OTP not applicable for GIMS_EMPLOYEE_ID_PASSWORD authentication"
-  sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash
+  sendOTP otpChannel otpCode personId merchantId merchantOpCityId transporterConfig mbLanguage mbCountryCode mbMobileNumber mbEmail mbSenderHash

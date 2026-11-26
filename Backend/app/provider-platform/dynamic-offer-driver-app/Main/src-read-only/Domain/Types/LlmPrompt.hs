@@ -37,7 +37,7 @@ data UseCase
   | RCExtraction
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type LlmPrompt = LlmPromptD 'Safe
+type LlmPrompt = LlmPromptD ('Safe)
 
 instance FromJSON (LlmPromptD 'Unsafe)
 
@@ -47,6 +47,6 @@ instance FromJSON (LlmPromptD 'Safe)
 
 instance ToJSON (LlmPromptD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PromptKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PromptKey))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UseCase)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UseCase))

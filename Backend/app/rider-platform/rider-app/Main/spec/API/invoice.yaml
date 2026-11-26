@@ -46,6 +46,10 @@ types:
     taxRate: Maybe Double
     issuedToTaxNo: Maybe Text
     issuedByTaxNo: Maybe Text
+    linkedInvoices: "[FinanceLinkedInvoices]"
+  FinanceLinkedInvoices:
+    invoiceType: InvoiceType
+    invoices: "[FinanceInvoiceItem]"
   FinanceInvoiceListRes:
     invoices: "[FinanceInvoiceItem]"
     totalItems: Int

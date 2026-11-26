@@ -42,6 +42,7 @@ import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
+import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC
@@ -52,6 +53,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
 import qualified Domain.Types.Trip as Trip
 import Domain.Types.VehicleVariant (VehicleVariant (..))
 import Environment (Flow)
@@ -61,6 +63,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.FleetEngine.Config as Fields
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -94,12 +97,14 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
@@ -203,7 +208,16 @@ data BookingAPIEntity = BookingAPIEntity
     -- and a new one is being found, but the app should keep showing the trip as assigned.
     isSilentReallocation :: Maybe Bool,
     parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo,
-    fleetEngineEnabled :: Maybe Bool
+    fleetEngineEnabled :: Maybe Bool,
+    rentalStops :: Maybe [RentalStopAPIEntity],
+    maxPendingRentalStops :: Maybe Int,
+    stopsVersion :: Maybe Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data RentalStopAPIEntity = RentalStopAPIEntity
+  { location :: LocationAPIEntity,
+    reachedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -299,7 +313,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     eligibleForBetterDriverSearch :: Maybe Bool,
     -- Set after a better-driver swap: the new Booking to switch polling to.
     supersededByBookingId :: Maybe (Id Booking),
-    betterDriverAbortRadiusMeters :: Maybe Int
+    betterDriverAbortRadiusMeters :: Maybe Int,
+    stopsVersion :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -431,6 +446,9 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   rides <- mapM (buildRideAPIEntity (requesterId, booking, isOnlinePayment)) allRides
   person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
   riderMobile <- mapM decrypt person.mobileNumber
+  let language = fromMaybe Lang.ENGLISH person.language
+  serviceTierName <- traverse (CQTranslations.findTextByKeyOrOpsText booking.merchantOperatingCityId language (ServiceTier_Name booking.vehicleServiceTierType)) booking.serviceTierName
+  serviceTierShortDesc <- traverse (CQTranslations.findTextByKeyOrOpsText booking.merchantOperatingCityId language (ServiceTier_ShortDescription booking.vehicleServiceTierType)) booking.serviceTierShortDesc
   let riderName =
         let names = catMaybes [person.firstName, person.middleName, person.lastName]
          in if null names then Nothing else Just $ T.intercalate " " names
@@ -438,6 +456,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   fleetEngineEnabled <- lookupFleetEngineEnabled booking.merchantId booking.merchantOperatingCityId
   mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
+  mbRentalStops <- mkRentalStopsAPIEntity booking activeRide isValueAddNP
+  mbStopsVersion <- bookingStopsVersion booking
   return $
     BookingAPIEntity
       { id = booking.id,
@@ -496,8 +516,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
         isAirConditioned = booking.isAirConditioned,
         driverCancellationNotAllowed = booking.driverCancellationNotAllowed,
-        serviceTierName = booking.serviceTierName,
-        serviceTierShortDesc = booking.serviceTierShortDesc,
+        serviceTierName,
+        serviceTierShortDesc,
         driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
         driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
         isScheduled = booking.isScheduled,
@@ -526,7 +546,10 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         cardInfo = cardInfo,
         isSilentReallocation = Nothing,
         parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo,
-        fleetEngineEnabled = fleetEngineEnabled
+        fleetEngineEnabled = fleetEngineEnabled,
+        rentalStops = fst <$> mbRentalStops,
+        maxPendingRentalStops = snd <$> mbRentalStops,
+        stopsVersion = mbStopsVersion
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -688,6 +711,67 @@ getActiveSos' mbRide personId = do
 makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
 makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
+mkRentalStopsAPIEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DRide.Ride -> Bool -> m (Maybe ([RentalStopAPIEntity], Int))
+mkRentalStopsAPIEntity booking mbActiveRide isValueAddNP = case (booking.bookingDetails, mbActiveRide) of
+  (RentalDetails _, Just ride) | isValueAddNP && ride.status == DRide.INPROGRESS -> do
+    mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+    if maybe False (fromMaybe False . (.enableRentalStopUpdates)) mbRiderConfig
+      then do
+        stops <- getCurrentRentalStops booking ride
+        let toAPIEntity stop = RentalStopAPIEntity {location = SLoc.makeLocationAPIEntity stop.location, reachedAt = stop.reachedAt}
+        pure $ Just (map toAPIEntity stops, 5)
+      else pure Nothing
+  _ -> pure Nothing
+
+data RentalStop = RentalStop
+  { order :: Int,
+    location :: Location,
+    reachedAt :: Maybe UTCTime
+  }
+
+getRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m [RentalStop]
+getRentalStops rideId = do
+  mappings <- QLM.getLatestStopsByEntityId' rideId.getId
+  stopsInfo <- QSI.findAllByRideIdFromKVAndDB rideId
+  forM mappings $ \mapping -> do
+    location <- QL.findById mapping.locationId >>= fromMaybeM (StopsLocationNotFound mapping.locationId.getId)
+    let reachedAt = (.waitingTimeStart) <$> find (\stopInfo -> stopInfo.stopOrder == mapping.order) stopsInfo
+    pure RentalStop {order = mapping.order, location, reachedAt}
+
+getCurrentRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> DRide.Ride -> m [RentalStop]
+getCurrentRentalStops booking ride = do
+  rideStops <- getRentalStops ride.id
+  mbStopsVersion <- getRentalStopsVersion booking.id
+  if isJust mbStopsVersion
+    then pure rideStops
+    else do
+      searchStopsCount <- length <$> QLM.getLatestStopsByEntityId booking.transactionId
+      let reachedStops = filter (isJust . (.reachedAt)) rideStops
+          bookedPendingStops = if booking.hasStops == Just True then filter (isNothing . (.reachedAt)) (take searchStopsCount rideStops) else []
+          mbSingleStopLocation = case booking.bookingDetails of
+            RentalDetails details -> details.stopLocation
+            _ -> Nothing
+          isListed location = location.id `elem` map (.location.id) (reachedStops <> bookedPendingStops)
+          mbSinglePendingStop = do
+            singleStopLocation <- mbSingleStopLocation
+            guard (not $ isListed singleStopLocation)
+            find (\stop -> stop.location.id == singleStopLocation.id) rideStops
+      pure $ reachedStops <> bookedPendingStops <> maybeToList mbSinglePendingStop
+
+bookingStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Booking -> m (Maybe Int)
+bookingStopsVersion booking = case booking.bookingDetails of
+  RentalDetails _ -> getRentalStopsVersion booking.id
+  _ -> pure Nothing
+
+getRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id Booking -> m (Maybe Int)
+getRentalStopsVersion bookingId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get (rentalStopsVersionKey bookingId)
+
+setRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id Booking -> Int -> m ()
+setRentalStopsVersion bookingId version = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setExp (rentalStopsVersionKey bookingId) version (2 * 24 * 60 * 60)
+
+rentalStopsVersionKey :: Id Booking -> Text
+rentalStopsVersionKey bookingId = "RentalStops:Version:BookingId-" <> bookingId.getId
+
 buildBookingAPIEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, CoreMetrics m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
 buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   -- mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
@@ -782,7 +866,8 @@ buildBookingStatusAPIEntity booking = do
         Nothing -> pure ()
       pure mbPending
     _ -> pure Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime driverArrivalStatus destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId) booking.betterDriverAbortRadiusMeters
+  mbStopsVersion <- bookingStopsVersion booking
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime driverArrivalStatus destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId) booking.betterDriverAbortRadiusMeters mbStopsVersion
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

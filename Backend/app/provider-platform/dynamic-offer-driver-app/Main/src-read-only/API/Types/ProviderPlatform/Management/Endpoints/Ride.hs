@@ -11,11 +11,11 @@ import qualified Dashboard.Common.RideDebug
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Ticket.Interface.Types
-import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -507,7 +507,7 @@ data RideEvidenceListRes = RideEvidenceListRes {evidence :: [RideEvidenceItem]}
 
 data RideFinanceInfoChargeGroup = RideFinanceInfoChargeGroup
   { key :: Kernel.Prelude.Text,
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     estimated :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     actual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     rows :: [RideFinanceInfoChargeRow]
@@ -517,7 +517,7 @@ data RideFinanceInfoChargeGroup = RideFinanceInfoChargeGroup
 
 data RideFinanceInfoChargeRow = RideFinanceInfoChargeRow
   { key :: Kernel.Prelude.Text,
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     estimated :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     actual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
@@ -649,7 +649,7 @@ data RideInfoRes = RideInfoRes
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
-    vehicleServiceTierName :: Kernel.Prelude.Text,
+    vehicleServiceTierName :: Domain.Types.TranslationKey.TranslatedText,
     nextStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     lastStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     stopInformation :: Kernel.Prelude.Maybe [StopInformation],
@@ -687,7 +687,7 @@ data RideInfoRes = RideInfoRes
     paymentReferenceInternal :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walletTransactions :: [WalletTransactionItem],
     invoiceIds :: [Kernel.Prelude.Text],
-    badge :: [Kernel.Prelude.Text],
+    badge :: [Domain.Types.TranslationKey.TranslatedText],
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
     actualTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
@@ -1240,7 +1240,7 @@ type GetRideInfo =
               )
        )
 
-type GetRideFinanceInfo = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("financeInfo" :> (QueryParam "language" Kernel.External.Types.Language :> Get '[JSON] RideFinanceInfoRes))
+type GetRideFinanceInfo = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("financeInfo" :> Get '[JSON] RideFinanceInfoRes)
 
 type GetRideEvidence = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("evidence" :> Get '[JSON] RideEvidenceListRes)
 
@@ -1359,7 +1359,7 @@ data RideAPIs = RideAPIs
     postRideEndMultiple :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp),
     postRideCancelMultiple :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideCancelReq -> EulerHS.Types.EulerClient MultipleRideCancelResp),
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe [RideDetailGroup] -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient RideInfoRes)),
-    getRideFinanceInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient RideFinanceInfoRes),
+    getRideFinanceInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideFinanceInfoRes,
     getRideEvidence :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideEvidenceListRes,
     getRideEvidenceFile :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideEvidenceFileRes),
     postRideEvidenceVisibility :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (SetRideEvidenceVisibilityReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess))),

@@ -205,6 +205,7 @@ data ScheduledBookingListItem = ScheduledBookingListItem
     cancellationReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     numberOfPassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfCheckInBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     numberOfCabinBags :: Kernel.Prelude.Maybe Kernel.Prelude.Int
@@ -220,107 +221,160 @@ data ScheduledBookingSpecialLocationSummary = ScheduledBookingSpecialLocationSum
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingCityWiseCountHelper :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper))
+type API = "scheduledBooking" :> (GetScheduledBookingList :<|> (GetScheduledBookingCityWiseCountHelper :<|> (GetScheduledBookingInfo :<|> (GetScheduledBookingDriverDistance :<|> (GetScheduledBookingNearbyDrivers :<|> (PostScheduledBookingAssignHelper :<|> (PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper)))))))
 
 type GetScheduledBookingList =
-  ( "list" :> QueryParam "assignmentStatus" AssignmentStatus :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "isHistory" Kernel.Prelude.Bool
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam
-           "pickupArea"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "to"
-           Kernel.Prelude.UTCTime
-      :> Get
-           '[JSON]
-           ScheduledBookingListRes
-  )
+  "list"
+    :> ( QueryParam "assignmentStatus" AssignmentStatus
+           :> ( QueryParam "customerPhoneNo" Kernel.Prelude.Text
+                  :> ( QueryParam
+                         "driverCountryCode"
+                         Kernel.Prelude.Text
+                         :> ( QueryParam "driverPhoneNo" Kernel.Prelude.Text
+                                :> ( QueryParam "dropCategory" Kernel.Prelude.Text
+                                       :> ( QueryParam
+                                              "from"
+                                              Kernel.Prelude.UTCTime
+                                              :> ( QueryParam
+                                                     "isHistory"
+                                                     Kernel.Prelude.Bool
+                                                     :> ( QueryParam
+                                                            "limit"
+                                                            Kernel.Prelude.Int
+                                                            :> ( QueryParam
+                                                                   "offset"
+                                                                   Kernel.Prelude.Int
+                                                                   :> ( QueryParam
+                                                                          "pickupArea"
+                                                                          Kernel.Prelude.Text
+                                                                          :> ( QueryParam
+                                                                                 "to"
+                                                                                 Kernel.Prelude.UTCTime
+                                                                                 :> Get
+                                                                                      '[JSON]
+                                                                                      ScheduledBookingListRes
+                                                                             )
+                                                                      )
+                                                               )
+                                                        )
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
-type GetScheduledBookingCityWiseCount = ("cityWiseCount" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] ScheduledBookingCityWiseCountRes)
+type GetScheduledBookingCityWiseCount = "cityWiseCount" :> (QueryParam "from" Kernel.Prelude.UTCTime :> (QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] ScheduledBookingCityWiseCountRes))
 
 type GetScheduledBookingCityWiseCountHelper =
-  ( "cityWiseCount" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
-      :> QueryParam
-           "requestorId"
-           Kernel.Prelude.Text
-      :> Get '[JSON] ScheduledBookingCityWiseCountRes
-  )
+  "cityWiseCount"
+    :> ( QueryParam "from" Kernel.Prelude.UTCTime
+           :> ( QueryParam "to" Kernel.Prelude.UTCTime
+                  :> ( QueryParam
+                         "requestorId"
+                         Kernel.Prelude.Text
+                         :> Get '[JSON] ScheduledBookingCityWiseCountRes
+                     )
+              )
+       )
 
-type GetScheduledBookingInfo = (Capture "transactionId" Kernel.Prelude.Text :> "info" :> Get '[JSON] ScheduledBookingInfoRes)
+type GetScheduledBookingInfo = Capture "transactionId" Kernel.Prelude.Text :> ("info" :> Get '[JSON] ScheduledBookingInfoRes)
 
-type GetScheduledBookingDriverDistance = (Capture "transactionId" Kernel.Prelude.Text :> "driverDistance" :> Get '[JSON] DriverDistanceRes)
+type GetScheduledBookingDriverDistance = Capture "transactionId" Kernel.Prelude.Text :> ("driverDistance" :> Get '[JSON] DriverDistanceRes)
 
 type GetScheduledBookingNearbyDrivers =
-  ( Capture "transactionId" Kernel.Prelude.Text :> "nearbyDrivers" :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam
-           "maxCancellationRatePercent"
-           Kernel.Prelude.Int
-      :> QueryParam "minCompletedRides" Kernel.Prelude.Int
-      :> QueryParam
-           "minRating"
-           Kernel.Prelude.Double
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "onlyFavourites"
-           Kernel.Prelude.Bool
-      :> QueryParam
-           "radiusKm"
-           Kernel.Prelude.Double
-      :> QueryParam
-           "sortBy"
-           NearbyDriverSortBy
-      :> QueryParam
-           "tags"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           NearbyDriversRes
-  )
+  Capture "transactionId" Kernel.Prelude.Text
+    :> ( "nearbyDrivers"
+           :> ( QueryParam "limit" Kernel.Prelude.Int
+                  :> ( QueryParam
+                         "maxCancellationRatePercent"
+                         Kernel.Prelude.Int
+                         :> ( QueryParam "minCompletedRides" Kernel.Prelude.Int
+                                :> ( QueryParam
+                                       "minRating"
+                                       Kernel.Prelude.Double
+                                       :> ( QueryParam
+                                              "offset"
+                                              Kernel.Prelude.Int
+                                              :> ( QueryParam
+                                                     "onlyFavourites"
+                                                     Kernel.Prelude.Bool
+                                                     :> ( QueryParam
+                                                            "radiusKm"
+                                                            Kernel.Prelude.Double
+                                                            :> ( QueryParam
+                                                                   "sortBy"
+                                                                   NearbyDriverSortBy
+                                                                   :> ( QueryParam
+                                                                          "tags"
+                                                                          Kernel.Prelude.Text
+                                                                          :> Get
+                                                                               '[JSON]
+                                                                               NearbyDriversRes
+                                                                      )
+                                                               )
+                                                        )
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
-type PostScheduledBookingAssign = (Capture "transactionId" Kernel.Prelude.Text :> "assign" :> ReqBody '[JSON] AssignDriverReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostScheduledBookingAssign = Capture "transactionId" Kernel.Prelude.Text :> ("assign" :> (ReqBody '[JSON] AssignDriverReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type PostScheduledBookingAssignHelper =
-  ( Capture "transactionId" Kernel.Prelude.Text :> "assign" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] AssignDriverReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "transactionId" Kernel.Prelude.Text
+    :> ( "assign"
+           :> ( QueryParam "requestorId" Kernel.Prelude.Text
+                  :> ( ReqBody
+                         '[JSON]
+                         AssignDriverReq
+                         :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
-type PostScheduledBookingUnassign = (Capture "transactionId" Kernel.Prelude.Text :> "unassign" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostScheduledBookingUnassign = Capture "transactionId" Kernel.Prelude.Text :> ("unassign" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostScheduledBookingUnassignHelper =
-  ( Capture "transactionId" Kernel.Prelude.Text :> "unassign" :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "transactionId" Kernel.Prelude.Text
+    :> ( "unassign"
+           :> ( QueryParam "requestorId" Kernel.Prelude.Text
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type PostScheduledBookingOpsNote = (Capture "transactionId" Kernel.Prelude.Text :> "opsNote" :> ReqBody '[JSON] OpsNoteReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostScheduledBookingOpsNote = Capture "transactionId" Kernel.Prelude.Text :> ("opsNote" :> (ReqBody '[JSON] OpsNoteReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type PostScheduledBookingOpsNoteHelper =
-  ( Capture "transactionId" Kernel.Prelude.Text :> "opsNote" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] OpsNoteReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "transactionId" Kernel.Prelude.Text
+    :> ( "opsNote"
+           :> ( QueryParam "requestorId" Kernel.Prelude.Text
+                  :> ( ReqBody '[JSON] OpsNoteReq
+                         :> Post
+                              '[JSON]
+                              Kernel.Types.APISuccess.APISuccess
+                     )
+              )
+       )
 
 data ScheduledBookingAPIs = ScheduledBookingAPIs
-  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
-    getScheduledBookingCityWiseCount :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingCityWiseCountRes,
+  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes)))))))))),
+    getScheduledBookingCityWiseCount :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingCityWiseCountRes)),
     getScheduledBookingInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingInfoRes,
     getScheduledBookingDriverDistance :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverDistanceRes,
-    getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe NearbyDriverSortBy -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient NearbyDriversRes,
-    postScheduledBookingAssign :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> AssignDriverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postScheduledBookingUnassign :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postScheduledBookingOpsNote :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> OpsNoteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Prelude.Maybe NearbyDriverSortBy -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient NearbyDriversRes))))))))),
+    postScheduledBookingAssign :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (AssignDriverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)),
+    postScheduledBookingUnassign :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postScheduledBookingOpsNote :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (OpsNoteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess))
   }
 
-mkScheduledBookingAPIs :: (Client EulerHS.Types.EulerClient API -> ScheduledBookingAPIs)
+mkScheduledBookingAPIs :: Client EulerHS.Types.EulerClient API -> ScheduledBookingAPIs
 mkScheduledBookingAPIs scheduledBookingClient = (ScheduledBookingAPIs {..})
   where
     getScheduledBookingList :<|> getScheduledBookingCityWiseCount :<|> getScheduledBookingInfo :<|> getScheduledBookingDriverDistance :<|> getScheduledBookingNearbyDrivers :<|> postScheduledBookingAssign :<|> postScheduledBookingUnassign :<|> postScheduledBookingOpsNote = scheduledBookingClient

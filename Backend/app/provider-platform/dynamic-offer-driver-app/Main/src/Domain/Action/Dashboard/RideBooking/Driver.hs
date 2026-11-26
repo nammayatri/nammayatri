@@ -988,7 +988,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     Nothing -> pure []
     Just rules -> do
       let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make, model = Just req.model}
-      DomainRC.validateRCResponse rcValidationReq rules (fromMaybe ENGLISH requestor.language)
+      DomainRC.validateRCResponse requestor.merchantOperatingCityId rcValidationReq rules (fromMaybe ENGLISH requestor.language)
   -- Create RC for vehicle before verifying it
   let mbFleetOwnerId = bool Nothing (Just $ requestor.id.getId) (DCommon.checkFleetOwnerRole requestor.role)
 

@@ -6,6 +6,8 @@ module: RSFReconciliation
 
 apis:
   # Orders whose latest receiver_recon claim falls on `date` (IST day), one row per order.
+  # rideId narrows every list to that ride's order (its booking id): its order row, the UTRs it was claimed on,
+  # or its booking among the missed orders.
   - GET: # OrderListAPI
       endpoint: /rsf/orders
       migrate:
@@ -16,6 +18,7 @@ apis:
         limit: Int
         offset: Int
         bapId: Text
+        rideId: Text
       response:
         type: OrderListRes
 
@@ -43,6 +46,7 @@ apis:
         limit: Int
         offset: Int
         bapId: Text
+        rideId: Text
       response:
         type: UtrListRes
 
@@ -141,6 +145,7 @@ apis:
         limit: Int
         offset: Int
         bapId: Text
+        rideId: Text
       response:
         type: ReconGridListRes
 

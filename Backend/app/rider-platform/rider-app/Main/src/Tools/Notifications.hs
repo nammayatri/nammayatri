@@ -50,6 +50,9 @@ import Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferences as Fields
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.ServiceTierType as DST
+import Domain.Types.TranslationKey (keyName, legacyKeyName, legacyOrKeyName)
+import Domain.Types.TranslationKeys (RiderPushKey (..), RiderTranslationKey (..))
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as VehicleVariant
@@ -59,7 +62,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Types as FCMType
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (Language, SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (getField)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -91,6 +94,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.RiderPreferences as CQRP
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -120,9 +124,14 @@ createNotificationReq key modifier = modifier $ def {notificationKey = key}
 showLocalTime :: Seconds -> UTCTime -> Text
 showLocalTime timeDiffFromUtc time = T.pack $ formatTime defaultTimeLocale "%d %b, %I:%M %p" $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) time
 
+-- | A code-owned key: the row is looked up under its name, then under its legacy name.
+createKeyedNotificationReq :: RiderPushKey -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
+createKeyedNotificationReq key modifier = modifier $ def {notificationKey = keyName key, legacyNotificationKey = legacyKeyName key}
+
 data NotificationRequest = NotificationRequest
   { subCategory :: Maybe Notification.SubCategory,
     notificationKey :: Text,
+    legacyNotificationKey :: Maybe Text,
     priority :: Maybe Notification.MessagePriority,
     ttl :: Maybe UTCTime,
     showType :: Notification.ShowNotification,
@@ -137,6 +146,7 @@ instance Default NotificationRequest where
     NotificationRequest
       { subCategory = Nothing,
         notificationKey = mempty,
+        legacyNotificationKey = Nothing,
         priority = Nothing,
         ttl = Nothing,
         showType = Notification.SHOW,
@@ -144,6 +154,13 @@ instance Default NotificationRequest where
         notificationTypeForSound = Nothing,
         auth = Nothing
       }
+
+-- | The title and body of a code-owned key's row in the reader's language with the parameters
+-- filled in, else the code's own English text, so the push is always sent.
+buildMerchantPNContentWithFallback :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Language -> RiderPushKey -> [(Text, Text)] -> (Text, Text) -> m (Text, Text)
+buildMerchantPNContentWithFallback merchantOperatingCityId mbLanguage key templateParams fallback =
+  maybe fallback (\merchantPN -> (buildTemplate templateParams merchantPN.title, buildTemplate templateParams merchantPN.body))
+    <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId key Nothing Nothing mbLanguage Nothing
 
 buildTemplate :: [(Text, Text)] -> Text -> Text
 buildTemplate paramVars template =
@@ -240,8 +257,8 @@ dynamicNotifyPerson ::
   m ()
 dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams mbConfigVersionMap liveActivityReq = do
   let merchantOperatingCityId = person.merchantOperatingCityId
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language mbConfigVersionMap
-  when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
+  mbMerchantPN <- CPN.findMatchingMerchantPNByNames merchantOperatingCityId (notiData.notificationKey : maybeToList notiData.legacyNotificationKey) tripCategory notiData.subCategory person.language mbConfigVersionMap
+  when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> fromMaybe notiData.notificationKey notiData.legacyNotificationKey
   whenJust mbMerchantPN \merchantPN -> do
     when (merchantPN.shouldTrigger) $ do
       let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
@@ -316,7 +333,7 @@ notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList 
   isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   quoteEntities <- mkQAPIEntityList Nothing quotes bppDetailList isValueAddNPList
   let entity = Notification.Entity Notification.Product estimateId.getId quoteEntities
-      notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
+      notiReq = createKeyedNotificationReq RiderPush_Quote_DriverIncoming identity
   dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty Nothing Nothing
 
 -- title = "New driver offers incoming!"
@@ -344,44 +361,42 @@ notifyOnRideSearchExpired searchReq = do
               <|> getField @"area" addr
               <|> getField @"street" addr
               <|> getField @"city" addr
-          liveActivityCustomMessage = Just "Your ride search has expired!!"
+      liveActivityReq <- forM personObj.liveActivityToken $ \liveActivityToken -> do
+        liveActivityCustomMessage <- CQTranslations.findTextByKeyWithFallback personObj.merchantOperatingCityId personObj.language LiveActivity_Message_SearchExpired "Your ride search has expired!!"
+        pure $
+          FCMType.LiveActivityReq
+            { liveActivityToken,
+              liveActivityReqType = "end",
+              liveActivityNotificationType = "CANCELLED_PRODUCT",
+              liveActivityContentState =
+                FCMType.LiveActivityContentState
+                  { activityStatus = "CANCELLED",
+                    driverInfo = Nothing,
+                    bookingInfo =
+                      Just $
+                        FCMType.BookingInfo
+                          { vehicleColor = Nothing,
+                            vehicleName = Nothing,
+                            vehicleNumber = Nothing,
+                            vehicleVariant = Nothing,
+                            source = Nothing,
+                            destination = destination,
+                            estimatedFare = Nothing
+                          },
+                    timerDuration = Nothing,
+                    customMessage = Just liveActivityCustomMessage
+                  },
+              liveActivityApnsPriority = "10"
+            }
       dynamicNotifyPerson
         personObj
-        (createNotificationReq "EXPIRED_CASE" identity)
+        (createKeyedNotificationReq RiderPush_Search_Expired identity)
         dynamicParams
         entity
         Nothing
         []
         (Just searchReq.configInExperimentVersions)
-        ( case personObj.liveActivityToken of
-            Just _liveActivityToken ->
-              Just $
-                FCMType.LiveActivityReq
-                  { liveActivityToken = _liveActivityToken,
-                    liveActivityReqType = "end",
-                    liveActivityNotificationType = "CANCELLED_PRODUCT",
-                    liveActivityContentState =
-                      FCMType.LiveActivityContentState
-                        { activityStatus = "CANCELLED",
-                          driverInfo = Nothing,
-                          bookingInfo =
-                            Just $
-                              FCMType.BookingInfo
-                                { vehicleColor = Nothing,
-                                  vehicleName = Nothing,
-                                  vehicleNumber = Nothing,
-                                  vehicleVariant = Nothing,
-                                  source = Nothing,
-                                  destination = destination,
-                                  estimatedFare = Nothing
-                                },
-                          timerDuration = Nothing,
-                          customMessage = liveActivityCustomMessage
-                        },
-                    liveActivityApnsPriority = "10"
-                  }
-            _ -> Nothing
-        )
+        liveActivityReq
     _ -> pure ()
 
 -- title = "Ride search expired!"
@@ -400,7 +415,7 @@ notifyOnRideAssigned ::
   SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnRideAssigned = notifyOnDriverAssignedWith Notification.DRIVER_ASSIGNMENT "DRIVER_ASSIGNMENT"
+notifyOnRideAssigned = notifyOnDriverAssignedWith Notification.DRIVER_ASSIGNMENT RiderPush_Driver_Assigned
 
 -- | Same as notifyOnRideAssigned, but tagged as a swap so the client can tell them apart.
 notifyOnBetterDriverAssigned ::
@@ -408,16 +423,16 @@ notifyOnBetterDriverAssigned ::
   SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnBetterDriverAssigned = notifyOnDriverAssignedWith Notification.BETTER_DRIVER_ASSIGNED "BETTER_DRIVER_ASSIGNED"
+notifyOnBetterDriverAssigned = notifyOnDriverAssignedWith Notification.BETTER_DRIVER_ASSIGNED RiderPush_Driver_BetterAssigned
 
 notifyOnDriverAssignedWith ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Notification.Category ->
-  Text ->
+  RiderPushKey ->
   SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnDriverAssignedWith category messageKey booking ride = do
+notifyOnDriverAssignedWith category pushKey booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
@@ -460,7 +475,7 @@ notifyOnDriverAssignedWith category messageKey booking ride = do
     -- Always send the normal driver-assigned notification
     dynamicNotifyPerson
       person'
-      (createNotificationReq messageKey (\r -> r {soundTag = tag}))
+      (createKeyedNotificationReq pushKey (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -472,7 +487,7 @@ notifyOnDriverAssignedWith category messageKey booking ride = do
               FCMType.LiveActivityReq
                 { liveActivityToken = _liveActivityToken,
                   liveActivityReqType = "update",
-                  liveActivityNotificationType = messageKey,
+                  liveActivityNotificationType = legacyOrKeyName pushKey,
                   liveActivityContentState =
                     FCMType.LiveActivityContentState
                       { activityStatus = "ASSIGNED",
@@ -529,7 +544,7 @@ notifyOtpRideConfirmed booking otp = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "OTP_RIDE_CONFIRMED" identity)
+    (createKeyedNotificationReq RiderPush_Ride_OtpConfirmed identity)
     ()
     entity
     booking.tripCategory
@@ -589,6 +604,14 @@ notifyOnScheduledRideAccepted booking ride = do
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability personId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  let startTime = showLocalTime riderConfig.timeDiffFromUtc booking.startTime
+  (title, body) <-
+    buildMerchantPNContentWithFallback
+      merchantOperatingCityId
+      person.language
+      RiderPush_Driver_AssignedScheduled
+      [("driverName", driverName), ("startTime", startTime)]
+      ("Driver assigned!", unwords [driverName, "will be your driver for your scheduled trip starting at ", startTime])
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_ASSIGNMENT,
@@ -604,13 +627,6 @@ notifyOnScheduledRideAccepted booking ride = do
             sound = notificationSound,
             overlayNotificationData = Nothing
           }
-      title = T.pack "Driver assigned!"
-      body =
-        unwords
-          [ driverName,
-            "will be your driver for your scheduled trip starting at ",
-            showLocalTime riderConfig.timeDiffFromUtc booking.startTime
-          ]
   notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
 newtype RideStartedParam = RideStartedParam
@@ -623,19 +639,28 @@ newtype ServiceTierChangedParam = ServiceTierChangedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | The app tells this push from other trip updates by 'notificationKey', not by its text.
+data ServiceTierChangedData = ServiceTierChangedData
+  { serviceTierName :: Text,
+    notificationKey :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 notifyOnServiceTierChange ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
-  Text ->
+  DST.ServiceTierType ->
+  Maybe Text ->
   m ()
-notifyOnServiceTierChange booking newServiceTierName = do
+notifyOnServiceTierChange booking newVehicleServiceTier mbServiceTierName = do
   let personId = booking.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedParam newServiceTierName)
+  newServiceTierName <- serviceTierNameFor person newVehicleServiceTier mbServiceTierName
+  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedData newServiceTierName (legacyOrKeyName RiderPush_Ride_ServiceTierChanged))
       dynamicParams = ServiceTierChangedParam newServiceTierName
   dynamicNotifyPerson
     person
-    (createNotificationReq "SERVICE_TIER_CHANGED" identity)
+    (createKeyedNotificationReq RiderPush_Ride_ServiceTierChanged identity)
     dynamicParams
     entity
     booking.tripCategory
@@ -648,6 +673,11 @@ newtype TripAssignedData = TripAssignedData
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | The tier name the rider sees: the keyed row in their language, else the keyed English row, else the booking's own name, else the type.
+serviceTierNameFor :: (CacheFlow m r, EsqDBFlow m r) => Person.Person -> DST.ServiceTierType -> Maybe Text -> m Text
+serviceTierNameFor person serviceTierType mbServiceTierName =
+  CQTranslations.findTextByKeyWithFallback person.merchantOperatingCityId person.language (ServiceTier_Name serviceTierType) (fromMaybe (show serviceTierType) mbServiceTierName)
+
 notifyOnRideStarted ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
@@ -657,7 +687,6 @@ notifyOnRideStarted booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
-      serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId (TripAssignedData booking.tripCategory)
       dynamicParams = RideStartedParam driverName
@@ -669,9 +698,10 @@ notifyOnRideStarted booking ride = do
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
+    serviceTierName <- serviceTierNameFor person' booking.vehicleServiceTierType booking.serviceTierName
     dynamicNotifyPerson
       person'
-      (createNotificationReq "TRIP_STARTED" (\r -> r {soundTag = tag}))
+      (createKeyedNotificationReq RiderPush_Trip_Started (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -745,7 +775,7 @@ notifyOnRideCompleted booking ride otherParties rideDiscountAmount = do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
-      (createNotificationReq "TRIP_FINISHED" (\r -> r {soundTag = tag}))
+      (createKeyedNotificationReq RiderPush_Trip_Finished (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -837,7 +867,7 @@ notifyOnExpiration searchReq = do
           dynamicParams = EmptyDynamicParam
       dynamicNotifyPerson
         p
-        (createNotificationReq "EXPIRED_CASE" identity)
+        (createKeyedNotificationReq RiderPush_Search_Expired identity)
         dynamicParams
         entity
         tripCategory
@@ -865,7 +895,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
       auth = Just $ Notification.Auth person.id.getId mbDeviceToken person.notificationToken
   dynamicNotifyPerson
     person
-    (createNotificationReq "REGISTRATION_APPROVED" (\r -> r {auth = auth}))
+    (createKeyedNotificationReq RiderPush_Account_RegistrationApproved (\r -> r {auth = auth}))
     EmptyDynamicParam
     entity
     Nothing
@@ -904,19 +934,19 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
             Just _ -> Notification.CANCELLED_PRODUCT_DRIVER
         SBCR.ByUser -> Notification.CANCELLED_PRODUCT_USER
         _ -> Notification.CANCELLED_PRODUCT
-      liveActivityCustomMessage = case cancellationSource of
+      (liveActivityMessageKey, liveActivityDefaultMessage) = case cancellationSource of
         SBCR.ByDriver -> do
           case mbRide of
-            Nothing -> Just "Sorry, No drivers found!"
-            Just _ -> Just "The driver had to cancel the ride!"
-        SBCR.ByUser -> Just "You have cancelled your ride!"
-        _ -> Just "Sorry, No drivers found!"
+            Nothing -> (LiveActivity_Message_NoDriversFound, "Sorry, No drivers found!")
+            Just _ -> (LiveActivity_Message_DriverCancelled, "The driver had to cancel the ride!")
+        SBCR.ByUser -> (LiveActivity_Message_UserCancelled, "You have cancelled your ride!")
+        _ -> (LiveActivity_Message_NoDriversFound, "Sorry, No drivers found!")
   fork "Disabling share ride" $ do
     disableFollowRide person.id
     Redis.del $ CQSos.mockSosKey person.id
   let notiKey = case mbRide of
-        Just _ -> "BOOKING_CANCEL_WITH_RIDE"
-        Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
+        Just _ -> RiderPush_Booking_CancelledWithRide
+        Nothing -> RiderPush_Booking_CancelledNoRide
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
       dynamicParams = RideCancelParam booking.startTime booking.id
       toLocationDestination = do
@@ -933,11 +963,38 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
           SRB.MeterRideDetails details -> details.toLocation
         let addr = destinationAdd.address
         addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
+  liveActivityReq <- forM person.liveActivityToken $ \liveActivityToken -> do
+    liveActivityCustomMessage <- CQTranslations.findTextByKeyWithFallback person.merchantOperatingCityId person.language liveActivityMessageKey liveActivityDefaultMessage
+    pure $
+      FCMType.LiveActivityReq
+        { liveActivityToken,
+          liveActivityReqType = "end",
+          liveActivityNotificationType = "CANCELLED_PRODUCT",
+          liveActivityContentState =
+            FCMType.LiveActivityContentState
+              { activityStatus = "CANCELLED",
+                driverInfo = Nothing,
+                bookingInfo =
+                  Just $
+                    FCMType.BookingInfo
+                      { vehicleColor = Nothing,
+                        vehicleName = Nothing,
+                        vehicleNumber = Nothing,
+                        vehicleVariant = Nothing,
+                        source = Nothing,
+                        destination = toLocationDestination,
+                        estimatedFare = Nothing
+                      },
+                timerDuration = Nothing,
+                customMessage = Just liveActivityCustomMessage
+              },
+          liveActivityApnsPriority = "10"
+        }
   forM_ (person : otherParties) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
-      ( createNotificationReq
+      ( createKeyedNotificationReq
           notiKey
           ( \r ->
               r
@@ -954,35 +1011,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
         ("orgName", bppDetails.name)
       ]
       (Just booking.configInExperimentVersions)
-      ( case person.liveActivityToken of
-          Just _liveActivityToken ->
-            Just $
-              FCMType.LiveActivityReq
-                { liveActivityToken = _liveActivityToken,
-                  liveActivityReqType = "end",
-                  liveActivityNotificationType = "CANCELLED_PRODUCT",
-                  liveActivityContentState =
-                    FCMType.LiveActivityContentState
-                      { activityStatus = "CANCELLED",
-                        driverInfo = Nothing,
-                        bookingInfo =
-                          Just $
-                            FCMType.BookingInfo
-                              { vehicleColor = Nothing,
-                                vehicleName = Nothing,
-                                vehicleNumber = Nothing,
-                                vehicleVariant = Nothing,
-                                source = Nothing,
-                                destination = toLocationDestination,
-                                estimatedFare = Nothing
-                              },
-                        timerDuration = Nothing,
-                        customMessage = liveActivityCustomMessage
-                      },
-                  liveActivityApnsPriority = "10"
-                }
-          _ -> Nothing
-      )
+      liveActivityReq
 
 cancellationSourceToSubCategory :: SBCR.CancellationSource -> Notification.SubCategory
 cancellationSourceToSubCategory = \case
@@ -1070,7 +1099,7 @@ notifyOnBookingReallocated booking = do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
-      (createNotificationReq "BOOKING_REALLOCATED" (\r -> r {soundTag = tag}))
+      (createKeyedNotificationReq RiderPush_Booking_Reallocated (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -1115,7 +1144,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
         addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
   dynamicNotifyPerson
     person
-    (createNotificationReq "EST_OR_QUOTE_REALLOCATED" (\r -> r {soundTag = tag, subCategory = Just subCategory}))
+    (createKeyedNotificationReq RiderPush_Booking_EstimateReallocated (\r -> r {soundTag = tag, subCategory = Just subCategory}))
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -1199,7 +1228,7 @@ notifyOnQuoteReceived quote = do
         _ -> Nothing
   dynamicNotifyPerson
     person
-    (createNotificationReq "QUOTE_RECEIVED" identity)
+    (createKeyedNotificationReq RiderPush_Quote_Received identity)
     dynamicParams
     entity
     tripCategory
@@ -1224,7 +1253,7 @@ notifyDriverReachingDestination personId tripCategory = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "DRIVER_REACHING_DESTINATION" identity)
+    (createKeyedNotificationReq RiderPush_Driver_ReachingDestination identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -1243,7 +1272,7 @@ notifyDriverOnTheWay personId tripCategory ride = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "DRIVER_ON_THE_WAY" identity)
+    (createKeyedNotificationReq RiderPush_Driver_OnTheWay identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -1310,12 +1339,12 @@ notifyDriverHasReached personId tripCategory ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let otpLessRide = fromMaybe False ride.enableOtpLessRide
       otp = if otpLessRide then "" else ride.otp
-      notificationKey = if otpLessRide then "DRIVER_HAS_REACHED_OTP_LESS" else "DRIVER_HAS_REACHED"
+      notificationKey = if otpLessRide then RiderPush_Driver_ReachedOtpLess else RiderPush_Driver_Reached
       entity = Notification.Entity Notification.Product personId.getId ()
       dynamicParams = DriverReachedParam ride.vehicleNumber otp
   dynamicNotifyPerson
     person
-    (createNotificationReq notificationKey identity)
+    (createKeyedNotificationReq notificationKey identity)
     dynamicParams
     entity
     tripCategory
@@ -1380,7 +1409,7 @@ notifyDriverReaching personId tripCategory ride = do
       dynamicParams = DriverReachedParam ride.vehicleNumber (if fromMaybe False ride.enableOtpLessRide then "" else ride.otp)
   dynamicNotifyPerson
     person
-    (createNotificationReq "DRIVER_REACHING" identity)
+    (createKeyedNotificationReq RiderPush_Driver_Reaching identity)
     dynamicParams
     entity
     tripCategory
@@ -1451,12 +1480,15 @@ notifyOnIssueChatMessage personId payload = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
   let notificationSound = notificationSoundFromConfig >>= NSC.defaultSound
-      title = T.pack "Support"
-      body =
-        if T.null payload.snippet
-          then if payload.hasMedia then "Sent you an image" else "You have a new message"
-          else payload.snippet
-      notificationData =
+      keyedText key fallback = maybe fallback (.body) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId key Nothing Nothing person.language Nothing
+  title <- maybe (T.pack "Support") (.title) <$> CPN.findMatchingMerchantPNByKey merchantOperatingCityId RiderPush_IssueChat_Title Nothing Nothing person.language Nothing
+  body <-
+    case payload.status of
+      Just status -> keyedText (RiderPush_IssueStatus status) payload.snippet
+      Nothing
+        | T.null payload.snippet -> if payload.hasMedia then keyedText RiderPush_IssueChat_ImageFallback "Sent you an image" else keyedText RiderPush_IssueChat_MessageFallback "You have a new message"
+        | otherwise -> pure payload.snippet
+  let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
             subCategory = Nothing,
@@ -1504,6 +1536,8 @@ notifyChatMessage ::
 notifyChatMessage riderId message entityData = do
   person <- runInReplica $ Person.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  -- The row names the sender; the message itself is the body.
+  (title, _) <- buildMerchantPNContentWithFallback merchantOperatingCityId person.language RiderPush_RideChat_Title [] ("Driver", message)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
@@ -1521,7 +1555,6 @@ notifyChatMessage riderId message entityData = do
             sound = notificationSound,
             overlayNotificationData = Nothing
           }
-      title = T.pack "Driver"
       body =
         unwords
           [ message
@@ -1537,10 +1570,9 @@ notifySafetyAlert booking code = do
   logDebug "Sending safety alert notification"
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let entity = Notification.Entity Notification.Product person.id.getId ()
-      key = mkSafetyNotificationKey code
   dynamicNotifyPerson
     person
-    (createNotificationReq key identity)
+    (mkSafetyNotificationReq code)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -1562,7 +1594,7 @@ notifyDriverBirthDay personId tripCategory driverName = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "DRIVER_BIRTHDAY" identity)
+    (createKeyedNotificationReq RiderPush_Driver_Birthday identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -1608,7 +1640,7 @@ notifyRideStartToEmergencyContacts booking ride = do
             let entity = Notification.Entity Notification.Product personId.getId ()
             dynamicNotifyPerson
               person
-              (createNotificationReq "FOLLOW_RIDE" identity)
+              (createKeyedNotificationReq RiderPush_Safety_FollowRide identity)
               EmptyDynamicParam
               entity
               booking.tripCategory
@@ -1665,7 +1697,7 @@ notifyOnStopReached booking ride = do
   let entity = Notification.Entity Notification.Product rideId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "STOP_REACHED" identity)
+    (createKeyedNotificationReq RiderPush_Ride_StopReached identity)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -1734,11 +1766,11 @@ notifyPersonOnEvents person entityData notifType mbCategory = do
 notifyRiderPayoutStatus ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r) =>
   Person ->
-  Text ->
+  RiderPushKey ->
   HighPrecMoney ->
   m ()
 notifyRiderPayoutStatus person pnKey amount = do
-  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
+  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey person.merchantOperatingCityId pnKey Nothing Nothing person.language []
   whenJust mbMerchantPN $ \merchantPN ->
     when merchantPN.shouldTrigger $ do
       let params = [("amount", show amount)]
@@ -1750,7 +1782,7 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "TICKET_CANCELLED" identity)
+    (createKeyedNotificationReq RiderPush_Ticket_Cancelled identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -1779,7 +1811,7 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
   let entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True)
   dynamicNotifyPerson
     person
-    (createNotificationReq "FIRST_RIDE_EVENT" identity)
+    (createKeyedNotificationReq RiderPush_Ride_FirstRide identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -1790,20 +1822,34 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
 -- title = fromMaybe (T.pack "First Ride Event") mbTitle
 -- body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
 
-notifyToAllBookingParties :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => [Person] -> Maybe TripCategory -> Text -> m ()
+notifyToAllBookingParties :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => [Person] -> Maybe TripCategory -> RiderPushKey -> m ()
 notifyToAllBookingParties persons tripCategory notikey =
   forM_ persons \person -> do
     when (isJust person.deviceToken) $ do
       let entity = Notification.Entity Notification.Product person.id.getId ()
       dynamicNotifyPerson
         person
-        (createNotificationReq notikey identity)
+        (createKeyedNotificationReq notikey identity)
         EmptyDynamicParam
         entity
         tripCategory
         []
         Nothing
         Nothing
+
+-- | The title and body for an edit-destination error the BPP sent: the code's row in the rider's
+-- language, else the English title for the code with the BPP's message as the body. A code this
+-- build does not know (an older BPP sends the title itself) is shown as received.
+editDestErrorContent :: (CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> Text -> m (Text, Text)
+editDestErrorContent person errorCode errorMessage =
+  case readMaybe (T.unpack errorCode) of
+    Just code -> buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language (RiderPush_Ride_EditDestError code) [] (fallbackTitle code, errorMessage)
+    Nothing -> pure (errorCode, errorMessage)
+  where
+    fallbackTitle = \case
+      BecknEnums.DECLINED_BY_DRIVER -> "Trip Update Request Declined"
+      BecknEnums.UNANSWERED_BY_DRIVER -> "Trip Update Request Unanswered"
+      _ -> "Trip Update Request Not Available"
 
 notifyOnTripUpdate ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
@@ -1817,9 +1863,9 @@ notifyOnTripUpdate booking mbRide err = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   (title, body) <- case err of
-    Just errorMessage -> return errorMessage
+    Just (errorCode, errorMessage) -> editDestErrorContent person errorCode errorMessage
     Nothing -> do
-      mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId "TRIP_UPDATED" booking.tripCategory Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (InternalError "Trip update merchant push notification not found")
+      mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId RiderPush_Trip_Updated booking.tripCategory Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (InternalError "Trip update merchant push notification not found")
       return (mbMerchantPN.title, mbMerchantPN.body)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_UPDATED merchantOperatingCityId
   let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
@@ -1876,9 +1922,10 @@ notifyOnTripUpdate booking mbRide err = do
 
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
-notifyAboutScheduledRide :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SRB.Booking -> Text -> Text -> m ()
-notifyAboutScheduledRide booking title body = do
+notifyAboutScheduledRide :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SRB.Booking -> m ()
+notifyAboutScheduledRide booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  (title, body) <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language RiderPush_ScheduledRide_Reminder [] ("Scheduled Ride Reminder", "Your scheduled ride is about to start. Please be ready for the ride.")
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SCHEDULED_RIDE_REMINDER person.merchantOperatingCityId
   let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
       notificationData =
@@ -1902,7 +1949,7 @@ notifyPaymentFulfillment :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationS
 notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceType = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType notifCategory person.merchantOperatingCityId
-  mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId (mkRefundNotificationKey) Nothing Nothing person.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey person.merchantOperatingCityId (RiderPush_Payment paymentServiceType notifCategory) Nothing Nothing person.language Nothing
   let mbContent = case mbMerchantPN of
         Just merchantPN -> if merchantPN.shouldTrigger then Just (merchantPN.title, merchantPN.body, Just merchantPN.notificationCategory) else Nothing
         Nothing -> (\(t, b) -> (t, b, Nothing)) <$> fallbackContent
@@ -1928,9 +1975,6 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
             }
     notifyPerson person.merchantId person.merchantOperatingCityId person.id mbPNCategory notificationData Nothing
   where
-    mkRefundNotificationKey :: Text
-    mkRefundNotificationKey =
-      T.pack (show paymentServiceType) <> "_" <> T.pack (show notifCategory)
     -- Booking-deposit refunds push even when no merchant_push_notification row is configured.
     fallbackContent :: Maybe (Text, Text)
     fallbackContent = case (paymentServiceType, notifCategory) of
@@ -1979,12 +2023,12 @@ getAllOtherRelatedPartyPersons booking = do
       pure $ filter (isJust . (.deviceToken)) allParty
     _ -> pure []
 
-mkSafetyNotificationKey :: T.Text -> Text
-mkSafetyNotificationKey code =
+mkSafetyNotificationReq :: T.Text -> NotificationRequest
+mkSafetyNotificationReq code =
   case readMaybe (T.unpack code) of
-    Just BecknEnums.DEVIATION -> "SAFETY_ALERT_DEVIATION"
-    Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
-    Nothing -> code
+    Just BecknEnums.DEVIATION -> createKeyedNotificationReq RiderPush_Safety_AlertDeviation identity
+    Just BecknEnums.RIDE_STOPPAGE -> createKeyedNotificationReq RiderPush_Safety_AlertRideStoppage identity
+    Nothing -> createNotificationReq code identity
 
 notifyAboutDeletedPerson :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> m ()
 notifyAboutDeletedPerson personId = do
@@ -1992,7 +2036,7 @@ notifyAboutDeletedPerson personId = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "ACCOUNT_DELETED" identity)
+    (createKeyedNotificationReq RiderPush_Account_Deleted identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -2008,7 +2052,7 @@ notifyOnRideEndOffer person = do
   let entity = Notification.Entity Notification.Person person.id.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "RIDE_END_OFFER" identity)
+    (createKeyedNotificationReq RiderPush_Ride_EndOffer identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -2032,18 +2076,19 @@ customerCancellationRateNudgeTtlSeconds = 24 * 3600
 sendCustomerCancellationRateNudge ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r) =>
   Person ->
-  Text ->
+  RiderPushKey ->
   Int ->
   m ()
 sendCustomerCancellationRateNudge person notificationKey cancellationRate = do
-  let key = customerCancellationRateNudgeSentKey person.id.getId notificationKey
+  -- The dedupe entry keeps the row's old name so a release does not nudge twice.
+  let key = customerCancellationRateNudgeSentKey person.id.getId (legacyOrKeyName notificationKey)
   alreadyNudged :: (Maybe Bool) <- Redis.get key
   unless (maybe False (const True) alreadyNudged) $ do
     let entityData = CustomerCancellationRateNudgeData {customerId = person.id.getId, customerCancellationRate = cancellationRate}
         entity = Notification.Entity Notification.Person person.id.getId entityData
     dynamicNotifyPerson
       person
-      (createNotificationReq notificationKey identity)
+      (createKeyedNotificationReq notificationKey identity)
       EmptyDynamicParam
       entity
       Nothing
@@ -2057,23 +2102,23 @@ notifyRefunds ::
   DRefundRequest.RefundRequest ->
   m ()
 notifyRefunds refundRequest = case refundRequest.status of
-  DRefundRequest.APPROVED -> notifyRefunds' FCMType.REFUND_REQUEST_APPROVED refundRequest
-  DRefundRequest.REJECTED -> notifyRefunds' FCMType.REFUND_REQUEST_REJECTED refundRequest
-  DRefundRequest.FAILED -> notifyRefunds' FCMType.REFUND_FAILED refundRequest
-  DRefundRequest.REFUNDED -> notifyRefunds' FCMType.REFUND_SUCCESS refundRequest
+  DRefundRequest.APPROVED -> notifyRefunds' RiderPush_Refund_RequestApproved refundRequest
+  DRefundRequest.REJECTED -> notifyRefunds' RiderPush_Refund_RequestRejected refundRequest
+  DRefundRequest.FAILED -> notifyRefunds' RiderPush_Refund_Failed refundRequest
+  DRefundRequest.REFUNDED -> notifyRefunds' RiderPush_Refund_Succeeded refundRequest
   DRefundRequest.OPEN -> pure ()
 
 notifyRefunds' ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
-  FCMType.FCMNotificationType ->
+  RiderPushKey ->
   DRefundRequest.RefundRequest ->
   m ()
-notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
+notifyRefunds' pushKey DRefundRequest.RefundRequest {..} = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq (show notificationType) identity)
+    (createKeyedNotificationReq pushKey identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -2101,7 +2146,7 @@ notifyRewardUnlock person rewardTitle sponsorName couponCode = do
       entity = Notification.Entity Notification.Person person.id.getId EmptyDynamicParam
   dynamicNotifyPerson
     person
-    (createNotificationReq fcmKey identity)
+    (createKeyedNotificationReq fcmKey identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -2119,7 +2164,7 @@ notifyRewardUnlock person rewardTitle sponsorName couponCode = do
             <> " reason=noPhone"
       Just phoneNumber -> do
         mbMerchantMessage <-
-          CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId whatsappMessageKey Nothing
+          CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId whatsappMessageKey person.language Nothing
         case mbMerchantMessage of
           Nothing ->
             logInfo $
@@ -2177,9 +2222,9 @@ rewardUnlockNotificationConfig ::
   Text ->
   Text ->
   Text ->
-  (Text, DMM.MessageKey, [(Text, Text)], [Maybe Text])
+  (RiderPushKey, DMM.MessageKey, [(Text, Text)], [Maybe Text])
 rewardUnlockNotificationConfig rewardTitle sponsorName couponCode =
-  ( "REWARD_UNLOCK",
+  ( RiderPush_Reward_Unlock,
     DMM.WHATSAPP_REWARD_UNLOCK,
     [ ("rewardTitle", rewardTitle),
       ("sponsorName", sponsorName),
@@ -2197,7 +2242,7 @@ notifyRiderOnEKDLiveCallFeedback booking = do
   let entity = Notification.Entity Notification.Product booking.id.getId ()
   dynamicNotifyPerson
     person
-    (createNotificationReq "EKD_LIVE_CALL_FEEDBACK" identity)
+    (createKeyedNotificationReq RiderPush_Ride_EkdLiveCallFeedback identity)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -2260,7 +2305,7 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
       dynamicParams = BusTripStartedParam vehicleNumber routeName
   dynamicNotifyPerson
     person
-    (createNotificationReq "BUS_TRIP_STARTED" identity)
+    (createKeyedNotificationReq RiderPush_Bus_TripStarted identity)
     dynamicParams
     entity
     Nothing
@@ -2295,7 +2340,7 @@ notifyBusTripEnded person vehicleNumber routeName tripId journeyId = do
       dynamicParams = BusTripStartedParam vehicleNumber routeName
   dynamicNotifyPerson
     person
-    (createNotificationReq "BUS_TRIP_ENDED" (\r -> r {showType = Notification.DO_NOT_SHOW}))
+    (createKeyedNotificationReq RiderPush_Bus_TripEnded (\r -> r {showType = Notification.DO_NOT_SHOW}))
     dynamicParams
     entity
     Nothing
@@ -2324,7 +2369,7 @@ notifyBusApproachingStop ::
   Text ->
   Text ->
   Text ->
-  Text ->
+  RiderPushKey ->
   Text ->
   Maybe (Id Domain.Types.Journey.Journey) ->
   Maybe Text ->
@@ -2348,7 +2393,7 @@ notifyBusApproachingStop person vehicleNumber routeName routeNumber vehicleTagNu
         _ -> routeNumber
   dynamicNotifyPerson
     person
-    (createNotificationReq notificationKey (\r -> r {notificationTypeForSound = Just Notification.BUS_APPROACHING}))
+    (createKeyedNotificationReq notificationKey (\r -> r {notificationTypeForSound = Just Notification.BUS_APPROACHING}))
     dynamicParams
     entity
     Nothing
@@ -2400,7 +2445,7 @@ notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNu
         _ -> routeNumber
   dynamicNotifyPerson
     person
-    (createNotificationReq "BUS_PREV_STOP_CROSSED" (\r -> r {notificationTypeForSound = Just Notification.BUS_PREV_STOP_CROSSED}))
+    (createKeyedNotificationReq RiderPush_Bus_PrevStopCrossed (\r -> r {notificationTypeForSound = Just Notification.BUS_PREV_STOP_CROSSED}))
     dynamicParams
     entity
     Nothing
@@ -2424,11 +2469,14 @@ notifyFrfsTripDetailsUpdated ::
   Maybe UTCTime ->
   m ()
 notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId mbJourneyId driverChanged busChanged mbStartTime = do
-  let updatedField
-        | driverChanged && busChanged = "driver and bus details"
-        | busChanged = "bus number"
-        | otherwise = "driver details"
-      entityData =
+  -- The changed part in the rider's language, else the English words; the row takes it as {#updatedField#}.
+  updatedField <-
+    let (key, english)
+          | driverChanged && busChanged = (Frfs_UpdatedField_DriverAndBus, "driver and bus details")
+          | busChanged = (Frfs_UpdatedField_BusNumber, "bus number")
+          | otherwise = (Frfs_UpdatedField_Driver, "driver details")
+     in CQTranslations.findTextByKeyWithFallback person.merchantOperatingCityId person.language key english
+  let entityData =
         BusNotificationEntityData
           { tripId = mbTripId,
             vehicleNumber = vehicleNumber,
@@ -2451,7 +2499,7 @@ notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId m
   let pushShowType = if isWithinLeadWindow then Notification.SHOW else Notification.DO_NOT_SHOW
   dynamicNotifyPerson
     person
-    (createNotificationReq "FRFS_TRIP_DETAILS_UPDATED" (\r -> r {showType = pushShowType}))
+    (createKeyedNotificationReq RiderPush_Frfs_TripDetailsUpdated (\r -> r {showType = pushShowType}))
     EmptyDynamicParam
     entity
     Nothing
@@ -2482,7 +2530,7 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
       case mbPhoneNumber of
         Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
         Just phoneNumber -> do
-          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing
           case mbMerchantMessage of
             Just merchantMessage
               | not (T.null merchantMessage.templateId) -> do
@@ -2555,7 +2603,7 @@ notifyShuttleBookingConfirmed personId bookingId = do
           -- Push (primary): shuttle-only booking-confirmed + tracking-on-start reassurance.
           dynamicNotifyPerson
             person
-            (createNotificationReq "SHUTTLE_TRACKING_ON_START" identity)
+            (createKeyedNotificationReq RiderPush_Shuttle_TrackingOnStart identity)
             EmptyDynamicParam
             entity
             Nothing

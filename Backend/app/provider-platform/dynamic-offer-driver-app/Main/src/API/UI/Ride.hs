@@ -366,11 +366,7 @@ departedStop (_, _, _) rideId stopId req = withFlowHandlerAPI . withStopLock rid
 
 -- One stop update per ride at a time: concurrent taps would otherwise both see a stop as unreached and record it twice.
 withStopLock :: Id Ride.Ride -> Flow APISuccess -> Flow APISuccess
-withStopLock rideId action = do
-  let lockKey = "RideStopUpdate:RideId:" <> rideId.getId
-  isLocked <- Redis.tryLockRedis lockKey 30
-  unless isLocked $ throwError (InvalidRequest "Stop update already in progress for this ride")
-  finally action (Redis.unlockRedis lockKey)
+withStopLock = RideCommon.withRideStopsLock 1
 
 uploadOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.UploadOdometerReq -> FlowHandler DRide.UploadOdometerResp
 uploadOdometerReading (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadOdometerReading cityId rideId req

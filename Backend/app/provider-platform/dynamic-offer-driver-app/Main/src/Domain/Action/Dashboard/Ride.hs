@@ -47,6 +47,7 @@ import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride as DUIRide
+import Domain.Action.UI.Ride.Common (rentalNextAndLastStop)
 import qualified Domain.Action.UI.Ride.Common as DRideCommon
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -74,6 +75,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKey (textAsReceived)
+import Domain.Types.TranslationKeys (FareBreakupAdjustment (..), TranslationKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Environment
@@ -83,7 +86,7 @@ import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import qualified Kernel.External.Types as KET
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
@@ -124,6 +127,7 @@ import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetadata
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -624,7 +628,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
   case (mbShortId, mbPhoneNumber) of
     (Just shortId, _) -> do
       ride <- QRide.findRideByRideShortId shortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
-      rideDetail <- rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []
+      rideDetail <- rideInfo merchant.id merchantOpCityId Nothing (cast ride.id) Nothing []
       let ticketRideDetail = makeRequiredRideDetail ride.driverId (ride, rideDetail)
       return Common.TicketRideListRes {rides = [ticketRideDetail]}
     (Nothing, Just number) -> do
@@ -633,7 +637,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
       person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole code no merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound number)
       ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing [] Nothing Nothing
       let lastNRides = map fst ridesAndBooking
-      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []) lastNRides
+      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId Nothing (cast ride.id) Nothing []) lastNRides
       let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
       return Common.TicketRideListRes {rides = rdList}
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
@@ -724,11 +728,12 @@ rideInfo ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Language ->
   Id Common.Ride ->
   Maybe Bool ->
   [Common.RideDetailGroup] ->
   m Common.RideInfoRes
-rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
+rideInfo merchantId merchantOpCityId mbLanguage reqRideId mbFinanceData detailGroups = do
   let hasGroup = (`elem` detailGroups)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -760,8 +765,8 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
-    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
-    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.Rental _ -> rentalNextAndLastStop ride booking
+    DTC.IntercityRental _ _ -> rentalNextAndLastStop ride booking
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
   let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
@@ -888,6 +893,12 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
 
   feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
   let mbFeedback = listToMaybe feedbacks
+  -- With no reader's language (the issue flow, the ticket ride list) the stored texts are shown as
+  -- stored; a badge without a key is the text the rider platform sent.
+  translatedTierName <- DRideCommon.translatedTierName mbLanguage booking
+  translatedBadges <- forM feedbacks $ \feedback -> case (,) <$> mbLanguage <*> feedback.badgeKey of
+    Just (language, badgeKey) -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FeedbackBadge_Name badgeKey) feedback.badge
+    Nothing -> pure (textAsReceived feedback.badge)
   mbBapName <- if hasGroup Common.BUYER_APP then getBapName booking.bapId else pure Nothing
   mbPaymentCollectedBy <- if hasGroup Common.PAYMENT then getPaymentCollectedBy booking else pure Nothing
   (mbFleetOwnerName, mbFleetName, mbFleetOwnerPhoneNo) <- if hasGroup Common.FLEET_INFO then getFleetOwnerContact ride.fleetOwnerId else pure (Nothing, Nothing, Nothing)
@@ -960,7 +971,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         vehicleVariant = rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
-        vehicleServiceTierName = booking.vehicleServiceTierName,
+        vehicleServiceTierName = translatedTierName,
         endOtp = ride.endOtp,
         mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
         rideCity = Just $ show city.city,
@@ -996,7 +1007,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         paymentReferenceInternal,
         walletTransactions,
         invoiceIds,
-        badge = map (.badge) feedbacks,
+        badge = translatedBadges,
         rating = mbFeedback >>= (.rating),
         estimatedTollInfo = mkTollInfoEntities ride.estimatedTollIds ride.estimatedTollNames,
         actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames,
@@ -1058,24 +1069,6 @@ castTripCategory = \case
   DTC.CrossCity _ _ -> Common.CrossCity
   DTC.Ambulance _ -> Common.Ambulance
   _ -> Common.OneWay
-
-calculateLocations ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Id SRB.Booking ->
-  Maybe (Id DLoc.Location) ->
-  m (Maybe DLoc.Location, Maybe DLoc.Location)
-calculateLocations bookingId stopLocationId = do
-  maxOrder <- QLM.maxOrderByEntity bookingId.getId
-  case stopLocationId of
-    Nothing -> do
-      lastLoc <- if maxOrder == 0 then pure Nothing else mkLocationFromLocationMapping bookingId.getId maxOrder
-      return (Nothing, lastLoc)
-    Just nextStopId -> do
-      nextLoc <- QL.findById nextStopId
-      lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
-      return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity loc@DLoc.Location {..} = do
@@ -1277,14 +1270,14 @@ fareBreakUp merchantShortId opCity reqRideId = do
 
 -- | The ride's gross / net fares and cash / online amounts, and its charges grouped for the fare breakup.
 -- The ride must already be checked to belong to the dashboard's merchant and city.
-rideFinanceInfo :: Maybe KET.Language -> DRide.Ride -> Flow Common.RideFinanceInfoRes
+rideFinanceInfo :: Maybe Language -> DRide.Ride -> Flow Common.RideFinanceInfoRes
 rideFinanceInfo mbLanguage ride = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   finalFareParams <- maybe (pure Nothing) (runInReplica . SQFP.findById) ride.fareParametersId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
   -- Net, cash and online are taken from the driver app's own ride response, so they always match what the driver sees.
   driverInfo <- runInReplica $ QDriverInfo.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  driverRide <- DUIRide.buildDriverRideResItem ride.driverId driverInfo KET.ENGLISH Nothing mbTransporterConfig (ride, booking)
+  driverRide <- DUIRide.buildDriverRideResItem ride.driverId driverInfo ENGLISH Nothing mbTransporterConfig (ride, booking)
   let estimatedFareParams = booking.fareParams
       -- Not rounded, like the estimated / actual fare in ride info: rounding by currency would
       -- turn an INR fare such as 51.50 into 52.
@@ -1293,7 +1286,7 @@ rideFinanceInfo mbLanguage ride = do
       gross cur fareAmount mbDiscount = price cur (fareAmount - fromMaybe 0 mbDiscount)
       -- A city without a groups config gets no charges at all, so the dashboard can keep its own fare table.
       chargeGroups = maybe [] (\groupsConfig -> configuredChargeGroups groupsConfig estimatedFareParams finalFareParams <> [adjustmentsGroup booking ride finalFareParams]) (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsDashboardConfig))
-  charges <- mapM (mkChargeGroup (fromMaybe KET.ENGLISH mbLanguage) booking.currency ride.currency) (pruneChargeGroups chargeGroups)
+  charges <- mapM (mkChargeGroup ride.merchantOperatingCityId (fromMaybe ENGLISH mbLanguage) booking.currency ride.currency) (pruneChargeGroups chargeGroups)
   pure
     Common.RideFinanceInfoRes
       { fare =
@@ -1314,9 +1307,11 @@ rideFinanceInfo mbLanguage ride = do
         charges
       }
 
--- | A charges group with its rows, or a single row, before its label is looked up.
+-- | A charges group with its rows, or a single row, before its label is looked up. Lines from the config have
+-- no adjustment; their label is read by the key ops typed into the config.
 data ChargeLine = ChargeLine
   { chargeKey :: Text,
+    chargeAdjustment :: Maybe FareBreakupAdjustment,
     chargeEstimated :: Maybe HighPrecMoney,
     chargeActual :: Maybe HighPrecMoney,
     chargeRows :: [ChargeLine]
@@ -1333,6 +1328,7 @@ configuredChargeGroups groupsConfig estimatedFareParams mbFinalFareParams =
     toChargeLine estimatedLine mbActualLine =
       ChargeLine
         { chargeKey = estimatedLine.key,
+          chargeAdjustment = Nothing,
           chargeEstimated = Just estimatedLine.amount,
           chargeActual = (.amount) <$> mbActualLine,
           chargeRows = pairLines estimatedLine.subItems ((.subItems) <$> mbActualLine)
@@ -1343,22 +1339,23 @@ adjustmentsGroup :: SRB.Booking -> DRide.Ride -> Maybe DFP.FareParameters -> Cha
 adjustmentsGroup booking ride mbFinalFareParams =
   ChargeLine
     { chargeKey = "ADJUSTMENTS",
+      chargeAdjustment = Just Adjustments,
       chargeEstimated = total (.chargeEstimated),
       chargeActual = total (.chargeActual),
       chargeRows = rows
     }
   where
     componentOf component fareParams = Map.lookup component (SFB.breakupComponentAmounts fareParams)
-    adjustmentRow key mbEstimated mbActual = ChargeLine {chargeKey = key, chargeEstimated = mbEstimated, chargeActual = mbActual, chargeRows = []}
+    adjustmentRow key adjustment mbEstimated mbActual = ChargeLine {chargeKey = key, chargeAdjustment = Just adjustment, chargeEstimated = mbEstimated, chargeActual = mbActual, chargeRows = []}
     -- These fare pieces are already negative amounts.
-    fareComponentRow key component = adjustmentRow key (componentOf component booking.fareParams) (componentOf component =<< mbFinalFareParams)
+    fareComponentRow key adjustment component = adjustmentRow key adjustment (componentOf component booking.fareParams) (componentOf component =<< mbFinalFareParams)
     rows =
-      [ adjustmentRow "DISCOUNT" (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
+      [ adjustmentRow "DISCOUNT" RideDiscount (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
         -- As in the driver app's earnings card, the commission on old cancellation dues added to this ride is included.
-        adjustmentRow "COMMISSION" (negate <$> booking.commission) ((\commission -> negate (commission + fromMaybe 0 ride.cancellationDuesCommission)) <$> ride.commission),
-        fareComponentRow "PERSONAL_DISCOUNT" FarePolicyD.PersonalDiscountComponent,
-        fareComponentRow "BUSINESS_DISCOUNT" FarePolicyD.BusinessDiscountComponent,
-        fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" FarePolicyD.NegativeFareAdjustmentComponent
+        adjustmentRow "COMMISSION" RideCommission (negate <$> booking.commission) ((\commission -> negate (commission + fromMaybe 0 ride.cancellationDuesCommission)) <$> ride.commission),
+        fareComponentRow "PERSONAL_DISCOUNT" PersonalDiscount FarePolicyD.PersonalDiscountComponent,
+        fareComponentRow "BUSINESS_DISCOUNT" BusinessDiscount FarePolicyD.BusinessDiscountComponent,
+        fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" NegativeFareAdjustment FarePolicyD.NegativeFareAdjustmentComponent
       ]
     total side = case mapMaybe side rows of
       [] -> Nothing
@@ -1371,24 +1368,32 @@ pruneChargeGroups groups =
   where
     hasAmount line = any (maybe False (/= 0)) [line.chargeEstimated, line.chargeActual]
 
--- | Labels come from the translations under "FARE_BREAKUP_<key>".
-mkChargeGroup :: KET.Language -> Currency -> Currency -> ChargeLine -> Flow Common.RideFinanceInfoChargeGroup
-mkChargeGroup language estimatedCurrency actualCurrency chargeGroup = do
-  groupTitle <- labelOf chargeGroup.chargeKey
+-- | Labels in the asked language, else English: a config line's by the key ops typed ("FARE_BREAKUP_<key>"),
+-- else the key itself; an adjustment's by its translation key, else its English name.
+mkChargeGroup :: Id DMOC.MerchantOperatingCity -> Language -> Currency -> Currency -> ChargeLine -> Flow Common.RideFinanceInfoChargeGroup
+mkChargeGroup merchantOpCityId language estimatedCurrency actualCurrency chargeGroup = do
+  groupTitle <- labelOf chargeGroup
   rows <-
     forM chargeGroup.chargeRows $ \row -> do
-      rowTitle <- labelOf row.chargeKey
+      rowTitle <- labelOf row
       pure Common.RideFinanceInfoChargeRow {key = row.chargeKey, title = rowTitle, estimated = estimatedOf row, actual = actualOf row}
   pure Common.RideFinanceInfoChargeGroup {key = chargeGroup.chargeKey, title = groupTitle, estimated = estimatedOf chargeGroup, actual = actualOf chargeGroup, rows}
   where
-    -- The label in the asked language, else in English, else the key itself.
-    labelOf key = do
-      let messageKey = "FARE_BREAKUP_" <> key
-      mbLabel <- DRideCommon.resolveLabel language messageKey
-      mbEnglishLabel <- if isNothing mbLabel && language /= KET.ENGLISH then DRideCommon.resolveLabel KET.ENGLISH messageKey else pure Nothing
-      pure $ fromMaybe key (mbLabel <|> mbEnglishLabel)
+    labelOf line = case line.chargeAdjustment of
+      Just adjustment -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FareBreakup_Adjustment adjustment) (adjustmentEnglishName adjustment)
+      Nothing -> CQTranslations.findTranslatedTextByOpsKey (Just merchantOpCityId) language ("FARE_BREAKUP_" <> line.chargeKey) line.chargeKey
     estimatedOf line = (`PriceAPIEntity` estimatedCurrency) <$> line.chargeEstimated
     actualOf line = (`PriceAPIEntity` actualCurrency) <$> line.chargeActual
+
+-- | The English name of an adjustments row, shown when its key has no row in the asked language or in English.
+adjustmentEnglishName :: FareBreakupAdjustment -> Text
+adjustmentEnglishName = \case
+  Adjustments -> "Adjustments"
+  RideDiscount -> "Discount"
+  RideCommission -> "Commission"
+  PersonalDiscount -> "Personal Discount"
+  BusinessDiscount -> "Business Discount"
+  NegativeFareAdjustment -> "Fare Adjustment"
 
 buildFareBreakUp :: Maybe DFPC.WaitingChargeInfo -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
 buildFareBreakUp mbWaitingChargeInfo mbDiscount DFP.FareParameters {..} = do

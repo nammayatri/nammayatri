@@ -1,6 +1,7 @@
 module Domain.Action.UI.EditBooking where
 
 import API.Types.UI.EditBooking
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Geohash as DG
 import Data.Text as T
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
@@ -73,7 +74,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       hasAdvancedRide <- QDI.findById driverId <&> maybe False (.hasAdvanceBooking)
       if hasAdvancedRide && not isAdvanceRide
         then do
-          CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
+          CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId Enums.DRIVER_HAS_UPCOMING_RIDE "Driver has an upcoming ride near your drop location. "
           throwError $ InvalidRequest "You have an upcoming ride near your current drop location."
         else do
           clearIOSPayload
@@ -121,23 +122,23 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
                 mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
                 rideInfo <- SInternal.mkInProgressRideLtsInfo ride {DRide.toLocation = Just updatedloc} startPoint (mbTransporterConfig >>= (.enableManualArrival))
                 void $ LF.rideStart ride.id startPoint.lat startPoint.lon bookingUpdateReq.merchantId driverId (Just rideInfo)
-          Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
+          Notify.notifyEditDestination ride.merchantOperatingCityId driver -- when ride.status in [INPROGRESS, NEW]
           return Success
     else do
-      let (errorType, errorMessage) = errorMessageByBookingType lockEditDestination
-      CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId errorType errorMessage
+      let (errorReason, errorMessage) = errorMessageByBookingType lockEditDestination
+      CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId errorReason errorMessage
       clearIOSPayload
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId
       return Success
   where
-    errorMessageByBookingType :: Bool -> (Text, Text)
+    errorMessageByBookingType :: Bool -> (Enums.EditDestinationError, Text)
     errorMessageByBookingType isLockAquired = do
       if isLockAquired && action /= ACCEPT
         then
           if action == IGNORED
-            then ("Trip Update Request Unanswered", "Your driver did not respond to the request. Kindly check with them offline before requesting again.")
-            else ("Trip Update Request Declined", "Request was declined by your driver. Kindly check with them offline before requesting again.")
-        else ("Trip Update Request Not Available", "Edit Destination is not possible at this moment. Please try again later.")
+            then (Enums.UNANSWERED_BY_DRIVER, "Your driver did not respond to the request. Kindly check with them offline before requesting again.")
+            else (Enums.DECLINED_BY_DRIVER, "Request was declined by your driver. Kindly check with them offline before requesting again.")
+        else (Enums.NOT_POSSIBLE_NOW, "Edit Destination is not possible at this moment. Please try again later.")
 
 -- Skips all driver-coupled work (ride mapping, driver FCM, geohash, notifyEditDestination) since there is no Ride.
 postEditResultNoRide ::

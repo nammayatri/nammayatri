@@ -18,6 +18,8 @@ import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as Person
+import Domain.Types.TranslationKey (legacyOrKeyName)
+import Domain.Types.TranslationKeys (DriverPushKey)
 import Environment
 import qualified EulerHS.Prelude as EulerHS
 import Kernel.Beam.Functions (runInReplica)
@@ -141,21 +143,21 @@ buildTemplate paramVars template =
     template
     paramVars
 
-fetchNotificationTemplate :: Id DMOC.MerchantOperatingCity -> Text -> Person.Person -> [(Text, Text)] -> Flow (Maybe (Text, Text))
+fetchNotificationTemplate :: Id DMOC.MerchantOperatingCity -> DriverPushKey -> Person.Person -> [(Text, Text)] -> Flow (Maybe (Text, Text))
 fetchNotificationTemplate merchantOperatingCityId notificationKey recipientPerson templateVariables = do
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notificationKey Nothing Nothing recipientPerson.language Nothing
+  mbMerchantPN <- CPN.findMatchingMerchantPNByKey merchantOperatingCityId notificationKey Nothing Nothing recipientPerson.language Nothing
   case mbMerchantPN of
     Just merchantPN -> do
       let title = buildTemplate templateVariables merchantPN.title
           body = buildTemplate templateVariables merchantPN.body
       return $ Just (title, body)
     Nothing -> do
-      logError $ "MISSED_FCM - " <> notificationKey <> " for person " <> recipientPerson.id.getId
+      logError $ "MISSED_FCM - " <> legacyOrKeyName notificationKey <> " for person " <> recipientPerson.id.getId
       return Nothing
 
 notifyEmergencyContactsWithKey ::
   Person.Person ->
-  Text ->
+  DriverPushKey ->
   Notification.Category ->
   [(Text, Text)] ->
   Maybe (Text -> Sms.SendSMSReq) ->
@@ -164,7 +166,7 @@ notifyEmergencyContactsWithKey ::
   Maybe (Id SafetyDSos.Sos) ->
   Flow ()
 notifyEmergencyContactsWithKey person notificationKey notificationType templateVariables mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =
-  notifyEmergencyContactsInternal person notificationType (Just notificationKey) mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \contactPersonEntity ->
+  notifyEmergencyContactsInternal person notificationType (Just (legacyOrKeyName notificationKey)) mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId $ \contactPersonEntity ->
     fetchNotificationTemplate person.merchantOperatingCityId notificationKey contactPersonEntity templateVariables
 
 sendSmsToAllEmergencyContacts ::

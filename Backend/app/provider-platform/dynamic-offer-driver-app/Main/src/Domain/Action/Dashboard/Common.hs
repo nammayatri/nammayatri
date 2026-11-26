@@ -155,13 +155,13 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId driver.language mkey Nothing MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing Nothing
+          QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId mkey driver.language Nothing Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [(Just $ fromMaybe "XXXXX" vehicleId), (Just timeStamp), mbReason] Nothing (Just merchantMessage.containsUrlButton) merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")

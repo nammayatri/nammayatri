@@ -227,8 +227,9 @@ sendTDSCertificate fromEmail record pdfFile recipientEmail = do
   logInfo $ "Sending TDS certificate to " <> recipientEmail <> " for " <> record.quarter <> " " <> record.assessmentYear
 
   downloadUrl <- S3.generateDownloadUrl (T.unpack pdfFile.s3FilePath) (Seconds 300)
-  let subject = "TDS Certificate for " <> record.quarter <> " - " <> record.assessmentYear
-      body =
+  let period = record.quarter <> " - " <> record.assessmentYear
+      fallbackSubject = "TDS Certificate for " <> period
+      fallbackBody =
         "Dear Driver,\n\n"
           <> "Please find attached your TDS Certificate for "
           <> record.quarter
@@ -237,6 +238,8 @@ sendTDSCertificate fromEmail record pdfFile recipientEmail = do
           <> ".\n\n"
           <> "This is a system-generated email. Please do not reply.\n\n"
           <> "Regards,\nNammayatri"
+  -- The job has no recipient language (the record carries an address, or a driver id used only to find one), so the row is read in English.
+  (subject, body) <- Delivery.certificateEmailText record.merchantOperatingCityId Nothing period "Driver" (fallbackSubject, fallbackBody)
   void $
     EmailDelivery.sendEmail
       EmailDelivery.EmailRequest

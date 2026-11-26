@@ -169,11 +169,11 @@ postRideCancelMultiple merchantShortId opCity _mbRequestorId req = do
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 -- mbFinanceData can be deprecated later: the FINANCE detail group fetches the same data.
-getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe [Common.RideDetailGroup] -> Maybe Bool -> Flow Common.RideInfoRes
-getRideInfo merchantShortId opCity rideId mbDetailGroups mbFinanceData = do
+getRideInfo :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Id Common.Ride -> Maybe [Common.RideDetailGroup] -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfo merchantShortId opCity mbDashboardLanguage rideId mbDetailGroups mbFinanceData = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData (fromMaybe [] mbDetailGroups)
+  DRide.rideInfo merchant.id merchantOpCityId mbDashboardLanguage rideId mbFinanceData (fromMaybe [] mbDetailGroups)
 
 postRideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync = DRide.rideSync
@@ -198,8 +198,8 @@ getRideKaptureList = DRide.ticketRideList
 getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
 getRideFareBreakUp = DRide.fareBreakUp
 
-getRideFinanceInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Language -> Environment.Flow Common.RideFinanceInfoRes
-getRideFinanceInfo merchantShortId opCity rideId mbLanguage =
+getRideFinanceInfo :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Id Common.Ride -> Environment.Flow Common.RideFinanceInfoRes
+getRideFinanceInfo merchantShortId opCity mbLanguage rideId =
   findRideInMerchantCity merchantShortId opCity rideId >>= DRide.rideFinanceInfo mbLanguage
 
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2

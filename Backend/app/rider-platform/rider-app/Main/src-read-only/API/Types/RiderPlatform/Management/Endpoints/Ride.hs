@@ -12,6 +12,7 @@ import qualified Data.Singletons.TH
 import qualified Domain.Types
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Ride
+import qualified Domain.Types.TranslationKey
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -198,7 +199,7 @@ data RideInfoRes = RideInfoRes
     vehicleNo :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
-    vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleServiceTierName :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     rideBookingTime :: Kernel.Prelude.UTCTime,
     actualDriverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -275,7 +276,7 @@ data RideListRes = RideListRes {totalItems :: Kernel.Prelude.Int, summary :: Das
 data RideOfferInfo = RideOfferInfo
   { offerId :: Kernel.Prelude.Text,
     offerCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    offerTitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    offerTitle :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     status :: RideOfferStatus,
     currency :: Kernel.Types.Common.Currency,
     discountAmount :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,

@@ -1,0 +1,79 @@
+{
+  "info": {
+    "name": "SMS OTP Country Restriction - snapshot rollouts",
+    "description": "Reads the active RiderConfig / TransporterConfig rollouts before the auth suite runs. run-tests.sh exports the environment so RestoreSmsOtpRollouts can put them back after the suite, whether it passed or failed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Snapshot RiderConfig Rollout (BAP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=%7B%22tag%22%3A%22RIDER_CONFIG%22%2C%22contents%22%3A%22RiderConfig%22%7D&activeOnly=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = null; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('RiderConfig rollout read', function () { pm.response.to.have.status(200); pm.expect(Array.isArray(d), 'response is a JSON array').to.eql(true); });",
+              "var isTest = function (x) { return (x.versionDescription || '').indexOf('Integration test SMS OTP country restriction') === 0; };",
+              "var domain = {\"tag\": \"RIDER_CONFIG\", \"contents\": \"RiderConfig\"};",
+              "var live = (Array.isArray(d) ? d : []).map(function (r) { return {domain: r.domain, timeBounds: r.timeBounds, rollout: (r.rollout || []).filter(function (x) { return !isTest(x); }).map(function (x) { return {rolloutPercentage: x.rolloutPercentage, version: x.version, versionDescription: x.versionDescription || 'restored'}; })}; });",
+              "var restore = live.length > 0 ? live : [{domain: domain, timeBounds: 'Unbounded', rollout: []}];",
+              "// A failed read must not produce a snapshot: restoring from it would wipe live rollouts.",
+              "if (pm.response.code === 200 && Array.isArray(d)) { pm.environment.set('_sms_rider_rollout_snapshot', JSON.stringify(restore)); console.log('RiderConfig rollout snapshot:', JSON.stringify(restore)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Snapshot TransporterConfig Rollout (BPP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=%7B%22tag%22%3A%22DRIVER_CONFIG%22%2C%22contents%22%3A%22TransporterConfig%22%7D&activeOnly=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = null; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('TransporterConfig rollout read', function () { pm.response.to.have.status(200); pm.expect(Array.isArray(d), 'response is a JSON array').to.eql(true); });",
+              "var isTest = function (x) { return (x.versionDescription || '').indexOf('Integration test SMS OTP country restriction') === 0; };",
+              "var domain = {\"tag\": \"DRIVER_CONFIG\", \"contents\": \"TransporterConfig\"};",
+              "var live = (Array.isArray(d) ? d : []).map(function (r) { return {domain: r.domain, timeBounds: r.timeBounds, rollout: (r.rollout || []).filter(function (x) { return !isTest(x); }).map(function (x) { return {rolloutPercentage: x.rolloutPercentage, version: x.version, versionDescription: x.versionDescription || 'restored'}; })}; });",
+              "var restore = live.length > 0 ? live : [{domain: domain, timeBounds: 'Unbounded', rollout: []}];",
+              "// A failed read must not produce a snapshot: restoring from it would wipe live rollouts.",
+              "if (pm.response.code === 200 && Array.isArray(d)) { pm.environment.set('_sms_driver_rollout_snapshot', JSON.stringify(restore)); console.log('TransporterConfig rollout snapshot:', JSON.stringify(restore)); }"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

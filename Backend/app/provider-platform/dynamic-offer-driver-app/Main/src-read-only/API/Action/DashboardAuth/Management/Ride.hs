@@ -11,11 +11,11 @@ import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.Ride
+import qualified Domain.Action.DashboardAuth.Management.Ride
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -129,15 +129,15 @@ getRideInfo a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
-        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Ride.getRideInfo a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.DashboardAuth.Management.Ride.getRideInfo a6 a5 a4 a3 a2 a1
     )
 
-getRideFinanceInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideFinanceInfoRes))))
-getRideFinanceInfo a5 a4 a3 a2 a1 =
+getRideFinanceInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideFinanceInfoRes)))
+getRideFinanceInfo a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Ride.getRideFinanceInfo a5 a4 a2 a1
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Ride.getRideFinanceInfo a4 a3 a2 a1
     )
 
 getRideEvidence :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideEvidenceListRes)))

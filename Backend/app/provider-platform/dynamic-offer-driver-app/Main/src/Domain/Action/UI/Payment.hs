@@ -26,7 +26,6 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Text as T
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
@@ -37,7 +36,7 @@ import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverGstin as DDG
+import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -54,6 +53,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
@@ -116,6 +116,7 @@ import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
+import SharedLogic.Finance.RideInvoice (resolveInvoiceIssuedToAddress)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Finance.WalletSubscription as SWalletSubscription
@@ -630,9 +631,8 @@ processWalletTopupWebhook driver order transactionStatus = do
             pure (not alreadyPosted)
           else pure False
     when creditedNow $ do
-      let notificationTitle = "Wallet Top-up Successful"
-          notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+      content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_TopupSuccess [("amount", show order.amount)] ("Wallet Top-up Successful", "Your wallet has been topped up with Rs." <> show order.amount)
+      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content driver driver.deviceToken
 
 mkTopupInvoiceConfig :: DOrder.PaymentOrder -> InvoiceConfig
 mkTopupInvoiceConfig order =
@@ -728,18 +728,6 @@ processNonClearedDriverFees merchantId person driverFee = do
       _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
       pure ()
 
--- | Buyer address for a subscription invoice: prefer the GSTIN-registered
---   address, then the fleet owner's registered address, else the operating city.
-resolveInvoiceIssuedToAddress :: Maybe DDG.DriverGstin -> Maybe DFOI.FleetOwnerInformation -> Text -> Text
-resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress =
-  fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
-  where
-    nonBlank t = if T.null (T.strip t) then Nothing else Just t
-    gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
-    fleetOwnerAddress = do
-      addr <- (mbFleetInfo >>= (.address)) >>= nonBlank
-      pure $ addr <> maybe "" (\st -> ", " <> show st) (mbFleetInfo >>= (.addressState))
-
 processSubscriptionPurchasePayment ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
@@ -796,8 +784,8 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
         mbBuyerGstinRow <- QDG.findByDriverId person.id
         gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
-        let issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
-            opCityAddress = show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+        let issuedByAddress = Just $ fromMaybe (show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country) merchantOperatingCity.address
+            opCityAddress = fromMaybe (show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country) merchantOperatingCity.address
             issuedToAddress = Just $ resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress
             -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
             resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
@@ -813,7 +801,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
                   merchantGstin = merchantOperatingCity.gstin <|> merchant.gstin,
-                  merchantShortId = getShortId merchant.shortId
+                  merchantShortId = getShortId merchant.shortId,
+                  supplierName = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierName)) <|> Just merchant.name,
+                  supplierAddress = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> Just opCityAddress
                 }
         -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
@@ -884,12 +874,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
               { subscriptionPurchaseId = latestPurchase.id
               }
         unless isFleetOwner $ do
-          let prepaidRechargeMessage =
-                "Your recharge worth Rs."
-                  <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
-                  <> " is successful"
-              prepaidRechargeTitle = "Recharge Successful!"
-          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+          let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces creditAmount)
+          content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
+          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS content person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
   ( CacheFlow m r,
@@ -963,12 +950,9 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           mbVehicleCategory
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
-      let prepaidRechargeMessage =
-            "Your recharge worth Rs."
-              <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
-              <> " is successful"
-          prepaidRechargeTitle = "Recharge Successful!"
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+      let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
+      content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
+      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS content person person.deviceToken
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::

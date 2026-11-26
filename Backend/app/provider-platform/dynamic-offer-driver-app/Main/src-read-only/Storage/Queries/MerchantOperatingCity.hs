@@ -58,7 +58,7 @@ updateCloudConfig ::
   (Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()))
 updateCloudConfig cloudType cloudBaseUrl id = do
   updateWithKV
-    [ Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
-      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap showBaseUrl cloudBaseUrl)
+    [ Se.Set Beam.cloudType ((Kernel.Prelude.fmap Kernel.Prelude.show) cloudType),
+      Se.Set Beam.cloudBaseUrl ((Kernel.Prelude.fmap showBaseUrl) cloudBaseUrl)
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

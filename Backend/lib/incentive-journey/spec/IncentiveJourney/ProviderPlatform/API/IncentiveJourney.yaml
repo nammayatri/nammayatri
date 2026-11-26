@@ -512,6 +512,8 @@ types:
     - streakEndRewardMetadata: Maybe Value
     # Assigned (default) = legacy bulk/auto-apply. OptIn = driver must opt in per period.
     - campaignUserLinkType: Maybe CampaignUserLinkType
+    # OptIn cadence. Only for OptIn campaigns; omit → Daily. Ignored for Assigned.
+    - optInPeriod: Maybe OptInPeriod
     # Campaign control features JSON array (see CohortJourneyMapping.controlFeatures).
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
@@ -537,6 +539,8 @@ types:
     # Just True clears streak-end type/value/expiry/metadata/SWO.
     - clearStreakEndReward: Maybe Bool
     - campaignUserLinkType: Maybe CampaignUserLinkType
+    # OptIn cadence. Just sets; omit keeps existing. Assigned campaigns store null.
+    - optInPeriod: Maybe OptInPeriod
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
     # Just True clears periodDays (also strips periodDays from streakEndRewardMetadata).
@@ -565,6 +569,8 @@ types:
     - isActive: Bool
     - journeyType: IncentiveJourneyType
     - campaignUserLinkType: CampaignUserLinkType
+    # Null for Assigned; OptInDaily/OptInWeekly for OptIn (default OptInDaily when unset in DB).
+    - optInPeriod: Maybe OptInPeriod
     - controlFeatures: Maybe Value
     - periodDays: Maybe Int
     - maxWaiveOffCount: Maybe Int

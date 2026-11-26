@@ -176,19 +176,15 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
     SMS -> do
       smsCfg <- asks (.smsCfg)
       messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
-      merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+      merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey driver.language Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
           (_, messageBody) = messageTransformer ("", merchantMessage.message)
-      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
+      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq (Sms.prebuiltSmsBody messageBody) phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
     _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
   where
     generateReq notifTitle notifBody = do
       let (title, message) = messageTransformer (notifTitle, notifBody)
-      NotifReq
-        { title = title,
-          message = message,
-          entityId = fromMaybe driverId.getId entityId
-        }
+      mkNotifReq (fromMaybe driverId.getId entityId) (prebuiltPushContent title message)
 
     buildCallStatus callStatusId exotelResponse = do
       now <- getCurrentTime

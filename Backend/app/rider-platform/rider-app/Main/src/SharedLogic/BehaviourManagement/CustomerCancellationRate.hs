@@ -22,6 +22,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RiderConfig as RC
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -350,11 +351,11 @@ nudgeOrBlockCustomer riderConfig customer = do
             blockCustomerTemporarily customer.merchantId customer.merchantOperatingCityId customer.id suspensionTimeHours
         _ -> do
           when (canNudgeCustomer cancellationRateThresholdWeekly weeklyMinRidesforNudging weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount) $ do
-            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_WEEKLY" weeklyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer RiderPush_CancellationRate_NudgeWeekly weeklyCancellationRate
           when (canNudgeCustomer cancellationRateThresholdDaily dailyMinRidesforNudging dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount) $ do
-            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_DAILY" dailyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer RiderPush_CancellationRate_NudgeDaily dailyCancellationRate
           when (maybe False (\threshold -> maybe False (\minRidesNudge -> maybe False (\minRidesBlock -> canNudgeCustomer threshold minRidesNudge minRidesBlock monthlyCancellationRate monthlyAssignedCount) monthlyMinRidesforBlocking) monthlyMinRidesforNudging) cancellationRateThresholdMonthly) $ do
-            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_MONTHLY" monthlyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer RiderPush_CancellationRate_NudgeMonthly monthlyCancellationRate
     _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in rider config"
   where
     canNudgeCustomer cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount =

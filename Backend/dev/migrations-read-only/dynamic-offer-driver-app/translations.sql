@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.translations ADD PRIMARY KEY ( id, language, 
 
 ALTER TABLE atlas_driver_offer_bpp.translations DROP CONSTRAINT translations_pkey;
 ALTER TABLE atlas_driver_offer_bpp.translations ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.translations ADD COLUMN merchant_operating_city_id character varying(36) ;

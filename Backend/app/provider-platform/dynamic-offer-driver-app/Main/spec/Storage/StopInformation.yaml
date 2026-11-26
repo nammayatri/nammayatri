@@ -52,6 +52,9 @@ StopInformation:
     findAllByRideId:
       kvFunction: findAllWithKVAndConditionalDB
       where: rideId
+    findAllByRideIdFromKVAndDB:
+      kvFunction: findAllWithKV
+      where: rideId
     updateByStopLocIdAndRideId:
       kvFunction: updateOneWithKV
       params: [waitingTimeEnd, stopEndLatLng]

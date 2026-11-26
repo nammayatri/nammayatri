@@ -51,6 +51,7 @@ apis:
   - GET:
       endpoint: /rideinfo/{rideId}
       name: GetRideInfo
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         rideId: Id Ride
@@ -161,35 +162,35 @@ types:
     - rideShortId: ShortId Ride
     - rideCreatedAt: UTCTime
     - rideId: Id Ride
-    - customerName: Maybe Text
-    - customerPhoneNo: Maybe Text
-    - driverName: Text
-    - driverPhoneNo: Text
-    - vehicleNo: Text
+    - customerName: "Maybe !Text"
+    - customerPhoneNo: "Maybe !Text"
+    - driverName: "!Text"
+    - driverPhoneNo: "!Text"
+    - vehicleNo: "!Text"
     - bookingStatus: BookingStatus
     - nextStopLocation: Maybe Location
     - rideScheduledAt: UTCTime
     - fareProductType: FareProductType # TODO: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     - tripCategory: TripCategory
-    - endOtp: Maybe Text
+    - endOtp: "Maybe !Text"
     - isSafetyPlus: Bool
   RideInfoRes:
     - rideId: Id Ride
     - bookingId: Id Booking
     - rideStatus: RideStatus
-    - customerName: Maybe Text
-    - customerPhoneNo: Maybe Text
-    - rideOtp: Text
+    - customerName: "Maybe !Text"
+    - customerPhoneNo: "Maybe !Text"
+    - rideOtp: "!Text"
     - customerPickupLocation: Location
     - customerDropLocation: Maybe Location
-    - driverName: Text
-    - driverPhoneNo: Maybe Text
-    - driverAlternatePhoneNo: Maybe Text
+    - driverName: "!Text"
+    - driverPhoneNo: "Maybe !Text"
+    - driverAlternatePhoneNo: "Maybe !Text"
     - driverRegisteredAt: Maybe UTCTime
-    - vehicleNo: Text
-    - vehicleModel: Text
+    - vehicleNo: "!Text"
+    - vehicleModel: "!Text"
     - vehicleVariant: VehicleVariant
-    - vehicleServiceTierName: Maybe Text
+    - vehicleServiceTierName: Maybe TranslatedText
     - rideBookingTime: UTCTime
     - actualDriverArrivalTime: Maybe UTCTime
     - rideStartTime: Maybe UTCTime
@@ -212,15 +213,15 @@ types:
     - rideScheduledAt: UTCTime
     - fareProductType: FareProductType  # TODO: Deprecated  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     - tripCategory: TripCategory
-    - endOtp: Maybe Text
+    - endOtp: "Maybe !Text"
     - estimateFareBP: Maybe [EstimateBreakup]
-    - merchantOperatingCityId: Maybe Text
+    - merchantOperatingCityId: "Maybe !Text"
     - estimatedDistance: Maybe HighPrecMeters
     - computedPrice: Maybe HighPrecMoney
     - fareBreakup: [FareBreakup]
     - rideCreatedAt: UTCTime
     - roundTrip: Maybe Bool
-    - mobileCountryCode: Maybe Text
+    - mobileCountryCode: "Maybe !Text"
     - isSafetyPlus: Bool
     - isAirConditioned: Bool
     - rideSosId: Maybe (Id Sos)
@@ -229,27 +230,27 @@ types:
     - walkToPickupDistance: Maybe Meters
     - walkFromDropDistance: Maybe Meters
     - rideDistanceSaved: Maybe Meters
-    - specialLocationTag: Maybe Text
-    - specialLocationName: Maybe Text
+    - specialLocationTag: "Maybe !Text"
+    - specialLocationName: "Maybe !Text"
     - isScheduled: Bool
     - customerId: Maybe (Id Customer)
     - paymentStatus: Maybe PaymentStatus
     - cardInfo: Maybe RideCardDetails
   RideCardDetails:
-    - cardBrand: Maybe Text
-    - cardType: Maybe Text
-    - cardLastFourDigits: Maybe Text
+    - cardBrand: "Maybe !Text"
+    - cardType: "Maybe !Text"
+    - cardLastFourDigits: "Maybe !Text"
   RideOfferInfo:
-    - offerId: Text
-    - offerCode: Maybe Text
-    - offerTitle: Maybe Text
+    - offerId: "!Text"
+    - offerCode: "Maybe !Text"
+    - offerTitle: Maybe TranslatedText
     - status: RideOfferStatus
     - currency: Currency
     - discountAmount: Maybe HighPrecMoney
     - payoutAmount: Maybe HighPrecMoney
     - amountSaved: Maybe HighPrecMoney
     - estimatedAmountSaved: Maybe HighPrecMoney
-    - payoutRequestId: Maybe Text
+    - payoutRequestId: "Maybe !Text"
     - paidOutAt: Maybe UTCTime
   RideOfferStatus:
     - enum: "OFFER_SELECTED, NOT_APPLIED, DISCOUNT_APPLIED, DISCOUNT_PENDING_CAPTURE, CASHBACK_PENDING, CASHBACK_AWAITING_VPA, CASHBACK_PROCESSING, CASHBACK_PAID, CASHBACK_FAILED, UNKNOWN"
@@ -262,19 +263,19 @@ types:
     - id: Id Ride
     - bookingId: Id Booking
     - status: RideStatus
-    - driverName: Text
-    - driverNumber: Maybe Text
+    - driverName: "!Text"
+    - driverNumber: "Maybe !Text"
     - driverRating: Maybe Centesimal
-    - vehicleNumber: Text
-    - vehicleModel: Text
-    - vehicleColor: Text
+    - vehicleNumber: "!Text"
+    - vehicleModel: "!Text"
+    - vehicleColor: "!Text"
     - trackingUrl: Maybe BaseUrl
     - estimatedDistance: Maybe HighPrecMeters
     - estimatedDistanceWithUnit: Maybe Distance
     - rideStartTime: Maybe UTCTime
     - rideEndTime: Maybe UTCTime
-    - userFirstName: Maybe Text
-    - userLastName: Maybe Text
+    - userFirstName: "Maybe !Text"
+    - userLastName: "Maybe !Text"
     - fromLocation: Location
     - toLocation: Maybe Location
     - sosStatus: Maybe SosStatus
@@ -292,15 +293,15 @@ types:
   SosStatus:
     - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
   EstimateBreakup:
-    - title: Text
+    - title: "!Text"
     - price: EstimateBreakupPrice
   EstimateBreakupPrice:
     - recordType: NewType
     - value: PriceAPIEntity
   FareBreakup:
     - amount: Price
-    - description: Text
-    - entityId: Text
+    - description: "!Text"
+    - entityId: "!Text"
     - entityType: FareBreakupEntityType
   FareBreakupEntityType:
     - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING, ESTIMATE, QUOTE
@@ -315,7 +316,7 @@ types:
     - bookingId: Id Booking
     - cancellationReasonCode: CancellationReasonCode
     - cancellationStage: CancellationStage
-    - additionalInfo: Maybe Text
+    - additionalInfo: "Maybe !Text"
   MultipleRideCancelReq:
     - recordType: NewType
     - multipleRideCancelInfo: [BookingCancelledReq]
@@ -328,31 +329,31 @@ types:
     - derive': "Show, Generic, ToSchema"
   RideInfo:
      - rideShortId: ShortId Ride
-     - customerName: Maybe Text
-     - customerPhoneNo: Maybe Text
-     - driverName: Text
-     - driverPhoneNo: Maybe Text
-     - vehicleNo: Text
+     - customerName: "Maybe !Text"
+     - customerPhoneNo: "Maybe !Text"
+     - driverName: "!Text"
+     - driverPhoneNo: "Maybe !Text"
+     - vehicleNo: "!Text"
      - status: BookingStatus
      - rideCreatedAt: UTCTime
      - pickupLocationLat: Maybe Double
      - pickupLocationLon: Maybe Double
-     - pickupLocationStreet: Maybe Text
-     - pickupLocationCity: Maybe Text
-     - pickupLocationState: Maybe Text
-     - pickupLocationCountry: Maybe Text
-     - pickupLocationBuilding: Maybe Text
-     - pickupLocationAreaCode: Maybe Text
-     - pickupLocationArea: Maybe Text
+     - pickupLocationStreet: "Maybe !Text"
+     - pickupLocationCity: "Maybe !Text"
+     - pickupLocationState: "Maybe !Text"
+     - pickupLocationCountry: "Maybe !Text"
+     - pickupLocationBuilding: "Maybe !Text"
+     - pickupLocationAreaCode: "Maybe !Text"
+     - pickupLocationArea: "Maybe !Text"
      - dropLocationLat: Maybe Double
      - dropLocationLon: Maybe Double
-     - dropLocationStreet: Maybe Text
-     - dropLocationCity: Maybe Text
-     - dropLocationState: Maybe Text
-     - dropLocationCountry: Maybe Text
-     - dropLocationBuilding: Maybe Text
-     - dropLocationAreaCode: Maybe Text
-     - dropLocationArea: Maybe Text
+     - dropLocationStreet: "Maybe !Text"
+     - dropLocationCity: "Maybe !Text"
+     - dropLocationState: "Maybe !Text"
+     - dropLocationCountry: "Maybe !Text"
+     - dropLocationBuilding: "Maybe !Text"
+     - dropLocationAreaCode: "Maybe !Text"
+     - dropLocationArea: "Maybe !Text"
      - fare: Maybe Money
      - fareWithCurrency: Maybe PriceAPIEntity
      - personId: Id Customer
@@ -360,7 +361,7 @@ types:
      - rideScheduledAt: UTCTime
      - fareProductType: FareProductType   # TODO :: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
      - tripCategory: TripCategory
-     - endOtp: Maybe Text
+     - endOtp: "Maybe !Text"
      - classification: Classification
      - derive': "Show, Generic, ToSchema"
   Location:
@@ -372,13 +373,13 @@ types:
     - updatedAt: UTCTime
     - derive: "Show"
   LocationAddress:
-    - street: Maybe Text
-    - city: Maybe Text
-    - state: Maybe Text
-    - country: Maybe Text
-    - building: Maybe Text
-    - areaCode: Maybe Text
-    - area: Maybe Text
+    - street: "Maybe !Text"
+    - city: "Maybe !Text"
+    - state: "Maybe !Text"
+    - country: "Maybe !Text"
+    - building: "Maybe !Text"
+    - areaCode: "Maybe !Text"
+    - area: "Maybe !Text"
     - derive: "Show"
   BookingStatus:
     - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED

@@ -21,6 +21,10 @@ apis:
         assignmentStatus: AssignmentStatus
         isHistory: Bool
         pickupArea: Text
+        dropCategory: Text
+        customerPhoneNo: Text
+        driverPhoneNo: Text
+        driverCountryCode: Text
       auth: ApiAuthV2
       response:
         type: ScheduledBookingListRes
@@ -178,6 +182,7 @@ types:
     - cancellationReasonCode: Maybe Text
     - cancellationAdditionalInfo: Maybe Text
     - pickupArea: Maybe Text # Pickup_<specialLocationId>[_Gate_<gateId>]
+    - dropArea: Maybe Text
     - numberOfPassengers: Maybe Int
     - numberOfCheckInBags: Maybe Int
     - numberOfCabinBags: Maybe Int

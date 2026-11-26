@@ -25,6 +25,7 @@ import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
 import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import qualified Lib.IncentiveJourney.MgCampaign as Mg
+import qualified Lib.IncentiveJourney.OptIn as OptIn
 import qualified Lib.IncentiveJourney.Streak as Streak
 
 data CampaignHotPathSync = CampaignHotPathSync
@@ -71,7 +72,7 @@ assignmentOccupiesControlFeaturesSlot now journeyType cjm mbUcm =
         && now < campaignEnd
         && case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
           DCJM.Assigned -> True
-          DCJM.OptIn -> isJust (mbUcm >>= (.optedInAt))
+          DCJM.OptIn -> maybe False (OptIn.isOptInActiveForLocalTime now (Just cjm.startDate)) mbUcm
 
 -- | Another live controlFeatures assignment already occupies the single pooling/AA slot.
 findControlFeaturesSlotConflict ::

@@ -33,6 +33,7 @@ updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
       SpecialLocationGeomCategory =. val category,
       SpecialLocationGeomGeom =. val geom,
       SpecialLocationGeomGeomGeoJson =. val geomGeoJson,
+      SpecialLocationGeomQueueGeomGeoJson =. val queueGeomGeoJson,
       SpecialLocationGeomMerchantOperatingCityId =. val merchantOperatingCityId',
       SpecialLocationGeomMerchantId =. val merchantId',
       SpecialLocationGeomUpdatedAt =. val updatedAt,
@@ -42,7 +43,8 @@ updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
       SpecialLocationGeomSupportNumber =. val supportNumber,
       SpecialLocationGeomPaymentModes =. val (PostgresList <$> paymentModes),
       SpecialLocationGeomFareSettlementType =. val fareSettlementType,
-      SpecialLocationGeomBoothSpecificFleet =. val boothSpecificFleet
+      SpecialLocationGeomBoothSpecificFleet =. val boothSpecificFleet,
+      SpecialLocationGeomPoolingMode =. val poolingMode
     ]
   where_ $
     tbl ^. SpecialLocationGeomUuid ==. val id.getId
