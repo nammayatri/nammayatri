@@ -44,6 +44,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as SP
 import Domain.Types.SharedCabSession
+import Domain.Types.SharedRoute (RunRef (..))
 import qualified Domain.Types.Vehicle as DVehicle
 import qualified Domain.Types.VehicleTrip as DVT
 import Environment
@@ -359,19 +360,29 @@ bookingOperation :: DriverAuthInfo -> Text -> SharedCabBookingOperationReq -> Fl
 bookingOperation auth@(personId, _merchantId, merchantOpCityId) bookingId req = do
   action <- fromMaybeM (InvalidRequest "a cancel needs its reason and an OTP boarding needs the otp") (bookingActionOf req)
   bap <- bapInternal
-  let bapReq plate = SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = plate, reason = actionReason action, otp = actionOtp action}
+  let bapReq plate mbRef =
+        SharedCabBAP.BAPBookingOperationReq
+          { operation = req.operation,
+            driverId = personId.getId,
+            vehicleNumber = plate,
+            reason = actionReason action,
+            otp = actionOtp action,
+            runTripId = (.tripId) <$> mbRef,
+            runDeparture = (.departure) <$> mbRef
+          }
   RunSession.activeRunOf personId >>= \case
-    -- a run has no plate session or vehicle_trip to keep in step: the rider platform applies the verb to the booking it
-    -- placed on the ride and answers with the run's session
-    Just _ -> do
+    -- a run has no plate session or vehicle_trip to keep in step: the rider platform applies the verb to the booking if
+    -- its ticket is on the run's trip and day, and answers with the run's session
+    Just run -> do
       vehicle <- QVehicle.findById personId >>= fromMaybeM (DriverWithoutVehicle personId.getId)
-      SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo)
+      ref <- RunSession.runRefOf run
+      SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo (Just ref))
     Nothing -> do
       vehicle <- validateSharedCabDriver personId
       integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
       session <-
         withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) (Just . Just) $
-          SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo)
+          SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo Nothing)
       -- the offer's answer goes into the driver's quote-response counters, like a ride request's
       whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
       pure session

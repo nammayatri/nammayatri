@@ -71,6 +71,9 @@ types:
     vehicleNumber: Text
     reason: Maybe Text
     otp: Maybe Text
+    # a passenger of a shared-route run: the run's GTFS trip and first departure, both or neither
+    runTripId: Maybe Text
+    runDeparture: Maybe UTCTime
 
   RiderCallNumberResp:
     riderNumber: Text
@@ -117,9 +120,12 @@ apis:
         driverId: Text
         vehicleNumber: Text
         agencyId: Text
-      # a shared-route run: the driver platform's ride id; its passengers are the bookings placed on it, not a Redis session
+      # a shared-route run, named by its GTFS trip (runTripId) and first departure (runDeparture), both or neither; its
+      # passengers are that day's tickets on the trip, not a Redis session. rideId only fills the session's tripId field.
       query:
         rideId: Text
+        runTripId: Text
+        runDeparture: UTCTime
       response:
         type: SharedCabSession
   - POST:

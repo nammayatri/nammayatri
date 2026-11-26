@@ -18,6 +18,7 @@ module SharedLogic.ScheduledBooking.OverlapCheck where
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -30,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.SharedRun.Knobs as SharedRunKnobs
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Ride as QRide
@@ -42,7 +44,9 @@ data CommittedInterval = CommittedInterval
   { intervalStart :: UTCTime,
     intervalEnd :: UTCTime,
     intervalPickup :: LatLong,
-    intervalDrop :: LatLong
+    intervalDrop :: LatLong,
+    -- | a shared-route run, which keeps the city's clash window from its neighbours
+    intervalIsRun :: Bool
   }
   deriving (Generic, Show)
 
@@ -51,7 +55,9 @@ data ScheduledCandidate = ScheduledCandidate
   { candidateStart :: UTCTime,
     candidateEnd :: UTCTime,
     candidatePickup :: LatLong,
-    candidateDrop :: Maybe LatLong
+    candidateDrop :: Maybe LatLong,
+    -- | a shared-route run, which keeps the city's clash window from its neighbours
+    candidateIsRun :: Bool
   }
   deriving (Generic, Show)
 
@@ -91,13 +97,14 @@ mkCommittedIntervals now mbExcludeBookingId = sortOn (.intervalStart) . mapMaybe
         let duration = maybe 0 secondsToNominalDiffTime booking.estimatedDuration
             pickupPos = LatLong booking.fromLocation.lat booking.fromLocation.lon
             dropPos = maybe pickupPos (\loc -> LatLong loc.lat loc.lon) booking.toLocation
+            isRun = DTrip.isSharedRouteTrip booking.tripCategory
          in case ride.status of
-              DRide.UPCOMING -> Just $ CommittedInterval booking.startTime (addUTCTime duration booking.startTime) pickupPos dropPos
-              DRide.NEW -> Just $ CommittedInterval booking.startTime (addUTCTime duration booking.startTime) pickupPos dropPos
+              DRide.UPCOMING -> Just $ CommittedInterval booking.startTime (addUTCTime duration booking.startTime) pickupPos dropPos isRun
+              DRide.NEW -> Just $ CommittedInterval booking.startTime (addUTCTime duration booking.startTime) pickupPos dropPos isRun
               -- trip underway occupies [now, planned end]; it can only ever be a predecessor, so its drop is what matters
               DRide.INPROGRESS ->
                 let plannedEnd = addUTCTime duration (fromMaybe booking.startTime ride.tripStartTime)
-                 in Just $ CommittedInterval now (max now plannedEnd) pickupPos dropPos
+                 in Just $ CommittedInterval now (max now plannedEnd) pickupPos dropPos isRun
               _ -> Nothing
 
 mkCandidateFromBooking :: DRB.Booking -> ScheduledCandidate
@@ -106,7 +113,8 @@ mkCandidateFromBooking booking =
     { candidateStart = booking.startTime,
       candidateEnd = addUTCTime (maybe 0 secondsToNominalDiffTime booking.estimatedDuration) booking.startTime,
       candidatePickup = LatLong booking.fromLocation.lat booking.fromLocation.lon,
-      candidateDrop = (\loc -> LatLong loc.lat loc.lon) <$> booking.toLocation
+      candidateDrop = (\loc -> LatLong loc.lat loc.lon) <$> booking.toLocation,
+      candidateIsRun = DTrip.isSharedRouteTrip booking.tripCategory
     }
 
 -- | The single accept guard for a scheduled booking, whether taken from the board, from the broadcast, assigned by a
@@ -152,19 +160,18 @@ isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate comm
   let (mbPredecessor, mbSuccessor) = selectNeighbours candidate.candidateStart committed
   (predecessorOk, mbPredecessorLeg) <- case mbPredecessor of
     Nothing -> pure (True, Nothing)
-    Just predecessor -> legFeasible Nothing predecessor.intervalDrop predecessor.intervalEnd candidate.candidatePickup candidate.candidateStart
+    Just predecessor -> legFeasible (gapBetween transporterConfig candidate.candidateIsRun predecessor.intervalIsRun) Nothing predecessor.intervalDrop predecessor.intervalEnd candidate.candidatePickup candidate.candidateStart
   if not predecessorOk
     then pure False
     else case mbSuccessor of
       Nothing -> pure True
       Just successor -> case candidate.candidateDrop of
         Nothing -> pure False -- unknown drop: cannot prove the gap to the next hold
-        Just candidateDrop -> fst <$> legFeasible mbPredecessorLeg candidateDrop candidate.candidateEnd successor.intervalPickup successor.intervalStart
+        Just candidateDrop -> fst <$> legFeasible (gapBetween transporterConfig candidate.candidateIsRun successor.intervalIsRun) mbPredecessorLeg candidateDrop candidate.candidateEnd successor.intervalPickup successor.intervalStart
   where
-    buffer = transporterConfig.scheduleRideBufferTime
     -- Both legs collapse to the same origin/destination when the driver's bookings repeat a pickup/drop pair
     -- (recurring commute); reuse that distance so the second leg costs no maps call, only the time arithmetic.
-    legFeasible mbCachedLeg fromPos fromEnd toPos toStart
+    legFeasible buffer mbCachedLeg fromPos fromEnd toPos toStart
       | legInfeasibleByTime buffer fromEnd toStart = pure (False, mbCachedLeg) -- even a zero-length deadhead cannot make it
       | otherwise = do
         distance <- case mbCachedLeg of
@@ -180,7 +187,7 @@ isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate comm
                     distanceUnit = Meter
                   }
             pure resp.distance
-        pure (legFeasibleWithDistance transporterConfig distance fromEnd toStart, Just (fromPos, toPos, distance))
+        pure (legFeasibleWithDistance transporterConfig buffer distance fromEnd toStart, Just (fromPos, toPos, distance))
 
 -- | Predecessor = latest committed interval starting at/before the candidate; successor = earliest strictly after.
 selectNeighbours :: UTCTime -> [CommittedInterval] -> (Maybe CommittedInterval, Maybe CommittedInterval)
@@ -193,11 +200,19 @@ selectNeighbours candidateStart committed =
 legInfeasibleByTime :: NominalDiffTime -> UTCTime -> UTCTime -> Bool
 legInfeasibleByTime buffer fromEnd toStart = addUTCTime buffer fromEnd > toStart
 
--- | Given a precomputed deadhead distance, does travel + buffer still clear the next start?
-legFeasibleWithDistance :: TransporterConfig -> Meters -> UTCTime -> UTCTime -> Bool
-legFeasibleWithDistance transporterConfig distance fromEnd toStart =
+-- | The gap two neighbouring holds must keep on top of the deadhead: the scheduled-ride buffer, widened to the city's
+-- shared-run clash window when either side is a run and the city runs them (SharedRun.Knobs.clashWindow).
+gapBetween :: TransporterConfig -> Bool -> Bool -> NominalDiffTime
+gapBetween transporterConfig candidateIsRun neighbourIsRun
+  | candidateIsRun || neighbourIsRun,
+    Just knobs <- SharedRunKnobs.supplyKnobsOf transporterConfig =
+    max transporterConfig.scheduleRideBufferTime (SharedRunKnobs.clashWindow knobs)
+  | otherwise = transporterConfig.scheduleRideBufferTime
+
+-- | Given a precomputed deadhead distance, does travel + the gap still clear the next start?
+legFeasibleWithDistance :: TransporterConfig -> NominalDiffTime -> Meters -> UTCTime -> UTCTime -> Bool
+legFeasibleWithDistance transporterConfig buffer distance fromEnd toStart =
   let avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideConfig.avgSpeedKmph
-      buffer = transporterConfig.scheduleRideBufferTime
       deadheadKm = (fromIntegral distance.getMeters :: Double) / 1000
       deadheadSeconds = realToFrac (deadheadKm / avgSpeedKmph * 3600) :: NominalDiffTime
    in addUTCTime (deadheadSeconds + buffer) fromEnd <= toStart
@@ -206,12 +221,12 @@ legFeasibleWithDistance transporterConfig distance fromEnd toStart =
 data LegPrecheck
   = LegClearedNoNeighbour
   | LegRejectedByTime
-  | LegNeedsDistance !LatLong !UTCTime !UTCTime
+  | LegNeedsDistance !LatLong !UTCTime !UTCTime !NominalDiffTime
 
 -- | A driver either has a pure verdict (no OSRM needed) or survives to the distance phase carrying its optional predecessor/successor cell needs.
 data DriverClass a
   = ClassDecided a !Bool
-  | ClassNeedsDistance a !(Maybe (LatLong, UTCTime, UTCTime)) !(Maybe (LatLong, UTCTime, UTCTime))
+  | ClassNeedsDistance a !(Maybe (LatLong, UTCTime, UTCTime, NominalDiffTime)) !(Maybe (LatLong, UTCTime, UTCTime, NominalDiffTime))
 
 -- | Pool-level feasibility for one shared candidate against many drivers' committed sets, collapsing the per-driver point-to-point OSRM calls into at most two batched @/table@ calls (predecessor legs many-to-one on the pickup, successor legs one-to-many from the drop). Input order is preserved; a missing/errored distance cell fails closed, matching the single-driver path's verdict.
 batchIsCandidateFeasible ::
@@ -223,9 +238,9 @@ batchIsCandidateFeasible ::
   [(a, [CommittedInterval])] ->
   m [(a, Bool)]
 batchIsCandidateFeasible merchantId merchantOpCityId transporterConfig candidate inputs = do
-  let classified = map (\(payload, committed) -> classifyDriver buffer candidate payload committed) inputs
-      predPoints = [point | ClassNeedsDistance _ (Just (point, _, _)) _ <- classified]
-      succPoints = [point | ClassNeedsDistance _ _ (Just (point, _, _)) <- classified]
+  let classified = map (\(payload, committed) -> classifyDriver (gapBetween transporterConfig candidate.candidateIsRun) candidate payload committed) inputs
+      predPoints = [point | ClassNeedsDistance _ (Just (point, _, _, _)) _ <- classified]
+      succPoints = [point | ClassNeedsDistance _ _ (Just (point, _, _, _)) <- classified]
   -- predecessor batch: origins = predecessor drops, single destination = candidate pickup; key each cell by the echoed resp.origin so we never depend on the provider preserving request order (Google route-matrix may omit/reorder)
   predDistByPoint <- case NE.nonEmpty predPoints of
     Nothing -> pure Map.empty
@@ -240,7 +255,6 @@ batchIsCandidateFeasible merchantId merchantOpCityId transporterConfig candidate
     _ -> pure Map.empty
   pure $ map (evaluate predDistByPoint succDistByPoint) classified
   where
-    buffer = transporterConfig.scheduleRideBufferTime
     pointKey p = (p.lat, p.lon)
     callTable origins destinations = do
       res <-
@@ -258,35 +272,36 @@ batchIsCandidateFeasible merchantId merchantOpCityId transporterConfig candidate
     evaluate predDistByPoint succDistByPoint (ClassNeedsDistance payload predNeed succNeed) =
       (payload, legOk predDistByPoint predNeed && legOk succDistByPoint succNeed)
     legOk _ Nothing = True
-    legOk distByPoint (Just (point, fromEnd, toStart)) = case Map.lookup (pointKey point) distByPoint of
+    legOk distByPoint (Just (point, fromEnd, toStart, gap)) = case Map.lookup (pointKey point) distByPoint of
       Nothing -> False -- errored, dropped (non-ROUTE_EXISTS), or missing cell: fail closed, exactly as the single-driver unknown-leg case
-      Just distance -> legFeasibleWithDistance transporterConfig distance fromEnd toStart
+      Just distance -> legFeasibleWithDistance transporterConfig gap distance fromEnd toStart
 
--- | Classify one driver's committed set against the shared candidate without any OSRM call.
-classifyDriver :: NominalDiffTime -> ScheduledCandidate -> a -> [CommittedInterval] -> DriverClass a
-classifyDriver buffer candidate payload committed =
+-- | Classify one driver's committed set against the shared candidate without any OSRM call. @gapTo@ gives the gap to
+-- keep from a neighbour, by whether that neighbour is a shared-route run.
+classifyDriver :: (Bool -> NominalDiffTime) -> ScheduledCandidate -> a -> [CommittedInterval] -> DriverClass a
+classifyDriver gapTo candidate payload committed =
   let (mbPredecessor, mbSuccessor) = selectNeighbours candidate.candidateStart committed
       predLeg = case mbPredecessor of
         Nothing -> LegClearedNoNeighbour
-        Just predecessor -> classifyLeg buffer predecessor.intervalDrop predecessor.intervalEnd candidate.candidateStart
+        Just predecessor -> classifyLeg (gapTo predecessor.intervalIsRun) predecessor.intervalDrop predecessor.intervalEnd candidate.candidateStart
       succLeg = case mbSuccessor of
         Nothing -> LegClearedNoNeighbour
         Just successor -> case candidate.candidateDrop of
           Nothing -> LegRejectedByTime -- unknown drop: cannot prove the gap to the next hold
-          Just _ -> classifyLeg buffer successor.intervalPickup candidate.candidateEnd successor.intervalStart
+          Just _ -> classifyLeg (gapTo successor.intervalIsRun) successor.intervalPickup candidate.candidateEnd successor.intervalStart
    in case (predLeg, succLeg) of
         (LegRejectedByTime, _) -> ClassDecided payload False
         (_, LegRejectedByTime) -> ClassDecided payload False
         (predResolved, succResolved) -> ClassNeedsDistance payload (toNeed predResolved) (toNeed succResolved)
   where
-    toNeed (LegNeedsDistance point fromEnd toStart) = Just (point, fromEnd, toStart)
+    toNeed (LegNeedsDistance point fromEnd toStart gap) = Just (point, fromEnd, toStart, gap)
     toNeed _ = Nothing
 
 -- | Pre-check one leg on time alone; if it survives, record the point that varies across the pool (batched later) plus the times for the final distance check.
 classifyLeg :: NominalDiffTime -> LatLong -> UTCTime -> UTCTime -> LegPrecheck
 classifyLeg buffer varyingPoint fromEnd toStart
   | legInfeasibleByTime buffer fromEnd toStart = LegRejectedByTime
-  | otherwise = LegNeedsDistance varyingPoint fromEnd toStart
+  | otherwise = LegNeedsDistance varyingPoint fromEnd toStart buffer
 
 -- | Earliest remaining UPCOMING hold, excluding the one being released.
 earliestRemainingScheduledHold :: Maybe (Id DRB.Booking) -> [(DRide.Ride, DRB.Booking)] -> Maybe (UTCTime, LatLong)

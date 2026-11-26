@@ -133,6 +133,8 @@ data AllocatorJobType
   | WalletIntegrityCheck
   | ChargeWalletPenalty
   | MaterialiseSharedRuns
+  | SharedRunCheckIn
+  | SharedRunFallback
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -224,6 +226,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
   restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
   restoreAnyJobInfo SMaterialiseSharedRuns jobData = AnyJobInfo <$> restoreJobInfo SMaterialiseSharedRuns jobData
+  restoreAnyJobInfo SSharedRunCheckIn jobData = AnyJobInfo <$> restoreJobInfo SSharedRunCheckIn jobData
+  restoreAnyJobInfo SSharedRunFallback jobData = AnyJobInfo <$> restoreJobInfo SSharedRunFallback jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -1082,3 +1086,25 @@ data MaterialiseSharedRunsJobData = MaterialiseSharedRunsJobData
 instance JobInfoProcessor 'MaterialiseSharedRuns
 
 type instance JobContent 'MaterialiseSharedRuns = MaterialiseSharedRunsJobData
+
+-- | At a shared run's check-in time, ask its driver to acknowledge it (SharedLogic.SharedRun.Coverage).
+newtype SharedRunCheckInJobData = SharedRunCheckInJobData
+  { bookingId :: Id DB.Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedRunCheckIn
+
+type instance JobContent 'SharedRunCheckIn = SharedRunCheckInJobData
+
+-- | Keep a shared run covered: at its fallback time, and at once when it loses its driver (SharedLogic.SharedRun.Coverage).
+data SharedRunFallbackJobData = SharedRunFallbackJobData
+  { bookingId :: Id DB.Booking,
+    -- | why this run of the job was scheduled, for the logs
+    reason :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedRunFallback
+
+type instance JobContent 'SharedRunFallback = SharedRunFallbackJobData
