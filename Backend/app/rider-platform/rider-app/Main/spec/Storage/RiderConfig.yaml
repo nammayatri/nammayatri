@@ -405,6 +405,7 @@ RiderConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     manualChargeApprovalMinCustomerVersion: Maybe Text
+    smsOtpAllowedCountryCodes: "Maybe [Text]" # Mobile country codes (e.g. "+91") that may receive an OTP over SMS. Nothing = no restriction
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -721,6 +722,7 @@ RiderConfig:
     serviceTierRelationshipCfg: "json"
     nonAllowedOverrideFleetNoServiceTiers: "json"
     metricsBlacklistPatterns: text []
+    smsOtpAllowedCountryCodes: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
     duesExcludedPaymentPurposes: text []

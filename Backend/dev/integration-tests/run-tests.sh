@@ -6,6 +6,7 @@
 #   ./run-tests.sh rides                              # Run all ride booking suites for all cities
 #   ./run-tests.sh rides NY_Bangalore                 # Run ride suites for Bangalore only
 #   ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow     # Run specific suite
+#   ./run-tests.sh auth NY_Bangalore                  # Run login / OTP suites for Bangalore
 #   ./run-tests.sh bus                               # Run all bus ticket booking suites for all cities
 #   ./run-tests.sh bus FRFS_Chennai                   # Run bus suites for Chennai only
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
@@ -58,6 +59,8 @@ SCHEDULED_DIR="$SCRIPT_DIR/collections/ScheduledBookingFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
+# Login / OTP rules (e.g. SMS OTP country restriction).
+AUTH_DIR="$SCRIPT_DIR/collections/AuthFlow"
 AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
@@ -522,6 +525,51 @@ run_rides() {
     [ "$failed" -eq 0 ]
 }
 
+# ── AuthFlow: the suites roll a config out through the dashboard, so the active rollouts are
+#    captured before the run and written back after it, whether it passed or failed ──
+
+AUTH_ROLLOUT_SNAPSHOTS=()
+
+auth_env_names() {
+    local filter_env="${1:-}"
+    for env_name in "${RIDE_ENVS[@]}"; do
+        if [ -n "$filter_env" ] && [ "$filter_env" != "$env_name" ]; then
+            continue
+        fi
+        [ -f "$AUTH_DIR/Local/Local_${env_name}.postman_environment.json" ] && echo "$env_name"
+    done
+    return 0
+}
+
+snapshot_auth_rollouts() {
+    local filter_env="${1:-}"
+    local env_name
+    mkdir -p "$REPORTS_DIR"
+    for env_name in $(auth_env_names "$filter_env"); do
+        local env_file="$AUTH_DIR/Local/Local_${env_name}.postman_environment.json"
+        local snapshot_env="$REPORTS_DIR/auth_rollout_snapshot_${env_name}.postman_environment.json"
+        rm -f "$snapshot_env"
+        echo ""
+        echo "Capturing config rollouts ($env_name)"
+        newman run "$AUTH_DIR/cleanup/SnapshotSmsOtpRollouts.json" -e "$(resolve_env_file "$env_file")" \
+            --bail --timeout-request 60000 --reporters cli --export-environment "$snapshot_env" \
+            || { rm -f "$snapshot_env"; echo "ERROR: could not read the config rollouts for $env_name"; return 1; }
+        AUTH_ROLLOUT_SNAPSHOTS+=("$snapshot_env")
+    done
+}
+
+restore_auth_rollouts() {
+    local rc=0
+    local snapshot_env
+    for snapshot_env in "${AUTH_ROLLOUT_SNAPSHOTS[@]+"${AUTH_ROLLOUT_SNAPSHOTS[@]}"}"; do
+        echo ""
+        echo "Restoring config rollouts ($(basename "$snapshot_env"))"
+        newman run "$AUTH_DIR/cleanup/RestoreSmsOtpRollouts.json" -e "$snapshot_env" --timeout-request 60000 --reporters cli \
+            || { echo "WARNING: could not restore config rollouts from $snapshot_env"; rc=1; }
+    done
+    return "$rc"
+}
+
 # ── FRFS Ticket Booking (generic for bus/metro/subway) ──
 
 run_frfs() {
@@ -908,6 +956,20 @@ case "${1:-}" in
         ;;
     taxi|taxi-rides)
         run_rides "${2:-}" "${3:-}" "$TAXI_RIDE_DIR"
+        ;;
+    auth)
+        # Nothing is run, and nothing is restored, unless the current rollouts could be read.
+        auth_rc=0
+        # An interrupted run must still put the captured rollouts back.
+        trap 'trap - INT TERM; restore_auth_rollouts || true; exit 130' INT TERM
+        if snapshot_auth_rollouts "${2:-}"; then
+            run_rides "${2:-}" "${3:-}" "$AUTH_DIR" || auth_rc=$?
+        else
+            auth_rc=1
+        fi
+        trap - INT TERM
+        restore_auth_rollouts || auth_rc=1
+        exit "$auth_rc"
         ;;
     bus)
         run_bus "${2:-}" "${3:-}"
