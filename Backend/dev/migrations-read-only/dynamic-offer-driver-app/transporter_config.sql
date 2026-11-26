@@ -1361,3 +1361,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN events_window_s
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_arrival boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_run_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_breakup_groups_config json ;
+
+
+------- SQL updates -------
+

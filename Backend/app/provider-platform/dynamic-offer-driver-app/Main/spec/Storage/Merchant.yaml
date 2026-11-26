@@ -1354,6 +1354,7 @@ TransporterConfig:
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
     customerPayableFareBreakupSubItemsConfig: "Maybe [FareBreakupNode]"
+    fareBreakupGroupsConfig: "Maybe [FareBreakupNode]" # groups of fare pieces for the dashboard ride-info v2 fare breakup
     fareRecomputePolicy: Maybe RecomputePolicy # THE recompute config: unified nested policy; absent fields fall back to code defaults (RecomputeDecision.mkRecomputeConfig). Legacy scattered columns are no longer read -- backfill before deploy (dev/sql-seed/fare-recompute-policy-backfill.sql)
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
@@ -1725,6 +1726,7 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     fareRecomputePolicy: Maybe Value
     customerPayableFareBreakupSubItemsConfig: Maybe Value
+    fareBreakupGroupsConfig: Maybe Value
     allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
@@ -1843,6 +1845,7 @@ TransporterConfig:
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     fareRecomputePolicy: Kernel.Prelude.toJSON <$> fareRecomputePolicy|E
     customerPayableFareBreakupSubItemsConfig: Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig|E
+    fareBreakupGroupsConfig: Kernel.Prelude.toJSON <$> fareBreakupGroupsConfig|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
     preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
@@ -1974,6 +1977,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareRecomputePolicy|E
     customerPayableFareBreakupSubItemsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerPayableFareBreakupSubItemsConfig|E
+    fareBreakupGroupsConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareBreakupGroupsConfig|E
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
@@ -2090,6 +2095,7 @@ TransporterConfig:
     sharedRunConfig: json
     rideEvidenceConfig: json
     customerPayableFareBreakupSubItemsConfig: json
+    fareBreakupGroupsConfig: json
     issueBreachConfig: json
     gpsTollBehaviorWindowDays: int
     enableGpsTollBehavior: boolean

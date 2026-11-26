@@ -3,6 +3,7 @@ module BecknV2.OnDemand.FareBreakup.SubItems
     FareBreakupNodeValue (..),
     FareBreakupLine (..),
     computeFareBreakupLines,
+    exactFareBreakupLines,
     FareUISection (..),
     FareUIComponentType (..),
     FareUISubItem (..),
@@ -90,8 +91,13 @@ computeFareBreakupLines currency configuredSubItems amounts =
   pruneLines (apportionLines unit (roundAmountByCurrency' currency exactTotal) exactLines)
   where
     unit = 1 / 10 ^ getAccuracy currency
-    exactLines = map (exactLine amounts) (snd (resolveFirstOccurrences 1 [] configuredSubItems))
+    exactLines = exactFareBreakupLines configuredSubItems amounts
     exactTotal = sum (map (.amount) exactLines)
+
+-- | The configured lines with their exact amounts: not rounded, and lines that are 0 are kept.
+exactFareBreakupLines :: Ord tag => [FareBreakupNode tag] -> Map.Map tag HighPrecMoney -> [FareBreakupLine]
+exactFareBreakupLines configuredSubItems amounts =
+  map (exactLine amounts) (snd (resolveFirstOccurrences 1 [] configuredSubItems))
 
 resolveFirstOccurrences :: Eq tag => Int -> [tag] -> [FareBreakupNode tag] -> ([tag], [FareBreakupNode tag])
 resolveFirstOccurrences depth seenTags nodes

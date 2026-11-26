@@ -12,6 +12,7 @@ module Domain.Action.UI.Ride.Common
     RideEarnings (..),
     EarningsLabels (..),
     fetchEarningsLabels,
+    resolveLabel,
     mkDriverRideRes,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),

@@ -320,6 +320,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.exotelStatusCheckSchedulerDelay (Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay),
       Se.Set Beam.fakeOtpEmails fakeOtpEmails,
       Se.Set Beam.fakeOtpMobileNumbers fakeOtpMobileNumbers,
+      Se.Set Beam.fareBreakupGroupsConfig (Kernel.Prelude.toJSON <$> fareBreakupGroupsConfig),
       Se.Set Beam.fareRecomputePolicy (Kernel.Prelude.toJSON <$> fareRecomputePolicy),
       Se.Set Beam.favouriteDriverDailyCoinRideThreshold (Just favouriteDriverDailyCoinRideThreshold),
       Se.Set Beam.fcmServiceAccount (Kernel.External.Notification.FCM.Types.fcmServiceAccount fcmConfig),
