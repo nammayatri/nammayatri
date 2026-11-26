@@ -118,11 +118,9 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
--- | Radius of a stand-by better-driver search: the city's proximity abort radius
--- (betterDriverProximityAbortRadiusMeters), the same for every batch. A search only runs while
--- the assigned driver is outside that radius, so every driver found inside it is closer to the
--- pickup. Nothing for normal searches, or if the booking or the radius is missing (caller then
--- falls back to the normal radius).
+-- | Radius of a stand-by better-driver search: betterDriverSearchMaxRadiusMeters, the same for
+-- every batch. Nothing for normal searches, or if the booking or the radius is missing (caller
+-- then falls back to the normal radius).
 computeBetterDriverSearchRadiusOverride ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -146,7 +144,7 @@ computeBetterDriverSearchRadiusOverride searchTry
           Nothing -> pure Nothing
           Just booking -> do
             mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-            pure $ highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
+            pure $ highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters))
 
 initiateDriverSearchBatch ::
   ( EncFlow m r,
