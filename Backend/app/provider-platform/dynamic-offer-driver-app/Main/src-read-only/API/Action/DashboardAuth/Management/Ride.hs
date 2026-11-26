@@ -26,7 +26,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = "ride" :> (GetRideAgentList :<|> (GetRideList :<|> (GetRideListV2 :<|> (PostRideEndMultiple :<|> (PostRideCancelMultiple :<|> (GetRideInfo :<|> (GetRideEvidence :<|> (GetRideEvidenceFile :<|> (PostRideEvidenceVisibility :<|> (PostRideSync :<|> (PostRideSyncMultiple :<|> (PostRideRoute :<|> (GetRideEstimatedRoute :<|> (GetRideSnappedRoute :<|> (GetRideKaptureList :<|> (GetRideFareBreakUp :<|> (PostRideWaiverRideCancellationPenalty :<|> (GetRideNearby :<|> (GetRideCallCount :<|> GetRideFlowDebug)))))))))))))))))))
+type API = "ride" :> (GetRideAgentList :<|> (GetRideList :<|> (GetRideListV2 :<|> (PostRideEndMultiple :<|> (PostRideCancelMultiple :<|> (GetRideInfo :<|> (GetRideInfoV2 :<|> (GetRideEvidence :<|> (GetRideEvidenceFile :<|> (PostRideEvidenceVisibility :<|> (PostRideSync :<|> (PostRideSyncMultiple :<|> (PostRideRoute :<|> (GetRideEstimatedRoute :<|> (GetRideSnappedRoute :<|> (GetRideKaptureList :<|> (GetRideFareBreakUp :<|> (PostRideWaiverRideCancellationPenalty :<|> (GetRideNearby :<|> (GetRideCallCount :<|> GetRideFlowDebug))))))))))))))))))))
 
 type GetRideAgentList = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_AGENT_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideAgentList
 
@@ -39,6 +39,8 @@ type PostRideEndMultiple = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVI
 type PostRideCancelMultiple = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_CANCEL_MULTIPLE" :> API.Types.ProviderPlatform.Management.Ride.PostRideCancelMultiple
 
 type GetRideInfo = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_INFO" :> API.Types.ProviderPlatform.Management.Ride.GetRideInfo
+
+type GetRideInfoV2 = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_INFO_V2" :> API.Types.ProviderPlatform.Management.Ride.GetRideInfoV2
 
 type GetRideEvidence = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_EVIDENCE" :> API.Types.ProviderPlatform.Management.Ride.GetRideEvidence
 
@@ -77,7 +79,7 @@ type GetRideCallCount = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER
 type GetRideFlowDebug = DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FLOW_DEBUG" :> API.Types.ProviderPlatform.Management.Ride.GetRideFlowDebug
 
 handler :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getRideAgentList merchantId city :<|> getRideList merchantId city :<|> getRideListV2 merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> getRideEvidence merchantId city :<|> getRideEvidenceFile merchantId city :<|> postRideEvidenceVisibility merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideEstimatedRoute merchantId city :<|> getRideSnappedRoute merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFareBreakUp merchantId city :<|> postRideWaiverRideCancellationPenalty merchantId city :<|> getRideNearby merchantId city :<|> getRideCallCount merchantId city :<|> getRideFlowDebug merchantId city
+handler merchantId city = getRideAgentList merchantId city :<|> getRideList merchantId city :<|> getRideListV2 merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> getRideInfoV2 merchantId city :<|> getRideEvidence merchantId city :<|> getRideEvidenceFile merchantId city :<|> postRideEvidenceVisibility merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideEstimatedRoute merchantId city :<|> getRideSnappedRoute merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFareBreakUp merchantId city :<|> postRideWaiverRideCancellationPenalty merchantId city :<|> getRideNearby merchantId city :<|> getRideCallCount merchantId city :<|> getRideFlowDebug merchantId city
 
 getRideAgentList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Ride.BookingStatus -> (Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideListRes))))))))))))
 getRideAgentList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
@@ -127,6 +129,14 @@ getRideInfo a6 a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Ride.getRideInfo a6 a5 a3 a2 a1
+    )
+
+getRideInfoV2 :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideInfoV2Res)))
+getRideInfoV2 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Ride.getRideInfoV2 a4 a3 a1
     )
 
 getRideEvidence :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideEvidenceListRes)))

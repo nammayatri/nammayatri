@@ -179,6 +179,15 @@ apis:
         rideId: Id Ride
       response:
         type: RideInfoRes
+  - GET: # RideInfoV2API
+      endpoint: /{rideId}/info/v2
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideInfoV2Res
+      migrate:
+        capability: city-operations.ride.read
   - GET: # RideEvidenceListAPI
       endpoint: /{rideId}/evidence
       auth: ApiAuthV2
@@ -718,6 +727,39 @@ types:
     - personId: Id Driver
     - classification: Classification
     - derive': "Show, Generic, ToSchema"
+  # Grouped by section so later sections can be added without changing these.
+  RideInfoV2Res:
+    - fare: RideInfoV2Fare
+    - charges: [RideInfoV2ChargeGroup]
+    - derive: "'HideSecrets"
+  # The fare split into groups, as set in the city's transporter config (fareBreakupGroupsConfig), followed by
+  # an adjustments group (discounts, commission); empty when the city has no such config. Amounts are not rounded;
+  # rows that are 0 on both sides and groups left with no rows are not sent. Estimated is from the booking, actual
+  # from the ride once it has ended.
+  RideInfoV2ChargeGroup:
+    - key: Text
+    - title: Text
+    - estimated: Maybe PriceAPIEntity
+    - actual: Maybe PriceAPIEntity
+    - rows: [RideInfoV2ChargeRow]
+  RideInfoV2ChargeRow:
+    - key: Text
+    - title: Text
+    - estimated: Maybe PriceAPIEntity
+    - actual: Maybe PriceAPIEntity
+  # Gross is what the customer is charged (fare before discount minus discount);
+  # net and the cash / online amounts are worked out as in the driver app, but not rounded.
+  RideInfoV2Fare:
+    - fareBeforeDiscountEstimated: PriceAPIEntity
+    - discountEstimated: Maybe PriceAPIEntity
+    - grossEstimated: PriceAPIEntity
+    - fareBeforeDiscountActual: Maybe PriceAPIEntity
+    - discountActual: Maybe PriceAPIEntity
+    - grossActual: Maybe PriceAPIEntity
+    - netEstimated: PriceAPIEntity
+    - netActual: Maybe PriceAPIEntity
+    - amountToCollectInCash: Maybe PriceAPIEntity
+    - amountToBeSettledOnline: Maybe PriceAPIEntity
   FareBreakUpRes:
     - estimatedFareBreakUp: Maybe FareBreakUp
     - actualFareBreakUp: Maybe FareBreakUp
