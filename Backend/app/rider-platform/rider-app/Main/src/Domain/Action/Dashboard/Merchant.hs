@@ -446,6 +446,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            skipQueue = mbExistingSpLoc >>= (.skipQueue),
             ..
           }
 
@@ -1934,7 +1935,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
-                boothSpecificFleet = Nothing
+                boothSpecificFleet = Nothing,
+                skipQueue = Nothing
               }
           gateInfo =
             DGI.GateInfo
@@ -2033,7 +2035,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
           DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
-          DSL.paymentModes = new.paymentModes <|> old.paymentModes
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+          DSL.skipQueue = new.skipQueue <|> old.skipQueue
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
