@@ -1279,8 +1279,6 @@ rideFinanceInfo mbLanguage ride = do
   driverInfo <- runInReplica $ QDriverInfo.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   driverRide <- DUIRide.buildDriverRideResItem ride.driverId driverInfo ENGLISH Nothing mbTransporterConfig (ride, booking)
   let estimatedFareParams = booking.fareParams
-      -- Not rounded, like the estimated / actual fare in ride info: rounding by currency would
-      -- turn an INR fare such as 51.50 into 52.
       price cur amt = PriceAPIEntity amt cur
       -- Gross is what the customer is charged: the fare before discount minus the discount.
       gross cur fareAmount mbDiscount = price cur (fareAmount - fromMaybe 0 mbDiscount)
@@ -1297,8 +1295,6 @@ rideFinanceInfo mbLanguage ride = do
               fareBeforeDiscountActual = price ride.currency <$> ride.fare,
               discountActual = price ride.currency <$> ride.discountAmount,
               grossActual = (\actualFare -> gross ride.currency actualFare ride.discountAmount) <$> ride.fare,
-              -- Same rule as the driver app's net earnings: the final fare, else the
-              -- cancellation compensation of a cancelled ride.
               netEstimated = driverRide.estimatedBaseFareWithCurrencyV2,
               netActual = driverRide.computedFareWithCurrency <|> driverRide.cancellationCompensation,
               amountToCollectInCash = driverRide.amountToCollectInCashWithCurrency,
@@ -1307,8 +1303,7 @@ rideFinanceInfo mbLanguage ride = do
         charges
       }
 
--- | A charges group with its rows, or a single row, before its label is looked up. Lines from the config have
--- no adjustment; their label is read by the key ops typed into the config.
+-- | A charges group with its rows, or a single row, before its label is looked up.
 data ChargeLine = ChargeLine
   { chargeKey :: Text,
     chargeAdjustment :: Maybe FareBreakupAdjustment,
@@ -1352,11 +1347,15 @@ adjustmentsGroup booking ride mbFinalFareParams =
     rows =
       [ adjustmentRow "DISCOUNT" RideDiscount (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
         -- As in the driver app's earnings card, the commission on old cancellation dues added to this ride is included.
-        adjustmentRow "COMMISSION" RideCommission (negate <$> booking.commission) ((\commission -> negate (commission + fromMaybe 0 ride.cancellationDuesCommission)) <$> ride.commission),
+        adjustmentRow "COMMISSION" RideCommission (negate <$> booking.commission) actualCommission,
         fareComponentRow "PERSONAL_DISCOUNT" PersonalDiscount FarePolicyD.PersonalDiscountComponent,
         fareComponentRow "BUSINESS_DISCOUNT" BusinessDiscount FarePolicyD.BusinessDiscountComponent,
         fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" NegativeFareAdjustment FarePolicyD.NegativeFareAdjustmentComponent
       ]
+    actualCommission =
+      if isNothing ride.commission && isNothing ride.cancellationDuesCommission
+        then Nothing
+        else Just (negate (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission))
     total side = case mapMaybe side rows of
       [] -> Nothing
       amounts -> Just (sum amounts)
