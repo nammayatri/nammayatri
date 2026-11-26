@@ -317,6 +317,24 @@ getStationsByGtfsId mbIncludeClusterId integratedBPPConfig = do
   stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey mbIncludeClusterId
   parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig True
 
+getNearbyStopCodes ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Double ->
+  Text ->
+  m [Text]
+getNearbyStopCodes integratedBPPConfig radiusMeters stopCode = IM.withInMemCache ["NearbyStopCodes", stopCode, show radiusMeters, integratedBPPConfig.id.getId] 3600 $ do
+  mbStation <- getStationByGtfsIdAndStopCode stopCode integratedBPPConfig
+  case (mbStation >>= (.lat), mbStation >>= (.lon)) of
+    (Just lat, Just lon) -> do
+      baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      withTryCatch "getNearbyStopCodes" (Flow.operatorNearbyStops baseUrl integratedBPPConfig.feedKey lat lon (Just radiusMeters) (Just 50) (Just False)) >>= \case
+        Right stops -> pure (mapMaybe (.code) stops)
+        Left err -> do
+          logWarning $ "getNearbyStopCodes: nearby lookup failed for " <> stopCode <> ": " <> show err
+          pure []
+    _ -> pure []
+
 getStationByGtfsIdAndStopCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
