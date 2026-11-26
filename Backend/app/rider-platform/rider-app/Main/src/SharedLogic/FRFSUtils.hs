@@ -752,8 +752,27 @@ stageFareBetweenStops ::
   Text ->
   m (Maybe Price)
 stageFareBetweenStops integratedBPPConfig vehicleType serviceTier merchantOperatingCityId fromStopCode toStopCode = do
-  routeSpans <- stopPairStageSpans integratedBPPConfig fromStopCode toStopCode
+  directSpans <- stopPairStageSpans integratedBPPConfig fromStopCode toStopCode
+  routeSpans <- if null directSpans then nearbyStopPairStageSpans integratedBPPConfig fromStopCode toStopCode else pure directSpans
   fmap fst <$> stageFareRoutes integratedBPPConfig vehicleType serviceTier merchantOperatingCityId routeSpans
+
+nearbyStopRadiusMeters :: Double
+nearbyStopRadiusMeters = 300
+
+nearbyStopPairStageSpans ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  m [RouteStageSpan]
+nearbyStopPairStageSpans integratedBPPConfig fromStopCode toStopCode = do
+  fromStopCodes <- nub . (fromStopCode :) <$> OTPRest.getNearbyStopCodes integratedBPPConfig nearbyStopRadiusMeters fromStopCode
+  toStopCodes <- nub . (toStopCode :) <$> OTPRest.getNearbyStopCodes integratedBPPConfig nearbyStopRadiusMeters toStopCode
+  fromMappings <- OTPRest.getRouteStopMappingByStopCodes integratedBPPConfig fromStopCodes
+  toMappings <- OTPRest.getRouteStopMappingByStopCodes integratedBPPConfig toStopCodes
+  let routeSpans = stageSpansBetween fromMappings toMappings
+  logInfo $ "nearbyStopPairStageSpans " <> fromStopCode <> " -> " <> toStopCode <> " stages=" <> show (map (\routeSpan -> (routeSpan.routeCode, routeSpan.stage)) routeSpans)
+  pure routeSpans
 
 stopPairStageSpans ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
