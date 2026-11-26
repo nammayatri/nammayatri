@@ -49,6 +49,7 @@ import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
+import qualified Domain.Types.Booking.API as DBookingAPI
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingStatus as DTB
 import Domain.Types.CancellationReason
@@ -342,7 +343,7 @@ getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ =
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
-  ridesDetail <- mapM (\ride -> rideInfo merchant.id (cast ride.id)) lastNRides
+  ridesDetail <- mapM (\ride -> rideInfo merchant.id (cast ride.id) False) lastNRides -- no card lookup
   let rdList = map (makeRequiredRideDetail personId) (zip3 lastNRides ridesDetail lastNBookingStatus)
   return Common.TicketRideListRes {rides = rdList}
   where
@@ -390,13 +391,14 @@ getRideInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Ride ->
+  Maybe Bool ->
   Flow Common.RideInfoRes
-getRideInfo merchantShortId _ rideId = do
+getRideInfo merchantShortId _ rideId mbIncludeCardInfo = do
   merchant <- findMerchantByShortId merchantShortId
-  rideInfo merchant.id rideId
+  rideInfo merchant.id rideId (fromMaybe False mbIncludeCardInfo)
 
-rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
-rideInfo merchantId reqRideId = do
+rideInfo :: Id DM.Merchant -> Id Common.Ride -> Bool -> Flow Common.RideInfoRes
+rideInfo merchantId reqRideId includeCardInfo = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -440,6 +442,14 @@ rideInfo merchantId reqRideId = do
   let fareProductType = mkFareProductType booking.bookingDetails
   mbSos <- SafetyCQSos.findByRideId (cast ride.id)
   let mbSosId = (cast @SafetyDSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
+  -- The card the ride was charged to, found the same way as for the rider's own booking screen; only looked up
+  -- when the caller asks for it. A cash ride has no payment order, so no card.
+  mbCardInfo <-
+    if includeCardInfo
+      then do
+        mbPaymentOrder <- B.runInReplica $ QPaymentOrder.findByDomainEntityId ride.id.getId
+        B.runInReplica $ DBookingAPI.getOrderCardInfo mbPaymentOrder
+      else pure Nothing
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -499,7 +509,10 @@ rideInfo merchantId reqRideId = do
         rideDistanceSaved = mbSearchRequest >>= (.betterPointRideDistanceSaved),
         specialLocationTag = booking.specialLocationTag,
         specialLocationName = booking.specialLocationName,
-        isScheduled = booking.isScheduled
+        isScheduled = booking.isScheduled,
+        customerId = Just (cast booking.riderId),
+        paymentStatus = Just ride.paymentStatus,
+        cardInfo = (\card -> Common.RideCardDetails {cardBrand = card.cardBrand, cardType = card.cardType, cardLastFourDigits = card.cardLastFourDigits}) <$> mbCardInfo
       }
 
 getRideOfferInfo :: DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)

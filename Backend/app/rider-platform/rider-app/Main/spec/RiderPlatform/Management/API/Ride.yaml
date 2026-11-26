@@ -26,6 +26,7 @@ imports:
   Classification: Kernel.External.Ticket.Interface.Types
   ParentSearchRequestLocationInfo: Domain.Types.Extra.Booking
   Meters: Kernel.Types.Common
+  PaymentStatus: Domain.Types.Ride
 
 importPackageOverrides:
   Domain.Action.Dashboard.Ride: "rider-app"
@@ -53,6 +54,8 @@ apis:
       auth: ApiAuthV2
       params:
         rideId: Id Ride
+      query:
+        - includeCardInfo: Bool # look up the card the ride was charged to (cardInfo); off when not sent
       response:
         type: RideInfoRes
   - GET:
@@ -231,6 +234,13 @@ types:
     - specialLocationTag: Maybe Text
     - specialLocationName: Maybe Text
     - isScheduled: Bool
+    - customerId: Maybe (Id Customer)
+    - paymentStatus: Maybe PaymentStatus # the ride's online payment status
+    - cardInfo: Maybe RideCardDetails # the card charged for the ride, only when includeCardInfo is sent; Nothing for cash rides
+  RideCardDetails:
+    - cardBrand: Maybe Text
+    - cardType: Maybe Text
+    - cardLastFourDigits: Maybe Text
   RideOfferInfo:
     - offerId: Text
     - offerCode: Maybe Text
