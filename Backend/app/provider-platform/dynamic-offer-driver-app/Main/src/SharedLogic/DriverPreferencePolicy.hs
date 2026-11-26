@@ -111,8 +111,8 @@ validatePolicyConfig policy = do
       _ -> "ToggleValue"
 
 -- | Campaign create / update (cohort journey mapping controlFeatures): checks the PreferencePolicy perk, if any, as
--- the fleet config save does. Its config must parse as a policy (strict decode: an unknown preference or value tag is
--- rejected here, unlike the tolerant read) and pass 'validatePolicyConfig'; at most one PreferencePolicy entry. Other
+-- the fleet config save does. Its config must parse as a policy (an unknown preference or value tag is rejected here
+-- with a 400; on read it would make the policy undecodable) and pass 'validatePolicyConfig'; at most one PreferencePolicy entry. Other
 -- features are the campaign library's business and are not looked at. 400 INVALID_PREFERENCE_POLICY.
 validateCampaignControlFeatures :: (MonadThrow m, Log m) => Maybe A.Value -> m ()
 validateCampaignControlFeatures mbControlFeatures = do

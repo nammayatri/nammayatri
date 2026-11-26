@@ -40,6 +40,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import "config-pilot" Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.MgCampaign as Mg
@@ -55,7 +56,6 @@ import SharedLogic.IncentiveJourney.CampaignControlsCache (CampaignControls (..)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import Storage.Queries.Transformers.FleetConfig (decodePreferencePolicy)
 
 -- | The campaign as the job and the save hook see it: the mapping and its controls read fresh (not the 60 s cache).
 -- Campaign dates and timeBounds are city-local wall clock (as in the incentive-journey library).
@@ -105,7 +105,7 @@ campaignWindowPolicy mbVersion st
   | not (isBounded st.controls.timeBounds) = Left "has no bounded first-milestone timeBounds (the perk is always open)"
   | otherwise = case st.controls.preferencePolicy of
     Nothing -> Left "has no PreferencePolicy perk"
-    Just raw -> case decodePreferencePolicy raw of
+    Just raw -> case Kernel.Utils.JSON.valueToMaybe raw of
       Nothing -> Left "has a PreferencePolicy perk that does not decode"
       Just policy
         | Apply.policyHasValues policy -> Right policy

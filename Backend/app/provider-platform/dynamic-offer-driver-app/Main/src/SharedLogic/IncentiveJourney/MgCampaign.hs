@@ -500,7 +500,7 @@ mgAutoAssignValue = \case
     | otherwise -> Nothing
 
 -- | The campaign's PreferencePolicy perk config (raw JSON) while its enableIn window is open, else Nothing. Decoded
--- by 'SharedLogic.DriverPreferencePolicy.Context' with the tolerant policy decoder.
+-- by 'SharedLogic.DriverPreferencePolicy.Context' with the normal JSON decode.
 mgPreferencePolicyValue :: MgPerkSource -> Maybe A.Value
 mgPreferencePolicyValue = \case
   UseNoCampaign -> Nothing

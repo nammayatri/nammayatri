@@ -34,7 +34,7 @@
 --
 --   1. Add a constructor to 'ControlSource' and decide its precedence in 'resolveDriverFleetContextWith'.
 --   2. Give it its policy in 'sourcePolicy' and its auto-assign config in 'sourceAutoAssign'. A policy kept as JSON
---      elsewhere is decoded with 'decodePreferencePolicy' (tolerant: a bad entry drops only that entry).
+--      elsewhere is decoded with the normal JSON decode ('Kernel.Utils.JSON.valueToMaybe': undecodable = no policy).
 --   3. If the source can be saved with a policy, check it on save with 'SharedLogic.DriverPreferencePolicy.validatePolicyConfig'
 --      (400 INVALID_PREFERENCE_POLICY).
 --   4. If its policy should be APPLIED (v2), call 'SharedLogic.DriverPreferencePolicy.Apply.applyCurrentPolicyToDriver'
@@ -79,6 +79,7 @@ import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Lib.IncentiveJourney.MgCampaign as Mg
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
@@ -87,7 +88,6 @@ import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
-import Storage.Queries.Transformers.FleetConfig (decodePreferencePolicy)
 
 -- | The driver's active fleet association and that fleet's config.
 data FleetLink = FleetLink
@@ -165,20 +165,20 @@ sourceAutoAssign = \case
 --   * A campaign in charge (including a behaviour-only one): the campaign's own PreferencePolicy perk
 --     (controlFeatures @{"feature":"PreferencePolicy","config":{"locked":[...],"hidden":[...]},"enableIn":...}@) while
 --     its enableIn window is open ('MgCampaign.mgPreferencePolicyValue': AllDay = while a member, TimeBound = inside the
---     first milestone's timeBounds, the default), decoded with the same tolerant decoder as the fleet column. Else
+--     first milestone's timeBounds, the default), decoded with the normal JSON decode, as the fleet column. Else
 --     Nothing. The campaign wins: the fleet's locks are suppressed like its other perks (auto-assign, cancel, pooling)
 --     and never merged with the campaign's. Unassign the driver from the campaign to bring the fleet's locks back.
 --   * Otherwise the active fleet's policy.
 sourcePolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
 sourcePolicy context = case context.controlSource of
-  CampaignSource _ -> MgCampaign.mgPreferencePolicyValue context.mgPerkSource >>= decodePreferencePolicy
+  CampaignSource _ -> MgCampaign.mgPreferencePolicyValue context.mgPerkSource >>= Kernel.Utils.JSON.valueToMaybe
   FleetSource link -> link.fleetConfig >>= (.preferencePolicy)
   NoSource -> Nothing
 
 -- | 'sourcePolicy' for the apply paths: a campaign's PreferencePolicy perk whatever its enableIn window.
 sourceApplyPolicy :: DriverFleetContext -> Maybe DDPP.PreferencePolicy
 sourceApplyPolicy context = case context.controlSource of
-  CampaignSource snapshot -> snapshot.preferencePolicy >>= decodePreferencePolicy
+  CampaignSource snapshot -> snapshot.preferencePolicy >>= Kernel.Utils.JSON.valueToMaybe
   _ -> sourcePolicy context
 
 readFleetLink :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigRead -> Id Person -> Id MerchantOperatingCity -> m (Maybe FleetLink)
