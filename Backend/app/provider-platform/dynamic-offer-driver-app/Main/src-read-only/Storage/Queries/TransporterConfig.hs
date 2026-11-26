@@ -456,6 +456,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.sharedCabTripEarningsTarget sharedCabTripEarningsTarget,
       Se.Set Beam.sharedRunConfig (Kernel.Prelude.toJSON <$> sharedRunConfig),
       Se.Set Beam.showRoutePerRequest showRoutePerRequest,
+      Se.Set Beam.smsOtpAllowedCountryCodes smsOtpAllowedCountryCodes,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,
       Se.Set Beam.specialLocationTags specialLocationTags,

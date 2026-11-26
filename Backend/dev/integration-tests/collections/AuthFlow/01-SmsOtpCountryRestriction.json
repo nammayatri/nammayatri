@@ -1,0 +1,1092 @@
+{
+  "info": {
+    "name": "SMS OTP Country Restriction",
+    "description": "smsOtpAllowedCountryCodes on RiderConfig / TransporterConfig.\n\nRolls the config out to [+91] through the dashboard dynamic-logic APIs, checks that /auth rejects an SMS OTP to another country code (and never falls back to WhatsApp), that WhatsApp still works, then restores the rollout.\n\nResend goes through sendOTP even in local dev, so it is asserted too (the SMS itself lands on the mock server).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generate random numbers ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_in_rider')) {",
+          "    var n = function (first) { return first + Math.floor(100000000 + Math.random() * 899999999); };",
+          "    ['_test_in_rider'].forEach(function (k) { pm.collectionVariables.set(k, n('8')); });",
+          "    ['_test_in_driver', '_test_in_driver_alt'].forEach(function (k) { pm.collectionVariables.set(k, n('9')); });",
+          "    ['_test_us_rider_base', '_test_us_rider', '_test_us_rider_profile', '_test_us_driver_base', '_test_us_driver', '_test_us_driver_profile', '_test_us_driver_alt'].forEach(function (k) { pm.collectionVariables.set(k, n('2')); });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Snapshot RiderConfig Rollout (BAP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=%7B%22tag%22%3A%22RIDER_CONFIG%22%2C%22contents%22%3A%22RiderConfig%22%7D&activeOnly=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = null; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('RiderConfig rollout read', function () { pm.response.to.have.status(200); pm.expect(Array.isArray(d), 'response is a JSON array').to.eql(true); });",
+              "var isTest = function (x) { return (x.versionDescription || '').indexOf('Integration test SMS OTP country restriction') === 0; };",
+              "var domain = {\"tag\": \"RIDER_CONFIG\", \"contents\": \"RiderConfig\"};",
+              "var live = (Array.isArray(d) ? d : []).map(function (r) { return {domain: r.domain, timeBounds: r.timeBounds, rollout: (r.rollout || []).filter(function (x) { return !isTest(x); }).map(function (x) { return {rolloutPercentage: x.rolloutPercentage, version: x.version, versionDescription: x.versionDescription || 'restored'}; })}; });",
+              "var restore = live.length > 0 ? live : [{domain: domain, timeBounds: 'Unbounded', rollout: []}];",
+              "// A failed read must not produce a snapshot: restoring from it would wipe live rollouts.",
+              "if (pm.response.code === 200 && Array.isArray(d)) { pm.environment.set('_sms_rider_rollout_snapshot', JSON.stringify(restore)); console.log('RiderConfig rollout snapshot:', JSON.stringify(restore)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Snapshot TransporterConfig Rollout (BPP)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=%7B%22tag%22%3A%22DRIVER_CONFIG%22%2C%22contents%22%3A%22TransporterConfig%22%7D&activeOnly=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = null; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('TransporterConfig rollout read', function () { pm.response.to.have.status(200); pm.expect(Array.isArray(d), 'response is a JSON array').to.eql(true); });",
+              "var isTest = function (x) { return (x.versionDescription || '').indexOf('Integration test SMS OTP country restriction') === 0; };",
+              "var domain = {\"tag\": \"DRIVER_CONFIG\", \"contents\": \"TransporterConfig\"};",
+              "var live = (Array.isArray(d) ? d : []).map(function (r) { return {domain: r.domain, timeBounds: r.timeBounds, rollout: (r.rollout || []).filter(function (x) { return !isTest(x); }).map(function (x) { return {rolloutPercentage: x.rolloutPercentage, version: x.version, versionDescription: x.versionDescription || 'restored'}; })}; });",
+              "var restore = live.length > 0 ? live : [{domain: domain, timeBounds: 'Unbounded', rollout: []}];",
+              "// A failed read must not produce a snapshot: restoring from it would wipe live rollouts.",
+              "if (pm.response.code === 200 && Array.isArray(d)) { pm.environment.set('_sms_driver_rollout_snapshot', JSON.stringify(restore)); console.log('TransporterConfig rollout snapshot:', JSON.stringify(restore)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clear stale RiderConfig Rollout (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_rider_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RiderConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clear stale TransporterConfig Rollout (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_driver_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TransporterConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Baseline: Rider auth +1 over SMS, no restriction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_rider_base}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 SMS with config unset -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_rider_us_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Baseline: Driver auth +1 over SMS, no restriction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_driver_base}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 SMS with config unset -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_driver_us_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create RiderConfig Logic: SMS OTP allowed for +91 only (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"RIDER_CONFIG\", \"contents\": \"RiderConfig\"}, \"shouldUpdateRule\": true, \"description\": \"Integration test SMS OTP country restriction allow +91 only\", \"inputData\": [], \"rules\": [{\"replaceMerge\": [{\"config\": null}, {\"config\": {\"replaceMerge\": [{\"var\": \"config\"}, {\"smsOtpAllowedCountryCodes\": [\"+91\"]}]}}, {\"identifier\": null}, {\"identifier\": {\"var\": \"identifier\"}}]}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('RiderConfig logic created', function () { pm.response.to.have.status(200); pm.expect(d.version).to.be.a('number'); });",
+              "var cfg = (d.result && d.result.config) || null;",
+              "if (cfg) { pm.test('Patched smsOtpAllowedCountryCodes = [+91]', function () { pm.expect(cfg.smsOtpAllowedCountryCodes).to.eql(['+91']); }); }",
+              "pm.environment.set('_sms_rider_logic_version', d.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rollout RiderConfig SMS OTP restriction (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"RIDER_CONFIG\",\"contents\":\"RiderConfig\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{_sms_rider_logic_version}},\"versionDescription\":\"Integration test SMS OTP country restriction allow +91 only\"}]}]"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RiderConfig restriction rolled out', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create TransporterConfig Logic: SMS OTP allowed for +91 only (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"DRIVER_CONFIG\", \"contents\": \"TransporterConfig\"}, \"shouldUpdateRule\": true, \"description\": \"Integration test SMS OTP country restriction allow +91 only\", \"inputData\": [], \"rules\": [{\"replaceMerge\": [{\"config\": null}, {\"config\": {\"replaceMerge\": [{\"var\": \"config\"}, {\"smsOtpAllowedCountryCodes\": [\"+91\"]}]}}, {\"identifier\": null}, {\"identifier\": {\"var\": \"identifier\"}}]}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('TransporterConfig logic created', function () { pm.response.to.have.status(200); pm.expect(d.version).to.be.a('number'); });",
+              "var cfg = (d.result && d.result.config) || null;",
+              "if (cfg) { pm.test('Patched smsOtpAllowedCountryCodes = [+91]', function () { pm.expect(cfg.smsOtpAllowedCountryCodes).to.eql(['+91']); }); }",
+              "pm.environment.set('_sms_driver_logic_version', d.version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rollout TransporterConfig SMS OTP restriction (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"DRIVER_CONFIG\",\"contents\":\"TransporterConfig\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{_sms_driver_logic_version}},\"versionDescription\":\"Integration test SMS OTP country restriction allow +91 only\"}]}]"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TransporterConfig restriction rolled out', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider auth +91 over SMS (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_in_rider}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +91 SMS -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_rider_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider auth +1, otpChannel WHATSAPP (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_rider}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"otpChannel\": \"WHATSAPP\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 WhatsApp -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_rider_wa_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider auth +1, no otpChannel (defaults to SMS, blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_rider}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 default channel -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Rider +1 default channel -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Rider +1 default channel -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider auth +1, otpChannel SMS (blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_rider}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"otpChannel\": \"SMS\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 explicit SMS -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Rider +1 explicit SMS -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Rider +1 explicit SMS -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider resend of the +1 WhatsApp OTP after the rejected SMS attempts (still WhatsApp, allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth/otp/{{sms_rider_wa_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 WhatsApp resend -> not rejected by the country restriction', function () { pm.expect(d.errorMessage || '').to.not.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Rider +1 WhatsApp resend -> 200, or the local OTP provider failure (500 INTERNAL_ERROR)', function () {",
+              "  if (pm.response.code === 200) { return; }",
+              "  pm.expect(pm.response.code).to.eql(500);",
+              "  pm.expect(d.errorCode).to.eql('INTERNAL_ERROR');",
+              "});",
+              "if (pm.response.code !== 200) { console.log('Rider +1 WhatsApp resend: OTP provider call failed locally (' + pm.response.code + ' ' + (d.errorCode || '') + '), after passing the country check'); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider resend OTP for +91 (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth/otp/{{sms_rider_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +91 resend -> 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider resend OTP for the +1 number that logged in before the restriction (blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth/otp/{{sms_rider_us_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 resend -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Rider +1 resend -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Rider +1 resend -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider verify OTP (+91)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth/{{sms_rider_authId}}/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +91 verify -> 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('sms_rider_token', d.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider profile: add +1 mobile number OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{sms_rider_token}}"
+          }
+        ],
+        "url": "{{baseUrl_app}}/profile/updateAuthData/triggerOTP",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"identifier\": \"MOBILENUMBER\",\n    \"mobileNumber\": \"{{_test_us_rider_profile}}\",\n    \"mobileCountryCode\": \"+1\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider profile +1 mobile OTP -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Rider profile +1 mobile OTP -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Rider profile +1 mobile OTP -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver auth +91 over SMS (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_in_driver}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +91 SMS -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_driver_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver auth +1, otpChannel WHATSAPP (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_driver}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\",\n    \"otpChannel\": \"WHATSAPP\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 WhatsApp -> 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authId) { pm.environment.set('sms_driver_wa_authId', d.authId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver auth +1, no otpChannel (defaults to SMS, blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_driver}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 default channel -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Driver +1 default channel -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver +1 default channel -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver auth +1, otpChannel SMS (blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_driver}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\",\n    \"otpChannel\": \"SMS\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 explicit SMS -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Driver +1 explicit SMS -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver +1 explicit SMS -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver resend of the +1 WhatsApp OTP after the rejected SMS attempts (still WhatsApp, allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth/otp/{{sms_driver_wa_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 WhatsApp resend -> not rejected by the country restriction', function () { pm.expect(d.errorMessage || '').to.not.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver +1 WhatsApp resend -> 200, or the local OTP provider failure (500 INTERNAL_ERROR)', function () {",
+              "  if (pm.response.code === 200) { return; }",
+              "  pm.expect(pm.response.code).to.eql(500);",
+              "  pm.expect(d.errorCode).to.eql('INTERNAL_ERROR');",
+              "});",
+              "if (pm.response.code !== 200) { console.log('Driver +1 WhatsApp resend: OTP provider call failed locally (' + pm.response.code + ' ' + (d.errorCode || '') + '), after passing the country check'); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver resend OTP for +91 (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth/otp/{{sms_driver_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +91 resend -> not rejected by the country restriction', function () { pm.expect(d.errorMessage || '').to.not.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver +91 resend -> 200, or the local OTP provider failure (500 INTERNAL_ERROR)', function () {",
+              "  if (pm.response.code === 200) { return; }",
+              "  pm.expect(pm.response.code).to.eql(500);",
+              "  pm.expect(d.errorCode).to.eql('INTERNAL_ERROR');",
+              "});",
+              "if (pm.response.code !== 200) { console.log('Driver +91 resend: OTP provider call failed locally (' + pm.response.code + ' ' + (d.errorCode || '') + '), after passing the country check'); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver resend OTP for the +1 number that logged in before the restriction (blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth/otp/{{sms_driver_us_authId}}/resend"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 resend -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Driver +1 resend -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver +1 resend -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver verify OTP (+91)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth/{{sms_driver_authId}}/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +91 verify -> 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('sms_driver_token', d.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver profile: add +1 mobile number OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{sms_driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/profile/updateAuthData/triggerOTP",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"identifier\": \"MOBILENUMBER\",\n    \"value\": \"{{_test_us_driver_profile}}\",\n    \"mobileCountryCode\": \"+1\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver profile +1 mobile OTP -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Driver profile +1 mobile OTP -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver profile +1 mobile OTP -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver alternate number OTP for a +1 number (blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{sms_driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/alternateNumber/validate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileCountryCode\": \"+1\",\n    \"alternateNumber\": \"{{_test_us_driver_alt}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver alternate +1 number OTP -> 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Driver alternate +1 number OTP -> country restriction message', function () { pm.expect(d.errorMessage || '').to.include('SMS OTP is not supported for this mobile country code'); });",
+              "pm.test('Driver alternate +1 number OTP -> no authId issued', function () { pm.expect(d.authId).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver alternate number OTP for a +91 number (allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{sms_driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/alternateNumber/validate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileCountryCode\": \"+91\",\n    \"alternateNumber\": \"{{_test_in_driver_alt}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver alternate +91 number OTP -> 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restore RiderConfig Rollout (BAP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BAP_Dashboard}}/{{bap_short_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_rider_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('RiderConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restore TransporterConfig Rollout (BPP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+        "body": {
+          "mode": "raw",
+          "raw": "{{_sms_driver_rollout_snapshot}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TransporterConfig rollout restored', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "After restore: Rider auth +1 over SMS works again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl_app}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_rider}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Rider +1 SMS after restore -> 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "After restore: Driver auth +1 over SMS works again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_us_driver}}\",\n    \"mobileCountryCode\": \"+1\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch (e) {}",
+              "pm.test('Driver +1 SMS after restore -> 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

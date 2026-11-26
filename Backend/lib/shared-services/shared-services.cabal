@@ -132,6 +132,7 @@ library
       Safety.Tools.Error
       SMS.API
       SMS.Domain
+      SMS.OtpCountryRestriction
       SMS.Types
       TempAppCode.Flow
       TempAppCode.Types

@@ -112,6 +112,7 @@ import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
@@ -387,7 +388,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       _ -> throwError $ InvalidRequest "Conductor token auth is not supported"
 
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
-  void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
@@ -399,6 +399,12 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       when isFraudDetected $ do
         whenJust mbMerchantConfigId $ \mcId ->
           SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
+
+  -- Below the IP counters, so requests rejected here still count towards the IP limit.
+  when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
+    whenJust req.mobileCountryCode $ validateSmsOtpCountryCode riderConfig.smsOtpAllowedCountryCodes
+  -- Cached only once the request is accepted, so a rejected attempt cannot change the channel a resend uses.
+  void $ cachePersonOTPChannel person.id otpChannel
 
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
   -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
@@ -490,6 +496,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               req.mobileNumber
               req.email
               riderConfig.emailOtpConfig
+              riderConfig.smsOtpAllowedCountryCodes
               mbSenderHash
           return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
     else do
@@ -1213,6 +1220,7 @@ resend tokenId mbSenderHash = do
       mobileNumber
       receiverEmail
       riderConfig.emailOtpConfig
+      riderConfig.smsOtpAllowedCountryCodes
       mbSenderHash
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id

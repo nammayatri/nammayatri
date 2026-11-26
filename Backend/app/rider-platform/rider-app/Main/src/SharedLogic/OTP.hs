@@ -31,6 +31,7 @@ import Kernel.Sms.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Tools.Error
@@ -59,9 +60,10 @@ sendOTP ::
   Maybe Text ->
   Maybe Text ->
   Maybe EmailOTPConfig ->
+  Maybe [Text] ->
   Maybe Text ->
   m ()
-sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountryCode mbMobileNumber mbEmail mbEmailOTPConfig mbSenderHash = do
+sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountryCode mbMobileNumber mbEmail mbEmailOTPConfig mbSmsOtpAllowedCountryCodes mbSenderHash = do
   smsCfg <- asks (.smsCfg)
   let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
 
@@ -69,6 +71,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountry
     SMS -> do
       countryCode <- mbCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for SMS OTP channel")
+      validateSmsOtpCountryCode mbSmsOtpAllowedCountryCodes countryCode
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
         buildSmsReq <-

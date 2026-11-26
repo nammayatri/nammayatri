@@ -257,7 +257,7 @@ postAuthEmailV2 mbXForwardedFor req = do
       otpHash <- getDbHash otp
       Redis.setExp (pendingEmailAuthKey authId) PendingEmailAuth {pendingMerchantId = merchant.id, pendingEmail = req.email, pendingOtpHash = otpHash, pendingMaxAttempts = sessionCfg.attempts} (sessionCfg.authExpiry * 60)
       when (isNothing mbFakeOtp) $
-        SOTP.sendOTP SOTP.EMAIL otp (Id authId) merchant.id merchantOpCity.id Nothing Nothing (Just req.email) riderConfig.emailOtpConfig Nothing
+        SOTP.sendOTP SOTP.EMAIL otp (Id authId) merchant.id merchantOpCity.id Nothing Nothing (Just req.email) riderConfig.emailOtpConfig riderConfig.smsOtpAllowedCountryCodes Nothing
       pure SL.EmailAuthV2Res {authId, attempts = sessionCfg.attempts}
 
 emailAuthReq :: SL.EmailAuthV2Req -> Text -> PR.AuthReq
