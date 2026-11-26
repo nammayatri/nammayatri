@@ -362,6 +362,8 @@ let AllocatorJobType =
       | WalletIntegrityCheck
       | ChargeWalletPenalty
       | MaterialiseSharedRuns
+      | SharedRunCheckIn
+      | SharedRunFallback
       >
 
 let jobRetryOnExceptionMapx =
@@ -480,6 +482,10 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MaterialiseSharedRuns, mapValue = True }
+      , { mapKey = AllocatorJobType.SharedRunCheckIn, mapValue = True }
+      , { mapKey = AllocatorJobType.SharedRunFallback, mapValue = True }
+      , { mapKey = AllocatorJobType.SharedRunCheckIn, mapValue = True }
+      , { mapKey = AllocatorJobType.SharedRunFallback, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
