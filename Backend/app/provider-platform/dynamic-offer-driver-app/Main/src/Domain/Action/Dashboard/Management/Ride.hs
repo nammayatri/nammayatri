@@ -20,7 +20,7 @@ module Domain.Action.Dashboard.Management.Ride
     postRideEndMultiple,
     postRideCancelMultiple,
     getRideInfo,
-    getRideInfoV2,
+    getRideFinanceInfo,
     postRideSync,
     postRideSyncMultiple,
     postRideRoute,
@@ -60,6 +60,7 @@ import Environment
 import qualified FileManagement.Domain.Action.UI.File as DFile
 import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -197,9 +198,9 @@ getRideKaptureList = DRide.ticketRideList
 getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
 getRideFareBreakUp = DRide.fareBreakUp
 
-getRideInfoV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.RideInfoV2Res
-getRideInfoV2 merchantShortId opCity rideId =
-  findRideInMerchantCity merchantShortId opCity rideId >>= DRide.rideInfoV2
+getRideFinanceInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Language -> Environment.Flow Common.RideFinanceInfoRes
+getRideFinanceInfo merchantShortId opCity rideId mbLanguage =
+  findRideInMerchantCity merchantShortId opCity rideId >>= DRide.rideFinanceInfo mbLanguage
 
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity requestorId mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto mbToAmount =

@@ -13,8 +13,6 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     resolveLabel,
-    RideAmounts (..),
-    computeRideAmounts,
     mkDriverRideRes,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
@@ -603,93 +601,6 @@ mkExoPhone mbExophone booking =
     (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone)
     mbExophone
 
--- | A ride's driver-side amounts as the driver app shows them, before rounding: the net fare at booking and
--- after the ride, the driver's compensation for a cancelled ride, and how much is collected in cash or settled
--- online. Shared by the driver app's ride API and the dashboard's ride info so both always show the same values.
-data RideAmounts = RideAmounts
-  { estimatedNetFare :: HighPrecMoney,
-    actualNetFare :: Maybe HighPrecMoney,
-    cancellationCompensationNetFare :: Maybe HighPrecMoney,
-    cashToCollect :: Maybe HighPrecMoney,
-    settledOnline :: Maybe HighPrecMoney
-  }
-
-computeRideAmounts ::
-  Tax.Regime ->
-  Maybe DFareParams.FareParameters ->
-  Maybe DCDD.CancellationDuesDetails ->
-  DRB.Booking ->
-  DRide.Ride ->
-  RideAmounts
-computeRideAmounts taxRegime finalFareParams mbCancellationDuesDetails booking ride =
-  RideAmounts
-    { estimatedNetFare = estimatedBaseFareV2,
-      actualNetFare = computedFareNet,
-      cancellationCompensationNetFare = cancellationCompensationNet,
-      cashToCollect = mbAmountToCollectInCash,
-      settledOnline = mbAmountToBeSettledOnline
-    }
-  where
-    estimatedFareParams = booking.fareParams
-    customerBearsCharge = ((ride.paymentChargeBearer >>= (readMaybe . T.unpack)) :: Maybe PaymentChargeBearer) == Just PAYMENT_CUSTOMER
-    ridePaymentCharge = fromMaybe 0 ride.paymentCharge
-    quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
-    componentTaxOf fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if edcCollectsParking then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
-    estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
-    rideTipsAmount = fromMaybe 0 ride.tipAmount
-    edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
-    estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
-    chargedFareParams = fromMaybe estimatedFareParams finalFareParams
-    computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
-    cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
-    isCancelled = ride.status == DRide.CANCELLED
-    cancelledRideAmount = max 0 (fromMaybe 0 cancellationCompensationNet)
-    -- See `amount*` semantics matrix (Cash / Online / booth EDC):
-    --   amountToCollectInCash   : Cash            -> FinalFare - Offer (commission included)
-    --                             Online          -> Nothing
-    --                             Booth EDC       -> FinalFare - Commission (residual the driver
-    --                                                still collects in cash; FullPayment settles
-    --                                                fully online)
-    --                             Booth ParkingOnly -> FinalFare - Offer (commission NOT collected
-    --                                                at the booth for this type, so it's still owed
-    --                                                in cash, same as the plain Cash case; it's
-    --                                                recovered separately via wallet debit, not
-    --                                                clawed back here — see
-    --                                                `commissionAlreadyCollectedAtBooth` in
-    --                                                EndRide/Internal.hs)
-    --   amountToBeSettledOnline : Cash        -> Offer
-    --                             Online      -> FinalFare - Commission (offer already applied)
-    --                             Booth EDC   -> Nothing, except FullPayment (FinalFare - Commission)
-    -- Gated on fareSettlementType (matches the existing CommissionOnly precedent elsewhere), not
-    -- paymentInstrument, since that's what actually distinguishes a booth/EDC booking here.
-    offer = fromMaybe 0 ride.discountAmount
-    commission = fromMaybe 0 ride.commission
-    -- No payment method on the booking means cash, as in StartRide and CancellationConsequence.
-    instrumentOrCash = fromMaybe DMPM.Cash booking.paymentInstrument
-    mbAmountToCollectInCash =
-      if isCancelled
-        then Just 0
-        else case (booking.fareSettlementType, ride.fare) of
-          (Just SL.FullPayment, _) -> Nothing
-          (Just SL.ParkingOnly, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
-          (Just SL.ParkingOnly, Nothing) -> Nothing
-          (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
-          (Just _, Nothing) -> Nothing
-          (Nothing, _) ->
-            case (instrumentOrCash, ride.fare) of
-              (DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
-              _ -> Nothing
-    mbAmountToBeSettledOnline =
-      if isCancelled
-        then Just cancelledRideAmount
-        else case booking.fareSettlementType of
-          Just SL.FullPayment -> computedFareNet
-          Just _ -> Nothing
-          Nothing ->
-            case instrumentOrCash of
-              DMPM.Cash -> if offer > 0 then Just offer else Nothing
-              _ -> computedFareNet
-
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
@@ -722,6 +633,10 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       (customerBearsCharge, driverBearsCharge) = bearerFlags ride.paymentChargeBearer
       chargeInAppFee = customerBearsCharge || driverBearsCharge
       ridePaymentCharge = fromMaybe 0 ride.paymentCharge
+      quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
+      componentTaxOf fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if edcCollectsParking then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
+      estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
+      rideTipsAmount = fromMaybe 0 ride.tipAmount
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
       displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
@@ -737,15 +652,15 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       driverSelectedFareNet = netOf FarePolicyD.DriverSelectedFareComponent Nothing $ fromMaybe 0.0 estimatedFareParams.driverSelectedFare
       customerExtraFeeNet = netOf FarePolicyD.CustomerExtraFeeComponent Nothing <$> estimatedFareParams.customerExtraFee
       cancellationDuesNet = netTaxInclusive booking.paymentChargeDetails taxRegime estimatedFareParams.cancellationDuesTax booking.cancellationDuesCommission $ fromMaybe 0 estimatedFareParams.customerCancellationDues
-  mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then QCDD.findByRideId ride.id else pure Nothing
-  let rideAmounts = computeRideAmounts taxRegime finalFareParams mbCancellationDuesDetails booking ride
-      estimatedBaseFareV2 = rideAmounts.estimatedNetFare
+      estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
       estimatedBaseFare = estimatedBaseFareV2 - driverSelectedFareNet
-      computedFareNet = rideAmounts.actualNetFare
-      cancellationCompensationNet = rideAmounts.cancellationCompensationNetFare
-      mbAmountToCollectInCash = rideAmounts.cashToCollect
-      mbAmountToBeSettledOnline = rideAmounts.settledOnline
+      chargedFareParams = fromMaybe estimatedFareParams finalFareParams
+      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
+  mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then QCDD.findByRideId ride.id else pure Nothing
+  let cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
       penalityChargeNet = netTaxInclusive Nothing taxRegime ride.cancellationFeeTaxIfCancelled Nothing <$> ride.cancellationFeeIfCancelled
+      isCancelled = ride.status == DRide.CANCELLED
+      cancelledRideAmount = max 0 (fromMaybe 0 cancellationCompensationNet)
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -777,6 +692,52 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         Nothing -> pure Nothing
       pure (mbGate, mbSL)
     Nothing -> pure (Nothing, Nothing)
+
+  -- See `amount*` semantics matrix (Cash / Online / booth EDC):
+  --   amountToCollectInCash   : Cash            -> FinalFare - Offer (commission included)
+  --                             Online          -> Nothing
+  --                             Booth EDC       -> FinalFare - Commission (residual the driver
+  --                                                still collects in cash; FullPayment settles
+  --                                                fully online)
+  --                             Booth ParkingOnly -> FinalFare - Offer (commission NOT collected
+  --                                                at the booth for this type, so it's still owed
+  --                                                in cash, same as the plain Cash case; it's
+  --                                                recovered separately via wallet debit, not
+  --                                                clawed back here — see
+  --                                                `commissionAlreadyCollectedAtBooth` in
+  --                                                EndRide/Internal.hs)
+  --   amountToBeSettledOnline : Cash        -> Offer
+  --                             Online      -> FinalFare - Commission (offer already applied)
+  --                             Booth EDC   -> Nothing, except FullPayment (FinalFare - Commission)
+  -- Gated on fareSettlementType (matches the existing CommissionOnly precedent elsewhere), not
+  -- paymentInstrument, since that's what actually distinguishes a booth/EDC booking here.
+  let offer = fromMaybe 0 ride.discountAmount
+      commission = fromMaybe 0 ride.commission
+      -- No payment method on the booking means cash, as in StartRide and CancellationConsequence.
+      instrumentOrCash = fromMaybe DMPM.Cash booking.paymentInstrument
+      mbAmountToCollectInCash =
+        if isCancelled
+          then Just 0
+          else case (booking.fareSettlementType, ride.fare) of
+            (Just SL.FullPayment, _) -> Nothing
+            (Just SL.ParkingOnly, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+            (Just SL.ParkingOnly, Nothing) -> Nothing
+            (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+            (Just _, Nothing) -> Nothing
+            (Nothing, _) ->
+              case (instrumentOrCash, ride.fare) of
+                (DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+                _ -> Nothing
+      mbAmountToBeSettledOnline =
+        if isCancelled
+          then Just cancelledRideAmount
+          else case booking.fareSettlementType of
+            Just SL.FullPayment -> computedFareNet
+            Just _ -> Nothing
+            Nothing ->
+              case instrumentOrCash of
+                DMPM.Cash -> if offer > 0 then Just offer else Nothing
+                _ -> computedFareNet
 
   mbRideEarningsVal <- case mbEarningsLabels of
     Just earningsLabels -> do

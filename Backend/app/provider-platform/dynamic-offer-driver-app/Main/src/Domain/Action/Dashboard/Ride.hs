@@ -25,7 +25,7 @@ module Domain.Action.Dashboard.Ride
     mkLocationFromLocationMapping,
     ticketRideList,
     fareBreakUp,
-    rideInfoV2,
+    rideFinanceInfo,
     getNearby,
   )
 where
@@ -34,7 +34,6 @@ import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
-import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
@@ -47,6 +46,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Ride as DUIRide
 import qualified Domain.Action.UI.Ride.Common as DRideCommon
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -130,7 +130,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
-import qualified Storage.Queries.CancellationDuesDetails as QCDD
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FareParameters as SQFP
@@ -1277,27 +1277,27 @@ fareBreakUp merchantShortId opCity reqRideId = do
 
 -- | The ride's gross / net fares and cash / online amounts, and its charges grouped for the fare breakup.
 -- The ride must already be checked to belong to the dashboard's merchant and city.
-rideInfoV2 :: DRide.Ride -> Flow Common.RideInfoV2Res
-rideInfoV2 ride = do
+rideFinanceInfo :: Maybe KET.Language -> DRide.Ride -> Flow Common.RideFinanceInfoRes
+rideFinanceInfo mbLanguage ride = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   finalFareParams <- maybe (pure Nothing) (runInReplica . SQFP.findById) ride.fareParametersId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-  mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then runInReplica (QCDD.findByRideId ride.id) else pure Nothing
-  -- Net, cash and online come from the same function as the driver app's ride API, but are not rounded here.
-  let rideAmounts = DRideCommon.computeRideAmounts (fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))) finalFareParams mbCancellationDuesDetails booking ride
-      estimatedFareParams = booking.fareParams
+  -- Net, cash and online are taken from the driver app's own ride response, so they always match what the driver sees.
+  driverInfo <- runInReplica $ QDriverInfo.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  driverRide <- DUIRide.buildDriverRideResItem ride.driverId driverInfo KET.ENGLISH Nothing mbTransporterConfig (ride, booking)
+  let estimatedFareParams = booking.fareParams
       -- Not rounded, like the estimated / actual fare in ride info: rounding by currency would
       -- turn an INR fare such as 51.50 into 52.
       price cur amt = PriceAPIEntity amt cur
       -- Gross is what the customer is charged: the fare before discount minus the discount.
       gross cur fareAmount mbDiscount = price cur (fareAmount - fromMaybe 0 mbDiscount)
       -- A city without a groups config gets no charges at all, so the dashboard can keep its own fare table.
-      chargeGroups = maybe [] (\groupsConfig -> configuredChargeGroups groupsConfig estimatedFareParams finalFareParams <> [adjustmentsGroup booking ride finalFareParams]) (mbTransporterConfig >>= (.fareBreakupGroupsConfig))
-  charges <- mapM (mkChargeGroup booking.currency ride.currency) (pruneChargeGroups chargeGroups)
+      chargeGroups = maybe [] (\groupsConfig -> configuredChargeGroups groupsConfig estimatedFareParams finalFareParams <> [adjustmentsGroup booking ride finalFareParams]) (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsDashboardConfig))
+  charges <- mapM (mkChargeGroup (fromMaybe KET.ENGLISH mbLanguage) booking.currency ride.currency) (pruneChargeGroups chargeGroups)
   pure
-    Common.RideInfoV2Res
+    Common.RideFinanceInfoRes
       { fare =
-          Common.RideInfoV2Fare
+          Common.RideFinanceInfoFare
             { fareBeforeDiscountEstimated = price booking.currency booking.estimatedFare,
               discountEstimated = price booking.currency <$> booking.discountAmount,
               grossEstimated = gross booking.currency booking.estimatedFare booking.discountAmount,
@@ -1306,10 +1306,10 @@ rideInfoV2 ride = do
               grossActual = (\actualFare -> gross ride.currency actualFare ride.discountAmount) <$> ride.fare,
               -- Same rule as the driver app's net earnings: the final fare, else the
               -- cancellation compensation of a cancelled ride.
-              netEstimated = price ride.currency rideAmounts.estimatedNetFare,
-              netActual = price ride.currency <$> (rideAmounts.actualNetFare <|> rideAmounts.cancellationCompensationNetFare),
-              amountToCollectInCash = price ride.currency <$> rideAmounts.cashToCollect,
-              amountToBeSettledOnline = price ride.currency <$> rideAmounts.settledOnline
+              netEstimated = driverRide.estimatedBaseFareWithCurrencyV2,
+              netActual = driverRide.computedFareWithCurrency <|> driverRide.cancellationCompensation,
+              amountToCollectInCash = driverRide.amountToCollectInCashWithCurrency,
+              amountToBeSettledOnline = driverRide.amountToBeSettledOnlineWithCurrency
             },
         charges
       }
@@ -1322,7 +1322,7 @@ data ChargeLine = ChargeLine
     chargeRows :: [ChargeLine]
   }
 
--- | The groups set in the city's fareBreakupGroupsConfig: each top-level entry is a group and its entries are
+-- | The groups set in the city's customerPayableFareBreakupSubItemsDashboardConfig: each top-level entry is a group and its entries are
 -- the rows. Estimated amounts are from the booking, actual ones from the ride once it has final fare params.
 configuredChargeGroups :: [FareBreakupNode] -> DFP.FareParameters -> Maybe DFP.FareParameters -> [ChargeLine]
 configuredChargeGroups groupsConfig estimatedFareParams mbFinalFareParams =
@@ -1354,7 +1354,8 @@ adjustmentsGroup booking ride mbFinalFareParams =
     fareComponentRow key component = adjustmentRow key (componentOf component booking.fareParams) (componentOf component =<< mbFinalFareParams)
     rows =
       [ adjustmentRow "DISCOUNT" (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
-        adjustmentRow "COMMISSION" (negate <$> booking.commission) (negate <$> ride.commission),
+        -- As in the driver app's earnings card, the commission on old cancellation dues added to this ride is included.
+        adjustmentRow "COMMISSION" (negate <$> booking.commission) ((\commission -> negate (commission + fromMaybe 0 ride.cancellationDuesCommission)) <$> ride.commission),
         fareComponentRow "PERSONAL_DISCOUNT" FarePolicyD.PersonalDiscountComponent,
         fareComponentRow "BUSINESS_DISCOUNT" FarePolicyD.BusinessDiscountComponent,
         fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" FarePolicyD.NegativeFareAdjustmentComponent
@@ -1371,16 +1372,21 @@ pruneChargeGroups groups =
     hasAmount line = any (maybe False (/= 0)) [line.chargeEstimated, line.chargeActual]
 
 -- | Labels are in English, from the translations under "FARE_BREAKUP_<key>"; the key itself when there is none.
-mkChargeGroup :: Currency -> Currency -> ChargeLine -> Flow Common.RideInfoV2ChargeGroup
-mkChargeGroup estimatedCurrency actualCurrency chargeGroup = do
+mkChargeGroup :: KET.Language -> Currency -> Currency -> ChargeLine -> Flow Common.RideFinanceInfoChargeGroup
+mkChargeGroup language estimatedCurrency actualCurrency chargeGroup = do
   groupTitle <- labelOf chargeGroup.chargeKey
   rows <-
     forM chargeGroup.chargeRows $ \row -> do
       rowTitle <- labelOf row.chargeKey
-      pure Common.RideInfoV2ChargeRow {key = row.chargeKey, title = rowTitle, estimated = estimatedOf row, actual = actualOf row}
-  pure Common.RideInfoV2ChargeGroup {key = chargeGroup.chargeKey, title = groupTitle, estimated = estimatedOf chargeGroup, actual = actualOf chargeGroup, rows}
+      pure Common.RideFinanceInfoChargeRow {key = row.chargeKey, title = rowTitle, estimated = estimatedOf row, actual = actualOf row}
+  pure Common.RideFinanceInfoChargeGroup {key = chargeGroup.chargeKey, title = groupTitle, estimated = estimatedOf chargeGroup, actual = actualOf chargeGroup, rows}
   where
-    labelOf key = fromMaybe key <$> DRideCommon.resolveLabel KET.ENGLISH ("FARE_BREAKUP_" <> key)
+    -- The label in the asked language, else in English, else the key itself.
+    labelOf key = do
+      let messageKey = "FARE_BREAKUP_" <> key
+      mbLabel <- DRideCommon.resolveLabel language messageKey
+      mbEnglishLabel <- if isNothing mbLabel && language /= KET.ENGLISH then DRideCommon.resolveLabel KET.ENGLISH messageKey else pure Nothing
+      pure $ fromMaybe key (mbLabel <|> mbEnglishLabel)
     estimatedOf line = (`PriceAPIEntity` estimatedCurrency) <$> line.chargeEstimated
     actualOf line = (`PriceAPIEntity` actualCurrency) <$> line.chargeActual
 

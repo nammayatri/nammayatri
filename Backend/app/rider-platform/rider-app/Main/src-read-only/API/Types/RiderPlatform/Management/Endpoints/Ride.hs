@@ -389,7 +389,7 @@ type GetRideList =
               )
        )
 
-type GetRideInfo = "rideinfo" :> (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> (QueryParam "includeCardInfo" Kernel.Prelude.Bool :> Get '[JSON] RideInfoRes))
+type GetRideInfo = "rideinfo" :> (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] RideInfoRes)
 
 type CancellationChargesWaiveOff = "cancellationChargesWaiveOff" :> (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] CancellationChargesWaiveOffRes)
 
@@ -486,18 +486,18 @@ type GetRideFlowDebugBap =
        )
 
 data RideAPIs = RideAPIs
-  { getRideList :: Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (BookingStatus) -> (Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient RideListRes))))))),
-    getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient RideInfoRes),
+  { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe BookingStatus -> (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes))))))),
+    getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideInfoRes,
     cancellationChargesWaiveOff :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient CancellationChargesWaiveOffRes,
     getShareRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
     getShareRideInfoByShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
     getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Double -> (Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp)),
     getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Double -> (Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp)),
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
-    postRidePayoutOfferSync :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp),
+    postRidePayoutOfferSync :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp),
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getRideKaptureList :: Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient TicketRideListRes))),
-    getRideFlowDebugBap :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Dashboard.Common.RideDebug.BAPSideDebug)))))
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes))),
+    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Dashboard.Common.RideDebug.BAPSideDebug)))))
   }
 
 mkRideAPIs :: Client EulerHS.Types.EulerClient API -> RideAPIs

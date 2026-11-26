@@ -1366,8 +1366,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN shared_run_conf
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_breakup_groups_config json ;
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN customer_payable_fare_breakup_sub_items_dashboard_config json ;

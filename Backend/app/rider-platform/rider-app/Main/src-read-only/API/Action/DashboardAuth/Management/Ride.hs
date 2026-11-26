@@ -69,12 +69,12 @@ getRideList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.Ride.getRideList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
     )
 
-getRideInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes))))
-getRideInfo a5 a4 a3 a2 a1 =
+getRideInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)))
+getRideInfo a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Ride.getRideInfo a5 a4 a2 a1
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.getRideInfo a4 a3 a1
     )
 
 cancellationChargesWaiveOff :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)))

@@ -355,7 +355,7 @@ castRideInfo merchantId _ rideId = do
   rideInfoRes <-
     Redis.safeGet makeRideInfoCacheKey >>= \case
       Just res -> pure res
-      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast rideId) False -- no card lookup
+      Nothing -> cacheRideInfo /=<< DRide.rideInfo (cast merchantId) (cast rideId)
   mbBooking <- runInReplica $ QB.findById (Id rideInfoRes.bookingId.getId)
   mbRide <- runInReplica $ QR.findById (cast rideId)
   fareBreakdown <- forM mbBooking $ \booking -> SFareBreakdown.buildFareBreakdown booking mbRide >>= SFareBreakdown.withOfferTotals booking mbRide
