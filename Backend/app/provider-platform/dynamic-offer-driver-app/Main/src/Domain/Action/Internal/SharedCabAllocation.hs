@@ -25,7 +25,6 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.GtfsDataServer.Types as Fields
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified Storage.CachedQueries.Merchant as QM
