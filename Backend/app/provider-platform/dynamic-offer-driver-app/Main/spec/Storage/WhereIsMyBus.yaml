@@ -256,7 +256,7 @@ FleetConfig:
     autoAssign: Kernel.Utils.JSON.valueToMaybe =<< autoAssign|E
     allowCancellationByDriver: fromMaybe True allowCancellationByDriver|E
     fleetPoolingPriority: Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority|E
-    preferencePolicy: Storage.Queries.Transformers.FleetConfig.decodePreferencePolicy =<< preferencePolicy|E
+    preferencePolicy: Kernel.Utils.JSON.valueToMaybe =<< preferencePolicy|E
   sqlType:
     endRideDistanceThreshold: double precision
     blacklistCoinEvents: text[]

@@ -18,7 +18,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetConfig as Beam
-import qualified Storage.Queries.Transformers.FleetConfig
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FleetConfig.FleetConfig -> m ()
 create = createWithKV
@@ -72,7 +71,7 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
             endRideDistanceThreshold = fromMaybe 100 endRideDistanceThreshold,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             fleetPoolingPriority = Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority,
-            preferencePolicy = Storage.Queries.Transformers.FleetConfig.decodePreferencePolicy =<< preferencePolicy,
+            preferencePolicy = Kernel.Utils.JSON.valueToMaybe =<< preferencePolicy,
             rideEndApproval = rideEndApproval,
             unlinkDriverAndVehicleOnTripTermination = fromMaybe True unlinkDriverAndVehicleOnTripTermination,
             merchantId = Kernel.Types.Id.Id <$> merchantId,

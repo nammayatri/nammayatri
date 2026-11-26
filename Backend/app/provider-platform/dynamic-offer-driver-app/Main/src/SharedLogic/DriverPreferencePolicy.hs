@@ -19,8 +19,8 @@
 --
 -- How to add a lockable preference:
 --
---   1. Add a constructor to 'DDPP.DriverPreference' (Domain.Types.DriverPreferencePolicy). Stored rows are decoded
---      per entry ('Storage.Queries.Transformers.FleetConfig.decodePreferencePolicy').
+--   1. Add a constructor to 'DDPP.DriverPreference' (Domain.Types.DriverPreferencePolicy). Stored rows use the
+--      normal JSON decode; a row that does not decode reads as no policy.
 --   2. Say which 'DDPP.PreferenceValue' kind it takes in 'valueKindMatches'.
 --   3. Guard every DRIVER write path of it with a @validate*@ helper below. Never guard shared or ops writers.
 --   4. If a driver tag carries it, guard POST /ui/driver/tag/update too ('validateTagWrite').

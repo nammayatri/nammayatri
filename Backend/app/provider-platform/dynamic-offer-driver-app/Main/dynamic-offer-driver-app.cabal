@@ -1216,7 +1216,6 @@ library
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Estimate
-      Storage.Queries.Transformers.FleetConfig
       Storage.Queries.Transformers.FleetOperatorDailyStats
       Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
