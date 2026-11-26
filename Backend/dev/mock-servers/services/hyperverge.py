@@ -44,6 +44,15 @@ def handle(handler, path, body):
             base = deep_merge(base, extra)
         return handler._json(base)
 
+    # SDK token (POST /login), read by getDriverSdkToken -> validateHyperVergeTokenizeResponse
+    # (shared-kernel Tokenize/HyperVerge): it needs statusCode "200" (text) and result.token,
+    # otherwise the backend throws HVError and the app gets a 500.
+    if path.endswith("/login"):
+        base = {"status": "success", "statusCode": "200", "result": {"token": f"mock-hv-{uuid.uuid4()}"}}
+        if extra:
+            base = deep_merge(base, extra)
+        return handler._json(base)
+
     base = {
         "status": override_status or "success",
         "result": {"verified": True},
