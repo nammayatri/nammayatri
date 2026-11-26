@@ -20,6 +20,7 @@ where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id)
