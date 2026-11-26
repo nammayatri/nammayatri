@@ -37,6 +37,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import Storage.CachedQueries.Merchant as QMerchant
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.Fields as Fields
@@ -53,7 +54,8 @@ betterDriverSearch req = do
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideNotFound $ "no active ride for booking: " <> booking.id.getId)
   unless (ride.status == DRide.UPCOMING || ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   -- One attempt per booking: a double-tap must not start two concurrent searches.
-  mbActiveBetterDriverSearchTry <- QST.findActiveBetterDriverSearchByBookingId booking.id.getId
+  driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+  mbActiveBetterDriverSearchTry <- QST.findActiveBetterDriverSearch driverQuote.requestId booking.id.getId
   whenJust mbActiveBetterDriverSearchTry $ \_ ->
     throwError (InvalidRequest "A better-driver search is already running for this booking")
   merchant <- QMerchant.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)

@@ -100,7 +100,7 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
       Right locResp ->
         forM_ (listToMaybe $ reverse locResp.loc) $ \latest ->
           when (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates oldBooking.fromLocation) < abortRadius) $ do
-            cancelBetterDriverSearchAndPullOffers merchant.id oldBooking.id
+            cancelBetterDriverSearchAndPullOffers merchant.id searchTry.requestId oldBooking.id
             throwError (RideRequestAlreadyAcceptedOrCancelled oldRide.id.getId)
   -- Same lock Beckn init takes: a concurrent cancel-search would deactivate the quote.
   isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchReq.transactionId) 30
