@@ -24,9 +24,16 @@ apis:
         customerId: Id Person
       response:
         type: BookingAPIEntity
-  - GET: # BookingInfoAPI (search by display-id, phone, or pickup OTP)
+  - GET: # BookingInfoAPI (public invoice page: search by display-id or booking id only)
       endpoint: /{searchValue}/booking
       auth: NoAuth
+      params:
+        searchValue: Text
+      response:
+        type: BookingAPIEntity
+  - GET: # BookingSearchAPI (booth agents: search by display-id, phone, or pickup OTP)
+      endpoint: /search/{searchValue}
+      auth: ApiAuthV2
       params:
         searchValue: Text
       query:
@@ -34,6 +41,8 @@ apis:
         - mobileCountryCode: Text
       response:
         type: BookingAPIEntity
+      migrate:
+        capability: city-operations.booth_booking.execute
   - GET: # CustomerBookingListAPI
       endpoint: /list/{customerId}
       auth: ApiAuthV2

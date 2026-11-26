@@ -39,6 +39,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Fields as Fields
 import TransactionLogs.PushLogs
@@ -65,7 +66,8 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
         trackContext = reqV2.trackReqContext
         bppId = trackContext.contextBppId
     dTrackReq <- ACL.buildTrackReqV2 subscriber reqV2
-    callbackUrl <- Utils.getContextBapUri trackContext
+    booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingDoesNotExist dTrackReq.bookingId.getId)
+    callbackUrl <- Utils.getBookingBapUri booking
     bppUri <- Utils.getContextBppUri trackContext
     msgId <- Utils.getMessageId trackContext
     bapId <- Utils.getContextBapId trackContext

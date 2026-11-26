@@ -37,7 +37,7 @@ import "lib-dashboard" Tools.Servant.HeaderAuth (guardVerification)
 
 run :: Http.Manager -> Env -> Application
 run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
-  BU.run driverOfferAPI (driverOfferServer modifiedEnv.appEnv) context modifiedEnv
+  BU.run driverOfferAPI driverOfferServer context modifiedEnv
     & crossCloudProxy proxyManager modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv

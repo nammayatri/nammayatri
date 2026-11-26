@@ -83,20 +83,19 @@ cancel ::
   Cancel.CancelReqV2 ->
   FlowHandler AckResponse
 cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
-  (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
+  (dCancelReq, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
     L.setOptionLocal TxnIdKey transactionId
     Utils.withTransactionIdLogTag transactionId $ do
       logTagInfo "Cancel APIV2 Flow" "Reached"
       dCancelReq <- ACL.buildCancelReqV2 reqV2
       let context = reqV2.cancelReqContext
-      callbackUrl <- Utils.getContextBapUri context
       bppUri <- Utils.getContextBppUri context
       messageId <- Utils.getMessageId context
       bapId <- Utils.getContextBapId context
       city <- Utils.getContextCity context
       country <- Utils.getContextCountry context
-      pure (dCancelReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
+      pure (dCancelReq, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
 
   logDebug $ "Cancel Request: " <> T.pack (show dCancelReq)
   case dCancelReq of
@@ -104,6 +103,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelRideReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelRideReq.bookingId.getId)
+      callbackUrl <- Utils.getBookingBapUri booking
       if (booking.status == DBooking.COMPLETED)
         then do
           logError $ "Completed booking cancel request received for ride id : " <> cancelRideReq.bookingId.getId

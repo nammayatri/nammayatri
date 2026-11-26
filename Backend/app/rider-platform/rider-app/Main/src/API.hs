@@ -33,7 +33,6 @@ import qualified API.Internal as Internal
 import qualified API.MetaWhatsappWebhook as MetaWhatsappWebhook
 import qualified API.OnixBapWebhook as OnixBapWebhook
 import qualified API.UI as UI
-import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.ByteString as BS
 import Data.OpenApi hiding (Header)
 import qualified Domain.Action.Internal.Payout as Payout
@@ -93,7 +92,6 @@ type MainAPI =
              :> "test"
              :> Stripe.StripeWebhookAPI
          )
-    :<|> UnifiedDashboard.API
     :<|> DirectDashboard.API
     :<|> DashboardExotel.API
     :<|> Internal.API
@@ -132,7 +130,6 @@ mainServer =
     :<|> juspayWebhookHandler
     :<|> stripeWebhookHandler
     :<|> stripeTestWebhookHandler
-    :<|> UnifiedDashboard.handler
     :<|> DirectDashboard.handler
     :<|> DashboardExotel.handler
     :<|> Internal.handler

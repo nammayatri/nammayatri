@@ -365,6 +365,28 @@ assertMayGrantAccessToMerchant tokenInfo targetMerchantId =
     callerAccess <- QAccess.findByPersonIdAndMerchantId tokenInfo.personId targetMerchantId
     when (null callerAccess) $ throwError AccessDenied
 
+-- | Gate for every admin action on an existing person (credentials, contact details, 2FA, role,
+-- enabled status, delete). The route only proves the caller is DASHBOARD_ADMIN of *some*
+-- merchant, so without this any admin could take over any account, SUPER_ADMIN included.
+-- A non-SUPER_ADMIN caller must hold access to every merchant the target is provisioned on, and
+-- may not act on a SUPER_ADMIN or an admin-tier target. Nobody uses these on themselves; the
+-- self-service endpoints (which check the old password etc.) exist for that.
+assertMayManagePerson :: BeamFlow m r => TokenInfo -> SP.Person -> m ()
+assertMayManagePerson tokenInfo target = do
+  when (tokenInfo.personId == target.id) $
+    throwError $ InvalidRequest "Use the self-service endpoint to change your own account"
+  unlessM (isSuperAdmin tokenInfo.personId) $ do
+    targetIsSuperAdmin <- isSuperAdmin target.id
+    when targetIsSuperAdmin $ throwError AccessDenied
+    targetRole <- QRole.findById target.roleId >>= fromMaybeM (RoleDoesNotExist target.roleId.getId)
+    DCap.guardAdminMutation tokenInfo.personId targetRole.dashboardAccessType
+    -- Same rule as 'assertMayGrantAccessToMerchant' per merchant, but with the caller's access
+    -- fetched once rather than one query (plus a super-admin re-check) per target merchant.
+    targetMerchants <- policyMerchantsForPerson tokenInfo target
+    callerMerchants <- map (.merchantId) <$> QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
+    when (null targetMerchants || any (`notElem` callerMerchants) targetMerchants) $
+      throwError AccessDenied
+
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
 -- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
 -- only payload — request bodies here carry credentials and must never reach the audit log.
@@ -614,6 +636,7 @@ assignRole tokenInfo personId roleId = do
   -- reassigns their own role.
   when (tokenInfo.personId == personId) $
     throwError $ InvalidRequest "Cannot change your own role"
+  assertMayManagePerson tokenInfo person
   DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
   DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
   QP.updatePersonRole personId newRole
@@ -980,7 +1003,8 @@ changePasswordByAdmin ::
   ChangePasswordByAdminReq ->
   m APISuccess
 changePasswordByAdmin tokenInfo personId req = do
-  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  target <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  assertMayManagePerson tokenInfo target
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     validateStrongPassword req.newPassword
@@ -1000,6 +1024,10 @@ changeMobileNumberByAdmin ::
   ChangeMobileNumberByAdminReq ->
   m APISuccess
 changeMobileNumberByAdmin tokenInfo personId req = do
+  -- Authorize before the duplicate-number probe below, which would otherwise tell any caller
+  -- whether a number is registered.
+  target <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  assertMayManagePerson tokenInfo target
   runRequestValidation validateChangeMobileNumberReq req
   mobileDbHash <- getDbHash req.newMobileNumber
   result <- QP.findByIdWithRoleAndCheckMobileHash personId (Just mobileDbHash)
@@ -1024,9 +1052,7 @@ changeEnabledStatus tokenInfo personId req = do
   -- One token per person: enabling/disabling is person-scoped (the token no
   -- longer has a merchant/city dimension)
   targetPerson <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  case targetPerson.merchantId of
-    Just targetMerchantId -> assertMayGrantAccessToMerchant tokenInfo targetMerchantId
-    Nothing -> unlessM (isSuperAdmin tokenInfo.personId) $ throwError AccessDenied
+  assertMayManagePerson tokenInfo targetPerson
   Auth.cleanCachedTokens personId
   QReg.updateEnabledStatusByPersonId personId req.enabled
   pure Success
@@ -1042,6 +1068,7 @@ changeEmailByAdmin tokenInfo personId req = do
   -- whether an address is already registered, so running it for an unauthorized caller would turn
   -- this endpoint into an account-enumeration oracle over the whole person table.
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  assertMayManagePerson tokenInfo person
   runRequestValidation validateChangeEmailReq req
   let newEmail = T.toLower req.newEmail
   mbExistingPerson <- QP.findByEmail newEmail
@@ -1072,6 +1099,7 @@ deletePerson ::
   m APISuccess
 deletePerson tokenInfo personId mbDeleteReason = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  assertMayManagePerson tokenInfo person
   -- Audit log: record who deleted which user before the deletion happens
   recordAdminActionOnPerson DT.DashboardUserDelete tokenInfo personId
   -- Snapshot the user into deleted_user (tombstone) before removing them, so the

@@ -78,7 +78,6 @@ library
       API.Internal.GeometryUpdate
       API.Internal.InMemManagement
       API.Internal.KnowYourDriver
-      API.Internal.MasterCloudForward
       API.Internal.Multimodal
       API.Internal.NotificationWebhook
       API.Internal.PersonCreate
@@ -149,7 +148,6 @@ library
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
-      API.UnifiedDashboard
       App
       App.CrossCloudProxy
       App.Server
@@ -520,11 +518,7 @@ library
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
       Domain.Action.UI.XyneWebhook
-      Domain.Action.UnifiedDashboard.Fleet.HealthCheck
-      Domain.Action.UnifiedDashboard.Management.HealthCheck
       Domain.Action.UnifiedDashboard.Management.Person
-      Domain.Action.UnifiedDashboard.Operator.HealthCheck
-      Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AccessMatrix
       Domain.Types.Beckn.Status
       Domain.Types.Cac
@@ -1443,15 +1437,6 @@ library
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
       API.Action.UI.WMB
-      API.Action.UnifiedDashboard.Fleet
-      API.Action.UnifiedDashboard.Fleet.HealthCheck
-      API.Action.UnifiedDashboard.Management
-      API.Action.UnifiedDashboard.Management.HealthCheck
-      API.Action.UnifiedDashboard.Management.Person
-      API.Action.UnifiedDashboard.Operator
-      API.Action.UnifiedDashboard.Operator.HealthCheck
-      API.Action.UnifiedDashboard.RideBooking
-      API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.DepotManager
       API.Types.Dashboard.AppManagement.Driver
@@ -1649,20 +1634,8 @@ library
       API.Types.UI.VehicleDetails
       API.Types.UI.VehicleInfo
       API.Types.UI.WMB
-      API.Types.UnifiedDashboard.Fleet
-      API.Types.UnifiedDashboard.Fleet.Endpoints.HealthCheck
-      API.Types.UnifiedDashboard.Fleet.HealthCheck
-      API.Types.UnifiedDashboard.Management
-      API.Types.UnifiedDashboard.Management.Endpoints.HealthCheck
       API.Types.UnifiedDashboard.Management.Endpoints.Person
-      API.Types.UnifiedDashboard.Management.HealthCheck
       API.Types.UnifiedDashboard.Management.Person
-      API.Types.UnifiedDashboard.Operator
-      API.Types.UnifiedDashboard.Operator.Endpoints.HealthCheck
-      API.Types.UnifiedDashboard.Operator.HealthCheck
-      API.Types.UnifiedDashboard.RideBooking
-      API.Types.UnifiedDashboard.RideBooking.Endpoints.HealthCheck
-      API.Types.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify

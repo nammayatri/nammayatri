@@ -2,7 +2,6 @@
 
 module Domain.Action.UnifiedDashboard.Management.Person
   ( postPersonCreate,
-    postUserLoginSendOtp,
   )
 where
 
@@ -11,27 +10,19 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import Domain.Types.TransporterConfig (TransporterConfig (..))
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
-import Kernel.Sms.Config (SmsConfig (..), useFakeSms)
-import qualified Kernel.Sms.Config as Fields
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.Merchant as SMerchant
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPExtra
-import qualified Tools.SMS as Sms
 
 postPersonCreate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.UnifiedDashboard.Management.Person.CreatePersonReq -> Environment.Flow API.Types.UnifiedDashboard.Management.Person.CreatePersonResp)
 postPersonCreate merchantShortId opCity req = do
@@ -103,42 +94,6 @@ postPersonCreate merchantShortId opCity req = do
           }
   QP.create person
   pure $ API.Types.UnifiedDashboard.Management.Person.CreatePersonResp {personId = Kernel.Types.Id.cast personId}
-
-postUserLoginSendOtp ::
-  ( Kernel.Types.Id.ShortId DM.Merchant ->
-    Kernel.Types.Beckn.Context.City ->
-    API.Types.UnifiedDashboard.Management.Person.SendOtpReq ->
-    Environment.Flow API.Types.UnifiedDashboard.Management.Person.SendOtpResp
-  )
-postUserLoginSendOtp merchantShortId opCity req = do
-  merchant <- SMerchant.findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show opCity)
-
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes req.mobileCountryCode
-
-  -- Check for fake OTP from config only (no person lookup)
-  smsCfg <- asks (.smsCfg)
-  let useFakeOtpM = show <$> useFakeSms smsCfg
-  otp <- maybe generateOTPCode return useFakeOtpM
-
-  -- Only send OTP via SMS if fake OTP is not configured
-  -- Send SMS directly without needing personId
-  whenNothing_ useFakeOtpM $ do
-    let phoneNumber = req.mobileCountryCode <> req.mobileNumber
-        otpHash = smsCfg.credConfig.otpHash
-    (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildSendOTPMessage merchantOpCity.id Nothing $
-        MessageBuilder.BuildSendOTPMessageReq
-          { otp = otp,
-            hash = otpHash
-          }
-    let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchant.id merchantOpCity.id (Sms.SendSMSReq message phoneNumber sender templateId messageType)
-      >>= Sms.checkSmsResult
-
-  -- Return OTP to Dashboard so it can store in cache
-  pure $ API.Types.UnifiedDashboard.Management.Person.SendOtpResp {otp = otp}
 
 parseRoleName :: T.Text -> Environment.Flow DP.Role -- TODO: Try to remove this
 parseRoleName roleName =

@@ -976,25 +976,6 @@ data PaytmEdcCallbackReq = PaytmEdcCallbackReq
 
 instance ToSchema PaytmEdcCallbackReq
 
--- Map Paytm resultStatus to our TransactionStatus
--- Paytm values: "MA" (Accepted), "S" (Success), "F" (Failed), "U" (Pending), or numeric codes like "01"
-paytmStatusToTransactionStatus :: Text -> KPayment.TransactionStatus
-paytmStatusToTransactionStatus s =
-  case Data.Text.toUpper s of
-    "S" -> KPayment.CHARGED -- Success
-    "MA" -> KPayment.CHARGED -- Accepted (treated as success)
-    "01" -> KPayment.CHARGED -- Numeric success code
-    "F" -> KPayment.CANCELLED -- Failed
-    "U" -> KPayment.STARTED -- Pending
-    -- Legacy support for old format
-    "TXN_SUCCESS" -> KPayment.CHARGED
-    "SUCCESS" -> KPayment.CHARGED
-    "A" -> KPayment.CHARGED
-    "TXN_FAILURE" -> KPayment.CANCELLED
-    "FAIL" -> KPayment.CANCELLED
-    "PENDING" -> KPayment.STARTED
-    _ -> KPayment.STARTED -- Default to pending for unknown statuses
-
 -- webhook ----------------------------------------------------------
 
 fetchPaymentServiceConfig ::
@@ -1096,68 +1077,24 @@ confirmRideBookingFromPaymentOrder paymentOrder = do
       Redis.setExp confirmTriggeredKey ("1" :: Text) 86400
   pure (DPayment.FulfillmentSucceeded, Just bookingIdText, Nothing)
 
--- | Paytm EDC callback: update order status; for RideBooking+CHARGED run confirm only (no PaymentStatus build). Other types use orderStatusHandlerWithRefunds.
+-- | Paytm EDC callback. The route is unauthenticated and Paytm's checksum is not verified, so nothing in
+-- the body is trusted: it only names the order. Its real status is fetched from Paytm and fulfilled from
+-- that, exactly as the background poller ('pollPaytmEdcPaymentStatus') does.
 paytmEdcCallbackHandler :: PaytmEdcCallbackReq -> Flow AckResponse
 paytmEdcCallbackHandler req = do
-  let PaytmEdcCallbackReq {body = PaytmEdcCallbackBody {resultInfo = ResultInfo {resultStatus = statusText, resultCode = resultCode', resultMsg = resultMsg'}, merchantRefereneceNo = orderIdText, merchantTransactionId = merchantTxnId}, head = PaytmEdcCallbackHead {checksum = checksumValue}} = req
-      -- merchantRefereneceNo is our orderId (UUID) we sent to Paytm
-      -- merchantTransactionId is our orderShortId we sent to Paytm (Paytm may echo it back or use their own)
-      resultCode = Just resultCode'
-      resultMsg = Just resultMsg'
-      _checksumHash = Just checksumValue
+  -- merchantRefereneceNo is our orderId (UUID) we sent to Paytm
+  -- merchantTransactionId is our orderShortId we sent to Paytm (Paytm may echo it back or use their own)
+  let PaytmEdcCallbackReq {body = PaytmEdcCallbackBody {merchantRefereneceNo = orderIdText, merchantTransactionId = merchantTxnId}} = req
   logDebug $ "Paytm EDC callback received: " <> show req
   -- Try finding by shortId first (merchantTransactionId), then by orderId (merchantRefereneceNo)
   paymentOrder <-
     QOrder.findByShortId (ShortId merchantTxnId)
       >>= maybe (QOrder.findById (Id orderIdText) >>= fromMaybeM (PaymentOrderNotFound $ "orderId:" <> orderIdText <> " or shortId:" <> merchantTxnId)) pure
   let lockKey = "PaytmEdcCallback:" <> getShortId paymentOrder.shortId
-      mappedStatus = paytmStatusToTransactionStatus statusText
       paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
-  -- TODO: Validate checksumHash when Paytm merchant config is available
-  Redis.whenWithLockRedis lockKey 60 $ do
-    QOrder.updateStatus paymentOrder.id merchantTxnId mappedStatus
-    if paymentServiceType == DOrder.RideBooking
-      then when (mappedStatus == Payment.CHARGED) $ do
-        eitherResult <- withTryCatch "paytmEdcCallback:fulfillment" $ confirmRideBookingFromPaymentOrder paymentOrder
-        case eitherResult of
-          Right (fulfillmentStatus, domainEntityId, domainTransactionId) ->
-            void $ QOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just fulfillmentStatus) domainEntityId domainTransactionId
-          Left err -> logError $ "Paytm EDC fulfillment failed: " <> show err
-      else do
-        let paymentStatusResp =
-              DPayment.PaymentStatus
-                { orderId = paymentOrder.id,
-                  orderShortId = paymentOrder.shortId,
-                  status = mappedStatus,
-                  bankErrorMessage = resultMsg,
-                  bankErrorCode = resultCode, -- Using resultCode (alphabetical) instead of resultCodeId (numeric)
-                  isRetried = Nothing,
-                  isRetargeted = Nothing,
-                  retargetLink = Nothing,
-                  refunds = [],
-                  payerVpa = Nothing,
-                  card = Nothing,
-                  paymentMethodType = Nothing,
-                  authIdCode = Nothing,
-                  txnUUID = Nothing,
-                  txnId = Just merchantTxnId,
-                  effectAmount = Nothing,
-                  offers = Nothing,
-                  paymentServiceType = paymentOrder.paymentServiceType,
-                  paymentFulfillmentStatus = paymentOrder.paymentFulfillmentStatus,
-                  domainEntityId = paymentOrder.domainEntityId,
-                  amount = paymentOrder.amount,
-                  validTill = paymentOrder.validTill,
-                  orderLoyaltyInfo = Nothing
-                }
-            fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-        void $
-          SPayment.orderStatusHandlerWithRefunds
-            fulfillmentHandler
-            paymentServiceType
-            paymentOrder
-            paymentOrder
-            paymentStatusResp
+      fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
+  Redis.whenWithLockRedis lockKey 60 $
+    void $ SPayment.syncOrderStatus fulfillmentHandler (cast paymentOrder.merchantId) (cast paymentOrder.personId) paymentOrder
   pure Ack
 
 rideBookingOrderStatusHandler ::

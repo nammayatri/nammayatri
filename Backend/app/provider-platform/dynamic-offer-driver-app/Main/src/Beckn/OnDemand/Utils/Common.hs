@@ -31,6 +31,7 @@ import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
@@ -62,6 +63,7 @@ import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
+import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (find, length, map, null, readMaybe)
@@ -73,6 +75,7 @@ import qualified Kernel.Types.Common as Common
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
+import qualified Kernel.Types.Registry as Registry
 import Kernel.Utils.Common hiding (mkPrice)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
@@ -186,6 +189,30 @@ getContextBapUri :: MonadFlow m => Spec.Context -> m BaseUrl
 getContextBapUri context = do
   bapUriText <- context.contextBapUri & fromMaybeM (InvalidRequest "Missing contextBapUri")
   decode (encode bapUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBapUri: " <> bapUriText)
+
+-- | We send signed callbacks to context.bap_uri, which the BAP chooses. Accept it only on the host the
+-- BAP registered in the registry, or on one of our own BAP hosts (keys of bapHostRedirectMap);
+-- otherwise any participant could point our callbacks at arbitrary URLs, internal ones included.
+-- A missing bap_uri is left to the caller (select falls back to the registry URL).
+validateContextBapUri ::
+  (MonadFlow m, HasFlowEnv m r '["bapHostRedirectMap" ::: BapHostRedirectMap]) =>
+  Registry.Subscriber ->
+  Spec.Context ->
+  m ()
+validateContextBapUri subscriber context =
+  Prelude.whenJust context.contextBapUri $ \_ -> do
+    bapUri <- getContextBapUri context
+    bapHostRedirectMap <- asks (.bapHostRedirectMap)
+    let hostOf = T.toLower . T.pack . baseUrlHost
+        bapHost = hostOf bapUri
+        ownBapHosts = T.toLower <$> HMS.keys bapHostRedirectMap
+    unless (bapHost == hostOf subscriber.subscriber_url || bapHost `Prelude.elem` ownBapHosts) $
+      throwError $ InvalidRequest $ "context.bap_uri host " <> bapHost <> " does not match the registered subscriber host"
+
+-- | Callbacks after search go to the URI stored on the booking at search time, not to whatever the
+-- latest request's context.bap_uri says.
+getBookingBapUri :: MonadFlow m => DBooking.Booking -> m BaseUrl
+getBookingBapUri booking = parseBaseUrl booking.bapUri
 
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
 getContextBppUri context = do

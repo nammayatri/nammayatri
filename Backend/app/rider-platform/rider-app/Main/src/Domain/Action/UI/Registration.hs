@@ -658,11 +658,13 @@ riderTempAppCodeCfg =
     { keyPrefix = "rider-platform:getUserIdKey:",
       limitKeyPrefix = "getUserLimitKey:",
       counterKey = "rider-platform:temp-app-secret-key:",
-      codeStrategy = NumericCounter 10000,
+      codeStrategy = RandomCode 8,
       ttlSeconds = 120,
-      consumeOnRead = False,
+      consumeOnRead = True,
       maxAttempts = 3,
-      attemptWindowSeconds = 3600
+      attemptWindowSeconds = 3600,
+      globalFailureLimit = 100,
+      globalFailureWindowSeconds = 60
     }
 
 generateTempAppCode ::

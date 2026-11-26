@@ -134,7 +134,6 @@ library
       API.UI.Sos
       API.UI.Support
       API.UI.Whatsapp
-      API.UnifiedDashboard
       App
       App.CrossCloudProxy
       App.Server
@@ -437,8 +436,6 @@ library
       Domain.Action.UI.XyneWebhook
       Domain.Action.UI.ZendeskSdkToken
       Domain.Action.UI.ZendeskWebhook
-      Domain.Action.UnifiedDashboard.Management.HealthCheck
-      Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AccessMatrix
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
@@ -1178,10 +1175,6 @@ library
       API.Action.UI.VehicleServiceTier
       API.Action.UI.ZendeskSdkToken
       API.Action.UI.ZendeskWebhook
-      API.Action.UnifiedDashboard.Management
-      API.Action.UnifiedDashboard.Management.HealthCheck
-      API.Action.UnifiedDashboard.RideBooking
-      API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
       API.Types.Dashboard.AppManagement.EDCMachine
@@ -1347,12 +1340,6 @@ library
       API.Types.UI.VehicleServiceTier
       API.Types.UI.ZendeskSdkToken
       API.Types.UI.ZendeskWebhook
-      API.Types.UnifiedDashboard.Management
-      API.Types.UnifiedDashboard.Management.Endpoints.HealthCheck
-      API.Types.UnifiedDashboard.Management.HealthCheck
-      API.Types.UnifiedDashboard.RideBooking
-      API.Types.UnifiedDashboard.RideBooking.Endpoints.HealthCheck
-      API.Types.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification

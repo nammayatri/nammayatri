@@ -83,7 +83,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
         bppId = context.contextBppId
         txnId = Just transactionId
     bapId <- Utils.getContextBapId context
-    callbackUrl <- Utils.getContextBapUri context
     bppUri <- Utils.getContextBppUri context
     msgId <- Utils.getMessageId context
     city <- Utils.getContextCity context
@@ -129,7 +128,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
             Nothing -> do
               fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
-                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP transporterConfig
+                  callOnConfirm dConfirmRes msgId txnId bapId bppId bppUri city country isValueAddNP transporterConfig
     pure Ack
   where
     isMeterRide = \case
@@ -141,7 +140,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter
       | otherwise = throwM exc
 
-    callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP transporterConfig = do
+    callOnConfirm dConfirmRes msgId txnId bapId bppId bppUri city country isValueAddNP transporterConfig = do
+      callbackUrl <- Utils.getBookingBapUri dConfirmRes.booking
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")

@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.RideBooking.Booking
   ( postBookingStatus,
     getBookingList,
     getBookingBooking,
+    getBookingSearch,
     getBookingAgentL1List,
     getBookingAgentL2List,
   )
@@ -40,14 +41,28 @@ postBookingStatus merchantShortId _opCity bookingId personId = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.Booking.bookingStatus bookingId (personId, m.id) Nothing
 
+-- Unauthenticated (public invoice page), so it only looks up by display or raw booking id.
+-- Phone and OTP lookups live behind dashboard auth in 'getBookingSearch'.
 getBookingBooking ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Environment.Flow Domain.Types.Booking.API.BookingAPIEntity
+getBookingBooking merchantShortId _opCity searchValue = do
+  apiRateLimitOptions <- asks (.apiRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("booking-search-" <> searchValue) apiRateLimitOptions
+  m <- findMerchantByShortId merchantShortId
+  booking <- findByDisplayOrRawId searchValue
+  Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id) Nothing
+
+getBookingSearch ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe DBT.BookingSearchType ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Types.Booking.API.BookingAPIEntity
-getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountryCode = do
+getBookingSearch merchantShortId opCity searchValue mbSearchType mbMobileCountryCode = do
   apiRateLimitOptions <- asks (.apiRateLimitOptions)
   checkSlidingWindowLimitWithOptions ("booking-search-" <> searchValue) apiRateLimitOptions
   m <- findMerchantByShortId merchantShortId
@@ -57,11 +72,6 @@ getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountr
     DBT.OTP -> findByRideOtp m searchValue
   Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id) Nothing
   where
-    findByDisplayOrRawId code = do
-      mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId code
-      let bookingId = fromMaybe (Kernel.Types.Id.Id code) mbBookingIdFromDisplay
-      SQB.findById bookingId >>= fromMaybeM (BookingNotFound code)
-
     findByPhone m countryCode phone = do
       phoneHash <- getDbHash phone
       person <- QPerson.findByMobileNumberAndMerchantId countryCode phoneHash m.id >>= fromMaybeM (PersonNotFound phone)
@@ -73,6 +83,12 @@ getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountr
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
       SQB.findByOtpAndMerchantAndCity otpVal m.id merchantOpCity.id
         >>= fromMaybeM (BookingNotFound otpVal)
+
+findByDisplayOrRawId :: Kernel.Prelude.Text -> Environment.Flow Domain.Types.Booking.Booking
+findByDisplayOrRawId code = do
+  mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId code
+  let bookingId = fromMaybe (Kernel.Types.Id.Id code) mbBookingIdFromDisplay
+  SQB.findById bookingId >>= fromMaybeM (BookingNotFound code)
 
 getBookingList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

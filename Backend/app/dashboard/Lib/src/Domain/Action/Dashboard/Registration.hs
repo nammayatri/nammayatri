@@ -75,15 +75,6 @@ data LoginReq = LoginReq
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-data Enable2FAReq = Enable2FAReq
-  { email :: Text,
-    password :: Text,
-    merchantId :: ShortId DMerchant.Merchant,
-    city :: Maybe City.City,
-    otp :: Maybe Text -- Existing authenticator TOTP for re-setup (skip phone OTP)
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
 data Initiate2FASetupReq = Initiate2FASetupReq
   { email :: Maybe Text,
     password :: Maybe Text,
@@ -503,31 +494,6 @@ make2FASetupKey requestId = "Dashboard:2FA:Setup:" <> requestId
 
 make2FASetupAttemptsKey :: Text -> Text
 make2FASetupAttemptsKey requestId = "Dashboard:2FA:Attempts:" <> requestId
-
--- | Step 1: Validate credentials, send OTP to registered phone, return requestId.
--- | Deprecated: Use initiate2FaSetup + verify2FaSetup instead.
-enable2fa ::
-  ( BeamFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
-    HasFlowEnv m r '["twoFaIssuerName" ::: Text],
-    EncFlow m r
-  ) =>
-  Enable2FAReq ->
-  m Enable2FARes
-enable2fa Enable2FAReq {..} = do
-  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  let city' = fromMaybe merchant.defaultOperatingCity city
-  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
-  key <- L.runIO Utils.generateSecretKey
-  QP.updatePerson2FaSecret person.id key
-  stepSize <- asks (.totpStepSize)
-  issuer <- asks (.twoFaIssuerName)
-  let qrCodeUri = Utils.generateAuthenticatorURI stepSize key email issuer
-  pure $ Enable2FARes qrCodeUri
 
 -- | Validate credentials and either:
 -- 1. If user provides a valid TOTP (has existing authenticator): regenerate secret, return new QR code directly
@@ -1074,6 +1040,7 @@ adminResetTwoFa tokenInfo TwoFaAdminResetReq {..} = do
   unless (requestor.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
     throwError AccessDenied
   target <- QP.findById targetPersonId >>= fromMaybeM (PersonNotFound targetPersonId.getId)
+  DP.assertMayManagePerson tokenInfo target
   -- Clear TOTP secret and disable 2FA on the Person row
   QP.clearPerson2Fa target.id
   -- Force logout across all sessions

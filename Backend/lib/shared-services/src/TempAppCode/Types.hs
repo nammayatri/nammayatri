@@ -22,6 +22,9 @@ data CodeStrategy
     NumericCounter Integer
   | -- | An unguessable id. Required whenever the code alone can redeem.
     Guid
+  | -- | N cryptographically random characters from an unambiguous uppercase alphabet: short
+    -- enough for a person to read and type, still unguessable when the code alone can redeem.
+    RandomCode Int
   deriving (Show, Eq)
 
 data TempAppCodeCfg = TempAppCodeCfg
@@ -33,7 +36,11 @@ data TempAppCodeCfg = TempAppCodeCfg
     ttlSeconds :: Int,
     consumeOnRead :: Bool,
     maxAttempts :: Int,
-    attemptWindowSeconds :: Int
+    attemptWindowSeconds :: Int,
+    -- | Failed redemptions allowed across all callers per window. The per-code limit cannot stop
+    -- someone trying many different codes; this caps total guessing.
+    globalFailureLimit :: Int,
+    globalFailureWindowSeconds :: Int
   }
 
 data TempAppCodeRes = TempAppCodeRes
