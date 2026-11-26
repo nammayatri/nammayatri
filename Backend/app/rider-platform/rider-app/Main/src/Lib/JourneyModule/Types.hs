@@ -1540,7 +1540,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let applicablePasses =
         maybe
           []
-          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig mbPassLegStops stopMatchedPasses serviceTierType unitPrice overridePriceItems)
+          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig mbPassLegStops stopMatchedPasses serviceTierType (maybe unitPrice (.price) (find (\category -> category.category == ADULT) quoteCategories)) unitPrice overridePriceItems)
           adultUnitPrice
   let hasTicketFreePass =
         shouldCheckPass
