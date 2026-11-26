@@ -41,15 +41,20 @@ types:
     limit: Int
     offset: Int
 
+  # one employee's saved pickup and drop, exactly as they chose them, with who they are (for the marker's tooltip)
   ShuttleInterestMapPoint:
     personId: Id Person
+    employeeName: Maybe Text
     passOrganizationId: Id PassOrganization
+    companyName: Maybe Text
     companyDomain: Text
     tripType: ShuttleTripType
     pickupLat: Double
     pickupLon: Double
+    pickupAddress: Text
     dropLat: Double
     dropLon: Double
+    dropAddress: Text
 
   ShuttleInterestMapResp:
     points: "[ShuttleInterestMapPoint]"
@@ -70,9 +75,14 @@ types:
     departure: Text # HH:MM from the route's first stop
     days: "[Text]" # lower-case day names the trip runs (just the asked day when a day is asked for)
     riders: Int # employees planned on it (on the asked day; else the most on any day)
+    slot: Maybe Text # HH:MM the employees on it asked for (their pickup time to the office, their leaving time home)
+    direction: Maybe Text # TO_OFFICE or FROM_OFFICE (a loop route runs both)
 
   ShuttlePublishedRoute:
     routeCode: Text # CORP-<ORG>-<n>
+    routeType: Text # TO_OFFICE (pickups then the office), FROM_OFFICE (the office then drops) or LOOP (office round the stops and back)
+    distanceMeters: Maybe Int # along the roads, first stop to last
+    durationMinutes: Maybe Int # first stop to last
     shortName: Text
     name: Text # the GTFS long name: the stops in order
     tripCount: Maybe Int

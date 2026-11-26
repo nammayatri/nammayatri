@@ -15,8 +15,9 @@ import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import Data.Containers.ListUtils (nubOrd)
+import Data.Either (lefts, rights)
+import Data.Hashable (hash)
 import qualified Data.IntMap.Strict as IntMap
-import qualified Data.IntSet as IntSet
 import Data.List (elemIndex, partition, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -36,14 +37,16 @@ import qualified "this" Domain.Types.Person as DPerson
 import qualified "this" Domain.Types.ShuttleInterest as DShuttleInterest
 import qualified Domain.Types.ShuttlePublishedTrip as DShuttlePublishedTrip
 import qualified Domain.Types.StopFare as DStopFare
+import qualified Domain.Utils as DU
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Types.TimeBound (TimeBound (Unbounded))
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common (Currency (INR), DistanceUnit (Meter), HighPrecMoney, Seconds (..), fromMaybeM, generateGUID, getCurrentTime, throwError, withTryCatch)
+import Kernel.Utils.Common (Currency (INR), DistanceUnit (Meter), HighPrecMoney, Meters (..), Seconds (..), fromMaybeM, generateGUID, getCurrentTime, logError, logInfo, throwError, withTryCatch)
+import qualified SharedLogic.CorporateShuttle.RoutePlanner as RP
+import qualified SharedLogic.CorporateShuttle.TransitHubs as TransitHubs
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
@@ -100,7 +103,9 @@ getShuttleInterestMapPoints merchantShortId opCity mbPassOrganizationId mbCompan
   merchantOperatingCity <- findCity merchantShortId opCity
   companies <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCity.id DPassType.RegularPass
   interests <- findInterests merchantOperatingCity.id companies mbPassOrganizationId mbCompanyDomain maxMapPoints 0
-  pure $ ShuttleInterestAPI.ShuttleInterestMapResp {ShuttleInterestAPI.points = map mkMapPoint interests}
+  employeeNames <- getEmployeeNames interests
+  let companyNames = Map.fromList [(company.id, company.name) | company <- companies]
+  pure $ ShuttleInterestAPI.ShuttleInterestMapResp {ShuttleInterestAPI.points = map (mkMapPoint employeeNames companyNames) interests}
 
 findCity :: Id.ShortId DMerchant.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
 findCity merchantShortId opCity =
@@ -161,17 +166,26 @@ mkItem employeeNames companyNames interest =
       ShuttleInterestAPI.updatedAt = interest.updatedAt
     }
 
-mkMapPoint :: DShuttleInterest.ShuttleInterest -> ShuttleInterestAPI.ShuttleInterestMapPoint
-mkMapPoint interest =
+-- | The employee's saved pickup and drop, exactly as stored (never moved or generated), with their name and company.
+mkMapPoint ::
+  Map.Map (Id.Id DPerson.Person) Text ->
+  Map.Map (Id.Id DPassOrganization.PassOrganization) Text ->
+  DShuttleInterest.ShuttleInterest ->
+  ShuttleInterestAPI.ShuttleInterestMapPoint
+mkMapPoint employeeNames companyNames interest =
   ShuttleInterestAPI.ShuttleInterestMapPoint
     { ShuttleInterestAPI.personId = interest.personId,
+      ShuttleInterestAPI.employeeName = Map.lookup interest.personId employeeNames,
       ShuttleInterestAPI.passOrganizationId = interest.passOrganizationId,
+      ShuttleInterestAPI.companyName = Map.lookup interest.passOrganizationId companyNames,
       ShuttleInterestAPI.companyDomain = interest.companyDomain,
       ShuttleInterestAPI.tripType = interest.tripType,
       ShuttleInterestAPI.pickupLat = interest.pickupLat,
       ShuttleInterestAPI.pickupLon = interest.pickupLon,
+      ShuttleInterestAPI.pickupAddress = interest.pickupAddress,
       ShuttleInterestAPI.dropLat = interest.dropLat,
-      ShuttleInterestAPI.dropLon = interest.dropLon
+      ShuttleInterestAPI.dropLon = interest.dropLon,
+      ShuttleInterestAPI.dropAddress = interest.dropAddress
     }
 
 -- | The city's corporate shuttle routes, planned from the interest forms (the same plan the GTFS download gives): each
@@ -196,6 +210,9 @@ mkPublishedRoute :: PlannedRoute -> [DShuttlePublishedTrip.ShuttlePublishedTrip]
 mkPublishedRoute route timetable =
   ShuttleInterestAPI.ShuttlePublishedRoute
     { ShuttleInterestAPI.routeCode = route.routeCode,
+      ShuttleInterestAPI.routeType = route.routeKind,
+      ShuttleInterestAPI.distanceMeters = Just route.distanceMeters,
+      ShuttleInterestAPI.durationMinutes = (.minutesFromStart) <$> lastMay route.stops,
       ShuttleInterestAPI.shortName = T.replace "-" " " (T.drop 5 route.routeCode),
       ShuttleInterestAPI.name = route.name,
       ShuttleInterestAPI.tripCount = Just (length trips),
@@ -207,7 +224,7 @@ mkPublishedRoute route timetable =
       ShuttleInterestAPI.shape = route.shape
     }
   where
-    trips = mkTrips timetable
+    trips = mkTrips route.tripSlots timetable
     mkStop seqNum stop =
       ShuttleInterestAPI.ShuttlePublishedStop
         { ShuttleInterestAPI.stopCode = stop.stopCode,
@@ -219,13 +236,15 @@ mkPublishedRoute route timetable =
         }
 
 -- | The route's trips from its timetable rows (one row per trip and day), in departure order, days in week order.
-mkTrips :: [DShuttlePublishedTrip.ShuttlePublishedTrip] -> [ShuttleInterestAPI.ShuttlePublishedTripInfo]
-mkTrips rows =
+mkTrips :: Map.Map Text (Text, Text) -> [DShuttlePublishedTrip.ShuttlePublishedTrip] -> [ShuttleInterestAPI.ShuttlePublishedTripInfo]
+mkTrips slots rows =
   [ ShuttleInterestAPI.ShuttlePublishedTripInfo
       { ShuttleInterestAPI.tripId = tripId,
         ShuttleInterestAPI.departure = maybe "" (.departure) (listToMaybe tripRows),
         ShuttleInterestAPI.days = sortOn dayIndex (map (.day) tripRows),
-        ShuttleInterestAPI.riders = maximum (0 : map (.riders) tripRows)
+        ShuttleInterestAPI.riders = maximum (0 : map (.riders) tripRows),
+        ShuttleInterestAPI.slot = fst <$> Map.lookup tripId slots,
+        ShuttleInterestAPI.direction = snd <$> Map.lookup tripId slots
       }
     | (tripId, tripRows) <- sortOn (fmap (.departure) . listToMaybe . snd) (Map.toList (Map.fromListWith (<>) [(r.tripId, [r]) | r <- rows]))
   ]
@@ -240,30 +259,39 @@ requireCorpConfig merchantOperatingCity =
   findCorpConfig merchantOperatingCity >>= fromMaybeM (InvalidRequest "The corporate shuttle feed (corp_<city>) is not configured for this city")
 
 -- Planning ------------------------------------------------------------------------------------------------------------
--- From one company's interest forms, per direction (MORNING to the office, EVENING home):
---   pickup points  everyone within walkMeters (500 m) of a point shares it, whatever their time (greedy cover over the
---                  employees' own pickup points, the point the most still-unplaced employees can walk to first)
---   routes         points within linkMeters (3 km) of each other, directly or through other points, are one route, picked
---                  up farthest first and ending at the office (EVENING: the reverse); planned once from every day's riders,
---                  so a route has the same stops every day
---   shuttles       per route and day, riders with the same time (to 15 minutes) share a shuttle: 8 seats, at least 5 meant;
---                  a full time is split into shuttles 5 minutes apart, a light one joins the nearest time within 30 minutes
---                  when both fit; nobody is dropped, so a shuttle that stays light still runs
---   roads          stops snap to the road and the legs and line come from the city's maps service (straight-line estimate
---                  when it cannot answer); a stop is named after its road, never an employee's address
+-- From one company's interest forms (SharedLogic.CorporateShuttle.RoutePlanner has the algorithms):
+--   pickup points  shared by both directions and every day: a metro station, a bus stand or a main road (told by the road
+--                  network's own speed on it, 28 km/h and more, not by names), never a side street or a doorstep.
+--                  Neighbours share the point they can all walk to, up to a kilometre along the streets (stations and
+--                  stands first); someone with none within a kilometre, or alone 3 km from everyone else, is left off
+--   routes         one set for every slot and day, so a route keeps its id whenever it runs: Clarke-Wright savings, moves
+--                  between routes and VND stop order on the road travel times both ways, joining points while it saves
+--                  driving and no slot has more riders than a shuttle's 6 seats; a group runs as a loop (office, stops,
+--                  office) or straight (to the office, and from it), whichever its geography suits
+--   shuttles       two slots each way for the whole city, the half-hour pair that best fits everyone's times on the forms;
+--                  everyone rides the slot nearer their time; a route runs one shuttle in each slot it has riders in (more
+--                  at the same time only when one stop alone has more riders than seats), reaching the office at the
+--                  morning slot and leaving it at the evening slot
+--   roads          the shuttle never drives into a road and back out the same way: such a stop moves to where that road
+--                  leaves the route, and stops that end up together are one; a stop is named after its station or road
 
-walkMeters, linkMeters, snapMaxMeters, nameMaxMeters :: Double
-walkMeters = 500
-linkMeters = 3000
+snapMaxMeters, nameMaxMeters :: Double
 snapMaxMeters = 200
 nameMaxMeters = 500
 
-slotMinutes, seats, minLoad, mergeMinutes, splitGapMinutes :: Int
-slotMinutes = 15
-seats = 8
-minLoad = 5
-mergeMinutes = 30
-splitGapMinutes = 5
+matrixChunk, pairChunk :: Int
+matrixChunk = 10
+-- origin-destination pairs per OSRM one-to-one request
+pairChunk = 40
+
+gridMeters, classProbeMeters, mainRoadKmh, roadKmh :: Double
+-- road points are sampled at grid points this far apart over everyone's walking area
+gridMeters = 200
+-- a road's speed is read over this stretch of it, along it either way
+classProbeMeters = 100
+-- the road network's speed on a main road (tertiary and up), and on an ordinary road (residential); slower is a lane
+mainRoadKmh = 28
+roadKmh = 17
 
 weekDays :: [Text]
 weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -271,18 +299,21 @@ weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 dayIndex :: Text -> Int
 dayIndex d = fromMaybe 7 (elemIndex d weekDays)
 
-data Rider = Rider {riderId :: Text, home :: Maps.LatLong, wish :: Int, riderDays :: [Text]}
+-- | An employee: where they live (their saved pickup, exactly), when they want to reach the office and leave it (minutes
+-- after midnight), and on which days.
+data Rider = Rider {riderId :: Text, home :: Maps.LatLong, toOffice :: Maybe Int, fromOffice :: Maybe Int, riderDays :: [Text]}
 
--- | A stop while planning: where it is, and who boards there (MORNING) or gets off there (EVENING).
-data PlanStop = PlanStop {at :: Maps.LatLong, office :: Bool, boarders :: [Text]}
-
-metersBetween :: Maps.LatLong -> Maps.LatLong -> Double
-metersBetween a b = realToFrac (distanceBetweenInMeters a b)
+-- | A shared pickup point (also where the evening shuttle drops them): a metro station, a bus stand or a main road, with
+-- its name and who uses it.
+data Pickup = Pickup {pickupAt :: Maps.LatLong, pickupRoad :: Maybe Text, pickupRiders :: [Text]}
 
 -- | A planned route: one company's, in the city's corp feed.
-data PlannedRoute = PlannedRoute {routeCode :: Text, passOrganizationId :: Id.Id DPassOrganization.PassOrganization, name :: Text, fareAmount :: HighPrecMoney, stops :: [PlannedStop], shape :: [[Double]]}
+-- tripSlots: per trip id, the slot time its employees asked for (HH:MM) and its direction (TO_OFFICE / FROM_OFFICE).
+data PlannedRoute = PlannedRoute {routeCode :: Text, routeKind :: Text, passOrganizationId :: Id.Id DPassOrganization.PassOrganization, name :: Text, fareAmount :: HighPrecMoney, stops :: [PlannedStop], shape :: [[Double]], distanceMeters :: Int, tripSlots :: Map.Map Text (Text, Text)}
+  deriving (Generic, ToJSON, FromJSON)
 
 data PlannedStop = PlannedStop {stopCode :: Text, name :: Text, lat :: Double, lon :: Double, minutesFromStart :: Int}
+  deriving (Generic, ToJSON, FromJSON)
 
 -- | Every company's routes in the city, each with its trips (one row per trip and day), planned from the interest forms.
 -- A company without an office location has no routes yet.
@@ -292,51 +323,137 @@ planCity config merchantOperatingCity = do
   let corporate = filter (\c -> not (null c.emailDomains)) companies
   forM_ corporate $ \c ->
     when (any (\o -> o.id /= c.id && orgCode o.name == orgCode c.name) corporate) $
-      throwError $ InvalidRequest ("Two companies in this city get the same route code " <> orgCode c.name <> "; rename one of them")
-  concat <$> mapM (planCompany config merchantOperatingCity) corporate
+      throwError $
+        InvalidRequest ("Two companies in this city get the same route code " <> orgCode c.name <> "; rename one of them")
+  interestsByCompany <- forM corporate $ \c -> (c,) <$> allInterests merchantOperatingCity c
+  -- the plan only changes when a form (or a company's office) does: it is kept until then, so showing the routes again
+  -- is instant
+  let fingerprint = hash (show [(c.id.getId, c.name, c.officeLat, c.officeLon, [(i.personId.getId, show i.updatedAt :: Text) | i <- is]) | (c, is) <- interestsByCompany] :: Text)
+      cacheKey = "CorporateShuttle:Plan:" <> plannerVersion <> ":" <> merchantOperatingCity.id.getId <> ":" <> show fingerprint
+  Redis.safeGet cacheKey >>= \case
+    Just cached -> pure cached
+    Nothing -> do
+      let ridersByCompany = [(c, filter (\r -> isJust r.toOffice || isJust r.fromOffice) (ridersOf is)) | (c, is) <- interestsByCompany]
+          -- the city's two slots each way, from everyone's times: the same two filters for every company and day
+          everyone = concatMap snd ridersByCompany
+          slots = DaySlots {morningSlots = twoSlots (mapMaybe (.toOffice) everyone), eveningSlots = twoSlots (mapMaybe (.fromOffice) everyone)}
+      planned <- fmap concat . forM ridersByCompany $ \(c, rs) ->
+        withTryCatch "shuttleRoutes:planCompany" (planCompany config merchantOperatingCity slots c rs) >>= \case
+          Right routes -> pure routes
+          Left err -> do
+            logError ("Corporate shuttle: could not plan " <> c.name <> "'s routes: " <> show err)
+            pure []
+      Redis.setExp cacheKey planned (24 * 3600)
+      logInfo ("Corporate shuttle: planned " <> show (length planned) <> " routes")
+      pure planned
 
-planCompany :: DIBC.IntegratedBPPConfig -> DMOC.MerchantOperatingCity -> DPassOrganization.PassOrganization -> Environment.Flow [(PlannedRoute, [DShuttlePublishedTrip.ShuttlePublishedTrip])]
-planCompany config merchantOperatingCity company = case (company.officeLat, company.officeLon) of
-  (Just lat, Just lon) -> do
-    let officeAt = Maps.LatLong lat lon
-        org = orgCode company.name
-    interests <- allInterests merchantOperatingCity company
-    laidOut <- forM [True, False] $ \morning -> do
-      let everyone = ridersFor morning Nothing interests
-      forM (layout officeAt everyone) $ \pickups -> do
-        let ordered = if morning then pickups else reverse pickups
-        (points, offsets, shape) <- onRoads merchantOperatingCity (map (.at) ordered)
-        let stops = zipWith (\s p -> s {at = p}) ordered points
-            stopAt = Map.fromList [(pid, i) | (i, s) <- zip [0 ..] stops, pid <- s.boarders]
-            trips =
-              [ (day, dep, ids)
-                | day <- weekDays,
-                  (t, ids) <- shuttles [(r.wish, r.riderId) | r <- ridersFor morning (Just day) interests, Map.member r.riderId stopAt],
-                  -- MORNING: at the first stop with riders of this shuttle at their time; EVENING: from the office then
-                  -- a service day starts at midnight: a shuttle would leave before it leaves at 00:00 instead
-                  let dep = max 0 (if morning then t - minimum [offsets !! (stopAt Map.! pid) | pid <- ids] else t)
-              ]
-        pure (morning, stops, offsets, shape, uniqueDepartures trips)
-    let planned = sortOn (\(morning, _, _, _, trips) -> (not morning, minimum (1440 : [d | (_, d, _) <- trips]))) (concat laidOut)
-        stopCodes = Map.fromList (zip (nubOrd [key s.at | (_, stops, _, _, _) <- planned, s <- stops]) [1 :: Int ..])
-        key p = (round (p.lat * 1e6) :: Integer, round (p.lon * 1e6) :: Integer)
-    now <- getCurrentTime
-    forM (zip [1 :: Int ..] planned) $ \(n, (_, stops, offsets, shape, trips)) -> do
-      let routeCode = "CORP-" <> org <> "-" <> show n
-      named <- forM (zip stops offsets) $ \(s, offset) -> do
-        name <- if s.office then pure (company.name <> " office") else stopName merchantOperatingCity s.at
-        pure PlannedStop {stopCode = "CORP_" <> org <> "_S" <> show (stopCodes Map.! key s.at), name, lat = s.at.lat, lon = s.at.lon, minutesFromStart = offset}
-      pure
-        ( PlannedRoute {routeCode, passOrganizationId = company.id, name = routeName named, fareAmount = defaultFare, stops = named, shape},
-          [mkTripRow config merchantOperatingCity now routeCode day dep (length ids) | (day, dep, ids) <- trips]
-        )
+-- | Bumped whenever the planner changes, so a plan cached by an older planner is not used.
+plannerVersion :: Text
+plannerVersion = "v4"
+
+-- | f over xs, up to parallelism at a time (independent maps-service calls). f must not fail: its result is dropped.
+inParallel :: (a -> Environment.Flow b) -> [a] -> Environment.Flow [b]
+inParallel f xs = concat <$> mapM (DU.mapConcurrently f) (chunksOf parallelism xs)
+
+parallelism :: Int
+parallelism = 16
+
+-- | The slot times each way (minutes after midnight).
+data DaySlots = DaySlots {morningSlots :: [Int], eveningSlots :: [Int]}
+
+-- | The two slot times that best fit the times employees asked for: on the half hour, the pair that leaves everyone
+-- the least total time from the slot nearer to them, the two at least an hour apart (one slot when everyone's times
+-- are within an hour).
+twoSlots :: [Int] -> [Int]
+twoSlots [] = []
+twoSlots wishes =
+  let halfHour w = 30 * round (fromIntegral w / 30 :: Double)
+      candidates = nubOrd (map halfHour wishes)
+      misfit a b = sum [min (abs (w - a)) (abs (w - b)) | w <- wishes]
+   in case sortOn fst [((misfit a b, a, b), [a, b]) | a <- candidates, b <- candidates, b - a >= 60] of
+        (_, best) : _ -> best
+        [] -> take 1 (map snd (sortOn fst [((misfit a a, a), a) | a <- candidates]))
+
+planCompany :: DIBC.IntegratedBPPConfig -> DMOC.MerchantOperatingCity -> DaySlots -> DPassOrganization.PassOrganization -> [Rider] -> Environment.Flow [(PlannedRoute, [DShuttlePublishedTrip.ShuttlePublishedTrip])]
+planCompany config merchantOperatingCity slots company riders = case (company.officeLat, company.officeLon) of
+  (Just lat, Just lon) | not (null riders) -> planRiders (Maps.LatLong lat lon)
   _ -> pure []
   where
+    org = orgCode company.name
     defaultFare = 40
-    -- two shuttles of one route never leave at the same minute on a day: a trip id is <route>-<HHMM>
-    uniqueDepartures = concatMap bump . groupBy' (\(d, _, _) -> d)
-    bump dayTrips = snd (mapAccumL (\used (d, dep, ids) -> let dep' = until (`notElem` used) (+ splitGapMinutes) dep in (dep' : used, (d, dep', ids))) [] dayTrips)
-    groupBy' f = Map.elems . Map.fromListWith (flip (<>)) . map (\x -> (f x, [x]))
+    planRiders office = do
+      officeAt <- maybe office (.location) <$> nearestRoad merchantOperatingCity office
+      (pickups0, noStop) <- pickupPoints merchantOperatingCity riders
+      -- someone alone far from everyone else (farMeters from every other pickup) is left off: a shuttle for one rider
+      -- across town would cost every other route its seats
+      let lonely p = length p.pickupRiders == 1 && all (\q -> q.pickupAt == p.pickupAt || RP.metersBetween p.pickupAt q.pickupAt > farMeters) pickups0
+          (isolated, pickups) = partition lonely pickups0
+          leftOff = noStop <> concatMap (.pickupRiders) isolated
+      unless (null leftOff) $ logInfo ("Corporate shuttle: " <> company.name <> ": " <> show (length leftOff) <> " too far from a main road, metro or bus stand, or from everyone else, left off")
+      let nodes = IntMap.fromList (zip [0 ..] (officeAt : map (.pickupAt) pickups))
+          nodeOf = Map.fromList [(rid, k) | (k, p) <- zip [1 :: Int ..] pickups, rid <- p.pickupRiders]
+          served = filter (\r -> Map.member r.riderId nodeOf) riders
+      matrix <- roadMatrix merchantOperatingCity (IntMap.elems nodes)
+      names <- IntMap.fromList <$> inParallel (\(k, p) -> (k,) <$> maybe (stopName merchantOperatingCity p.pickupAt) pure p.pickupRoad) (zip [1 ..] pickups)
+      let -- the slots each way; slot k to the office pairs with slot k home
+          slotsOf morning = if morning then slots.morningSlots else slots.eveningSlots
+          slotIndex morning w = maybe 0 snd (listToMaybe (sortOn fst [((abs (w - t), t), i) | (i, t) <- zip [0 :: Int ..] (slotsOf morning)]))
+          dirOf morning = if morning then (.toOffice) else (.fromOffice)
+          ridesIn day wave morning r = day `elem` r.riderDays && (slotIndex morning <$> dirOf morning r) == Just wave
+          waves = [0 .. max 1 (max (length slots.morningSlots) (length slots.eveningSlots)) - 1]
+          dayWaves = [(day, wave) | day <- weekDays, wave <- waves]
+          loadsOf morning = filter (not . IntMap.null) [IntMap.fromListWith (+) [(nodeOf Map.! r.riderId, 1) | r <- served, ridesIn day wave morning r] | (day, wave) <- dayWaves]
+          -- one set of routes for every slot and day: a route is its path, and its id is the same at any time it runs
+          routes = RP.planRoutes matrix (loadsOf True) (loadsOf False) (IntMap.keys (IntMap.delete 0 nodes))
+      driven <- forM routes $ \(kind, ps) -> do
+        let ns = RP.nodesOf kind ps
+        (points, stopIx, offsets, shape, meters) <- drive merchantOperatingCity [n /= 0 | n <- ns] (map (nodes IntMap.!) ns)
+        let firstNode = IntMap.fromListWith (\_ a -> a) (zip stopIx ns)
+        stopNames <- forM (zip [0 :: Int ..] points) $ \(i, (point, moved)) -> case IntMap.lookup i firstNode of
+          Just 0 -> pure (company.name <> " office")
+          Just node | not moved -> pure (IntMap.findWithDefault "Pickup point" node names)
+          _ -> stopName merchantOperatingCity point
+        let offsetOf = Map.fromList [(n, IntMap.findWithDefault 0 ix (IntMap.fromList (zip [0 ..] offsets))) | (n, ix) <- zip ns stopIx, n /= 0]
+            atOffice = fromMaybe 0 (lastMay offsets)
+            directions = case kind of
+              RP.ToOffice -> [True]
+              RP.FromOffice -> [False]
+              RP.Loop -> [True, False]
+            -- MORNING: the shuttle reaches the office at the slot time; EVENING: it leaves the office then. A slot
+            -- busier than the seats runs more shuttles of the route at the same time (<route>-<HHMM>-2, ...)
+            trips =
+              [ (day, tid, dep, (t, if morning then "TO_OFFICE" else "FROM_OFFICE" :: Text), length grp)
+                | (day, wave) <- dayWaves,
+                  morning <- directions,
+                  t <- take 1 (drop wave (slotsOf morning)),
+                  let ids = [r.riderId | r <- served, ridesIn day wave morning r, Map.member (nodeOf Map.! r.riderId) offsetOf],
+                  not (null ids),
+                  -- a service day starts at midnight: a shuttle would leave before it leaves at 00:00 instead
+                  let dep = max 0 (if morning then t - atOffice else t),
+                  (k, grp) <- zip [1 :: Int ..] (chunksOf RP.seats ids),
+                  let tid = tripIdOf "" dep <> (if k > 1 then "-" <> show k else "")
+              ]
+        pure (kind, [(point, label) | ((point, _), label) <- zip points stopNames], offsets, shape, meters, trips)
+      let planned = sortOn (\(kind, _, _, _, _, trips) -> (kind, minimum (1440 : [d | (_, _, d, _, _) <- trips]))) (filter (\(_, _, _, _, _, trips) -> not (null trips)) driven)
+          -- a stop is its place: two routes at one place share the stop
+          spotKey (point, _) = (round (point.lat * 1e5) :: Integer, round (point.lon * 1e5) :: Integer)
+          stopCodes = Map.fromList (zip (nubOrd [spotKey st | (_, sts, _, _, _, _) <- planned, st <- sts]) [1 :: Int ..])
+      now <- getCurrentTime
+      pure
+        [ ( PlannedRoute {routeCode, routeKind = RP.routeKindText kind, passOrganizationId = company.id, name = routeName named, fareAmount = defaultFare, stops = named, shape, distanceMeters = meters, tripSlots = Map.fromList [(routeCode <> tid, (minutesToHHMM t, d)) | (_, tid, _, (t, d), _) <- trips]},
+            [mkTripRow config merchantOperatingCity now routeCode (routeCode <> tid) day dep count | (day, tid, dep, _, count) <- trips]
+          )
+          | (n, (kind, sts, offsets, shape, meters, trips)) <- zip [1 :: Int ..] planned,
+            let routeCode = "CORP-" <> org <> "-" <> show n
+                named =
+                  [ PlannedStop {stopCode = "CORP_" <> org <> "_S" <> show (stopCodes Map.! spotKey st), name = stopLabel, lat = point.lat, lon = point.lon, minutesFromStart = offset}
+                    | (st@(point, stopLabel), offset) <- zip sts offsets
+                  ]
+        ]
+
+-- | Someone this far (straight line) from every other employee's pickup, riding alone, is too far to serve.
+farMeters :: Double
+farMeters = 3000
 
 -- | Every current interest form of the company, read page by page (none is left out of the plan).
 allInterests :: DMOC.MerchantOperatingCity -> DPassOrganization.PassOrganization -> Environment.Flow [DShuttleInterest.ShuttleInterest]
@@ -347,93 +464,330 @@ allInterests merchantOperatingCity company = go 0
       page <- QShuttleInterest.findAllByMerchantOperatingCityIdAndPassOrganizationId (Just pageSize) (Just offset) merchantOperatingCity.id company.id
       if length page < pageSize then pure page else (page <>) <$> go (offset + pageSize)
 
--- | That direction's riders (on that day, or on any day), each with the time they want, in minutes after midnight.
-ridersFor :: Bool -> Maybe Text -> [DShuttleInterest.ShuttleInterest] -> [Rider]
-ridersFor morning mbDay interests =
-  sortOn (.riderId) $
-    [ Rider {riderId = interest.personId.getId, home = Maps.LatLong interest.pickupLat interest.pickupLon, wish = todHour t * 60 + todMin t, riderDays = days}
+-- | The employees, from their forms: their saved pickup exactly as they chose it, their times on the legs they asked for.
+ridersOf :: [DShuttleInterest.ShuttleInterest] -> [Rider]
+ridersOf interests =
+  sortOn
+    (.riderId)
+    [ Rider
+        { riderId = interest.personId.getId,
+          home = Maps.LatLong interest.pickupLat interest.pickupLon,
+          toOffice = if interest.tripType /= DShuttleInterest.TO_HOME then minutesOf <$> interest.pickupTime else Nothing,
+          fromOffice = if interest.tripType /= DShuttleInterest.TO_OFFICE then minutesOf <$> interest.dropTime else Nothing,
+          riderDays = days
+        }
       | interest <- interests,
-        interest.tripType /= (if morning then DShuttleInterest.TO_HOME else DShuttleInterest.TO_OFFICE),
-        let days = map (T.toLower . show) interest.daysOfWeek,
-        maybe (not (null days)) (`elem` days) mbDay,
-        Just t <- [if morning then interest.pickupTime else interest.dropTime]
+        let days = nubOrd (map (T.toLower . show) interest.daysOfWeek),
+        not (null days)
     ]
-
--- | Routes in MORNING order (pickups farthest first, then the office) that carry every rider.
-layout :: Maps.LatLong -> [Rider] -> [[PlanStop]]
-layout officeAt riders = [sortOn (\s -> negate (metersBetween s.at officeAt)) group <> [PlanStop officeAt True []] | group <- link (cover riders)]
-
-cover :: [Rider] -> [PlanStop]
-cover riders = go (IntMap.map (sum . map weight) near) (IntSet.fromList (IntMap.keys points))
   where
-    -- riders at the same spot (to about a metre) are one point weighted by its riders, so a crowded pickup costs one entry,
-    -- not one per pair of riders; points keep the riders' order (the first such rider wins a tie)
-    spot p = (round (p.lat * 1e5) :: Integer, round (p.lon * 1e5) :: Integer)
-    points = IntMap.fromList (zip [0 ..] (sortOn ((.riderId) . NE.head) (Map.elems (Map.fromListWith (flip (<>)) [(spot r.home, r :| []) | r <- riders]))))
-    homeOf i = (.home) (NE.head (points IntMap.! i))
-    weight i = length (points IntMap.! i)
-    -- each point's neighbourhood (points within walkMeters, itself included), looked for only in the grid cells around it:
-    -- a cell is at least walkMeters wide, so no neighbour is missed
-    cell p = (floor (p.lat / cellDegrees) :: Integer, floor (p.lon / cellDegrees) :: Integer)
-    cellDegrees = 0.006
-    byCell = Map.fromListWith (<>) [(cell (homeOf i), [i]) | i <- IntMap.keys points]
-    near = IntMap.mapWithKey (\i _ -> let (y, x) = cell (homeOf i) in [j | dy <- [-1, 0, 1], dx <- [-1, 0, 1], j <- Map.findWithDefault [] (y + dy, x + dx) byCell, metersBetween (homeOf i) (homeOf j) <= walkMeters]) points
-    go counts unplaced
-      | IntSet.null unplaced = []
-      | otherwise =
-        -- the point the most still-unplaced riders can walk to
-        let best = fst (IntMap.foldlWithKey (\b i c -> if c > snd b then (i, c) else b) (-1, 0) counts)
-            taken = filter (`IntSet.member` unplaced) (near IntMap.! best)
-            counts' = foldl (\m j -> foldl (flip (IntMap.adjust (subtract (weight j)))) m (near IntMap.! j)) counts taken
-         in PlanStop (homeOf best) False (concatMap (map (.riderId) . NE.toList . (points IntMap.!)) taken) : go counts' (foldr IntSet.delete unplaced taken)
+    minutesOf t = todHour t * 60 + todMin t
 
-link :: [PlanStop] -> [[PlanStop]]
-link = foldl add []
+-- | The shared pickup points: per DBSCAN neighbourhood, chosen from the metro stations, bus stands and main-road points
+-- across its walking area (a kilometre), everyone's walk then checked along the streets; whoever no shared point suits
+-- walks to the nearest main road, metro or bus stand within a kilometre. Never a side street or someone's home. Also who
+-- has none within walking distance (left off).
+pickupPoints :: DMOC.MerchantOperatingCity -> [Rider] -> Environment.Flow ([Pickup], [Text])
+pickupPoints merchantOperatingCity riders = do
+  let -- riders at one spot (to about ten metres: one building) are one home
+      spots = Map.elems (Map.fromListWith (flip (<>)) [(spot r.home, [r]) | r <- riders])
+      homes = IntMap.fromList (zip [0 ..] [(RP.Home r0.home (length rs), map (.riderId) rs) | rs@(r0 : _) <- spots])
+  allSites <- stopSites merchantOperatingCity (map (.homeAt) (map fst (IntMap.elems homes)))
+  results <- forM (RP.dbscan (map fst (IntMap.elems homes))) $ \members -> do
+    let byLocal = IntMap.fromList (zip [0 ..] (map (homes IntMap.!) members))
+        hs = map fst (IntMap.elems byLocal)
+        ridersAt i = maybe [] snd (IntMap.lookup i byLocal)
+        homeAt i = maybe (Maps.LatLong 0 0) ((.homeAt) . fst) (IntMap.lookup i byLocal)
+        sites = [st | st <- allSites, any (\h -> RP.walkEstimate h.homeAt st.siteAt <= RP.walkMeters) hs]
+        (groups, unreachable) = RP.chooseSites hs sites
+    checked <- inParallel `flip` groups $ \(site, is) -> do
+      walks <- walkingMeters merchantOperatingCity (map homeAt is) site.siteAt
+      pure (site, partition (\i -> maybe True (<= RP.walkMeters) (Map.lookup (spot (homeAt i)) walks)) is)
+    own <- forM (unreachable <> concatMap (snd . snd) checked) $ \i ->
+      ownStop merchantOperatingCity sites (homeAt i) <&> \case
+        Just road -> Right Pickup {pickupAt = road.siteAt, pickupRoad = road.siteRoad, pickupRiders = ridersAt i}
+        Nothing -> Left (ridersAt i)
+    pure ([Pickup {pickupAt = site.siteAt, pickupRoad = site.siteRoad, pickupRiders = concatMap ridersAt ok} | (site, (ok, _)) <- checked, not (null ok)] <> rights own, concat (lefts own))
+  -- two neighbourhoods' riders at one stop are one pickup
+  let merged = Map.elems (Map.fromListWith (\b a -> a {pickupRiders = a.pickupRiders <> b.pickupRiders}) [(spot p.pickupAt, p) | p <- concatMap fst results])
+  pure (merged, concatMap snd results)
   where
-    add groups s =
-      let (near, far) = partition (any (\t -> metersBetween s.at t.at <= linkMeters)) groups
-       in far <> [concat near <> [s]]
+    spot p = (round (p.lat * 1e4) :: Integer, round (p.lon * 1e4) :: Integer)
 
--- | One route's shuttles on one day: [(time, rider ids)] from (wanted time, rider id) pairs.
-shuttles :: [(Int, Text)] -> [(Int, [Text])]
-shuttles wishes = merge (concatMap split (Map.toList slots))
+-- | Where a shuttle may stop near the homes: the metro stations and bus stands within walking distance of anyone (at the
+-- road beside them), then the main-road points (never a side street).
+stopSites :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Environment.Flow [RP.Site]
+stopSites merchantOperatingCity homesAt = do
+  let near h = any (\p -> RP.walkEstimate p (hubAt h) <= RP.walkMeters) homesAt
+      hubAt h = Maps.LatLong h.hubLat h.hubLon
+  hubs <- inParallel `flip` filter near TransitHubs.transitHubs $ \h -> do
+    road <- nearestRoad merchantOperatingCity (hubAt h)
+    pure (RP.Site (maybe (hubAt h) (.location) road) (Just h.hubName) RP.hubClass)
+  roads <- filter (\st -> st.siteClass >= RP.mainRoadClass) <$> roadSites merchantOperatingCity homesAt
+  pure (hubs <> roads)
+
+-- | Every road point anyone could walk to: OSRM's nearest road segments around grid points gridMeters apart over each
+-- home's walking radius (nearest alone only sees the segments right by a point, so a main road a few hundred metres
+-- away would never be considered), one per ~40 m, each classed by the road network (classifyRoads).
+roadSites :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Environment.Flow [RP.Site]
+roadSites merchantOperatingCity homesAt = do
+  let lat0 = maybe 13 (.lat) (listToMaybe homesAt)
+      dLat = gridMeters / 111000
+      dLon = dLat / max 0.2 (cos (lat0 * pi / 180))
+      reach = RP.walkMeters / 1.3 + gridMeters
+      cellOf p = (floor (p.lat / dLat) :: Int, floor (p.lon / dLon) :: Int)
+      span' = ceiling (reach / gridMeters) :: Int
+      cells = nubOrd [(y + dy, x + dx) | h <- homesAt, let (y, x) = cellOf h, dy <- [- span' .. span'], dx <- [- span' .. span']]
+      centreOf (y, x) = Maps.LatLong ((fromIntegral y + 0.5) * dLat) ((fromIntegral x + 0.5) * dLon)
+      grid = [c | c <- map centreOf cells, any (\h -> RP.metersBetween h c <= reach) homesAt]
+  found <- concat <$> inParallel (roadsNear merchantOperatingCity) (homesAt <> grid)
+  let key (p, _) = (round (p.lat * 2.5e3) :: Integer, round (p.lon * 2.5e3) :: Integer)
+      points = Map.elems (Map.fromListWith (\a b -> if isJust (snd b) && isNothing (snd a) then b else a) [(key r, r) | r <- found])
+  classifyRoads merchantOperatingCity points
+
+-- | Road segments near a point (the city's OSRM): where on each road, and its name (for naming the stop only).
+roadsNear :: DMOC.MerchantOperatingCity -> Maps.LatLong -> Environment.Flow [(Maps.LatLong, Maybe Text)]
+roadsNear merchantOperatingCity p = either (const []) identity <$> withTryCatch "shuttleRoutes:roadsNear" (roadsWithin RP.walkMeters merchantOperatingCity p)
+
+-- | Road segments within metres of a point, cached (a found road only).
+roadsWithin :: Double -> DMOC.MerchantOperatingCity -> Maps.LatLong -> Environment.Flow [(Maps.LatLong, Maybe Text)]
+roadsWithin metres merchantOperatingCity p = do
+  let cacheKey = "CorporateShuttle:Nearest:v2:" <> show (round metres :: Int) <> ":" <> show (round (p.lat * 1e5) :: Integer) <> ":" <> show (round (p.lon * 1e5) :: Integer)
+  Redis.safeGet cacheKey >>= \case
+    Just cached -> pure [(Maps.LatLong lat lon, name) | (lat, lon, name) <- cached]
+    Nothing -> do
+      res <- withTryCatch "shuttleRoutes:roadsNear" (Maps.getNearestPoints merchantOperatingCity.merchantId merchantOperatingCity.id Nothing (Maps.GetNearestPointsReq p (Just 5)))
+      case res of
+        Right resp -> do
+          let found = [(w.location, mfilter (not . T.null) w.roadName) | w <- resp.waypoints, w.distance <= metres]
+          -- "no road here" is not kept: it may only mean the road map does not reach here yet
+          unless (null found) $ Redis.setExp cacheKey [(q.lat, q.lon, name) | (q, name) <- found] roadCacheSeconds
+          pure found
+        Left _ -> pure []
+
+-- | Each road point's class from the road network itself, not its name: OSRM's travel time along the road for
+-- classProbeMeters either way gives the speed the network holds for it (its road class: main roads are fast, lanes and
+-- service roads slow). 3 a main road (mainRoadKmh and up), 2 an ordinary road (roadKmh and up), 1 a lane or side street.
+classifyRoads :: DMOC.MerchantOperatingCity -> [(Maps.LatLong, Maybe Text)] -> Environment.Flow [RP.Site]
+classifyRoads merchantOperatingCity points = do
+  classed <- inParallel (\(p, name) -> (p,name,) . either (const Nothing) identity <$> withTryCatch "shuttleRoutes:roadClassCache" (Redis.safeGet (classKey p))) points
+  let cached = [c | (_, _, c) <- classed]
+      points' = [(p, name) | (p, name, _) <- classed]
+      todo = [p | ((p, _), Nothing) <- zip points' cached]
+      probes p = [offsetBy p classProbeMeters bearing | bearing <- [0, 90, 180, 270]]
+      -- a few road points at a time, each to its own probes (a plain many-to-many table: stock OSRM has no one-to-one)
+      batches = [(ps, concatMap probes ps) | ps <- chunksOf (pairChunk `div` 4) todo]
+  answered <- concat <$> inParallel (uncurry table) batches
+  let speeds =
+        Map.fromListWith
+          max
+          [ (key6 p, meters / secs * 3.6)
+            | ((p, q), (secs, meters)) <- answered,
+              secs > 0,
+              meters >= 0.4 * classProbeMeters,
+              meters <= 1.4 * RP.metersBetween p q
+          ]
+      classOf kmh
+        | kmh >= mainRoadKmh = RP.mainRoadClass
+        | kmh >= roadKmh = 2
+        | otherwise = 1
+  void . withTryCatch "shuttleRoutes:roadClassSave" $ forM_ todo $ \p -> whenJust (Map.lookup (key6 p) speeds) $ \kmh -> Redis.setExp (classKey p) (classOf kmh) roadCacheSeconds
+  pure [RP.Site p name (fromMaybe (maybe 1 classOf (Map.lookup (key6 p) speeds)) c) | ((p, name), c) <- zip points' cached]
   where
-    slots = Map.fromListWith (flip (<>)) [(roundTo slotMinutes w, [pid]) | (w, pid) <- sortOn identity wishes]
-    roundTo k w = k * round (fromIntegral w / fromIntegral k :: Double)
-    split (t, ids) =
-      let n = (length ids + seats - 1) `div` seats
-          size = (length ids + n - 1) `div` n
-       in [(t + k * splitGapMinutes, take size (drop (k * size) ids)) | k <- [0 .. n - 1]]
-    merge groups = maybe groups merge (listToMaybe (mapMaybe (tryMerge groups) [0 .. length groups - 1]))
-    tryMerge groups i = do
-      let (t, ids) = groups !! i
-      guard (length ids < minLoad)
-      -- any shuttle within mergeMinutes with room, the nearest in time first
-      let fits j = j /= i && abs (fst (groups !! j) - t) <= mergeMinutes && length (snd (groups !! j)) + length ids <= seats
-      j <- listToMaybe (sortOn (\j -> abs (fst (groups !! j) - t)) (filter fits [0 .. length groups - 1]))
-      let (tj, ij) = groups !! j
-          merged = (if length ij >= length ids then tj else t, ij <> ids)
-      pure (sortOn fst (merged : [g | (k, g) <- zip [0 ..] groups, k /= i, k /= j]))
+    key6 p = (round (p.lat * 1e6) :: Integer, round (p.lon * 1e6) :: Integer)
+    classKey p = "CorporateShuttle:RoadClass:v2:" <> show (round (p.lat * 1e5) :: Integer) <> ":" <> show (round (p.lon * 1e5) :: Integer)
+    -- only each road point's own probes count: a probe is within classProbeMeters (and a bit) of its road point
+    table origins destinations = case (origins, destinations) of
+      (o : os, d : ds) -> do
+        res <- withTryCatch "shuttleRoutes:roadClass" (Maps.getOsrmDistances merchantOperatingCity.merchantId merchantOperatingCity.id Nothing (Maps.GetDistancesReq (o :| os) (d :| ds) Meter Nothing (Just Maps.CAR)))
+        pure $ either (const []) (\rs -> [((r.origin, r.destination), (fromIntegral r.duration.getSeconds :: Double, fromIntegral r.distance.getMeters)) | r <- NE.toList rs, RP.metersBetween r.origin r.destination <= classProbeMeters * 1.05]) res
+      _ -> pure []
 
--- | Snap the stops to the road and drive them in order: (stops on the road, minutes from the first stop, road line).
-onRoads :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Environment.Flow ([Maps.LatLong], [Int], [[Double]])
-onRoads merchantOperatingCity points = do
-  snapped <- forM points $ \p ->
-    nearestRoad merchantOperatingCity p >>= \case
-      Just road -> pure road.location
-      Nothing -> do
-        res <- withTryCatch "shuttleRoutes:snap" (Maps.snapToRoad merchantOperatingCity.merchantId merchantOperatingCity.id Nothing (Maps.SnapToRoadReq [p] Meter Nothing))
-        pure $ case res of
-          Right r | Just s <- listToMaybe r.snappedPoints, metersBetween p s <= snapMaxMeters -> s
-          _ -> p
-  legs <- forM (zip snapped (drop 1 snapped)) $ \(a, b) -> do
-    res <- withTryCatch "shuttleRoutes:route" (Maps.getRoutes Nothing (Id.Id "corporate-shuttle-planner") merchantOperatingCity.merchantId (Just merchantOperatingCity.id) Nothing (Maps.GetRoutesReq (a :| [b]) (Just Maps.CAR) True))
-    pure $ case res of
-      Right (r : _) | Just d <- r.duration, not (null r.points) -> (d.getSeconds, r.points)
-      _ -> (round (metersBetween a b * 1.4 / 1000 / 20 * 3600), [a, b])
-  let offsets = scanl (\acc (secs, _) -> acc + max 1 (secs `div` 60) + 1) 0 legs
-      shape = [[p.lat, p.lon] | p <- take 1 snapped <> concatMap (drop 1 . snd) legs]
-  pure (snapped, offsets, shape)
+-- | Road data barely changes: a week.
+roadCacheSeconds :: Redis.ExpirationTime
+roadCacheSeconds = 7 * 24 * 3600
+
+-- | The point metres away on a compass bearing (degrees).
+offsetBy :: Maps.LatLong -> Double -> Double -> Maps.LatLong
+offsetBy p meters bearing =
+  let b = bearing * pi / 180
+   in Maps.LatLong (p.lat + meters * cos b / 111000) (p.lon + meters * sin b / (111000 * max 0.2 (cos (p.lat * pi / 180))))
+
+-- | Someone no shared point suits walks to the nearest metro, bus stand or main road within a kilometre; with none
+-- known, the main roads OSRM finds right by their home. None at all: Nothing (they are left off). Never an error.
+ownStop :: DMOC.MerchantOperatingCity -> [RP.Site] -> Maps.LatLong -> Environment.Flow (Maybe RP.Site)
+ownStop merchantOperatingCity sites p =
+  case sortOn (\s -> RP.walkEstimate p s.siteAt) [s | s <- sites, RP.walkEstimate p s.siteAt <= RP.walkMeters] of
+    s : _ -> pure (Just s)
+    [] -> do
+      near <- roadsNear merchantOperatingCity p
+      classified <- classifyRoads merchantOperatingCity near
+      pure $ listToMaybe (sortOn (RP.metersBetween p . (.siteAt)) [s | s <- classified, s.siteClass >= RP.mainRoadClass])
+
+-- | Walking metres from each home to the pickup point along the streets, by home spot (either way round: a one-way street
+-- does not bind a pedestrian). A home the maps service gives nothing for is left out (its estimate stands).
+walkingMeters :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Maps.LatLong -> Environment.Flow (Map.Map (Integer, Integer) Double)
+walkingMeters merchantOperatingCity homesAt site = do
+  there <- concat <$> forM (chunksOf matrixChunk homesAt) (\chunk -> distances chunk [site])
+  let far = [o | ((o, _), (_, m)) <- there, m > RP.walkMeters]
+  back <- concat <$> forM (chunksOf matrixChunk far) (distances [site])
+  pure $ Map.fromListWith min ([(spot o, m) | ((o, _), (_, m)) <- there] <> [(spot d, m) | ((_, d), (_, m)) <- back])
+  where
+    spot p = (round (p.lat * 1e4) :: Integer, round (p.lon * 1e4) :: Integer)
+    distances os ds = roadDistances merchantOperatingCity Maps.FOOT os ds
+
+-- | Road distances between points, both as given: ((origin, destination), (seconds, metres)); none when the maps service
+-- cannot answer.
+roadDistances :: DMOC.MerchantOperatingCity -> Maps.TravelMode -> [Maps.LatLong] -> [Maps.LatLong] -> Environment.Flow [((Maps.LatLong, Maps.LatLong), (Double, Double))]
+roadDistances merchantOperatingCity mode origins destinations = case (origins, destinations) of
+  (o : os, d : ds) -> do
+    res <- withTryCatch "shuttleRoutes:distances" (Maps.getDistances merchantOperatingCity.merchantId merchantOperatingCity.id Nothing (Maps.GetDistancesReq (o :| os) (d :| ds) Meter Nothing (Just mode)))
+    pure $ either (const []) (\rs -> [((r.origin, r.destination), (fromIntegral r.duration.getSeconds, fromIntegral r.distance.getMeters)) | r <- NE.toList rs]) res
+  _ -> pure []
+
+-- | Road travel between every two nodes, each way, from the maps service's matrix (one-way streets, bridges and signals
+-- included); a pair it cannot answer is estimated from the straight line (1.4 times it, at 20 km/h).
+roadMatrix :: DMOC.MerchantOperatingCity -> [Maps.LatLong] -> Environment.Flow RP.Matrix
+roadMatrix merchantOperatingCity nodes = do
+  let indexed = zip [0 :: Int ..] nodes
+      key p = (round (p.lat * 1e6) :: Integer, round (p.lon * 1e6) :: Integer)
+      indexOf = Map.fromList [(key p, i) | (i, p) <- reverse indexed]
+      chunks = chunksOf matrixChunk nodes
+  answered <- concat <$> inParallel (\(os, ds) -> roadDistances merchantOperatingCity Maps.CAR os ds) [(os, ds) | os <- chunks, ds <- chunks]
+  let known = Map.fromList [((i, j), v) | ((o, d), v) <- answered, Just i <- [Map.lookup (key o) indexOf], Just j <- [Map.lookup (key d) indexOf], i /= j]
+      estimate a b = let m = RP.metersBetween a b * 1.4 in (m / 1000 / 20 * 3600, m)
+      full = Map.fromList [((i, j), Map.findWithDefault (estimate a b) (i, j) known) | (i, a) <- indexed, (j, b) <- indexed, i /= j]
+  pure RP.Matrix {RP.travelSecs = Map.map fst full, RP.travelMeters = Map.map snd full}
+
+chunksOf :: Int -> [a] -> [[a]]
+chunksOf n xs = case splitAt n xs of
+  ([], _) -> []
+  (c, rest) -> c : chunksOf n rest
+
+-- | Drive the stops in order along the roads: (the stops driven, each with whether it was moved; for each given point
+-- the stop it became; minutes from the first stop at each stop; road line; metres). The shuttle never drives in and back
+-- out the same way: a pickup it would reach down a road and leave by that road back moves to where that road leaves the
+-- route (its riders walk the stretch, up to walkMeters), and pickups that end up together are one stop. Only stops marked
+-- movable (the pickups, not the office) move, and never the first or last stop (the trip starts or ends there).
+drive :: DMOC.MerchantOperatingCity -> [Bool] -> [Maps.LatLong] -> Environment.Flow ([(Maps.LatLong, Bool)], [Int], [Int], [[Double]], Int)
+drive merchantOperatingCity movable points0 = do
+  placed <- onThroughPath
+  (stops, legs) <- noSpurs (4 :: Int) [Stop p wasMoved mv [i] | (i, ((p, wasMoved), mv)) <- zip [0 ..] (zip placed movable)]
+  let offsets = scanl (\acc (secs, _, _) -> acc + max 1 (secs `div` 60) + 1) 0 legs
+      shape = [[p.lat, p.lon] | p <- take 1 (map (.stopAt) stops) <> concatMap (\(_, _, ps) -> drop 1 ps) legs]
+      stopOf = IntMap.fromList [(i, k) | (k, st) <- zip [0 ..] stops, i <- st.stopInputs]
+  pure ([(st.stopAt, st.stopMoved) | st <- stops], [IntMap.findWithDefault 0 i stopOf | i <- [0 .. length points0 - 1]], offsets, shape, sum [m | (_, m, _) <- legs])
+  where
+    lastIx0 = length points0 - 1
+    -- a pickup within throughPathMeters of the shuttle's own drive from the stop before to the stop after moves onto
+    -- that drive when the drive there is a main road: its riders walk to it (crossing the road if they must), and the
+    -- shuttle never turns off its way, into a side road or round a U-turn, to reach them
+    onThroughPath = go [] (zip3 [0 :: Int ..] points0 movable)
+      where
+        go acc [] = pure (reverse acc)
+        go acc ((k, p, mv) : rest) = case (acc, rest) of
+          ((prev, _) : _, (_, next, _) : _) | mv && k > 0 && k < lastIx0 -> do
+            line <- routeLine prev next
+            case nearestOnLine p line of
+              Just q | RP.metersBetween p q > 15 && RP.metersBetween p q <= throughPathMeters -> do
+                main <- onMainRoad q
+                go ((if main then (q, True) else (p, False)) : acc) rest
+              _ -> go ((p, False) : acc) rest
+          _ -> go ((p, False) : acc) rest
+    onMainRoad q = any (\st -> st.siteClass >= RP.mainRoadClass) <$> classifyRoads merchantOperatingCity [(q, Nothing)]
+    -- drive, find every stop the shuttle would reach and leave along the same road (looking at the whole drive before
+    -- and after it), move it to where that road leaves the route, join stops that are then together; again, until the
+    -- drive has none
+    noSpurs n stops = do
+      legs <- legsOf (map (.stopAt) stops)
+      let paths = map (\(_, _, ps) -> ps) legs
+          lastIx = length stops - 1
+          entry k = do
+            guard (k > 0 && k < lastIx)
+            spurEntry (concat (take k paths)) (concat (drop k paths))
+          moved = [if st.stopMovable then maybe st (\q -> st {stopAt = q, stopMoved = True}) (entry k) else st | (k, st) <- zip [0 :: Int ..] stops]
+      if n <= 0 || map (.stopAt) moved == map (.stopAt) stops
+        then pure (stops, legs)
+        else noSpurs (n - 1 :: Int) (joinClose moved)
+    -- a stop within mergeMeters of the stop before it is that stop (both pickups)
+    joinClose =
+      reverse
+        . foldl
+          ( \acc st -> case acc of
+              prev : rest | prev.stopMovable && st.stopMovable && RP.metersBetween prev.stopAt st.stopAt <= mergeMeters -> prev {stopInputs = prev.stopInputs <> st.stopInputs} : rest
+              _ -> st : acc
+          )
+          []
+    routeLine a b = do
+      res <- withTryCatch "shuttleRoutes:throughPath" (Maps.getRoutes Nothing (Id.Id "corporate-shuttle-planner") merchantOperatingCity.merchantId (Just merchantOperatingCity.id) Nothing (Maps.GetRoutesReq (a :| [b]) (Just Maps.CAR) True))
+      pure $ case res of
+        Right (r : _) | not (null r.points) -> r.points
+        _ -> []
+    legsOf pts = inParallel `flip` zip pts (drop 1 pts) $ \(a, b) -> do
+      res <- withTryCatch "shuttleRoutes:route" (Maps.getRoutes Nothing (Id.Id "corporate-shuttle-planner") merchantOperatingCity.merchantId (Just merchantOperatingCity.id) Nothing (Maps.GetRoutesReq (a :| [b]) (Just Maps.CAR) True))
+      pure $ case res of
+        Right (r : _) | Just d <- r.duration, not (null r.points) -> (d.getSeconds, maybe (estimateMeters a b) (.getMeters) r.distance, r.points)
+        _ -> (round (RP.metersBetween a b * 1.4 / 1000 / 20 * 3600), estimateMeters a b, [a, b])
+    estimateMeters a b = round (RP.metersBetween a b * 1.4)
+
+-- | A stop while a route is driven: where it is, whether it was moved there, whether it may move, and the given points it
+-- serves (more than one when pickups were joined).
+data Stop = Stop {stopAt :: Maps.LatLong, stopMoved :: Bool, stopMovable :: Bool, stopInputs :: [Int]}
+
+-- | Pickups this close together on a route are one stop.
+mergeMeters :: Double
+mergeMeters = 150
+
+-- | Where the shuttle would drive into a road for a stop and come back out the same way: the drive up to the stop (inPath,
+-- ending at it) and after it (outPath, starting at it) share their stretch by the stop. The point where they part (at
+-- most RP.walkMeters along the shared stretch: the riders walk it), when that shared stretch is at least spurMinMeters.
+spurEntry :: [Maps.LatLong] -> [Maps.LatLong] -> Maybe Maps.LatLong
+spurEntry inPath outPath =
+  let back = reverse inPath
+      shared = takeWhile (\q -> distanceToLine q back <= spurToleranceMeters) (drop 1 outPath)
+      along = zip shared (drop 1 (scanl (+) 0 (zipWith RP.metersBetween (take 1 outPath <> shared) shared)))
+      stretch = maybe 0 snd (lastMay along)
+   in if stretch >= spurMinMeters then fst <$> lastMay (takeWhile ((<= RP.walkMeters) . snd) along) else Nothing
+
+-- | How far a pickup may move onto the shuttle's own drive (its riders then walk that much further).
+throughPathMeters :: Double
+throughPathMeters = 500
+
+-- | The point of a road line nearest to a point (on its nearest segment).
+nearestOnLine :: Maps.LatLong -> [Maps.LatLong] -> Maybe Maps.LatLong
+nearestOnLine q line = fmap snd (listToMaybe (sortOn fst [onSegment a b | (a, b) <- zip line (drop 1 line)]))
+  where
+    kx = 111320 * cos (q.lat * pi / 180)
+    ky = 110540
+    xy p = ((p.lon - q.lon) * kx, (p.lat - q.lat) * ky)
+    onSegment a b =
+      let (ax, ay) = xy a
+          (bx, by) = xy b
+          (dx, dy) = (bx - ax, by - ay)
+          len2 = dx * dx + dy * dy
+          t = if len2 == 0 then 0 else max 0 (min 1 (negate (ax * dx + ay * dy) / len2))
+          (px, py) = (ax + t * dx, ay + t * dy)
+       in (px * px + py * py, Maps.LatLong (q.lat + py / ky) (q.lon + px / kx))
+
+-- | A stretch the shuttle would drive in and back out shorter than this is left alone (a U-turn at the stop's own corner).
+spurMinMeters, spurToleranceMeters :: Double
+spurMinMeters = 80
+spurToleranceMeters = 20
+
+-- | Metres from a point to a road line (its nearest segment).
+distanceToLine :: Maps.LatLong -> [Maps.LatLong] -> Double
+distanceToLine q line = minimum (1e9 : map (RP.metersBetween q) (take 1 line) <> [toSegment a b | (a, b) <- zip line (drop 1 line)])
+  where
+    -- on a local flat projection around q, in metres
+    xy p = ((p.lon - q.lon) * 111320 * cos (q.lat * pi / 180), (p.lat - q.lat) * 110540)
+    toSegment a b =
+      let (ax, ay) = xy a
+          (bx, by) = xy b
+          (dx, dy) = (bx - ax, by - ay)
+          len2 = dx * dx + dy * dy
+          t = if len2 == 0 then 0 else max 0 (min 1 (negate (ax * dx + ay * dy) / len2))
+          (px, py) = (ax + t * dx, ay + t * dy)
+       in sqrt (px * px + py * py)
 
 -- | The road (or the area) a stop is on, never a house number or an employee's address.
 stopName :: DMOC.MerchantOperatingCity -> Maps.LatLong -> Environment.Flow Text
@@ -474,10 +828,10 @@ orgCode companyName =
 routeName :: [PlannedStop] -> Text
 routeName stops = T.intercalate " → " (map NE.head (NE.group (map (.name) stops)))
 
-mkTripRow :: DIBC.IntegratedBPPConfig -> DMOC.MerchantOperatingCity -> UTCTime -> Text -> Text -> Int -> Int -> DShuttlePublishedTrip.ShuttlePublishedTrip
-mkTripRow config merchantOperatingCity now routeCode day dep riders =
+mkTripRow :: DIBC.IntegratedBPPConfig -> DMOC.MerchantOperatingCity -> UTCTime -> Text -> Text -> Text -> Int -> Int -> DShuttlePublishedTrip.ShuttlePublishedTrip
+mkTripRow config merchantOperatingCity now routeCode tripId day dep riders =
   DShuttlePublishedTrip.ShuttlePublishedTrip
-    { tripId = routeCode <> "-" <> T.filter (/= ':') (minutesToHHMM dep),
+    { tripId,
       day,
       feedKey = config.feedKey,
       routeCode,
@@ -488,6 +842,9 @@ mkTripRow config merchantOperatingCity now routeCode day dep riders =
       createdAt = now,
       updatedAt = now
     }
+
+tripIdOf :: Text -> Int -> Text
+tripIdOf routeCode dep = routeCode <> "-" <> T.filter (/= ':') (minutesToHHMM dep)
 
 -- | These routes' trips become the given rows: a row with the same trip and day is updated, rows no longer given are
 -- removed, the rest created.
@@ -553,7 +910,7 @@ writeFares config merchantOperatingCity tier now route = do
         QFRFSRouteFareProduct.create DFRFSRouteFareProduct.FRFSRouteFareProduct {farePolicyId, id = productId, integratedBppConfigId = config.id, merchantId = merchantOperatingCity.merchantId, merchantOperatingCityId = merchantOperatingCity.id, routeCode = route.routeCode, timeBounds = Unbounded, vehicleServiceTierId = tier.id, vehicleType = FRFSEnums.BUS, createdAt = now, updatedAt = now}
         pure farePolicyId
   let codes = map (.stopCode) route.stops
-  forM_ [(a, b) | (i, a) <- zip [0 :: Int ..] codes, b <- drop (i + 1) codes] $ \(start, end) ->
+  forM_ (nubOrd [(a, b) | (i, a) <- zip [0 :: Int ..] codes, b <- drop (i + 1) codes, a /= b]) $ \(start, end) ->
     QStopFare.findByPrimaryKey ADULT end farePolicyId start >>= \case
       Just fare -> QStopFare.updateByPrimaryKey fare {DStopFare.amount = route.fareAmount, DStopFare.updatedAt = now}
       Nothing -> QStopFare.create DStopFare.StopFare {amount = route.fareAmount, bppItemId = Nothing, category = ADULT, currency = INR, endStopCode = end, farePolicyId, integratedBppConfigId = config.id, merchantId = merchantOperatingCity.merchantId, merchantOperatingCityId = merchantOperatingCity.id, offeredAmount = Nothing, startStopCode = start, createdAt = now, updatedAt = now}

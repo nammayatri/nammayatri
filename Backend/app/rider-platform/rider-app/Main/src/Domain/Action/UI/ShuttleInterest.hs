@@ -20,6 +20,7 @@ import qualified SharedLogic.CorporateMembership as SCorporate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ShuttleInterest as QShuttleInterest
 import Tools.Error
+import qualified Tools.Maps as Maps
 
 -- | Submit the corporate shuttle interest form (page 2). Page 1 is the existing business-email OTP flow
 -- (/auth/business-email/send-verification and /verify); the form is accepted only after it, and only when the email's
@@ -30,6 +31,10 @@ postShuttleInterest (mbPersonId, _) req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (company, companyDomain) <- SCorporate.requireCorporateOrg person
   validateRequest req
+  -- the location the employee chose (their GPS position or the address they picked) is kept exactly; only a missing
+  -- address is filled in, from those same coordinates
+  pickupAddress <- resolveAddress person "pickup" req.pickupLat req.pickupLon req.pickupAddress
+  dropAddress <- resolveAddress person "drop" req.dropLat req.dropLon req.dropAddress
   now <- getCurrentTime
   mbExisting <- QShuttleInterest.findByPrimaryKey personId
   let interest =
@@ -39,10 +44,14 @@ postShuttleInterest (mbPersonId, _) req = do
             DShuttleInterest.companyDomain = companyDomain,
             DShuttleInterest.pickupLat = req.pickupLat,
             DShuttleInterest.pickupLon = req.pickupLon,
-            DShuttleInterest.pickupAddress = T.strip req.pickupAddress,
+            DShuttleInterest.pickupAddress = pickupAddress,
+            DShuttleInterest.pickupLocationSource = req.pickupLocationSource,
+            DShuttleInterest.pickupAccuracyMeters = req.pickupAccuracyMeters,
             DShuttleInterest.dropLat = req.dropLat,
             DShuttleInterest.dropLon = req.dropLon,
-            DShuttleInterest.dropAddress = T.strip req.dropAddress,
+            DShuttleInterest.dropAddress = dropAddress,
+            DShuttleInterest.dropLocationSource = req.dropLocationSource,
+            DShuttleInterest.dropAccuracyMeters = req.dropAccuracyMeters,
             DShuttleInterest.tripType = req.tripType,
             -- a leg the employee did not ask for keeps no time
             DShuttleInterest.pickupTime = if needsPickupTime req.tripType then req.pickupTime else Nothing,
@@ -90,12 +99,36 @@ validateRequest :: API.ShuttleInterestReq -> Environment.Flow ()
 validateRequest req = do
   unless (validLatLon req.pickupLat req.pickupLon) $ throwError $ InvalidRequest "Invalid pickup location"
   unless (validLatLon req.dropLat req.dropLon) $ throwError $ InvalidRequest "Invalid drop location"
-  when (T.null (T.strip req.pickupAddress)) $ throwError $ InvalidRequest "Pickup address is required"
-  when (T.null (T.strip req.dropAddress)) $ throwError $ InvalidRequest "Drop address is required"
+  checkGps "pickup" req.pickupLocationSource req.pickupAccuracyMeters
+  checkGps "drop" req.dropLocationSource req.dropAccuracyMeters
   when (needsPickupTime req.tripType && isNothing req.pickupTime) $
-    throwError $ InvalidRequest "Pickup time is required for this trip type"
+    throwError $
+      InvalidRequest "Pickup time is required for this trip type"
   when (needsDropTime req.tripType && isNothing req.dropTime) $
-    throwError $ InvalidRequest "Drop time is required for this trip type"
+    throwError $
+      InvalidRequest "Drop time is required for this trip type"
   when (null req.daysOfWeek) $ throwError $ InvalidRequest "Select at least one day of the week"
   where
-    validLatLon lat lon = lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+    validLatLon lat lon = lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 && not (lat == 0 && lon == 0)
+    -- a GPS location must say how accurate it is, and be accurate enough to plan a pickup point 500 m away from; else
+    -- the employee is asked to search for their address instead of the form keeping an approximate point
+    checkGps leg source accuracy = when (source == Just DShuttleInterest.GPS) $ case accuracy of
+      Nothing -> throwError $ InvalidRequest ("The " <> leg <> " GPS location has no accuracy; search for the address instead")
+      Just meters
+        | meters <= 0 || meters > maxGpsAccuracyMeters ->
+          throwError $ InvalidRequest ("The " <> leg <> " GPS location is only accurate to " <> show (round meters :: Int) <> " m; search for the address instead")
+      Just _ -> pure ()
+
+-- | Worse than this, a GPS fix could be on the wrong street.
+maxGpsAccuracyMeters :: Double
+maxGpsAccuracyMeters = 50
+
+-- | The address given, or else the formatted address of those exact coordinates (the coordinates are never changed).
+resolveAddress :: DP.Person -> Text -> Double -> Double -> Maybe Text -> Environment.Flow Text
+resolveAddress person leg lat lon mbAddress = case mfilter (not . T.null) (T.strip <$> mbAddress) of
+  Just address -> pure address
+  Nothing -> do
+    res <- withTryCatch "shuttleInterest:address" (Maps.getPlaceName person.merchantId person.merchantOperatingCityId Nothing (Maps.GetPlaceNameReq (Maps.ByLatLong (Maps.LatLong lat lon)) Nothing Nothing))
+    case either (const Nothing) (\places -> listToMaybe (mapMaybe (mfilter (not . T.null) . (.formattedAddress)) places)) res of
+      Just address -> pure address
+      Nothing -> throwError $ InvalidRequest ("Could not find the " <> leg <> " address; search for it and pick it from the list")

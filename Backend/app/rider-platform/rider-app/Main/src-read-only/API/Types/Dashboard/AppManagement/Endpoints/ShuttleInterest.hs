@@ -48,10 +48,14 @@ data ShuttleInterestListResp = ShuttleInterestListResp {interests :: [ShuttleInt
 
 data ShuttleInterestMapPoint = ShuttleInterestMapPoint
   { companyDomain :: Kernel.Prelude.Text,
+    companyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropAddress :: Kernel.Prelude.Text,
     dropLat :: Kernel.Prelude.Double,
     dropLon :: Kernel.Prelude.Double,
+    employeeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    pickupAddress :: Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,
     pickupLon :: Kernel.Prelude.Double,
     tripType :: Domain.Types.ShuttleInterest.ShuttleTripType
@@ -64,11 +68,14 @@ data ShuttleInterestMapResp = ShuttleInterestMapResp {points :: [ShuttleInterest
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ShuttlePublishedRoute = ShuttlePublishedRoute
-  { fareAmount :: Kernel.Types.Common.HighPrecMoney,
+  { distanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    durationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fareAmount :: Kernel.Types.Common.HighPrecMoney,
     firstDeparture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     routeCode :: Kernel.Prelude.Text,
+    routeType :: Kernel.Prelude.Text,
     shape :: [[Kernel.Prelude.Double]],
     shortName :: Kernel.Prelude.Text,
     stops :: [ShuttlePublishedStop],
@@ -93,7 +100,14 @@ data ShuttlePublishedStop = ShuttlePublishedStop
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ShuttlePublishedTripInfo = ShuttlePublishedTripInfo {days :: [Kernel.Prelude.Text], departure :: Kernel.Prelude.Text, riders :: Kernel.Prelude.Int, tripId :: Kernel.Prelude.Text}
+data ShuttlePublishedTripInfo = ShuttlePublishedTripInfo
+  { days :: [Kernel.Prelude.Text],
+    departure :: Kernel.Prelude.Text,
+    direction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    riders :: Kernel.Prelude.Int,
+    slot :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripId :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

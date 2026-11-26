@@ -25,12 +25,16 @@ data ShuttleEligibilityResp = ShuttleEligibilityResp
 
 data ShuttleInterestReq = ShuttleInterestReq
   { daysOfWeek :: [Data.Time.Calendar.DayOfWeek],
-    dropAddress :: Kernel.Prelude.Text,
+    dropAccuracyMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    dropAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropLat :: Kernel.Prelude.Double,
+    dropLocationSource :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleLocationSource,
     dropLon :: Kernel.Prelude.Double,
     dropTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
-    pickupAddress :: Kernel.Prelude.Text,
+    pickupAccuracyMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    pickupAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupLat :: Kernel.Prelude.Double,
+    pickupLocationSource :: Kernel.Prelude.Maybe Domain.Types.ShuttleInterest.ShuttleLocationSource,
     pickupLon :: Kernel.Prelude.Double,
     pickupTime :: Kernel.Prelude.Maybe Data.Time.LocalTime.TimeOfDay,
     tripType :: Domain.Types.ShuttleInterest.ShuttleTripType

@@ -595,6 +595,8 @@ library
       SharedLogic.CancellationFee
       SharedLogic.Confirm
       SharedLogic.CorporateMembership
+      SharedLogic.CorporateShuttle.RoutePlanner
+      SharedLogic.CorporateShuttle.TransitHubs
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
       SharedLogic.DriverNumber

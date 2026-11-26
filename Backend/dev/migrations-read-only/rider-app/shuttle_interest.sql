@@ -18,3 +18,12 @@ ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_time time ;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN trip_type text NOT NULL;
 ALTER TABLE atlas_app.shuttle_interest ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.shuttle_interest ADD PRIMARY KEY ( person_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_location_source text ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN pickup_accuracy_meters double precision ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_location_source text ;
+ALTER TABLE atlas_app.shuttle_interest ADD COLUMN drop_accuracy_meters double precision ;

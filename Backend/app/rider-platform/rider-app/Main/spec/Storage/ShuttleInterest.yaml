@@ -25,6 +25,12 @@ ShuttleInterest:
     dropLat: Double
     dropLon: Double
     dropAddress: Text
+    # how the employee chose each location: their phone's GPS position or an address they searched for and picked
+    # (the chosen one is kept as it is: the planner never moves it); GPS accuracy in metres when it came from GPS
+    pickupLocationSource: Maybe ShuttleLocationSource
+    pickupAccuracyMeters: Maybe Double
+    dropLocationSource: Maybe ShuttleLocationSource
+    dropAccuracyMeters: Maybe Double
     tripType: ShuttleTripType
     # to-office leg: when the employee wants to be picked up (TO_OFFICE / ROUND_TRIP)
     pickupTime: Maybe TimeOfDay
@@ -40,9 +46,13 @@ ShuttleInterest:
     ShuttleTripType:
       enum: "TO_OFFICE, TO_HOME, ROUND_TRIP"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ShuttleLocationSource:
+      enum: "GPS, MANUAL"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleTripType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleLocationSource>
 
   beamType:
     daysOfWeek: "[Text]"
@@ -58,6 +68,8 @@ ShuttleInterest:
     pickupAddress: text
     dropAddress: text
     tripType: text
+    pickupLocationSource: text
+    dropLocationSource: text
     pickupTime: time
     dropTime: time
     daysOfWeek: "text[]"

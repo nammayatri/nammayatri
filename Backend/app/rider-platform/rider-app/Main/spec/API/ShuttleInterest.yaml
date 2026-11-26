@@ -3,6 +3,7 @@ imports:
   DayOfWeek: Data.Time.Calendar
   TimeOfDay: Data.Time.LocalTime
   ShuttleTripType: Domain.Types.ShuttleInterest
+  ShuttleLocationSource: Domain.Types.ShuttleInterest
 
 module: ShuttleInterest
 
@@ -11,10 +12,14 @@ types:
   ShuttleInterestReq:
     pickupLat: Double
     pickupLon: Double
-    pickupAddress: Text
+    pickupAddress: Maybe Text # the formatted address; resolved from the coordinates when not given
+    pickupLocationSource: Maybe ShuttleLocationSource # GPS (the phone's position) or MANUAL (an address searched for)
+    pickupAccuracyMeters: Maybe Double # GPS accuracy; a GPS pickup must come with it and be accurate enough
     dropLat: Double
     dropLon: Double
-    dropAddress: Text
+    dropAddress: Maybe Text
+    dropLocationSource: Maybe ShuttleLocationSource
+    dropAccuracyMeters: Maybe Double
     tripType: ShuttleTripType
     pickupTime: Maybe TimeOfDay # required for TO_OFFICE and ROUND_TRIP
     dropTime: Maybe TimeOfDay # required for TO_HOME and ROUND_TRIP
