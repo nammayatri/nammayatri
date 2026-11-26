@@ -284,6 +284,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers as SSRD
 import qualified SharedLogic.Analytics as Analytics
@@ -2835,15 +2836,16 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbPerson <- QPerson.findByMobileNumberAndMerchantAndRole phoneNumber.mobileCountryCode mobileNumberHash person.merchantId SP.DRIVER
   deleteOldPersonCheck <- case mbPerson of
     Nothing -> return False
     Just oldPerson -> do
       when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       DeleteDriverOnCheck.validateDriver merchant oldPerson (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
   logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
+  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes phoneNumber.mobileCountryCode
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
   otpCode <- maybe generateOTPCode (return . show) useFakeOtpM
@@ -2924,6 +2926,8 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
     return $ fromMaybe 0 res
   logDebug $ "attemptsLeft" <> show attemptsLeft
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes req.mobileCountryCode
   smsCfg <- asks (.smsCfg)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode

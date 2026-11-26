@@ -220,6 +220,7 @@ data RiderConfig = RiderConfig
     sharedCabConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabConfig,
     silentReallocationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     singleModeWalkSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    smsOtpAllowedCountryCodes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     sosTrackingLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
     specialLocationTierOrderConfig :: Kernel.Prelude.Maybe [Domain.Types.Extra.RiderConfig.SpecialLocationTierOrderConfig],

@@ -46,6 +46,7 @@ import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
@@ -63,6 +64,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
@@ -288,6 +290,9 @@ fleetOwnerLogin req = do
     fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
     unless fleetOwnerInfo.enabled (throwError $ InvalidRequest "fleetOwner is not enabled")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
+  when (isNothing person.useFakeOtp) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes countryCode
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
   otp <- maybe generateOTPCode return useFakeOtpM
   whenNothing_ useFakeOtpM $ do
