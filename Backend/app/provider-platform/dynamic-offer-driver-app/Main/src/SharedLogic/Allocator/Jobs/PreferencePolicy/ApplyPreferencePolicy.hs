@@ -15,7 +15,7 @@
 -- | Applies a source's preference policy to the drivers that source is in charge of, 'pageSize' per run in driver-id
 --   order, then queues the next page a little later. One job type for every source ('PolicySource'): the page runner
 --   ('runPage': retry, paging, apply, counts) is shared, and each source only supplies a 'PolicySourceOps'
---   ('sourceOps'):
+--   (one case per source in 'applyPreferencePolicyJob'):
 --
 --   * 'currentPolicy': a fresh read of the source's policy (never a cache: this process didn't see the save's cache
 --     invalidation). Re-read on every page, so a later save (or a clear) wins over an older run; Left stops the run.
@@ -25,8 +25,8 @@
 --   * 'nextWindowRun': for a source whose policy is time-windowed, when to run the chain again (with
 --     'rescheduleAtNextWindow'): a little after its next window opens; Nothing for the others.
 --
---   Adding a source (e.g. a city or ops policy) = a 'PolicySource' constructor, its 'PolicySourceOps' in 'sourceOps',
---   and a createJobIn where that source's policy is saved.
+--   Adding a source (e.g. a city or ops policy) = a 'PolicySource' constructor, its 'PolicySourceOps' case in
+--   'applyPreferencePolicyJob', and a createJobIn where that source's policy is saved.
 --
 --   Sources: 'FleetPolicySource' (postDriverFleetConfigUpdate: fleet_config.preference_policy, the fleet's active
 --   drivers; a driver a campaign is in charge of is skipped).
@@ -70,10 +70,6 @@ pageSize = 50
 maxAttempts :: Int
 maxAttempts = 5
 
--- | Backoff before attempt n + 1: 5 s, 10 s, 15 s, 20 s.
-retryDelaySeconds :: Int -> Int
-retryDelaySeconds attempt = 5 * attempt
-
 -- | What a source supplies to the shared page runner.
 data PolicySourceOps m = PolicySourceOps
   { -- | Names the source in the log lines ("fleet <id>").
@@ -109,7 +105,9 @@ applyPreferencePolicyJob ::
   m ExecutionResult
 applyPreferencePolicyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
-      ops = sourceOps jobData
+      -- The per-source interface: one case per 'PolicySource'.
+      ops = case jobData.source of
+        FleetPolicySource fleetOwnerId -> fleetOps fleetOwnerId
       attempt = fromMaybe 1 jobData.attemptCount
       pageName = "ApplyPreferencePolicy: " <> ops.label <> " page after " <> maybe "start" (.getId) jobData.afterDriverId
   withTryCatch "ApplyPreferencePolicy:page" (runPage ops jobData) >>= \case
@@ -118,7 +116,7 @@ applyPreferencePolicyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
       | attempt >= maxAttempts ->
         logError $ pageName <> " failed, attempts exhausted (" <> show attempt <> "/" <> show maxAttempts <> "), the run stops here: " <> show err
       | otherwise -> do
-        let delay = retryDelaySeconds attempt
+        let delay = 5 * attempt -- backoff before attempt n + 1: 5 s, 10 s, 15 s, 20 s
         logError $ pageName <> " failed (attempt " <> show attempt <> "/" <> show maxAttempts <> "), retrying the same page in " <> show delay <> " s: " <> show err
         withTryCatch "ApplyPreferencePolicy:retry" (queueRun jobData (fromIntegral delay) jobData {attemptCount = Just (attempt + 1)})
           >>= either (\schedErr -> logError $ pageName <> ": scheduling the retry failed, the run stops here: " <> show schedErr) (const $ pure ())
@@ -187,11 +185,6 @@ applyToMember ops policy driverId =
       pure (Apply.Skipped reason)
     Right driver -> Apply.applyPreferencePolicyWithOutcome policy driver
 
--- | The per-source interface. One case per 'PolicySource'.
-sourceOps :: PolicyJobFlow m r => ApplyPreferencePolicyJobData -> PolicySourceOps m
-sourceOps jobData = case jobData.source of
-  FleetPolicySource fleetOwnerId -> fleetOps fleetOwnerId
-
 -- | A fleet's policy (fleet_config, from the table: not the ConfigPilot cache) on its active drivers. A driver whose
 -- newest active association is another fleet, or whom a campaign is in charge of, is skipped. A resolver read error
 -- fails that driver (counted), never applies the fleet's policy over a campaign.
@@ -208,7 +201,7 @@ fleetOps fleetOwnerId =
         case associations of
           (newest : _) | newest.fleetOwnerId == fleetOwnerId -> do
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-            context <- DPP.tryDriverFleetContext driverId driver.merchantOperatingCityId >>= either throwM pure
+            context <- DPP.tryDriverFleetContext DPP.Cached driverId driver.merchantOperatingCityId >>= either throwM pure
             pure $
               if DPP.isCampaignControlled context
                 then Left "a campaign is in charge"

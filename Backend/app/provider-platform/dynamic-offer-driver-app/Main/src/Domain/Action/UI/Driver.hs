@@ -1669,10 +1669,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   -- fails the cash-ride and trip-distance checks; the preference policy fails open on it.
   fleetLookup <-
     if isJust req.enableCashRide || legacyTierRebuildRequested || isJust req.canSwitchToIntraCity || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
-      then DPP.tryDriverFleetContextFresh personId merchantOpCityId
+      then DPP.tryDriverFleetContext DPP.Fresh personId merchantOpCityId
       else pure (Right DPP.noDriverFleetContext)
   whenJust req.enableCashRide $ \_ ->
-    either throwM (\context -> when (DPP.contextInFleet context) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet") fleetLookup
+    either throwM (\context -> when (isJust context.fleet) $ throwError $ InvalidRequest "Cash ride preference is managed by your fleet") fleetLookup
   fleetContext <- DPP.failOpen personId fleetLookup
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-

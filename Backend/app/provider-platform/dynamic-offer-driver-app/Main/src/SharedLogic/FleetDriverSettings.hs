@@ -72,14 +72,14 @@ autoAssignedTiers tags = case Yudhishthira.accessTagKey (LYT.TagName autoAssignT
 -- returns snapshot AutoAssign even outside the perk window so reconcile/apply can
 -- install tags at opt-in; silent-assign still gates on perksActive at dispatch.
 -- Lives in SharedLogic (not query Extra) to avoid PersonExtra ↔ FleetDriverAssociationExtra ↔ MgCampaign cycle.
--- A thin wrapper over the shared resolver 'Context.resolveDriverFleetContext' (same lookup, same "throws on a read
+-- A thin wrapper over the shared resolver 'Context.tryDriverFleetContext' (same lookup, same "throws on a read
 -- error" semantics).
 getDriverFleetAutoAssignConfig ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Person ->
   Id MerchantOperatingCity ->
   m (Maybe DFC.AutoAssignConfig)
-getDriverFleetAutoAssignConfig driverId merchantOpCityId = (.autoAssignConfig) <$> Context.resolveDriverFleetContext driverId merchantOpCityId
+getDriverFleetAutoAssignConfig driverId merchantOpCityId = (.autoAssignConfig) <$> (Context.tryDriverFleetContext Context.Cached driverId merchantOpCityId >>= either throwM pure)
 
 -- | Applies the driver's fleet settings to the driver and this vehicle, one after another on the same tags: auto-assign
 -- on the vehicle's auto-accept tiers when the fleet has it on by default (or 'forceAutoAssign', the fleet's per-driver
@@ -93,7 +93,7 @@ applyFleetSettings ::
   DV.Vehicle ->
   m ()
 applyFleetSettings forceAutoAssign cityTiers driver vehicle = do
-  context <- Context.resolveDriverFleetContext driver.id driver.merchantOperatingCityId
+  context <- Context.tryDriverFleetContext Context.Cached driver.id driver.merchantOperatingCityId >>= either throwM pure
   let mgSource = context.mgPerkSource
       mbFleetAutoAssign = context.autoAssignConfig
   -- Active IJ membership (incl. behaviour-only) owns the perk slot: do not force-install fleet AA.

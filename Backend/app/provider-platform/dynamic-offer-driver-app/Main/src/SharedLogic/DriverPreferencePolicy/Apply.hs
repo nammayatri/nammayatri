@@ -137,7 +137,7 @@ applyFleetPolicyToDriver ::
   Id MerchantOperatingCity ->
   m ()
 applyFleetPolicyToDriver driverId merchantOpCityId = do
-  context <- DPP.getDriverFleetContext driverId merchantOpCityId
+  context <- DPP.getDriverFleetContext DPP.Cached driverId merchantOpCityId
   if DPP.isCampaignControlled context
     then logInfo $ "Preference policy for driver " <> driverId.getId <> ": a campaign is in charge, the fleet's policy is not applied"
     else whenJust (find policyHasValues (DPP.contextPolicy context)) $ \policy -> do
@@ -169,7 +169,7 @@ restoreServiceTierLockOnWalletPosting driverId merchantOpCityId = do
           then logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": no protected tier missing, fast path (no lock, no wallet read)"
           else do
             -- The policy of the source in charge ('DPP.contextPolicy'): a campaign in charge has none in v2.
-            context <- DPP.getDriverFleetContext driverId merchantOpCityId
+            context <- DPP.getDriverFleetContext DPP.Cached driverId merchantOpCityId
             let mbPolicy = DPP.contextPolicy context
             when (isNothing mbPolicy && DPP.isCampaignControlled context) $
               logDebug $ "Preference policy (wallet posting) for driver " <> driverId.getId <> ": a campaign is in charge, no policy to restore"

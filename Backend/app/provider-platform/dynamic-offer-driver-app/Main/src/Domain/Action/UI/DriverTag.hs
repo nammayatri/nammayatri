@@ -34,7 +34,7 @@ postDriverTagUpdate (mbPersonId, _, merchantOpCityId) req = do
   tagName <- validateTagPart "tagName" req.tagName
   mbTagValue <- traverse (validateTagPart "tagValue") req.tagValue
   -- The AutoAssign tag can't be written here while the driver's fleet locks ServiceTier.
-  DPP.getDriverPolicyFresh personId merchantOpCityId >>= flip whenJust (`DPP.validateTagWrite` tagName)
+  DPP.contextPolicy <$> DPP.getDriverFleetContext DPP.Fresh personId merchantOpCityId >>= flip whenJust (`DPP.validateTagWrite` tagName)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updatedTags = case req.action of
         APIT.ADD_TAG ->

@@ -53,7 +53,7 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
   -- One fleet read: "ignore preferences", and the policy hiding AreaPreference (which also greys it out in the app).
-  fleetContext <- DPP.getDriverFleetContext personId merchantOpCityId
+  fleetContext <- DPP.getDriverFleetContext DPP.Cached personId merchantOpCityId
   let fleetDisablesPreference = maybe False (.disableDriverAreaAndDistancePreference) (DPP.contextAutoAssign fleetContext)
       hiddenByFleet = maybe False (DPP.isHidden DDPP.AreaPreference) (DPP.contextPolicy fleetContext)
       res = buildInfoRes fleetDisablesPreference minCells person.driverTag

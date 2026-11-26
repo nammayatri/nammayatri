@@ -5518,7 +5518,7 @@ postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFl
   let personId = validatedDriver.id
   -- A campaign member's auto-assign belongs to the campaign (incl. a behaviour-only one): the fleet can turn it neither
   -- on nor off. Read error: throws, as the fleet auto-assign lookup always did.
-  driverContext <- DPP.resolveDriverFleetContext personId validatedDriver.merchantOperatingCityId
+  driverContext <- DPP.tryDriverFleetContext DPP.Cached personId validatedDriver.merchantOperatingCityId >>= either throwM pure
   when (DPP.isCampaignControlled driverContext) $ do
     logInfo $ "Fleet auto-assign " <> (if req.enable then "ON" else "OFF") <> " for driver " <> personId.getId <> " rejected: a campaign is in charge"
     throwError FleetAutoAssignControlledByCampaign

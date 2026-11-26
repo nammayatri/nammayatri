@@ -494,7 +494,7 @@ postDriverUpdateAirCondition ::
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   -- Fleet preference lock (validation only), before any write.
-  DPP.getDriverPolicyFresh personId merchantOperatingCityId >>= flip whenJust (\policy -> validateAirConditionedLock policy personId (Just isAirConditioned))
+  DPP.contextPolicy <$> DPP.getDriverFleetContext DPP.Fresh personId merchantOperatingCityId >>= flip whenJust (\policy -> validateAirConditionedLock policy personId (Just isAirConditioned))
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   SDO.checkAndUpdateAirConditioned False isAirConditioned personId merchantOperatingCityId cityVehicleServiceTiers Nothing True
   now <- getCurrentTime
@@ -529,7 +529,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
-  fleetContext <- DPP.getDriverFleetContext personId merchantOpCityId
+  fleetContext <- DPP.getDriverFleetContext DPP.Cached personId merchantOpCityId
   let autoAcceptLockedByFleet = maybe False (not . (.allowDriverToToggle)) (DPP.contextAutoAssign fleetContext)
       mbPolicy = DPP.contextPolicy fleetContext
   tiersNow <- getCurrentTime
@@ -679,7 +679,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) req@API.Ty
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   -- Fleet preference locks (validation only), before any write: checkAndUpdateAirConditioned below writes AC.
-  fleetContext <- DPP.getDriverFleetContextFresh personId merchantOperatingCityId
+  fleetContext <- DPP.getDriverFleetContext DPP.Fresh personId merchantOperatingCityId
   whenJust (DPP.contextPolicy fleetContext) $ \policy -> validateServiceTiersLocks policy personId merchantOperatingCityId cityVehicleServiceTiers req
 
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False

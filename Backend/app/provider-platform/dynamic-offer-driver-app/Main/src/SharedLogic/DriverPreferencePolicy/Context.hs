@@ -27,7 +27,7 @@
 -- 'SharedLogic.DriverPreferencePolicy') takes a 'DDPP.PreferencePolicy' and never knows where it came from.
 --
 -- It lives in its own module, below 'SharedLogic.FleetDriverSettings' (whose 'getDriverFleetAutoAssignConfig' is a thin
--- wrapper over 'resolveDriverFleetContext') and 'SharedLogic.DriverPreferencePolicy', so neither imports the other
+-- wrapper over 'tryDriverFleetContext') and 'SharedLogic.DriverPreferencePolicy', so neither imports the other
 -- through it.
 --
 -- How to add a new source (e.g. campaign preference locks, a city policy):
@@ -41,20 +41,13 @@ module SharedLogic.DriverPreferencePolicy.Context
     FleetLink (..),
     ControlSource (..),
     FleetConfigRead (..),
-    resolveDriverFleetContext,
-    resolveDriverFleetContextWith,
     tryDriverFleetContext,
-    tryDriverFleetContextFresh,
     getDriverFleetContext,
-    getDriverFleetContextFresh,
     failOpen,
     noDriverFleetContext,
     contextPolicy,
     contextAutoAssign,
-    contextInFleet,
     isCampaignControlled,
-    getDriverPolicy,
-    getDriverPolicyFresh,
   )
 where
 
@@ -111,15 +104,6 @@ noDriverFleetContext = DriverFleetContext Nothing MgCampaign.UseNoCampaign NoSou
 -- a read that started before a fleet config save can refill the cache with the old config right after the save
 -- invalidated it, which would let a driver change a just-locked preference for up to the cache TTL.
 data FleetConfigRead = Cached | Fresh
-
--- | The lookup with the cached fleet config. Throws on a read error (as
--- 'SharedLogic.FleetDriverSettings.getDriverFleetAutoAssignConfig' always did).
-resolveDriverFleetContext ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  Id MerchantOperatingCity ->
-  m DriverFleetContext
-resolveDriverFleetContext = resolveDriverFleetContextWith Cached
 
 resolveDriverFleetContextWith ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -181,38 +165,25 @@ readFleetLink configRead driverId merchantOpCityId = do
         Fresh -> mfilter ((== Just merchantOpCityId) . (.merchantOperatingCityId)) <$> QFC.findByPrimaryKey (Id newest.fleetOwnerId)
       pure $ Just FleetLink {association = newest, fleetConfig}
 
--- | The lookup with its read error kept, for a caller that must not fail open on it (the cash-ride guard) but still
--- wants the policy to ('failOpen').
+-- | The lookup with its read error kept, for a caller that must not fail open on it: the cash-ride guard (which still
+-- wants the policy to 'failOpen'), and, with @>>= either throwM pure@, the callers that throw on it (fleet auto-assign,
+-- the fleet policy job).
 tryDriverFleetContext ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  FleetConfigRead ->
   Id Person ->
   Id MerchantOperatingCity ->
   m (Either SomeException DriverFleetContext)
-tryDriverFleetContext driverId merchantOpCityId = withTryCatch "getDriverFleetContext" $ resolveDriverFleetContextWith Cached driverId merchantOpCityId
-
--- | 'tryDriverFleetContext' with the fleet config read fresh from the DB, for driver preference-change handlers.
-tryDriverFleetContextFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  Id MerchantOperatingCity ->
-  m (Either SomeException DriverFleetContext)
-tryDriverFleetContextFresh driverId merchantOpCityId = withTryCatch "getDriverFleetContext" $ resolveDriverFleetContextWith Fresh driverId merchantOpCityId
+tryDriverFleetContext configRead driverId merchantOpCityId = withTryCatch "getDriverFleetContext" $ resolveDriverFleetContextWith configRead driverId merchantOpCityId
 
 -- | Fails OPEN: a read error is logged and treated as "no source", so an outage never blocks drivers.
 getDriverFleetContext ::
   (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  FleetConfigRead ->
   Id Person ->
   Id MerchantOperatingCity ->
   m DriverFleetContext
-getDriverFleetContext driverId merchantOpCityId = tryDriverFleetContext driverId merchantOpCityId >>= failOpen driverId
-
--- | 'getDriverFleetContext' with the fleet config read fresh from the DB, for driver preference-change handlers.
-getDriverFleetContextFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  Id MerchantOperatingCity ->
-  m DriverFleetContext
-getDriverFleetContextFresh driverId merchantOpCityId = tryDriverFleetContextFresh driverId merchantOpCityId >>= failOpen driverId
+getDriverFleetContext configRead driverId merchantOpCityId = tryDriverFleetContext configRead driverId merchantOpCityId >>= failOpen driverId
 
 failOpen :: (Monad m, Log m) => Id Person -> Either SomeException DriverFleetContext -> m DriverFleetContext
 failOpen driverId = \case
@@ -227,27 +198,7 @@ contextPolicy = (.preferencePolicy)
 contextAutoAssign :: DriverFleetContext -> Maybe DFC.AutoAssignConfig
 contextAutoAssign = (.autoAssignConfig)
 
--- | Has an active fleet association, whoever is in charge.
-contextInFleet :: DriverFleetContext -> Bool
-contextInFleet = isJust . (.fleet)
-
 isCampaignControlled :: DriverFleetContext -> Bool
 isCampaignControlled context = case context.controlSource of
   CampaignSource _ -> True
   _ -> False
-
--- | For handlers that need only the policy.
-getDriverPolicy ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  Id MerchantOperatingCity ->
-  m (Maybe DDPP.PreferencePolicy)
-getDriverPolicy driverId merchantOpCityId = contextPolicy <$> getDriverFleetContext driverId merchantOpCityId
-
--- | 'getDriverPolicy' with the fleet config read fresh from the DB, for driver preference-change handlers.
-getDriverPolicyFresh ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  Id MerchantOperatingCity ->
-  m (Maybe DDPP.PreferencePolicy)
-getDriverPolicyFresh driverId merchantOpCityId = contextPolicy <$> getDriverFleetContextFresh driverId merchantOpCityId

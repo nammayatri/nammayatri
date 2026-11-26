@@ -21,7 +21,7 @@
 --
 --   1. Add a constructor to 'DDPP.DriverPreference' (Domain.Types.DriverPreferencePolicy). Stored rows use the
 --      normal JSON decode; a row that does not decode reads as no policy.
---   2. Say which 'DDPP.PreferenceValue' kind it takes in 'valueKindMatches'.
+--   2. Say which 'DDPP.PreferenceValue' kind it takes in 'validatePolicyConfig' (@valueKindMatches@).
 --   3. Guard every DRIVER write path of it with a @validate*@ helper below. Never guard shared or ops writers.
 --   4. If a driver tag carries it, guard POST /ui/driver/tag/update too ('validateTagWrite').
 --   5. If the app should grey the control out, expose a lock flag on the driver GET it reads.
@@ -81,12 +81,6 @@ throwLocked preference = do
 -------------------------------------------------------------------------------
 -- Config save (dashboard)
 
--- | Which value kind each preference takes. A null value (frozen) is allowed for any lockable preference.
-valueKindMatches :: DDPP.DriverPreference -> DDPP.PreferenceValue -> Bool
-valueKindMatches preference = \case
-  DDPP.AutoAssignTiers -> preference == DDPP.ServiceTier
-  DDPP.ToggleValue _ -> preference `elem` [DDPP.AirConditioned, DDPP.IntraCity, DDPP.InterCity, DDPP.Rental]
-
 -- | Rejects a policy the fleet config update must not store. 'hidden' takes any preference.
 validatePolicyConfig :: (MonadThrow m, Log m) => DDPP.PreferencePolicy -> m ()
 validatePolicyConfig policy = do
@@ -101,6 +95,11 @@ validatePolicyConfig policy = do
       unless (valueKindMatches lock.preference value) $
         throwError $ InvalidPreferencePolicy $ show lock.preference <> " takes a " <> expectedKind lock.preference <> " value (or null)"
   where
+    -- Which value kind each preference takes. A null value (frozen) is allowed for any lockable preference.
+    valueKindMatches :: DDPP.DriverPreference -> DDPP.PreferenceValue -> Bool
+    valueKindMatches preference = \case
+      DDPP.AutoAssignTiers -> preference == DDPP.ServiceTier
+      DDPP.ToggleValue _ -> preference `elem` [DDPP.AirConditioned, DDPP.IntraCity, DDPP.InterCity, DDPP.Rental]
     expectedKind :: DDPP.DriverPreference -> Text
     expectedKind = \case
       DDPP.ServiceTier -> "AutoAssignTiers"
