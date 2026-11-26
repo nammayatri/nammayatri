@@ -26,6 +26,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
@@ -179,7 +180,7 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                         distance = distanceBetweenInMeters (LatLong latest.lat latest.lon) pickupLoc
                     if distance < abortRadius
                       then do
-                        QST.cancelBetterDriverSearchByBookingId bookingId.getId
+                        QST.cancelBetterDriverSearch searchTry.requestId bookingId.getId
                         pullActiveRequests merchantId searchTry
                         return Complete
                       else rescheduleIn $ nextCheckDelay (realToFrac (distance - abortRadius)) (observedSpeedMps driverLocationResp.loc)
@@ -197,12 +198,13 @@ cancelBetterDriverSearchAndPullOffers ::
     Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
+  Id DSR.SearchRequest ->
   Id DB.Booking ->
   m ()
-cancelBetterDriverSearchAndPullOffers merchantId bookingId =
-  QST.findActiveBetterDriverSearchByBookingId bookingId.getId >>= \mbSearchTry ->
+cancelBetterDriverSearchAndPullOffers merchantId requestId bookingId =
+  QST.findActiveBetterDriverSearch requestId bookingId.getId >>= \mbSearchTry ->
     whenJust mbSearchTry $ \searchTry -> do
-      QST.cancelBetterDriverSearchByBookingId bookingId.getId
+      QST.cancelBetterDriverSearch requestId bookingId.getId
       pullActiveRequests merchantId searchTry
 
 pullActiveRequests ::

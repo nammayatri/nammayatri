@@ -185,7 +185,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         else cancelRideTransactionForNonReallocation Nothing Nothing
 
     performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry = do
-      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearchByBookingId booking.id.getId
+      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearch searchReq.id booking.id.getId
       case mbBetterDriverSearchTry of
         -- A stand-by search is already live and a replacement is now needed: let it serve
         -- as the reallocation instead of starting a duplicate.
@@ -239,7 +239,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False singleBooking
 
     performStaticOfferReallocation quote searchReq searchTry transporterConfig now = do
-      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearchByBookingId booking.id.getId
+      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearch searchReq.id booking.id.getId
       case mbBetterDriverSearchTry of
         -- Same as the dynamic-offer path above.
         Just betterDriverSearchTry -> do
@@ -399,7 +399,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       m Bool
     cancelRideTransactionForNonReallocation mbNewBooking mbEstimateId = do
       -- No replacement is coming, so a live stand-by search must not swap one in anyway.
-      QST.cancelBetterDriverSearchByBookingId booking.id.getId
+      QDQ.findById (Id booking.quoteId) >>= \mbDriverQuote ->
+        whenJust mbDriverQuote $ \driverQuote -> QST.cancelBetterDriverSearch driverQuote.requestId booking.id.getId
       Redis.del $ multipleRouteKey booking.transactionId
       Redis.del $ searchRequestKey booking.transactionId
       whenJust mbEstimateId $ \estimateId ->
