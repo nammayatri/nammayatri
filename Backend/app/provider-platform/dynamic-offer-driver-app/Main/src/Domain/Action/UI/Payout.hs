@@ -103,9 +103,9 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Rails as Rails
-import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.IncentiveJourney as SLIJ
 import SharedLogic.Merchant
@@ -836,7 +836,7 @@ callPayoutServiceActionForRefresh _merchantId merchantOpCityId mbEntityName payo
   pure (payoutStatusResp.status, payoutStatusResp.orderId)
 
 processPreviousPayoutAmount ::
-  SLIJ.JourneyCashPayoutFlow m r =>
+  (SLIJ.JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id Person.Person ->
   Maybe Text ->
   Id DMOC.MerchantOperatingCity ->

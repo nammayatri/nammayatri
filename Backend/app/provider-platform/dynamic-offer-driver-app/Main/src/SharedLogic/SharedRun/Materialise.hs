@@ -77,6 +77,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.Booking as SBooking
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -141,7 +142,7 @@ sharedRunBapId = "shared-run"
 runTransactionId :: Id DIBC.IntegratedBPPConfig -> Text -> Day -> Text
 runTransactionId integratedBppConfigId tripId day = "sharedRun:" <> integratedBppConfigId.getId <> ":" <> tripId <> ":" <> show day
 
-materialiseRuns :: MaterialiseFlow m r c => DM.Merchant -> MaterialiseReq -> m MaterialiseResp
+materialiseRuns :: (MaterialiseFlow m r c, DriverPoolStateEnv r) => DM.Merchant -> MaterialiseReq -> m MaterialiseResp
 materialiseRuns merchant req = do
   moc <- CQMOC.findById req.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId.getId)
   unless (moc.merchantId == merchant.id) $ throwError (InvalidRequest "the city does not belong to the merchant")
@@ -168,7 +169,7 @@ data Outcome = Existing | Created Assignment
 
 data Assignment = Assigned Text | Unassigned Text
 
-materialiseDay :: MaterialiseFlow m r c => DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> SharedSupplyKnobs -> DFareProduct.FareProduct -> Day -> m DayResult
+materialiseDay :: (MaterialiseFlow m r c, DriverPoolStateEnv r) => DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> SharedSupplyKnobs -> DFareProduct.FareProduct -> Day -> m DayResult
 materialiseDay merchant moc transporterConfig knobs fareProduct day = do
   perFeed <- forM knobs.feeds $ \feedKey -> do
     configs <- QIBC.findAllByFeedKeyAndCity feedKey moc.id
@@ -201,7 +202,7 @@ materialiseDay merchant moc transporterConfig knobs fareProduct day = do
   logInfo $ "shared runs for " <> show day <> " in city " <> moc.id.getId <> ": " <> show result
   pure result
 
-materialiseTrip :: MaterialiseFlow m r c => DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> DFareProduct.FareProduct -> DIBC.IntegratedBPPConfig -> Day -> GtfsTimetableRoute -> GtfsTimetableTrip -> m Outcome
+materialiseTrip :: (MaterialiseFlow m r c, DriverPoolStateEnv r) => DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> DFareProduct.FareProduct -> DIBC.IntegratedBPPConfig -> Day -> GtfsTimetableRoute -> GtfsTimetableTrip -> m Outcome
 materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig day route trip = do
   let tripId = gtfsLocalId trip.gtfsId
       routeCode = gtfsLocalId route.gtfsId
@@ -499,7 +500,7 @@ stopLocation merchant moc now stopTime = do
 -- | The run goes to the driver of the first vehicle bound to the route, through the scheduled accept's own steps
 -- ('assignRun'). A failed assignment leaves the run on the scheduled board for the next driver or the fallback job,
 -- and says why.
-assignBoundVehicle :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assignment
+assignBoundVehicle :: (MaterialiseFlow m r c, DriverPoolStateEnv r) => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assignment
 assignBoundVehicle merchant transporterConfig booking routeCode = do
   mappings <- filter ((== booking.merchantOperatingCityId) . (.merchantOperatingCityId)) <$> QVRM.findAllByRouteCode routeCode
   if null mappings
@@ -525,7 +526,7 @@ assignBoundVehicle merchant transporterConfig booking routeCode = do
 -- scheduled board, the assignment claim, ride creation and the driver's gate under the driver's hold lock, then the
 -- pre-ride job. The checks on a driver choosing a ride for themselves (wallet floor, reachability, prepaid credits) do
 -- not apply: the vehicle is bound to the route.
-assignRun :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> DP.Person -> Id DP.Person -> m ()
+assignRun :: (MaterialiseFlow m r c, DriverPoolStateEnv r) => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> DP.Person -> Id DP.Person -> m ()
 assignRun merchant transporterConfig booking driver fleetOwnerId = do
   SBOC.ensureNoScheduledOverlap merchant.id driver.id transporterConfig booking
   SBooking.removeBookingFromRedis booking

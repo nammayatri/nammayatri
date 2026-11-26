@@ -26,10 +26,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.SharedRun.Materialise as Materialise
 import qualified Storage.CachedQueries.Merchant as CQM
 
-materialiseSharedRuns :: Materialise.MaterialiseFlow m r c => Job 'MaterialiseSharedRuns -> m ExecutionResult
+materialiseSharedRuns :: (Materialise.MaterialiseFlow m r c, DriverPoolStateEnv r) => Job 'MaterialiseSharedRuns -> m ExecutionResult
 materialiseSharedRuns Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
   merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)

@@ -104,7 +104,7 @@ stateBufferMs = 30 * 1000
 readWriterWatermark :: R.Connection -> IO (Either Text (Maybe Integer))
 readWriterWatermark conn = do
   reply <- (Right <$> R.runRedis conn (R.hgetall (TE.encodeUtf8 writerWatermarkKey))) `catchAny` (pure . Left . show)
-  pure (either Left (either (Left . show) (Right . writerWatermarkFromHash)) reply)
+  pure (either (Left . show) (Right . writerWatermarkFromHash) =<< reply)
 
 -- | Epoch ms of the oldest ping the sessionizer has not flushed yet.
 sessionizerWatermarkKey :: Text

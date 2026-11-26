@@ -181,13 +181,16 @@ syncFleetLinkToLTS now driverId fleetOwnerId mbDriverCashRide mbAssociation = do
         LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
         LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
       }
-  publishDriverPoolData
-    (cast driverId)
-    [ poolField "fleetOwnerId" (Just fleetOwnerId.getId),
-      poolField "chargesEnabled" (maybe False (.chargesEnabled) mbFleetBa),
-      poolField "bankAccountPaymentMode" ((.paymentMode) =<< mbFleetBa),
-      poolField "enableCashRide" (Just cashRideEffective)
-    ]
+  -- A pending join request is not a fleet link yet: analytics takes the fleet only once
+  -- the association is active, as the DB seed (active links only) does.
+  when (maybe False (isActiveFleetAssociation now) mbAssociation) $
+    publishDriverPoolData
+      (cast driverId)
+      [ poolField "fleetOwnerId" (Just fleetOwnerId.getId),
+        poolField "chargesEnabled" (maybe False (.chargesEnabled) mbFleetBa),
+        poolField "bankAccountPaymentMode" ((.paymentMode) =<< mbFleetBa),
+        poolField "enableCashRide" (Just cashRideEffective)
+      ]
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
 findAllActiveByFleetOwnerIds [] = pure []

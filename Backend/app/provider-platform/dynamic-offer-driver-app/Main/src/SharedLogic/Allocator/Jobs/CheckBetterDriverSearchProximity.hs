@@ -49,6 +49,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -142,7 +143,8 @@ checkBetterDriverSearchProximity ::
     HasPrettyLogger m r,
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
-    HasField "driverUnlockDelay" r Seconds
+    HasField "driverUnlockDelay" r Seconds,
+    DriverPoolStateEnv r
   ) =>
   Job 'CheckBetterDriverSearchProximity ->
   m ExecutionResult
@@ -194,7 +196,8 @@ cancelBetterDriverSearchAndPullOffers ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DM.Merchant ->
   Id DB.Booking ->
@@ -211,7 +214,8 @@ pullActiveRequests ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DM.Merchant ->
   DST.SearchTry ->

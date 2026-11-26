@@ -51,6 +51,7 @@ import qualified Lib.IncentiveJourney.MgCampaign as Mg
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.IncentiveJourney.CampaignControlsCache (CampaignControls (..), getCampaignControls)
 import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -77,7 +78,8 @@ syncCampaignMembership ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id IJCommon.Person ->
   Maybe CampaignSync.CampaignHotPathSync ->
@@ -94,7 +96,8 @@ syncCampaignMembershipBatch ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id IJCommon.Person ->
   [CampaignSync.CampaignHotPathSync] ->
@@ -111,7 +114,8 @@ syncMgCampaignSnapshot ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id IJCommon.Person ->
   Maybe Mg.MgCampaignSnapshot ->
@@ -140,7 +144,8 @@ setIjCampaignTag ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person.Person ->
   CampaignTag.CampaignMembership ->
@@ -154,7 +159,8 @@ setIjCampaignTags ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person.Person ->
   -- | mbValidTill is city-local wall-clock (same convention as UCM.validTill). Converted to
@@ -198,7 +204,8 @@ clearIjCampaignTag ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person.Person ->
   m ()
@@ -216,7 +223,8 @@ clearMgOptedInOnDriverInfo ::
     CacheFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id IJCommon.Person ->
   Id DCJM.CohortJourneyMapping ->

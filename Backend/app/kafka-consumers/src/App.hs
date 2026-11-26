@@ -42,6 +42,7 @@ import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
 import qualified Processor.DriverPoolState.Processor as DPSProcessor
+import qualified Processor.DriverPoolState.Types as Fields (DriverPoolStateEvent (..))
 import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.IncentiveJourney.BehaviorTick as IJBehaviorTick
@@ -136,10 +137,11 @@ startKafkaTransport flowRt appEnv = do
         FCProcessor.processFleetCommunicationDelivery payload
     DRIVER_POOL_STATE -> do
       kc <- KafkaFlow.newKafkaConsumer appEnv
-      KafkaCommitting.runOrderedCommitting flowRt appEnv kc (\ev -> ev.ts) DPSProcessor.processDriverPoolState DPSProcessor.publishWriterWatermark
+      KafkaCommitting.runOrderedCommitting flowRt appEnv kc (.ts) DPSProcessor.processDriverPoolState DPSProcessor.publishWriterWatermark
     SESSIONIZER -> do
-      kc <- KafkaFlow.newKafkaConsumer appEnv
-      SessionizerProcessor.runSessionizer flowRt appEnv kc
+      (rebalanced, onRebalance) <- SessionizerProcessor.newRebalanceFlag
+      kc <- KafkaFlow.newSessionizerKafkaConsumer onRebalance appEnv
+      SessionizerProcessor.runSessionizer flowRt appEnv kc rebalanced
     LOCATION_UPDATE -> do
       kc <- KafkaFlow.newKafkaConsumer appEnv
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg

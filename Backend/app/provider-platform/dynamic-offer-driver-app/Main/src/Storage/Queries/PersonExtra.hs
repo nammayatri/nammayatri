@@ -473,7 +473,6 @@ updatePersonRec (Id personId) person = do
     (Id personId)
     [ poolField "language" person.language,
       poolField "gender" person.gender,
-      poolField "deviceToken" person.deviceToken,
       poolField "clientSdkVersion" person.clientSdkVersion,
       poolField "clientBundleVersion" person.clientBundleVersion,
       poolField "clientConfigVersion" person.clientConfigVersion,
@@ -679,7 +678,6 @@ clearDeviceTokenByPersonId personId = do
     ]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set Nothing}
-  publishDriverPoolData (cast personId) [poolField "deviceToken" (Nothing :: Maybe Text)]
 
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
@@ -784,7 +782,6 @@ updateDeviceToken token personId = do
   updateOneWithKV [Se.Set BeamP.deviceToken token, Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set token}
-  publishDriverPoolData (cast personId) [poolField "deviceToken" token]
 
 updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
 updateDriverTag driverTag personId = do

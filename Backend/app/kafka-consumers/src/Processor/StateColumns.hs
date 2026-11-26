@@ -138,7 +138,7 @@ renderValue kind mbValue = case (kind, mbValue) of
 statesAt :: R.Connection -> [(Text, Integer)] -> IO (Either Text (M.Map (Text, Integer) (Integer, DriverStateSnapshot)))
 statesAt conn wanted = do
   found <- forM (inChunks (S.toList (S.fromList wanted))) $ \chunk -> do
-    replies <- R.runRedis conn (forM chunk (\(did, atMs) -> R.zrevrangebyscoreLimit (TE.encodeUtf8 (historyKey did)) (fromIntegral atMs) (-1 / 0) 0 1))
+    replies <- R.runRedis conn (forM chunk (\(did, atMs) -> R.zrevrangebyscoreLimit (TE.encodeUtf8 (historyKey did)) (fromIntegral atMs) (- (1 / 0)) 0 1))
     pure $ do
       memberLists <- either (Left . show) Right (sequence replies)
       pure [(lookupKey, entry) | (lookupKey, members) <- zip chunk memberLists, Just entry <- [listToMaybe members >>= decodeMember]]

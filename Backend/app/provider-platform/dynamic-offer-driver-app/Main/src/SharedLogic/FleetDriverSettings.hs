@@ -38,9 +38,9 @@ import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import Storage.Beam.IncentiveJourney ()
-import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -138,7 +138,7 @@ applyFleetSettingsToDriver driverId merchantOpCityId =
 
 -- | Strip AutoAssign tag + selectedAutoAcceptTiers so leftover fleet/MG tiers cannot silent-assign.
 clearAllAutoAssign ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id Person ->
   m ()
 clearAllAutoAssign driverId = do
@@ -157,7 +157,7 @@ clearAllAutoAssign driverId = do
 -- until unassign). Invite-only keeps driver-owned selections. Silent-assign at
 -- dispatch still requires perksActive via 'mgAutoAssignConfig'.
 reconcileAutoAssignAfterMgSync ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Id IJCommon.Person ->
   Maybe Mg.MgCampaignSnapshot ->
   m ()
@@ -172,7 +172,7 @@ reconcileAutoAssignAfterMgSync personId mbSnap = do
 -- | After one CJM membership is removed from tags: strip leftover AA, then re-apply
 -- fleet (or remaining campaign) settings so fleet perks return after unassign.
 onCampaignMembershipCleared ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Id Person ->
   Id DCJM.CohortJourneyMapping ->
   m ()
@@ -182,7 +182,7 @@ onCampaignMembershipCleared driverId _cjmId = do
 
 -- | clear + apply current MG/fleet AA from getDriverFleetAutoAssignConfig.
 rewriteAutoAssignFromCurrentConfig ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Id Person ->
   m ()
 rewriteAutoAssignFromCurrentConfig driverId = do
@@ -192,7 +192,7 @@ rewriteAutoAssignFromCurrentConfig driverId = do
 -- | After all IJCampaign tags cleared: restore fleet AA if any; never wipe independent
 -- driver self-selections when there is no fleet AutoAssign to reinstall.
 restoreFleetAutoAssignOrKeep ::
-  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, BeamFlow m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, EsqDBReplicaFlow m r, DriverPoolStateEnv r) =>
   Id Person ->
   m ()
 restoreFleetAutoAssignOrKeep driverId =

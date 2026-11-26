@@ -755,6 +755,25 @@ def wait_for_flush(r: redis.Redis, covering_ms: int, timeout_s: int):
     return False
 
 
+def wait_for_ingest(url: str, where: str, expected: dict, timeout_s: int = 120) -> None:
+    """Rows reach driver_analytics_5m through a Kafka engine table and a
+    materialized view after the sessionizer flushes, so they can lag its
+    watermark. Wait until the expected pings and event counts are in (or the
+    timeout passes; the comparisons then report what is missing)."""
+    want = round(sum(v["pings"] + sum(v[c] for c in EVENT_COLUMNS) for v in expected.values()), 4)
+    if not want:
+        return
+    total = " + ".join(["sum(pings)"] + [f"sum({c})" for c in EVENT_COLUMNS])
+    deadline = time.time() + timeout_s
+    while True:
+        have = round(float(ch(url, f"SELECT {total} AS n FROM atlas_kafka.driver_analytics_5m WHERE {where}")[0]["n"] or 0), 4)
+        if have >= want or time.time() >= deadline:
+            print()
+            return
+        print(f"\r  waiting for ClickHouse ingestion ... {have}/{want} ", end="", flush=True)
+        time.sleep(2)
+
+
 def history_of(r: redis.Redis, d: str) -> list[tuple[int, dict]]:
     out = []
     for member, score in r.zrange(f"driver_state:history:{d}", 0, -1, withscores=True):
@@ -801,6 +820,7 @@ def run_scenarios(args) -> int:
     print()
 
     ids = ",".join("'" + d.replace("\\", "\\\\").replace("'", "\\'") + "'" for d in drivers)
+    wait_for_ingest(args.clickhouse, f"driver_id IN ({ids})", exp_activity)
     events = ", ".join(f"sum({c}) AS {c}" for c in EVENT_COLUMNS)
     rows = ch(args.clickhouse, f"""
         SELECT toUnixTimestamp(bucket) * 1000 AS b, merchant_operating_city_id AS c, driver_id AS d,

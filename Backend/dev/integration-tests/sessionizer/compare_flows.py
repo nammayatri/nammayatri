@@ -62,6 +62,8 @@ SCHEMAS = ["atlas_driver_offer_bpp", "atlas_app"]
 BUCKET_S = 300
 # Topics only the branch has; their presence is the point of the change.
 NEW_TOPICS = {"driver-pool-state", "driver-analytics-events", "driver-analytics-5m"}
+# The new topics the driver app itself publishes to.
+APP_TOPICS = {"driver-pool-state", "driver-analytics-events"}
 # Redis keys only the branch has (the writer's and the sessionizer's, Redis DB 2).
 NEW_KEY_PREFIXES = ("driver_state:", "state_writer:", "sessionizer:")
 # `prepare` exit code: config was imported, so the stack must restart. The import's own
@@ -430,9 +432,14 @@ def cmd_diff(args) -> int:
             (expected if fields <= EXPECTED_DPD_FIELDS else unexpected).append(line)
 
     ka, kb = a["kafka"], b["kafka"]
-    for t in sorted(set(ka) | set(kb)):
+    for t in sorted(set(ka) | set(kb) | NEW_TOPICS):
         if t in NEW_TOPICS:
-            if t not in ka:
+            # Every run makes a ride, so the app must have published on both of its
+            # topics. driver-analytics-5m is left out: the sessionizer flushes every
+            # 5 minutes, which may not fall inside the snapshot window.
+            if t in APP_TOPICS and not kb.get(t, {}).get("messages"):
+                unexpected.append(f"kafka {t}: no messages on the branch")
+            elif t in kb and t not in ka:
                 expected.append(f"kafka {t}: new on the branch, {kb[t]['messages']} messages")
             continue
         xa, xb = ka.get(t, {"messages": 0, "shapes": {}}), kb.get(t, {"messages": 0, "shapes": {}})

@@ -309,8 +309,8 @@ import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
-import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.DriverPool.DriverAnalyticsEvent as DAE
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -1576,7 +1576,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
 
     epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, Redis.HedisLTSFlowEnv r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -4031,7 +4031,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
     calcPercentage percentage = (percentage * fee') / 100.0
 
 verifyVpaStatus ::
-  SLJourney.JourneyCashPayoutFlow m r =>
+  (SLJourney.JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do

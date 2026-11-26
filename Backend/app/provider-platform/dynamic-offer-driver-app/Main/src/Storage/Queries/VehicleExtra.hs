@@ -152,10 +152,15 @@ updateVariantAndServiceTiers variant selectedServiceTiers category driverId = do
     ]
 
 -- | Unlinks the driver's vehicle: its fields leave the driver's pool data.
-deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id Person -> m ()
 deleteById driverId = do
   LTSSync.deleteDriverPoolDataFromLTS (cast driverId)
   deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId.getId)]
+  publishDriverPoolData
+    (cast driverId)
+    [ poolField "registrationNo" (Nothing :: Maybe Text),
+      poolField "vehicleRating" (Nothing :: Maybe Double)
+    ]
 
 findByAnyOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =

@@ -85,6 +85,7 @@ import qualified SharedLogic.Association.Change as AC
 import SharedLogic.DriverOnboarding.DocumentIdentifier
 import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -1618,7 +1619,8 @@ deleteVehicleWithAllAssociations ::
     EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person.Person ->
   Maybe (Id Person.Person) ->
@@ -1669,7 +1671,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
       pure (hasDriverAssoc || hasFleetAssoc)
 
     endDriverAssociationIfPossibleForRc ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
       Id VehicleRegistrationCertificate ->
       m ()
     endDriverAssociationIfPossibleForRc rcId = do
@@ -1695,7 +1697,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
     deleteImagesLinkedWithRC = ImageQueryExtra.deleteByRcId
 
     deleteVehicleIfPossible ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
       Id Person.Person ->
       m ()
     deleteVehicleIfPossible driverId = do

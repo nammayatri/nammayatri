@@ -129,6 +129,7 @@ def main():
     say(f"flushed {time.time() - played:.0f}s after the last message")
 
     expected, _, _, _ = ts.model(p)
+    ts.wait_for_ingest(args.clickhouse, f"merchant_operating_city_id = '{p.city}'", expected)
     events = ", ".join(f"sum({c}) AS {c}" for c in ts.EVENT_COLUMNS)
     rows = ts.ch(args.clickhouse, f"""
         SELECT toUnixTimestamp(bucket) * 1000 AS b, merchant_operating_city_id AS c, driver_id AS d,

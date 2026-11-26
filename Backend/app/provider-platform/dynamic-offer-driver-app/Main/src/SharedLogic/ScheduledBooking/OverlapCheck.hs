@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Ride as QRide
@@ -130,7 +131,7 @@ ensureNoScheduledOverlap merchantId driverId schedulingCfg booking = do
 
 -- | After an accept: the driver's gate column keeps the earliest future hold (min); the first hold collapses to today's
 -- overwrite. Called under the driver's scheduled-hold lock so concurrent accepts and releases cannot lose the min.
-updateLatestScheduledAsMin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> DRB.Booking -> m ()
+updateLatestScheduledAsMin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Person -> DRB.Booking -> m ()
 updateLatestScheduledAsMin driverId booking = do
   now <- getCurrentTime
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound

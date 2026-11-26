@@ -97,6 +97,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import qualified SharedLogic.DriverPool as DriverPool
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.Finance.PostActions as FinancePostActions
 import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified SharedLogic.FleetDriverSettings as FDS
@@ -105,7 +106,6 @@ import qualified SharedLogic.IncentiveJourney.CampaignBehaviorBump as CampaignBe
 import SharedLogic.IncentiveJourney.CampaignControlsCache (CampaignControls (..), getCampaignControls)
 import qualified SharedLogic.IncentiveJourney.MetricBag as MetricBag
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
-import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -624,7 +624,8 @@ forkEnsureAssignedCampaignTags ::
     HedisFlow m r,
     HedisLTSFlowEnv r,
     IJBeamFlow.BeamFlow m r,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Person ->
   m ()
@@ -1109,7 +1110,7 @@ dispatchDriverStreakEndReward driverId merchantId merchantOpCityId transporterCo
 -- Order id / ledger referenceId are the same string so retries cannot double-pay.
 -- Awarded = wallet entry or payout order exists. AwardSkipped = neither (no wallet path, no VPA, payout off, partner error).
 awardJourneyCashPayout ::
-  JourneyCashPayoutFlow m r =>
+  (JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1174,7 +1175,7 @@ preferIncentiveJourneyWalletCredit transporterConfig = do
       pure driverWalletClass.transferInEnabled
 
 awardJourneyCashPayoutLocked ::
-  JourneyCashPayoutFlow m r =>
+  (JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1208,7 +1209,7 @@ awardJourneyCashPayoutLocked driverId merchantId merchantOpCityId transporterCon
 
 -- | Same ledger path as wallet incentives (PlatformAsset → OwnerLiability), ref IncentiveJourneyCash.
 awardJourneyCashViaWallet ::
-  JourneyCashPayoutFlow m r =>
+  (JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1325,7 +1326,7 @@ awardJourneyCashViaPayoutOrder driverId merchantId merchantOpCityId transporterC
 -- | After a verified UPI id is saved, pay cash milestones from the last 7 days
 -- whose target was reached and whose payout never started. Status becomes Completed only when the payout order exists.
 retryVerifiedVpaJourneyCashPayouts ::
-  JourneyCashPayoutFlow m r =>
+  (JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   m ()
 retryVerifiedVpaJourneyCashPayouts driverId = do
@@ -1366,7 +1367,7 @@ retryVerifiedVpaJourneyCashPayouts driverId = do
     Right () -> pure ()
 
 payOneAwaitingCashRow ::
-  JourneyCashPayoutFlow m r =>
+  (JourneyCashPayoutFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

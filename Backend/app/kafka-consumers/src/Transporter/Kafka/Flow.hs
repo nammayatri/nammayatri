@@ -21,6 +21,7 @@ module Transporter.Kafka.Flow
     getConfigNameFromConsumertype,
     newKafkaConsumer,
     newFleetAnalyticsKafkaConsumer,
+    newSessionizerKafkaConsumer,
   )
 where
 
@@ -136,13 +137,27 @@ newKafkaConsumer = newKafkaConsumerWith mempty
 newFleetAnalyticsKafkaConsumer :: AppEnv -> IO Consumer.KafkaConsumer
 newFleetAnalyticsKafkaConsumer = newKafkaConsumerWith (Consumer.offsetReset Consumer.Earliest)
 
+-- | The SESSIONIZER consumer, told of every rebalance (see 'runSessionizer').
+newSessionizerKafkaConsumer :: (Consumer.KafkaConsumer -> Consumer.RebalanceEvent -> IO ()) -> AppEnv -> IO Consumer.KafkaConsumer
+newSessionizerKafkaConsumer onRebalance = newKafkaConsumerWithProps (Consumer.setCallback (Consumer.rebalanceCallback onRebalance)) mempty
+
 newKafkaConsumerWith :: Consumer.Subscription -> AppEnv -> IO Consumer.KafkaConsumer
-newKafkaConsumerWith extraSub appEnv =
+newKafkaConsumerWith = newKafkaConsumerWithProps mempty
+
+newKafkaConsumerWithProps :: Consumer.ConsumerProperties -> Consumer.Subscription -> AppEnv -> IO Consumer.KafkaConsumer
+newKafkaConsumerWithProps extraProps extraSub appEnv =
   either (error . ("Unable to open a kafka consumer: " <>) . show) id
     <$> Consumer.newConsumer
-      (appEnv.kafkaConsumerCfg.consumerProperties <> sessionizerProps)
+      (appEnv.kafkaConsumerCfg.consumerProperties <> sessionizerProps <> extraProps <> explicitCommitProps)
       (Consumer.topics appEnv.kafkaConsumerCfg.topicNames <> extraSub)
   where
+    -- DRIVER_POOL_STATE and SESSIONIZER commit only what they have applied;
+    -- auto-commit would commit records still held or not yet handled, and a
+    -- restart would skip them. Forced here, whatever the config says (the
+    -- right-hand properties win).
+    explicitCommitProps
+      | appEnv.consumerType `elem` [DRIVER_POOL_STATE, SESSIONIZER] = Consumer.noAutoCommit
+      | otherwise = mempty
     -- SESSIONIZER: its loop can still stall on a Redis or Kafka outage (it
     -- retries without a timeout); past librdkafka's default 5-minute
     -- max.poll.interval.ms the consumer would leave the group mid-window, so

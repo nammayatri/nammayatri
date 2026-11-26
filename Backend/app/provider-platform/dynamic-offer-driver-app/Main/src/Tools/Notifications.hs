@@ -777,7 +777,8 @@ notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityDat
 notifySharedCabCheckIn ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->

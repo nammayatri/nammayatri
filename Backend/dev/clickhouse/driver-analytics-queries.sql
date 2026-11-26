@@ -7,7 +7,7 @@
   - Every event counts at its own time: a ride's booking, start, end and
     cancellation can land in different buckets, so per-bucket ratios between
     them are noisy; take them over hours or days.
-  - Pop-ups: sent = (sum(popups_sent) - sum(popups_pulled)) - sum(popups_pulled) (performance_analytics
+  - Pop-ups: sent = sum(popups_sent) - sum(popups_pulled) (performance_analytics
     leaves pulled pop-ups out); neglected = sent - accepted - rejected, exact
     over a day, approximate per bucket.
   - bucket is a 5-minute UTC bucket. For India days/hours use
@@ -245,7 +245,7 @@ FROM
            sum(cancelled_rides) AS cancelled,
            uniqExactIf(bucket, online = 1) AS online_buckets, uniqExactIf(bucket, online = 1 AND state_known = 0) AS unknown_buckets
     FROM atlas_kafka.driver_analytics_5m
-    WHERE toDate(toTimeZone(bucket, 'Asia/Kolkata')) = yesterday()
+    WHERE toDate(toTimeZone(bucket, 'Asia/Kolkata')) = toDate(toTimeZone(now(), 'Asia/Kolkata')) - 1
     GROUP BY driver_id
 );
 

@@ -98,11 +98,12 @@ run_rides() {  # tree, label, flags
       say "[$label] ride $i: DRIVER APP DOWN"
       echo "{\"ride\": $i, \"crash\": true}" >> "$OUT/crashes-$label.jsonl"
       $PY ride-stats --pre "$OUT/ride-pre.json" --ride "$i" --flow-rc "$rc" --out "$OUT/rides-$label.jsonl" || true
+      FAILED=1
       stack_down; stack_up "$tree" "$label" || return 1
       continue
     fi
     $PY ride-stats --pre "$OUT/ride-pre.json" --ride "$i" --flow-rc "$rc" --out "$OUT/rides-$label.jsonl"
-    [ "$rc" = 0 ] || say "[$label] ride $i: flow failed: $OUT/$label-ride-$i.log"
+    [ "$rc" = 0 ] || { say "[$label] ride $i: flow failed: $OUT/$label-ride-$i.log"; FAILED=1; }
   done
   # One end-to-end check of the stream after all those rides.
   if [ "$label" = branch ]; then run_suite "$label" "$name" "$flags" || FAILED=1; fi
@@ -180,10 +181,18 @@ if [ -z "${SKIP_BASE:-}" ]; then
   if [ ! -d "$BASE_TREE" ]; then
     say "creating worktree $BASE_TREE at $BASE_REV"
     git -C "$REPO" worktree add --detach "$BASE_TREE" "$BASE_REV"
+  elif [ "$(git -C "$BASE_TREE" rev-parse HEAD)" != "$(git -C "$REPO" rev-parse "$BASE_REV")" ]; then
+    # After a rebase the merge-base moves. Drop the nix patch below (it is applied again)
+    # and check out the new base; any other local change makes the checkout fail.
+    say "moving worktree $BASE_TREE to $BASE_REV"
+    git -C "$BASE_TREE" checkout -q -- Backend/nix/services/nammayatri.nix
+    git -C "$BASE_TREE" checkout -q --detach "$BASE_REV"
   fi
   # The stack's cabal-build reads the shared CABAL_DIR's path in setup-config as a CI
   # cache from another root and takes a Linux-only route (unshare). Worktree only.
-  sed -i '' 's/if \[ ! -f \.ci-project-root \] && \[ -d dist-newstyle\/build \]; then/if false; then/' "$BASE_TREE/Backend/nix/services/nammayatri.nix"
+  # -i.bak works on both BSD and GNU sed.
+  sed -i.bak 's/if \[ ! -f \.ci-project-root \] && \[ -d dist-newstyle\/build \]; then/if false; then/' "$BASE_TREE/Backend/nix/services/nammayatri.nix"
+  rm -f "$BASE_TREE/Backend/nix/services/nammayatri.nix.bak"
   [ -e "$BASE_TREE/$CONFIG_ENV" ] || cp -p "$REPO/$CONFIG_ENV" "$BASE_TREE/$CONFIG_ENV"   # git-ignored; config_transfer.py needs it
   [ -z "${RIDES:-}" ] || rm -rf "$BASE_TREE/data"
   run_side "$BASE_TREE" base

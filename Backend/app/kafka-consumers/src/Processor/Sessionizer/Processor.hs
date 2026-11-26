@@ -40,9 +40,17 @@
 -- (held records stay uncommitted) and sessionizer:watermark is published.
 -- Records at or below a partition's flushed offset are skipped, so a crash
 -- before the commit does not count them again. A crash between the
--- deliveries and the Redis write does.
+-- deliveries and the Redis write does. A flush that fails part-way keeps
+-- only the rows not delivered for its retry; a crash before that retry
+-- succeeds counts the delivered ones again.
+--
+-- Replicas: each reads the whole state topic and keeps every driver's state;
+-- pings and events are split by partition. A rebalance drops everything not
+-- yet flushed and moves each assigned partition back to its last commit, so
+-- whoever owns a partition now counts those records, once.
 module Processor.Sessionizer.Processor
   ( runSessionizer,
+    newRebalanceFlag,
   )
 where
 
@@ -54,7 +62,7 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Either as Either
 import qualified Data.HashMap.Strict as HM
-import Data.IORef (atomicModifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import qualified Data.List as DL
 import qualified Data.Map.Strict as M
 import qualified Data.Scientific as Sci
@@ -68,8 +76,10 @@ import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import qualified Kafka.Metadata as KM
 import qualified Kafka.Producer as Producer
+import qualified Kernel.External.Maps.Types as Fields (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Streaming.Kafka.Producer.Types as Fields (KafkaProducerTools (..))
 import Kernel.Types.Flow
 import Kernel.Utils.Common hiding (id)
 import Processor.ClickhouseText (epochMsText)
@@ -80,10 +90,8 @@ import qualified Prometheus as P
 import Transporter.Kafka.Committing (isRdKafkaError)
 import qualified Prelude as P
 
-locationTopic, eventsTopic, stateTopic, analyticsTopic :: Text
+locationTopic, analyticsTopic :: Text
 locationTopic = "location-updates"
-eventsTopic = "driver-analytics-events"
-stateTopic = "driver-pool-state"
 analyticsTopic = "driver-analytics-5m"
 
 bucketMs, flushEveryMs, flushRetryMs, stateProbeEveryMs, writerReadEveryMs :: Integer
@@ -284,8 +292,19 @@ data Acc = Acc
     flushedThrough :: M.Map (Text, Int) Int64
   }
 
-runSessionizer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-runSessionizer flowRt appEnv kc = do
+-- | A flag the main consumer's rebalance callback sets when partitions are revoked.
+newRebalanceFlag :: IO (IORef Bool, Consumer.KafkaConsumer -> Consumer.RebalanceEvent -> IO ())
+newRebalanceFlag = do
+  flag <- newIORef False
+  pure
+    ( flag,
+      \_ -> \case
+        Consumer.RebalanceBeforeRevoke _ -> atomicModifyIORef' flag (const (True, ()))
+        _ -> pure ()
+    )
+
+runSessionizer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IORef Bool -> IO ()
+runSessionizer flowRt appEnv kc rebalanced = do
   stateEnv <- maybe (P.error "driverStateRedisCfg is not set; SESSIONIZER needs it") pure appEnv.driverStateHedisEnv
   start <- nowMs
   (sc, stateStart, stateStartMs) <- openStateConsumer
@@ -315,6 +334,11 @@ runSessionizer flowRt appEnv kc = do
     flow :: Flow a -> IO a
     flow = runFlowR flowRt appEnv
 
+    -- The names the driver app publishes to (driverPoolStateTopic,
+    -- driverAnalyticsEventsTopic), defaulting to the dev names.
+    stateTopic = fromMaybe "driver-pool-state" appEnv.driverPoolStateTopic
+    eventsTopic = fromMaybe "driver-analytics-events" appEnv.driverAnalyticsEventsTopic
+
     -- Every partition of driver-pool-state, from its current end, on a
     -- consumer of its own. hw-kafka-client cannot open a consumer without a
     -- subscription, so it subscribes under a group id unique to this process:
@@ -322,11 +346,15 @@ runSessionizer flowRt appEnv kc = do
     -- committed. Once assigned, every partition is moved to its end.
     -- Partitions added to the topic later are not picked up until a restart.
     openStateConsumer = do
-      openedAt <- nowMs
+      -- A random id: two pods starting in the same ms must not share the group.
+      groupSuffix <- flow generateGUIDText
       let props =
             appEnv.kafkaConsumerCfg.consumerProperties
-              <> Consumer.groupId (Consumer.ConsumerGroupId ("sessionizer-state-" <> show openedAt))
+              <> Consumer.groupId (Consumer.ConsumerGroupId ("sessionizer-state-" <> groupSuffix))
               <> Consumer.noAutoCommit
+              -- As the main consumer: a long Redis retry must not drop it from its group,
+              -- which would restart it from auto.offset.reset rather than its read position.
+              <> Consumer.extraProp "max.poll.interval.ms" "86400000"
       sc <- either (P.error . ("sessionizer: cannot open the driver-pool-state consumer: " <>) . show) P.id <$> Consumer.newConsumer props (Consumer.topics [Consumer.TopicName stateTopic])
       partitionCount <- length <$> retryingIO "driver-pool-state partition list" (sequence <$> KM.watermarkOffsets sc (Consumer.Timeout 10000) (Consumer.TopicName stateTopic))
       awaitAssignment sc partitionCount
@@ -335,7 +363,7 @@ runSessionizer flowRt appEnv kc = do
       -- writer's copy once its watermark passes now.
       startedMs <- nowMs
       let starts = M.fromList [(Consumer.unPartitionId (KM.woPartitionId wo), Consumer.unOffset (KM.woHighWatermark wo)) | wo <- wos]
-      seekErr <- Consumer.seek sc (Consumer.Timeout 10000) [Consumer.TopicPartition (Consumer.TopicName stateTopic) (Consumer.PartitionId p) (Consumer.PartitionOffset o) | (p, o) <- M.toList starts]
+      seekErr <- Consumer.seekPartitions sc [Consumer.TopicPartition (Consumer.TopicName stateTopic) (Consumer.PartitionId p) (Consumer.PartitionOffset o) | (p, o) <- M.toList starts] (Consumer.Timeout 10000)
       whenJust seekErr $ \err -> P.error ("sessionizer: cannot move the driver-pool-state partitions to their end: " <> show err)
       flow $ logInfo $ "sessionizer: reading all " <> show (M.size starts) <> " driver-pool-state partitions from " <> show (M.toList starts)
       pure (sc, starts, startedMs)
@@ -350,6 +378,25 @@ runSessionizer flowRt appEnv kc = do
         flow $ logInfo $ "sessionizer: waiting for the driver-pool-state assignment (" <> show got <> "/" <> show partitionCount <> ")"
         awaitAssignment sc partitionCount
 
+    -- The batch polled with the rebalance can hold records from before the
+    -- revocation (to be read again) and from after the new assignment (not read
+    -- again): both are dropped, and every assigned partition is moved back to its
+    -- last commit, so each record is read once more. A partition with no commit
+    -- keeps its position, and records polled from it with the rebalance are lost.
+    rewindToCommit = do
+      assigned <- either (\err -> P.error ("sessionizer: assignment unreadable after a rebalance: " <> show err)) P.id <$> Consumer.assignment kc
+      let tps = [(t, p) | (t, ps) <- M.toList assigned, p <- ps]
+      committedTps <-
+        if null tps
+          then pure []
+          else either (\err -> P.error ("sessionizer: committed offsets unreadable after a rebalance: " <> show err)) P.id <$> Consumer.committed kc (Consumer.Timeout 10000) tps
+      let (known, unknown) = DL.partition (\tp -> case Consumer.tpOffset tp of Consumer.PartitionOffset _ -> True; _ -> False) committedTps
+      unless (null known) $ do
+        seekErr <- Consumer.seekPartitions kc known (Consumer.Timeout 10000)
+        whenJust seekErr $ \err -> P.error ("sessionizer: cannot move partitions back to their commit after a rebalance: " <> show err)
+      unless (null unknown) $ flow $ logWarning $ "sessionizer: no commit yet for " <> show (map Consumer.tpPartition unknown) <> "; records polled with the rebalance are not read again"
+      flow $ logInfo $ "sessionizer: partitions rebalanced; unflushed work dropped, " <> show (length known) <> " partitions re-read from their last commit"
+
     retryingIO what action = do
       res <- action `catchAny` (pure . Left . Consumer.KafkaError . show)
       case res of
@@ -359,9 +406,15 @@ runSessionizer flowRt appEnv kc = do
           CC.threadDelay 1000000
           retryingIO what action
 
-    pollLoop stateEnv sc stateStartMs acc = do
+    pollLoop stateEnv sc stateStartMs acc0 = do
       statePolled <- Consumer.pollMessageBatch sc (Consumer.Timeout 50) (Consumer.BatchSize pollBatchSize)
-      polled <- Consumer.pollMessageBatch kc (Consumer.Timeout 450) (Consumer.BatchSize pollBatchSize)
+      polledNow <- Consumer.pollMessageBatch kc (Consumer.Timeout 450) (Consumer.BatchSize pollBatchSize)
+      -- A rebalance (eager, range assignor) revokes every partition; what was
+      -- read since the last commit is read again by whoever owns it now, so the
+      -- unflushed work is dropped rather than flushed as well.
+      rebalancedNow <- atomicModifyIORef' rebalanced (False,)
+      polled <- if rebalancedNow then [] <$ rewindToCommit else pure polledNow
+      let acc = if rebalancedNow then dropUnflushed acc0 else acc0
       forM_ (Either.lefts statePolled <> Either.lefts polled) $ \err ->
         unless (isRdKafkaError "RdKafkaRespErrTimedOut" err) $ flow $ logError $ "sessionizer: kafka poll error: " <> show err
       let stateRecords = filter (isTopic stateTopic) (Either.rights statePolled)
@@ -373,7 +426,7 @@ runSessionizer flowRt appEnv kc = do
       batchNow <- nowMs
       withWriter <- readWriter stateEnv batchNow (applyStateRecords batchNow (foldl' trackOffset withFlushed skipped) stateRecords)
       withLoaded <- loadPending stateEnv stateStartMs withWriter
-      probed <- advanceProbe sc batchNow withLoaded {heldRecords = withLoaded.heldRecords <> map (holdRecord batchNow) fresh}
+      probed <- advanceProbe sc batchNow withLoaded {heldRecords = withLoaded.heldRecords <> map (holdRecord eventsTopic batchNow) fresh}
       released <- releaseRecords stateEnv stateStartMs batchNow probed
       now <- nowMs
       acc' <- if now >= released.nextFlushMs then flush stateEnv (null polled && null released.heldRecords) now released else pure released
@@ -413,7 +466,9 @@ runSessionizer flowRt appEnv kc = do
       [] -> pure acc
       dids -> do
         loaded <- loadDriversRetrying stateEnv.hedisConnection dids
-        let mem (current, seeded, history) = DriverMem {dmCurrent = current, dmHistory = history, dmLoadedThroughMs = acc.writerWmMs, dmSeeded = seeded}
+        -- The writer may be past the watermark read: its newest history
+        -- entry is in the copy too, so events up to it are not applied again.
+        let mem (current, seeded, history) = DriverMem {dmCurrent = current, dmHistory = history, dmLoadedThroughMs = max acc.writerWmMs (maybe 0 fst (M.lookupMax history)), dmSeeded = seeded}
         pure acc {drivers = M.union (M.map mem loaded) acc.drivers}
 
     loadDriversRetrying conn dids = do
@@ -514,6 +569,7 @@ runSessionizer flowRt appEnv kc = do
             filter
               (\(did, atMs) -> isNothing (entryAt loaded did atMs))
               ([(p.pingDriverId, p.pingTsMs) | p <- pingsAt, isBufferedPing p] <> [(ev.driverId, ev.ts) | ev <- eventsAt])
+              <> filter (uncurry (historyAfter loaded)) [(p.pingDriverId, p.pingStMs) | p <- pingsAt]
       fallback <- if null late then pure M.empty else lateStatesRetrying stateEnv.hedisConnection late
       void $ P.addCounter acc.metrics.historyFallbacks (fromIntegral (length late))
       unless (null late) $ flow $ logInfo $ "sessionizer: " <> show (length late) <> " records took their state from Redis history (" <> show (M.size fallback) <> " found)"
@@ -542,13 +598,15 @@ runSessionizer flowRt appEnv kc = do
           lateStatesRetrying conn wanted
 
     flush stateEnv idle now acc = do
-      let rows = [analyticsRow k v | (k, v) <- M.toList acc.activity]
-      produced <- produceRows appEnv.kafkaProducerTools.producer rows `catchAny` (pure . Left . show)
+      let keyed = inChunks rowsPerMessage (M.toList acc.activity)
+      produced <- produceRows appEnv.kafkaProducerTools.producer (map (map (uncurry analyticsRow)) keyed) `catchAny` (\e -> pure (Left (S.fromList [0 .. length keyed - 1], show e)))
       case produced of
-        Left err -> do
+        Left (undelivered, err) -> do
           flow $ logError $ "sessionizer: producing to " <> analyticsTopic <> " failed, will retry: " <> err
           P.incCounter acc.metrics.flushFailures
-          pure acc {nextFlushMs = now + flushRetryMs}
+          -- Only the rows not delivered are retried: the others are not sent twice.
+          let retried = S.fromList [k | (i, chunk) <- zip [0 ..] keyed, S.member i undelivered, (k, _) <- chunk]
+          pure acc {activity = M.restrictKeys acc.activity retried, nextFlushMs = now + flushRetryMs}
         Right () -> do
           writeFlushedRetrying stateEnv.hedisConnection acc.offsets
           commitOffsets acc.offsets
@@ -558,7 +616,7 @@ runSessionizer flowRt appEnv kc = do
               watermark = if idle || null pending then now else P.minimum pending
           flow (inStateRedis stateEnv (Hedis.set sessionizerWatermarkKey watermark)) `catchAny` \e ->
             flow $ logError $ "sessionizer: watermark update failed: " <> show e
-          flow $ logInfo $ "sessionizer: flushed " <> show (length rows) <> " rows; " <> show (length acc.heldRecords) <> " records held (oldest for " <> show (maybe 0 (\hr -> now - hr.hrHeldAtMs) (listToMaybe acc.heldRecords)) <> " ms); " <> show (M.size acc.pendingLoad) <> " drivers waiting for the writer; " <> show (M.size acc.drivers) <> " drivers in memory"
+          flow $ logInfo $ "sessionizer: flushed " <> show (M.size acc.activity) <> " rows; " <> show (length acc.heldRecords) <> " records held (oldest for " <> show (maybe 0 (\hr -> now - hr.hrHeldAtMs) (listToMaybe acc.heldRecords)) <> " ms); " <> show (M.size acc.pendingLoad) <> " drivers waiting for the writer; " <> show (M.size acc.drivers) <> " drivers in memory"
           -- Driver state stays; its history keeps only what held records can
           -- still need.
           pure
@@ -612,6 +670,17 @@ applyEvent acc ev = case M.lookup ev.driverId acc.drivers of
 entryAt :: Acc -> Text -> Integer -> Maybe (Integer, DriverStateSnapshot)
 entryAt acc did atMs = M.lookup did acc.drivers >>= M.lookupLE atMs . (.dmHistory)
 
+-- | After a rebalance: everything not yet flushed is read again from the last
+-- commit, so it is dropped here. Driver state stays (the state topic is read
+-- by every pod), and the flushed offsets are read again from Redis.
+dropUnflushed :: Acc -> Acc
+dropUnflushed acc = acc {activity = M.empty, heldRecords = [], offsets = M.empty, recordProgress = M.empty, flushedThrough = M.empty}
+
+-- | The driver's history in memory starts after @atMs@ (trimmed at a flush):
+-- the writer's Redis history may still hold the entry in force then.
+historyAfter :: Acc -> Text -> Integer -> Bool
+historyAfter acc did atMs = maybe False (\dm -> maybe False ((> atMs) . fst) (M.lookupMin dm.dmHistory)) (M.lookup did acc.drivers)
+
 isBufferedPing :: PingAt -> Bool
 isBufferedPing p = p.pingStMs - p.pingTsMs > bufferedPingGapMs
 
@@ -643,30 +712,32 @@ trackOffset acc cr =
 topicPartition :: ConsumerRecordD -> (Text, Int)
 topicPartition cr = (Consumer.unTopicName (Consumer.crTopic cr), Consumer.unPartitionId (Consumer.crPartition cr))
 
--- | Produces the rows, 'rowsPerMessage' JSONEachRow lines per message, and
--- waits until every message is delivered.
-produceRows :: Producer.KafkaProducer -> [A.Value] -> IO (Either Text ())
+-- | Produces each chunk of rows as one message of JSONEachRow lines, and
+-- waits until every message is delivered. On failure: the indices of the
+-- chunks not delivered.
+produceRows :: Producer.KafkaProducer -> [[A.Value]] -> IO (Either (S.Set Int, Text) ())
 produceRows _ [] = pure (Right ())
-produceRows producer rows = do
-  failures <- newIORef []
-  let report = \case
+produceRows producer chunks = do
+  failures <- newIORef ([] :: [(Int, Text)])
+  let report i = \case
         Producer.DeliverySuccess _ _ -> pure ()
-        Producer.DeliveryFailure _ err -> atomicModifyIORef' failures (\fs -> (show err : fs, ()))
-        Producer.NoMessageError err -> atomicModifyIORef' failures (\fs -> (show err : fs, ()))
-  queued <- forM (inChunks rowsPerMessage rows) $ \chunk ->
-    Producer.produceMessage' producer (message chunk) report
+        Producer.DeliveryFailure _ err -> atomicModifyIORef' failures (\fs -> ((i, show err) : fs, ()))
+        Producer.NoMessageError err -> atomicModifyIORef' failures (\fs -> ((i, show err) : fs, ()))
+  queued <- forM (zip [0 ..] chunks) $ \(i, chunk) ->
+    either (\(Producer.ImmediateError e) -> Left (i, show e)) Right <$> Producer.produceMessage' producer (message chunk) (report i)
   Producer.flushProducer producer
   delivered <- readIORef failures
-  pure $ case (Either.lefts queued, delivered) of
-    ([], []) -> Right ()
-    (immediate, failed) -> Left (show (length immediate + length failed) <> " messages not delivered, e.g. " <> T.take 500 (show (map (\(Producer.ImmediateError e) -> show e) immediate <> failed :: [Text])))
+  pure $ case Either.lefts queued <> delivered of
+    [] -> Right ()
+    failed -> Left (S.fromList (map fst failed), show (length failed) <> " messages not delivered, e.g. " <> T.take 500 (show (map snd failed)))
   where
     message chunk =
       Producer.ProducerRecord
         { Producer.prTopic = Producer.TopicName analyticsTopic,
           Producer.prPartition = Producer.UnassignedPartition,
           Producer.prKey = Nothing,
-          Producer.prValue = Just (LBS.toStrict (LBS.intercalate "\n" (map A.encode chunk)))
+          Producer.prValue = Just (LBS.toStrict (LBS.intercalate "\n" (map A.encode chunk))),
+          Producer.prHeaders = Producer.headersFromList []
         }
 
 inChunks :: Int -> [a] -> [[a]]
@@ -690,8 +761,8 @@ writeFlushed conn offs = do
       R.set (TE.encodeUtf8 (flushedOffsetKey t p)) (TE.encodeUtf8 (show lastOffset))
   pure (either (Left . show) (const (Right ())) (sequence replies))
 
-holdRecord :: Integer -> ConsumerRecordD -> HeldRecord
-holdRecord now cr =
+holdRecord :: Text -> Integer -> ConsumerRecordD -> HeldRecord
+holdRecord eventsTopic now cr =
   HeldRecord
     { hrHeldAtMs = now,
       hrRecord = cr,
@@ -699,7 +770,7 @@ holdRecord now cr =
         if isTopic eventsTopic cr
           then mfilter (\ev -> ev.driverId `notElem` ignoredDriverIds) (decodeValue cr) <&> DecodedEvent
           else do
-            did <- decodeKey cr
+            did <- mfilter (`notElem` ignoredDriverIds) (decodeKey cr)
             lu :: LU.LocationUpdates <- decodeValue cr
             pure (DecodedPing did lu (utcToMs (fromMaybe lu.ts lu.st)))
     }
@@ -743,7 +814,7 @@ loadDrivers conn dids = do
         members <- R.zrange (TE.encodeUtf8 (historyKey did)) 0 (-1)
         pure ((,) <$> fields <*> members)
     pure (either (Left . show) (Right . zip chunk) (sequence replies))
-  pure (M.fromList . map (\(did, reply) -> (did, toMem reply)) . concat <$> sequence loaded)
+  pure (M.fromList . map (second toMem) . concat <$> sequence loaded)
   where
     toMem (fields, members) =
       let decoded = [(TE.decodeUtf8 field, v) | (field, raw) <- fields, Just v <- [A.decodeStrict raw]]
@@ -811,7 +882,7 @@ decodeValue :: FromJSON a => ConsumerRecordD -> Maybe a
 decodeValue cr = A.decode . LBS.fromStrict =<< Consumer.crValue cr
 
 decodeKey :: ConsumerRecordD -> Maybe Text
-decodeKey cr = TE.decodeUtf8 <$> Consumer.crKey cr
+decodeKey cr = either (const Nothing) Just . TE.decodeUtf8' =<< Consumer.crKey cr
 
 inStateRedis :: Hedis.HedisEnv -> Flow a -> Flow a
-inStateRedis stateEnv = local (Hedis.withSecondaryRedisEnv stateEnv)
+inStateRedis stateEnv = local (Hedis.withCloudRedisEnv stateEnv)

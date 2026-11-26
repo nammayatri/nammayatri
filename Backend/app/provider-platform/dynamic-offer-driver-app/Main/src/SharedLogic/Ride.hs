@@ -153,7 +153,7 @@ type InitializeRideFlow m r c =
   )
 
 initializeRide ::
-  InitializeRideFlow m r c =>
+  (InitializeRideFlow m r c, DriverPoolStateEnv r) =>
   Merchant ->
   DPerson.Person ->
   DBooking.Booking ->

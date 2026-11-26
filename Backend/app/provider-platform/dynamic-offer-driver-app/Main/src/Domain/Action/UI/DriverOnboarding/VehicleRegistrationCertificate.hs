@@ -99,10 +99,10 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.DocumentProtection (readDocument)
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.RCTakeoverVerification as RCTakeover
 import qualified SharedLogic.RCTransferNotice as RCTransferNotice
-import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -986,7 +986,7 @@ endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
     forM_ rcs $ \rc ->
       Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
 
-removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
+removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Bool -> Id Person.Person -> m ()
 removeVehicle isTaxiBoothRequest driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
