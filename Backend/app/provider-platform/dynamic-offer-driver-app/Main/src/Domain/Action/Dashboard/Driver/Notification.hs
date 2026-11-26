@@ -211,6 +211,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           requestedVehicleVariant = driverVehicle,
           airConditioned = Nothing,
           vehicleServiceTier = Just tierName,
+          vehicleServiceTierName = Nothing,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,

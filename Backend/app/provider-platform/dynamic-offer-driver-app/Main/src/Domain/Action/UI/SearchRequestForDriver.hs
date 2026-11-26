@@ -106,6 +106,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: DV.VehicleVariant,
     vehicleServiceTier :: Maybe TranslatedText,
+    vehicleServiceTierName :: Maybe Text, -- as configured for the city, not translated; vehicleServiceTier is the one to show
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
     -- customerCancellationDues :: HighPrecMoney,   -- not used in the ui therefore removing both of these fields
@@ -228,6 +229,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           vehicleServiceTier = textAsReceived <$> nearbyReq.vehicleServiceTierName,
+          vehicleServiceTierName = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollCharges = tollCharges',

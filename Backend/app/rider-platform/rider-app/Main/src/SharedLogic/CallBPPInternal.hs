@@ -701,6 +701,7 @@ data DriverReview = DriverReview
   { riderName :: Maybe Text,
     review :: Maybe Text,
     feedBackPills :: [Text],
+    feedBackPillKeys :: Maybe [Text],
     rating :: Int,
     tripDate :: UTCTime
   }

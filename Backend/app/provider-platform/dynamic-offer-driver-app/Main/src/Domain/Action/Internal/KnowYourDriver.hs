@@ -64,6 +64,7 @@ data DriverReview = DriverReview
   { riderName :: Maybe Text,
     review :: Maybe Text,
     feedBackPills :: [Text],
+    feedBackPillKeys :: [Text], -- one per pill, in the same order; empty for a pill without a key
     rating :: Int,
     tripDate :: UTCTime
   }
@@ -202,12 +203,14 @@ getDriverProfile withImages language person = do
     constructPartialRatings ratings feedbacks =
       pure $ foldl (goFeedbacks feedbacks) [] ratings
 
-    goFeedbacks feedbacks fullRating (rating, riderName) =
+    goFeedbacks feedbacks fullRating (rating, riderName) = do
+      let rideFeedbacks = filter (\feedback -> feedback.rideId == rating.rideId) feedbacks
       fullRating
         <> [ DriverReview
                { riderName = riderName,
                  review = rating.feedbackDetails,
-                 feedBackPills = filter (\feedback -> feedback.rideId == rating.rideId) feedbacks <&> (.badge), -- map () ratingFeedbacks,
+                 feedBackPills = rideFeedbacks <&> (.badge), -- map () ratingFeedbacks,
+                 feedBackPillKeys = rideFeedbacks <&> (fromMaybe "" . (.badgeKey)),
                  rating = rating.ratingValue,
                  tripDate = rating.createdAt
                }

@@ -639,6 +639,13 @@ newtype ServiceTierChangedParam = ServiceTierChangedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | The app tells this push from other trip updates by 'notificationKey', not by its text.
+data ServiceTierChangedData = ServiceTierChangedData
+  { serviceTierName :: Text,
+    notificationKey :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 notifyOnServiceTierChange ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
@@ -649,7 +656,7 @@ notifyOnServiceTierChange booking newVehicleServiceTier mbServiceTierName = do
   let personId = booking.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newServiceTierName <- serviceTierNameFor person newVehicleServiceTier mbServiceTierName
-  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedParam newServiceTierName)
+  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedData newServiceTierName (legacyOrKeyName RiderPush_Ride_ServiceTierChanged))
       dynamicParams = ServiceTierChangedParam newServiceTierName
   dynamicNotifyPerson
     person
