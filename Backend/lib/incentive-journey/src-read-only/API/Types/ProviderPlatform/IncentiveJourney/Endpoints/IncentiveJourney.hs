@@ -284,7 +284,8 @@ data IncentiveJourneyCampaignMembersSummary = IncentiveJourneyCampaignMembersSum
     invited :: Kernel.Prelude.Int,
     disabled :: Kernel.Prelude.Int,
     expired :: Kernel.Prelude.Int,
-    optedInToday :: Kernel.Prelude.Int
+    optedInToday :: Kernel.Prelude.Int,
+    optInPeriod :: Kernel.Prelude.Maybe OptInPeriod
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

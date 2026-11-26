@@ -418,7 +418,8 @@ getIncentiveJourneyCohortJourneyMembers handle merchantShortId opCity cjmId mbOp
               invited = summary.invited,
               disabled = summary.disabled,
               expired = summary.expired,
-              optedInToday = summary.optedInToday
+              optedInToday = summary.optedInToday,
+              optInPeriod = toApiOptInPeriod <$> summary.optInPeriod
             },
         members = map toCampaignMemberItem members
       }
@@ -1104,11 +1105,6 @@ toApiOptInPeriod :: DCJM.OptInPeriod -> Common.OptInPeriod
 toApiOptInPeriod = \case
   DCJM.Daily -> Common.OptInDaily
   DCJM.Weekly -> Common.OptInWeekly
-
-toApiOptInPeriod :: DUCM.OptInPeriod -> Common.OptInPeriod
-toApiOptInPeriod = \case
-  DUCM.Daily -> Common.OptInDaily
-  DUCM.Weekly -> Common.OptInWeekly
 
 toDomainConditionType :: Common.MilestoneConditionType -> DIJM.MilestoneConditionType
 toDomainConditionType = \case

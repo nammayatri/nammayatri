@@ -384,13 +384,16 @@ data CampaignMembersSummary = CampaignMembersSummary
     invited :: Int,
     disabled :: Int,
     expired :: Int,
-    optedInToday :: Int
+    optedInToday :: Int,
+    -- | The campaign's OptIn cadence ('IJ.listOptInPeriod'); Nothing for Assigned.
+    optInPeriod :: Maybe DCJM.OptInPeriod
   }
 
 data CampaignMemberView = CampaignMemberView
   { userId :: ID.Id DIJC.Person,
     optInStatus :: AssignmentOptInStatus,
-    optInPeriod :: Maybe DUCM.OptInPeriod,
+    -- | The membership's cadence snapshot (taken at opt-in), else the campaign's; Nothing for Assigned.
+    optInPeriod :: Maybe DCJM.OptInPeriod,
     optedInAt :: Maybe UTCTime,
     optedInBy :: Maybe Text,
     assignedAt :: UTCTime,
@@ -431,7 +434,9 @@ listCampaignMembers handle merchantShortId opCity cjmId flt = do
         CampaignMemberView
           { userId = ucm.userId,
             optInStatus = mkAssignmentOptInStatus localNow cjm (Just ucm),
-            optInPeriod = ucm.optInPeriod,
+            optInPeriod = case linkType of
+              DCJM.Assigned -> Nothing
+              DCJM.OptIn -> ucm.optInPeriod <|> IJ.listOptInPeriod cjm,
             optedInAt = ucm.optedInAt,
             optedInBy = ucm.optedInBy,
             assignedAt = ucm.createdAt,
@@ -452,7 +457,8 @@ listCampaignMembers handle merchantShortId opCity cjmId flt = do
             invited = count (\v -> v.enabled && v.optInStatus == Pending),
             disabled = count (not . (.enabled)),
             expired = count (\v -> v.enabled && v.validTill < localNow),
-            optedInToday = count (\v -> maybe False (>= todayStartLocal) v.optedInAt)
+            optedInToday = count (\v -> maybe False (>= todayStartLocal) v.optedInAt),
+            optInPeriod = IJ.listOptInPeriod cjm
           }
       matches v =
         maybe True (== v.optInStatus) flt.optInStatus

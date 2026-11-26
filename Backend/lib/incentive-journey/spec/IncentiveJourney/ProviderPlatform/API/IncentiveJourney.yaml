@@ -454,6 +454,7 @@ types:
   # (OptedIn = opted in for the current period: Daily = same local day, Weekly = campaign week);
   # disabled = enabled false; expired = enabled with validTill before city-local now;
   # optedInToday = optedInAt (city-local wall clock) since city-local midnight.
+  # optInPeriod: the campaign's OptIn cadence (OptInDaily / OptInWeekly; OptIn without one = OptInDaily); Nothing for Assigned.
   IncentiveJourneyCampaignMembersSummary:
     - total: Int
     - optedIn: Int
@@ -461,11 +462,13 @@ types:
     - disabled: Int
     - expired: Int
     - optedInToday: Int
+    - optInPeriod: Maybe OptInPeriod
 
   # optInStatus: same rule as /driver/{driverId}/assignments. assignedAt = UCM createdAt.
   # activeNow: campaign enabled and in window, UCM enabled, validTill >= city-local now,
   # and Assigned link or opted in for the current period (same rule as the control-features slot / IJCampaign tag).
-  # optInPeriod: the stored opt-in period (OptInDaily / OptInWeekly); Nothing when not opted in.
+  # optInPeriod: the membership's cadence snapshot taken at opt-in (OptInDaily / OptInWeekly), else the campaign's
+  # (as the summary); Nothing for Assigned.
   IncentiveJourneyCampaignMemberItem:
     - driverId: Id Driver
     - optInStatus: OptInStatus
