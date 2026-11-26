@@ -36,11 +36,15 @@ module SharedLogic.SharedRun.Materialise
   )
 where
 
+import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (Day, UTCTime (..), addDays)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V5 as UUIDV5
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DRB
@@ -138,8 +142,15 @@ sharedRunBapId :: Text
 sharedRunBapId = "shared-run"
 
 -- | The idempotency key of one run: the feed's config, the GTFS trip and the service day.
+-- Hashed into a name-based UUID (v5): the same three always give the same id, and it fits the 36-character
+-- transaction_id of booking (character(36)) and search_request (character varying(36)). The readable key
+-- "sharedRun:<config>:<trip>:<day>" is 58+ characters and Postgres rejects it (SQLSTATE 22001). Nothing parses
+-- the id: callers rebuild it from the same inputs to look a run up, and the trip, route and start time are
+-- stored in their own booking columns.
 runTransactionId :: Id DIBC.IntegratedBPPConfig -> Text -> Day -> Text
-runTransactionId integratedBppConfigId tripId day = "sharedRun:" <> integratedBppConfigId.getId <> ":" <> tripId <> ":" <> show day
+runTransactionId integratedBppConfigId tripId day =
+  UUID.toText . UUIDV5.generateNamed UUID.nil . BS.unpack . TE.encodeUtf8 $
+    "sharedRun:" <> integratedBppConfigId.getId <> ":" <> tripId <> ":" <> show day
 
 materialiseRuns :: MaterialiseFlow m r c => DM.Merchant -> MaterialiseReq -> m MaterialiseResp
 materialiseRuns merchant req = do
