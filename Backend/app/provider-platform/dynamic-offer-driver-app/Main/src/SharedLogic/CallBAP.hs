@@ -15,6 +15,7 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    betterDriverCutoffRadius,
     sendRideEnroutePickupStatusToBAP,
     notifyDriverOnScheduledRideAssigned,
     sendRideStartedUpdateToBAP,
@@ -178,6 +179,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
+import qualified Storage.Queries.SearchRequestForDriverExtra as QSRDE
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -653,7 +655,7 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
             if isUpgrade then (.name) <$> mbAssignedCfg else Nothing
           )
       _ -> pure (False, Nothing, Nothing)
-  let betterDriverAbortRadiusMeters = highPrecMetersToMeters <$> (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters))
+  betterDriverAbortRadiusMeters <- forM (mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters)) $ \searchRadius -> highPrecMetersToMeters <$> betterDriverCutoffRadius searchRadius (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters)) booking ride.driverId
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
@@ -1921,3 +1923,14 @@ callBecknAPIUnsigned action baseUrl body = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   let urlWithAction = baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/" <> T.unpack action}
   Beckn.callBecknAPI Nothing Nothing action fabricUnsignedAPI urlWithAction internalEndPointHashMap body
+
+betterDriverCutoffRadius :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMeters -> Maybe Double -> DRB.Booking -> Id DP.Person -> m HighPrecMeters
+betterDriverCutoffRadius searchRadius mbProgressFraction booking driverId = do
+  mbInitialDistance <- case booking.searchTryId of
+    Nothing -> pure Nothing
+    Just searchTryId -> fmap (metersToHighPrecMeters . (.straightLineDistanceToPickup)) . listToMaybe <$> QSRDE.findAllByDriverAndSearchTryId driverId searchTryId
+  pure $ case mbInitialDistance of
+    Just initialDistance | initialDistance > searchRadius -> initialDistance - realToFrac progressFraction * (initialDistance - searchRadius)
+    _ -> searchRadius
+  where
+    progressFraction = max 0 . min 1 $ fromMaybe 0.5 mbProgressFraction
