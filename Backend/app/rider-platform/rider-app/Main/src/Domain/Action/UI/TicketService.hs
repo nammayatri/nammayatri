@@ -511,7 +511,6 @@ seatRows :: [DTB.TicketBookingService] -> [DTB.TicketBookingService]
 seatRows = filter (isNothing . (.startTime))
 
 -- | A parking row paid after its 5-minute hold lapsed may have lost its space or its vehicle's slot meanwhile.
--- shortcut: checked without the zone lock, so two late payers confirming in the same instant can still both pass; lock if that shows up.
 parkingStillFits :: DTB.TicketBookingService -> Environment.Flow Bool
 parkingStillFits row = do
   now <- getCurrentTime
@@ -1619,21 +1618,26 @@ applyTicketPaymentStatus merchantId person _shortId paymentStatus =
             -- checking here if blockExpiryTime is passed
             currentTimeWithBuffer <- (10000 +) <$> getCurrentTimestamp
             let windowTimePassed = maybe False (\expTime -> currentTimeWithBuffer > expTime) ticketBooking'.blockExpirationTime
-            fits <- and <$> mapM parkingStillFits ticketBookingServices
-            res <-
-              if not fits
-                then pure LockBookingFailed
-                else
-                  if windowTimePassed
-                    then tryInstantBooking personId ticketBookingServiceCategories
-                    else do
-                      case ticketBooking'.blockExpirationTime of
-                        Just _ -> tryLockBooking personId ticketBookingServiceCategories
-                        Nothing -> return (LockBookingSuccess Nothing)
+            res <- withTimeWindowLocks [s.ticketServiceId | s <- ticketBookingServices, isJust s.startTime] $ do
+              fits <- and <$> mapM parkingStillFits ticketBookingServices
+              res' <-
+                if not fits
+                  then pure LockBookingFailed
+                  else
+                    if windowTimePassed
+                      then tryInstantBooking personId ticketBookingServiceCategories
+                      else do
+                        case ticketBooking'.blockExpirationTime of
+                          Just _ -> tryLockBooking personId ticketBookingServiceCategories
+                          Nothing -> return (LockBookingSuccess Nothing)
+              case res' of
+                LockBookingSuccess _ -> do
+                  QTB.updateStatusByShortId DTTB.Booked _shortId
+                  QTicketBookingService.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
+                LockBookingFailed -> pure ()
+              pure res'
             case res of
               LockBookingSuccess _ -> do
-                QTB.updateStatusByShortId DTTB.Booked _shortId
-                QTicketBookingService.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
                 mapM_
                   ( \tbsc ->
                       whenJust tbsc.serviceCategoryId $ \serviceId ->

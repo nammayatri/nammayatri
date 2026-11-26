@@ -1381,7 +1381,6 @@ library
       Domain.Types.DeletedPerson
       Domain.Types.Depot
       Domain.Types.DepotManager
-      Domain.Types.DetectionSource
       Domain.Types.DeviceVehicleMapping
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
@@ -1449,7 +1448,6 @@ library
       Domain.Types.NotificationSoundsConfig
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
-      Domain.Types.OccupancyAlert
       Domain.Types.OfferEntity
       Domain.Types.OnSearchEvent
       Domain.Types.OpenMeterRide
@@ -1524,9 +1522,6 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.TicketSubPlace
-      Domain.Types.TowingAuditLog
-      Domain.Types.TowingRequest
-      Domain.Types.TowingVehicle
       Domain.Types.Translations
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
@@ -1534,7 +1529,6 @@ library
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleSeatLayoutMapping
-      Domain.Types.VehicleViolation
       Domain.Types.VendorSplitDetails
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -1568,7 +1562,6 @@ library
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
       Storage.Beam.DepotManager
-      Storage.Beam.DetectionSource
       Storage.Beam.DeviceVehicleMapping
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
@@ -1636,7 +1629,6 @@ library
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
-      Storage.Beam.OccupancyAlert
       Storage.Beam.OfferEntity
       Storage.Beam.OnSearchEvent
       Storage.Beam.OpenMeterRide
@@ -1710,9 +1702,6 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.TicketSubPlace
-      Storage.Beam.TowingAuditLog
-      Storage.Beam.TowingRequest
-      Storage.Beam.TowingVehicle
       Storage.Beam.Translations
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
@@ -1720,7 +1709,6 @@ library
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleSeatLayoutMapping
-      Storage.Beam.VehicleViolation
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.AssetRelease
@@ -1760,7 +1748,6 @@ library
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
       Storage.Queries.DepotManager
-      Storage.Queries.DetectionSource
       Storage.Queries.DeviceVehicleMapping
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
@@ -1828,7 +1815,6 @@ library
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
-      Storage.Queries.OccupancyAlert
       Storage.Queries.OfferEntity
       Storage.Queries.OnSearchEvent
       Storage.Queries.OpenMeterRide
@@ -1983,9 +1969,6 @@ library
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
       Storage.Queries.TicketSubPlace
-      Storage.Queries.TowingAuditLog
-      Storage.Queries.TowingRequest
-      Storage.Queries.TowingVehicle
       Storage.Queries.Translations
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
@@ -1993,7 +1976,6 @@ library
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleSeatLayoutMapping
-      Storage.Queries.VehicleViolation
       Storage.Queries.VendorSplitDetails
       Storage.Queries.WhiteListOrg
   other-modules:
