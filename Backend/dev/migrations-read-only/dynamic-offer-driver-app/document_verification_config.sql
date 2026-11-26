@@ -222,3 +222,12 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN force
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN failed_attempt_window_seconds integer ;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN failed_attempt_limit integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN ai_image_verification_enabled boolean ;
+
+
+------- SQL updates -------

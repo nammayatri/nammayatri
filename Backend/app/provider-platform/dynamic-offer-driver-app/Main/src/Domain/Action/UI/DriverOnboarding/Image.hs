@@ -47,10 +47,13 @@ import qualified API.Types.UI.DriverOnboardingV2 as Domain
 -- 'PDF' is hidden because AWS.S3's FileType has a constructor of the same name that would clash
 -- with the local 'UploadedFileType' constructor below; the S3 one is not used in this module.
 import AWS.S3 as S3 hiding (PDF)
+import qualified Control.Monad.Catch as Catch
 import qualified Data.ByteString as BS
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverRCAssociation as DRCA
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as Fields
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -72,12 +75,15 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.DocumentProtection (readDocument, readDocumentIfAvailable, storeDocument)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
+import qualified SharedLogic.DriverOnboarding.VehicleImageGridVerification as VehicleImageGrid
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -475,11 +481,11 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
+      let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
       let validationFromDocConfigs =
-            let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
-             in ( maybe True (.isImageValidationRequired) mbDocCfg,
-                  mbDocCfg >>= (.markImageValidOnValidationSkip)
-                )
+            ( maybe True (.isImageValidationRequired) mbDocCfg,
+              mbDocCfg >>= (.markImageValidOnValidationSkip)
+            )
       (isImageValidationRequired, markValidOnSkip) <-
         -- A fleet upload carrying an rcNumber is a VEHICLE document; those are governed by
         -- docConfigs like driver uploads. The fleet-owner table only describes the fleet
@@ -507,18 +513,61 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
               if markValidOnSkip == Just True
                 then Documents.VALID
                 else Documents.MANUAL_VERIFICATION_REQUIRED
+      let gridVerificationEnabled = fromMaybe False (mbDocCfg >>= (.aiImageVerificationEnabled))
+          setVerificationStatusForIfPending imgId status = do
+            mbCurrent <- Query.findById imgId
+            let alreadyTerminal = case mbCurrent >>= (.verificationStatus) of
+                  Just Documents.VALID -> True
+                  Just Documents.INVALID -> True
+                  _ -> False
+            unless alreadyTerminal $
+              SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve guardTarget $
+                Query.updateVerificationStatusOnlyById status imgId
       if isImageValidationRequired && isNothing validationStatus
         then do
-          validationOutput <-
-            Verification.validateImage merchantId merchantOpCityId $
-              Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-          if validationOutput.validationAvailable
-            then do
-              checkErrors imageEntity.id imageType validationOutput.detectedImage
-              setVerificationStatus Documents.VALID
-            else -- the provider cannot validate this document type: a doc that was never checked
-            -- must follow the validation-skip semantics, not get stamped VALID
-              markStatusOnValidationSkip
+          batchOutcome <-
+            if gridVerificationEnabled
+              then case mbRcId of
+                Nothing -> pure BatchUnavailable
+                Just rcId -> tryVehicleImageGridBatch merchantId merchantOpCityId rcId (fromMaybe CAR vehicleCategory) imageType
+              else pure BatchUnavailable
+          case batchOutcome of
+            BatchComplete verdict batchImageIds ->
+              if verdict.plateMatchesRc
+                then do
+                  forM_ batchImageIds $ \imgId -> setVerificationStatusForIfPending imgId Documents.VALID
+                  when verdict.isClean $ case mbRcId of
+                    Nothing -> pure ()
+                    Just rcId -> do
+                      cleanTagTarget <-
+                        if isFleetRole person.role
+                          then do
+                            now <- getCurrentTime
+                            mbAssoc <- QDRCA.findLatestLinkedByRCId rcId now
+                            case mbAssoc of
+                              Just assoc -> Person.findById (DRCA.driverId assoc)
+                              Nothing -> pure Nothing
+                          else pure (Just person)
+                      whenJust cleanTagTarget $ \tagPerson -> do
+                        tagResult <- withTryCatch "applyCleanVehicleTag" $ applyCleanVehicleTag tagPerson
+                        case tagResult of
+                          Left err
+                            | Just (asyncErr :: SomeAsyncException) <- fromException err -> Catch.throwM asyncErr
+                            | otherwise -> logWarning "Failed to apply clean-vehicle tag after Grid approval; image status is unaffected"
+                          Right () -> pure ()
+                else forM_ batchImageIds $ \imgId -> setVerificationStatusForIfPending imgId Documents.INVALID
+            BatchWaiting -> pure ()
+            BatchFailed batchImageIds ->
+              forM_ batchImageIds $ \imgId -> setVerificationStatusForIfPending imgId Documents.MANUAL_VERIFICATION_REQUIRED
+            BatchUnavailable -> do
+              validationOutput <-
+                Verification.validateImage merchantId merchantOpCityId $
+                  Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+              if validationOutput.validationAvailable
+                then do
+                  checkErrors imageEntity.id imageType validationOutput.detectedImage
+                  setVerificationStatus Documents.VALID
+                else markStatusOnValidationSkip
         else when (isNothing validationStatus) markStatusOnValidationSkip
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $ do
@@ -578,6 +627,59 @@ validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, mer
       isLocked <- Redis.tryLockRedis mkLockKey 45
       return isLocked
     mkLockKey = "CreateImageTransaction:PersonId:-" <> personId.getId <> "-ImageType:" <> show imageType
+
+applyCleanVehicleTag :: Person.Person -> Flow ()
+applyCleanVehicleTag person =
+  Person.updateDriverTag
+    ( Just
+        ( Yudhishthira.replaceTagNameValue
+            person.driverTag
+            (Yudhishthira.mkTagNameValueExpiryAt (LYT.TagName "VehicleCleanliness") (LYT.TextValue "Clean") Nothing)
+        )
+    )
+    person.id
+
+data BatchOutcome
+  = BatchComplete VehicleImageGrid.VehicleImageVerdict [Id Domain.Image]
+  | BatchWaiting
+  | BatchUnavailable
+  | BatchFailed [Id Domain.Image]
+
+tryVehicleImageGridBatch ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DVRC.VehicleRegistrationCertificate ->
+  VehicleCategory ->
+  DVC.DocumentType ->
+  Flow BatchOutcome
+tryVehicleImageGridBatch merchantId merchantOpCityId rcId vehicleCategory imageType
+  | imageType `notElem` VDocs.vehicleDocsByRcIdList = pure BatchUnavailable
+  | otherwise = do
+    categoryConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just vehicleCategory}) Nothing
+    let aiEligibleTypes = [c.documentType | c <- categoryConfigs, c.documentType `elem` VDocs.vehicleDocsByRcIdList, c.aiImageVerificationEnabled == Just True]
+    case NE.nonEmpty aiEligibleTypes of
+      Nothing -> pure BatchUnavailable
+      Just types -> do
+        mbLatestImages <- forM (toList types) $ \docType ->
+          listToMaybe <$> Query.findImagesByRCAndType merchantId (Just rcId.getId) docType (Just 1)
+        case sequence mbLatestImages of
+          Nothing -> pure BatchWaiting
+          Just latestImages -> do
+            let batchImageIds = (.id) <$> latestImages
+            result <-
+              withTryCatch "tryVehicleImageGridBatch" $ do
+                mbContents <- forM latestImages $ \img -> fmap (img.id,) <$> readDocumentIfAvailable img
+                case sequence mbContents of
+                  Nothing -> pure Nothing
+                  Just contentsList -> case NE.nonEmpty contentsList of
+                    Nothing -> pure Nothing
+                    Just contentsNE -> VehicleImageGrid.verifyVehicleImageBatchWithGrid merchantId merchantOpCityId rcId types (snd <$> contentsNE)
+            case result of
+              Left err
+                | Just (asyncErr :: SomeAsyncException) <- fromException err -> Catch.throwM asyncErr
+                | otherwise -> pure (BatchFailed batchImageIds)
+              Right Nothing -> pure (BatchFailed batchImageIds)
+              Right (Just verdict) -> pure (BatchComplete verdict batchImageIds)
 
 convertHVStatusToValidationStatus :: Text -> Domain.ValidationStatus
 convertHVStatusToValidationStatus status =

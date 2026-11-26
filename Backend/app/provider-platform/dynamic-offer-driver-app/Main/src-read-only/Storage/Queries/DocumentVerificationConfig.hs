@@ -47,7 +47,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowLicenseTransfer allowLicenseTransfer,
+    [ Se.Set Beam.aiImageVerificationEnabled aiImageVerificationEnabled,
+      Se.Set Beam.allowLicenseTransfer allowLicenseTransfer,
       Se.Set Beam.allowNonTransportVehicle allowNonTransportVehicle,
       Se.Set Beam.applicableTo (Kernel.Prelude.Just applicableTo),
       Se.Set Beam.checkExpiry checkExpiry,
