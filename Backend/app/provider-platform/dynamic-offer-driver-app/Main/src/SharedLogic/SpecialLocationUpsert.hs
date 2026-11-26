@@ -393,7 +393,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             fareSettlementType = mbFareSettlementType,
             boothSpecificFleet = boothSpecificFleet,
             poolingMode = Nothing,
-            queueGeomGeoJson = queueGeomGeoJson
+            queueGeomGeoJson = queueGeomGeoJson,
+            skipQueue = Nothing
           }
       gateInfo =
         DGI.GateInfo
@@ -566,7 +567,8 @@ mergeSpecialLocationWithExisting new (Just old) =
       DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType,
       DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet,
       DSL.poolingMode = new.poolingMode <|> old.poolingMode,
-      DSL.queueGeomGeoJson = new.queueGeomGeoJson <|> old.queueGeomGeoJson
+      DSL.queueGeomGeoJson = new.queueGeomGeoJson <|> old.queueGeomGeoJson,
+      DSL.skipQueue = new.skipQueue <|> old.skipQueue
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

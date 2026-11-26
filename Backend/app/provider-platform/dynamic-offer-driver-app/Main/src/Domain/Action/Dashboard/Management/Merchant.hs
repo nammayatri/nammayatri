@@ -3805,6 +3805,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
             poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
             queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
+            skipQueue = mbExistingSpLoc >>= (.skipQueue),
             ..
           }
 
