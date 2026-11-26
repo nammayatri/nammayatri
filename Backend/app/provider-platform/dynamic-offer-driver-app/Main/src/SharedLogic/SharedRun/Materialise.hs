@@ -37,6 +37,7 @@ module SharedLogic.SharedRun.Materialise
 where
 
 import qualified Data.ByteString as BS
+import Data.Either (partitionEithers)
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
@@ -55,9 +56,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SharedRoute (ScheduleMode (..), SharedSupplyKnobs (..))
@@ -77,16 +76,14 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as Gtfs
 import Lib.GtfsDataServer.Types (GtfsTimetablePattern (..), GtfsTimetableRoute (..), GtfsTimetableStop (..), GtfsTimetableStopTime (..), GtfsTimetableTrip (..), gtfsLocalId)
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
-import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as SRide
-import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
-import qualified SharedLogic.SearchTryLocker as CS
+import qualified SharedLogic.SharedRun.Assign as Assign
+import qualified SharedLogic.SharedRun.Coverage as Coverage
 import qualified SharedLogic.SharedRun.Knobs as Knobs
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.SchedulerJob ()
@@ -101,7 +98,6 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRouteMapping as QVRM
-import Tools.Error
 
 -- | What the materialiser asks of its environment: what creating a ride asks (the assignment), plus the fare policy's
 -- ClickHouse read and the timetable's and own-address lookups. The driver app's Flow and the allocator's both have it.
@@ -175,9 +171,7 @@ runFareProduct cityId = do
   find (DTrip.isSharedRouteTrip . (.tripCategory)) products
     & fromMaybeM (InvalidRequest $ "No enabled SharedRoute fare_product in city " <> cityId.getId <> "; it names the service tier and fare policy of a run")
 
-data Outcome = Existing | Created Assignment
-
-data Assignment = Assigned Text | Unassigned Text
+data Outcome = Existing | Created Assign.Assignment
 
 materialiseDay :: MaterialiseFlow m r c => DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> SharedSupplyKnobs -> DFareProduct.FareProduct -> Day -> m DayResult
 materialiseDay merchant moc transporterConfig knobs fareProduct day = do
@@ -205,9 +199,9 @@ materialiseDay merchant moc transporterConfig knobs fareProduct day = do
             trips = length outcomes,
             created = length [() | Right (Created _) <- outcomes],
             existing = length [() | Right Existing <- outcomes],
-            assigned = length [() | Right (Created (Assigned _)) <- outcomes],
-            unassigned = length [() | Right (Created (Unassigned _)) <- outcomes],
-            failures = feedFailures <> [msg | Left msg <- outcomes] <> ["unassigned: " <> why | Right (Created (Unassigned why)) <- outcomes]
+            assigned = length [() | Right (Created (Assign.Assigned _)) <- outcomes],
+            unassigned = length [() | Right (Created (Assign.Unassigned _)) <- outcomes],
+            failures = feedFailures <> [msg | Left msg <- outcomes] <> ["unassigned: " <> why | Right (Created (Assign.Unassigned why)) <- outcomes]
           }
   logInfo $ "shared runs for " <> show day <> " in city " <> moc.id.getId <> ": " <> show result
   pure result
@@ -473,6 +467,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
       SFP.cacheFarePolicyByScheduledEstOrQuoteId quoteId.getId startTime Nothing fullFarePolicy
       QRB.createBooking booking
       SBooking.addScheduledBookingInRedis booking
+      Coverage.scheduleCoverageJobs transporterConfig booking
       logInfo $ "shared run created: booking " <> bookingId.getId <> " for trip " <> tripId <> " of " <> routeCode <> " at " <> show startTime
       Created <$> assignBoundVehicle merchant transporterConfig booking routeCode
 
@@ -507,56 +502,25 @@ stopLocation merchant moc now stopTime = do
         updatedAt = now
       }
 
--- | The run goes to the driver of the first vehicle bound to the route, through the scheduled accept's own steps
--- ('assignRun'). A failed assignment leaves the run on the scheduled board for the next driver or the fallback job,
--- and says why.
-assignBoundVehicle :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assignment
+-- | The run goes to the driver of the first vehicle bound to the route that can take it
+-- ('Assign.assignFirstAvailable', the scheduled accept's own steps). A failed assignment leaves the run on the
+-- scheduled board for the next driver or the fallback job, and says why.
+assignBoundVehicle :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assign.Assignment
 assignBoundVehicle merchant transporterConfig booking routeCode = do
   mappings <- filter ((== booking.merchantOperatingCityId) . (.merchantOperatingCityId)) <$> QVRM.findAllByRouteCode routeCode
   if null mappings
-    then pure (Unassigned $ "no vehicle is bound to route " <> routeCode <> "; the run is on the scheduled board")
-    else tryEach mappings []
+    then pure (Assign.Unassigned $ "no vehicle is bound to route " <> routeCode <> "; the run is on the scheduled board")
+    else do
+      (errors, candidates) <- partitionEithers <$> mapM boundCandidate mappings
+      outcome <- Assign.assignFirstAvailable merchant transporterConfig booking candidates
+      pure $ case outcome of
+        Assign.Unassigned why | not (null errors) -> Assign.Unassigned (T.intercalate "; " (errors <> [why | not (T.null why)]))
+        _ -> outcome
   where
-    tryEach [] errors = pure (Unassigned (T.intercalate "; " (reverse errors)))
-    tryEach (mapping : rest) errors = do
+    boundCandidate mapping = do
       res <- withTryCatch "sharedRun:assignBoundVehicle" $ do
         plate <- decrypt mapping.vehicleNumber
         vehicle <- QVehicle.findByRegistrationNo plate >>= fromMaybeM (InvalidRequest $ "vehicle " <> plate <> " bound to route " <> routeCode <> " is not registered")
         driver <- QPerson.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-        assignRun merchant transporterConfig booking driver mapping.fleetOwnerId
-        pure plate
-      case res of
-        Right plate -> do
-          logInfo $ "shared run " <> booking.id.getId <> " handed to the driver of " <> plate
-          pure (Assigned plate)
-        Left err -> tryEach rest (show err : errors)
-
--- | The scheduled accept as a fleet owner's dashboard assignment runs it, step for step with the scheduled branch of
--- Domain.Action.UI.Driver.acceptStaticOfferDriverRequest (the two must move together): the overlap guard, off the
--- scheduled board, the assignment claim, ride creation and the driver's gate under the driver's hold lock, then the
--- pre-ride job. The checks on a driver choosing a ride for themselves (wallet floor, reachability, prepaid credits) do
--- not apply: the vehicle is bound to the route.
-assignRun :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> DP.Person -> Id DP.Person -> m ()
-assignRun merchant transporterConfig booking driver fleetOwnerId = do
-  SBOC.ensureNoScheduledOverlap merchant.id driver.id transporterConfig booking
-  SBooking.removeBookingFromRedis booking
-  claimed <- CS.tryMarkBookingAssignmentInprogress booking.id
-  unless claimed $ throwError RideRequestAlreadyAccepted
-  (ride, _, _) <-
-    CS.withDriverScheduledHoldLock driver.id $ do
-      -- authoritative re-check under the lock; on a lost race, put the run back on the board before rejecting
-      recheck <- withTryCatch "sharedRun:assignOverlapLocked" $ SBOC.ensureNoScheduledOverlap merchant.id driver.id transporterConfig booking
-      case recheck of
-        Right _ -> pure ()
-        Left exc -> do
-          CS.markBookingAssignmentCompleted booking.id
-          SBooking.addScheduledBookingInRedis booking
-          throwM exc
-      res <- SRide.initializeRide merchant driver booking Nothing Nothing Nothing Nothing (Just fleetOwnerId) False False (Just DRide.AssignedByFleetOwner)
-      SBOC.updateLatestScheduledAsMin driver.id booking
-      pure res
-  now <- getCurrentTime
-  let jobScheduledTime = max 2 (diffUTCTime booking.startTime now - transporterConfig.scheduleRideBufferTime)
-  createJobIn @_ @'ScheduledRideAssignedOnUpdate (Just merchant.id) (Just booking.merchantOperatingCityId) jobScheduledTime $
-    ScheduledRideAssignedOnUpdateJobData {driverId = driver.id, bookingId = booking.id, rideId = ride.id}
-  CS.markBookingAssignmentCompleted booking.id
+        pure Assign.RunCandidate {driver, fleetOwnerId = mapping.fleetOwnerId, label = "the driver of " <> plate}
+      pure (either (Left . show) Right res)

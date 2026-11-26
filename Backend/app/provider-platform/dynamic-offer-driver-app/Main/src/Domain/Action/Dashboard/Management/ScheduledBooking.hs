@@ -56,7 +56,6 @@ import qualified IssueManagement.Common as Issue
 import qualified IssueManagement.Common.UI.Issue as IssueUI
 import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
 import qualified IssueManagement.Domain.Types.Issue.Comment as DComment
-import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIssueReport
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QComment
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
@@ -83,6 +82,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FarePolicy (getScheduledRideMinWalletBalance)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.PassengerLuggage as SPL
+import SharedLogic.ScheduledBooking.OpsNote (maxOpsNoteLength, scheduledBookingIssueCategoryId, scheduledBookingIssueDescription, scheduledBookingIssueDriverId, scheduledBookingIssuePersonId)
+import qualified SharedLogic.ScheduledBooking.OpsNote as OpsNote
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -113,18 +114,6 @@ liveLookbackSeconds = 24 * 60 * 60
 -- | Statuses the live view shows: NEW is unassigned, TRIP_ASSIGNED is assigned (started rides included).
 liveStatuses :: [SRB.BookingStatus]
 liveStatuses = [SRB.NEW, SRB.TRIP_ASSIGNED]
-
-scheduledBookingIssuePersonId :: Id DP.Person
-scheduledBookingIssuePersonId = Id "00000000-0000-0000-0000-000000000000"
-
-scheduledBookingIssueDriverId :: Id Issue.Person
-scheduledBookingIssueDriverId = Id "driver-0000000-0000-1"
-
-scheduledBookingIssueCategoryId :: Id DIssueCategory.IssueCategory
-scheduledBookingIssueCategoryId = Id "Schedule_Booking_Issue"
-
-maxOpsNoteLength :: Int
-maxOpsNoteLength = 255
 
 -- | Upper bound used when the caller does not pass a `to` filter.
 defaultLookaheadSeconds :: Int
@@ -782,19 +771,7 @@ postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId r
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
-  Redis.withWaitAndLockRedisWithTimeout (opsNoteLockKey merchantOpCity.id transactionId) 10 10 50000 $ do
-    issueReportId <- getOrCreateScheduledBookingIssueReport booking
-    commentId <- generateGUID
-    now <- getCurrentTime
-    QComment.create
-      DComment.Comment
-        { id = commentId,
-          issueReportId,
-          authorId = Id requestorId,
-          comment = note,
-          createdAt = now,
-          merchantId = Just $ cast booking.providerId
-        }
+  OpsNote.addOpsNoteWith getOrCreateScheduledBookingIssueReport booking (Id requestorId) note
   pure APISuccess.Success
 
 getScheduledBookingOpsNotes :: Id DMOC.MerchantOperatingCity -> Text -> Flow [Common.OpsNote]
@@ -833,7 +810,7 @@ getOrCreateScheduledBookingIssueReport booking =
               mediaFiles = [],
               optionId = Nothing,
               categoryId = Just scheduledBookingIssueCategoryId,
-              description = "Scheduled booking operations notes",
+              description = scheduledBookingIssueDescription,
               chats = Nothing,
               createTicket = Just False,
               isFeedback = Nothing,
@@ -867,10 +844,6 @@ validateOpsNote rawNote = do
   when (T.null note) $ throwError ScheduledBookingOpsNoteEmpty
   when (T.length note > maxOpsNoteLength) $ throwError (ScheduledBookingOpsNoteTooLong maxOpsNoteLength)
   pure note
-
-opsNoteLockKey :: Id DMOC.MerchantOperatingCity -> Text -> Text
-opsNoteLockKey merchantOperatingCityId transactionId =
-  "ScheduledBookingOpsNote:" <> merchantOperatingCityId.getId <> ":" <> transactionId
 
 -- Live driver proximity to pickup via OSRM (Maps.getDistance -> .getDistances config): one LTS
 -- location fetch + one distance call that returns both distance and duration.

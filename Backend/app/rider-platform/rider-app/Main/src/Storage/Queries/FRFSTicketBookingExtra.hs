@@ -3,6 +3,7 @@ module Storage.Queries.FRFSTicketBookingExtra where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
+import Domain.Types.IntegratedBPPConfig (IntegratedBPPConfig)
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -217,6 +218,22 @@ findAllConfirmedByRideId rideId =
     [ Se.And
         [ Se.Is Beam.rideId $ Se.Eq (Just rideId),
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+        ]
+    ]
+
+-- | The confirmed bookings of one shared-route run: its GTFS trip on its feed, with a start time in @[from, to)@ (the
+-- run's ticket window, 'Domain.Types.SharedRoute.runTicketWindow'). The feed is every config row of it (a ticket may
+-- carry any of them, e.g. the MULTIMODAL row it was booked through). Reads by the tripId secondary key; the feed and
+-- the window pick that day's run out of every day's tickets for the trip.
+findAllConfirmedByTripIdInWindow :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id IntegratedBPPConfig] -> Text -> UTCTime -> UTCTime -> m [FRFSTicketBooking]
+findAllConfirmedByTripIdInWindow feedConfigIds tripId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.tripId $ Se.Eq (Just tripId),
+          Se.Is Beam.integratedBppConfigId $ Se.In (map (.getId) feedConfigIds),
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+          Se.Is Beam.startTime $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.startTime $ Se.LessThan (Just to)
         ]
     ]
 
