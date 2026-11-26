@@ -883,7 +883,7 @@ emptyLedgerEntriesResponse =
       groups = []
     }
   where
-    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0}
+    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0, items = []}
 
 isWalletPayoutEntry :: FLedgerEntry.LedgerEntry -> Bool
 isWalletPayoutEntry e = e.referenceType == walletReferencePayout
@@ -893,7 +893,8 @@ toLedgerTotal itemGroup =
   DriverWallet.WalletLedgerTotal
     { totalAmount = itemGroup.totalAmount,
       redeemableAmount = sum (map (.redeemableBalance) itemGroup.items),
-      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items)
+      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items),
+      items = itemGroup.items
     }
 
 groupEntriesByReference :: [FLedgerEntry.LedgerEntry] -> [(Text, UTCTime, [FLedgerEntry.LedgerEntry])]

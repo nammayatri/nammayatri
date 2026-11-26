@@ -587,10 +587,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       carriedDuesTaxAmount = fromMaybe 0 fareParams.cancellationDuesTax
       carriedDuesBaseAmount = max 0 (fromMaybe 0 fareParams.customerCancellationDues - carriedDuesTaxAmount)
       commissionTaxPct = (.tax) <$> (mbFarePolicy >>= (.commissionTaxConfig))
-      commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      commissionAmount = fromMaybe 0 ride.commission
       (commissionBaseAmount, commissionVatAmount) = splitGrossByTaxPct commissionTaxPct commissionAmount
-      cancellationCommissionAmount = fromMaybe 0 (ride.cancellationDuesCommission <|> booking.cancellationDuesCommission)
-      cancellationCommissionVat = Tax.taxTotal (ride.cancellationDuesCommissionTaxBreakup <|> booking.cancellationDuesCommissionTaxBreakup)
+      cancellationCommissionAmount = fromMaybe 0 ride.cancellationDuesCommission
+      cancellationCommissionVat = Tax.taxTotal ride.cancellationDuesCommissionTaxBreakup
       cancellationCommissionBase = cancellationCommissionAmount - cancellationCommissionVat
       rawBaseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - airportFeeAmount - airportFeeTaxAmount - fromMaybe 0 fareParams.customerCancellationDues - fromMaybe 0 fareParams.paymentProcessingFee - fromMaybe 0 fareParams.paymentProcessingFeeTax
       customerDiscountAmount = fromMaybe 0 ride.discountAmount

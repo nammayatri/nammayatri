@@ -748,7 +748,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
                 DMPM.Cash -> if offer > 0 then Just offer else Nothing
                 _ -> computedFareNet
 
-  mbRideEarningsVal <- case mbEarningsLabels of
+  mbRideEarningsVal <- case mfilter (const (not (isCancelled && cancelledRideAmount == 0))) mbEarningsLabels of
     Just earningsLabels -> do
       Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig)) mbDriverTaxRates ((.freeWaitingTime) <$> mbWaitingChargeInfo)
     Nothing -> pure Nothing
