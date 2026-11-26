@@ -216,16 +216,18 @@ postMerchantUpdate merchantShortId city req = do
   mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
-  whenJust req.exoPhones \exophones -> do
+  mbNewExophones <- forM req.exoPhones $ \exophones -> do
     CQExophone.deleteByMerchantOperatingCityId merchantOperatingCity.id
-    forM_ exophones $ \exophoneReq -> do
+    forM (toList exophones) $ \exophoneReq -> do
       exophone <- buildExophone merchant.id merchantOperatingCity.id now exophoneReq
       CQExophone.create exophone
+      pure exophone
 
   CQM.clearCache updMerchant
-  whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id) allExophones
-    CQExophone.clearCache merchantOperatingCity.id oldExophones
+  let oldExophones = maybe [] (filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id)) mbAllExophones
+  let newExophones = fromMaybe [] mbNewExophones
+  unless (null oldExophones && null newExophones) $
+    CQExophone.clearCache merchantOperatingCity.id (oldExophones <> newExophones)
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
 
