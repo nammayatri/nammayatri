@@ -12,6 +12,7 @@ importPackageOverrides:
 module: FinanceInvoice
 types:
   FinanceInvoiceItem:
+    invoiceId: Text
     invoiceNumber: Text
     invoiceType: InvoiceType
     invoiceDate: UTCTime
@@ -49,6 +50,10 @@ types:
   FinanceInvoicePdfResp:
     pdfBase64: Text
     invoiceNumber: Text
+    linkedInvoices: "[FinanceLinkedInvoicePdfs]"
+  FinanceLinkedInvoicePdfs:
+    invoiceType: InvoiceType
+    invoices: "[FinanceInvoicePdfResp]"
   FinanceInvoicePdfUrlResp:
     invoiceId: Text
     pdfUrl: Maybe Text

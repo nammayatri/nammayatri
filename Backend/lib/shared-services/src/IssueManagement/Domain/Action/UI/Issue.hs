@@ -42,6 +42,7 @@ import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
 import qualified IssueManagement.Tools.JsonLogic as JsonLogic
+import qualified IssueManagement.Tools.LookupGuard as LookupGuard
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -86,9 +87,10 @@ data ServiceHandle m = ServiceHandle
     getTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.SearchTicketByIdReq -> m [TIT.GetTicketStatusResp]),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
     mbGetRideCardInfoByRideIds :: Maybe ([Id Ride] -> m [(Id Ride, Common.IssueReportRideInfo)]),
-    -- | rider-app: resolves driver-app's dashboard base URL + dashboard token
-    -- for a merchant so InternalDriver lookups can call across; Nothing where
-    -- unsupported (driver-app itself, or deployments without the config).
+    -- | rider-app: resolves driver-app's base URL and the driver-side merchant
+    -- short id for a merchant, so InternalDriver lookups can call driver-app's
+    -- /direct-dashboard tree with the same lookup token; Nothing where
+    -- unsupported (driver-app itself, or a merchant without the mapping).
     mbCounterpartDashboardInfo :: Maybe (Id Merchant -> m (Maybe (BaseUrl, Text))),
     selfLookupToken :: m (Maybe Text),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
@@ -930,6 +932,9 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
           ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
     ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId botLabel
+    withTryCatch "createTicket:storeFormFields" (QIR.updateTicketFormFields issueReport.id (xyneTicketFormFields ticket)) >>= \case
+      Left err -> logWarning $ "Could not store ticket form fields for issue " <> issueReport.id.getId <> ": " <> show err
+      Right _ -> pure ()
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -984,6 +989,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             deleted = False,
             ticketId = Nothing,
             additionalTicketIds = Nothing,
+            ticketFormFields = Nothing,
             createdAt = now,
             updatedAt = now,
             description,
@@ -1592,7 +1598,14 @@ mkIssueMessageList ::
   D.IssueConfig ->
   Maybe RideInfoRes ->
   [Common.Message]
-mkIssueMessageList mbList language issueConfig mbRideInfoRes = case mbList of
+mkIssueMessageList mbList language issueConfig mbRideInfoRes =
+  mkIssueMessageListWith (getConfigValue language issueConfig mbRideInfoRes) mbList
+
+mkIssueMessageListWith ::
+  (Text -> Text) ->
+  Maybe [(D.IssueMessage, D.DetailedTranslation, [Text])] ->
+  [Common.Message]
+mkIssueMessageListWith resolvePlaceholder mbList = case mbList of
   Nothing -> []
   Just list ->
     map
@@ -1614,7 +1627,7 @@ mkIssueMessageList mbList language issueConfig mbRideInfoRes = case mbList of
       list
   where
     messageTransformer :: [Text] -> Text -> Text
-    messageTransformer = transformText (getConfigValue language issueConfig mbRideInfoRes)
+    messageTransformer = transformText resolvePlaceholder
 
 transformText :: (Text -> Text) -> [Text] -> Text -> Text
 transformText getCfgValue mediaFileUrls text =
@@ -1664,6 +1677,11 @@ transformText getCfgValue mediaFileUrls text =
             newText = before <> "{SUBPART}{IMAGE_GROUP}{!!!} " <> replacement <> T.drop (T.length pattern_) after
          in (newText, remainingUrls)
 
+getConfigValueWithoutRideInfo :: Language -> D.IssueConfig -> Text -> Text
+getConfigValueWithoutRideInfo language issueConfig key
+  | key `elem` ["MERCHANT", "SUPPORT_MAIL", "HEADING", "BODY"] = getConfigValue language issueConfig Nothing key
+  | otherwise = "{#" <> key <> "#}"
+
 getConfigValue :: Language -> D.IssueConfig -> Maybe RideInfoRes -> Text -> Text
 getConfigValue language issueConfig mbRideInfoRes key = do
   let estimatedDistance = fromMaybe 0.0 $ (.estimatedDistance) =<< mbRideInfoRes
@@ -1692,6 +1710,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       estimateFareBreakup = maybe [] (.estimateFareBreakup) mbRideInfoRes
       freeWaitingMinutes = maybe 0.0 (.amount) (getEstimateFromArray "FREE_WAITING_TIME_IN_MINUTES" estimateFareBreakup)
       waitingChargeRatePerMin = maybe 0.0 (.amount) (getEstimateFromArray "WAITING_CHARGE_RATE_PER_MIN" estimateFareBreakup)
+      fareDecimals = getDisplayAccuracy $ maybe INR (.amount.currency) (listToMaybe fareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1728,9 +1747,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
         "SCHEDULING_CHARGE" -> show schedulingCharges
-        "WAITING_CHARGES" -> formatMoney "" waitingCharges
+        "WAITING_CHARGES" -> formatMoney fareDecimals "" waitingCharges
         "FREE_WAITING_TIME_IN_MINUTES" -> show (round freeWaitingMinutes :: Int)
-        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney "" waitingChargeRatePerMin
+        "WAITING_CHARGE_RATE_PER_MIN" -> formatMoney fareDecimals "" waitingChargeRatePerMin
         "WAITING_TIME" -> waitingTimeText freeWaitingMinutes waitingChargeRatePerMin waitingCharges mbRideInfoRes
         "FARE_INVOICE" -> maybe "" fareInvoiceText mbRideInfoRes
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
@@ -1758,13 +1777,14 @@ getConfigValue language issueConfig mbRideInfoRes key = do
                in T.pack formatted
             _ -> vehicleNo
 
-toCents :: HighPrecMoney -> Integer
-toCents money = round (money * 100)
+toCents :: Int -> HighPrecMoney -> Integer
+toCents decimals money = round (money * 10 ^ decimals)
 
-formatMoney :: Text -> HighPrecMoney -> Text
-formatMoney symbol money =
-  let cents = toCents money
-   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` 100) <> "." <> T.justifyRight 2 '0' (show (abs cents `mod` 100))
+formatMoney :: Int -> Text -> HighPrecMoney -> Text
+formatMoney decimals symbol money =
+  let cents = toCents decimals money
+      centsPerUnit = 10 ^ decimals
+   in (if cents < 0 then "-" else "") <> symbol <> show (abs cents `div` centsPerUnit) <> "." <> T.justifyRight decimals '0' (show (abs cents `mod` centsPerUnit))
 
 waitingTimeText :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe RideInfoRes -> Text
 waitingTimeText freeMinutes ratePerMin charges mbRideInfoRes =
@@ -1785,11 +1805,13 @@ fareInvoiceText rideInfo = maybe "" breakdownText rideInfo.fareBreakdown
     breakdownText breakdown =
       T.intercalate "<br><br>" $ [totalText] <> distanceText <> [breakupText]
       where
-        money = formatMoney $ case breakdown.currency of
+        decimals = getDisplayAccuracy breakdown.currency
+        money = formatMoney decimals $ case breakdown.currency of
           EUR -> "€"
           INR -> "₹"
           USD -> "$"
-        moneyDiff amount = (if toCents amount > 0 then "+" else "") <> money amount
+          JOD -> "JD"
+        moneyDiff amount = (if toCents decimals amount > 0 then "+" else "") <> money amount
         totalText = section "TOTAL_FARE" $ case breakdown.finalTotal of
           Just finalTotal -> compareText (money breakdown.estimatedTotal) (money finalTotal) <> "<br>" <> valueText "DIFFERENCE" (moneyDiff (finalTotal - breakdown.estimatedTotal))
           Nothing -> valueText "ESTIMATED" (money breakdown.estimatedTotal)
@@ -1846,7 +1868,12 @@ getRideInfoWithFareLabels issueHandle language merchantId merchantOpCityId rideI
 
 mkIssueOptionList ::
   D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
-mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslation) =
+mkIssueOptionList issueConfig language mbRideInfoRes =
+  mkIssueOptionListWith (getConfigValue language issueConfig mbRideInfoRes)
+
+mkIssueOptionListWith ::
+  (Text -> Text) -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
+mkIssueOptionListWith resolvePlaceholder (issueOption, issueTranslation) =
   Common.IssueOptionRes
     { issueOptionId = issueOption.id,
       label = fromMaybe (issueOption.option & T.toUpper & T.replace " " "_") issueOption.label,
@@ -1855,21 +1882,25 @@ mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslat
     }
   where
     transformOption :: Text -> Text
-    transformOption = transformText (getConfigValue language issueConfig mbRideInfoRes) []
+    transformOption = transformText resolvePlaceholder []
 
 recreateIssueChats :: BeamFlow m r => D.IssueReport -> D.IssueConfig -> Maybe RideInfoRes -> Language -> Identifier -> m [ChatDetail]
-recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
+recreateIssueChats issueReport issueConfig mbRideInfoRes language =
+  recreateIssueChatsWith (getConfigValue language issueConfig mbRideInfoRes) issueReport language
+
+recreateIssueChatsWith :: BeamFlow m r => (Text -> Text) -> D.IssueReport -> Language -> Identifier -> m [ChatDetail]
+recreateIssueChatsWith resolvePlaceholder issueReport language identifier =
   concat
     <$> mapM
       ( \item -> case item.chatType of
           IssueMessage -> do
             mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
+            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageListWith resolvePlaceholder (Just messageList)) . (: []) =<< mbIssueMessageTranslation
             let label = (.label) . fst_ =<< mbIssueMessageTranslation
             pure [mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label]
           IssueOption -> do
             mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language identifier
-            let mbIssueOption = mkIssueOptionList issueConfig language mbRideInfoRes <$> mbIssueOptionTranslation
+            let mbIssueOption = mkIssueOptionListWith resolvePlaceholder <$> mbIssueOptionTranslation
                 label = (.label) . fst =<< mbIssueOptionTranslation
             pure [mkChatDetail item.chatId item.timestamp Text USER (mbIssueOption <&> (.option)) Nothing Nothing label]
           IssueDescription -> pure [mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing]
@@ -1985,6 +2016,40 @@ xyneHistoricalExternalId templateId threadId ts = templateId <> "|" <> threadId.
 
 xyneChatExternalId :: Id D.IssueReport -> Chat -> Text
 xyneChatExternalId threadId chat = xyneHistoricalExternalId chat.chatId threadId chat.timestamp
+
+xyneTicketFormFields :: TIT.CreateTicketReq -> Map.Map Text Text
+xyneTicketFormFields req =
+  Map.fromList $
+    catMaybes $
+      [ nonEmpty "Category" req.category,
+        req.subCategory >>= nonEmpty "Sub Category",
+        req.name >>= nonEmpty "Customer Name",
+        req.phoneNo >>= nonEmpty "Customer Phone Number",
+        req.xyneBotLabel >>= nonEmpty "Bot Label"
+      ]
+        <> maybe [] rideFields req.rideDescription
+        <> mediaField req.mediaFiles
+  where
+    rideFields r =
+      [ nonEmpty "Ride ID" r.rideShortId,
+        nonEmpty "Ride City" r.rideCity,
+        nonEmpty "Ride Status" r.status,
+        r.rideType >>= nonEmpty "Ride Type",
+        nonEmpty "Vehicle Number" r.vehicleNo,
+        r.vehicleCategory >>= nonEmpty "Vehicle Category",
+        r.vehicleServiceTier >>= nonEmpty "Vehicle Service Tier",
+        Just ("Ride Created At", showTimeIst r.rideCreatedAt),
+        (\f -> ("Fare", T.pack $ show f)) <$> r.fare,
+        r.driverName >>= nonEmpty "Driver Name",
+        r.driverPhoneNo >>= nonEmpty "Driver Phone Number"
+      ]
+    nonEmpty k v =
+      let stripped = T.strip v
+       in if T.null stripped then Nothing else Just (k, stripped)
+    mediaField Nothing = []
+    mediaField (Just urls) =
+      let hosted = filter (not . ("data:" `T.isPrefixOf`)) urls
+       in if null hosted then [] else [Just ("Media URLs", T.intercalate ", " hosted)]
 
 xyneDescriptionExternalId :: Id D.IssueReport -> Text
 xyneDescriptionExternalId threadId = "description|" <> threadId.getId
@@ -2277,21 +2342,6 @@ resolveApiCallSteps ::
   Int ->
   m ([(D.IssueMessage, D.DetailedTranslation, [Text])], Map.Map Text A.Value)
 resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language identifier issueHandle initialList maxHops = do
-  let builtins =
-        Map.fromList $
-          [ ("personId", A.String personId.getId),
-            ("categoryId", A.String categoryId.getId)
-          ]
-            <> maybe [] (\rideId -> [("rideId", A.String rideId.getId)]) mbRideId
-            <> maybe
-              []
-              ( \moCity ->
-                  [ ("merchantShortId", A.String moCity.merchantShortId.getShortId),
-                    ("city", A.String (show moCity.city)),
-                    ("merchantOperatingCityId", A.String moCity.id.getId)
-                  ]
-              )
-              mbMerchantOpCity
   -- Fast path: most steps have no lookup, so skip the Redis read of stored
   -- flow context entirely; the pure builtins are still available for {{var}}
   -- interpolation on ordinary messages.
@@ -2303,6 +2353,22 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
       -- anything a previously stored flow context happens to contain.
       go initialList maxHops (Map.union builtins storedCtx)
   where
+    builtins =
+      Map.fromList $
+        [ ("personId", A.String personId.getId),
+          ("categoryId", A.String categoryId.getId)
+        ]
+          <> maybe [] (\rideId -> [("rideId", A.String rideId.getId)]) mbRideId
+          <> maybe
+            []
+            ( \moCity ->
+                [ ("merchantShortId", A.String moCity.merchantShortId.getShortId),
+                  ("city", A.String (show moCity.city)),
+                  ("merchantOperatingCityId", A.String moCity.id.getId)
+                ]
+            )
+            mbMerchantOpCity
+
     go list hops ctx = case find (\(msg, _, _) -> msg.messageType == D.ApiCall) list of
       Nothing -> pure (list, ctx)
       Just (apiMsg, _, _)
@@ -2323,38 +2389,23 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
       mbIntegration <- QAI.findById (Id action.integrationId)
       case mbIntegration of
         Just integration | integration.isActive -> do
-          let params = buildParams action.paramMapping ctx
-              headers = maybe [] (map (\h -> (h.key, h.value))) (decodeJsonText =<< integration.headersJson :: Maybe [DAI.ApiHeaderSpec])
-              fields = maybe [] (map (\f -> (f.name, f.path))) (decodeJsonText integration.responseFieldsJson :: Maybe [DAI.ResponseFieldSpec])
+          let fields = maybe [] (map (\f -> (f.name, f.path))) (decodeJsonText integration.responseFieldsJson :: Maybe [DAI.ResponseFieldSpec])
           result <- case integration.kind of
-            DAI.External ->
-              Executor.executeIntegration (show integration.method) integration.urlTemplate headers integration.bodyTemplate integration.timeoutMs fields params
+            DAI.InternalRider -> case mbMerchantOpCity of
+              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
+              Just moCity -> do
+                selfBaseUrl <- asks (.selfBaseUrl)
+                runInternalLookup integration fields moCity.city selfBaseUrl moCity.merchantShortId.getShortId
             DAI.InternalDriver -> case mbMerchantOpCity of
               Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
               Just moCity -> do
                 counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
                 case counterpart of
-                  Nothing -> pure (internalFailure "Driver-side internal lookups are not configured on this deployment")
-                  Just (driverBase, driverToken) -> do
-                    let base = showBaseUrl driverBase
-                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                        url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                        internalHeaders = ("token", driverToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
-            DAI.InternalRider -> case mbMerchantOpCity of
-              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
-              Just moCity -> do
-                mbLookupToken <- issueHandle.selfLookupToken
-                case mbLookupToken of
-                  Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
-                  Just lookupToken -> do
-                    selfBaseUrl <- asks (.selfBaseUrl)
-                    let base = showBaseUrl selfBaseUrl
-                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-                        url = basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
-                        -- The engine's token must win: drop any author-supplied token header.
-                        internalHeaders = ("token", lookupToken) : filter (\(k, _) -> T.toLower k /= "token") headers
-                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+                  Nothing -> pure (internalFailure "Driver-side lookups are not configured for this merchant")
+                  Just (driverBaseUrl, driverMerchantShortId) -> runInternalLookup integration fields moCity.city driverBaseUrl driverMerchantShortId
+            -- External calls let a flow author reach any URL from inside the
+            -- cluster; they are disabled outright.
+            DAI.External -> pure (internalFailure "External lookups are disabled; use an internal lookup")
           case result.errorMessage of
             Nothing -> do
               let extracted = Map.mapMaybe identity result.extractedFields
@@ -2368,6 +2419,26 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
           logError $ "ApiCall engine: integration " <> action.integrationId <> " missing or inactive"
           pure (action.onErrorNextOptionId, ctx)
 
+    -- Both internal kinds call a /direct-dashboard tree (rider-app's own, or
+    -- driver-app's) with the engine's lookup token. The URL is rendered from
+    -- the parsed template (built-ins only, safe path segments, encoded query)
+    -- and sent as GET with only that token: no author headers or body. Which
+    -- endpoint it reaches is then checked against the receiving app's
+    -- issue_config.allowed_lookup_endpoints by its dashboard auth.
+    runInternalLookup integration fields city baseUrl merchantShortId
+      | integration.method /= DAI.GET = pure (internalFailure "Internal lookups are GET-only")
+      | otherwise = do
+        mbLookupToken <- issueHandle.selfLookupToken
+        case mbLookupToken of
+          Nothing -> pure (internalFailure "Internal lookups are not configured on this deployment")
+          Just lookupToken -> case LookupGuard.renderLookupTemplate (Map.map valueToParamText builtins) integration.urlTemplate of
+            Left err -> pure (internalFailure ("Lookup path rejected: " <> err))
+            Right endpointTail -> do
+              let base = showBaseUrl baseUrl
+                  basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                  url = basePadded <> "direct-dashboard/" <> merchantShortId <> "/" <> show city <> "/" <> endpointTail
+              Executor.executeIntegration "GET" url [("token", lookupToken)] Nothing integration.timeoutMs fields Map.empty
+
     internalFailure msg =
       Executor.ExecutionResult
         { statusCode = Nothing,
@@ -2376,10 +2447,6 @@ resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language ident
           rawResponse = Nothing,
           errorMessage = Just msg
         }
-
-    buildParams mbMapping ctx = case mbMapping of
-      Nothing -> Map.map valueToParamText ctx
-      Just mapping -> Map.mapMaybe (\ctxKey -> valueToParamText <$> Map.lookup ctxKey ctx) mapping
 
     decodeJsonText :: A.FromJSON a => Text -> Maybe a
     decodeJsonText = A.decode . BSL.fromStrict . TE.encodeUtf8

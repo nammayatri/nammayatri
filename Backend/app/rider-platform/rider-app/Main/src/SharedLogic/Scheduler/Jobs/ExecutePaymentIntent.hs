@@ -14,6 +14,7 @@
 
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationAddress as Fields
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -25,7 +26,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
@@ -58,7 +59,10 @@ executePaymentIntentJob ::
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult
@@ -123,13 +127,19 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
             rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
-            let ledgerCtx = (RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = person.firstName}
-            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates fare.amount rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ledgerCtx
+            let ledgerCtx =
+                  RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                    (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                      { issuedToName = person.firstName
+                      }
+            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType fare.amount rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ledgerCtx
             logDebug $ "makePaymentIntent (execute-payment-intent): breakups=" <> show rideFareBreakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
             mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False
-            let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx fare.amount rideFareBreakups)
+            let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx booking.fareSettlementType fare.amount rideFareBreakups)
             case mbPaymentIntentResp of
-              Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
+              Nothing -> do
+                SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
+                SPayment.notifyBppPaymentStatus True ride.id
               Just paymentIntentResp -> do
                 offerStatsInput <- buildOfferStatsInput person
                 paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
@@ -137,8 +147,10 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   then do
                     -- Apply offer stats after successful charge
                     QRide.markPaymentStatus DRide.Completed ride.id
+                    SPayment.notifyBppPaymentStatus True ride.id
                   else do
                     QRide.markPaymentStatus DRide.Failed ride.id
+                    SPayment.notifyBppPaymentStatus False ride.id
                     logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
 
             -- Handle tip payment orders (FALLBACK: check for pending tip ledger entries)

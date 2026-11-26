@@ -221,7 +221,7 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
-data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry | PickupStall | DocumentInvalid | LowRating deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | CancellationRateEvents | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry | PickupStall | DocumentInvalid | LowRating deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
@@ -1516,6 +1516,7 @@ data DriverOnboardingError
   | RCMandatory Text
   | ActiveRCNotFound
   | RCVehicleOnRide
+  | RCBlocked
   | RCActiveOnOtherAccount
   | RCOtherDriverOnRide
   | RCOtherDriverRecentRide
@@ -1631,6 +1632,7 @@ instance IsBaseError DriverOnboardingError where
     ActiveRCNotFound -> Just "Vehicle Registration Certificate is not active with any driver."
     VehicleIsNotRegistered -> Just " Vehicle is not Registered "
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
+    RCBlocked -> Just "This vehicle registration certificate is blocked. Please contact support."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
     RCOtherDriverOnRide -> Just "This vehicle is on a ride with another driver account. Try again after that ride ends."
     RCOtherDriverRecentRide -> Just "This vehicle was used for a ride on another driver account recently. Try again later."
@@ -1744,6 +1746,7 @@ instance IsHTTPError DriverOnboardingError where
     ActiveRCNotFound -> "ACTIVE_RC_NOT_FOUND"
     VehicleIsNotRegistered -> "VEHICLE_IS_NOT_REGISTERED"
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
+    RCBlocked -> "RC_BLOCKED"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
     -- RC activation errors keep the codes clients already branch on; the specific reason is in errorPayload.reasonCode.
     RCOtherDriverOnRide -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
@@ -1851,6 +1854,7 @@ instance IsHTTPError DriverOnboardingError where
     ActiveRCNotFound -> E400
     VehicleIsNotRegistered -> E400
     RCVehicleOnRide -> E400
+    RCBlocked -> E403
     RCActiveOnOtherAccount -> E400
     RCOtherDriverOnRide -> E400
     RCOtherDriverRecentRide -> E400

@@ -26,6 +26,7 @@ module SharedLogic.OneShotAssign
   )
 where
 
+import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride as DRideUI
@@ -76,6 +77,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
+import Tools.Utils (generateTwillioCallerIdentity)
 
 data OneShotAssignReq = OneShotAssignReq
   { merchant :: DM.Merchant,
@@ -113,7 +115,7 @@ oneShotAssign OneShotAssignReq {..} = do
               isInsured = Nothing,
               insuredAmount = Nothing,
               displayBookingId = Nothing,
-              discountAmount = searchTry.discountAmount,
+              discountAmount = offerDiscountForEstimate driverQuote.estimateId.getId searchTry.estimateOfferDiscounts,
               paymentChargeDetails = searchTry.paymentChargeDetails,
               initialStatus = DRB.TRIP_ASSIGNED,
               riderId = searchReq.riderId,
@@ -239,7 +241,8 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
               registeredAt = Just driver.createdAt,
               image = rideAssignedReq.image,
               isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
-              accountId = Nothing -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              accountId = Nothing, -- online payment is out of one-shot scope (phase 1 is cash/postpaid)
+              callIdentity = generateTwillioCallerIdentity driver.id <$ booking.riderCallIdentity
             },
         vehicleDetails =
           CallBAPInternal.OneShotVehicleDetails
@@ -277,10 +280,10 @@ buildAssignedDriverRideRes :: DPerson.Person -> DDI.DriverInformation -> Transpo
 buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride rideDetails = do
   let driverLanguage = fromMaybe KET.ENGLISH driver.language
   driverNumber <- RD.getDriverNumber rideDetails
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) BecknDomain.MOBILITY
   callingOption <- DRideUI.effectiveCallingOption transporterConfig
   resolvedCalling <- DRideUI.resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else pure []
-  RideCommon.mkDriverRideRes driverLanguage Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest
+  RideCommon.mkDriverRideRes driverLanguage Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest transporterConfig.enableManualArrival

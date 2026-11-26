@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 data FaqT f = FaqT
   { answer :: B.C f Kernel.Prelude.Text,
     category :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    displayOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     faqGroupId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     language :: B.C f Kernel.External.Types.Language,

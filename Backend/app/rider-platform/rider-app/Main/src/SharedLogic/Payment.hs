@@ -2,8 +2,10 @@ module SharedLogic.Payment where
 
 import qualified API.Types.UI.RidePayment as APIRidePayment
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.ACL.Update as UpdateACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import BecknV2.OnDemand.Settlement (PaymentChargeDetails (..))
@@ -70,10 +72,12 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import qualified Lib.Payment.Wallet.Types as WalletSummary
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSRefundUpdate as FRFSRefundUpdate
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Finance.Rails as FinanceRails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -462,7 +466,9 @@ refundStatusHandler ::
     ServiceFlow m r,
     Finance.HasActorInfo m r,
     MonadMask m,
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   DOrder.PaymentOrder ->
   DOrder.PaymentServiceType ->
@@ -489,7 +495,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
-        HasBAPMetrics m r
+        HasBAPMetrics m r,
+        CallFRFSBPP.BecknAPICallFlow m r,
+        HasRequestId r
       ) =>
       DRefunds.Refunds ->
       m ()
@@ -523,6 +531,10 @@ refundStatusHandler paymentOrder paymentServiceType = do
                           then FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.COUNTER_CANCELLED FRFSUtils.counterCancellationRefundTag booking bapConfig refund.refundAmount mRiderNumber fareParameters
                           else whenJust booking.refundAmount $ \bookingRefundAmount ->
                             FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.CANCELLED FRFSUtils.cancellationRefundTag booking bapConfig bookingRefundAmount mRiderNumber fareParameters
+                        let updatedRefundAmount = case paymentOrder.effectAmount of
+                              Just effectAmount | effectAmount /= paymentOrder.amount -> effectAmount
+                              _ -> maybe refund.refundAmount abs booking.refundAmount
+                        FRFSRefundUpdate.sendRefundUpdateToBpp booking paymentOrder.id refund.arn updatedRefundAmount
                 FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUNDED "refund_success" mbBooking bookingPayment
               Payment.REFUND_FAILURE ->
                 FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_FAILED "refund_failure" mbBooking bookingPayment
@@ -644,7 +656,9 @@ initiateRefundWithPaymentStatusRespSync ::
     EncFlow m r,
     SchedulerFlow r,
     HasBAPMetrics m r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
@@ -905,6 +919,7 @@ mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge 
 
 buildLedgerInfoFromBreakups ::
   Maybe Tax.RiderTaxRates ->
+  Maybe SL.FareSettlementType ->
   HighPrecMoney ->
   [DFareBreakup.FareBreakup] ->
   HighPrecMoney -> -- requestedDiscount (bookingDiscountAmount)
@@ -912,7 +927,7 @@ buildLedgerInfoFromBreakups ::
   HighPrecMoney -> -- applicationFeeAmount (platform commission + payment charge)
   FinanceCtx ->
   RidePaymentLedgerInfo
-buildLedgerInfoFromBreakups mbRiderTaxRates fare breakups discount cashback appFee ctx =
+buildLedgerInfoFromBreakups mbRiderTaxRates mbFareSettlementType fare allBreakups discount cashback appFee ctx =
   mkRidePaymentLedgerInfo
     (fare - snd lineSums.rideFare - sum [base + tax | (base, tax) <- [lineSums.toll, lineSums.parking, lineSums.airportEntryFee, lineSums.cancellationFee, lineSums.paymentCharge]] - appFee)
     (snd lineSums.rideFare)
@@ -932,6 +947,7 @@ buildLedgerInfoFromBreakups mbRiderTaxRates fare breakups discount cashback appF
     (RidePaymentFinance.gstRatesFromLines ((\fb -> (fb.description, fb.amount.amount)) <$> breakups))
     ctx
   where
+    breakups = FB.withoutBoothLines (SL.edcCollectsParking mbFareSettlementType) (.description) allBreakups
     breakupLines = (\fb -> FB.BreakupLine fb.description fb.amount.amount) <$> breakups
     lineSums = FB.componentLines breakupLines
 
@@ -1511,7 +1527,10 @@ clearDuesForPerson ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasRequestId r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Person.Person ->
   Payment.PaymentMethodId ->
@@ -1620,6 +1639,7 @@ clearDuesForPerson person paymentMethodId = Redis.withWaitAndLockRedis ("ClearDu
                         CallBPPInternal.SettleCancellationLedger
                         ride.bppRideId.getId
                 _ -> logError $ "clearDuesForPerson: skipping cancellation ledger sync, missing merchant or mobile number for rideId: " <> rideId.getId
+            when (isNothing ride.cancellationChargesOnCancel) $ notifyBppPaymentStatus True rideId
             logInfo $
               "AUDIT: Debt settlement CAPTURED - order_id: " <> paymentIntentResp.orderId.getId
                 <> ", amount: "
@@ -1685,7 +1705,11 @@ capturePendingPaymentIfExists ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1722,9 +1746,11 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId
                   QRide.markPaymentStatus Ride.Completed ride.id
+                  notifyBppPaymentStatus True ride.id
                 else do
                   logError $ "Failed to capture payment for ride " <> ride.id.getId
                   QRide.markPaymentStatus Ride.Failed ride.id
+                  notifyBppPaymentStatus False ride.id
                   -- chargePaymentIntent already marked entries as DUE, now block
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
@@ -1779,3 +1805,42 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
             let mbProduct = Just (show booking.vehicleServiceTierType, discountApplicableFareAmountTaxIncl)
             DPayment.applyOfferWithoutPaymentService rideId.getId offerId rideOfferEntity.offerCode offerStatsInput (Just discountAmount) Nothing discountApplicableFareAmountTaxIncl currency merchantId.getId merchantOperatingCityId.getId useDomainOffers applyOfferCall booking.createdAt mbProduct
   QRide.markPaymentStatus Ride.Completed rideId
+
+notifyBppPaymentStatus ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasShortDurationRetryCfg r c
+  ) =>
+  Bool ->
+  Id Ride.Ride ->
+  m ()
+notifyBppPaymentStatus isPaid rideId = void . withTryCatch "notifyBppPaymentStatus" $ do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (InvalidRequest "BPP booking ID not found")
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantDoesNotExist booking.merchantId.getId)
+  messageId <- generateGUID
+  updateReq <-
+    UpdateACL.buildUpdateReq
+      UpdateACL.UpdateBuildReq
+        { bppBookingId = bppBookingId,
+          bppId = booking.providerId,
+          bppUrl = booking.providerUrl,
+          transactionId = booking.transactionId,
+          merchant = merchant,
+          messageId = messageId,
+          city = merchant.defaultCity,
+          details =
+            UpdateACL.UPaymentCompletedBuildReqDetails
+              UpdateACL.PaymentCompletedBuildReqDetails
+                { bppRideId = ride.bppRideId,
+                  paymentMethodInfo = DMPM.PaymentMethodInfo {paymentType = DMPM.ON_FULFILLMENT, paymentInstrument = DMPM.Card DMPM.DefaultCardType, collectedBy = DMPM.BAP},
+                  paymentStatus = if isPaid then Enums.PAID else Enums.NOT_PAID
+                }
+        }
+  void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl updateReq

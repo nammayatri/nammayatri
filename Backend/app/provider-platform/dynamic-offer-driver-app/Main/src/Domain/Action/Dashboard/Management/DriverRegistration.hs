@@ -1508,7 +1508,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.docsVerificationStatusUpdatedAt = Just now,
                       DRC.pendingChallan = Nothing,
                       DRC.initiatedBy = Nothing,
-                      DRC.rcVehicleType = Nothing
+                      DRC.rcVehicleType = Nothing,
+                      DRC.isBlocked = Nothing
                     }
             QRC.create newRC
             SDocVersion.saveRCVersionMetadata newRC
@@ -1522,6 +1523,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRCA.associatedOn = now,
                       DRCA.associatedTill = convertTextToUTC (Just "2099-12-12"),
                       DRCA.errorMessage = Nothing,
+                      DRCA.takeoverVerifyResponse = Nothing,
                       DRCA.consent = True,
                       DRCA.consentTimestamp = now,
                       DRCA.isRcActive = True,
@@ -2496,7 +2498,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId personId docType
           mbAssoc <- QRCAssoc.findActiveAssociationByRC rcId True
           whenJust mbAssoc $ \assoc -> when (assoc.driverId == personId) $ do
             QRCAssoc.deactivateRCForDriver False personId rcId
-            QVehicle.deleteByDriverid personId
+            QVehicle.deleteById personId
             unless separateEnablement downgradePerson
           when unifiedRecompute $
             void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId

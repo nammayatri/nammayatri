@@ -182,6 +182,10 @@ data AppCfg = AppCfg
     longDurationRetryCfg :: RetryCfg,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
+    -- | Session token of the read-only issue lookup service operator (the
+    -- same one rider-app sends). Requests carrying it are restricted to the
+    -- endpoints in issue_config.allowed_lookup_endpoints for the city.
+    issueLookupToken :: Maybe Text,
     cloudSwitchPassword :: Maybe Text,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
@@ -251,6 +255,8 @@ data AppCfg = AppCfg
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    -- | Same shape as ride-events publisher; stream prefix for BehaviourMetricTick.
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text
   }
@@ -338,6 +344,10 @@ data AppEnv = AppEnv
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
+    -- | Session token of the read-only issue lookup service operator (the
+    -- same one rider-app sends). Requests carrying it are restricted to the
+    -- endpoints in issue_config.allowed_lookup_endpoints for the city.
+    issueLookupToken :: Maybe Text,
     cloudSwitchPassword :: Maybe Text,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
@@ -421,6 +431,7 @@ data AppEnv = AppEnv
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    ijBehaviorTickPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
     actorInfo :: Finance.ActorInfo

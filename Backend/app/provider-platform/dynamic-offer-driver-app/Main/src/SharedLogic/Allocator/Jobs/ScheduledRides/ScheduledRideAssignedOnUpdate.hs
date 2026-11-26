@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps.HasCoordinates (HasCoordinates (..))
 import Kernel.External.Maps.Interface.Types
@@ -107,6 +108,7 @@ type ScheduledRideAssignedOnUpdateFlow m r c =
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,
@@ -303,7 +305,7 @@ activateScheduledRide driverId bookingId booking ride driver vehicle transporter
   whenJust (booking.toLocation) $ \toLoc -> do
     QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
   void $ QRide.updateStatus ride.id DRide.NEW
-  void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing}))
+  void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing, isManualArrival = transporterConfig.enableManualArrival}))
   -- Forked: a BAP NACK throws, and the tail below still has the pickup monitor to schedule.
   fork "scheduled ride activation push to BAP" $ do
     notifyDriverOnScheduledRideAssigned booking ride driver
@@ -367,6 +369,7 @@ cancelOrReallocate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,

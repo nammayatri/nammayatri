@@ -79,6 +79,8 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 castPaymentInstrument Payment.BoothOnline = DMPM.BoothOnline
+-- The rider app has no Online instrument; UPI is what the BPP stored for it before.
+castPaymentInstrument Payment.Online = DMPM.UPI
 
 mkLocation :: SLS.SearchReqLocation -> Search.Location
 mkLocation info =
@@ -138,6 +140,7 @@ parseBookingDetails order msgId = do
       isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< Utils.getTag Tag.IS_TIER_UPGRADE fulfillmentTagGroups)
       assignedServiceTierName = Utils.getTag Tag.ASSIGNED_SERVICE_TIER_NAME fulfillmentTagGroups
       betterDriverAbortRadiusMeters = Meters <$> (readMaybe . T.unpack =<< Utils.getTag Tag.BETTER_DRIVER_ABORT_RADIUS_METERS fulfillmentTagGroups)
+      driverCallIdentity = Utils.getTag Tag.DRIVER_CALL_IDENTITY tagGroups
   pure $
     Common.BookingDetails
       { bppBookingId = Id bppBookingId,

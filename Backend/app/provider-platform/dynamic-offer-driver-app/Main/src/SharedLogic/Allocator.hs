@@ -132,6 +132,7 @@ data AllocatorJobType
   | ProcessEndRideFinance
   | WalletIntegrityCheck
   | ChargeWalletPenalty
+  | MaterialiseSharedRuns
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -222,6 +223,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SProcessEndRideFinance jobData = AnyJobInfo <$> restoreJobInfo SProcessEndRideFinance jobData
   restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
   restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
+  restoreAnyJobInfo SMaterialiseSharedRuns jobData = AnyJobInfo <$> restoreJobInfo SMaterialiseSharedRuns jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -1065,3 +1067,18 @@ data ChargeWalletPenaltyJobData = ChargeWalletPenaltyJobData
 instance JobInfoProcessor 'ChargeWalletPenalty
 
 type instance JobContent 'ChargeWalletPenalty = ChargeWalletPenaltyJobData
+
+-- | The daily clock of the shared-run engine for one city: turns the city's GTFS timetables into scheduled runs for the
+-- next 'lookaheadDays' days (default 1, tomorrow), hands each to the vehicle bound to its route
+-- (SharedLogic.SharedRun.Materialise, run in the job itself) and re-arms itself 'intervalSeconds' later (default a day).
+data MaterialiseSharedRunsJobData = MaterialiseSharedRunsJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    lookaheadDays :: Maybe Int,
+    intervalSeconds :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MaterialiseSharedRuns
+
+type instance JobContent 'MaterialiseSharedRuns = MaterialiseSharedRunsJobData

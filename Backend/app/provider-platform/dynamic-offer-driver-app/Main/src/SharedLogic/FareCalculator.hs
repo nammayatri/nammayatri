@@ -52,6 +52,8 @@ module SharedLogic.FareCalculator
     entryFeeForGateId,
     parseCodeValue,
     ParsedCodeValue (..),
+    applyRideTaxWith,
+    rideTaxRate,
   )
 where
 
@@ -441,7 +443,7 @@ getPerMinuteRate fareParams = do
       mkRoundedPriceAPIEntity . Price.mkPrice (Just det.currency) <$> det.rideDurationFare
     _ -> Nothing
 
-data FareComputationPhase = FCEstimate | FCRecompute | FCBuffer
+data FareComputationPhase = FCEstimate | FCRecompute (Maybe [FareChargeComponent]) | FCBuffer
   deriving (Eq, Show)
 
 data CalculateFareParametersParams = CalculateFareParametersParams
@@ -732,12 +734,17 @@ calculateFareParametersHandler transporterConfig params = do
   pure fareParams
   where
     estimateComponentMap = maybe Map.empty buildComponentMap params.mbEstimateFareParams
+    isDropped component = case params.computationPhase of
+      FCRecompute (Just notAllowed) -> component `elem` notAllowed
+      _ -> False
     capComponent component value =
-      case (params.computationPhase, params.mbCapConfig) of
-        (FCRecompute, Just capConfig) -> capByStrategy (lookupCapStrategy capConfig component) (componentAmount estimateComponentMap component) value
-        (FCBuffer, Just capConfig) -> maybe value (\strategy -> value + capAllowance strategy value) (lookupCapStrategy capConfig component)
-        _ -> value
-    capComponentMb component = fmap (capComponent component)
+      if isDropped component
+        then 0
+        else case (params.computationPhase, params.mbCapConfig) of
+          (FCRecompute _, Just capConfig) -> capByStrategy (lookupCapStrategy capConfig component) (componentAmount estimateComponentMap component) value
+          (FCBuffer, Just capConfig) -> maybe value (\strategy -> value + capAllowance strategy value) (lookupCapStrategy capConfig component)
+          _ -> value
+    capComponentMb component mbValue = if isDropped component then Nothing else fmap (capComponent component) mbValue
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs
@@ -1180,7 +1187,10 @@ calculateFareParameters params = do
       pure $ applyPaymentChargeGrossUp prms.paymentChargeDetails prms.buyerOfferDiscount (applyRideTax transporterConfig prms.farePolicy fareWithAirport)
 
 applyRideTax :: DTC.TransporterConfig -> FullFarePolicy -> FareParameters -> FareParameters
-applyRideTax transporterConfig fp fareParams =
+applyRideTax transporterConfig fp = applyRideTaxWith transporterConfig fp.rideTaxConfig
+
+applyRideTaxWith :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> FareParameters -> FareParameters
+applyRideTaxWith transporterConfig policyRideTaxConfig fareParams =
   fareParams
     { govtCharges = (.total) <$> rideTax,
       rideTaxCgst = rideTax >>= (.cgst),
@@ -1192,11 +1202,17 @@ applyRideTax transporterConfig fp fareParams =
     (_, _, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
     cardCharges = fromMaybe 0 (fareParams.cardCharge >>= (.onFare)) + fromMaybe 0 (fareParams.cardCharge >>= (.fixed))
     taxableRideFare = max 0 (customerCancellationFareBasis fareParams (fareSum fareParams Nothing) - platformFee - cardCharges)
-    rideTax = Tax.taxOn taxRegime (rideTaxConfigFor transporterConfig fp) (Tax.Exclusive taxableRideFare)
+    rideTax = Tax.taxOn taxRegime (rideTaxConfigWith transporterConfig policyRideTaxConfig) (Tax.Exclusive taxableRideFare)
 
 rideTaxConfigFor :: DTC.TransporterConfig -> FullFarePolicy -> Maybe Tax.TaxConfig
-rideTaxConfigFor transporterConfig fp =
-  fp.rideTaxConfig <|> (if fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime == Tax.GST then gstTaxConfig transporterConfig.taxConfig.rideGst else Nothing)
+rideTaxConfigFor transporterConfig fp = rideTaxConfigWith transporterConfig fp.rideTaxConfig
+
+rideTaxConfigWith :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> Maybe Tax.TaxConfig
+rideTaxConfigWith transporterConfig policyRideTaxConfig =
+  policyRideTaxConfig <|> (if fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime == Tax.GST then gstTaxConfig transporterConfig.taxConfig.rideGst else Nothing)
+
+rideTaxRate :: DTC.TransporterConfig -> Maybe Tax.TaxConfig -> HighPrecMoney
+rideTaxRate transporterConfig = Tax.taxRateOf . rideTaxConfigWith transporterConfig
 
 gstTaxConfig :: DTC.GstBreakup -> Maybe Tax.TaxConfig
 gstTaxConfig gst = if totalPct > 0 then Just Tax.TaxConfig {tax = totalPct, cgst = asPct gst.cgstPercentage, sgst = asPct gst.sgstPercentage, igst = asPct gst.igstPercentage} else Nothing
@@ -1403,7 +1419,9 @@ buildComponentMap FareParameters {..} =
             (GovtChargesComponent, maybeZero govtCharges),
             (PaymentChargePaidByCustomerComponent, maybeZero paymentProcessingFee + maybeZero paymentProcessingFeeTax),
             (PersonalDiscountComponent, if shouldApplyPersonalDiscount then negate (maybeZero personalDiscount) else 0),
-            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0)
+            (BusinessDiscountComponent, if shouldApplyBusinessDiscount then negate (maybeZero businessDiscount) else 0),
+            (AirportEntryFeeComponent, maybeZero airportEntryFee),
+            (AirportEntryFeeTaxComponent, maybeZero airportEntryFeeTax)
           ]
    in Map.union baseMap (detailComponentMap fareParametersDetails)
 

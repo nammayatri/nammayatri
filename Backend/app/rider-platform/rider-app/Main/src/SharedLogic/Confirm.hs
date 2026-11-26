@@ -258,7 +258,7 @@ confirm DConfirmReq {..} = do
     case booking0.selectedOfferId of
       Just offerId -> do
         fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback quote.id.getId DFareBreakup.QUOTE (pure [])
-        let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx booking0.estimatedTotalFare.amount fareBreakups
+        let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx booking0.fareSettlementType booking0.estimatedTotalFare.amount fareBreakups
             offerBasePrice = mkPrice (Just booking0.estimatedTotalFare.currency) offerBaseAmount
         mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking0) (Just searchRequest)
         case mbOfferDetails of
@@ -633,6 +633,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           supplierTaxNo = Nothing,
           issuedByGstin = Nothing,
           issuedByTaxNo = Nothing,
+          issuedByLogoUrl = Nothing,
           supplierId = Nothing,
           -- Both are filled in later, once a driver is assigned (eligibility roll / swap link).
           eligibleForBetterDriverSearch = Nothing,

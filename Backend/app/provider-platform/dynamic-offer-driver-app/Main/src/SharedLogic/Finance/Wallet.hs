@@ -185,6 +185,7 @@ module SharedLogic.Finance.Wallet
     cashWalletCheckEnabled,
     shouldCheckCashWallet,
     settlementWalletFinanceEnabled,
+    driverInvoiceParty,
   )
 where
 
@@ -227,13 +228,17 @@ import SharedLogic.DriverPool (isScheduledOpenToAll)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, tdsReimbursementReferenceType)
+import SharedLogic.Finance.RideInvoice (resolveInvoiceIssuedToAddress)
 import SharedLogic.Finance.WalletAccount (buildDriverChargeCtx, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletClassConfig, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverGstin as QDG
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.Person as QPerson
+import Tools.Encryption (decryptWithDefault)
 import Tools.Error (MerchantPaymentMethodError (..), TransporterError (TransporterConfigNotFound))
 import qualified Tools.Fields as Fields
 
@@ -564,17 +569,19 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
       mShortId = mbMerchant <&> (.shortId.getShortId)
       address =
         mbMerchantOpCity <&> \city ->
-          show city.city <> ", " <> show city.state <> ", " <> show city.country
+          fromMaybe (show city.city <> ", " <> show city.state <> ", " <> show city.country) city.address
   -- Resolve supplier info (fleet owner or driver) and detect LDC custom rate
   let configDefaultTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
   (sName, sGSTIN, sVatNumber, sAddress, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+      -- The GSTIN lives in the encrypted column; gstNumberDec maps to the legacy plaintext column, which is always written as NULL.
+      mbFleetGstin <- decryptWithDefault (mbFleetInfo >>= (.gstNumber)) (mbFleetInfo >>= (.gstNumberDec))
       let customRate = mbFleetInfo >>= (.tdsRate) >>= \r -> if configDefaultTdsRate == Just r then Nothing else Just r
           formattedAddress = nonBlank (mbFleetInfo >>= (.stripeAddress) <&> formatStripeAddress) <|> nonBlank (mbFleetInfo >>= (.address))
       pure
         ( mbFleetInfo >>= (.fleetName),
-          mbFleetInfo >>= (.gstNumberDec),
+          mbFleetGstin,
           mbFleetInfo >>= (.vatNumber),
           formattedAddress,
           Just fleetOwnerId.getId,
@@ -1219,3 +1226,13 @@ getScheduledRideMinBalanceIfShort transporterConfig isScheduled pickupTime now g
     let minBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
     walletOk <- hasMinWalletBalance counterpartyDriver minBalance driverId
     pure $ if walletOk then Nothing else minBalance
+
+driverInvoiceParty :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe (Id DP.Person) -> m (Maybe Text, Maybe Text)
+driverInvoiceParty merchantOpCityId driverId mbFleetOwnerId = do
+  let partyId = fromMaybe driverId mbFleetOwnerId
+  mbPerson <- QPerson.findById partyId
+  mbFleetInfo <- maybe (pure Nothing) QFOI.findByPrimaryKey mbFleetOwnerId
+  mbBuyerGstinRow <- QDG.findByDriverId partyId
+  mbOpCity <- CQMOC.findById merchantOpCityId
+  let opCityAddress = mbOpCity <&> \opCity -> fromMaybe (show opCity.city <> ", " <> show opCity.state <> ", " <> show opCity.country) opCity.address
+  pure ((mbFleetInfo >>= (.fleetName)) <|> (mbPerson <&> (.firstName)), resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo <$> opCityAddress)

@@ -369,3 +369,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN bap_settled boolean ;
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_dues_commission_tax_breakup json ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_dues_commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN trip_id text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN route_code text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN integrated_bpp_config_id text ;

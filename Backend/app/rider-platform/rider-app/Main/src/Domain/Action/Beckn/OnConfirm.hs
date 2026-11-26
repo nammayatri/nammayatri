@@ -80,7 +80,8 @@ data BPPInvoiceProviderInfo = BPPInvoiceProviderInfo
     supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
     issuedByGstin :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    issuedByLogoUrl :: Maybe Text
   }
 
 bppInvoiceProviderInfoToFields :: BPPInvoiceProviderInfo -> QRBE.BPPInvoiceProviderFields
@@ -95,7 +96,8 @@ bppInvoiceProviderInfoToFields info =
       supplierTaxNo = info.supplierTaxNo,
       supplierId = info.supplierId,
       issuedByGstin = info.issuedByGstin,
-      issuedByTaxNo = info.issuedByTaxNo
+      issuedByTaxNo = info.issuedByTaxNo,
+      issuedByLogoUrl = info.issuedByLogoUrl
     }
 
 data BookingConfirmedInfo = BookingConfirmedInfo
@@ -131,6 +133,7 @@ data RideAssignedInfo = RideAssignedInfo
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
     betterDriverAbortRadiusMeters :: Maybe Meters,
+    driverCallIdentity :: Maybe Text,
     bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 

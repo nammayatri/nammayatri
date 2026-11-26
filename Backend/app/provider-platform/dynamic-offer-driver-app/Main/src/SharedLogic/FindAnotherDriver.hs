@@ -83,13 +83,13 @@ swapCancelQuote booking mbRide = case mfilter (> 0) booking.bookingDeposit of
     pure $ if marked then Just PriceAPIEntity {amount = deposit, currency = booking.currency} else Nothing
   _ -> pure Nothing
 
-clearSwap :: SRB.Booking -> Flow ()
+clearSwap :: CacheFlow m r => SRB.Booking -> m ()
 clearSwap booking = Redis.del (swapKey booking.transactionId)
 
-swappedRide :: SRB.Booking -> Flow (Maybe DRide.Ride)
+swappedRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SRB.Booking -> m (Maybe DRide.Ride)
 swappedRide booking = swappedRideId booking >>= maybe (pure Nothing) QRide.findById
 
-swappedRideId :: SRB.Booking -> Flow (Maybe (Id DRide.Ride))
+swappedRideId :: CacheFlow m r => SRB.Booking -> m (Maybe (Id DRide.Ride))
 swappedRideId booking = Redis.safeGet (swapKey booking.transactionId)
 
 swapKey :: Text -> Text

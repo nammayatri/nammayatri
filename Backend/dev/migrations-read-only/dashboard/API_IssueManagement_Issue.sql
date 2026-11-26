@@ -46,8 +46,5 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 -- {"api":"PostIssueApiIntegrationDelete","migration":"capability","param":"system-config.customer_issue_config.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_API_INTEGRATION_DELETE' ) ON CONFLICT DO NOTHING;
 
--- {"api":"PostIssueApiIntegrationTest","migration":"capability","param":"system-config.customer_issue_config.write","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_API_INTEGRATION_TEST' ) ON CONFLICT DO NOTHING;
-
 -- {"api":"GetIssueFlowSimulate","migration":"capability","param":"system-config.customer_issue_config.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_FLOW_SIMULATE' ) ON CONFLICT DO NOTHING;

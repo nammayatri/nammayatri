@@ -174,7 +174,8 @@ data BPPInvoiceProviderFields = BPPInvoiceProviderFields
     supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
     issuedByGstin :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    issuedByLogoUrl :: Maybe Text
   }
 
 updateBPPBookingIdAndProviderUrl ::
@@ -200,6 +201,7 @@ updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl BPPInvoiceProviderFi
         <> maybe [] (\v -> [Se.Set BeamB.supplierTaxNo (Just v)]) supplierTaxNo
         <> maybe [] (\v -> [Se.Set BeamB.issuedByGstin (Just v)]) issuedByGstin
         <> maybe [] (\v -> [Se.Set BeamB.issuedByTaxNo (Just v)]) issuedByTaxNo
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByLogoUrl (Just v)]) issuedByLogoUrl
         <> maybe [] (\v -> [Se.Set BeamB.supplierId (Just v)]) supplierId
     )
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
@@ -399,6 +401,16 @@ updateStop booking mbStopLoc isBookingUpdated = do
         <> [Se.Set BeamB.isBookingUpdated isBookingUpdated | isJust isBookingUpdated]
     )
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
+
+updateRentalStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Maybe (Id DL.Location) -> m ()
+updateRentalStops bookingId mbNextStopLocationId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.stopLocationId (getId <$> mbNextStopLocationId),
+      Se.Set BeamB.hasStops (Just True),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do

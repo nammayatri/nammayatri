@@ -14,6 +14,7 @@
 
 module SharedLogic.Cancel where
 
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount (EstimateOfferDiscount))
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -35,6 +36,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Environment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
@@ -47,6 +49,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -66,6 +69,7 @@ import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -120,8 +124,10 @@ reAllocateBookingIfPossible ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasFlowEnv m r '["version" ::: DeploymentVersion],
     EventStreamFlow m r,
     HasPrettyLogger m r,
@@ -151,6 +157,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
     DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
     DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     DTC.OneWay DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer
+    -- a dropped run is not re-offered through the on-demand path; the shared-run fallback job
+    -- re-assigns it from the owned fleet or the curated board (module A)
+    DTC.SharedRoute _ -> cancelRideTransactionForNonReallocation Nothing Nothing
     _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateDynamicOffer = do
@@ -223,7 +232,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tqd.estimateOrQuoteId discount | tqd <- tripQuoteDetails, Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False,
@@ -278,7 +287,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tripQuoteDetail.estimateOrQuoteId discount | Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False,

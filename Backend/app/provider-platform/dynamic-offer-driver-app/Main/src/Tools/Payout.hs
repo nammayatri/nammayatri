@@ -63,7 +63,13 @@ createPayoutOrder ::
   Maybe DDBA.DriverBankAccount ->
   DPayment.CreatePayoutServiceReq ->
   m Payout.CreatePayoutOrderResp
-createPayoutOrder = runWithServiceConfigAndName Payout.createPayoutOrder DPayment.mkCreatePayoutOrderReq
+createPayoutOrder payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq = do
+  serviceConfig <-
+    withTryCatch "createPayoutOrder:serviceConfig" (getPayoutServiceConfig payoutServiceName merchantOperatingCityId)
+      >>= either (throwError . PayoutNotSent . show) pure
+  case serviceConfig of
+    Payout.HdfcCbxConfig _ -> throwError $ PayoutNotSent "HDFC CBX has no single-order API; use submitBulkPayout"
+    _ -> callWithServiceConfig Payout.createPayoutOrder DPayment.mkCreatePayoutOrderReq payoutServiceName personId mbPersonBankAccount serviceConfig serviceReq
 
 payoutOrderStatus ::
   ServiceFlow m r =>
@@ -88,14 +94,20 @@ runWithServiceConfigAndName ::
   serviceReq ->
   m resp
 runWithServiceConfigAndName func mkReq payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq = do
-  merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName}) Nothing
-      >>= fromMaybeM (uncurry (MerchantServiceConfigNotFound merchantOperatingCityId.getId) (showPayoutServiceType payoutServiceName))
-  case merchantServiceConfig.serviceConfig of
-    DMSC.PayoutServiceConfig vsc -> callFunc vsc
-    DMSC.RentalPayoutServiceConfig vsc -> callFunc vsc
-    DMSC.RidePayoutServiceConfig vsc -> callFunc vsc
-    _ -> throwError $ InternalError "Unknown Service Config"
+  serviceConfig <- getPayoutServiceConfig payoutServiceName merchantOperatingCityId
+  callWithServiceConfig func mkReq payoutServiceName personId mbPersonBankAccount serviceConfig serviceReq
+
+callWithServiceConfig ::
+  ServiceFlow m r =>
+  (Payout.PayoutServiceConfig -> req -> m resp) ->
+  (Maybe Text -> Maybe Text -> serviceReq -> req) ->
+  DMSC.ServiceName ->
+  Id DP.Person ->
+  Maybe DDBA.DriverBankAccount ->
+  Payout.PayoutServiceConfig ->
+  serviceReq ->
+  m resp
+callWithServiceConfig func mkReq payoutServiceName personId mbPersonBankAccount serviceConfig serviceReq = callFunc serviceConfig
   where
     mRoutingId = Just personId.getId
 

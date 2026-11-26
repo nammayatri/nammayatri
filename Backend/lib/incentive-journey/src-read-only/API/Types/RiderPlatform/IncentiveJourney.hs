@@ -23,7 +23,6 @@ instance Text.Show.Show IncentiveJourneyUserActionType where
 instance Text.Read.Read IncentiveJourneyUserActionType where
   readsPrec d' = Text.Read.readParen (d' > app_prec) (\r -> [(INCENTIVE_JOURNEY v1, r2) | r1 <- stripPrefix "INCENTIVE_JOURNEY/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1])
     where
-      app_prec = 10
-      stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+      app_prec = 10; stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''IncentiveJourneyUserActionType])
+$(Data.Singletons.TH.genSingletons [(''IncentiveJourneyUserActionType)])

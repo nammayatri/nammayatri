@@ -37,9 +37,12 @@ import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import Tools.Encryption (decryptWithDefault)
 import qualified Tools.Fields as Fields
 
 data BPPInvoiceInfo = BPPInvoiceInfo
@@ -52,11 +55,12 @@ data BPPInvoiceInfo = BPPInvoiceInfo
     supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
     issuedByGstin :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    issuedByLogoUrl :: Maybe Text
   }
 
 emptyBPPInvoiceInfo :: BPPInvoiceInfo
-emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
@@ -72,9 +76,11 @@ resolveBPPInvoiceInfo res = do
       mid = merchant.id.getId
       mName = merchant.name
   mbMerchantOpCity <- CQMOC.findById res.booking.merchantOperatingCityId
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = res.booking.merchantOperatingCityId.getId}) Nothing
+  let logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl
   let merchantAddress =
         mbMerchantOpCity <&> \city ->
-          show city.city <> ", " <> show city.state <> ", " <> show city.country
+          fromMaybe (show city.city <> ", " <> show city.state <> ", " <> show city.country) city.address
       merchantGstin = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin
   mbFleetInfo <- case res.rideInfo of
     Just rideInfo -> do
@@ -83,6 +89,7 @@ resolveBPPInvoiceInfo res = do
         Just assoc -> QFOI.findByPrimaryKey (Id assoc.fleetOwnerId :: Id DP.Person)
         Nothing -> pure Nothing
     Nothing -> pure Nothing
+  mbFleetGstin <- decryptWithDefault (mbFleetInfo >>= (.gstNumber)) (mbFleetInfo >>= (.gstNumberDec))
   pure $ case mbFleetInfo of
     Just fleetInfo ->
       BPPInvoiceInfo
@@ -91,11 +98,12 @@ resolveBPPInvoiceInfo res = do
           issuedByAddress = merchantAddress,
           supplierName = fleetInfo.fleetName,
           supplierAddress = fleetInfo.stripeAddress <&> formatStripeAddress,
-          supplierGSTIN = fleetInfo.gstNumberDec,
+          supplierGSTIN = mbFleetGstin,
           supplierTaxNo = fleetInfo.vatNumber,
           supplierId = Just fleetInfo.fleetOwnerPersonId.getId,
           issuedByGstin = merchantGstin,
-          issuedByTaxNo = merchant.vatNumber
+          issuedByTaxNo = merchant.vatNumber,
+          issuedByLogoUrl = logoUrl
         }
     Nothing -> case res.rideInfo of
       Just rideInfo ->
@@ -109,7 +117,8 @@ resolveBPPInvoiceInfo res = do
             supplierTaxNo = Nothing,
             supplierId = Just rideInfo.driver.id.getId,
             issuedByGstin = merchantGstin,
-            issuedByTaxNo = merchant.vatNumber
+            issuedByTaxNo = merchant.vatNumber,
+            issuedByLogoUrl = logoUrl
           }
       Nothing ->
         BPPInvoiceInfo
@@ -122,7 +131,8 @@ resolveBPPInvoiceInfo res = do
             supplierTaxNo = merchant.vatNumber <|> merchantGstin,
             supplierId = Just mid,
             issuedByGstin = merchantGstin,
-            issuedByTaxNo = merchant.vatNumber
+            issuedByTaxNo = merchant.vatNumber,
+            issuedByLogoUrl = logoUrl
           }
 
 mkBPPInvoiceInfoTagGroup :: BPPInvoiceInfo -> Maybe [Spec.TagGroup]
@@ -137,7 +147,8 @@ mkBPPInvoiceInfoTagGroup info =
       (Tags.SUPPLIER_TAX_NO, info.supplierTaxNo),
       (Tags.SUPPLIER_ID, info.supplierId),
       (Tags.ISSUED_BY_GSTIN, info.issuedByGstin),
-      (Tags.ISSUED_BY_TAX_NO, info.issuedByTaxNo)
+      (Tags.ISSUED_BY_TAX_NO, info.issuedByTaxNo),
+      (Tags.ISSUED_BY_LOGO_URL, info.issuedByLogoUrl)
     ]
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState

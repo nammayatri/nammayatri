@@ -37,6 +37,7 @@ module SharedLogic.DriverPool
     quoteResponseCooldownTags,
     rideCancellationActionType,
     rideCancellationCounterConfig,
+    cityEventsWindowSize,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getPopupDelay,
@@ -133,6 +134,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.BehaviorTracker.Accumulator as BTAcc
+import qualified Lib.BehaviorTracker.ActionTypes as BTAction
+import qualified Lib.BehaviorTracker.EventsWindowSettings as EWS
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -145,6 +148,7 @@ import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import qualified SharedLogic.PassengerLuggage as SPL
@@ -177,15 +181,17 @@ mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-"
 -- RIDE_CANCELLATION series (ACTION = cancels, ELIGIBLE = rides assigned).
 -- The fixed 7-day window lets both "today" (last 1 day-bucket) and "weekly" (last 7 day-buckets)
 -- be derived from the same series via getCurrentWindowValuesUptoLast.
+-- Shared action-type strings are BF-owned ('Lib.BehaviorTracker.ActionTypes') — campaign
+-- ticks reuse them; do not derive these from CampaignQuote/Cancel (silent bt: key remount).
 quoteResponseAcceptActionType, quoteResponseRejectActionType, quoteResponsePullActionType, quoteResponseEligibleActionType :: Text
-quoteResponseAcceptActionType = "QUOTE_RESPONSE_ACCEPT"
+quoteResponseAcceptActionType = BTAction.quoteResponseAcceptActionType
 quoteResponseRejectActionType = "QUOTE_RESPONSE_REJECT"
 quoteResponsePullActionType = "QUOTE_RESPONSE_PULL"
-quoteResponseEligibleActionType = "QUOTE_RESPONSE"
+quoteResponseEligibleActionType = BTAction.quoteResponseActionType
 
 -- bt: series written on valid driver cancellation (Lib.DriverScore, OnDriverCancellation)
 rideCancellationActionType :: Text
-rideCancellationActionType = "RIDE_CANCELLATION"
+rideCancellationActionType = BTAction.rideCancellationActionType
 
 -- Cooldown tags exposed in the quote-response snapshot (e.g. {"var": "cooldowns.QuoteResponseNudge"})
 -- for the future quote-response behavior rulebook, so a nudge/block consequence can be
@@ -206,7 +212,9 @@ quoteResponseActionType = \case
   SRD.Pulled -> quoteResponsePullActionType
 
 -- | Record the outcome of one quote response as a bt: ACTION_COUNT under the
--- outcome's action type. Called at the respond site (Domain.Action.UI.Driver).
+-- outcome's action type. City behaviour-tracker only (no IJ campaign bump).
+-- Ride Accept + campaign rrAccepted: SharedLogic.IncentiveJourney.recordQuoteResponseAndCampaignMetrics
+-- (keeps DriverPool free of IncentiveJourney — avoids Coins→Wallet→DriverPool→IJ cycle).
 recordQuoteResponseCounters ::
   (EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -476,6 +484,29 @@ rideCancellationCounterConfig =
       periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
       hashTagEntityId = True
     }
+
+-- | How many events each events window keeps in this city (Z), for every behaviour that keeps
+-- one: the city's TransporterConfig.eventsWindowSize (default 100). Config patches outside 1 to EWS.maxWindowSize
+-- are refused; a value that got in another way is clamped into that range and logged. The
+-- config is cached, so reading it on every ride costs no database call.
+cityEventsWindowSize ::
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  m Int
+cityEventsWindowSize merchantOpCityId = do
+  mbConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  case mbConfig of
+    Nothing -> do
+      logWarning $ "Events window: city " <> merchantOpCityId.getId <> " has no TransporterConfig, so its events windows keep the default " <> show EWS.defaultWindowSize <> " events."
+      pure EWS.defaultWindowSize
+    Just config -> do
+      let z = config.eventsWindowSize
+          clamped = max 1 (min EWS.maxWindowSize z)
+      when (clamped /= z) $
+        logWarning $ "Events window: TransporterConfig.eventsWindowSize of city " <> merchantOpCityId.getId <> " is " <> show z <> ", outside 1 to " <> show EWS.maxWindowSize <> ", so its events windows keep " <> show clamped <> " events. Fix TransporterConfig.eventsWindowSize."
+      pure clamped
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -1019,6 +1050,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     airportEntryFee :: Maybe HighPrecMoney,
     isAirportRequest :: Bool,
     passengerLuggage :: Maybe SPL.PassengerLuggage,
+    pickupSpecialLocationId :: Maybe (Id SL.SpecialLocation),
     paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
@@ -1240,12 +1272,17 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             mbSearchTryId,
             bufferedFareByTier
           }
-  sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
+  (sortedCandidates, offRideFinal, onRideFinal) <-
+    case poolType of
+      SpecialZoneQueuePool | Just specialLocationId <- pickupSpecialLocationId -> queuePool ltsReq fetchPoolData specialLocationId.getId
+      _ -> do
+        sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
+        (offRide, onRide) <-
+          if hasDedicatedDrivers dedicatedDrivers
+            then dedicatedOrNormalPool ltsReq fetchPoolData sortedCandidates
+            else chunkLoop ltsReq fetchPoolData sortedCandidates [] []
+        pure (sortedCandidates, offRide, onRide)
   let totalCandidates = length sortedCandidates
-  (offRideFinal, onRideFinal) <-
-    if hasDedicatedDrivers dedicatedDrivers
-      then dedicatedOrNormalPool ltsReq fetchPoolData sortedCandidates
-      else chunkLoop ltsReq fetchPoolData sortedCandidates [] []
   fork "Driver Pool Search Try Batch - Analytics" $ do
     pushToKafka
       ( SearchTryBatchData
@@ -1290,6 +1327,31 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
       if r.driverId `elem` prevAttemptedIds
         then DPD.checkRequestCount searchTryId isBookAnyRequest r.driverId r.serviceTier r.serviceTierDowngradeLevel driverPoolCfg
         else pure True
+
+    queuePool ltsReq fetchPoolData specialLocationId = do
+      let allowedVehicleVariants = nub $ concatMap (.allowedVehicleVariant) $ filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      queueEntries <- fmap concat $
+        forM allowedVehicleVariants $ \variant ->
+          withTryCatch "queuePooling:getQueueDrivers" (LTSFlow.getQueueDrivers specialLocationId (show variant)) >>= \case
+            Right resp -> pure resp.drivers
+            Left err -> do
+              logError $ "Queue dispatch: queue fetch failed for variant " <> show variant <> ", skipping it: " <> show err
+              pure []
+      let queueDriverIds = nub $ (.driverId) <$> sortOn (.queuePosition) queueEntries
+          queueRank = Map.fromList (zip queueDriverIds [0 :: Int ..])
+          maxLocationAge = maybe dedicatedDriverMaxLocationAge (fromIntegral . getSeconds) driverPoolCfg.driverPositionInfoExpiry
+      queueCandidates <-
+        if null queueDriverIds
+          then pure []
+          else
+            withTryCatch "queuePooling:fetchSortedCandidatesByDriverIds" (QPG.fetchSortedCandidatesByDriverIds ltsReq merchantOperatingCityId maxLocationAge queueDriverIds) >>= \case
+              Right candidates -> pure $ sortOn (\c -> (QPG.isPrevAttempted c, Map.lookup (QPG.driverLoc c).driverId queueRank)) candidates
+              Left err -> do
+                logError $ "Queue dispatch: location fetch failed, no candidates this batch: " <> show err
+                pure []
+      (queueOffRide, _) <- chunkLoop ltsReq fetchPoolData queueCandidates [] []
+      logInfo $ "Queue dispatch: specialLocationId=" <> specialLocationId <> " queued=" <> show (length queueDriverIds) <> " eligible=" <> show (length queueOffRide) <> " order=" <> show ((.driverPoolResult.driverId) <$> queueOffRide)
+      pure (queueCandidates, queueOffRide, [])
 
     -- A previous batch went to a driver outside the list only after falling back, so once the search has fallen
     -- back it stays on the normal pool instead of returning to the list when a listed driver frees up.
@@ -1354,13 +1416,16 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
                 }
             qualifies dp =
               SRV.isVisibleUnderRules
-                (SRV.driverVisibilityFactsFromStats (Map.lookup dp.driverPoolResult.driverId statsByDriver) [] dp.driverPoolResult.lat dp.driverPoolResult.lon)
+                (SRV.driverVisibilityFactsFromStats (Map.lookup dp.driverPoolResult.driverId statsByDriver) (SRV.poolTagTexts dp.driverPoolResult.driverTags) dp.driverPoolResult.lat dp.driverPoolResult.lon)
                 bookingFacts
                 topDriverRules
         pure (filter qualifies drivers)
 
     runOffRideStages chunkOffRide = case poolType of
-      SpecialZoneQueuePool -> pure $ map (mkSpecialZoneQueueActualDistanceResult . makeDriverPoolResult) chunkOffRide
+      SpecialZoneQueuePool ->
+        withTimeAPI "driverPooling" "filterM scheduledRideFilter" $
+          applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig $
+            map (\dpr -> (mkDriverPoolWithStraightLineAsActualDistance transporterConfig.defaultPopupDelay dpr :: DriverPoolWithActualDistResult) {pickupZone = True}) (makeDriverPoolResult <$> chunkOffRide)
       _ -> case chunkOffRide of
         [] -> pure []
         (a : as) -> do
@@ -1381,31 +1446,6 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
                   Just threshold -> filter (\dis -> getMeters dis.actualDistanceToPickup <= fromIntegral threshold || dis.driverPoolResult.driverId `elem` dedicatedDrivers.anyDistance) (NE.toList drvPoolWithDist)
           withTimeAPI "driverPooling" "filterM scheduledRideFilter" $
             applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig (skippedWithStraightLine <> mapsThresholded)
-
-    mkSpecialZoneQueueActualDistanceResult dpr = do
-      DriverPoolWithActualDistResult
-        { driverPoolResult = dpr,
-          actualDistanceToPickup = dpr.distanceToPickup,
-          actualDurationToPickup = Seconds 180,
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0,
-          isPartOfIntelligentPool = False,
-          pickupZone = False,
-          specialZoneExtraTip = Nothing,
-          searchTags = Nothing,
-          tripDistance = Nothing,
-          keepHiddenForSeconds = Seconds 0,
-          goHomeReqId = Nothing,
-          specialLocWarriorPreferredSpecialLocId = Nothing,
-          isForwardRequest = False,
-          previousDropGeoHash = Nothing,
-          score = dpr.score,
-          poolingLogicVersion = Nothing,
-          searchReqDriverStatsCounters = Nothing,
-          idleTimeSeconds = Nothing,
-          preferenceMatchScore = 1.0,
-          hasApplicablePreferences = False,
-          fleetPoolingPriorityLevel = Nothing
-        }
 
 scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.CurrentSearchInfo -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Bool -> DTC.TransporterConfig -> DriverPoolWithActualDistResult -> m Bool
 scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isIntercity transporterConfig driverPoolWithActualDistResult = do

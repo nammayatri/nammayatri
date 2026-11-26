@@ -18,25 +18,28 @@ import qualified Lib.IncentiveJourney.Storage.Beam.UserCohortMapping as Beam
 import Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as ReExport
 import qualified Sequelize as Se
 
-create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m ())
+create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m ()
 create = createWithKV
 
-createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping] -> m ())
+createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping] -> m ()
 createMany = traverse_ create
 
 findById ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByUserId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> m [Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping])
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person ->
+  m [Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping]
 findByUserId userId = do findAllWithKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)]
 
 findByUserIdAndCohortMappingId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person ->
+  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping))
 findByUserIdAndCohortMappingId userId cohortMappingId = do
   findOneWithKV
     [ Se.And
@@ -47,15 +50,20 @@ findByUserIdAndCohortMappingId userId cohortMappingId = do
 
 findByPrimaryKey ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m ())
+updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping -> m ()
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cohortMappingId (Kernel.Types.Id.getId cohortMappingId),
       Se.Set Beam.enabled enabled,
+      Se.Set Beam.optInPeriod optInPeriod,
+      Se.Set Beam.optedInAt optedInAt,
+      Se.Set Beam.optedInBy optedInBy,
+      Se.Set Beam.termsAcceptedAt termsAcceptedAt,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userId (Kernel.Types.Id.getId userId),
       Se.Set Beam.validTill validTill

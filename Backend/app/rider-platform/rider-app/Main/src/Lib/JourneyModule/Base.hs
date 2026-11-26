@@ -24,7 +24,9 @@ import qualified Domain.Types.FRFSQuoteCategory as Fields
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as Fields
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -85,6 +87,9 @@ import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
@@ -104,7 +109,9 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -1840,3 +1847,87 @@ getLegTierOptions ::
   Bool ->
   m [DRouteDetails.AvailableRoutesByTier]
 getLegTierOptions journeyLeg enableSuburbanRoundTrip = getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip
+
+buildPastTicketSummary :: DJourney.Journey -> Flow (Maybe APITypes.PastTicketSummary)
+buildPastTicketSummary journey = do
+  journeyLegs <- sortOn (.sequenceNumber) <$> QJourneyLeg.getJourneyLegs journey.id
+  legs <- forM journeyLegs $ \journeyLeg -> do
+    mbBooking <-
+      if DTrip.isFrfsTransitMode journeyLeg.mode
+        then maybe (pure Nothing) (QTBooking.findBySearchId . Id) journeyLeg.legSearchId
+        else pure Nothing
+    validities <- maybe (pure []) (\booking -> map (.validTill) <$> QFRFSTicket.findAllByTicketBookingId booking.id) mbBooking
+    pure (journeyLeg, mbBooking, validities)
+  let bookings = [booking | (_, Just booking, _) <- legs]
+      transitStops = mapMaybe (\(journeyLeg, mbBooking, _) -> legStops journeyLeg mbBooking) legs
+      fares = map bookingFare bookings
+  bookingPayments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTBPByBookingId . (.id)) bookings
+  paymentOrders <- mapMaybeM QPaymentOrder.findById (ordNub $ map (.paymentOrderId) bookingPayments)
+  refunds <- concat <$> mapM (HQRefunds.findAllByOrderId . (.shortId)) paymentOrders
+  pure $
+    if null legs
+      then Nothing
+      else
+        Just
+          APITypes.PastTicketSummary
+            { journeyId = journey.id,
+              journeyStatus = journey.status,
+              startTime = (KP.listToMaybe bookings >>= (.startTime)) <|> journey.startTime,
+              createdAt = journey.createdAt,
+              isSingleMode = journey.isSingleMode,
+              validUntil = KP.maximumMay (concat [validities | (_, _, validities) <- legs]),
+              paymentOrderShortId = journey.paymentOrderShortId,
+              fromStopName = KP.listToMaybe transitStops >>= fst,
+              toStopName = KP.lastMay transitStops >>= snd,
+              farePaid = case fares of
+                [] -> Nothing
+                (_, currency) : _ -> Just PriceAPIEntity {amount = sum (map fst fares), currency},
+              passApplied = any (\booking -> booking.overrideType == Just DFRFSBooking.PassOverride) bookings,
+              legs = map (\(journeyLeg, mbBooking, _) -> legSummary journeyLeg mbBooking) legs,
+              refunds = map refundInfo refunds
+            }
+  where
+    refundInfo refund = JL.LegRefundInfo {id = refund.id, amount = refund.refundAmount, status = refund.status, arn = refund.arn, completedAt = refund.completedAt, updatedAt = refund.updatedAt, createdAt = refund.createdAt}
+
+    bookingFare booking = case (booking.overrideType, booking.overriddenAmount) of
+      (Just DFRFSBooking.PassOverride, Just overridden) -> (overridden, booking.totalPrice.currency)
+      _ -> (booking.totalPrice.amount, booking.totalPrice.currency)
+
+    fromName route mbBooking = route.fromStopName <|> (mbBooking >>= (.fromStationName))
+    toName route mbBooking = route.toStopName <|> (mbBooking >>= (.toStationName))
+
+    legStops journeyLeg mbBooking
+      | DTrip.isFrfsTransitMode journeyLeg.mode = (\firstRoute lastRoute -> (fromName firstRoute mbBooking, toName lastRoute mbBooking)) <$> KP.listToMaybe journeyLeg.routeDetails <*> KP.lastMay journeyLeg.routeDetails
+      | otherwise = Nothing
+
+    serviceTierType mbBooking = do
+      booking <- mbBooking
+      routeStations <- decodeFromText =<< booking.routeStationsJson :: Maybe [APITypes.FRFSRouteStationsAPI]
+      (._type) <$> KP.listToMaybe (mapMaybe (.vehicleServiceTier) routeStations)
+
+    legSummary journeyLeg mbBooking =
+      let order = journeyLeg.sequenceNumber
+          firstRoute = KP.listToMaybe journeyLeg.routeDetails
+       in case journeyLeg.mode of
+            DTrip.Metro ->
+              APITypes.MetroLeg
+                APITypes.MetroTicketLegSummary
+                  { order,
+                    routes = map (\route -> APITypes.MetroTicketRouteSummary {lineColor = route.routeColorName, lineColorCode = route.routeColorCode}) journeyLeg.routeDetails
+                  }
+            DTrip.Subway ->
+              APITypes.SubwayLeg
+                APITypes.SubwayTicketLegSummary
+                  { order,
+                    trainNumber = (firstRoute >>= (.routeShortName)) <|> (mbBooking >>= (.routeName)),
+                    serviceTierType = serviceTierType mbBooking
+                  }
+            DTrip.Walk -> APITypes.WalkLeg APITypes.WalkTicketLegSummary {order}
+            DTrip.Taxi -> APITypes.TaxiLeg APITypes.TaxiTicketLegSummary {order}
+            _ ->
+              APITypes.BusLeg
+                APITypes.BusTicketLegSummary
+                  { order,
+                    routeName = (firstRoute >>= (.routeShortName)) <|> (mbBooking >>= (.routeName)),
+                    serviceTierType = serviceTierType mbBooking
+                  }

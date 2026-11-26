@@ -202,6 +202,26 @@ data LanguageStrings = LanguageStrings
     regularChangePickupButton :: Text,
     regularSearching :: Text,
     regularBooking :: Text,
+    -- Favourite places (pickup/drop list, save a place)
+    favChoosePickup :: Text,
+    favChooseDrop :: Text,
+    favSectionSaved :: Text,
+    favSectionOther :: Text,
+    favShareNew :: Text,
+    favAddNew :: Text,
+    favAddPrompt :: Text,
+    favSaveButton :: Text,
+    favAddPinPrompt :: Text,
+    favNamePrompt :: Text,
+    favNameHome :: Text,
+    favNameWork :: Text,
+    favNameOther :: Text,
+    favTypeName :: Text,
+    favSaved :: Text -> Text, -- (name)
+    favReplacePrompt :: Text -> Text, -- (name)
+    favReplaceYes :: Text,
+    favReplaceNo :: Text,
+    favSaveFailed :: Text,
     -- Errors
     somethingWentWrong :: Text,
     sessionExpired :: Text,

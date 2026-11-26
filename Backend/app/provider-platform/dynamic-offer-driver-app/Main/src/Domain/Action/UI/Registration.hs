@@ -72,7 +72,7 @@ import qualified Domain.Types.SubscriptionConfig as Fields
 import qualified Domain.Types.TransporterConfig as TC
 import qualified Email.Types
 import Environment (Flow)
-import qualified Environment as Fields
+import qualified Environment
 -- import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -85,7 +85,7 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
-import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Fields
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
@@ -106,12 +106,15 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..), GimsEmployeeRole (..))
 import qualified Lib.GtfsDataServer.Types as Fields
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
+import Storage.Beam.IncentiveJourney ()
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -472,29 +475,27 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
 
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  whenJust mbClientIP $ \clientIP ->
+    fork "Driver Auth IP Fraud Check" $
+      checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
+  -- Below the IP counters, so requests rejected here still count towards the IP limit.
+  when (identifierType == SP.MOBILENUMBER && otpChannel == SOTP.SMS && isNothing person.useFakeOtp) $
+    whenJust req.mobileCountryCode $ validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes
+
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
   -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
   -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
   unless (isJust person.useFakeOtp) $
     whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
-      transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
       mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
       whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
       updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
   when (identifierType == SP.EMAIL && isNothing person.useFakeOtp) $
-    whenJust req.email $ \email -> do
-      transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      SSL.enforceEmailOtpLimit email transporterConfig
-  whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
+    whenJust req.email $ \email -> SSL.enforceEmailOtpLimit email transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
@@ -513,6 +514,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       person.id
       person.merchantId
       merchantOpCityId
+      transporterConfig
       req.mobileCountryCode
       req.mobileNumber
       req.email
@@ -944,13 +946,17 @@ resend tokenId mbSenderHash = do
   let receiverEmail = person.email
 
   -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
-  unless (isJust person.useFakeOtp) $
+  unless (isJust person.useFakeOtp) $ do
+    transporterConfig <-
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     SOTP.sendOTP
       otpChannel
       otpCode
       person.id
       person.merchantId
       merchantOpCityId
+      transporterConfig
       person.mobileCountryCode
       mobileNumber
       receiverEmail
@@ -989,8 +995,11 @@ getPersonOTPChannel personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->

@@ -2,7 +2,9 @@
 
 module Lib.IncentiveJourney.Storage.CachedQueries.Assignment
   ( findAssignmentsByUserId,
+    findMembershipsByUserId,
     findAssignmentsForDriver,
+    findMembershipsForDriver,
     clearCacheByPersonId,
     clearCacheByCohortMappingId,
   )
@@ -18,27 +20,51 @@ import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as Fie
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
+import Lib.IncentiveJourney.OptIn (isOptInActiveForLocalTime)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra as QUCMExtra
 import Lib.IncentiveJourney.Types.Actor (JourneyActor (..), actorCachePrefix)
 
+-- | Eval / driver UI: OptIn rows only when opted-in for the current local period.
+-- Pass city-local now — UCM.validTill / optedInAt are local wall-clock stored as UTCTime.
 findAssignmentsByUserId ::
   (BeamFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
+  UTCTime ->
   m [Assignment.JourneyAssignment]
-findAssignmentsByUserId actor personId = do
-  ucms <- findUserCohortMappingsByPersonId actor personId
+findAssignmentsByUserId actor personId now = findUcmAssignments actor personId now True
+
+-- | Dashboard membership listing: include pending OptIn invites (optedInAt null).
+findMembershipsByUserId ::
+  (BeamFlow m r) =>
+  JourneyActor ->
+  Id Common.Person ->
+  UTCTime ->
+  m [Assignment.JourneyAssignment]
+findMembershipsByUserId actor personId now = findUcmAssignments actor personId now False
+
+findUcmAssignments ::
+  (BeamFlow m r) =>
+  JourneyActor ->
+  Id Common.Person ->
+  UTCTime ->
+  Bool -> -- requireOptInForOptInCampaigns
+  m [Assignment.JourneyAssignment]
+findUcmAssignments actor personId now requireOptIn = do
+  ucms <- findUserCohortMappingsByPersonId actor personId now
   cjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
+  let pairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms cjms]
+      selectedPairs = if requireOptIn then filterOptInActive now pairs else pairs
   pure $
     [ Assignment.JourneyAssignment
         { userCohortMapping = Just ucm,
           cohortJourneyMapping = cjm,
           assignedAt = ucm.createdAt
         }
-      | (ucm, Just cjm) <- zip ucms cjms
+      | (ucm, cjm) <- selectedPairs
     ]
 
 -- | UCM assignments plus enabled city auto-apply rows.
@@ -46,6 +72,7 @@ findAssignmentsByUserId actor personId = do
 -- allowIfNoMapping rows apply only when the driver has no active user_cohort_mapping.
 -- The same cohort journey mapping is kept once, so a driver is not rewarded twice.
 -- row.enabled turns off only this auto-apply. cjm.enabled still has to be true.
+-- OptIn campaigns are never auto-applied; they require an opted-in UCM row.
 findAssignmentsForDriver ::
   (BeamFlow m r) =>
   JourneyActor ->
@@ -53,38 +80,87 @@ findAssignmentsForDriver ::
   Id Common.Merchant ->
   Id Common.MerchantOperatingCity ->
   Maybe Text ->
+  UTCTime ->
   m [Assignment.JourneyAssignment]
-findAssignmentsForDriver actor personId merchantId merchantOperatingCityId mbVehicleCategory = do
-  ucms <- findUserCohortMappingsByPersonId actor personId
+findAssignmentsForDriver actor personId merchantId merchantOperatingCityId mbVehicleCategory now =
+  findDriverAssignments actor personId merchantId merchantOperatingCityId mbVehicleCategory now True
+
+-- | Dashboard listing for drivers: same as findAssignmentsForDriver but keeps pending OptIn invites.
+findMembershipsForDriver ::
+  (BeamFlow m r) =>
+  JourneyActor ->
+  Id Common.Person ->
+  Id Common.Merchant ->
+  Id Common.MerchantOperatingCity ->
+  Maybe Text ->
+  UTCTime ->
+  m [Assignment.JourneyAssignment]
+findMembershipsForDriver actor personId merchantId merchantOperatingCityId mbVehicleCategory now =
+  findDriverAssignments actor personId merchantId merchantOperatingCityId mbVehicleCategory now False
+
+findDriverAssignments ::
+  (BeamFlow m r) =>
+  JourneyActor ->
+  Id Common.Person ->
+  Id Common.Merchant ->
+  Id Common.MerchantOperatingCity ->
+  Maybe Text ->
+  UTCTime ->
+  Bool -> -- requireOptInForOptInCampaigns
+  m [Assignment.JourneyAssignment]
+findDriverAssignments actor personId merchantId merchantOperatingCityId mbVehicleCategory now requireOptIn = do
+  ucms <- findUserCohortMappingsByPersonId actor personId now
   ucmCjms <- mapM (findCohortJourneyMappingById actor . (.cohortMappingId)) ucms
-  let ucmAssignments =
+  let ucmPairs = [(ucm, cjm) | (ucm, Just cjm) <- zip ucms ucmCjms]
+      activeUcmPairs = filterOptInActive now ucmPairs
+      -- Listing may include pending OptIn invites; allowIfNoMapping still keys off period-active / Assigned only.
+      selectedUcmPairs = if requireOptIn then activeUcmPairs else ucmPairs
+      ucmAssignments =
         [ Assignment.JourneyAssignment
             { userCohortMapping = Just ucm,
               cohortJourneyMapping = cjm,
               assignedAt = ucm.createdAt
             }
-          | (ucm, Just cjm) <- zip ucms ucmCjms
+          | (ucm, cjm) <- selectedUcmPairs
         ]
-      hasActiveUcm = not (null ucms)
+      hasActiveUcm = not (null activeUcmPairs)
   rows <- CQAuto.findApplicableByMerchantAndCity actor merchantId merchantOperatingCityId mbVehicleCategory
   autoAssignments <-
     catMaybes <$> forM rows \row -> do
       mbCjm <- findCohortJourneyMappingById actor row.cohortJourneyMappingId
-      pure $ case mbCjm of
+      case mbCjm of
         Just cjm
           | row.enabled
               && cjm.enabled
               && cjm.merchantId == merchantId
               && cjm.merchantOperatingCityId == merchantOperatingCityId
-              && (not row.allowIfNoMapping || not hasActiveUcm) ->
-            Just
-              Assignment.JourneyAssignment
-                { userCohortMapping = Nothing,
-                  cohortJourneyMapping = cjm,
-                  assignedAt = row.createdAt
-                }
-        _ -> Nothing
+              && (not row.allowIfNoMapping || not hasActiveUcm) -> do
+            let isAssignedCampaign = fromMaybe DCJM.Assigned cjm.campaignUserLinkType /= DCJM.OptIn
+            pure $
+              if isAssignedCampaign
+                then
+                  Just
+                    Assignment.JourneyAssignment
+                      { userCohortMapping = Nothing,
+                        cohortJourneyMapping = cjm,
+                        assignedAt = row.createdAt
+                      }
+                else Nothing
+        _ -> pure Nothing
   pure $ nubBy sameCohortJourneyMapping (ucmAssignments <> autoAssignments)
+
+-- | OptIn campaigns require period-active opt-in; Assigned (or missing link type) stay active.
+filterOptInActive ::
+  UTCTime ->
+  [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)] ->
+  [(DUCM.UserCohortMapping, DCJM.CohortJourneyMapping)]
+filterOptInActive localNow =
+  filter
+    ( \(ucm, cjm) ->
+        case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
+          DCJM.OptIn -> isOptInActiveForLocalTime localNow (Just cjm.startDate) ucm
+          DCJM.Assigned -> True
+    )
 
 sameCohortJourneyMapping :: Assignment.JourneyAssignment -> Assignment.JourneyAssignment -> Bool
 sameCohortJourneyMapping assignment other = assignment.cohortJourneyMapping.id == other.cohortJourneyMapping.id
@@ -93,16 +169,16 @@ findUserCohortMappingsByPersonId ::
   (BeamFlow m r) =>
   JourneyActor ->
   Id Common.Person ->
+  UTCTime ->
   m [DUCM.UserCohortMapping]
-findUserCohortMappingsByPersonId actor personId =
+findUserCohortMappingsByPersonId actor personId now =
   Hedis.withCrossAppRedis (Hedis.safeGet (makeByPersonIdKey actor personId)) >>= \case
     Just cached -> do
-      now <- getCurrentTime
       let active = filter (\ucm -> ucm.enabled && ucm.validTill >= now) cached
       when (length active /= length cached) $ clearCacheByPersonId actor personId
       pure active
     Nothing -> do
-      fetched <- QUCMExtra.findActiveByUserId personId
+      fetched <- QUCMExtra.findActiveByUserId personId now
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.withCrossAppRedis $ Hedis.setExp (makeByPersonIdKey actor personId) fetched expTime
       pure fetched

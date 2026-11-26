@@ -406,8 +406,12 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 -- ledger core (handled separately via createTipLedger), the
                 -- existing core entries won't be disturbed.
                 tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-                let tipLedgerCtx = (RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = person.firstName}
-                let tipLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount tipLedgerCtx
+                let tipLedgerCtx =
+                      RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                        (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                          { issuedToName = person.firstName
+                          }
+                let tipLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount tipLedgerCtx
                 mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo) False
                 case mbPaymentIntentResp of
                   Nothing -> do
@@ -416,7 +420,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                     let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
                     void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
                     when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
-                      let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx totalFare.amount tipRideFareBreakups)
+                      let discountApplicableFareAmountTaxIncl = snd (SOffer.offerFareCtx booking.fareSettlementType totalFare.amount tipRideFareBreakups)
                       SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount tipLedgerInfo booking
                       RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
                   Just paymentIntentResp -> do
@@ -431,8 +435,10 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                         then do
                           QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
                           RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+                          SPayment.notifyBppPaymentStatus True rideId
                         else do
                           QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
+                          SPayment.notifyBppPaymentStatus False rideId
                           logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
                 QRide.updateTipByRideId (Just tipAmount) rideId
                 let tipFarePrice = mkPriceFromAPIEntity tipRequest.amount
@@ -609,7 +615,7 @@ refundableAmounts rideId ctx = do
           rideId.getId
           Domain.Types.FareBreakup.RIDE
           (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-      let li = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates (maybe booking.estimatedFare.amount (.amount) ride.totalFare) fareBreakups (maybe 0 (.discountAmount) mbOfferEntity) 0 0 ctx
+      let li = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType (maybe booking.estimatedFare.amount (.amount) ride.totalFare) fareBreakups (maybe 0 (.discountAmount) mbOfferEntity) 0 0 ctx
           (platformFeeBase, platformFeeTax) = (FB.componentLines ((\fb -> FB.BreakupLine fb.description fb.amount.amount) <$> fareBreakups)).platformFee
           rideFareGross = li.rideFare + li.gstAmount
           netOfDiscount = if rideFareGross > 0 then (rideFareGross - li.offerDiscountAmount) / rideFareGross else 1

@@ -331,6 +331,7 @@ createDriverRCAssociationIfPossible transporterConfig driverId rc = do
             associatedOn = now,
             associatedTill = end,
             errorMessage = Nothing,
+            takeoverVerifyResponse = Nothing,
             consent = True,
             consentTimestamp = now,
             isRcActive = False,
@@ -590,7 +591,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         verified = Nothing,
         pendingChallan = Nothing,
         initiatedBy = Nothing,
-        rcVehicleType = input.rcVehicleType
+        rcVehicleType = input.rcVehicleType,
+        isBlocked = Nothing
       }
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text, Maybe Text)
@@ -1615,7 +1617,8 @@ deleteVehicleWithAllAssociations ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Person.Person ->
   Maybe (Id Person.Person) ->
@@ -1666,7 +1669,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
       pure (hasDriverAssoc || hasFleetAssoc)
 
     endDriverAssociationIfPossibleForRc ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
       Id VehicleRegistrationCertificate ->
       m ()
     endDriverAssociationIfPossibleForRc rcId = do
@@ -1692,7 +1695,7 @@ deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
     deleteImagesLinkedWithRC = ImageQueryExtra.deleteByRcId
 
     deleteVehicleIfPossible ::
-      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
       Id Person.Person ->
       m ()
     deleteVehicleIfPossible driverId = do

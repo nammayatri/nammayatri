@@ -83,6 +83,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
+import Tools.Utils (generateTwillioCallerIdentity)
 
 data Pricing = Pricing
   { pricingId :: Text,
@@ -729,7 +730,7 @@ mkFulfillmentV2' driverDetached mbDriver mbDriverStats ride booking mbVehicle mb
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW)
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW) (isJust booking.riderCallIdentity)
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -749,8 +750,8 @@ tfCustomer riderPhone riderName =
           Just $ emptyPerson {Spec.personName = riderName}
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Bool -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus isScheduledRideActivated =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Bool -> Bool -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus isScheduledRideActivated isPersonCallIdentity =
   Tags.buildTagGroups
     [ Tags.REGISTERED_AT ~= show driver.createdAt,
       Tags.RATING ~=? (show <$> driverStats.rating),
@@ -762,7 +763,8 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
       Tags.IS_ALREADY_FAVOURITE ~=| (isAlreadyFav, show isAlreadyFav),
       Tags.FAVOURITE_COUNT ~= show favCount,
       Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus),
-      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated)
+      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated),
+      Tags.DRIVER_CALL_IDENTITY ~=| (isPersonCallIdentity, generateTwillioCallerIdentity driver.id)
     ]
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
@@ -943,6 +945,7 @@ tripCategoryToCategoryCode :: DT.TripCategory -> Text
 tripCategoryToCategoryCode = \case
   DT.Rental _ -> "ON_DEMAND_RENTAL"
   DT.IntercityRental _ _ -> "ON_DEMAND_RENTAL"
+  DT.SharedRoute _ -> "SHARED_ROUTE_TRIP"
   _ -> "ON_DEMAND_TRIP"
 
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
@@ -1143,11 +1146,18 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbTransporterConfig hasStops) farePolicy
       displayFareParamsBreakups = maybe [] (\(isValueAddNP, fareParams) -> mkFareParamsBreakups isValueAddNP highPrecMoneyToText mkRateCardFareParamsBreakupItem fareParams) mbFareParams
       filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
+      airportEntryFeeBreakups = maybe [] (mkAirportEntryFeeBreakup . snd) mbFareParams
       plannedTripBreakups = maybe [] (mkPlannedTripBreakups estimatedDistance mbTripDurationItem . snd) mbFareParams
-      combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> plannedTripBreakups
+      combainedParams = farePolicyBreakups <> airportEntryFeeBreakups <> filteredDisplayBreakups <> plannedTripBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]
   where
+    mkAirportEntryFeeBreakup :: Params.FareParameters -> [RateCardBreakupItem]
+    mkAirportEntryFeeBreakup fareParams =
+      if isNothing fareParams.airportEntryFee || SL.edcCollectsParking fareParams.fareSettlementType
+        then []
+        else [mkRateCardBreakupItem (show Tags.AIRPORT_ENTRY_FEE) (show (fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax))]
+
     findDup :: [RateCardBreakupItem] -> RateCardBreakupItem -> Bool
     findDup [] _ = False
     findDup (farePolicyCard : nextFarePolicy) fareParameter =
@@ -1357,7 +1367,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW)
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW) (isJust booking.riderCallIdentity)
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,

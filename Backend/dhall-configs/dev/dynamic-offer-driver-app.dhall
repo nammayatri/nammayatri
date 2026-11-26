@@ -361,6 +361,7 @@ let AllocatorJobType =
       | ProcessEndRideFinance
       | WalletIntegrityCheck
       | ChargeWalletPenalty
+      | MaterialiseSharedRuns
       >
 
 let jobRetryOnExceptionMapx =
@@ -478,6 +479,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckBetterDriverSearchProximity
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.MaterialiseSharedRuns, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -601,6 +603,15 @@ let rideEventsPublisherCfg =
             else  None { kafkaTopic : Text }
         }
 
+let ijBehaviorTickRedisCfg =
+      { streamPrefix = "ij_behavior_tick_stream_", shardCount = +10 }
+
+let ijBehaviorTickPublisherCfg =
+      Some
+        { redisConfig = Some ijBehaviorTickRedisCfg
+        , kafkaConfig = None { kafkaTopic : Text }
+        }
+
 let dashboardLoginRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +600 }
 
@@ -708,6 +719,7 @@ in  { esqDBCfg
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
+    , issueLookupToken = Some sec.issueLookupToken
     , cloudSwitchPassword = sec.cloudSwitchPassword
     , cacheConfig
     , metricsSearchDurationTimeout = +45
@@ -780,6 +792,7 @@ in  { esqDBCfg
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
+    , ijBehaviorTickPublisherCfg
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

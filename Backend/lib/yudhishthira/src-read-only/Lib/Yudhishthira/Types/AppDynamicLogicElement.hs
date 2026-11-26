@@ -17,6 +17,7 @@ data AppDynamicLogicElement = AppDynamicLogicElement
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Merchant),
     order :: Kernel.Prelude.Int,
     patchedElement :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    settings :: Kernel.Prelude.Maybe Data.Aeson.Value,
     version :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

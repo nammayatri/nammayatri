@@ -17,6 +17,7 @@ module Lib.BehaviorTracker.Recorder
     recordAction,
     incrementCounterOnly,
     decrementCounterOnly,
+    recordEventsWindow,
   )
 where
 
@@ -25,6 +26,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.BehaviorTracker.Accumulator
+import qualified Lib.BehaviorTracker.EventsWindow as EventsWindow
 import Lib.BehaviorTracker.Types
 
 -- | Full pipeline: increment counters + build unified snapshot
@@ -118,6 +120,31 @@ decrementCounterOnly ::
   m ()
 decrementCounterOnly config entityType entityId actionType counterType eventTime =
   decrementCounterInTimeBucket config.hashTagEntityId entityType actionType counterType entityId eventTime config.windowSizeDays
+
+-- | Write one event to an entity's events window, and nothing else (no counter): ELIGIBLE_COUNT
+-- appends '0', ACTION_COUNT marks a '1' as @mark@ says, keeping the newest @keep@ events.
+-- Call it next to the counter write of the same event, like 'incrementCounterOnly'.
+-- Returns the length of an oversized window that was cleared first, for the caller to log;
+-- a Redis failure is thrown.
+--
+-- Example:
+--   On ride assignment:  recordEventsWindow DRIVER "RIDE_CANCELLATION" MarkLatestEligible z driverId ELIGIBLE_COUNT
+--   On cancellation:     recordEventsWindow DRIVER "RIDE_CANCELLATION" MarkLatestEligible z driverId ACTION_COUNT
+recordEventsWindow ::
+  (Redis.HedisFlow m r, TryException m) =>
+  EntityType ->
+  -- | action type of the window, e.g. "RIDE_CANCELLATION"
+  Text ->
+  EventsWindowMark ->
+  -- | events to keep (Z)
+  Int ->
+  -- | entity id, e.g. the driver id
+  Text ->
+  CounterType ->
+  m (Maybe Int)
+recordEventsWindow entityType actionType mark keep entityId = \case
+  ELIGIBLE_COUNT -> EventsWindow.recordEligible entityType actionType entityId keep
+  ACTION_COUNT -> EventsWindow.recordAction entityType actionType entityId mark keep
 
 -- Internal helpers
 

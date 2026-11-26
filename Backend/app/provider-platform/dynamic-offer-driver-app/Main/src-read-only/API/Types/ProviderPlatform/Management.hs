@@ -42,7 +42,6 @@ import qualified API.Types.ProviderPlatform.Management.ScheduledBooking
 import qualified API.Types.ProviderPlatform.Management.SearchTry
 import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
-import qualified API.Types.ProviderPlatform.Management.System
 import qualified API.Types.ProviderPlatform.Management.TdsDistribution
 import qualified API.Types.ProviderPlatform.Management.Vehicle
 import qualified API.Types.ProviderPlatform.Management.VehicleDetails
@@ -95,7 +94,6 @@ data ManagementUserActionType
   | SEARCH_TRY API.Types.ProviderPlatform.Management.SearchTry.SearchTryUserActionType
   | SOS_MEDIA API.Types.ProviderPlatform.Management.SosMedia.SosMediaUserActionType
   | SPECIAL_ZONE_QUEUE API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueUserActionType
-  | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
   | TDS_DISTRIBUTION API.Types.ProviderPlatform.Management.TdsDistribution.TdsDistributionUserActionType
   | VEHICLE API.Types.ProviderPlatform.Management.Vehicle.VehicleUserActionType
   | VEHICLE_DETAILS API.Types.ProviderPlatform.Management.VehicleDetails.VehicleDetailsUserActionType
@@ -145,7 +143,6 @@ instance Text.Show.Show ManagementUserActionType where
     SEARCH_TRY e -> "SEARCH_TRY/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SPECIAL_ZONE_QUEUE e -> "SPECIAL_ZONE_QUEUE/" <> show e
-    SYSTEM e -> "SYSTEM/" <> show e
     TDS_DISTRIBUTION e -> "TDS_DISTRIBUTION/" <> show e
     VEHICLE e -> "VEHICLE/" <> show e
     VEHICLE_DETAILS e -> "VEHICLE_DETAILS/" <> show e
@@ -497,15 +494,6 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
-            ++ [ ( SYSTEM v1,
-                   r2
-                 )
-                 | r1 <- stripPrefix "SYSTEM/" r,
-                   ( v1,
-                     r2
-                     ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
-               ]
             ++ [ ( TDS_DISTRIBUTION v1,
                    r2
                  )
@@ -553,7 +541,6 @@ instance Text.Read.Read ManagementUserActionType where
                ]
       )
     where
-      app_prec = 10
-      stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+      app_prec = 10; stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

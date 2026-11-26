@@ -14,13 +14,17 @@
 
 module SharedLogic.Utils
   ( getStaticCustomerId,
+    generateTwillioCallerIdentity,
     getPureStaticCustomerId,
     getPersonUdf1,
   )
 where
 
+import qualified Data.ByteString.Lazy as BSL
 import Data.Char (isAlphaNum, isAscii)
+import Data.Digest.Pure.MD5 (md5)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RiderConfig as Fields
@@ -70,3 +74,7 @@ getStaticCustomerId person phone = do
           return $ UUID.generateStaticUUID key
         else return person.id.getId
     Nothing -> return person.id.getId
+
+-- | Twilio identity for a person's in-app calls: MD5 of the person id, as 32 lowercase hex characters.
+generateTwillioCallerIdentity :: Fields.Id DP.Person -> Text
+generateTwillioCallerIdentity personId = T.pack (show (md5 (BSL.fromStrict (TE.encodeUtf8 personId.getId))))

@@ -5,6 +5,7 @@ module Domain.Types.Extra.IntegratedBPPConfig where
 
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
+import Domain.Types.SharedRoute (SharedDemandKnobs)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Base64
@@ -43,7 +44,12 @@ data DIRECTConfig = DIRECTConfig
     -- (the default) means unbounded -- fine for almost every operator. Only needed when this
     -- operator's gtfs_id has GIMS's repeater automation enabled, since that's the only case
     -- where an `upcoming` waybill can be real and far in the future.
-    checkAheadDaysSchedule :: Maybe Int
+    checkAheadDaysSchedule :: Maybe Int,
+    -- | Present when this feed is a shared-route service our own drivers run (shuttle, shared cab, works
+    -- bus): how its passengers book, hold seats, board and cancel. Absent for operator feeds (metro,
+    -- government bus) whose rails stay as they are. Read through SharedLogic.SharedRoute.Knobs, which
+    -- also validates it.
+    sharedKnobs :: Maybe SharedDemandKnobs
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

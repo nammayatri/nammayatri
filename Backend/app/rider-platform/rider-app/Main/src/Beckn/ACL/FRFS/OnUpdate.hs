@@ -43,7 +43,8 @@ buildOnUpdateReq onUpdateReq = do
                   refundAmount,
                   cancellationCharges,
                   baseFare,
-                  orderStatus
+                  orderStatus,
+                  isRefundAck = isRefundAcknowledgement message.confirmReqMessageOrder
                 }
         return $ Just dOnUpdate
       Left err -> throwError $ InvalidBecknSchema $ "on_update error:-" <> show err
@@ -70,6 +71,10 @@ buildOnUpdateReq onUpdateReq = do
       (baseFare, refundAmount, cancellationCharges) <- Utils.getAndValidateCancellationParams quoteBreakup orderStatus
 
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus)
+
+isRefundAcknowledgement :: Spec.Order -> Bool
+isRefundAcknowledgement order =
+  any (\payment -> payment.paymentType == Just "REFUND" && payment.paymentStatus == Just (show Spec.PAID)) (fromMaybe [] order.orderPayments)
 
 handleError ::
   (MonadFlow m) =>

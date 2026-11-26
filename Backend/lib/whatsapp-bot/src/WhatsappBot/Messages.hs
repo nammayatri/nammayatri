@@ -76,18 +76,29 @@ classifyStage b
     present = maybe False (not . T.null) -- TS treats an empty string as falsy/absent
 
 -- | Normalize a phone so WhatsApp auto-linkifies it to a tap-to-dial link
--- (@flexi-messages.ts:36-44@). Bare 10-digit -> @+91@; @91XXXXXXXXXX@ -> @+…@;
--- a leading @0@ (masked exophone) is returned as-is; else prefix @+@.
-formatDialable :: Maybe Text -> Maybe Text
-formatDialable Nothing = Nothing
-formatDialable (Just phone)
+-- (@flexi-messages.ts:36-44@, which was India-only), for the WhatsApp
+-- number's country. With a fixed national length @n@ (India: 10): a bare
+-- @n@-digit number gets the country code; code + @n@ digits gets a @+@; a
+-- leading @0@ (masked exophone) is returned as-is; else prefix @+@ — the
+-- original rule. Without a length: a leading @0@ as-is, a number already
+-- starting with the code gets a @+@, anything else gets the code.
+formatDialable :: MerchantCtx -> Maybe Text -> Maybe Text
+formatDialable _ Nothing = Nothing
+formatDialable m (Just phone)
   | T.null d = Nothing
-  | T.length d == 10 = Just ("+91" <> d)
-  | T.length d == 12 && "91" `T.isPrefixOf` d = Just ("+" <> d)
+  | Just n <- m.phoneNumberLength = case () of
+    _
+      | T.length d == n -> Just (plusCc <> d)
+      | T.length d == n + T.length cc && cc `T.isPrefixOf` d -> Just ("+" <> d)
+      | "0" `T.isPrefixOf` d -> Just phone
+      | otherwise -> Just ("+" <> d)
   | "0" `T.isPrefixOf` d = Just phone
-  | otherwise = Just ("+" <> d)
+  | cc `T.isPrefixOf` d = Just ("+" <> d)
+  | otherwise = Just (plusCc <> d)
   where
     d = T.filter isDigit phone
+    cc = T.filter isDigit m.phoneCountryCode
+    plusCc = "+" <> cc
 
 -- | Build a tracking link (@engine.ts:1471-1477@): the merchant's URL template with
 -- the ride id substituted (falling back to the bookingId until a ride is assigned,
@@ -95,7 +106,7 @@ formatDialable (Just phone)
 -- The link text is not golden-projected.
 buildTrackingLink :: MerchantCtx -> BotBookingDetails -> Text
 buildTrackingLink merchant b =
-  let template = if T.null merchant.nyTrackingUrl then defaultTrackingUrl else merchant.nyTrackingUrl
+  let template = if T.null merchant.trackingUrl then defaultTrackingUrl else merchant.trackingUrl
    in T.replace "{rideId}" (fromMaybe b.bookingId b.rideId) template
 
 defaultTrackingUrl :: Text
@@ -114,7 +125,7 @@ buildDriverCard translations merchant b lang =
   where
     s = t translations lang
     driverName = fromMaybe "" b.driverName
-    dial = formatDialable b.driverNumber
+    dial = formatDialable merchant b.driverNumber
     trackingLink = buildTrackingLink merchant b
     msgLines =
       [s.flexiFoundDriver driverName]

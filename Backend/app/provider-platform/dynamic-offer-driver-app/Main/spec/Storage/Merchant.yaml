@@ -54,7 +54,6 @@ imports:
   RecomputePolicy: Domain.Types.Extra.TransporterConfig
   FareBreakupNode: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
-  TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
@@ -66,6 +65,7 @@ imports:
   ChallanSearchService: Kernel.External.ChallanSearch.Types
   OnboardingAs: Domain.Types.DriverInformation
   MapProvider: Domain.Types.DriverInformation
+  SharedSupplyKnobs: Domain.Types.SharedRoute
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -382,6 +382,7 @@ MerchantOperatingCity:
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
     gstin: Maybe Text
+    address: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -1223,6 +1224,8 @@ TransporterConfig:
       cityState: Maybe Text # City, State line shown in the invoice footer (place of issue)
       enableDriverInvoice: Maybe Bool # Nothing/True = also emit the standalone driver/FO copy of the ride invoice (default); False = skip it (e.g. MSIL — the compliant invoice is rider-facing, driver is the supplier not a recipient)
       enableB2CUnsignedQR: Maybe Bool # Nothing/False = no self-generated B2C QR (default); True = persist + render it on customer invoices. Keep off until payee UPI/bank details are sourced — the QR is not payable without them
+      walletInvoiceSupplierName: Maybe Text # Supplier name on driver wallet invoices (wallet top-up, airport cash recharge)
+      walletInvoiceSupplierAddress: Maybe Text # Supplier address on driver wallet invoices (wallet top-up, airport cash recharge)
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool
@@ -1493,6 +1496,10 @@ TransporterConfig:
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
+    # Events-window rulebooks: how many recent events each driver's window keeps in Redis in
+    # this city (Z), 1 to 400 (default 100; a config patch outside that is refused). A rulebook
+    # judging the last X events needs X <= Z.
+    eventsWindowSize: Int
     cancellationRateCalculationThreshold: Maybe Int
     arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
     demandHotspotsConfig: Maybe DemandHotspotsConfig
@@ -1585,6 +1592,7 @@ TransporterConfig:
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
+    smsOtpAllowedCountryCodes: Maybe [Text]
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
@@ -1616,6 +1624,10 @@ TransporterConfig:
     # Absent means the manual toll charge feature is off for this city; present is the single
     # switch that turns it on, folding what used to be a separate enabled-trip-categories check.
     manualTollChargeConfig: Maybe ManualTollChargeConfig
+    # Present when this city runs shared-route services (SharedRoute trip category) with its own drivers:
+    # fee basis, clash window, fallback and check-in windows, no-show wait. Absent means no runs are
+    # materialised here. Read through SharedLogic.SharedRun.Knobs, which also validates it.
+    sharedRunConfig: Maybe SharedSupplyKnobs
     rideEvidenceConfig: Maybe RideEvidenceConfig
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
@@ -1661,6 +1673,8 @@ TransporterConfig:
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
+    enableManualArrival: Maybe Bool # When True, the driver marks arrival in the app: LTS never auto-marks the driver as reached, scheduled-ride activation doesn't auto-arrive, and arrivedAtPickup skips the arrivedPickupThreshold distance check
+    rentalNextStopLockThreshold: Maybe HighPrecMeters
 
   beamType:
     currency: Maybe Currency
@@ -1702,6 +1716,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
     manualTollChargeConfig: Maybe Value
+    sharedRunConfig: Maybe Value
     rideEvidenceConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
@@ -1809,6 +1824,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     manualTollChargeConfig: Kernel.Prelude.toJSON <$> manualTollChargeConfig|E
+    sharedRunConfig: Kernel.Prelude.toJSON <$> sharedRunConfig|E
     rideEvidenceConfig: Kernel.Prelude.toJSON <$> rideEvidenceConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     scheduledRideConfig: Just . Data.Aeson.toJSON|I
@@ -1929,6 +1945,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     manualTollChargeConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< manualTollChargeConfig|E
+    sharedRunConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< sharedRunConfig|E
     rideEvidenceConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rideEvidenceConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
@@ -2072,6 +2090,7 @@ TransporterConfig:
     demandHotspotsConfig: json
     fareRecomputePolicy: json
     manualTollChargeConfig: json
+    sharedRunConfig: json
     rideEvidenceConfig: json
     customerPayableFareBreakupSubItemsConfig: json
     issueBreachConfig: json
@@ -2098,14 +2117,17 @@ TransporterConfig:
     communicationChannelCharLimits: json
     tripConfig: json
     allowedPaymentInstrumentForPayout: "text[]"
+    smsOtpAllowedCountryCodes: "text[]"
     stclConfig: json
     takeoverScoring: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
+    rentalNextStopLockThreshold: double precision
 
   default:
     enableLegalComplianceDocuments: "false"
+    eventsWindowSize: "100"
     enableGoOnlinePolicyBlocker: "false"
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -2282,6 +2304,7 @@ TransporterConfig:
     forceDirectCalling: "false"
     showRoutePerRequest: "false"
     enableOndcScheduledRideSupport: "false"
+    enableManualArrival: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
@@ -2364,6 +2387,10 @@ TransporterConfig:
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    updateCallingMode:
+      kvFunction: updateOneWithKV
+      params: [callingMode, driverCallingOption, forceDirectCalling]
+      where: merchantOperatingCityId
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
@@ -2429,6 +2456,7 @@ MerchantClientConfig:
   constraints:
     packageId: PrimaryKey
     serviceName: PrimaryKey
+    clientOS: PrimaryKey
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

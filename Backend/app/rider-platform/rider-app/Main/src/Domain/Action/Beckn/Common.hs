@@ -102,6 +102,8 @@ import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Finance.Transfer.Rail (RailSubmitResult (..))
 import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.JourneyModule.State.Types as JMState
+import qualified Lib.JourneyModule.State.Utils as JMState
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -215,7 +217,9 @@ data BookingDetails = BookingDetails
     isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
-    betterDriverAbortRadiusMeters :: Maybe Meters
+    betterDriverAbortRadiusMeters :: Maybe Meters,
+    -- | Driver's per-person Twilio call identity (DRIVER_CALL_IDENTITY tag); Nothing for older BPPs.
+    driverCallIdentity :: Maybe Text
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -549,7 +553,8 @@ rideAssignedReqHandler req = do
             DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
             DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId,
             DRB.issuedByGstin = bppInfo.issuedByGstin <|> req.booking.issuedByGstin,
-            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo
+            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo,
+            DRB.issuedByLogoUrl = bppInfo.issuedByLogoUrl <|> req.booking.issuedByLogoUrl
           }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
@@ -661,21 +666,13 @@ rideAssignedReqHandler req = do
           -- re-price here voids the ride-end invoice and writes a fresh one, the invoice the
           -- PDF actually renders ends up with no recipient and no supplier.
           riderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-          assignedRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
           let assignedRiderName = riderPerson.firstName
-              assignedInvCfg = assignedRiderConfig.invoiceConfig
               ledgerCtx =
-                -- applyBookingProviderFieldsToCtx only overlays supplier fields the BPP actually
-                -- sent, so seed them from config first -- otherwise a booking without those
-                -- fields leaves the invoice with no supplier at all.
                 RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                   (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                    { issuedToName = assignedRiderName,
-                      supplierName = assignedInvCfg >>= (.supplierName),
-                      supplierAddress = assignedInvCfg >>= (.supplierAddress),
-                      supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
+                    { issuedToName = assignedRiderName
                     }
-          let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
+          let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
           logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
           -- Wrap makePaymentIntent in retry, capture result for orderId
           mbPaymentResp <-
@@ -707,18 +704,13 @@ rideAssignedReqHandler req = do
           -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
           deferPostAssignmentWork "assign:cashRideLedger" $ do
             cashRiderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-            cashRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
-            let cashInvCfg = cashRiderConfig.invoiceConfig
-                ledgerCtx =
+            let ledgerCtx =
                   RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                     (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
-                      { issuedToName = cashRiderPerson.firstName,
-                        supplierName = cashInvCfg >>= (.supplierName),
-                        supplierAddress = cashInvCfg >>= (.supplierAddress),
-                        supplierVatNumber = cashInvCfg >>= (.supplierVatNumber)
+                      { issuedToName = cashRiderPerson.firstName
                       }
             estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
-            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
+            let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
             result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.taxRegime ledgerInfo.gstRates ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat (ledgerInfo.airportEntryFee, ledgerInfo.airportEntryFeeTax) ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat) (ledgerInfo.cancellationCharge, ledgerInfo.cancellationTax)
             case result of
               Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
@@ -745,8 +737,9 @@ rideAssignedReqHandler req = do
       -- rejects shorter trips, so they are never marked eligible.
       -- A swap does NOT re-roll - one search per original booking, so a rider cannot chain
       -- swaps and cancel a driver on each hop. To allow repeats later, drop this branch.
+      -- A scheduled booking is never eligible: its driver is not on the way at assignment time.
       eligibleForBetterDriverSearch <-
-        if isBetterDriverSwap
+        if isBetterDriverSwap || booking.isScheduled
           then pure False
           else do
             riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
@@ -806,7 +799,7 @@ rideAssignedReqHandler req = do
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
           riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-          mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+          mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
           senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
           receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
           senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
@@ -896,7 +889,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
     _ -> pure ()
   where
     sendDeliveryDetailsToReceiver riderConfig = fork "Sending Delivery Details SMS to Receiver" $ do
-      mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+      mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
       senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
       receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
       receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
@@ -1032,7 +1025,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- its VAT (same basis as /getOfferDiscount and the quote-list offer
   -- basket). Fall back to the aggregate totalFare when the BPP didn't emit
   -- the ten-tag summary.
-  let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx totalFare.amount breakups
+  let (fareCtx, discountApplicableFareAmountTaxIncl) = SOffer.offerFareCtx booking.fareSettlementType totalFare.amount breakups
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
   -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
   -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
@@ -1114,16 +1107,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       let riderName = person.firstName
-          mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderName,
-                  supplierName = mbInvCfg >>= (.supplierName),
-                  supplierAddress = mbInvCfg >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+                { issuedToName = riderName
                 }
-      let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
+      let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
           cashLedgerCtx
@@ -1156,16 +1145,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     else do
       -- Online Ride End branch → isOnline=True.
       let riderNameOnline = person.firstName
-          mbInvCfgOnline = riderConfig.invoiceConfig
           ledgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderNameOnline,
-                  supplierName = mbInvCfgOnline >>= (.supplierName),
-                  supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
+                { issuedToName = riderNameOnline
                 }
-      let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
+      let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
       logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
       let scheduleAfter = riderConfig.executePaymentDelay
           executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount'}
@@ -1251,6 +1236,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                 IJ.RideDeltas
                   { ridesDelta = 1,
                     earningsDelta,
+                    -- Rider path has no MG net-earnings tracking.
+                    netEarningsDelta = 0,
                     distanceMetersDelta = distanceDelta,
                     rideTimeSecondsDelta = rideTimeDelta
                   }
@@ -1535,7 +1522,11 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              ledgerCtx =
+                RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                  (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
+                    { issuedToName = personD.firstName
+                    }
               cancellationTaxRegime = RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx
               cancellationGstRates = RidePaymentFinance.gstRatesFromConfig (booking.riderTaxRates >>= (.riderPayable.cancellationFee))
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
@@ -1767,7 +1758,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {bookingPrePersisted = False, ..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])
@@ -2151,6 +2142,19 @@ updateAndNotifyDriverArrivalStatus booking ride newStatus =
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
+      -- Both LTS's automatic arrival and the BPP's arrival on_update land here, so the multimodal leg follows either.
+      -- Caught so a leg failure can't cost the rider the notification below: the status is already saved, so a redelivery wouldn't send it.
+      let trackingStatus = case newStatus of
+            DRide.DRIVER_ON_THE_WAY -> JMState.Arriving
+            DRide.DRIVER_REACHING -> JMState.AlmostArrived
+            DRide.DRIVER_REACHED -> JMState.Arrived
+      legResult <- withTryCatch "updateAndNotifyDriverArrivalStatus:journeyLeg" $ do
+        now <- getCurrentTime
+        mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
+        whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing trackingStatus now
+      case legResult of
+        Left err -> logError $ "journey leg arrival status update failed for ride " <> ride.id.getId <> ": " <> show err
+        Right _ -> pure ()
       case newStatus of
         DRide.DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
         DRide.DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride

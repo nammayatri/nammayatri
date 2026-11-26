@@ -147,6 +147,7 @@ data WalletLedgerEntryItem = WalletLedgerEntryItem
     entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     isCredit :: Kernel.Prelude.Bool,
+    isDisplayOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReversal :: Kernel.Prelude.Bool,
     itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,
@@ -176,7 +177,12 @@ data WalletLedgerRideInfo = WalletLedgerRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletLedgerTotal = WalletLedgerTotal {nonRedeemableAmount :: Kernel.Types.Common.HighPrecMoney, redeemableAmount :: Kernel.Types.Common.HighPrecMoney, totalAmount :: Kernel.Types.Common.HighPrecMoney}
+data WalletLedgerTotal = WalletLedgerTotal
+  { items :: [WalletItem],
+    nonRedeemableAmount :: Kernel.Types.Common.HighPrecMoney,
+    redeemableAmount :: Kernel.Types.Common.HighPrecMoney,
+    totalAmount :: Kernel.Types.Common.HighPrecMoney
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

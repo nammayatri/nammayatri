@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverAcceptOffer
   )
 where
 
+import BecknV2.OnDemand.Settlement (offerDiscountForEstimate)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Person as SP
@@ -61,6 +62,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AddOn as SAddOn
@@ -69,12 +71,14 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaign
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
@@ -82,6 +86,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -104,6 +109,7 @@ type AcceptDynamicOfferFlow m r c =
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -175,11 +181,17 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
   mbFleetConfig <- case sReqFD.fleetOwnerId of
     Just fleetOwnerId -> Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs merchantOpCityId
     Nothing -> pure Nothing
+  mbDriverInfo <- QDI.findById driver.id
+  mgSource <- MgCampaign.resolveMgPerkSource merchantOpCityId mbDriverInfo
+  let mgOrFleetForbidsCancel =
+        case MgCampaign.mgForbidsDriverCancellation mgSource of
+          Just forbid -> forbid
+          Nothing -> fleetForbidsDriverCancellation mbFleetConfig
   let farePolicy' =
         farePolicy
           { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
             DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
-            DFarePolicy.driverCancellationNotAllowed = if fleetForbidsDriverCancellation mbFleetConfig then Just True else farePolicy.driverCancellationNotAllowed
+            DFarePolicy.driverCancellationNotAllowed = if mgOrFleetForbidsCancel then Just True else farePolicy.driverCancellationNotAllowed
           } ::
           DFarePolicy.FullFarePolicy
   -- Only look the RC up when the pickup zone has opted in, so ordinary rides pay nothing for this.
@@ -197,7 +209,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           mbCapConfig = Nothing,
           mbEstimateFareParams = Nothing,
           paymentChargeDetails = searchTry.paymentChargeDetails,
-          buyerOfferDiscount = searchTry.discountAmount,
+          buyerOfferDiscount = offerDiscountForEstimate estimateId searchTry.estimateOfferDiscounts,
           actualDistance = searchReq.estimatedDistance,
           rideTime = sReqFD.startTime,
           returnTime = searchReq.returnTime,

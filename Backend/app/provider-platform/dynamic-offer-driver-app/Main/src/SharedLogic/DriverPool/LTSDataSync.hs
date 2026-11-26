@@ -1,9 +1,11 @@
 module SharedLogic.DriverPool.LTSDataSync
   ( syncDriverPoolDataToLTS,
+    deleteDriverPoolDataFromLTS,
     DriverPoolDataUpdate (..),
     SetField (..),
     set,
     emptyUpdate,
+    driverPoolSyncLockKey,
   )
 where
 
@@ -203,6 +205,24 @@ syncDriverPoolDataToLTS driverId update = do
             recordSupplyChange existing' merged
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+deleteDriverPoolDataFromLTS ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Driver ->
+  m ()
+deleteDriverPoolDataFromLTS driverId =
+  Redis.withWaitAndLockRedisWithTimeout (driverPoolSyncLockKey driverId) 3 10 50000 $ do
+    let key = DPD.driverPoolDataKey driverId
+    primaryCopy <- Redis.withLTSRedis $ Redis.safeGet key
+    peerCopies <- Redis.runOnAllPeerLTSRedis $ Redis.safeGet key
+    let mbExisting = listToMaybe $ sortOn (Down . (.lastUpdatedAt)) $ catMaybes (primaryCopy : peerCopies)
+    Redis.withLTSRedis $ Redis.del key
+    void $ Redis.runOnAllPeerLTSRedis $ Redis.del key
+    whenJust mbExisting $ \existing ->
+      recordSupplyChange existing existing {DPD.mode = Nothing}
 
 -- | Every writer of driver_information.mode passes through here, and the pre-update
 -- entry is already in hand, so the online counter is maintained from the merge rather

@@ -54,12 +54,15 @@ import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Action.UI.SharedCab as SharedCab
+import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.FarePolicy as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.OnUpdate (RentalStop (..))
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
@@ -100,8 +103,10 @@ import qualified SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssigned
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
+import qualified SharedLogic.SharedRun.Session as RunSession
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -291,14 +296,19 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
   rideRating <- runInReplica $ QR.findRatingForRide ride.id
   driverNumber <- RD.getDriverNumber rideDetail
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   callingOption <- maybe (pure DTC.AnonymousCall) effectiveCallingOption transporterConfig
   resolvedCalling <- resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
-  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest)
+  -- arrivedAtPickup decides with the booking city's config, so the flag shown for this ride must come from there too, not the city the request came from.
+  bookingCityConfig <-
+    if ((.merchantOperatingCityId) <$> transporterConfig) == Just booking.merchantOperatingCityId
+      then pure transporterConfig
+      else getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest) (bookingCityConfig >>= DTC.enableManualArrival)
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
 arrivedAtPickup rideId req = do
@@ -308,7 +318,9 @@ arrivedAtPickup rideId req = do
   let pickupLoc = getCoordinates booking.fromLocation
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let distance = distanceBetweenInMeters (LatLong req.lat req.lon) pickupLoc
-  unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
+      isManualArrival = fromMaybe False transporterConfig.enableManualArrival
+  -- With manual arrival the driver's slide is the source of truth: the customer may have walked to the driver, who is then outside the threshold but must still be able to arrive and start the ride. NEAR still means "within the pickup radius", so it keeps the check.
+  unless ((isManualArrival && req.stage /= Just NEAR) || distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   let markArrived = do
         now <- getCurrentTime
         -- Notify the BAP BEFORE committing driverArrivalTime: with the write first, a
@@ -394,7 +406,11 @@ otpRideCreate driver otpCode booking clientId = do
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   vehicleServiceTierItem <- getBookingVehicleServiceTierItem booking.vehicleServiceTier
-  let isSpotRide = isRideOtpTrip booking.tripCategory
+  -- Only a spot ride (an OTP quote derived by 'addSpotRidePolicies') gets the spot checks; a native
+  -- OTP ride keeps the normal ones. The quote's fare policy cached at search carries isDerived; a
+  -- missing cache entry is taken as a spot ride.
+  mbQuoteFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let isSpotRide = isRideOtpTrip booking.tripCategory && maybe True (\fp -> fp.isDerived == Just True) mbQuoteFarePolicy
   if isSpotRide
     then do
       let isVehicleVariantNotAllowedForSpotRide = case vehicleServiceTierItem.spotRideAllowedVariants of
@@ -434,12 +450,12 @@ otpRideCreate driver otpCode booking clientId = do
 
   driverNumber <- RD.getDriverNumber rideDetails
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
-  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.merchantOperatingCityId booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   callingOption <- effectiveCallingOption transporterConfig
   resolvedCalling <- resolveCallingNumber booking ride callingOption (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest
+  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling transporterConfig.showRoutePerRequest transporterConfig.enableManualArrival
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -451,6 +467,13 @@ otpRideCreate driver otpCode booking clientId = do
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
+  mbStopListRide <- findStopListRide rideId
+  case mbStopListRide of
+    Just (ride, booking) -> Success <$ arriveAtRentalStop ride booking Nothing pt
+    Nothing -> arrivedAtBookedStop rideId pt
+
+arrivedAtBookedStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
+arrivedAtBookedStop rideId pt = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
@@ -467,8 +490,8 @@ arrivedAtStop rideId pt = do
     Just (stopLM, mbStopInfo) -> do
       when (isNothing mbStopInfo) $ do
         ensureDriverAt stopLM.locationId
-        void $ stopAction rideId pt stopLM.locationId ARRIVE
-      stopAction rideId pt stopLM.locationId DEPART
+        void $ bookedStopAction rideId pt stopLM.locationId ARRIVE
+      bookedStopAction rideId pt stopLM.locationId DEPART
     Nothing -> do
       unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
       case booking.stopLocationId of
@@ -493,6 +516,77 @@ arrivedAtStop rideId pt = do
 
 stopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
 stopAction rideId pt stopLocId action = do
+  mbStopListRide <- findStopListRide rideId
+  case (mbStopListRide, action) of
+    (Just (ride, booking), ARRIVE) -> Success <$ arriveAtRentalStop ride booking (Just stopLocId) pt
+    (Just (ride, _), DEPART) -> do
+      isDeparted <- isRentalStopDeparted ride stopLocId
+      if isDeparted then pure Success else bookedStopAction rideId pt stopLocId DEPART
+    (Nothing, _) -> bookedStopAction rideId pt stopLocId action
+
+findStopListRide :: Id DRide.Ride -> Flow (Maybe (DRide.Ride, DRB.Booking))
+findStopListRide rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  mbStopsVersion <- if isRentalTrip ride.tripCategory then RideCommon.getRentalStopsVersion ride.bookingId else pure Nothing
+  if isJust mbStopsVersion
+    then do
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      pure (Just (ride, booking))
+    else pure Nothing
+
+arriveAtRentalStop :: DRide.Ride -> DRB.Booking -> Maybe (Id DLoc.Location) -> LatLong -> Flow ()
+arriveAtRentalStop ride booking mbStopLocationId point = do
+  unless (ride.status == DRide.INPROGRESS) $
+    throwError (RideInvalidStatus $ "This ride " <> ride.id.getId <> " is not in progress")
+  stops <- RideCommon.getRentalStops ride.id
+  (stopIndex, nextStop) <- find (isNothing . (.reachedAt) . snd) (zip [0 :: Int ..] stops) & fromMaybeM (InvalidRequest $ "No stop present to be reached for ride " <> ride.id.getId)
+  whenJust mbStopLocationId $ \stopLocationId ->
+    unless (stopLocationId == nextStop.location.id) $
+      throwError (InvalidRequest $ "Only the next stop can be reached for ride " <> ride.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let distance = distanceBetweenInMeters point (LatLong nextStop.location.lat nextStop.location.lon)
+  unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $
+    throwError (InvalidRequest $ "Driver is not at stop location for ride " <> ride.id.getId)
+  now <- getCurrentTime
+  stopInfoId <- generateGUID
+  QSI.create
+    DSI.StopInformation
+      { id = stopInfoId,
+        stopLocId = nextStop.location.id,
+        stopOrder = nextStop.order,
+        waitingTimeStart = now,
+        waitingTimeEnd = Just now,
+        stopStartLatLng = point,
+        stopEndLatLng = Just point,
+        rideId = ride.id,
+        createdAt = now,
+        updatedAt = now,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId,
+        merchantId = ride.merchantId
+      }
+  mbStopsVersion <- RideCommon.getRentalStopsVersion booking.id
+  let newStops = map (\stop -> if stop.order == nextStop.order then stop {reachedAt = Just now} else stop) stops
+      mbNext = find (isNothing . (.reachedAt)) newStops
+      version = maybe 1 (+ 1) mbStopsVersion
+  RideCommon.setRentalStopsVersion booking.id version
+  QBooking.updateRentalStops booking.id ((.location.id.getId) <$> mbNext)
+  let lastIntermediateIndex = length stops - 2
+  when (stopIndex <= lastIntermediateIndex) $
+    fork "rental stops: Fleet Engine arrival" $ do
+      FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id stopIndex
+      FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id (if stopIndex < lastIntermediateIndex then Just (stopIndex + 1) else Nothing)
+  fork "rental stops: send list to BAP" $ BP.sendStopsUpdatedToBAP booking ride version newStops
+
+isRentalStopDeparted :: DRide.Ride -> Id DLoc.Location -> Flow Bool
+isRentalStopDeparted ride stopLocationId = do
+  unless (ride.status == DRide.INPROGRESS) $
+    throwError (RideInvalidStatus $ "This ride " <> ride.id.getId <> " is not in progress")
+  stopsInfo <- QSI.findAllByRideIdFromKVAndDB ride.id
+  stopInfo <- find (\info -> info.stopLocId == stopLocationId) stopsInfo & fromMaybeM (InvalidRequest $ "Stop " <> stopLocationId.getId <> " has not been reached for ride " <> ride.id.getId)
+  pure (isJust stopInfo.waitingTimeEnd)
+
+bookedStopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
+bookedStopAction rideId pt stopLocId action = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
@@ -507,7 +601,8 @@ stopAction rideId pt stopLocId action = do
       stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      -- a shared-route run has no rider-platform ride; its passengers follow the run through the manifest
+      unless (DTrip.isSharedRouteTrip ride.tripCategory) $ void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let mbNextStopFEIndex = if currentStopFEIndex + 1 < length stopsLM then Just (currentStopFEIndex + 1) else Nothing
       fork "FleetEngine:notifyStopDeparted" $
         FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id mbNextStopFEIndex
@@ -534,9 +629,17 @@ stopAction rideId pt stopLocId action = do
       let nowTs = floor $ utcTimeToPOSIXSeconds now
       VID.addReachedStop rideId stopLM.order pt nowTs
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      unless (DTrip.isSharedRouteTrip ride.tripCategory) $ void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       fork "FleetEngine:notifyStopArrived" $
         FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id currentStopFEIndex
+      -- a shared-route run departs at once from a stop where nobody boards or alights: its passengers are read as the
+      -- run's session; the first and last stops are the run's pickup and drop and never come through here
+      when (DTrip.isSharedRouteTrip ride.tripCategory) $ do
+        mbStopCode <- (>>= RunSession.stopCodeOf) <$> QLoc.findById stopLocId
+        session <- RunSession.runSession ride
+        whenJust mbStopCode $ \stopCode ->
+          unless (RunSession.boardingAt stopCode session || RunSession.alightingAt stopCode session) $
+            void $ stopAction rideId pt stopLocId DEPART
       pure Success
   where
     isValidStopArrivedAction stopLM =

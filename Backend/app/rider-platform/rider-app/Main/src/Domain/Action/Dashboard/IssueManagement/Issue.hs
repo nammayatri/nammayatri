@@ -41,7 +41,6 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     getIssueApiIntegrationList,
     postIssueApiIntegrationUpsert,
     postIssueApiIntegrationDelete,
-    postIssueApiIntegrationTest,
     getIssueFlowSimulate,
     postIssueChatUpload,
   )
@@ -491,14 +490,6 @@ postIssueApiIntegrationDelete ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIssueApiIntegrationDelete (Kernel.Types.Id.ShortId merchantShortId) city apiIntegrationId =
   DIssue.postIssueApiIntegrationDelete (Kernel.Types.Id.ShortId merchantShortId) city apiIntegrationId dashboardIssueHandle Common.CUSTOMER
-
-postIssueApiIntegrationTest ::
-  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
-  Kernel.Types.Beckn.Context.City ->
-  IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes
-postIssueApiIntegrationTest (Kernel.Types.Id.ShortId merchantShortId) city req =
-  DIssue.postIssueApiIntegrationTest (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
 
 getIssueFlowSimulate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

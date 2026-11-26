@@ -21,13 +21,14 @@ module Beckn.ACL.Update
     EditLocationBuildReqDetails (..),
     AddStopBuildReqDetails (..),
     EditStopBuildReqDetails (..),
+    UpdateStopsBuildReqDetails (..),
+    UpdateStopsBuildStop (..),
     ChangeServiceTierBuildReqDetails (..),
     AddBaggageBuildReqDetails (..),
     UpdateStatus (..),
   )
 where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
@@ -64,12 +65,14 @@ data UpdateBuildReqDetails
   | UEditLocationBuildReqDetails EditLocationBuildReqDetails
   | UAddStopBuildReqDetails AddStopBuildReqDetails
   | UEditStopBuildReqDetails EditStopBuildReqDetails
+  | UUpdateStopsBuildReqDetails UpdateStopsBuildReqDetails
   | UChangeServiceTierBuildReqDetails ChangeServiceTierBuildReqDetails
   | UAddBaggageBuildReqDetails AddBaggageBuildReqDetails
 
 data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
   { bppRideId :: Id DRide.BPPRide,
-    paymentMethodInfo :: DMPM.PaymentMethodInfo
+    paymentMethodInfo :: DMPM.PaymentMethodInfo,
+    paymentStatus :: Enums.PaymentStatus
   }
 
 data EditLocationBuildReqDetails = EditLocationBuildReqDetails
@@ -89,6 +92,16 @@ newtype AddStopBuildReqDetails = AddStopBuildReqDetails
 
 newtype EditStopBuildReqDetails = EditStopBuildReqDetails
   { stops :: [DLoc.Location]
+  }
+
+data UpdateStopsBuildReqDetails = UpdateStopsBuildReqDetails
+  { stopsVersion :: Maybe Int,
+    stops :: [UpdateStopsBuildStop]
+  }
+
+data UpdateStopsBuildStop = UpdateStopsBuildStop
+  { order :: Maybe Int,
+    location :: DLoc.Location
   }
 
 data ChangeServiceTierBuildReqDetails = ChangeServiceTierBuildReqDetails
@@ -147,12 +160,12 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
             orderPayments =
               Just
                 [ Spec.Payment
-                    { paymentCollectedBy = Just $ show $ Common.castDPaymentCollector details.paymentMethodInfo.collectedBy,
-                      paymentType = Just $ show $ Common.castDPaymentType details.paymentMethodInfo.paymentType,
-                      paymentStatus = Just "PAID",
+                    { paymentCollectedBy = Just $ show details.paymentMethodInfo.collectedBy,
+                      paymentType = Just "ON_FULFILLMENT",
+                      paymentStatus = Just $ show details.paymentStatus,
                       paymentId = Nothing,
                       paymentParams = Nothing,
-                      paymentTags = Nothing,
+                      paymentTags = Just [Tag.getFullTagGroup Tag.SETTLEMENT_TERMS [Tag.mkTag Tag.PAYMENT_INSTRUMENT (Just $ show details.paymentMethodInfo.paymentInstrument)]],
                       paymentTlMethod = Nothing
                     }
                 ],
@@ -303,6 +316,56 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
                                   Spec.Descriptor
                                     { descriptorLongDesc = Nothing,
                                       descriptorCode = Just $ show Enums.EDIT_STOP,
+                                      descriptorName = Nothing,
+                                      descriptorShortDesc = Nothing
+                                    }
+                            },
+                      fulfillmentTags = Nothing,
+                      fulfillmentType = Nothing,
+                      fulfillmentVehicle = Nothing
+                    }
+                ]
+          },
+      updateReqMessageUpdateTarget = "order.fullfillments"
+    }
+mkUpdateMessage req (UUpdateStopsBuildReqDetails details) = do
+  let mkUpdatedStop stop = (CommonUtils.makeStop stop.location) {Spec.stopId = show <$> stop.order}
+      updateStopsTags =
+        [ Tag.getFullTagGroup
+            Tag.UPDATE_DETAILS
+            [Tag.getFullTag Tag.STOPS_VERSION (T.pack . show <$> details.stopsVersion)]
+        ]
+  Spec.UpdateReqMessage
+    { updateReqMessageOrder =
+        Spec.Order
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Nothing,
+            orderId = Just $ req.bppBookingId.getId,
+            orderItems = Nothing,
+            orderProvider = Nothing,
+            orderQuote = Nothing,
+            orderCreatedAt = Nothing,
+            orderUpdatedAt = Nothing,
+            orderTags = Just updateStopsTags,
+            orderStatus = Nothing,
+            orderPayments = Nothing,
+            orderFulfillments =
+              Just
+                [ Spec.Fulfillment
+                    { fulfillmentId = Nothing,
+                      fulfillmentStops = Just $ map mkUpdatedStop details.stops,
+                      fulfillmentAgent = Nothing,
+                      fulfillmentCustomer = Nothing,
+                      fulfillmentState =
+                        Just $
+                          Spec.FulfillmentState
+                            { fulfillmentStateDescriptor =
+                                Just $
+                                  Spec.Descriptor
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.UPDATE_STOPS,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }

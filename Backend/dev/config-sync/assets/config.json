@@ -222,6 +222,51 @@
     },
     "special_location": {
       "dim": []
+    },
+    "email_template": {
+      "dim": []
+    },
+    "invoice_template": {
+      "dim": []
+    },
+    "finance_account_config": {
+      "dim": []
+    },
+    "finance_scheduled_transfer_rule": {
+      "dim": []
+    },
+    "frfs_cancellation_config": {
+      "dim": []
+    },
+    "tag_action_notification_config": {
+      "dim": []
+    },
+    "time_bound_config": {
+      "dim": []
+    },
+    "app_dynamic_logic_element": {
+      "dim": []
+    },
+    "app_dynamic_logic_rollout": {
+      "dim": []
+    },
+    "namma_tag": {
+      "dim": []
+    },
+    "namma_tag_trigger": {
+      "dim": []
+    },
+    "namma_tag_v2": {
+      "dim": []
+    },
+    "namma_tag_trigger_v2": {
+      "dim": []
+    },
+    "offline_offer": {
+      "dim": []
+    },
+    "policy_and_compliance_document": {
+      "dim": []
     }
   },
   "atlas_driver_offer_bpp": {
@@ -298,6 +343,9 @@
       "dim": []
     },
     "scheduled_payout_config": {
+      "dim": []
+    },
+    "finance_account_config": {
       "dim": []
     },
     "go_home_config": {
@@ -496,6 +544,51 @@
       "dim": []
     },
     "special_location": {
+      "dim": []
+    },
+    "invoice_template": {
+      "dim": []
+    },
+    "finance_account_config": {
+      "dim": []
+    },
+    "finance_scheduled_transfer_rule": {
+      "dim": []
+    },
+    "add_on_config": {
+      "dim": []
+    },
+    "cancellation_consequence_matrix": {
+      "dim": []
+    },
+    "document_verification_stages_config": {
+      "dim": []
+    },
+    "inter_city_travel_cities": {
+      "dim": []
+    },
+    "merchant_client_config": {
+      "dim": []
+    },
+    "message_translation": {
+      "dim": []
+    },
+    "platform_fee_slab": {
+      "dim": []
+    },
+    "ride_feedback_config": {
+      "dim": []
+    },
+    "surge_config": {
+      "dim": []
+    },
+    "tag_action_notification_config": {
+      "dim": []
+    },
+    "policy_and_compliance_document": {
+      "dim": []
+    },
+    "integrated_bpp_config": {
       "dim": []
     }
   },

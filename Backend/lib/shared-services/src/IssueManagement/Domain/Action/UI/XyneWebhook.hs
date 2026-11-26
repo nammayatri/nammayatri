@@ -43,6 +43,7 @@ where
 
 import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
+import Data.List (sortOn)
 import qualified Data.Map as Map
 import Data.OpenApi (NamedSchema (..), ToSchema (declareNamedSchema), toInlinedSchema)
 import qualified Data.Text as T
@@ -539,8 +540,14 @@ fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDa
     throwError $ AuthBlocked "Invalid Authorization header"
   let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
   issueReports <- QIR.findAllCreatedAfter mbSince mbEndDate (Just cappedLimit) mbOffset
-  concat <$> mapM toXyneInboundReqs issueReports
+  concat <$> mapM safeToXyneInboundReqs issueReports
   where
+    safeToXyneInboundReqs issue =
+      withTryCatch "fetchXyneIssues:issue" (toXyneInboundReqs issue) >>= \case
+        Right reqs -> pure reqs
+        Left err -> do
+          logError $ "Xyne issues feed: skipping issue " <> issue.id.getId <> ": " <> show err
+          pure []
     toXyneInboundReqs issue = do
       mbCategory <- maybe (pure Nothing) (`CQIC.findById` identifier) issue.categoryId
       defaultChannelId <- resolveDefaultChannelId issue
@@ -550,9 +557,12 @@ fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDa
       liveReqs <- forM chatMessages $ \chatMessage -> do
         item <- DUI.toChatMessageItem identifier chatMessage
         senderName <- resolveSenderName chatMessage
-        pure $ toXyneInboundReq channelId subject issue senderName item
+        pure (item.createdAt, toXyneInboundReq channelId subject issue senderName item)
       historicalReqs <- resolveHistoricalReqs issue channelId subject
-      pure $ liveReqs <> historicalReqs
+      -- Bot-flow history and live chat come from separate stores, so merge them
+      -- by message time. sortOn is stable: messages sharing a timestamp keep
+      -- their stored order.
+      pure $ withTicketFormFields issue.ticketFormFields (map snd $ sortOn fst (historicalReqs <> liveReqs))
     resolveDefaultChannelId issue = case (issue.merchantId, issue.merchantOperatingCityId) of
       (Just merchantId, Just mocId) -> either (const "") (.channelId) <$> withTryCatch "fetchXyneIssues:lookupXyneCfg" (lookupXyneCfg merchantId mocId)
       _ -> pure ""
@@ -573,13 +583,24 @@ fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDa
             Nothing -> pure []
             Just issueConfig -> do
               language <- DUI.getLanguage issue.personId Nothing issueHandle
-              mbRideInfoRes <- mapM (DUI.getRideInfoWithFareLabels issueHandle language merchantId mocId) issue.rideId
+              resolvePlaceholder <- case issue.rideId of
+                Nothing -> pure (DUI.getConfigValue language issueConfig Nothing)
+                Just rideId ->
+                  withTryCatch "fetchXyneIssues:getRideInfo" (DUI.getRideInfoWithFareLabels issueHandle language merchantId mocId rideId) >>= \case
+                    Right rideInfo -> pure (DUI.getConfigValue language issueConfig (Just rideInfo))
+                    Left err -> do
+                      logWarning $ "Xyne issues feed: ride info unavailable for issue " <> issue.id.getId <> " ride " <> rideId.getId <> ", keeping ride placeholders unresolved: " <> show err
+                      pure (DUI.getConfigValueWithoutRideInfo language issueConfig)
               customerName <- resolvePersonName issue.personId
               let historicalChats = filter (\c -> c.chatType `elem` [Common.IssueMessage, Common.IssueOption, Common.IssueDescription]) issue.chats
                   issueForHistory = issue {DIR.chats = historicalChats}
-              chatDetails <- DUI.recreateIssueChats issueForHistory issueConfig mbRideInfoRes language identifier
-              pure $ catMaybes $ zipWith (toHistoricalReq channelId subject issue customerName) historicalChats chatDetails
+              chatDetails <- DUI.recreateIssueChatsWith resolvePlaceholder issueForHistory language identifier
+              pure $ catMaybes $ zipWith (\chat chatDetail -> (chatDetail.timestamp,) <$> toHistoricalReq channelId subject issue customerName chat chatDetail) historicalChats chatDetails
         _ -> pure []
+    withTicketFormFields (Just formFields) (firstReq : rest)
+      | not (Map.null formFields) =
+        firstReq {Xyne.additionalFormFields = Just (maybe formFields (`Map.union` formFields) firstReq.additionalFormFields)} : rest
+    withTicketFormFields _ reqs = reqs
     resolvePersonName personId = do
       mbPerson <- issueHandle.findPersonById personId
       pure $ fromMaybe "Customer" (mbPerson >>= personFullName)

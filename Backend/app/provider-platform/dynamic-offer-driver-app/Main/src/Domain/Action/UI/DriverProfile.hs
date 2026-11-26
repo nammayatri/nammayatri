@@ -26,6 +26,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import qualified Email.Types
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -42,6 +43,7 @@ import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -72,6 +74,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
   personId <- mbPersonId & fromMaybeM (PersonNotFound "Person ID not found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   smsCfg <- asks (.smsCfg)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   let identifierType = req.identifier
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -88,7 +91,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
 
-      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId (Just mobileNumber) (Just countryCode) Nothing
+      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId transporterConfig (Just mobileNumber) (Just countryCode) Nothing
     SP.EMAIL -> do
       let receiverEmail = req.value
       when (T.null receiverEmail) $ throwError $ InvalidRequest "Email is required for EMAIL identifier"
@@ -96,10 +99,9 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       checkSlidingWindowLimit ("BPP:DriverProfile:updateAuthEmailOtp:" <> personId.getId <> ":hitsCount")
-      when (isNothing person.useFakeOtp) $ do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      when (isNothing person.useFakeOtp) $
         SSL.enforceEmailOtpLimit receiverEmail transporterConfig
-      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId Nothing Nothing (Just receiverEmail)
+      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId transporterConfig Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD identifier is not supported for profile update"
     SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD identifier is not supported for profile update"
@@ -120,11 +122,12 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       SmsConfig ->
       Maybe Text ->
       Id DMOC.MerchantOperatingCity ->
+      TransporterConfig ->
       Maybe Text ->
       Maybe Text ->
       Maybe Text ->
       m ()
-    storeAndSendOTP otpCode' identifierType' personId' person' smsCfg' useFakeOtpM' merchantOpCityId' mobileNum countryCode emailVal = do
+    storeAndSendOTP otpCode' identifierType' personId' person' smsCfg' useFakeOtpM' merchantOpCityId' transporterConfig' mobileNum countryCode emailVal = do
       otpHash <- getDbHash otpCode'
       let authData =
             AuthData
@@ -133,6 +136,9 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
                 email = emailVal,
                 otp = otpHash
               }
+      -- Checked before the pending record is replaced, so a rejected request leaves an OTP already sent usable.
+      when (identifierType' == SP.MOBILENUMBER && isNothing person'.useFakeOtp) $
+        whenJust countryCode $ validateSmsOtpCountryCode transporterConfig'.smsOtpAllowedCountryCodes
       let redisKey = makeUpdateAuthRedisKey identifierType' (getId personId')
           expirySeconds = smsCfg'.sessionConfig.authExpiry * 60
       Redis.setExp redisKey authData expirySeconds
@@ -143,6 +149,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
           personId'
           person'.merchantId
           merchantOpCityId'
+          transporterConfig'
           countryCode
           mobileNum
           emailVal

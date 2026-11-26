@@ -78,7 +78,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
                 supplierTaxNo = BecknV2Utils.getTag Tag.SUPPLIER_TAX_NO orderTagGroups,
                 supplierId = BecknV2Utils.getTag Tag.SUPPLIER_ID orderTagGroups,
                 issuedByGstin = BecknV2Utils.getTag Tag.ISSUED_BY_GSTIN orderTagGroups,
-                issuedByTaxNo = BecknV2Utils.getTag Tag.ISSUED_BY_TAX_NO orderTagGroups
+                issuedByTaxNo = BecknV2Utils.getTag Tag.ISSUED_BY_TAX_NO orderTagGroups,
+                issuedByLogoUrl = BecknV2Utils.getTag Tag.ISSUED_BY_LOGO_URL orderTagGroups
               }
 
       let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust
@@ -104,6 +105,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.IS_TIER_UPGRADE tagGroupsFullfillment)
               assignedServiceTierName = BecknV2Utils.getTag Tag.ASSIGNED_SERVICE_TIER_NAME tagGroupsFullfillment
               betterDriverAbortRadiusMeters = Meters <$> (readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.BETTER_DRIVER_ABORT_RADIUS_METERS tagGroupsFullfillment)
+              driverCallIdentity = BecknV2Utils.getTag Tag.DRIVER_CALL_IDENTITY tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right

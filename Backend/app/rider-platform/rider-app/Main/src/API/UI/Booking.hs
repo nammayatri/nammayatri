@@ -97,6 +97,11 @@ type API =
              :> Post '[JSON] APISuccess
            :<|> Capture "rideBookingId" (Id SRB.Booking)
              :> TokenAuth
+             :> "updateStops"
+             :> ReqBody '[JSON] DBooking.UpdateStopsReq
+             :> Post '[JSON] APISuccess
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> TokenAuth
              :> "edit"
              :> "location"
              :> ReqBody '[JSON] DRide.EditLocationReq
@@ -126,6 +131,7 @@ handler =
     :<|> favouriteBookingList
     :<|> addStop
     :<|> editStop
+    :<|> updateStops
     :<|> editLocationForBooking
     :<|> generateInvoice
     :<|> getRideBookingPaymentStatus
@@ -142,6 +148,9 @@ addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPIPersonId
 
 editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
 editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
+
+updateStops :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.UpdateStopsReq -> FlowHandler APISuccess
+updateStops bookingId (personId, merchantId) updateStopsReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.updateStops (personId, merchantId) bookingId updateStopsReq
 
 editLocationForBooking :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
 editLocationForBooking bookingId (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.editLocationForBooking (personId, merchantId) bookingId req

@@ -691,12 +691,13 @@ class MockHandler(BaseHTTPRequestHandler):
           {"key": "rider-app-scheduler:NAMMA_YATRI:mobility:fcm_token",
            "value": "{\"access_token\":\"fake\",\"expires_in\":32503680000,\"token_type\":\"Bearer\"}",
            "target": "cluster",  # "cluster" (port 30001, with -c) or "standalone" (port 6379) — default "cluster"
-           "port": 30001}        # optional — overrides target preset
+           "port": 30001,        # optional — overrides target preset
+           "ttl": 3888000}       # optional seconds → SET … EX <ttl> (omit = no expiry)
 
         Used by integration tests that need to pre-populate cache state the production
         code reads via Redis.get (e.g. the FCM JWT cache, to bypass Google OAuth in dev).
 
-        Returns: {"ok": true, "key": "...", "stored": "OK"}
+        Returns: {"ok": true, "key": "...", "stored": "OK", "ttl": <seconds|null>}
         """
         import subprocess
 
@@ -717,10 +718,21 @@ class MockHandler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             return self._json({"error": "port must be numeric"}, status=400)
 
+        ttl = data.get("ttl")
+        if ttl is not None:
+            try:
+                ttl = int(ttl)
+            except (TypeError, ValueError):
+                return self._json({"error": "ttl must be numeric seconds"}, status=400)
+            if ttl <= 0:
+                return self._json({"error": "ttl must be > 0"}, status=400)
+
         cmd = ["redis-cli"]
         if target == "cluster":
             cmd += ["-c"]
         cmd += ["-p", str(port), "SET", key, str(value)]
+        if ttl is not None:
+            cmd += ["EX", str(ttl)]
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
@@ -730,7 +742,7 @@ class MockHandler(BaseHTTPRequestHandler):
         out = (result.stdout or "").strip()
         if result.returncode != 0 or out != "OK":
             return self._json({"error": "redis SET failed", "stdout": out, "stderr": (result.stderr or "").strip()}, status=500)
-        return self._json({"ok": True, "key": key, "stored": out})
+        return self._json({"ok": True, "key": key, "stored": out, "ttl": ttl})
 
     def _mock_redis_del(self, body):
         """POST /mock/redis/del — delete a Redis key, or a SCAN pattern, on every cluster node.
@@ -804,7 +816,8 @@ class MockHandler(BaseHTTPRequestHandler):
         A pattern (rather than an exact key) keeps callers independent of the
         service's key prefix.
 
-        Returns: {"keys": {"<key>": "<raw value>"}, "count": N}
+        Returns: {"keys": {"<key>": "<raw value>"}, "ttls": {"<key>": <seconds|-1|-2>}, "count": N}
+          TTL semantics match redis-cli TTL: >=0 remaining seconds, -1 no expiry, -2 missing.
         """
         import subprocess
 
@@ -822,6 +835,7 @@ class MockHandler(BaseHTTPRequestHandler):
         ports = [int(p) for p in (data.get("ports") or ports_default)]
 
         found = {}
+        ttls = {}
         for p in ports:
             try:
                 scan = subprocess.run(["redis-cli", "-p", str(p), "--scan", "--pattern", pattern], capture_output=True, text=True, timeout=10)
@@ -835,9 +849,14 @@ class MockHandler(BaseHTTPRequestHandler):
                     g = subprocess.run(cmd + ["GET", k], capture_output=True, text=True, timeout=5)
                     if g.returncode == 0:
                         found[k] = (g.stdout or "").rstrip("\n")
+                        t = subprocess.run(cmd + ["TTL", k], capture_output=True, text=True, timeout=5)
+                        try:
+                            ttls[k] = int((t.stdout or "-2").strip() or -2) if t.returncode == 0 else -2
+                        except ValueError:
+                            ttls[k] = -2
             except subprocess.TimeoutExpired:
                 continue
-        return self._json({"keys": found, "count": len(found)})
+        return self._json({"keys": found, "ttls": ttls, "count": len(found)})
 
     def _mock_scheduler_clear(self, body):
         """POST /mock/scheduler/clear — purge all scheduler state for one jobType so a test starts clean.

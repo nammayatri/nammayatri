@@ -210,3 +210,15 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN allow
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN force_image_verification boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN failed_attempt_window_seconds integer ;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN failed_attempt_limit integer ;

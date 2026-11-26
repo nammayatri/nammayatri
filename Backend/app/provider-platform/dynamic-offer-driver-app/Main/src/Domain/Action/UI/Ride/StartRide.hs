@@ -54,7 +54,6 @@ import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -66,6 +65,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -82,6 +83,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking, validateRideLocation)
@@ -90,6 +92,7 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -153,7 +156,16 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r, TMetrics.HasBPPMetrics m r)
 
 driverStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
+  ( StartRideFlow m r,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    PostActionsEnv r,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
+    Finance.HasActorInfo m r
+  ) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -164,7 +176,16 @@ driverStartRide handle rideId req =
     pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
+  ( StartRideFlow m r,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    PostActionsEnv r,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
+    Finance.HasActorInfo m r
+  ) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -175,7 +196,17 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
+  ( StartRideFlow m r,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
+    Finance.HasActorInfo m r
+  ) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -195,7 +226,17 @@ startRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
     mkLockKey = "StartTransaction:RID:-" <> rideId.getId
 
 startRideHandler ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
+  ( StartRideFlow m r,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
+    Finance.HasActorInfo m r
+  ) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -301,7 +342,8 @@ startRideHandler ServiceHandle {..} rideId req = do
         let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
         TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
       -- Schedule payout for special zone rides if enabled
-      let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
+      -- Online pays out as UPI did before it existed.
+      let paymentInstrument = DMPM.bookablePaymentInstrument $ fromMaybe DMPM.Cash booking.paymentInstrument
       when
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory

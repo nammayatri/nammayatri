@@ -50,6 +50,7 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalRatingScore = Just 0,
             isValidRating = Just False,
             totalPayoutEarnings = 0.0,
+            totalIncentiveJourneyEarnings = 0.0,
             totalPayoutAmountPaid = Nothing,
             totalValidActivatedRides = 0,
             totalReferralCounts = 0,
@@ -186,6 +187,21 @@ updateCoinToCashByDriverId driverId amountToAdd = do
         [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
     Nothing -> pure ()
 
+-- | Bump lifetime IJ reward ₹ (Cash/NetOff/Coins→cash/SWO estimate). No-op when amount <= 0 or row missing.
+incrementTotalIncentiveJourneyEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+incrementTotalIncentiveJourneyEarnings driverId amountToAdd = do
+  when (amountToAdd > 0) $ do
+    now <- getCurrentTime
+    mbDriverStat <- findById driverId
+    case mbDriverStat of
+      Just driverStat ->
+        updateWithKV
+          [ Se.Set BeamDS.totalIncentiveJourneyEarnings $ Just (driverStat.totalIncentiveJourneyEarnings + amountToAdd),
+            Se.Set BeamDS.updatedAt now
+          ]
+          [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
+      Nothing -> pure ()
+
 updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
 updateCoinFieldsByDriverId driverId amount = do
   now <- getCurrentTime
@@ -249,9 +265,9 @@ updateAverageRating (Id driverId') totalRatingsCount' totalRatingScore' isValidR
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId = do
-  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId
+fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> Maybe Text -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId mbOperatorBadgeToken = do
+  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId mbOperatorBadgeToken
   addRidesCount `mapM` mbDriverInfo
   where
     addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount

@@ -135,6 +135,7 @@ updateGate gate =
       Se.Set Beam.canQueueUpOnGate gate.canQueueUpOnGate,
       Se.Set Beam.geomGeoJson gate.geomGeoJson,
       Se.Set Beam.gateTags gate.gateTags,
-      Se.Set Beam.walkDescription gate.walkDescription
+      Se.Set Beam.walkDescription gate.walkDescription,
+      Se.Set Beam.maxRideSkipsBeforeQueueRemoval gate.maxRideSkipsBeforeQueueRemoval
     ]
     [Se.And [Se.Is Beam.specialLocationId $ Se.Eq (getId gate.specialLocationId), Se.Is Beam.name $ Se.Eq gate.name]]

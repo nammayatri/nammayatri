@@ -27,6 +27,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     linkRCStatus,
     RCActivationSource (..),
     removeVehicle,
+    deactivateRC,
     endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
     getAllLinkedRCs,
@@ -80,6 +81,7 @@ import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
@@ -90,6 +92,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
@@ -100,6 +103,7 @@ import qualified SharedLogic.FleetDriverSettings as FDS
 import qualified SharedLogic.RCTakeoverVerification as RCTakeover
 import qualified SharedLogic.RCTransferNotice as RCTransferNotice
 import SharedLogic.Reminder.Helper (createReminder)
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -247,6 +251,8 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
 
   (blocked, _) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
+  VRCExtra.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber >>= \mbBlockedRC ->
+    when ((mbBlockedRC >>= (.isBlocked)) == Just True) $ throwError RCBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   when (person.role == Person.DRIVER) $ do
@@ -268,12 +274,16 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
   let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
+  let isDriverAppRequest = not isDashboard && not bulkUpload && isNothing mbMerchant && isNothing mbFleetOwnerId
+      forceImageCheck = documentVerificationConfig.forceImageVerification == Just True && isDriverAppRequest
+  when (isDriverAppRequest && not isTtenCertificate) $
+    forM_ (req.imageId : maybeToList req.imageId2) ensureOwnRcImage
   unless isTtenCertificate $
     when
-      ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
+      ( isNothing req.vehicleDetails && (forceImageCheck || isNothing req.dateOfRegistration) && documentVerificationConfig.checkExtraction
           && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
           && (not bulkUpload)
-          && (isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
+          && (forceImageCheck || isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
       )
       $ do
         image <- getImage req.imageId
@@ -358,6 +368,15 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withWaitAndLockRedis (imageS3Lock (imageMetadata.s3Path)) 5 50000 $
         readDocument imageMetadata
+
+    ensureOwnRcImage :: Id Image.Image -> Flow ()
+    ensureOwnRcImage imageId_ = do
+      imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
+      unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
+        throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
+      fileContent <- readDocument imageMetadata
+      when (T.null fileContent) $ throwError (ImageNotFound imageId_.getId)
 
     -- When enabled via transporterConfig, update any existing VehicleRegistrationCertificate
     -- row for this registration number with the new fleetOwnerId.
@@ -493,7 +512,7 @@ mkMorthVerificationEntity person requestId docType documentNumber status issueDa
         updatedAt = now
       }
 
-onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> Maybe DVC.VehicleCategory -> m AckResponse
+onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, BeamFlow m r, Metrics.CoreMetrics m, HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> Maybe DVC.VehicleCategory -> m AckResponse
 onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbImageId2 mbRetryCnt mbReqStatus mbServiceName mbVehicleCategoryFromSyncRequest = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates rcVerificationResponse.registrationDate req.issueDateOnDoc) mbVerificationReq
     then do
@@ -511,10 +530,10 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
           mbImageExtractionValidation' = mbImageExtractionValidation <|> (mbVerificationReq <&> (.imageExtractionValidation))
           mbEncryptedRC' = mbEncryptedRC <|> (mbVerificationReq <&> (.documentNumber))
           mbImageId2' = (mbVerificationReq >>= (.documentImageId2)) <|> mbImageId2
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) mbImageId2' Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus False
+      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe imageId (.documentImageId1) mbVerificationReq) mbImageId2' Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus False
       return Ack
 
-onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Bool -> m ()
+onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, BeamFlow m r, Metrics.CoreMetrics m, HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Bool -> m ()
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbDocumentImageId2 mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus' isDriverProvidedVehicleDetails = do
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
@@ -658,7 +677,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             verified = Nothing,
             pendingChallan = Nothing,
             initiatedBy = Nothing,
-            rcVehicleType = input.rcVehicleType
+            rcVehicleType = input.rcVehicleType,
+            isBlocked = Nothing
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
@@ -858,6 +878,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) source req@RCStatusReq {..
   let isTaxiBoothRequest = source == TaxiBooth
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
+  when (req.isActivate && rc.isBlocked == Just True) $ throwError RCBlocked
   -- Activation gets its specific code; deactivation keeps the neutral error so clients never show activation copy for it.
   unless (rc.verificationStatus == Documents.VALID) $ do
     DAQuery.updateRcErrorMessage driverId rc.id "Vehicle is not ready to be linked"
@@ -964,7 +985,7 @@ endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
     forM_ rcs $ \rc ->
       Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
 
-removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 removeVehicle isTaxiBoothRequest driverId = do
   isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
@@ -973,12 +994,17 @@ removeVehicle isTaxiBoothRequest driverId = do
 -- | Put the driver OFFLINE when the linked vehicle/variant changes so they cannot
 -- keep taking rides on a plan that no longer matches. Throws RCVehicleOnRide if
 -- they currently have an active ride. No-ops if already offline.
+-- Uses 'processingChangeOnline' so a closed ONLINE session still counts campaign OnlineMinutes
+-- (same as DriverMode offline) and emits session analytics.
 forceDriverOffline ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    BeamFlow m r,
+    Metrics.CoreMetrics m,
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
   ) =>
   DTC.TransporterConfig ->
   Id Person.Person ->

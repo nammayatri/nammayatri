@@ -31,9 +31,10 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.FleetDriverSettings as FleetDriverSettings
+import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.GeohashArea as CQGA
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Fields as Fields
@@ -100,7 +101,7 @@ getDriverAreaPreferenceList (_, _, merchantOpCityId) = do
 
 isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
 isAreaPreferenceDisabledByFleet merchantOpCityId personId =
-  maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
+  maybe False (.disableDriverAreaAndDistancePreference) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
 
 getMinCells ::
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->

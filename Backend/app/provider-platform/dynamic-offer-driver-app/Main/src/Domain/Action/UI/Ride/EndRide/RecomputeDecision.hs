@@ -45,7 +45,9 @@ module Domain.Action.UI.Ride.EndRide.RecomputeDecision
     RecomputeModifier (..),
     RecomputeDecision (..),
     ShadowRecord (..),
+    EarlyEndFacts (..),
     decideRecompute,
+    detectEndedAtPickup,
     mkRecomputeConfig,
     mkShadowRecordText,
     defaultNoRecomputeTripCategories,
@@ -63,6 +65,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Extra.TransporterConfig as ExtraTC
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.TransporterConfig as DTConf
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (roundToIntegral)
@@ -106,11 +109,11 @@ data ExtraKmBudgetState = ExtraKmBudgetState
 -- directly.
 data RecomputeConfig = RecomputeConfig
   { cfgRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
-    -- | One band table gates recompute in BOTH directions: within the
-    -- threshold it qualifies upward recompute; outside the threshold the
-    -- actual (or approx) is billed only when |delta| clears the band,
-    -- shortfalls included.
+    -- | Upward bands: within the threshold they qualify upward recompute;
+    -- outside it the actual (or approx) is billed only when the overage
+    -- clears the band.
     cfgRecomputeThresholds :: Maybe [ExtraTC.RecomputeBand],
+    cfgDownwardRecomputeThresholds :: Maybe [ExtraTC.RecomputeBand],
     cfgUpwardsRecomputeBuffer :: HighPrecMeters,
     cfgUpwardsRecomputeBufferPercentage :: Maybe Int,
     cfgFareRecomputeDailyExtraKmsThreshold :: HighPrecMeters,
@@ -126,6 +129,8 @@ data RecomputeConfig = RecomputeConfig
     -- it bills only the excess. Empty list = no forgiveness. Fleet default:
     -- one catch-all 5-min band.
     cfgTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand],
+    -- | Cap on the overage billed after forgiveness. Default Nothing (no cap).
+    cfgMaxChargeableOverageSeconds :: Maybe Seconds,
     -- | When True, rides billed at the ESTIMATED distance also bill the
     -- estimated duration, so the per-minute extra-time charge cannot fire on
     -- a ride the distance ladder decided to forgive. Default False.
@@ -146,7 +151,9 @@ data RecomputeConfig = RecomputeConfig
     -- | Estimated-toll fallback when GPS was dark at the gates. Default False.
     cfgEstimatedTollFallback :: Bool,
     -- | Overlay the driver on extra-km budget exhaustion. Default True.
-    cfgNotifyDriverOnBudgetExceeded :: Bool
+    cfgNotifyDriverOnBudgetExceeded :: Bool,
+    -- | Ended-at-pickup check; see 'detectEndedAtPickup'. Default off.
+    cfgEndedAtPickup :: Maybe ExtraTC.EarlyEndPolicy
   }
   deriving (Show, Eq, Generic)
 
@@ -177,6 +184,7 @@ data RecomputeInput = RecomputeInput
     -- 'checkExtraKmsThreshold' which defaults to True on partial state).
     budgetState :: Maybe ExtraKmBudgetState,
     productFlags :: ProductFlags,
+    earlyEndFacts :: EarlyEndFacts,
     cfg :: RecomputeConfig
   }
   deriving (Show, Generic)
@@ -220,6 +228,7 @@ data RecomputeReason
   | FailedOutsideApproxRecompute
   | FailedOutsideCappedBuffer
   | FailedOutsideUnknownApprox
+  | EndedAtPickup
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Post-pick adjustments applied inside the fare recompute step.
@@ -232,6 +241,7 @@ data RecomputeModifier
   | DurationForgivenessDeducted
   | ExtraTimeGatedOnEstimateBilledRide
   | TimeFlooredAtEstimate
+  | DurationOverageCapped
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data RecomputeDecision = RecomputeDecision
@@ -283,9 +293,11 @@ mkRecomputeConfig tc = do
       up = pol >>= (.upward)
       down = pol >>= (.downward)
       tim = pol >>= (.time)
+      upwardBands = fromMaybe defaultRecomputeBands (up >>= (.bands))
   RecomputeConfig
     { cfgRecomputeIfPickupDropNotOutsideOfThreshold = fromMaybe False (up >>= (.allowWithinThreshold)),
-      cfgRecomputeThresholds = Just $ fromMaybe defaultRecomputeBands (up >>= (.bands)),
+      cfgRecomputeThresholds = Just upwardBands,
+      cfgDownwardRecomputeThresholds = Just $ fromMaybe upwardBands (down >>= (.bands)),
       cfgUpwardsRecomputeBuffer = fromMaybe 2000 (up >>= (.bufferMeters)),
       cfgUpwardsRecomputeBufferPercentage = up >>= (.bufferPercentage),
       cfgFareRecomputeDailyExtraKmsThreshold = fromMaybe 5000 (up >>= (.dailyExtraKmsBudget)),
@@ -299,12 +311,14 @@ mkRecomputeConfig tc = do
           (Just bands, _) -> bands
           (Nothing, Just flat) -> [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = flat}]
           (Nothing, Nothing) -> defaultTimeForgivenessBands,
+      cfgMaxChargeableOverageSeconds = tim >>= (.maxChargeableOverageSeconds),
       cfgGateExtraTimeChargeByRecompute = fromMaybe False (tim >>= (.gateExtraTimeOnEstimateBilled)),
       cfgFloorTimeAtEstimateWithinThreshold = fromMaybe True (tim >>= (.floorAtEstimateWithinThreshold)),
       cfgFloorTimeAtEstimateOutsideThreshold = fromMaybe False (tim >>= (.floorAtEstimateOutsideThreshold)),
       cfgRecomputeCongestionOnEndRide = fromMaybe False (pol >>= (.recomputeCongestionOnEndRide)),
       cfgEstimatedTollFallback = fromMaybe False (pol >>= (.estimatedTollFallback)),
-      cfgNotifyDriverOnBudgetExceeded = fromMaybe True (up >>= (.notifyDriverOnBudgetExceeded))
+      cfgNotifyDriverOnBudgetExceeded = fromMaybe True (up >>= (.notifyDriverOnBudgetExceeded)),
+      cfgEndedAtPickup = pol >>= (.endedAtPickup)
     }
 
 reasonText :: RecomputeDecision -> Text
@@ -401,19 +415,66 @@ matchingForgivenessSeconds bands mbEstimatedDur = do
 -- | The billed duration after applying the forgiveness window to an overrun:
 -- the window is deducted from the actual duration, never going below the
 -- estimate. Overage within the window therefore bills the estimate outright;
--- overage beyond it bills only the part past the window. Nothing = no
--- overrun, or no matching band (bill the input duration unchanged).
-forgivenessAdjustedDuration :: [ExtraTC.TimeForgivenessBand] -> Maybe Seconds -> Maybe Seconds -> Maybe Seconds
-forgivenessAdjustedDuration bands mbEstimatedDur mbActualDur = do
-  window <- matchingForgivenessSeconds bands mbEstimatedDur
+-- overage beyond it bills only the part past the window. The overage left is
+-- then capped at mbMaxOverage. Nothing = no overrun, or neither a matching
+-- band nor a cap (bill the input duration unchanged).
+forgivenessAdjustedDuration :: [ExtraTC.TimeForgivenessBand] -> Maybe Seconds -> Maybe Seconds -> Maybe Seconds -> Maybe Seconds
+forgivenessAdjustedDuration bands mbMaxOverage mbEstimatedDur mbActualDur = do
   estDur <- mbEstimatedDur
   actDur <- mbActualDur
-  if actDur > estDur
-    then pure (max estDur (actDur - window))
-    else Nothing
+  let mbWindow = matchingForgivenessSeconds bands mbEstimatedDur
+  if actDur <= estDur || (isNothing mbWindow && isNothing mbMaxOverage)
+    then Nothing
+    else do
+      let forgiven = max estDur (actDur - fromMaybe 0 mbWindow)
+      case mbMaxOverage of
+        Just maxOverage -> pure (min forgiven (estDur + maxOverage))
+        Nothing -> pure forgiven
+
+data EarlyEndFacts = EarlyEndFacts
+  { eeTraveledDistance :: HighPrecMeters,
+    eeDistanceFromPickup :: Meters,
+    eeTripDuration :: Maybe Seconds,
+    eeDistanceCalculationFailed :: Bool,
+    eeDropOutsideOfThreshold :: Bool
+  }
+  deriving (Show, Eq, Generic)
+
+-- | The ended-at-pickup check shared by the live recompute and the shadow
+-- decision: returns the components not to bill when the ride matched. It matches
+-- when the distance AND the duration are both within the thresholds. It
+-- never runs when the distance
+-- calculation failed (the traveled distance is partial) or the trip ended at
+-- the booked drop (that is a normal ride).
+detectEndedAtPickup :: RecomputeConfig -> EarlyEndFacts -> Maybe [DFP.FareChargeComponent]
+detectEndedAtPickup recomputeCfg facts =
+  if facts.eeDistanceCalculationFailed || not facts.eeDropOutsideOfThreshold
+    then Nothing
+    else do
+      policy <- recomputeCfg.cfgEndedAtPickup
+      tripDuration <- facts.eeTripDuration
+      let endDistance = max (roundToIntegral facts.eeTraveledDistance) facts.eeDistanceFromPickup
+      if endDistance <= policy.distanceThresholdMeters && tripDuration <= policy.durationThresholdSeconds
+        then Just policy.notAllowedComponents
+        else Nothing
 
 decideRecompute :: RecomputeInput -> RecomputeDecision
-decideRecompute input = applyFareStepAdjustments input (basePick input)
+decideRecompute input = do
+  let base = basePick input
+      mbNotAllowedComponents =
+        if input.requestSource == CronJobSource || input.isOdometerBilled
+          then Nothing
+          else detectEndedAtPickup input.cfg input.earlyEndFacts
+  case mbNotAllowedComponents of
+    Just _ ->
+      base
+        { distanceSource = UseActual,
+          durationSource = UseActualDuration,
+          reason = EndedAtPickup,
+          modifiers = [],
+          predictedChargeableDistance = Just (roundToIntegral input.traveledDistance)
+        }
+    Nothing -> applyFareStepAdjustments input base
 
 -- | Mirrors the branch point in endRideHandler plus the two
 -- calculateFinalValuesFor* ladders.
@@ -443,6 +504,7 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
       tripCategory `notElem` cfgNoRecomputeTripCategories
         || fromMaybe True cfgEnableDownwardRecomputeForDifferentDestination
     shouldRecompute diff = recomputeBandQualifies cfgRecomputeThresholds estimate diff
+    shouldRecomputeDownward diff = recomputeBandQualifies cfgDownwardRecomputeThresholds estimate diff
     -- Same fallback semantics as legacy checkExtraKmsThreshold: unknown = ok.
     budgetOk = case budgetState of
       Nothing -> True
@@ -452,8 +514,8 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
 
     correctLadder = do
       let distanceDiff = metersToHighPrecMeters (highPrecMetersToMeters traveledDistance - estimate)
-          upwardQualifies = shouldRecompute (highPrecMetersToMeters distanceDiff)
-          thresholdChecks = cfgRecomputeIfPickupDropNotOutsideOfThreshold && upwardQualifies
+          withinThresholdQualifies = shouldRecompute (highPrecMetersToMeters distanceDiff)
+          thresholdChecks = cfgRecomputeIfPickupDropNotOutsideOfThreshold && withinThresholdQualifies
           maxUpwardBuffer = case (estimatedDistance, cfgUpwardsRecomputeBufferPercentage) of
             (Just estDistance, Just percentage) -> HighPrecMeters (max (fromRational $ toRational estDistance.getMeters * (toRational percentage / 100)) cfgUpwardsRecomputeBuffer.getHighPrecMeters)
             _ -> cfgUpwardsRecomputeBuffer
@@ -465,25 +527,27 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
             else do
               let why
                     | not cfgRecomputeIfPickupDropNotOutsideOfThreshold = WithinThresholdUpwardDisabled
-                    | not upwardQualifies = WithinThresholdNoUpwardBand
+                    | not withinThresholdQualifies = WithinThresholdNoUpwardBand
                     | otherwise = WithinThresholdBudgetExhausted
               pick UseEstimate QuotedPolicy why (Just estimate)
         else do
-          -- Outside the threshold the SAME bands gate both directions: the
-          -- actual is billed only when |traveled - estimate| clears the
-          -- tightest band for the estimate; sub-band deltas keep the
-          -- estimate (repriced on the latest policy, destination changed).
-          let deltaQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
+          -- Outside the threshold the actual is billed only when the absolute
+          -- gap between traveled and estimate clears the tightest band for the estimate
+          -- (downward bands for a shortfall, upward bands for an overage);
+          -- sub-band deltas keep the estimate (repriced on the latest
+          -- policy, destination changed).
+          let upwardQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
+              shortfallQualifies = shouldRecomputeDownward (abs (highPrecMetersToMeters distanceDiff))
           if distanceDiff < 0
             then
               if not downwardEnabled
                 then pick UseEstimate QuotedPolicy OutsideThresholdDownwardDisabled (Just estimate)
                 else
-                  if deltaQualifies
+                  if shortfallQualifies
                     then pick UseActual LatestPolicy OutsideThresholdShorterActual (Just traveledRounded)
                     else pick UseEstimate LatestPolicy OutsideThresholdSmallShortfallEstimate (Just estimate)
             else
-              if deltaQualifies
+              if upwardQualifies
                 then pick UseActual LatestPolicy OutsideThresholdLargeOverageActual (Just traveledRounded)
                 else pick UseEstimate LatestPolicy OutsideThresholdSmallOverageEstimate (Just estimate)
 
@@ -497,17 +561,18 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
           Nothing -> pick UseApproxRoute LatestPolicy FailedOutsideUnknownApprox Nothing
           Just approx -> do
             let distanceDiff = metersToHighPrecMeters (approx - estimate)
-                deltaQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
+                upwardQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
+                shortfallQualifies = shouldRecomputeDownward (abs (highPrecMetersToMeters distanceDiff))
             if distanceDiff < 0
               then
                 if not downwardEnabled
                   then pick UseEstimate QuotedPolicy FailedOutsideDownwardDisabled (Just estimate)
                   else
-                    if deltaQualifies
+                    if shortfallQualifies
                       then pick UseApproxRoute LatestPolicy FailedOutsideShorterApprox (Just approx)
                       else pick UseEstimate LatestPolicy FailedOutsideSmallShortfallEstimate (Just estimate)
               else
-                if not deltaQualifies
+                if not upwardQualifies
                   then pick UseEstimate LatestPolicy FailedOutsideSmallOverageEstimate (Just estimate)
                   else
                     if highPrecMetersToMeters distanceDiff < maxDistanceFailed
@@ -588,9 +653,13 @@ applyFareStepAdjustments RecomputeInput {cfg = RecomputeConfig {..}, ..} base = 
           mbForgivenessAdjusted =
             if productFlags.timeLeversApplicable
               && not gated
-              && withFloor.durationSource == UseActualDuration
-              then forgivenessAdjustedDuration cfgTimeForgivenessBands estimatedDuration actualDuration
+              && withFloor.durationSource `elem` [UseActualDuration, UseFlooredDuration]
+              then forgivenessAdjustedDuration cfgTimeForgivenessBands cfgMaxChargeableOverageSeconds estimatedDuration actualDuration
               else Nothing
+          overageCapped = case (mbForgivenessAdjusted, actualDuration) of
+            (Just adj, Just actDur) -> adj < fromMaybe actDur (forgivenessAdjustedDuration cfgTimeForgivenessBands Nothing estimatedDuration actualDuration)
+            _ -> False
+          cappedModifier = if overageCapped then [DurationOverageCapped] else []
           -- Never bill below the estimated duration: within the pickup/drop
           -- threshold by default, outside it only when configured. Binds only
           -- when perMinRateSections actually bill the chargeable minutes —
@@ -615,12 +684,12 @@ applyFareStepAdjustments RecomputeInput {cfg = RecomputeConfig {..}, ..} base = 
                 then
                   withFloor
                     { durationSource = UseEstimatedDuration,
-                      modifiers = withFloor.modifiers <> [DurationOverageForgiven]
+                      modifiers = withFloor.modifiers <> [DurationOverageForgiven] <> cappedModifier
                     }
                 else
                   withFloor
                     { durationSource = UseForgivenessAdjustedDuration,
-                      modifiers = withFloor.modifiers <> [DurationForgivenessDeducted]
+                      modifiers = withFloor.modifiers <> [DurationForgivenessDeducted] <> cappedModifier
                     }
             | timeFloored =
               withFloor

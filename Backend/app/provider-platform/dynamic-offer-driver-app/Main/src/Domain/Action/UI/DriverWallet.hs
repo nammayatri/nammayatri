@@ -553,7 +553,7 @@ generateMonthBuckets startDay endDay =
    in step (sy, sm)
 
 referenceTypeToItemName :: Bool -> Text -> Text
-referenceTypeToItemName isVat ref
+referenceTypeToItemName isVat storedRef
   | ref == walletReferenceBaseRide = "Ride Earnings"
   | ref == walletReferenceTollCharges = "Toll Charges"
   | ref == walletReferenceParkingCharges = "Parking Charges"
@@ -597,7 +597,25 @@ referenceTypeToItemName isVat ref
   | ref == WalletSubscription.walletReferenceBehaviourPenalty = "Penalty"
   | otherwise = ref
   where
+    ref = Map.findWithDefault storedRef storedRef legacyReferenceTypes
     taxLabel = if isVat then "VAT" else "GST"
+
+legacyReferenceTypes :: Map.Map Text Text
+legacyReferenceTypes =
+  Map.fromList
+    [ ("GSTOnline", walletReferenceRideTax Tax.GST),
+      ("GSTCash", walletReferenceRideTax Tax.GST),
+      ("VATOnline", walletReferenceRideTax Tax.VAT),
+      ("VATCash", walletReferenceRideTax Tax.VAT),
+      ("TDSDeductionOnline", walletReferenceTDSDeduction),
+      ("TDSDeductionCash", walletReferenceTDSDeduction),
+      ("CommissionOnline", walletReferenceCommission),
+      ("CommissionCash", walletReferenceCommission),
+      ("CommissionVATOnline", walletReferenceCommissionTax Tax.VAT),
+      ("CommissionVATCash", walletReferenceCommissionTax Tax.VAT),
+      ("DiscountsOnline", walletReferenceDiscounts),
+      ("DiscountsCash", walletReferenceDiscounts)
+    ]
 
 isVatMerchant :: DTConf.TransporterConfig -> Bool
 isVatMerchant transporterConfig = transporterConfig.taxConfig.taxRegime == Just Tax.VAT
@@ -865,7 +883,7 @@ emptyLedgerEntriesResponse =
       groups = []
     }
   where
-    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0}
+    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0, items = []}
 
 isWalletPayoutEntry :: FLedgerEntry.LedgerEntry -> Bool
 isWalletPayoutEntry e = e.referenceType == walletReferencePayout
@@ -875,7 +893,8 @@ toLedgerTotal itemGroup =
   DriverWallet.WalletLedgerTotal
     { totalAmount = itemGroup.totalAmount,
       redeemableAmount = sum (map (.redeemableBalance) itemGroup.items),
-      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items)
+      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items),
+      items = itemGroup.items
     }
 
 groupEntriesByReference :: [FLedgerEntry.LedgerEntry] -> [(Text, UTCTime, [FLedgerEntry.LedgerEntry])]
@@ -901,7 +920,13 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
   let payoutRequestIds = [refId | (refId, _, refEntries) <- groups, any isWalletPayoutEntry refEntries]
   payoutTransfers <- QTransferExtra.findByDirectionRefTypeAndRefIds DTransfer.OUTBOUND walletReferencePayout payoutRequestIds
   payoutRequests <- QPayoutRequestExtra.findByIds payoutRequestIds
+  let onlineBookingIds = [b.id.getId | b <- bookings, bookingIsOnline b == Just True]
+  onlineTaxEntries <-
+    if isVat || null onlineBookingIds
+      then pure []
+      else QLedgerEntry.findByReferenceTypesAndReferenceIds (Map.keys onlineTaxBaseReferenceTypes) onlineBookingIds
   let bookingById = Map.fromList [(b.id.getId, b) | b <- bookings]
+      onlineTaxLegsByBooking = Map.fromListWith (<>) [(e.referenceId, [e]) | e <- govtTaxLegs onlineTaxEntries]
       ridesByBookingId = Map.fromListWith (<>) [(r.bookingId.getId, [r]) | r <- rides]
       vehicleNumberByRideId = vehicleNumbersByRideId rideDetails
       driverNameById = Map.fromList [(d.id.getId, QRide.personFullName d) | d <- viewer : otherDrivers]
@@ -932,7 +957,10 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
                 date = latestAt,
                 netAmount = sum (map signedAmount refEntries),
                 groupData = (DriverWallet.RideWallet <$> mbRideInfo) <|> (DriverWallet.PayoutWallet <$> mbPayoutInfo),
-                entries = map (mkLedgerEntryItem isVat walletAccId) refEntries
+                entries =
+                  withOnlineTaxBreakup
+                    (sortOn (.timestamp) (Map.findWithDefault [] refId onlineTaxLegsByBooking))
+                    (map (mkLedgerEntryItem isVat walletAccId) refEntries)
               }
   pure (map mkGroup groups)
 
@@ -953,8 +981,11 @@ mkLedgerRideInfo driverNameById vehicleNumberByRideId booking ride =
       driverId = ride.driverId,
       driverName = Map.lookup ride.driverId.getId driverNameById,
       vehicleNumber = Map.lookup ride.id.getId vehicleNumberByRideId,
-      isOnline = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
+      isOnline = bookingIsOnline booking
     }
+
+bookingIsOnline :: DRB.Booking -> Maybe Bool
+bookingIsOnline booking = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
 
 mkLedgerEntryItem :: Bool -> Id Account -> FLedgerEntry.LedgerEntry -> DriverWallet.WalletLedgerEntryItem
 mkLedgerEntryItem isVat walletAccId e =
@@ -970,8 +1001,65 @@ mkLedgerEntryItem isVat walletAccId e =
       settlementStatus = e.settlementStatus,
       entityReferenceType = e.entityReferenceType,
       entityReferenceId = e.entityReferenceId,
-      reversalOf = e.reversalOf
+      reversalOf = e.reversalOf,
+      isDisplayOnly = Nothing
     }
+
+onlineTaxBaseReferenceTypes :: Map.Map Text Text
+onlineTaxBaseReferenceTypes =
+  Map.fromList
+    [ (walletReferenceRideTax Tax.GST, walletReferenceBaseRide),
+      ("GSTOnline", walletReferenceBaseRide),
+      (walletReferenceTollChargesTax Tax.GST, walletReferenceTollCharges),
+      (walletReferenceParkingChargesTax Tax.GST, walletReferenceParkingCharges),
+      (walletReferenceAirportEntryFeeChargesTax Tax.GST, walletReferenceAirportEntryFeeCharges)
+    ]
+
+govtTaxLegs :: [FLedgerEntry.LedgerEntry] -> [FLedgerEntry.LedgerEntry]
+govtTaxLegs taxEntries = filter isGovtLeg live
+  where
+    live = filter (\e -> e.entryType /= FLedgerEntry.Reversal && isNothing e.reversedBy) taxEntries
+    isGovtLeg e =
+      e.status == FLedgerEntry.SETTLED
+        && any (\prev -> prev.referenceId == e.referenceId && prev.referenceType == e.referenceType && prev.toAccountId == e.fromAccountId) live
+
+withOnlineTaxBreakup :: [FLedgerEntry.LedgerEntry] -> [DriverWallet.WalletLedgerEntryItem] -> [DriverWallet.WalletLedgerEntryItem]
+withOnlineTaxBreakup taxLegs items = case appliedLegs of
+  leg : _ | not (any (.isReversal) items) -> reverse throughLastGrossed <> [gstItem leg] <> reverse afterLastGrossed
+  _ -> items
+  where
+    taxByBase = Map.fromListWith (+) [(baseRef, leg.amount) | leg <- taxLegs, Just baseRef <- [Map.lookup leg.referenceType onlineTaxBaseReferenceTypes]]
+    (unmatchedTax, grossedItems) = mapAccumL grossUp taxByBase items
+    grossUp pendingTax item = case Map.lookup item.itemReference pendingTax of
+      Just tax
+        | item.isCredit && not item.isReversal && isNothing item.entityReferenceType ->
+          ( Map.delete item.itemReference pendingTax,
+            item
+              { DriverWallet.itemName = if item.itemReference == walletReferenceBaseRide then "Ride Fare" else item.itemName,
+                DriverWallet.itemValue = item.itemValue + tax,
+                DriverWallet.isDisplayOnly = Just True
+              } ::
+              DriverWallet.WalletLedgerEntryItem
+          )
+      _ -> (pendingTax, item)
+    appliedLegs = filter (\leg -> maybe False (`Map.notMember` unmatchedTax) (Map.lookup leg.referenceType onlineTaxBaseReferenceTypes)) taxLegs
+    (afterLastGrossed, throughLastGrossed) = break ((== Just True) . (.isDisplayOnly)) (reverse grossedItems)
+    gstItem leg =
+      DriverWallet.WalletLedgerEntryItem
+        { entryId = leg.id,
+          itemReference = leg.referenceType,
+          itemName = "GST",
+          itemValue = sum (map (.amount) appliedLegs),
+          isCredit = False,
+          isReversal = False,
+          date = leg.timestamp,
+          status = Just leg.status,
+          settlementStatus = leg.settlementStatus,
+          entityReferenceType = leg.entityReferenceType,
+          entityReferenceId = leg.entityReferenceId,
+          reversalOf = Nothing,
+          isDisplayOnly = Just True
+        }
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory
@@ -1234,7 +1322,7 @@ clearDuesByWalletTopup (driverId, merchantId, mocId) = do
 
 -- | Shared helper to build a FinanceCtx for driver wallet recharges (topup/cash).
 --   Populates merchant/supplier metadata so invoices and analytics have rich context.
--- TODO: Add supplier name and GSTIN
+--   Supplier name/address come from transporterConfig.invoiceConfig (wallet* fields).
 mkDriverWalletFinanceCtx ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -1247,22 +1335,28 @@ mkDriverWalletFinanceCtx ::
   Currency ->
   Text -> -- referenceId (order id or booth receipt id)
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  Maybe DTConf.InvoiceConfig -> -- caller-resolved transporterConfig.invoiceConfig
   m FinanceCtx
-mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGateEnabled = do
+mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGateEnabled mbInvoiceConfig = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
   let mName = Just merchant.name
       mShortId = Just merchant.shortId.getShortId
       address =
         Just $
-          show merchantOpCity.city
-            <> ", "
-            <> show merchantOpCity.state
-            <> ", "
-            <> show merchantOpCity.country
-      supplierName = Nothing
-      supplierGSTIN = Nothing
-      supplierId = Nothing
+          fromMaybe
+            ( show merchantOpCity.city
+                <> ", "
+                <> show merchantOpCity.state
+                <> ", "
+                <> show merchantOpCity.country
+            )
+            merchantOpCity.address
+      supplierName = (mbInvoiceConfig >>= (.walletInvoiceSupplierName)) <|> mName
+      supplierAddress = (mbInvoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> address
+      merchantGstin = merchantOpCity.gstin <|> merchant.gstin
+      supplierId = Just merchantId.getId
+  (issuedToName, _) <- driverInvoiceParty mocId driverId Nothing
   pure
     FinanceCtx
       { merchantId = merchantId.getId,
@@ -1279,18 +1373,18 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
         merchantShortId = mShortId,
         issuedByAddress = address,
         supplierName = supplierName,
-        supplierGSTIN = supplierGSTIN,
-        merchantGstin = Nothing,
-        supplierVatNumber = Nothing,
-        supplierAddress = Nothing,
-        merchantVatNumber = Nothing,
+        supplierGSTIN = merchantGstin,
+        merchantGstin = merchantGstin,
+        supplierVatNumber = merchant.vatNumber,
+        supplierAddress = supplierAddress,
+        merchantVatNumber = merchant.vatNumber,
         supplierId = supplierId,
         panOfParty = Nothing,
         panType = Nothing,
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing,
+        issuedToName = issuedToName,
         enableWalletGatedTierCheck = walletGateEnabled,
         buyerCounterpartyId = Nothing,
         initialSettlementStatus = Nothing
@@ -1331,7 +1425,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
       merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
       let currency = merchantOpCity.currency
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.invoiceConfig
       let cashRechargeInvoiceConfig =
             InvoiceConfig
               { invoiceType = SubscriptionPurchase,

@@ -1,0 +1,147 @@
+{
+  "scenario": "fav-hi-then-quick-ride",
+  "description": "Favourites (hand-written, not from TS): a rider who greets first is logged in without loading saved places; Quick Ride must still load them and show the list (review fix: before it, this rider got the no-favourites prompt).",
+  "env": {
+    "merchant": "pn_flexi",
+    "favourites": true,
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "hi -> silent login WITHOUT loading saved places -> intro video + welcome",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.favhi.1",
+                      "timestamp": "1783545600",
+                      "type": "text",
+                      "text": {
+                        "body": "hi"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "video",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "link": "https://videos.example/intro.mp4"
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        }
+      ]
+    },
+    {
+      "note": "tap Quick Ride -> already logged in (no authenticate) -> saved places loaded now -> favourites list, not the location request + nudge",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.favhi.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "list",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "fav:pick:Home",
+            "fav:pick:Work",
+            "fav:share",
+            "fav:add"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    }
+  ]
+}

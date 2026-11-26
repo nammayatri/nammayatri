@@ -21,7 +21,7 @@ module Domain.Action.Beckn.Select
 where
 
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect as OSROnSelect
-import BecknV2.OnDemand.Settlement (PaymentChargeDetails)
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount, PaymentChargeDetails)
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
@@ -49,6 +49,7 @@ import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -57,6 +58,7 @@ import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.DriverPool
+import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.PassengerLuggage as SPL
@@ -67,6 +69,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -95,7 +98,7 @@ data DSelectReq = DSelectReq
     negotiatedFare :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
     paymentChargeDetails :: Maybe PaymentChargeDetails,
-    offerDiscountAmount :: Maybe HighPrecMoney,
+    estimateOfferDiscounts :: [EstimateOfferDiscount],
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     -- | Customer display name from fulfillment.customer.person (value-add-NP BAPs
@@ -214,7 +217,7 @@ handler merchant sReq searchReq estimates addOnData = do
             customerExtraFee = sReq.customerExtraFee,
             negativeFareAdjustment = sReq.negativeFareAdjustment,
             paymentChargeDetails = sReq.paymentChargeDetails,
-            buyerOfferDiscount = sReq.offerDiscountAmount,
+            estimateOfferDiscounts = sReq.estimateOfferDiscounts,
             messageId = sReq.messageId,
             isRepeatSearch = False,
             billingCategory = sReq.billingCategory,
@@ -295,17 +298,28 @@ applyNegotiatedFare merchantOpCityId quoteId sReq =
     addOnData <- computeAddOnData quote
     -- Priced once, here, and frozen into the quote's FareParameters: the catalogue is what's on offer, the fare parameters are what was charged.
     addOnCharges <- SAddOn.addOnChargesTotal addOnData
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let fareParams = quote.fareParams
-        -- estimatedFare carries whatever an earlier /select already applied, so strip both parts off to recover the fare originally quoted. Everything below is computed from that, which is what keeps repeated /selects from ratcheting the fare.
-        originalFare = quote.estimatedFare - fromMaybe 0 fareParams.negotiatedFareDelta - fromMaybe 0 fareParams.addOnCharges
-    negotiatedFareDelta <- computeNegotiatedFareDelta quote originalFare
+        policyRideTaxConfig = quote.farePolicy >>= (.rideTaxConfig)
+        -- Ride tax (GST/VAT) is charged on the whole ride fare, so whatever /select changes it must be re-taxed here;
+        -- otherwise govtCharges stays at the search-time amount and the invoice's Ride Tax no longer matches its Ride Fare.
+        retax = Fare.applyRideTaxWith transporterConfig policyRideTaxConfig
+        rideTaxRate = Fare.rideTaxRate transporterConfig policyRideTaxConfig
+        -- The quote as originally priced: no negotiation, no add-ons, taxed on that fare.
+        baseFareParams = retax fareParams {DFareParams.negotiatedFareDelta = Nothing, DFareParams.addOnCharges = Nothing}
+        -- Tax-inclusive amount an earlier /select added to estimatedFare (negotiated delta + add-ons, plus the ride tax on them).
+        priorIncrement = Fare.fareSum fareParams Nothing - Fare.fareSum baseFareParams Nothing
+        -- Strip it off to recover the fare originally quoted. Everything below is computed from that, which is what keeps repeated /selects from ratcheting the fare.
+        originalFare = quote.estimatedFare - priorIncrement
+    negotiatedFareDelta <- computeNegotiatedFareDelta quote originalFare rideTaxRate
     let updatedFareParams =
-          fareParams
-            { DFareParams.negotiatedFareDelta = negotiatedFareDelta,
-              DFareParams.addOnCharges = addOnCharges
-            }
-        -- The bid is the ride fare; add-on charges go on top of it.
-        estimatedFare = originalFare + fromMaybe 0 negotiatedFareDelta + fromMaybe 0 addOnCharges
+          retax
+            fareParams
+              { DFareParams.negotiatedFareDelta = negotiatedFareDelta,
+                DFareParams.addOnCharges = addOnCharges
+              }
+        -- The bid is the tax-inclusive ride fare; add-on charges (and the ride tax on them) go on top of it.
+        estimatedFare = originalFare + (Fare.fareSum updatedFareParams Nothing - Fare.fareSum baseFareParams Nothing)
         updatedQuote =
           quote
             { DQuote.estimatedFare = estimatedFare,
@@ -317,7 +331,10 @@ applyNegotiatedFare merchantOpCityId quoteId sReq =
     return updatedQuote
   where
     -- Tolerance lives on the quote's own FarePolicy (per-vehicle-tier), not TransporterConfig (city-level) -- a Sedan and an Auto on the same city can negotiate different bands. Defaults to +-10% when unset on the policy (see DFP.effectiveNegotiationTolerancePct).
-    computeNegotiatedFareDelta quote originalFare = case sReq.negotiatedFare of
+    -- Returns the pre-tax delta stored as FareParameters.negotiatedFareDelta: the bid and the tolerance band are
+    -- tax-inclusive (what the customer pays), and ride tax is re-applied on top of the delta, so a bid moving the total
+    -- by X moves the pre-tax ride fare by X / (1 + rate).
+    computeNegotiatedFareDelta quote originalFare rideTaxRate = case sReq.negotiatedFare of
       -- No bid on this /select: keep whatever an earlier one negotiated.
       Nothing -> pure quote.fareParams.negotiatedFareDelta
       Just negotiatedFare -> do
@@ -330,7 +347,7 @@ applyNegotiatedFare merchantOpCityId quoteId sReq =
         unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $
           throwError $ NegotiatedFareNotAcceptable quoteId.getId negotiatedFare minAcceptable maxAcceptable
         -- Total delta from the original fare, not just this negotiation round's step.
-        pure $ Just (negotiatedFare - originalFare)
+        pure $ Just ((negotiatedFare - originalFare) / (1 + rideTaxRate))
 
     computeAddOnData quote
       | Kernel.Prelude.null sReq.addOns = pure [] -- if same request will come which already processed then we should process the latest addOns information not the esisting one

@@ -133,6 +133,13 @@ Ride:
     vehicleVariant : Maybe VehicleVariant
     vehicleServiceTierName : Maybe Text
     tripCategory: TripCategory
+    # Shared-route runs only (tripCategory SharedRoute): the GTFS trip this ride drives, its route code, and
+    # the rider platform's integrated_bpp_config whose feed defines them. Plain Text, not Id: that table
+    # lives in the rider DB. The materialiser finds an existing run by tripId plus date; the manifest and
+    # the LTS route key use routeCode.
+    tripId: Maybe Text
+    routeCode: Maybe Text
+    integratedBppConfigId: Maybe Text
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
@@ -338,6 +345,7 @@ Ride:
     driverId: "!SecondaryKey" # forcing to be a secondary key
     driverGoHomeRequestId: "!SecondaryKey" # forcing to be a secondary key
     fleetOwnerId: "!SecondaryKey" # forcing to be a secondary key; prepaid expiry must read a fleet's INPROGRESS rides from KV (a DB-only read misses rides not yet flushed)
+    tripId: "!SecondaryKey" # forcing to be a secondary key; the shared-run materialiser looks a day's run up by GTFS trip id before creating it
     shortId: SecondaryKey
 
   queries:

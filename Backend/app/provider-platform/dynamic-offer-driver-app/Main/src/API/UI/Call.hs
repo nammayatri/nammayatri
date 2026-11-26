@@ -33,6 +33,7 @@ import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import qualified Kernel.External.Call.Ozonetel.Types as Ozonetel
 import Kernel.Prelude
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
 import Kernel.Utils.Common
@@ -115,7 +116,8 @@ type SDKBasedCallAPI =
   "call"
     :> "twillio"
     :> ( "accessToken"
-           :> MandatoryQueryParam "bppRideId" (Id SRide.Ride)
+           :> Header "token" RegToken
+           :> QueryParam "bppRideId" (Id SRide.Ride)
            :> MandatoryQueryParam "user" DCall.EntityType
            :> MandatoryQueryParam "deviceType" DeviceType
            :> Get '[JSON] Kernel.Prelude.Text
@@ -167,8 +169,14 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = 
 getDriverMobileNumber :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler DCall.CallRes
 getDriverMobileNumber (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DCall.getDriverMobileNumber (driverId, merchantId, merchantOpCityId)
 
-getCallTwillioAccessToken :: Id SRide.Ride -> DCall.EntityType -> DeviceType -> FlowHandler Text
-getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.getCallTwillioAccessToken rideId entity deviceType
+-- | The login token is checked only when no ride id is given (registering outside a ride); with a
+-- ride id the endpoint behaves as before.
+getCallTwillioAccessToken :: Maybe RegToken -> Maybe (Id SRide.Ride) -> DCall.EntityType -> DeviceType -> FlowHandler Text
+getCallTwillioAccessToken mbToken mbRideId entity deviceType = withFlowHandlerAPI $ do
+  mbCaller <- case mbRideId of
+    Just _ -> pure Nothing
+    Nothing -> Just <$> (mbToken & fromMaybeM (InvalidRequest "token is required when bppRideId is not given") >>= verifyPerson)
+  DCall.getCallTwillioAccessToken mbRideId mbCaller entity deviceType
 
 getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler Text
 getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity

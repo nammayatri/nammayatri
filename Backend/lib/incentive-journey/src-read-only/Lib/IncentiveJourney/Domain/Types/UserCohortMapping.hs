@@ -16,6 +16,10 @@ data UserCohortMapping = UserCohortMapping
     createdAt :: Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.UserCohortMapping.UserCohortMapping,
+    optInPeriod :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.OptInPeriod,
+    optedInAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    optedInBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    termsAcceptedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     userId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Person,
     validTill :: Kernel.Prelude.UTCTime

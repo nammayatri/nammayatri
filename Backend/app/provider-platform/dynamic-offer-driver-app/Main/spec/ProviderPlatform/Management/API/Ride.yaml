@@ -545,6 +545,31 @@ types:
     - passedThroughDestination: Maybe Bool
     - finalFarePolicyId: Maybe Text
     - estimatedStaticDuration: Maybe Seconds
+    - pickupEdits: Maybe [PickupEditInfo]
+    - destinationEdits: Maybe [DestinationEditInfo]
+  PickupEditInfo:
+    - editedAt: UTCTime
+    - previousPickupLocation: Maybe LocationAPIEntity
+    - newPickupLocation: Maybe LocationAPIEntity
+  DestinationEditInfo:
+    - bookingUpdateRequestId: Text
+    - status: Text
+    - createdAt: UTCTime
+    - validTill: UTCTime
+    - previousDropLocation: Maybe LocationAPIEntity
+    - newDropLocation: Maybe LocationAPIEntity
+    - driverLocationAtEdit: Maybe LatLong
+    - oldEstimatedDistance: Maybe Meters
+    - estimatedDistance: Maybe Meters
+    - oldMaxEstimatedDistance: Maybe Meters
+    - maxEstimatedDistance: Maybe Meters
+    - oldEstimatedFare: PriceAPIEntity
+    - estimatedFare: PriceAPIEntity
+    - estimatedDuration: Maybe Seconds
+    - snapToRoadFailed: Maybe Bool
+    - oldFareParamsId: Text
+    - fareParamsId: Text
+    - farePolicyId: Text
   TollInfoAPIEntity:
     - id: Text
     - name: Text
@@ -604,7 +629,11 @@ types:
     - transactionId: Text
     - estimatedDistance: Maybe Meters
     - calls: [MapsRouteCall]
+    - editDestinations: [EditDestinationRoute]
     - derive: "'HideSecrets"
+  EditDestinationRoute:
+    - requestedWaypoints: [LatLong]
+    - call: MapsRouteCall
   MapsRouteCall:
     - apiName: Text
     - provider: Text
@@ -723,6 +752,8 @@ types:
     - tollFareTaxWithCurrency: Maybe PriceAPIEntity
     - discountWithCurrency: Maybe PriceAPIEntity
     - negotiatedFareDeltaWithCurrency: Maybe PriceAPIEntity
+    - waitingChargePerMin: Maybe HighPrecMoney
+    - freeWaitingTimeInMinutes: Maybe Int
     - updatedAt: UTCTime
   FareParametersDetails:
     - enum: "ProgressiveDetails FParamsProgressiveDetails, SlabDetails FParamsSlabDetails, RentalDetails FParamsRentalDetails, InterCityDetails FParamsInterCityDetails, AmbulanceDetails FParamsAmbulanceDetails"

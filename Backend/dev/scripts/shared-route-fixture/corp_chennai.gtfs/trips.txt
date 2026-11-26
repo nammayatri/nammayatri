@@ -1,0 +1,3 @@
+route_id,service_id,trip_id,trip_headsign,direction_id
+CORP-ACME-1,corp_acme_weekday,CORP-ACME-1-0830,ACME campus Sholinganallur,0
+CORP-ACME-1,corp_acme_weekday,CORP-ACME-1-1800,Adyar Depot,1

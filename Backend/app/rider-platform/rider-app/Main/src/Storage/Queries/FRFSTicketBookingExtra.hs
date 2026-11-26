@@ -117,6 +117,17 @@ updateFRFSTicketBookingVehicleNumberById vehicleNumber bookingId = do
     ]
     [Se.Is Beam.id $ Se.Eq bookingId.getId]
 
+-- | The driver gave up waiting for this passenger at their stop; the count is what the manifest's NO_SHOW state and the
+-- feed's no-show consequence (module S) read.
+updateSharedCabNoShowsById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Int -> Id FRFSTicketBooking -> m ()
+updateSharedCabNoShowsById noShows bookingId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.sharedCabNoShows (Just noShows),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq bookingId.getId]
+
 updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 updateBookingAuthCodeById bookingAuthCode id = do
   now <- getCurrentTime
@@ -194,6 +205,19 @@ findAllConfirmedByTripId tripId = do
   findAllWithKV
     [ Se.Is Beam.tripId $ Se.Eq (Just tripId),
       Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+    ]
+
+-- | The manifest of one shared-route run: every CONFIRMED booking placed on the driver platform's ride for that run
+-- (rideId is set when the ticket is issued against a materialised run, or when the allocator moves a passenger to
+-- another run). Cancelled bookings drop out here; the passenger state of the rest is derived in
+-- SharedLogic.SharedRoute.Passenger.
+findAllConfirmedByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRFSTicketBooking]
+findAllConfirmedByRideId rideId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.rideId $ Se.Eq (Just rideId),
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+        ]
     ]
 
 -- | All confirmed bookings on a waybill (across all its trips), via the dedicated waybillNo secondary key

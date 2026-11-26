@@ -73,6 +73,7 @@ import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
@@ -139,6 +140,7 @@ type SelectFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     Redis.HedisFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
@@ -242,7 +244,7 @@ data DSelectRes = DSelectRes
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentChargeDetails :: Maybe PaymentCharge.PaymentChargeDetails,
-    offerDiscountAmount :: Maybe HighPrecMoney,
+    estimateOfferDiscounts :: [PaymentCharge.EstimateOfferDiscount],
     paymentMode :: Maybe DMPM.PaymentMode,
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
@@ -373,19 +375,22 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory, searchRequestId = Just searchRequest.id}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
-  offerDiscountAmount <- case selectedOfferId of
-    Nothing -> pure Nothing
-    Just offerId -> do
-      fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback estimate.id.getId DFareBreakup.ESTIMATE (pure [])
-      let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx estimate.estimatedTotalFare.amount fareBreakups
-          offerBasePrice = mkPrice (Just estimate.estimatedTotalFare.currency) offerBaseAmount
-      offerResult <- withTryCatch "selectOfferDiscount" $ SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId personId merchantOperatingCityId DOrder.RideHailing (show estimate.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing Nothing (Just searchRequest)
-      case offerResult of
-        Left err -> do
-          logError $ "Failed to compute selected offer discount for estimateId " <> estimateId.getId <> ": " <> show err
-          pure Nothing
-        Right mbOffer -> pure $ mfilter (> 0) ((.discountAmount) . snd <$> mbOffer)
-  QEstimate.updateSelectedOfferId selectedOfferId offerDiscountAmount estimateId
+  selectedEstimateDiscounts <- forM (estimate : remainingEstimates) $ \selectedEstimate -> do
+    discount <- case selectedOfferId of
+      Nothing -> pure Nothing
+      Just offerId -> do
+        fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback selectedEstimate.id.getId DFareBreakup.ESTIMATE (pure [])
+        let (fareCtx, offerBaseAmount) = SOffer.offerFareCtx selectedEstimate.fareSettlementType selectedEstimate.estimatedTotalFare.amount fareBreakups
+            offerBasePrice = mkPrice (Just selectedEstimate.estimatedTotalFare.currency) offerBaseAmount
+        offerResult <- withTryCatch "selectOfferDiscount" $ SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId personId merchantOperatingCityId DOrder.RideHailing (show selectedEstimate.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing Nothing (Just searchRequest)
+        case offerResult of
+          Left err -> do
+            logError $ "Failed to compute selected offer discount for estimateId " <> selectedEstimate.id.getId <> ": " <> show err
+            pure Nothing
+          Right mbOffer -> pure $ mfilter (> 0) ((.discountAmount) . snd <$> mbOffer)
+    QEstimate.updateSelectedOfferId selectedOfferId discount selectedEstimate.id
+    pure (selectedEstimate.bppEstimateId, discount)
+  let estimateOfferDiscounts = [PaymentCharge.EstimateOfferDiscount bppEstimateId.getId discount | (bppEstimateId, Just discount) <- selectedEstimateDiscounts]
   QDOffer.updateStatus DDO.INACTIVE estimateId
   when (isJust mbCustomerExtraFee || isJust mbNegativeFareAdjustment || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee mbNegativeFareAdjustment req.paymentMethodId req.paymentInstrument

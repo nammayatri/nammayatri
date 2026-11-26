@@ -15,7 +15,7 @@
 module Domain.Action.UI.SearchRequestForDriver where
 
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
-import BecknV2.OnDemand.Settlement (chargeOn)
+import BecknV2.OnDemand.Settlement (chargeOn, offerDiscountForEstimate)
 import qualified BecknV2.OnDemand.Settlement as Fields
 import Control.Applicative ((<|>))
 import Data.Aeson.TH
@@ -133,6 +133,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
     luggageCharges :: Maybe HighPrecMoney,
+    numberOfCheckInBags :: Maybe Int,
+    numberOfCabinBags :: Maybe Int,
     -- Only present when at least one of the driver's own preferences applied to this request.
     preferenceMatchScore :: Maybe Double
   }
@@ -157,8 +159,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       rawBaseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare
       duesTax = (.total) <$> searchRequest.customerCancellationDuesTaxBreakup
       componentTax = fromMaybe 0 govtCharges + maybe 0 (* Tax.taxRateOf tollTaxConfig) tollCharges + maybe 0 (* Tax.taxRateOf parkingTaxConfig) parkingCharge + fromMaybe 0 duesTax
-      driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 searchTry.discountAmount))
-      netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax 0 rawBaseFare
+      driverPaymentCharge = searchTry.paymentChargeDetails <&> \details -> Tax.taxedTotal (chargeOn details (rawBaseFare - fromMaybe 0 (offerDiscountForEstimate (fromMaybe searchTry.estimateId nearbyReq.estimateId) searchTry.estimateOfferDiscounts)))
+      netBaseFare = Settlement.netTotalTaxInclusive taxRegime nearbyReq.commissionCharges driverPaymentCharge ((.bearer) <$> searchTry.paymentChargeDetails) componentTax rawBaseFare
       customerExtraFee = rideNet DFP.CustomerExtraFeeComponent <$> searchTry.customerExtraFee
       driverPickUpCharges' = rideNet DFP.DeadKmFareComponent <$> driverPickUpCharges
       tollCharges' = netFare tollTaxConfig (Just DFP.TollChargesComponent) <$> tollCharges
@@ -244,6 +246,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
           driverCancellationNotAllowed = nearbyReq.driverCancellationNotAllowed,
           customerRating = mbRiderDetails >>= (.customerRating),
+          numberOfCheckInBags = searchRequest.numberOfCheckInBags,
+          numberOfCabinBags = searchRequest.numberOfCabinBags,
           ..
         }
   where

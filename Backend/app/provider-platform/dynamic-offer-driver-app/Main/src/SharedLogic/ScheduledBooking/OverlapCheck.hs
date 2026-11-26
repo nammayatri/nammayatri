@@ -27,10 +27,13 @@ import Domain.Types.TransporterConfig (TransporterConfig)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.Fields as Fields
 import qualified Tools.Maps as TMaps
 
@@ -105,6 +108,36 @@ mkCandidateFromBooking booking =
       candidatePickup = LatLong booking.fromLocation.lat booking.fromLocation.lon,
       candidateDrop = (\loc -> LatLong loc.lat loc.lon) <$> booking.toLocation
     }
+
+-- | The single accept guard for a scheduled booking, whether taken from the board, from the broadcast, assigned by a
+-- fleet owner or handed to a shared-route run's bound vehicle: a cap on the driver's scheduled holds, then feasibility
+-- against the committed set. Fails closed when the maps call fails.
+ensureNoScheduledOverlap :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> TransporterConfig -> DRB.Booking -> m ()
+ensureNoScheduledOverlap merchantId driverId schedulingCfg booking = do
+  committed <- getDriverCommittedRides driverId
+  let activeHolds = countActiveHolds committed
+  -- trigger on any commitment (hold or in-progress); cap counts holds only, in-progress enters feasibility as a predecessor
+  unless (null committed) $ do
+    when (activeHolds >= schedulingCfg.scheduledRideConfig.maxHoldsPerDriver) $
+      throwError ScheduledRideOverlapConflict
+    now <- getCurrentTime
+    feasibleRes <-
+      withTryCatch "acceptScheduledOverlap" $
+        isCandidateFeasible merchantId booking.merchantOperatingCityId schedulingCfg (mkCandidateFromBooking booking) (mkCommittedIntervals now (Just booking.id) committed)
+    case feasibleRes of
+      Right True -> pure ()
+      _ -> throwError ScheduledRideOverlapConflict
+
+-- | After an accept: the driver's gate column keeps the earliest future hold (min); the first hold collapses to today's
+-- overwrite. Called under the driver's scheduled-hold lock so concurrent accepts and releases cannot lose the min.
+updateLatestScheduledAsMin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> DRB.Booking -> m ()
+updateLatestScheduledAsMin driverId booking = do
+  now <- getCurrentTime
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  let scheduledTime = booking.startTime
+      pickupPos = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+      keepExisting = maybe False (\existing -> existing > now && existing <= scheduledTime) driverInfo.latestScheduledBooking
+  unless keepExisting $ void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driverId
 
 -- | Candidate must clear (end + deadhead + buffer) vs its predecessor and successor; unknown leg fails closed.
 isCandidateFeasible ::

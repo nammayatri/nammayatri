@@ -69,10 +69,10 @@
     # over time.  NOTE: This file is not permanent, find the available one at
     # https://download.geofabrik.de/asia/india/
     # NOTE: If you change this, also change `openStreetDataFileName` in osrm.nix
-    osrm-pbf.url = "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf";
+    osrm-pbf.url = "https://download.geofabrik.de/asia/india/southern-zone/southern-zone-240101.osm.pbf";
     osrm-pbf.flake = false;
 
-    osrm-pbf-finland.url = "https://download.geofabrik.de/europe/finland-260101.osm.pbf";
+    osrm-pbf-finland.url = "https://download.geofabrik.de/europe/finland/finland-260101.osm.pbf";
     osrm-pbf-finland.flake = false;
 
     # Multi-Cloud DB Manager — a SQL console (Node backend + React/Vite frontend)

@@ -22,6 +22,7 @@ data DriverRCAssociation = DriverRCAssociation
     id :: Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation,
     isRcActive :: Kernel.Prelude.Bool,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
+    takeoverVerifyResponse :: Kernel.Prelude.Maybe Data.Aeson.Value,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

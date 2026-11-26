@@ -115,7 +115,12 @@ processMerchantCreateRequest merchantShortId opCity canCreateMerchant req@Dashbo
 postMerchantSpecialLocationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantSpecialLocationUpsert a5 a4 _a3 a2 req@Dashboard.Common.Merchant.UpsertSpecialLocationReq {..} = do
   geom <- maybe (pure Nothing) mkGeom req.file
-  Domain.Action.Dashboard.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, ..}
+  -- 'geom' is PostGIS hex, which the overlap checks can't read, so also hand over the pricing
+  -- polygon as GeoJSON. A KML that doesn't convert skips those checks rather than failing an
+  -- upload that worked before they existed.
+  pricingGeoJson <- maybe (pure Nothing) GGeom.getGeoJsonFromKML req.file
+  queueGeom <- forM req.queueFile $ \kmlFile -> GGeom.getGeoJsonFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert queue KML to GeoJSON.")
+  Domain.Action.Dashboard.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, queueGeom = queueGeom, pricingGeoJson = pricingGeoJson, ..}
 
 -- | @\/specialLocation\/{specialLocationId}\/gates\/upsert@: same optional KML.
 postMerchantSpecialLocationGatesUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

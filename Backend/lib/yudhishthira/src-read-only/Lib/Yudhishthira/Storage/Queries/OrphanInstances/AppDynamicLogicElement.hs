@@ -27,6 +27,7 @@ instance FromTType' Beam.AppDynamicLogicElement Lib.Yudhishthira.Types.AppDynami
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             order = order,
             patchedElement = (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val) patchedElement,
+            settings = (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val) settings,
             version = version,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -41,6 +42,7 @@ instance ToTType' Beam.AppDynamicLogicElement Lib.Yudhishthira.Types.AppDynamicL
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.order = order,
         Beam.patchedElement = fmap (Data.String.Conversions.cs . Data.Aeson.encode) patchedElement,
+        Beam.settings = fmap (Data.String.Conversions.cs . Data.Aeson.encode) settings,
         Beam.version = version,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

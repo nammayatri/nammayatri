@@ -103,6 +103,7 @@ import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -126,12 +127,14 @@ import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid
+import SharedLogic.Finance.RideInvoice (markBookingInvoicesStatus)
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -190,10 +193,13 @@ endRideTransaction ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    CoreMetrics m
+    CoreMetrics m,
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -325,14 +331,15 @@ processEndRideFinance ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    BeamFlow m r
+    BeamFlow m r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   Merchant ->
   Ride.Ride ->
@@ -553,7 +560,9 @@ createDriverWalletTransaction ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
-    PostActionsEnv r
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -578,10 +587,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       carriedDuesTaxAmount = fromMaybe 0 fareParams.cancellationDuesTax
       carriedDuesBaseAmount = max 0 (fromMaybe 0 fareParams.customerCancellationDues - carriedDuesTaxAmount)
       commissionTaxPct = (.tax) <$> (mbFarePolicy >>= (.commissionTaxConfig))
-      commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      commissionAmount = fromMaybe 0 ride.commission
       (commissionBaseAmount, commissionVatAmount) = splitGrossByTaxPct commissionTaxPct commissionAmount
-      cancellationCommissionAmount = fromMaybe 0 (ride.cancellationDuesCommission <|> booking.cancellationDuesCommission)
-      cancellationCommissionVat = Tax.taxTotal (ride.cancellationDuesCommissionTaxBreakup <|> booking.cancellationDuesCommissionTaxBreakup)
+      cancellationCommissionAmount = fromMaybe 0 ride.cancellationDuesCommission
+      cancellationCommissionVat = Tax.taxTotal ride.cancellationDuesCommissionTaxBreakup
       cancellationCommissionBase = cancellationCommissionAmount - cancellationCommissionVat
       rawBaseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - airportFeeAmount - airportFeeTaxAmount - fromMaybe 0 fareParams.customerCancellationDues - fromMaybe 0 fareParams.paymentProcessingFee - fromMaybe 0 fareParams.paymentProcessingFeeTax
       customerDiscountAmount = fromMaybe 0 ride.discountAmount
@@ -686,9 +695,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         paymentChargeGross = fromMaybe 0 ride.paymentCharge
         (paymentChargeAmt, paymentChargeVatAmt) = splitGrossByTaxPct ((.tax) <$> (booking.paymentChargeDetails >>= (.chargeTax))) paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
-        driverBearsPayment = mbPaymentBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER]
         paymentChargeTaxRef = walletReferencePGPaymentChargesTax taxRegime
-    let mkRideLineItems issuedToType =
+    let rideInvoiceIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+        rideLineItems =
           let -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
               -- collapses them into one main-table row.
               mkPair gId ty isExt desc descType amt =
@@ -738,44 +747,20 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               commonLines =
                 [ if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge (fromMaybe 0 fareParams.paymentProcessingFee) else Nothing,
                   if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax (fromMaybe 0 fareParams.paymentProcessingFeeTax) else Nothing,
-                  if issuedToType == CUSTOMER then mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount) else Nothing,
-                  mkAdjustment "Tip" Tip tipAmount,
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
-                  -- Supplier copy: a deduction, like commission above.
-                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge" PaymentCharge (negate paymentChargeAmt) else Nothing,
-                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge VAT" PaymentChargeTax (negate paymentChargeVatAmt) else Nothing
+                  mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount),
+                  mkAdjustment "Tip" Tip tipAmount
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         -- GST place of supply = the pickup State.
         mbPlaceOfSupply = gstPlaceOfSupply booking.fromLocation
-        customerInvoiceConfig =
+        rideInvoiceConfig =
           InvoiceConfig
             { invoiceType = BeckInvoice.Ride,
-              issuedToType = CUSTOMER,
-              issuedToId = maybe "" (.getId) booking.riderId,
+              issuedToType = rideInvoiceIssuedToType,
+              issuedToId = driverOrFleetPersonId.getId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              lineItems = mkRideLineItems CUSTOMER,
-              gstBreakdown = rideGstBreakdown,
-              referenceId = Just booking.id.getId,
-              isVat = isVat,
-              issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing,
-              paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
-              periodStart = Nothing,
-              periodEnd = Nothing
-            }
-        driverInvoiceConfig =
-          InvoiceConfig
-            { invoiceType = BeckInvoice.Ride,
-              issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
-              issuedToId = driverOrFleetPersonId.getId,
-              issuedToName = mbDriver <&> (.firstName),
-              issuedToAddress = Nothing,
-              lineItems = mkRideLineItems (if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER),
+              lineItems = rideLineItems,
               gstBreakdown = rideGstBreakdown,
               referenceId = Just booking.id.getId,
               isVat = isVat,
@@ -797,11 +782,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- doubled; the invoices are created only if missing.
     -- From the master, like the ledger once-checks: a retry must see invoices the previous run created.
     existingRideInvoices <- withMasterReads (QFInvoice.findByReferenceId (Just booking.id.getId))
-    let driverInvoiceIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
-        -- A voided or cancelled ride invoice (a tip update voids it and mints a replacement) is not one to reuse.
-        findRideInvoice issuedTo = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.issuedToType == issuedTo && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
-        existingCustomerInvoice = findRideInvoice CUSTOMER
-        existingDriverInvoice = findRideInvoice driverInvoiceIssuedToType
+    let existingRideInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.issuedToType == rideInvoiceIssuedToType && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
     result <- runFinance ctx $ do
       -- Ride-earning components. Online: 2-leg pass-through (BAP cash in via
       -- BuyerExternal, then credited to driver wallet). Cash: single leg
@@ -876,15 +857,15 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         if isOnline
           then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips Nothing
           else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips Nothing
-      if isJust existingCustomerInvoice then pure Nothing else invoice customerInvoiceConfig
+      if isJust existingRideInvoice then pure Nothing else invoice rideInvoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
       Right (mbPostedInvoiceId, _entryIds) -> do
-        let mbInvoiceId = mbPostedInvoiceId <|> (existingCustomerInvoice <&> (.id))
+        let mbInvoiceId = mbPostedInvoiceId <|> (existingRideInvoice <&> (.id))
         -- A newly created invoice, or a retry of a run that stopped before the booking was linked to its
         -- invoice. The booking link is written last, so it also marks these steps as finished; the steps
         -- themselves are safe to repeat.
-        when (isNothing existingCustomerInvoice || isNothing booking.financeInvoiceId) $ do
+        when (isNothing existingRideInvoice || isNothing booking.financeInvoiceId) $ do
           whenJust mbInvoiceId $ \invId -> do
             QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
             -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
@@ -896,22 +877,13 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 GenerateInvoicePdfJobData {invoiceId = invId.getId}
           QRB.updateFinanceInvoiceId booking.id ((.getId) <$> mbInvoiceId)
 
-    -- Standalone driver / fleet-owner Ride invoice mirroring the customer
-    -- invoice. No transfers in this block → no ledger entries are linked,
-    -- so no duplicate IndirectTaxTransaction is emitted.
-    let generateDriverInvoice = maybe True (fromMaybe True . (.enableDriverInvoice)) transporterConfig.invoiceConfig
-    when (generateDriverInvoice && isNothing existingDriverInvoice) $ do
-      driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
-      case driverInvoiceResult of
-        Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
-        Right (mbDriverInvoiceId, _) -> whenJust mbDriverInvoiceId $ \invId -> QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
-    -- A retry of a run that created the driver invoice but stopped before stamping it.
-    whenJust existingDriverInvoice $ \inv ->
-      when (isNothing inv.placeOfSupply) $ QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing inv.id
+    unless (maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod) $
+      markBookingInvoicesStatus FInvoice.Paid BeckInvoice.Ride booking.id
 
     let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
         existingCommissionInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Commission) existingRideInvoices
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
+      (commissionPartyName, commissionPartyAddress) <- driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
       let commissionRef = walletReferenceCommission
           commissionVatRef = walletReferenceCommissionTax taxRegime
           commissionInvoiceConfig =
@@ -919,8 +891,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               { invoiceType = BeckInvoice.Commission,
                 issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
                 issuedToId = driverOrFleetPersonId.getId,
-                issuedToName = mbDriver <&> (.firstName),
-                issuedToAddress = Nothing,
+                issuedToName = commissionPartyName,
+                issuedToAddress = commissionPartyAddress,
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes

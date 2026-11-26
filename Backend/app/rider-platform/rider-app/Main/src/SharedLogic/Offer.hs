@@ -9,11 +9,13 @@ where
 import qualified BecknV2.OnDemand.FareBreakup.Core as FB
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Geohash as Geohash
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -51,6 +53,7 @@ import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
@@ -218,12 +221,14 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
 
 type OfferFareCtx = Maybe (HighPrecMoney, [FB.BreakupLine])
 
-offerFareCtx :: HighPrecMoney -> [DFareBreakup.FareBreakup] -> (OfferFareCtx, HighPrecMoney)
-offerFareCtx fare fareBreakups
+offerFareCtx :: Maybe SL.FareSettlementType -> HighPrecMoney -> [DFareBreakup.FareBreakup] -> (OfferFareCtx, HighPrecMoney)
+offerFareCtx mbFareSettlementType fare allFareBreakups
   | null fareBreakups = (Nothing, fare)
   | otherwise =
     let breakupLines = [FB.BreakupLine fb.description fb.amount.amount | fb <- fareBreakups]
      in (Just (fare, breakupLines), FB.discountableAmount fare breakupLines)
+  where
+    fareBreakups = FB.withoutBoothLines (SL.edcCollectsParking mbFareSettlementType) (.description) allFareBreakups
 
 recomputePostOfferAmount ::
   (MonadFlow m) =>
@@ -924,7 +929,21 @@ mkSearchRequestData SSR.SearchRequest {..} =
       initiatedBy = show <$> initiatedBy,
       vehicleCategory = show <$> vehicleCategory,
       searchMode = show <$> searchMode,
+      fromLocation = Just (mkSearchLocationData fromLocation),
+      toLocation = mkSearchLocationData <$> toLocation,
       ..
+    }
+
+mkSearchLocationData :: DLoc.Location -> Y.SearchLocationData
+mkSearchLocationData loc =
+  Y.SearchLocationData
+    { lat = loc.lat,
+      lon = loc.lon,
+      geohash = T.pack <$> Geohash.encode 9 (loc.lat, loc.lon),
+      title = loc.address.title,
+      placeId = loc.address.placeId,
+      area = loc.address.area,
+      areaCode = loc.address.areaCode
     }
 
 mkOfferListReqWithBasket :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> HighPrecMoney -> Currency -> [Payment.Basket] -> m Payment.OfferListReq

@@ -133,6 +133,7 @@ types:
     totalAmount: HighPrecMoney
     redeemableAmount: HighPrecMoney
     nonRedeemableAmount: HighPrecMoney
+    items: "[WalletItem]"
   WalletLedgerEntryItem:
     entryId: Id LedgerEntry
     itemReference: Text
@@ -146,6 +147,7 @@ types:
     entityReferenceType: Maybe EntityReferenceType
     entityReferenceId: Maybe Text
     reversalOf: Maybe (Id LedgerEntry)
+    isDisplayOnly: Maybe Bool
   WalletLedgerRideInfo:
     rideId: Id Ride
     rideShortId: Text

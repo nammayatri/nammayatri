@@ -36,8 +36,9 @@ where
 import Data.Aeson (object, (.=))
 import Data.Char as DC
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub, nubBy)
 import qualified Data.Map as M
-import Data.Text hiding (elem)
+import Data.Text hiding (elem, filter, find, map, null)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
@@ -49,6 +50,7 @@ import qualified Domain.Types.BookingStatus as DBookingStatus
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import qualified Domain.Types.CallStatus as DCallStatus
+import Domain.Types.Exophone (Exophone)
 import qualified Domain.Types.Exophone as Fields
 import qualified Domain.Types.Merchant as Fields
 import qualified Domain.Types.MerchantOperatingCity as Fields
@@ -87,7 +89,9 @@ import qualified SharedLogic.DriverNumber as SDN
 import qualified SharedLogic.SharedCab.Call as SharedCabCall
 import SharedLogic.SharedCab.Interest (bestEffort)
 import qualified SharedLogic.SharedCab.SessionState as Fields
+import SharedLogic.Utils (generateTwillioCallerIdentity)
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -308,7 +312,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus id callStatus url callAttemptStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, Metrics.CoreMetrics m, HasRequestId r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber :: forall m r. (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, Metrics.CoreMetrics m, HasRequestId r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
   id <- generateGUID
 
@@ -316,14 +320,14 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
       callTo = dropFirstZero callTo_
       to = dropFirstZero to_
 
-  exophone <-
-    SharedCabCall.findExophoneByDialled to >>= \case
-      Nothing -> SharedCabCall.findExophoneByDialled callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
-      Just phone -> return phone
+  mobileNumberHash <- getDbHash callFrom
+  exophoneCandidates <- do
+    byTo <- findAllByDialled to
+    if null byTo then findAllByDialled callTo else pure byTo
+  when (null exophoneCandidates) $ throwError (ExophoneDoesNotExist callTo)
+  (exophone, mbRider) <- resolveExophoneAndRider exophoneCandidates mobileNumberHash callFrom callTo
   merchantId <- CQMOC.findById exophone.merchantOperatingCityId >>= fmap (.merchantId) . fromMaybeM (MerchantOperatingCityDoesNotExist exophone.merchantOperatingCityId.getId)
 
-  mobileNumberHash <- getDbHash callFrom
-  mbRider <- runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId)
   rideClaim <- fmap (\details@(_, booking) -> (details, booking.primaryExophone == exophone.primaryPhone)) <$> maybe (pure Nothing) findRiderDetails mbRider
   -- best effort: a failed driver-app lookup must not fail a ride-hailing rider's call
   cabClaim <-
@@ -387,6 +391,49 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
       case activeBooking of
         Nothing -> pure Nothing
         Just activeBooking_ -> return $ Just (Nothing, activeBooking_)
+
+    findAllByDialled dialled = do
+      allRows <- fold <$> traverse CQExophone.findAllByPhone (SharedCabCall.exophoneCandidates dialled)
+      pure $ nubBy (\a b -> a.id == b.id) allRows
+
+    resolveExophoneAndRider :: [Exophone] -> DbHash -> Text -> Text -> m (Exophone, Maybe Person)
+    resolveExophoneAndRider candidates mobileNumberHash callFrom callTo = do
+      let candidateMerchantIds = nub (map (.merchantId) candidates)
+      persons <- runInReplica (Person.findAllByRoleAndMobileNumber USER "+91" mobileNumberHash)
+      let relevantPersons = filter (\p -> p.merchantId `elem` candidateMerchantIds) persons
+      mbMatch <- firstMatching relevantPersons candidates
+      case mbMatch of
+        Just hit -> pure hit
+        Nothing -> case candidates of
+          [] -> throwError (ExophoneDoesNotExist callTo)
+          [single] -> pure (single, firstForMerchant single relevantPersons)
+          many@(firstCandidate : _) -> do
+            let cityIds = map (\eo -> eo.merchantOperatingCityId.getId) many
+            logWarning $
+              "exophone.multi_city.unresolved callFrom=" <> callFrom
+                <> " candidates="
+                <> T.intercalate "," cityIds
+            pure (firstCandidate, firstForMerchant firstCandidate relevantPersons)
+
+    firstForMerchant eo = find (\p -> p.merchantId == eo.merchantId)
+
+    firstMatching :: [Person] -> [Exophone] -> m (Maybe (Exophone, Maybe Person))
+    firstMatching [] _ = pure Nothing
+    firstMatching (person : rest) candidates = do
+      rd <- findRiderDetails person
+      case rd >>= \(_, booking) -> (,Just person) <$> candidateForBooking booking candidates of
+        Just hit -> pure (Just hit)
+        Nothing -> do
+          mbCab <-
+            fmap join . bestEffort (logError . ("shared-cab call lookup failed: " <>)) $
+              SharedCabCall.liveSessionForRider person.id
+          case mbCab >>= \s -> (,Just person) <$> find (\eo -> eo.merchantOperatingCityId == s.merchantOperatingCityId) candidates of
+            Just hit -> pure (Just hit)
+            Nothing -> firstMatching rest candidates
+
+    candidateForBooking booking candidates =
+      find (\eo -> eo.merchantOperatingCityId == booking.merchantOperatingCityId) candidates
+        <|> find (\eo -> eo.merchantId == booking.merchantId && eo.primaryPhone == booking.primaryExophone) candidates
 
     ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId merchantId =
       QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case
@@ -544,21 +591,36 @@ instance FromHttpApiData EntityType where
     "driver" -> Right Domain.Action.UI.Call.DRIVER
     _ -> Left "Invalid EntityType"
 
+-- | Twilio access token. With a ride id: that ride's party, as before. Without one: the verified
+-- caller's own per-person identity, for registering outside a ride (app open, logout).
 getCallTwillioAccessToken ::
-  ( Id SRide.Ride ->
+  ( Maybe (Id SRide.Ride) ->
+    Maybe (Id Person.Person, Id Fields.Merchant) ->
     EntityType ->
     DeviceType ->
     Flow Text
   )
-getCallTwillioAccessToken rideId entity deviceType = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  entityId <- case entity of
-    Domain.Action.UI.Call.CUSTOMER -> do
-      return booking.transactionId
-    Domain.Action.UI.Call.DRIVER -> do
-      return ride.bppRideId.getId
-  getAccessToken entityId (fromMaybe booking.merchantOperatingCityId ride.merchantOperatingCityId) (fromMaybe booking.merchantId ride.merchantId)
+getCallTwillioAccessToken mbRideId mbCaller entity deviceType = case mbRideId of
+  Just rideId -> do
+    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    entityId <- case entity of
+      Domain.Action.UI.Call.CUSTOMER -> do
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+        return $
+          if (riderConfig >>= (.enablePersonCallIdentity)) == Just True
+            then generateTwillioCallerIdentity booking.riderId
+            else booking.transactionId
+      Domain.Action.UI.Call.DRIVER -> do
+        return ride.bppRideId.getId
+    getAccessToken entityId (fromMaybe booking.merchantOperatingCityId ride.merchantOperatingCityId) (fromMaybe booking.merchantId ride.merchantId)
+  Nothing -> do
+    (personId, merchantId) <- mbCaller & fromMaybeM (InvalidRequest "token is required when bapRideId is not given")
+    unless (entity == Domain.Action.UI.Call.CUSTOMER) $ throwError (InvalidRequest "Only the CUSTOMER token can be issued without bapRideId")
+    person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+    unless ((riderConfig >>= (.enablePersonCallIdentity)) == Just True) $ throwError (InvalidRequest "Per-person call identity is not enabled")
+    getAccessToken (generateTwillioCallerIdentity personId) person.merchantOperatingCityId merchantId
   where
     getAccessToken id cityId merId = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
@@ -583,7 +645,9 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
   let say = Just "Please wait while we are making the call"
   dial <- case entity of
     Domain.Action.UI.Call.CUSTOMER -> do
-      let dial = Dial (Just (T.unpack ride.bppRideId.getId))
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      let driverCallIdentity = if (riderConfig >>= (.enablePersonCallIdentity)) == Just True then ride.driverCallIdentity else Nothing
+          dial = Dial (Just (T.unpack (fromMaybe ride.bppRideId.getId driverCallIdentity)))
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       let dial = Dial (Just (T.unpack booking.transactionId))

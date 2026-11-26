@@ -70,6 +70,11 @@ updateFleetOwnerId ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateFleetOwnerId fleetOwnerId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.fleetOwnerId fleetOwnerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsBlocked ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateIsBlocked isBlocked id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isBlocked isBlocked, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateIsNew ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -152,6 +157,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.initiatedBy initiatedBy,
       Se.Set Beam.insuranceValidity insuranceValidity,
+      Se.Set Beam.isBlocked isBlocked,
       Se.Set Beam.isNew isNew,
       Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.mYManufacturing mYManufacturing,

@@ -380,6 +380,7 @@ determineMode Nothing (Just (MP.Wallet _)) = Just ONLINE
 determineMode Nothing (Just MP.UPI) = Just ONLINE
 determineMode Nothing (Just MP.BoothOnline) = Just ONLINE
 determineMode Nothing (Just MP.NetBanking) = Just ONLINE
+determineMode Nothing (Just MP.Online) = Just ONLINE
 determineMode _ _ = Nothing
 
 pickExpectedStored :: ExpectedComponents -> KTC.HighPrecMoney

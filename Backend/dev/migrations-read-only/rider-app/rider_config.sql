@@ -982,3 +982,18 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_email_enabled boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_keep_journey_confirmed_until_departure boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_person_call_identity boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rental_stop_updates boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sms_otp_allowed_country_codes text [] ;

@@ -68,6 +68,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as Person
 import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest), MerchantError (MerchantOperatingCityNotFound))
 import qualified Tools.Fields as Fields
@@ -81,7 +82,7 @@ import WhatsappBot.Types
 -- this built a RentalSearchReq). Kept in the signature since MerchantCtx is
 -- the natural place for future flexi-specific config this handle might need.
 mkBackendHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> MerchantCtx -> BackendHandle Flow
-mkBackendHandle merchantId mocId _ctx =
+mkBackendHandle merchantId mocId ctx =
   BackendHandle
     { authenticate = \phone ->
         runBot "authenticate" $ do
@@ -90,8 +91,10 @@ mkBackendHandle merchantId mocId _ctx =
           -- function only ever returns a bare Id, so we ask again here rather
           -- than touch its signature (it has other callers, e.g. Select.hs).
           mobileDbHash <- getDbHash phone
-          mbExistingPerson <- Person.findByMobileNumberAndMerchantId "+91" mobileDbHash merchantId
-          personId <- Reg.createPersonWithPhoneNumber merchantId phone Nothing
+          -- The WhatsApp number's country code (meta_config column), not a
+          -- fixed "+91": the same code the person is created with below.
+          mbExistingPerson <- Person.findByMobileNumberAndMerchantId ctx.phoneCountryCode mobileDbHash merchantId
+          personId <- Reg.createPersonWithPhoneNumber merchantId phone (Just ctx.phoneCountryCode)
           pure
             AuthResult
               { auth = BotAuth {personId = personId.getId},
@@ -243,6 +246,26 @@ mkBackendHandle merchantId mocId _ctx =
               SosAPI.MarkAsSafeReq {contacts = Nothing, isEndLiveTracking = Nothing, isMock = Nothing, isRideEnded = Nothing},
       cancelRide = \auth bookingId _rideStatus ->
         runBot "cancelRide" $ cancelRideImpl merchantId (Id auth.personId) bookingId,
+      -- The app's own saved-places actions, so a favourite saved on WhatsApp
+      -- shows in the app and the reverse.
+      addSavedLocation = \auth loc ->
+        runBot "addSavedLocation" $
+          void $ DSavedReqLocation.createSavedReqLocation (Id auth.personId) (toCreateSavedReq loc),
+      -- The backend has no update-by-tag and the app's create refuses a
+      -- duplicate tag, so: delete, create, and if the create fails put the
+      -- old row(s) back before reporting the failure — a failed replace must
+      -- never leave the rider without their old place.
+      replaceSavedLocation = \auth loc ->
+        runBot "replaceSavedLocation" $ do
+          let riderId = Id auth.personId
+          old <- QSavedReqLocation.findAllByRiderIdAndTag riderId loc.tag
+          void $ DSavedReqLocation.deleteSavedReqLocation riderId loc.tag
+          res <- try @_ @SomeException $ DSavedReqLocation.createSavedReqLocation riderId (toCreateSavedReq loc)
+          case res of
+            Right _ -> pure ()
+            Left e -> do
+              mapM_ QSavedReqLocation.create old
+              throwM e,
       updateProfile = \auth upd ->
         runBot "updateProfile" $
           void $
@@ -469,6 +492,27 @@ mkSearchLoc p =
           }
     }
 
+toCreateSavedReq :: BotSavedLocation -> DSavedReqLocation.CreateSavedReqLocationReq
+toCreateSavedReq loc =
+  DSavedReqLocation.CreateSavedReqLocationReq
+    { lat = loc.lat,
+      lon = loc.lon,
+      street = Nothing,
+      door = Nothing,
+      city = loc.city,
+      state = loc.state,
+      country = loc.country,
+      building = loc.building,
+      areaCode = Nothing,
+      area = loc.area,
+      tag = loc.tag,
+      placeId = loc.placeId,
+      ward = Nothing,
+      isMoved = Nothing,
+      locationName = Nothing,
+      preferredServiceTierType = Nothing
+    }
+
 toBotSavedLocation :: DSRL.SavedReqLocationAPIEntity -> BotSavedLocation
 toBotSavedLocation s =
   BotSavedLocation
@@ -539,8 +583,15 @@ toBotQuote qe =
     { quoteId = qe.id.getId,
       serviceTierName = qe.serviceTierName <|> Just (show qe.vehicleVariant),
       estimatedFare = Just (fromIntegral qe.estimatedTotalFare.getMoney),
-      vehicleVariant = Just (show qe.vehicleVariant)
+      vehicleVariant = Just (show qe.vehicleVariant),
+      baseFare = rateCardAmount "BASE_FARE" rateCard,
+      perKmFare = rateCardAmount "EXTRA_PER_KM_FARE" rateCard
     }
+  where
+    -- The BPP builds these items from the quote's fare policy; the rider app
+    -- stores them on the quote and returns them as quoteFareBreakup. See
+    -- 'rateCardAmount' for which item is picked.
+    rateCard = [(b.title, realToFrac b.priceWithCurrency.amount) | b <- qe.quoteFareBreakup]
 
 toBotBooking :: DBAPI.BookingAPIEntity -> BotBookingDetails
 toBotBooking e =

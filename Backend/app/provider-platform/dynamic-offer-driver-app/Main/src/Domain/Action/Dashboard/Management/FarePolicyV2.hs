@@ -472,8 +472,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
           _ -> 0
         breakup = SFC.mkFareParamsBreakups True identity Common.FPV2FareBreakupItem fareParams
         chargeRes = SFC.finalisePaymentCharge mbPaymentChargeDetails totalFare (fromMaybe 0 fareParams.paymentProcessingFee + fromMaybe 0 fareParams.paymentProcessingFeeTax) req.discountAmount fareParams
-        componentTax = sum (catMaybes [fareParams.govtCharges, fareParams.tollFareTax, fareParams.parkingChargeTax, fareParams.cancellationDuesTax])
-        airportEntryFeeWithTax = fromMaybe 0 fareParams.airportEntryFee + fromMaybe 0 fareParams.airportEntryFeeTax
+        componentTax = sum (catMaybes ([fareParams.govtCharges, fareParams.tollFareTax, fareParams.cancellationDuesTax] <> if SL.edcCollectsParking fareParams.fareSettlementType then [] else [fareParams.parkingChargeTax, fareParams.airportEntryFeeTax]))
         taxRegime = fromMaybe Tax.GST transporterConfig.taxConfig.taxRegime
         mbBearer = (.bearer) <$> mbPaymentChargeDetails
         customerCharge = if mbBearer == Just PAYMENT_CUSTOMER then fromMaybe 0 chargeRes.paymentCharge else 0
@@ -489,13 +488,12 @@ postFarePolicyV2Preview merchantShortId opCity req = do
           breakup = breakup,
           riderTotalFare = max 0 (chargeRes.adjustedFare - fromMaybe 0 req.discountAmount),
           riderAdditions = previewLines [(show Enums.PAYMENT_CHARGE, chargeRes.adjustedFareParams.paymentProcessingFee), (show Enums.PAYMENT_CHARGE_TAX, chargeRes.adjustedFareParams.paymentProcessingFeeTax)],
-          netEarnings = Settlement.netTotalTaxInclusive taxRegime commission chargeRes.paymentCharge mbBearer componentTax airportEntryFeeWithTax (chargeRes.adjustedFare - customerCharge),
+          netEarnings = Settlement.netTotalTaxInclusive taxRegime commission chargeRes.paymentCharge mbBearer componentTax (chargeRes.adjustedFare - customerCharge),
           driverDeductions =
             previewLines
               [ (show Enums.COMMISSION, commission),
                 (show Enums.PAYMENT_CHARGE, if mbBearer == Just PAYMENT_DRIVER then chargeRes.paymentCharge else Nothing),
-                (show Enums.TAX, if taxRegime == Tax.GST then Just componentTax else Nothing),
-                (show Enums.AIRPORT_ENTRY_FEE, Just airportEntryFeeWithTax)
+                (show Enums.TAX, if taxRegime == Tax.GST then Just componentTax else Nothing)
               ]
         }
   pure $ Common.FPV2PreviewRes {trips = trips}
@@ -1573,6 +1571,8 @@ toApiChargeComponent = \case
   FarePolicyD.GovtChargesComponent -> Common.GovtChargesComponent
   FarePolicyD.PersonalDiscountComponent -> Common.PersonalDiscountComponent
   FarePolicyD.BusinessDiscountComponent -> Common.BusinessDiscountComponent
+  FarePolicyD.AirportEntryFeeComponent -> Common.AirportEntryFeeComponent
+  FarePolicyD.AirportEntryFeeTaxComponent -> Common.AirportEntryFeeTaxComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1626,3 +1626,5 @@ fromApiChargeComponent = \case
   Common.GovtChargesComponent -> FarePolicyD.GovtChargesComponent
   Common.PersonalDiscountComponent -> FarePolicyD.PersonalDiscountComponent
   Common.BusinessDiscountComponent -> FarePolicyD.BusinessDiscountComponent
+  Common.AirportEntryFeeComponent -> FarePolicyD.AirportEntryFeeComponent
+  Common.AirportEntryFeeTaxComponent -> FarePolicyD.AirportEntryFeeTaxComponent

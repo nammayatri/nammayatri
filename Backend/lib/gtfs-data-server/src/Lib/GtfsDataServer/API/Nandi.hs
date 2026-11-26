@@ -236,3 +236,12 @@ getNandiDepotCrewV2 = ET.client nandiDepotCrewV2API
 
 getNandiDepotOverviewV2 :: Text -> Text -> Day -> ET.EulerClient MonitoringOverview
 getNandiDepotOverviewV2 = ET.client nandiDepotOverviewV2API
+
+-- GIMS forwards GraphQL to the OTP instance of the request's gtfs_id; a Value, since every query has its own shape.
+type GtfsGraphQLAPI = "graphql" :> ReqBody '[JSON] GtfsGraphQLRequest :> Post '[JSON] Value
+
+nandiGtfsGraphQLAPI :: Proxy GtfsGraphQLAPI
+nandiGtfsGraphQLAPI = Proxy
+
+postNandiGtfsGraphQL :: GtfsGraphQLRequest -> ET.EulerClient Value
+postNandiGtfsGraphQL = ET.client nandiGtfsGraphQLAPI

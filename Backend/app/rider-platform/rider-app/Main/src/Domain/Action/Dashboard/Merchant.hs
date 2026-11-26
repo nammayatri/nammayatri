@@ -48,6 +48,8 @@ module Domain.Action.Dashboard.Merchant
     postMerchantRiderConfigEstimatesOrderUpdate,
     getMerchantConfigPaymentMethodList,
     postMerchantConfigPaymentMethodPaymentChargeUpdate,
+    getMerchantRiderConfigCalling,
+    postMerchantRiderConfigCallingUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
@@ -211,14 +213,7 @@ postMerchantUpdate merchantShortId city req = do
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
 
-  mbAllExophones <- forM req.exoPhones $ \exophones -> do
-    allExophones <- CQExophone.findAllExophones
-    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantOperatingCityId /= merchantOperatingCity.id) allExophones
-    let reqPhones = getAllPhones $ toList exophones
-    let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
-    unless (null busyPhones) $ do
-      throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
-    pure allExophones
+  mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
   whenJust req.exoPhones \exophones -> do
@@ -233,8 +228,6 @@ postMerchantUpdate merchantShortId city req = do
     CQExophone.clearCache merchantOperatingCity.id oldExophones
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
-  where
-    getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
 
 buildExophone :: MonadGuid m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
 buildExophone merchantId merchantOperatingCityId now req = do
@@ -453,6 +446,8 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
             ..
           }
 
@@ -513,7 +508,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             defaultMaxDriverThreshold = mbGate >>= (.defaultMaxDriverThreshold),
             defaultDemandThreshold = mbGate >>= (.defaultDemandThreshold),
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
-            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            maxRideSkipsBeforeQueueRemoval = reqT.maxRideSkipsBeforeQueueRemoval <|> (mbGate >>= (.maxRideSkipsBeforeQueueRemoval)),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
@@ -904,11 +899,6 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       let (Context.City cityText) = newOperatingCity.city
       mbMappingError <- City.validateAndAppendCityStdCodeMapping cityText stdCode
       whenJust mbMappingError $ \mappingError -> throwError $ InvalidRequest mappingError
-
-  -- Reject before any DB write if the requested exophone number is already in use by another operating city
-  existingExophones <- CQExophone.findAllByPhone req.exophone
-  unless (all (\e -> e.merchantOperatingCityId == newMerchantOperatingCityId) existingExophones) $
-    throwError $ InvalidRequest $ "Exophone number " <> req.exophone <> " is already in use by another operating city"
 
   finally
     ( do
@@ -1941,7 +1931,9 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType,
-                boothSpecificFleet = Nothing
+                boothSpecificFleet = Nothing,
+                poolingMode = Nothing,
+                queueGeomGeoJson = Nothing
               }
           gateInfo =
             DGI.GateInfo
@@ -2363,6 +2355,52 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
   invalidateConfigInMem LYT.RiderConfig
 
   logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
+  pure Success
+
+getMerchantRiderConfigCalling ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderCallingConfigRes
+getMerchantRiderConfigCalling merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  pure
+    Common.RiderCallingConfigRes
+      { enableShareNumberWithDriver = fromMaybe False riderConfig.enableShareNumberWithDriver,
+        pushConsentToBpp = fromMaybe False riderConfig.pushConsentToBpp
+      }
+
+postMerchantRiderConfigCallingUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateRiderCallingConfigReq ->
+  Flow APISuccess
+postMerchantRiderConfigCallingUpdate merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  _ <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  let setRiderFlags enabled = do
+        QRiderConfig.updateCallingConfig (Just enabled) (Just enabled) merchantOperatingCity.id
+        QRC.clearCache merchantOperatingCity.id
+        invalidateConfigInMem LYT.RiderConfig
+  case req.mode of
+    Common.CLOUD_CALLING -> setRiderFlags False
+    Common.DIRECT_CALLING_WITH_CONSENT -> setRiderFlags True
+    -- Forced direct calling is decided on the driver side and ignores rider consent, so the rider flags stay as they are.
+    Common.FORCED_DIRECT_CALLING -> pure ()
+
+  logTagInfo "dashboard -> postMerchantRiderConfigCallingUpdate : " (show merchantOperatingCity.id <> " mode: " <> show req.mode)
   pure Success
 
 -- Type conversion helpers for VehicleServiceTierOrderConfig

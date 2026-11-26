@@ -20,17 +20,22 @@ module API.UI.Route
   )
 where
 
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRideStatus
 import Environment
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
+import qualified Storage.CachedQueries.EtaRoute as CQEtaRoute
+import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
@@ -67,14 +72,21 @@ getPickupRoute (personId, merchantId) req = withFlowHandlerAPIPersonId personId 
   whenJust req.rideId $ \rid -> do
     case routeResp of
       (firstRoute : _) -> do
-        unless (null firstRoute.points) $ do
-          CQPickupRoute.cachePickupRoute rid firstRoute.points
-        whenJust firstRoute.duration $ \duration -> do
-          -- remove for non disha cities later
-          now <- getCurrentTime
-          CQPickupRoute.cachePickupEtaBasis rid duration now
+        mbRide <- B.runInReplica $ QRide.findById rid
+        whenJust (mbRide >>= etaLegForStatus . DRide.status) $ \leg -> do
+          unless (null firstRoute.points) $ do
+            CQEtaRoute.cacheRoute leg rid firstRoute.points
+          whenJust firstRoute.duration $ \duration -> do
+            -- remove for non disha cities later
+            now <- getCurrentTime
+            CQEtaRoute.cacheEtaBasis leg rid duration now (Just $ NE.last req.waypoints)
       [] -> pure ()
   return routeResp
+  where
+    etaLegForStatus = \case
+      DRideStatus.NEW -> Just CQEtaRoute.PickupLeg
+      DRideStatus.INPROGRESS -> Just CQEtaRoute.DropLeg
+      _ -> Nothing
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
 getTripRoute (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId) (Just personId.getId)

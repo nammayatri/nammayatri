@@ -48,6 +48,8 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantToll,
     getMerchantConfigCommon,
     postMerchantConfigCommonUpdate,
+    getMerchantConfigCalling,
+    postMerchantConfigCallingUpdate,
     getMerchantConfigDriverPool,
     postMerchantConfigDriverPoolUpdate,
     postMerchantConfigDriverPoolCreate,
@@ -121,6 +123,7 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
+import qualified Domain.Action.UI.Ride as DRideUI
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import Domain.Types
@@ -220,7 +223,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MaterialiseSharedRunsJobData (..), MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator as Fields
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
@@ -564,6 +567,34 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
 
+getMerchantConfigCalling :: ShortId DM.Merchant -> Context.City -> Flow Common.CallingConfigRes
+getMerchantConfigCalling merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  callingOption <- DRideUI.effectiveCallingOption config
+  let mode = case callingOption of
+        DTC.ForceDirectCall -> Common.FORCED_DIRECT_CALLING
+        DTC.DirectCall -> Common.DIRECT_CALLING_WITH_CONSENT
+        DTC.DualCall -> Common.DIRECT_CALLING_WITH_CONSENT
+        DTC.AnonymousCall -> Common.CLOUD_CALLING
+  pure Common.CallingConfigRes {mode, callingMode = config.callingMode}
+
+postMerchantConfigCallingUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateCallingConfigReq -> Flow APISuccess
+postMerchantConfigCallingUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  _ <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let (callingOption, legacyOption, legacyForceDirect) = case req.mode of
+        Common.CLOUD_CALLING -> (DTC.AnonymousCall, DTC.AnonymousCall, False)
+        Common.DIRECT_CALLING_WITH_CONSENT -> (DTC.DirectCall, DTC.DirectCall, False)
+        Common.FORCED_DIRECT_CALLING -> (DTC.ForceDirectCall, DTC.DirectCall, True)
+  QTC.updateCallingMode (Just (show callingOption)) (Just legacyOption) (Just legacyForceDirect) merchantOpCityId
+  CQTC.clearCache merchantOpCityId
+  invalidateConfigInMem LYT.TransporterConfig
+  logTagInfo "dashboard -> postMerchantConfigCallingUpdate : " (show merchantOpCityId <> " mode: " <> show req.mode)
+  pure Success
+
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [QSL.SpecialLocationFull]
 getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbLocationType mbLocationTypes = do
   merchant <- findMerchantByShortId merchantShortId
@@ -683,6 +714,14 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           case jobData' of
             Just jobData -> do
               createJobIn @_ @'SendLegalPolicyNotification (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: SendLegalPolicyNotificationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        -- the shared-run engine's daily clock for one city; it re-arms itself, so this is fired once per city
+        Just Common.MaterialiseSharedRunsTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe MaterialiseSharedRunsJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'MaterialiseSharedRuns (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: MaterialiseSharedRunsJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
@@ -1477,6 +1516,9 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         documentCategory = castDocumentCategory <$> documentCategory,
         documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
         allowLicenseTransfer = Just False,
+        forceImageVerification = Just False,
+        failedAttemptLimit = Nothing,
+        failedAttemptWindowSeconds = Nothing,
         rolesAllowedToUploadDocument = Nothing,
         isApprovalSupported = Nothing,
         isReminderSupported = Nothing,
@@ -3725,9 +3767,22 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
   updatedSL <- mkSpecialLocation mbExistingSL mbGeom
+  -- Overlap checks. The new pricing polygon comes as GeoJSON in 'pricingGeoJson' ('geom' is PostGIS
+  -- hex); without one, the stored pricing polygon still applies.
+  let ownPricingGeoJson = request.pricingGeoJson <|> (mbExistingSL >>= (.geomGeoJson) >>= parsesAsPolygon)
+      storedQueueGeoJson = mbExistingSL >>= (.queueGeomGeoJson) >>= parsesAsPolygon
+      parsesAsPolygon g = g <$ GGeom.parseGatePolygons g
+  whenJust request.pricingGeoJson $ QSL.validatePricingGeomOutsideQueueBands mbSpecialLocationId updatedSL.locationName
+  -- The queue check's exemption depends on the zone's own pricing polygon, so a kept queue polygon
+  -- is re-checked whenever the pricing polygon changes.
+  case (request.queueGeom, request.pricingGeoJson) of
+    (Just newQueue, _) -> QSL.validateQueueGeomNoOverlap mbSpecialLocationId updatedSL.locationName ownPricingGeoJson newQueue
+    (Nothing, Just _) -> whenJust storedQueueGeoJson $ QSL.validateQueueGeomNoOverlap mbSpecialLocationId updatedSL.locationName ownPricingGeoJson
+    (Nothing, Nothing) -> pure ()
   void $
     runTransaction $
       if isJust mbExistingSL then QSLG.updateSpecialLocation updatedSL else QSLG.create updatedSL
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) (updatedSL : maybeToList mbExistingSL)
   QSL.clearSpecialZoneInMemCache
   return Success
   where
@@ -3779,14 +3834,17 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
+            poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
+            queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
             ..
           }
 
 deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
 deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
   QGI.deleteAll specialLocationId
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   QSL.clearSpecialZoneInMemCache
   pure Success
 
@@ -3795,6 +3853,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
   specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate specialLocation existingGates request
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   QSL.clearSpecialZoneInMemCache
   return Success
   where
@@ -3838,7 +3897,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             defaultMaxDriverThreshold = mbGate >>= (.defaultMaxDriverThreshold),
             defaultDemandThreshold = mbGate >>= (.defaultDemandThreshold),
             notificationCooldownInSec = mbGate >>= (.notificationCooldownInSec),
-            maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
+            maxRideSkipsBeforeQueueRemoval = reqT.maxRideSkipsBeforeQueueRemoval <|> (mbGate >>= (.maxRideSkipsBeforeQueueRemoval)),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
@@ -3851,12 +3910,13 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
 
 deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
 deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationId gateName = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
   case existingGate of
     Nothing -> throwError $ InvalidRequest "Could not find any gates with the specified name for the given specialLocationId"
     Just gate -> QGI.deleteById gate.id
+  QSL.clearSpecialLocationListCache $ mapMaybe (fmap (.getId) . (.merchantOperatingCityId)) [specialLocation]
   QSL.clearSpecialZoneInMemCache
   return Success
 
@@ -4470,7 +4530,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit,
           cloudType = Nothing,
           cloudBaseUrl = Nothing,
-          gstin = req.gstin <|> baseCity.gstin
+          gstin = req.gstin <|> baseCity.gstin,
+          address = Nothing
         }
 
     buildIntelligentPoolConfig mId newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =

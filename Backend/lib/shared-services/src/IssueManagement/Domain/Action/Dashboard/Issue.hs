@@ -5,8 +5,6 @@ module IssueManagement.Domain.Action.Dashboard.Issue where
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AKey
-import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString as BS
 import Data.Either (partitionEithers)
 import qualified Data.List as DL
@@ -51,8 +49,8 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
-import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
+import qualified IssueManagement.Tools.LookupGuard as LookupGuard
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -283,6 +281,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             customerResponse = Nothing,
             submitLabel = Nothing,
             additionalTicketIds = Nothing,
+            ticketFormFields = Nothing,
             scheduledBookingTransactionId = Nothing,
             ..
           }
@@ -2367,14 +2366,17 @@ postIssueApiIntegrationUpsert merchantShortId opCity req issueHandle _identifier
   merchantId <- resolveMerchantId merchantShortId opCity issueHandle
   when (T.null (T.strip req.name)) $ throwError $ InvalidRequest "Integration name cannot be empty"
   when (T.null (T.strip req.urlTemplate)) $ throwError $ InvalidRequest "URL template cannot be empty"
-  let integrationKind = fromMaybe DAI.External req.kind
-  case integrationKind of
-    DAI.External ->
-      unless ("http://" `T.isPrefixOf` req.urlTemplate || "https://" `T.isPrefixOf` req.urlTemplate) $
-        throwError $ InvalidRequest "External integrations need a full http(s):// URL"
-    _ ->
-      when ("http" `T.isPrefixOf` req.urlTemplate || "/" `T.isPrefixOf` req.urlTemplate) $
-        throwError $ InvalidRequest "Internal integrations take only the endpoint path after /dashboard/{merchant}/{city}/, e.g. ride/rideinfo/{{rideId}}"
+  -- Only internal lookups are accepted: External ones could reach any URL
+  -- from inside the cluster. Lookups are GET with no author headers or body;
+  -- the engine attaches its own token.
+  when (integrationKind == DAI.External) $
+    throwError $ InvalidRequest "External integrations are no longer supported; use an InternalRider or InternalDriver lookup"
+  unless (req.method == DAI.GET) $ throwError $ InvalidRequest "Lookups are GET-only"
+  unless (null (fromMaybe [] req.headers)) $ throwError $ InvalidRequest "Lookups do not take headers; the engine attaches its own token"
+  unless (maybe True (T.null . T.strip) req.bodyTemplate) $ throwError $ InvalidRequest "Lookups do not take a request body"
+  case LookupGuard.validateLookupTemplate (T.strip req.urlTemplate) of
+    Left err -> throwError $ InvalidRequest err
+    Right () -> pure ()
   when (null req.responseFields) $ throwError $ InvalidRequest "Declare at least one response field"
   now <- getCurrentTime
   case req.apiIntegrationId of
@@ -2388,17 +2390,20 @@ postIssueApiIntegrationUpsert merchantShortId opCity req issueHandle _identifier
       QAI.create (mkIntegration newId merchantId now now)
       pure $ Common.UpsertApiIntegrationRes {apiIntegrationId = newId}
   where
+    -- Omitted kind used to mean External, which is no longer supported.
+    integrationKind = fromMaybe DAI.InternalRider req.kind
+
     mkIntegration integrationId merchantId createdAt now =
       DAI.IssueApiIntegration
         { id = integrationId,
           merchantId = merchantId,
           name = req.name,
           description = req.description,
-          kind = fromMaybe DAI.External req.kind,
-          method = req.method,
-          urlTemplate = req.urlTemplate,
-          headersJson = encodeToText <$> req.headers,
-          bodyTemplate = req.bodyTemplate,
+          kind = integrationKind,
+          method = DAI.GET,
+          urlTemplate = T.strip req.urlTemplate,
+          headersJson = Nothing,
+          bodyTemplate = Nothing,
           timeoutMs = max 100 (min 10000 (fromMaybe 3000 req.timeoutMs)),
           responseFieldsJson = encodeToText req.responseFields,
           isActive = fromMaybe True req.isActive,
@@ -2420,70 +2425,6 @@ postIssueApiIntegrationDelete merchantShortId opCity apiIntegrationId issueHandl
   unless (existing.merchantId == merchantId) $ throwError $ InvalidRequest "IssueApiIntegration belongs to a different merchant"
   QAI.deleteById apiIntegrationId
   pure Success
-
-postIssueApiIntegrationTest ::
-  ( BeamFlow m r,
-    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl
-  ) =>
-  ShortId Merchant ->
-  Context.City ->
-  Common.TestApiIntegrationReq ->
-  ServiceHandle m ->
-  Identifier ->
-  m Common.TestApiIntegrationRes
-postIssueApiIntegrationTest merchantShortId opCity req issueHandle _identifier = do
-  moCity <-
-    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
-      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
-  let definition = req.definition
-      params = maybe Map.empty valueToParamMap req.sampleParams
-      authorHeaders = map (\h -> (h.key, h.value)) (fromMaybe [] definition.headers)
-  (testUrl, testHeaders) <- case fromMaybe DAI.External definition.kind of
-    DAI.External -> pure (definition.urlTemplate, authorHeaders)
-    DAI.InternalRider -> do
-      mbLookupToken <- issueHandle.selfLookupToken
-      case mbLookupToken of
-        Nothing -> throwError $ InvalidRequest "Internal lookups are not configured on this deployment"
-        Just lookupToken -> do
-          selfBaseUrl <- asks (.selfBaseUrl)
-          pure (mkDirectDashboardUrl (showBaseUrl selfBaseUrl) moCity definition.urlTemplate, mkTokenHeaders lookupToken authorHeaders)
-    DAI.InternalDriver -> do
-      counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
-      case counterpart of
-        Nothing -> throwError $ InvalidRequest "Driver-side internal lookups are not configured on this deployment"
-        Just (driverBase, driverToken) ->
-          pure (mkDashboardUrl (showBaseUrl driverBase) moCity definition.urlTemplate, mkTokenHeaders driverToken authorHeaders)
-  result <-
-    Executor.executeIntegration
-      (show definition.method)
-      testUrl
-      testHeaders
-      definition.bodyTemplate
-      (max 100 (min 10000 (fromMaybe 3000 definition.timeoutMs)))
-      (map (\f -> (f.name, f.path)) definition.responseFields)
-      params
-  pure
-    Common.TestApiIntegrationRes
-      { success = isNothing result.errorMessage,
-        statusCode = result.statusCode,
-        latencyMs = result.latencyMs,
-        extractedFields = Just $ A.toJSON $ Map.map (fromMaybe A.Null) result.extractedFields,
-        rawResponse = result.rawResponse,
-        errorMessage = result.errorMessage
-      }
-  where
-    valueToParamMap :: A.Value -> Map.Map T.Text T.Text
-    valueToParamMap (A.Object obj) =
-      Map.fromList
-        [ (AKey.toText k, valueToText v)
-          | (k, v) <- AKM.toList obj
-        ]
-    valueToParamMap _ = Map.empty
-
-    valueToText (A.String s) = s
-    valueToText (A.Number n) = T.pack (show n)
-    valueToText (A.Bool b) = if b then "true" else "false"
-    valueToText v = encodeToText v
 
 -- | Dashboard chat simulator: walks the real customer flow - ApiCall engine
 -- included, so lookups actually execute - under a synthetic person, letting
@@ -2515,16 +2456,3 @@ getIssueFlowSimulate merchantShortId city categoryId mbOptionId mbRideId mbSessi
   let sessionKey = fromMaybe moCity.id.getId mbSessionId
       simulatorPersonId = Id $ "dashboard-simulator-" <> sessionKey
   UIR.getIssueOption (simulatorPersonId, moCity.merchantId, moCity.id) categoryId mbOptionId Nothing mbRideId (Just ENGLISH) issueHandle identifier
-
-mkDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
-mkDashboardUrl base moCity urlTail =
-  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-   in basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
-
-mkDirectDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
-mkDirectDashboardUrl base moCity urlTail =
-  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
-   in basePadded <> "direct-dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
-
-mkTokenHeaders :: T.Text -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
-mkTokenHeaders token authorHeaders = ("token", token) : filter (\(k, _) -> T.toLower k /= "token") authorHeaders

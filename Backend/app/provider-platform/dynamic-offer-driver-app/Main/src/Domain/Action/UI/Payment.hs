@@ -26,7 +26,6 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Text as T
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
@@ -37,7 +36,7 @@ import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverGstin as DDG
+import qualified Domain.Types.DriverGstin as Fields
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as Fields
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -116,6 +115,7 @@ import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
+import SharedLogic.Finance.RideInvoice (resolveInvoiceIssuedToAddress)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Finance.WalletSubscription as SWalletSubscription
@@ -217,8 +217,7 @@ getStatus ::
     JobCreatorEnv r,
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -360,8 +359,7 @@ getStatusV2 ::
     Redis.HedisLTSFlowEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Finance.HasActorInfo m r
   ) =>
@@ -596,7 +594,7 @@ processWalletTopupWebhook driver order transactionStatus = do
   let lockKey = "wallet:topup:lock:" <> order.id.getId
   Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+    ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.invoiceConfig
     -- creditedNow: the credit posted on THIS delivery. Webhooks are at-least-once, so
     -- the success push is gated on it — a redelivery must not re-notify.
     -- Also the wallet's running-balance lock: every other posting on this wallet (ride end,
@@ -663,8 +661,7 @@ processPayment ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    PostActionsEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
@@ -731,18 +728,6 @@ processNonClearedDriverFees merchantId person driverFee = do
       _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
       pure ()
 
--- | Buyer address for a subscription invoice: prefer the GSTIN-registered
---   address, then the fleet owner's registered address, else the operating city.
-resolveInvoiceIssuedToAddress :: Maybe DDG.DriverGstin -> Maybe DFOI.FleetOwnerInformation -> Text -> Text
-resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress =
-  fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
-  where
-    nonBlank t = if T.null (T.strip t) then Nothing else Just t
-    gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
-    fleetOwnerAddress = do
-      addr <- (mbFleetInfo >>= (.address)) >>= nonBlank
-      pure $ addr <> maybe "" (\st -> ", " <> show st) (mbFleetInfo >>= (.addressState))
-
 processSubscriptionPurchasePayment ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
@@ -799,8 +784,8 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
         mbBuyerGstinRow <- QDG.findByDriverId person.id
         gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
-        let issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
-            opCityAddress = show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+        let issuedByAddress = Just $ fromMaybe (show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country) merchantOperatingCity.address
+            opCityAddress = fromMaybe (show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country) merchantOperatingCity.address
             issuedToAddress = Just $ resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress
             -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
             resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
@@ -816,7 +801,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
                   merchantGstin = merchantOperatingCity.gstin <|> merchant.gstin,
-                  merchantShortId = getShortId merchant.shortId
+                  merchantShortId = getShortId merchant.shortId,
+                  supplierName = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierName)) <|> Just merchant.name,
+                  supplierAddress = (transporterConfig.invoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> Just opCityAddress
                 }
         -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer

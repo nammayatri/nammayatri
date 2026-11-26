@@ -41,6 +41,7 @@ castDPaymentInstrument DMPM.UPI = Payment.UPI
 castDPaymentInstrument DMPM.NetBanking = Payment.NetBanking
 castDPaymentInstrument DMPM.Cash = Payment.Cash
 castDPaymentInstrument DMPM.BoothOnline = Payment.BoothOnline
+castDPaymentInstrument DMPM.Online = Payment.Online
 
 castPaymentCollector :: Payment.PaymentCollector -> DMPM.PaymentCollector
 castPaymentCollector Payment.BAP = DMPM.BAP
@@ -57,6 +58,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 castPaymentInstrument Payment.BoothOnline = DMPM.BoothOnline
+castPaymentInstrument Payment.Online = DMPM.Online
 
 makeLocation :: DLoc.Location -> Search.Location
 makeLocation DLoc.Location {..} =

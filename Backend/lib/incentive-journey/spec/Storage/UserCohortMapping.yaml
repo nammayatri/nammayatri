@@ -1,6 +1,7 @@
 imports:
   Person: Lib.IncentiveJourney.Domain.Types.Common
   CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
+  OptInPeriod: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 
 UserCohortMapping:
   tableName: user_cohort_mapping
@@ -11,8 +12,20 @@ UserCohortMapping:
     cohortMappingId: Id CohortJourneyMapping
     enabled: Bool
     validTill: UTCTime
+    # Snapshot of CJM cadence at opt-in. Null for Assigned / before opt-in.
+    optInPeriod: Maybe OptInPeriod
+    # Null = invited / eligible but not active for eval. Just = opted in for this period.
+    optedInAt: Maybe UTCTime
+    optedInBy: Maybe Text
+    termsAcceptedAt: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  default:
+    optInPeriod: "NULL"
+    optedInAt: "NULL"
+    optedInBy: "NULL"
+    termsAcceptedAt: "NULL"
 
   constraints:
     id: PrimaryKey

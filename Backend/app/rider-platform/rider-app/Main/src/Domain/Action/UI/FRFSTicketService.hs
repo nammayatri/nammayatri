@@ -54,6 +54,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteDetails as Fields
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.SharedRoute as DSharedRoute
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
@@ -127,6 +128,8 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified SharedLogic.SharedCab as SharedCab
+import qualified SharedLogic.SharedRoute.Knobs as SharedRouteKnobs
+import qualified SharedLogic.SharedRoute.Passenger as SharedRoutePassenger
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -948,14 +951,13 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                   else (decodedRouteStations, decodeFromText quote.stationsJson)
           -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
           -- alongside the Journey/JourneyLeg during the discovery flow (buildInterchangeJourney), so
-          -- here we simply read them back off the leg tied to this quote's search. Only the MULTIMODAL
-          -- platform builds interchange journeys, so we skip the lookup otherwise.
-          routeDetails <-
-            if integratedBppConfig.platformType == DIBC.MULTIMODAL
-              then do
-                mbLeg <- QJourneyLeg.findByLegSearchId (Just quote.searchId.getId)
-                pure $ (map mkRouteDetail . (.routeDetails)) <$> mbLeg
-              else pure Nothing
+          -- here we simply read them back off the leg tied to this search. Every quote here belongs to
+          -- searchId_, so reuse the leg fetched once above instead of looking it up again per quote.
+          -- Only the MULTIMODAL platform builds interchange journeys, so we skip it otherwise.
+          let routeDetails =
+                if integratedBppConfig.platformType == DIBC.MULTIMODAL
+                  then (map mkRouteDetail . (.routeDetails)) <$> mbJourneyLeg
+                  else Nothing
           let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
               categories = map mkCategoryInfoResponse quoteCategories
           singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
@@ -1369,9 +1371,10 @@ getFrfsBookingCanCancelStatus _ bookingId = do
       }
 
 postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
-postFrfsBookingCancel (_, merchantId) bookingId = do
+postFrfsBookingCancel (mbPersonId, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  whenJust mbPersonId $ \personId -> unless (personId == ticketBooking.riderId) $ throwError AccessDenied
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
@@ -2104,6 +2107,9 @@ buildManifestForBookings ::
   Environment.Flow FRFSTripPassengerManifestResp
 buildManifestForBookings firstBooking bookings tripId routeId = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigById firstBooking.integratedBppConfigId
+  -- a shared-route feed (our own drivers) carries knobs; an operator feed does not and gets no passenger state
+  let mbSharedKnobs = SharedRouteKnobs.demandKnobsOf integratedBPPConfig
+      manifestHasOtp = maybe False ((== DSharedRoute.OTP) . (.boarding)) mbSharedKnobs
   let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
   schedule <- JMU.measureLatency (OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig) "getBusTripSchedule"
   scheduleDetail <-
@@ -2150,7 +2156,9 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
                   phone = mobileNumber,
                   bookingId = booking.id,
                   checkedIn = isCheckedIn,
-                  quantity = bookingQuantity
+                  quantity = bookingQuantity,
+                  hasOtp = manifestHasOtp,
+                  state = SharedRoutePassenger.passengerStateOf booking frfsTickets <$ mbSharedKnobs
                 }
         pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)
   let validPassengerData = catMaybes passengerData
@@ -2526,12 +2534,16 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory passRow.vehicleType) platformType
   when (FRFSPassOverride.isOndcConfig integratedBPPConfig) $
     throwError (InvalidRequest "Instant booking on a pass is not available for this operator")
-  existingBookingResp personId False >>= \case
-    Just res -> pure res
-    Nothing ->
-      Hedis.whenWithLockRedisAndReturnValue (PassInstantBook.lockKey req.purchasedPassPaymentId) 600 (existingBookingResp personId True >>= maybe (instantBook personId merchantOperatingCity.city passRow.vehicleType quantity integratedBPPConfig) pure) >>= \case
-        Left _ -> pure $ instantBookResp Nothing [] False True
-        Right res -> pure res
+  let recentWindow = max 1 (fromMaybe 300 integratedBPPConfig.passTicketOverlapWarningTime)
+  resp <-
+    existingBookingResp recentWindow False >>= \case
+      Just res -> pure res
+      Nothing ->
+        Hedis.whenWithLockRedisAndReturnValue (PassInstantBook.lockKey req.purchasedPassPaymentId) 600 (existingBookingResp recentWindow True >>= maybe (instantBook personId merchantOperatingCity.city passRow quantity integratedBPPConfig recentWindow) pure) >>= \case
+          Left _ -> pure $ instantBookResp Nothing [] False True
+          Right res -> pure res
+  when resp.isRecentBooking $ throwError (PassRecentTicketExists recentWindow)
+  pure resp
   where
     instantBookResp booking recentBookingIds isRecentBooking inProgress =
       FRFSTicketService.FRFSPassInstantBookResp {booking, recentBookingIds, isRecentBooking, inProgress, routeCode = Nothing, applicableRouteCodes = Nothing}
@@ -2543,38 +2555,38 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
     setInProgress mbSearchId attemptStartedAt =
       Hedis.setExp inProgressKey PassInstantBook.InProgress {PassInstantBook.searchId = mbSearchId, PassInstantBook.startedAt = attemptStartedAt} 600
 
-    recordBooking bookingId bookingStatus bookingSearchId bookingCreatedAt =
-      Hedis.hSetExp bookingsKey bookingId.getId PassInstantBook.RecentBooking {PassInstantBook.status = bookingStatus, PassInstantBook.searchId = bookingSearchId, PassInstantBook.createdAt = bookingCreatedAt} 300
+    recordBooking recentWindow bookingId bookingStatus bookingSearchId bookingCreatedAt =
+      Hedis.hSetExp bookingsKey bookingId.getId PassInstantBook.RecentBooking {PassInstantBook.status = bookingStatus, PassInstantBook.searchId = bookingSearchId, PassInstantBook.createdAt = bookingCreatedAt} recentWindow
 
     isIssued booking = booking.status `elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]
 
-    liveRecentBookingIds = do
+    liveRecentBookingIds recentWindow = do
       now <- getCurrentTime
       entries <- Hedis.hGetAll bookingsKey :: Environment.Flow [(Text, PassInstantBook.RecentBooking)]
-      let (fresh, stale) = partition (\(_, entry) -> Time.diffUTCTime now entry.createdAt <= 300) entries
+      let (fresh, stale) = partition (\(_, entry) -> Time.diffUTCTime now entry.createdAt <= fromIntegral recentWindow) entries
       Hedis.hDel bookingsKey (map fst stale)
-      liveBookings <- mapMaybeM (\(bookingId, _) -> mfilter isLiveBooking <$> QFRFSTicketBooking.findById (Kernel.Types.Id.Id bookingId)) fresh
+      liveBookings <- mapMaybeM (\(bookingId, _) -> mfilter (isLiveBooking now) <$> QFRFSTicketBooking.findById (Kernel.Types.Id.Id bookingId)) fresh
       pure . map (.id) $ sortOn (Down . (.createdAt)) liveBookings
 
-    existingBookingResp personId insideLock = do
+    existingBookingResp recentWindow insideLock = do
       mbInProgress <- Hedis.safeGet inProgressKey :: Environment.Flow (Maybe PassInstantBook.InProgress)
       whenJust ((.searchId) =<< mbInProgress) $ \attemptSearchId -> do
-        mbIssued <- mfilter (\booking -> isLiveBooking booking && isIssued booking) <$> QFRFSTicketBooking.findBySearchId attemptSearchId
-        whenJust mbIssued $ \booking -> recordBooking booking.id booking.status booking.searchId booking.createdAt
-      recentBookingIds <- liveRecentBookingIds
+        now <- getCurrentTime
+        mbIssued <- mfilter (\booking -> isLiveBooking now booking && isIssued booking) <$> QFRFSTicketBooking.findBySearchId attemptSearchId
+        whenJust mbIssued $ \booking -> recordBooking recentWindow booking.id booking.status booking.searchId booking.createdAt
+      recentBookingIds <- liveRecentBookingIds recentWindow
       case recentBookingIds of
-        (latestBookingId : _)
-          | mbForceBook /= Just True -> do
-            bookingStatus <- getFrfsBookingStatus (Just personId, merchantId) latestBookingId
-            pure . Just $ instantBookResp (Just bookingStatus) recentBookingIds True False
+        (_ : _)
+          | mbForceBook /= Just True ->
+            pure . Just $ instantBookResp Nothing recentBookingIds True False
         _
           | isJust mbInProgress && not insideLock -> pure . Just $ instantBookResp Nothing recentBookingIds False True
           | otherwise -> pure Nothing
 
-    instantBook personId city vehicleType quantity integratedBPPConfig = do
+    instantBook personId city passRow quantity integratedBPPConfig recentWindow = do
       attemptStartedAt <- getCurrentTime
       setInProgress Nothing attemptStartedAt
-      result <- withTryCatch "postFrfsPassInstantBook:bookNew" (bookNew personId city vehicleType quantity integratedBPPConfig attemptStartedAt)
+      result <- withTryCatch "postFrfsPassInstantBook:bookNew" (bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt)
       void $ Hedis.del inProgressKey
       case result of
         Left err -> throwM err
@@ -2589,7 +2601,7 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
                 applicableRouteCodes = applicableRouteCodes
               }
 
-    isLiveBooking booking =
+    isLiveBooking now booking =
       booking.status
         `notElem` [ DFRFSTicketBooking.FAILED,
                     DFRFSTicketBooking.CANCELLED,
@@ -2597,17 +2609,34 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
                     DFRFSTicketBooking.CANCEL_INITIATED,
                     DFRFSTicketBooking.RESCHEDULED
                   ]
+        && not (booking.status == DFRFSTicketBooking.CONFIRMING && addUTCTime 5 booking.validTill < now)
 
-    bookNew personId city vehicleType quantity integratedBPPConfig attemptStartedAt = do
-      mbServiceTier <- case (req.serviceTier, req.vehicleNumber) of
-        (Nothing, Just vehicleNumber) -> fmap ((.serviceType) . snd) <$> JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
-        _ -> pure req.serviceTier
+    bookNew personId city passRow quantity integratedBPPConfig recentWindow attemptStartedAt = do
+      let vehicleType = passRow.vehicleType
+      mbVehicle <- forM req.vehicleNumber $ \vehicleNumber -> do
+        mbLive <-
+          if mbForceBook == Just True
+            then pure Nothing
+            else OTPRest.getVehicleServiceType integratedBPPConfig vehicleNumber Nothing
+        case mbLive of
+          Just live -> pure (vehicleNumber, live.service_type, live.route_id)
+          Nothing -> do
+            (_, metadata) <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber >>= fromMaybeM (PassInvalidVehicleNumber vehicleNumber)
+            pure (vehicleNumber, metadata.serviceType, Nothing)
+      let mbServiceTier = req.serviceTier <|> ((\(_, vehicleServiceTier, _) -> vehicleServiceTier) <$> mbVehicle)
+      whenJust mbServiceTier $ \serviceTier ->
+        unless (null passRow.applicableVehicleServiceTiers || serviceTier `elem` passRow.applicableVehicleServiceTiers) $
+          throwError (PassUnserviceableOnServiceTier (show serviceTier))
+      whenJust mbVehicle $ \(vehicleNumber, _, mbLiveRouteCode) ->
+        whenJust mbLiveRouteCode $ \liveRouteCode -> do
+          onOppositeRoute <- vehicleOnOppositeRoute integratedBPPConfig liveRouteCode
+          when onOppositeRoute $ throwError (PassRequestedVehicleOnOppositeRoute vehicleNumber)
       (mbRouteCode, mbApplicableRouteCodes) <- case req.routeCode of
         Just routeCode -> pure (Just routeCode, Nothing)
         Nothing
           | vehicleType == Spec.BUS -> do
             routeCodes <- FRFSUtils.stopPairRouteCodes integratedBPPConfig vehicleType mbServiceTier integratedBPPConfig.merchantOperatingCityId req.sourceStopCode req.destinationStopCode
-            routeCode <- listToMaybe routeCodes & fromMaybeM (InvalidRequest "No bus route serves this stop pair")
+            routeCode <- listToMaybe routeCodes & fromMaybeM (PassUnserviceableBetweenRequestedStops req.sourceStopCode req.destinationStopCode)
             pure (Just routeCode, Just routeCodes)
           | otherwise -> pure (Nothing, Nothing)
       let searchReq =
@@ -2645,11 +2674,25 @@ postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
         Left err -> do
           mbBooking <- QFRFSTicketBooking.findBySearchId searchRes.searchId
           whenJust (mfilter isIssued mbBooking) $ \booking ->
-            recordBooking booking.id booking.status booking.searchId booking.createdAt
+            recordBooking recentWindow booking.id booking.status booking.searchId booking.createdAt
           throwM err
-      recordBooking confirmRes.bookingId confirmRes.status searchRes.searchId confirmRes.createdAt
+      recordBooking recentWindow confirmRes.bookingId confirmRes.status searchRes.searchId confirmRes.createdAt
       bookingStatus <- getFrfsBookingStatus (Just personId, merchantId) confirmRes.bookingId
       pure (bookingStatus, mbRouteCode, mbApplicableRouteCodes)
+
+    vehicleOnOppositeRoute integratedBPPConfig liveRouteCode =
+      withTryCatch "postFrfsPassInstantBook:vehicleOnOppositeRoute" (oppositeRouteCheck integratedBPPConfig liveRouteCode) <&> \case
+        Right onOppositeRoute -> onOppositeRoute
+        Left _ -> False
+
+    oppositeRouteCheck integratedBPPConfig liveRouteCode = do
+      routeStops <- OTPRest.getRouteStopMappingByRouteCode liveRouteCode integratedBPPConfig
+      sourceCodes <- OTPRest.getEquivalentStopCodes req.sourceStopCode integratedBPPConfig
+      destinationCodes <- OTPRest.getEquivalentStopCodes req.destinationStopCode integratedBPPConfig
+      let sequencesOf codes = [stop.sequenceNum | stop <- routeStops, stop.stopCode `elem` codes]
+      pure $ case (sequencesOf sourceCodes, sequencesOf destinationCodes) of
+        (sourceSequences@(_ : _), destinationSequences@(_ : _)) -> all (\destinationSequence -> all (destinationSequence <) sourceSequences) destinationSequences
+        _ -> False
 
     pickPassCoveredQuote mbServiceTier mbRouteCode quotes = do
       let passOptions quote = filter (\option -> option.purchasedPassPaymentId == req.purchasedPassPaymentId) quote.applicablePasses

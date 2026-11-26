@@ -26,6 +26,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.Prelude hiding (error, setField)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -94,7 +95,8 @@ buildSelectReqV2 subscriber req = do
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
       customerName = getCustomerName fulfillment
-  paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
+  -- The search try carries the instrument the payment books against; only the booking keeps Online.
+  paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> fmap DMPM.bookablePaymentMethodInfo . Kernel.Prelude.join
   -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
   bapUri <- case context.contextBapUri of
     Just bapUriText -> parseBaseUrl bapUriText
@@ -115,7 +117,7 @@ buildSelectReqV2 subscriber req = do
         addOns = [],
         negativeFareAdjustment = negativeFareAdjustment,
         paymentChargeDetails = PaymentCharge.paymentChargeDetailsFromTags item.itemTags,
-        offerDiscountAmount = readTag Tag.DISCOUNT_AMOUNT item.itemTags,
+        estimateOfferDiscounts = PaymentCharge.estimateOfferDiscountFromTags item.itemTags,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         customerName = customerName,

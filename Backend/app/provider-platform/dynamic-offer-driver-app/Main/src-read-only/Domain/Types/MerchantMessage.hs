@@ -43,13 +43,13 @@ data MediaChannel
   | OVERLAY
   | ALERT
   | EMAIL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data MessageDomain
   = FLEET
   | RIDE_HAILING
   | GENERAL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data MessageKey
   = SEND_OTP
@@ -110,9 +110,9 @@ data MessageKey
   | VEHICLE_APPROVED
   | SEND_WHATSAPP_OTP
   | DASHBOARD_WELCOME_EMAIL
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
-type MerchantMessage = MerchantMessageD 'Safe
+type MerchantMessage = MerchantMessageD ('Safe)
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -122,8 +122,8 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaChannel))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageDomain)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageDomain))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))

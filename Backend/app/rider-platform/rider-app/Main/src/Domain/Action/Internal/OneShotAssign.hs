@@ -98,7 +98,9 @@ data OneShotDriverDetails = OneShotDriverDetails
     registeredAt :: Maybe UTCTime,
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
-    accountId :: Maybe Text
+    accountId :: Maybe Text,
+    -- | Driver's per-person Twilio call identity; absent from BPPs that predate it.
+    callIdentity :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -324,7 +326,8 @@ processAssignment req = do
                 isBetterDriverSwap = isJust req.oldBppBookingId,
                 isTierUpgrade = req.isTierUpgrade,
                 assignedServiceTierName = req.assignedServiceTierName,
-                betterDriverAbortRadiusMeters = req.betterDriverAbortRadiusMeters
+                betterDriverAbortRadiusMeters = req.betterDriverAbortRadiusMeters,
+                driverCallIdentity = req.driverDetails.callIdentity
               },
           isDriverBirthDay = req.driverDetails.isDriverBirthDay,
           isFreeRide = req.isFreeRide,
@@ -340,7 +343,7 @@ processAssignment req = do
           favCount = req.favCount,
           isSafetyPlus = req.isSafetyPlus,
           isSynchronousOnUpdateProcessing = True,
-          bppInvoiceProviderFields = QRideB.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
+          bppInvoiceProviderFields = QRideB.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
           bookingPrePersisted = True,
           isScheduledRideActivated = False
         }

@@ -185,4 +185,5 @@ in  { hedisCfg
     , inMemConfig
     , smsCfg = appCfg.smsCfg
     , selfBaseUrl = appCfg.selfBaseUrl
+    , ijBehaviorTickPublisherCfg = appCfg.ijBehaviorTickPublisherCfg
     }

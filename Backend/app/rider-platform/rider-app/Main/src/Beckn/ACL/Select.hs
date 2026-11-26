@@ -165,7 +165,7 @@ mkItemTags res =
             Tags.NUMBER_OF_CABIN_BAGS Tags.~=? (show <$> res.numberOfCabinBags)
           ]
             <> PaymentCharge.paymentChargeDetailsTagList res.paymentChargeDetails
-            <> [Tags.DISCOUNT_AMOUNT Tags.~=? (highPrecMoneyToText <$> res.offerDiscountAmount)]
+            <> PaymentCharge.estimateOfferDiscountTagList res.estimateOfferDiscounts
       deliveryTags = mkSelectResDetailsTagGroup res
    in fromMaybe [] baseTags <> deliveryTags
 

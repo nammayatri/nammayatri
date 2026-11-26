@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import BecknV2.OnDemand.Settlement (EstimateOfferDiscount (EstimateOfferDiscount))
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
@@ -90,6 +91,7 @@ data DConfirmReq = DConfirmReq
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
     consentToShareMobileNumber :: Maybe Bool,
+    customerCallIdentity :: Maybe Text,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
@@ -139,6 +141,7 @@ handler merchant req validatedQuote = do
   unless isNewRider $ do
     QRD.updateNightSafetyChecks req.nightSafetyCheck storedRiderDetails.id
     whenJust req.consentToShareMobileNumber $ \consent -> QRD.updateConsentToShareMobileNumber (Just consent) storedRiderDetails.id
+  whenJust req.customerCallIdentity $ \callIdentity -> QRB.updateRiderCallIdentity (Just callIdentity) booking.id
   let riderDetails = storedRiderDetails {DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber}
 
   case validatedQuote of
@@ -233,7 +236,7 @@ handler merchant req validatedQuote = do
                 customerExtraFee = Nothing,
                 negativeFareAdjustment = Nothing,
                 paymentChargeDetails = booking.paymentChargeDetails,
-                buyerOfferDiscount = booking.discountAmount,
+                estimateOfferDiscounts = [EstimateOfferDiscount tripQuoteDetail.estimateOrQuoteId discount | Just discount <- [booking.discountAmount]],
                 messageId = booking.id.getId,
                 billingCategory = booking.billingCategory,
                 isRepeatSearch = False,
@@ -389,6 +392,8 @@ validateRequest subscriber transporterId req now transporterConfig = do
     -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
     -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
     EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    -- runs are created by the shared-run materialiser, never confirmed over Beckn
+    SharedRoute _ -> throwError . InvalidRequest $ "SharedRoute bookings are not confirmed over Beckn: " <> show booking.tripCategory
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do

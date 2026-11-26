@@ -101,6 +101,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
 import qualified Safety.Domain.Types.SafetySettings as Fields
@@ -961,6 +962,9 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
                 email = emailVal,
                 otp = otpHash
               }
+      -- Checked before the pending record is replaced, so a rejected request leaves an OTP already sent usable.
+      when (otpChannel' == SOTP.SMS && isNothing person'.useFakeOtp) $
+        whenJust req'.mobileCountryCode $ validateSmsOtpCountryCode riderConfig'.smsOtpAllowedCountryCodes
       let redisKey = makeUpdateAuthRedisKey identifierType' (getId personId')
       let expirySeconds = smsCfg'.sessionConfig.authExpiry * 60
       Redis.setExp redisKey authData expirySeconds
@@ -975,6 +979,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
           req'.mobileNumber
           req'.email
           riderConfig'.emailOtpConfig
+          riderConfig'.smsOtpAllowedCountryCodes
           Nothing
 
 data VerifyUpdateAuthOTPReq = VerifyUpdateAuthOTPReq

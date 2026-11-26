@@ -20,6 +20,15 @@ extra-source-files:
     test/resources/golden/cancel-after-register.json
     test/resources/golden/cancel-mid-search.json
     test/resources/golden/driver-not-found.json
+    test/resources/golden/fav-add-from-list.json
+    test/resources/golden/fav-hi-then-quick-ride.json
+    test/resources/golden/fav-name-with-status-word.json
+    test/resources/golden/fav-nudge-no-favourites.json
+    test/resources/golden/fav-pick-drop.json
+    test/resources/golden/fav-pick-pickup.json
+    test/resources/golden/fav-replace.json
+    test/resources/golden/fav-save-from-confirm.json
+    test/resources/golden/fav-share-new-location.json
     test/resources/golden/flexi-happy-path.json
     test/resources/golden/help-support-more.json
     test/resources/golden/language-switch.json
@@ -49,6 +58,7 @@ library
       WhatsappBot.Engine
       WhatsappBot.Env
       WhatsappBot.Flow.Booking
+      WhatsappBot.Flow.Favourites
       WhatsappBot.Handles
       WhatsappBot.I18n
       WhatsappBot.I18n.Build

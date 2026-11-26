@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
@@ -22,9 +23,12 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPExtra
 import qualified Tools.SMS as Sms
@@ -109,6 +113,9 @@ postUserLoginSendOtp ::
 postUserLoginSendOtp merchantShortId opCity req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show opCity)
+
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  validateSmsOtpCountryCode transporterConfig.smsOtpAllowedCountryCodes req.mobileCountryCode
 
   -- Check for fake OTP from config only (no person lookup)
   smsCfg <- asks (.smsCfg)

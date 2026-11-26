@@ -357,7 +357,9 @@ data OneShotDriverDetails = OneShotDriverDetails
     registeredAt :: Maybe UTCTime,
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
-    accountId :: Maybe Text
+    accountId :: Maybe Text,
+    -- | Driver's per-person Twilio call identity, when they have one.
+    callIdentity :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

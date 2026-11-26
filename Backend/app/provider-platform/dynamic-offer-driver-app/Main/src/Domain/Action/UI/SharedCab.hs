@@ -21,9 +21,11 @@ module Domain.Action.UI.SharedCab
     getSharedCabCallStatus,
     sharedCabTrips,
     tripTargets,
+    getSharedCabRoutesSuggested,
     sharedCabTripActive,
     sharedCabFeedVersion,
     BookingAction (..),
+    actionOtp,
     actionReason,
     bookingActionOf,
   )
@@ -31,6 +33,7 @@ where
 
 import API.Types.UI.SharedCab
 import qualified Data.Aeson as DA
+import qualified Data.Map.Strict as Map
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
@@ -60,6 +63,7 @@ import qualified SharedLogic.DriverPool as DP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified SharedLogic.SharedCab.Trip as Trip
+import qualified SharedLogic.SharedRun.Session as RunSession
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -132,6 +136,25 @@ sharedCabTrips personId merchantOpCityId mbDate mbLimit mbOffset = do
     (Nothing, Just limit) -> QVT.findAllByDriverId (Just (fromIntegral limit)) (fromIntegral <$> mbOffset) personId
     (Nothing, Nothing) -> throwError (InvalidRequest "day or limit is required")
   pure (map (tripSummary merchantOpCity.currency) trips)
+
+getSharedCabRoutesSuggested :: TokenAuthInfo -> Maybe Int -> Flow SharedCabSuggestedRoutesResp
+getSharedCabRoutesSuggested auth mbDays = requireDriver auth >>= (`suggestedRoutes` mbDays)
+
+defaultSuggestedRouteDays :: Int
+defaultSuggestedRouteDays = 7
+
+suggestedRoutes :: DriverAuthInfo -> Maybe Int -> Flow SharedCabSuggestedRoutesResp
+suggestedRoutes (personId, _merchantId, _merchantOpCityId) mbDays = do
+  _ <- validateDriver personId
+  now <- getCurrentTime
+  let days = max 1 (min 30 (fromMaybe defaultSuggestedRouteDays mbDays))
+      from = addUTCTime (negate (fromIntegral days * 86400)) now
+  trips <- QVT.findAllByDriverIdStartedBetween (Just 500) Nothing personId from now
+  let counts = Map.fromListWith (+) [(trip.routeCode, 1 :: Int) | trip <- trips, trip.status == DVT.COMPLETED, trip.endReason /= Just DVT.ROUTE_CHANGED]
+  pure
+    SharedCabSuggestedRoutesResp
+      { routes = [SharedCabSuggestedRoute {routeCode, tripCount} | (routeCode, tripCount) <- sortOn (\(c, n) -> (Down n, c)) (Map.toList counts)]
+      }
 
 sharedCabTripActive :: Id SP.Person -> Bool -> Maybe DVehicle.VehicleAPIEntity -> Flow (Maybe Bool)
 sharedCabTripActive personId isSharedCab = \case
@@ -264,13 +287,18 @@ selectSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req routeCod
 routeSession :: SelectRouteResp -> Maybe (Maybe SharedCabSession)
 routeSession resp = if isJust resp.affectedRiders then Nothing else Just resp.session
 
+-- | A driver on a shared-route run gets the run as the session (the rider platform builds it from the ride's bookings);
+-- a shared-cab driver gets the cab's plate session.
 currentSession :: DriverAuthInfo -> Flow (Maybe SharedCabSession)
-currentSession auth@(personId, _merchantId, merchantOpCityId) = do
-  vehicle <- validateSharedCabDriver personId
-  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
-  bap <- bapInternal
-  withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) Just $
-    SharedCabBAP.getSharedCabSession bap.apiKey bap.url personId.getId vehicle.registrationNo integratedBPPConfig.agencyKey
+currentSession auth@(personId, _merchantId, merchantOpCityId) =
+  RunSession.activeRunOf personId >>= \case
+    Just run -> Just <$> RunSession.runSession run
+    Nothing -> do
+      vehicle <- validateSharedCabDriver personId
+      integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
+      bap <- bapInternal
+      withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) Just $
+        SharedCabBAP.getSharedCabSession bap.apiKey bap.url personId.getId vehicle.registrationNo integratedBPPConfig.agencyKey Nothing
 
 endSharedCabRoute :: DriverAuthInfo -> SharedCabRouteOperationReq -> Flow SelectRouteResp
 endSharedCabRoute auth@(personId, _merchantId, merchantOpCityId) req = do
@@ -313,30 +341,40 @@ sessionOperation auth@(personId, _merchantId, merchantOpCityId) req = do
           SharedCabBAP.checkInId = req.checkInId
         }
 
-data BookingAction = Cancel Text | BoardedWithoutCode | Dropped | Accept | Decline
+data BookingAction = Cancel Text | BoardedWithoutCode | BoardedWithOtp Text | NoShow | Dropped | Accept | Decline
   deriving (Show, Eq)
 
+-- | Nothing when the operation lacks what it carries: a cancel its reason, an OTP boarding its otp.
 bookingActionOf :: SharedCabBookingOperationReq -> Maybe BookingAction
 bookingActionOf req = case req.operation of
   ACCEPT -> Just Accept
   DECLINE -> Just Decline
   DROPPED -> Just Dropped
   BOARDED_WITHOUT_CODE -> Just BoardedWithoutCode
+  BOARDED_WITH_OTP -> BoardedWithOtp <$> req.otp
+  NO_SHOW -> Just NoShow
   CANCEL -> Cancel <$> req.reason
 
 bookingOperation :: DriverAuthInfo -> Text -> SharedCabBookingOperationReq -> Flow SharedCabSession
 bookingOperation auth@(personId, _merchantId, merchantOpCityId) bookingId req = do
-  action <- fromMaybeM (InvalidRequest "reason is required to cancel a booking") (bookingActionOf req)
-  vehicle <- validateSharedCabDriver personId
-  integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
+  action <- fromMaybeM (InvalidRequest "a cancel needs its reason and an OTP boarding needs the otp") (bookingActionOf req)
   bap <- bapInternal
-  session <-
-    withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) (Just . Just) $
-      SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId $
-        SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason = actionReason action}
-  -- the offer's answer goes into the driver's quote-response counters, like a ride request's
-  whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
-  pure session
+  let bapReq plate = SharedCabBAP.BAPBookingOperationReq {operation = req.operation, driverId = personId.getId, vehicleNumber = plate, reason = actionReason action, otp = actionOtp action}
+  RunSession.activeRunOf personId >>= \case
+    -- a run has no plate session or vehicle_trip to keep in step: the rider platform applies the verb to the booking it
+    -- placed on the ride and answers with the run's session
+    Just _ -> do
+      vehicle <- QVehicle.findById personId >>= fromMaybeM (DriverWithoutVehicle personId.getId)
+      SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo)
+    Nothing -> do
+      vehicle <- validateSharedCabDriver personId
+      integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
+      session <-
+        withTripSync auth integratedBPPConfig vehicle DVT.SESSION_TIMEOUT (const Nothing) (Just . Just) $
+          SharedCabBAP.postBookingOperation bap.apiKey bap.url bookingId (bapReq vehicle.registrationNo)
+      -- the offer's answer goes into the driver's quote-response counters, like a ride request's
+      whenJust (offerResponse action) $ DP.recordQuoteResponseCounters merchantOpCityId personId
+      pure session
 
 offerResponse :: BookingAction -> Maybe DCommon.SearchRequestForDriverResponse
 offerResponse = \case
@@ -347,6 +385,11 @@ offerResponse = \case
 actionReason :: BookingAction -> Maybe Text
 actionReason = \case
   Cancel reason -> Just reason
+  _ -> Nothing
+
+actionOtp :: BookingAction -> Maybe Text
+actionOtp = \case
+  BoardedWithOtp otp -> Just otp
   _ -> Nothing
 
 -- | Driver calls the rider of a shared-cab booking through Exotel, so each side sees only the ExoPhone. Same shape as

@@ -17,6 +17,7 @@ module SharedLogic.Ride where
 import Control.Applicative ((<|>))
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import qualified Domain.Types as DTrip
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Common as SReqD
@@ -49,8 +50,11 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
@@ -62,7 +66,9 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified "location-updates" Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import Lib.Scheduler.Environment (JobCreator)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJobData (..))
 import qualified SharedLogic.Analytics as Analytics
@@ -72,6 +78,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, removePrepaidOfferHold, reserveWalletForCashRide, resolveIsOnlineFromBooking, voidWalletHoldByReference)
 import qualified SharedLogic.FindAnotherDriver as FindAnotherDriver
@@ -117,7 +124,34 @@ validateRideLocation point =
     logError "Invalid ride location (0, 0) received"
     throwError InvalidRideLocation
 
+-- | What creating a ride asks of its environment. The driver app's Flow has all of it, and so does the allocator's,
+-- which is how the shared-run engine hands a run to its bound vehicle in-process instead of calling the driver app.
+type InitializeRideFlow m r c =
+  ( ServiceFlow m r,
+    MonadCatch m,
+    EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    CoreMetrics m,
+    HasRequestId r,
+    HasShortDurationRetryCfg r c,
+    LT.HasLocationService m r,
+    EventStreamFlow m r,
+    JobCreator r m,
+    FleetEngine.FleetEngineRetryFlow m r,
+    Metrics.HasBPPMetrics m r,
+    CH.ClickhouseFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    PostActionsEnv r,
+    HasField "selfUIUrl" r BaseUrl,
+    HasField "cloudType" r (Maybe CloudType),
+    HasField "version" r DeploymentVersion
+  )
+
 initializeRide ::
+  InitializeRideFlow m r c =>
   Merchant ->
   DPerson.Person ->
   DBooking.Booking ->
@@ -134,10 +168,11 @@ initializeRide ::
   -- fixed acceptance mode, for accept paths that aren't a driver's own self-accept (e.g. an
   -- ops or fleet-owner dashboard assignment). Nothing at every ordinary self-accept call site.
   Maybe DRide.ScheduledAcceptanceMode ->
-  Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
+  m (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = releaseHoldsOnInitializeRideFailure booking driver.id mFleetOwnerId $ do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+      isSharedRun = DTrip.isSharedRouteTrip booking.tripCategory
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
@@ -194,6 +229,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
+      -- a shared-route run has no rider to hold an OTP: the driver starts it without one (enableOtpLessRide below)
+      Nothing | isSharedRun -> generateOTPCode
       Nothing -> do
         riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
         riderDetails <- QRiderD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
@@ -221,7 +258,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
         | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
         | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
         | otherwise = Just DRide.AcceptedAsScheduled
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationDuesCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment (if isSharedRun then Just True else enableOtpLessRide) mFleetOwnerId commission cancellationDuesCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -250,7 +287,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   -- reallocated before start would otherwise leave waypoints and a cumulative distance
   -- behind for the keys' TTL, and this ride's distanceToPickup would include them.
   LocUpd.resetPickupLegState ride.driverId
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing}))
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops, dropLocation = Nothing, isManualArrival = transporterConfig.enableManualArrival}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
   -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
   when (monitorPickupProgress && not booking.isScheduled) $
@@ -337,7 +374,13 @@ releaseLien ::
 releaseLien booking ride =
   releaseBookingHolds booking ride.driverId ride.fleetOwnerId "Ride cancelled" ("releaseLien failed for rideId " <> getId ride.id)
 
-releaseHoldsOnInitializeRideFailure :: DBooking.Booking -> Id Person -> Maybe (Id Person) -> Flow a -> Flow a
+releaseHoldsOnInitializeRideFailure ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Finance.HasActorInfo m r, MonadCatch m) =>
+  DBooking.Booking ->
+  Id Person ->
+  Maybe (Id Person) ->
+  m a ->
+  m a
 releaseHoldsOnInitializeRideFailure booking driverId mbFleetOwnerId action = do
   result <- try action
   case result of
@@ -527,11 +570,12 @@ safeApplyVehicleBalanceForPayout pr = do
           QDRPB.updateByPrimaryKey (rcAccount {DDPBA.vehicleBalance = Just newBalance})
 
 buildRideDetails ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   DBooking.Booking ->
   DRide.Ride ->
   DPerson.Person ->
   DVeh.Vehicle ->
-  Flow SRD.RideDetails
+  m SRD.RideDetails
 buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
@@ -558,6 +602,16 @@ buildRideDetails booking ride driver vehicle = do
       }
 
 buildRide ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "selfUIUrl" r BaseUrl,
+    HasField "cloudType" r (Maybe CloudType),
+    HasField "version" r DeploymentVersion
+  ) =>
   DPerson.Person ->
   DBooking.Booking ->
   Maybe (Id DGetHomeRequest.DriverGoHomeRequest) ->
@@ -575,7 +629,7 @@ buildRide ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Maybe DRide.ScheduledAcceptanceMode ->
-  Flow DRide.Ride
+  m DRide.Ride
 buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationDuesCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
@@ -667,6 +721,10 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         backendConfigVersion = driver.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         tripCategory = booking.tripCategory,
+        -- the run's GTFS trip, route and feed, set on the booking by the shared-run materialiser; Nothing on every other ride
+        tripId = booking.tripId,
+        routeCode = booking.routeCode,
+        integratedBppConfigId = booking.integratedBppConfigId,
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,
@@ -716,7 +774,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         bapSettled = if isOnlinePayment then Just False else Nothing
       }
 
-buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
+buildTrackingUrl :: (MonadReader r m, HasField "selfUIUrl" r BaseUrl) => Id DRide.Ride -> m BaseUrl
 buildTrackingUrl rideId = do
   bppUIUrl <- asks (.selfUIUrl)
   let rideid = T.unpack (getId rideId)

@@ -92,6 +92,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearc
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runPgSettlementIngestionJob, runSettlementReportIngestionJob)
+import SharedLogic.Allocator.Jobs.SharedRun.MaterialiseSharedRuns (materialiseSharedRuns)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify (triggerSpecialZoneNotify)
 import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
@@ -230,6 +231,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env processEndRideFinanceJob
           & putJobHandlerInListWrapper flowRt env walletIntegrityCheck
           & putJobHandlerInListWrapper flowRt env chargeWalletPenaltyJob
+          & putJobHandlerInListWrapper flowRt env materialiseSharedRuns
     }
 
 runDriverOfferAllocator ::

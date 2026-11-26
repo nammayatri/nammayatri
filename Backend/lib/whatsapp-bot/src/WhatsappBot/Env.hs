@@ -188,7 +188,7 @@ ensureAuth env ev hook ctx = do
           ctx2 <- hook auth ctx1
           save env ev ctx2
           pure (Just ctx2)
-        Nothing -> case extractPhone ev of
+        Nothing -> case extractPhone env.cfg.merchant ev of
           Nothing -> do
             reply env to s.sessionExpired
             save env ev ctx {state = Idle}
@@ -278,10 +278,24 @@ rawInput ev = case ev.kind of
 firstNonEmpty :: [Maybe Text] -> Text -> Text
 firstNonEmpty xs d = fromMaybe d (listToMaybe [x | Just x <- xs, not (T.null x)])
 
--- | Extract a normalized 10-digit phone from the channel (@engine.ts:1647-1654@):
--- strip non-digits, drop a leading @91@ when longer than 10, require exactly 10.
-extractPhone :: InboundEvent -> Maybe Text
-extractPhone ev =
+-- | The rider's national number from the sender's WhatsApp number, for the
+-- WhatsApp number's country (@engine.ts:1647-1654@, which was India-only):
+-- strip non-digits, then
+--
+-- * a fixed length @n@ (India: 10): drop the country code when the number is
+--   longer than @n@, and require exactly @n@ digits — the original rule;
+-- * no length (countries whose mobile lengths vary, e.g. Finland): require
+--   the country code, and take what follows it. WhatsApp always sends the
+--   full international number, so a number from another country is refused
+--   rather than saved under this country's code.
+extractPhone :: MerchantCtx -> InboundEvent -> Maybe Text
+extractPhone m ev =
   let digits = T.filter isDigit ev.fromPhone
-      d = if "91" `T.isPrefixOf` digits && T.length digits > 10 then T.drop 2 digits else digits
-   in if T.length d == 10 then Just d else Nothing
+      cc = T.filter isDigit m.phoneCountryCode
+   in case m.phoneNumberLength of
+        Just n ->
+          let d = if cc `T.isPrefixOf` digits && T.length digits > n then T.drop (T.length cc) digits else digits
+           in if T.length d == n then Just d else Nothing
+        Nothing -> case T.stripPrefix cc digits of
+          Just rest | not (T.null rest) -> Just rest
+          _ -> Nothing

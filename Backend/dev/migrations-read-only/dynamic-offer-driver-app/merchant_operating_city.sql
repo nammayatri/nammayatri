@@ -44,3 +44,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN support_em
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN gstin text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN address text ;

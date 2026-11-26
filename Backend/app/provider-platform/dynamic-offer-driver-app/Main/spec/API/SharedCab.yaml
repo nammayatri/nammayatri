@@ -57,12 +57,15 @@ types:
     checkInId: Maybe Text
     derive: "Show,Eq"
 
+  # Mirrors rider-app's SharedCabInternal contract: BOARDED_WITH_OTP needs `otp`, NO_SHOW is the driver
+  # giving up on a booked rider after the configured wait.
   SharedCabBookingOperation:
-    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,DROPPED"
+    enum: "ACCEPT,DECLINE,CANCEL,BOARDED_WITHOUT_CODE,BOARDED_WITH_OTP,NO_SHOW,DROPPED"
 
   SharedCabBookingOperationReq:
     operation: SharedCabBookingOperation
     reason: Maybe Text
+    otp: Maybe Text
     derive: "Show,Eq"
 
   SharedCabMessageReq:
@@ -79,6 +82,15 @@ types:
     endedAt: Maybe UTCTime
     earnings: HighPrecMoney
     currency: Currency
+    derive: "Show,Eq"
+
+  SharedCabSuggestedRoute:
+    routeCode: Text
+    tripCount: Int
+    derive: "Show,Eq"
+
+  SharedCabSuggestedRoutesResp:
+    routes: "[SharedCabSuggestedRoute]"
     derive: "Show,Eq"
 
 apis:
@@ -145,3 +157,10 @@ apis:
         callId: Id CallStatus
       response:
         type: GetCallStatusRes
+  - GET:
+      endpoint: /sharedCab/routes/suggested
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - days: Int
+      response:
+        type: SharedCabSuggestedRoutesResp

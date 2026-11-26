@@ -23,6 +23,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -31,7 +32,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation))
+type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> PostFRFSTicketServiceCustomerFrfsBookingCancel :<|> PostFRFSTicketServiceCustomerFrfsBookingReschedule :<|> GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsPaymentAttempts :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation))
 
 type GetFRFSTicketServiceCustomerFrfsConfig =
   ( DashboardUserAuth
@@ -103,6 +104,20 @@ type GetFRFSTicketServiceCustomerFrfsBookingStatus =
       :> API.Types.Dashboard.AppManagement.FRFSTicketService.GetFRFSTicketServiceCustomerFrfsBookingStatus
   )
 
+type PostFRFSTicketServiceCustomerFrfsBookingCancel =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_CANCEL"
+      :> API.Types.Dashboard.AppManagement.FRFSTicketService.PostFRFSTicketServiceCustomerFrfsBookingCancel
+  )
+
+type PostFRFSTicketServiceCustomerFrfsBookingReschedule =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_RESCHEDULE"
+      :> API.Types.Dashboard.AppManagement.FRFSTicketService.PostFRFSTicketServiceCustomerFrfsBookingReschedule
+  )
+
 type GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts =
   ( DashboardUserAuth
       'APP_BACKEND_MANAGEMENT
@@ -153,7 +168,7 @@ type PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFRFSTicketServiceCustomerFrfsConfig merchantId city :<|> getFRFSTicketServiceCustomerFrfsAutocomplete merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoutes merchantId city :<|> getFRFSTicketServiceCustomerFrfsStations merchantId city :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoute merchantId city :<|> postFRFSTicketServiceCustomerFrfsSearch merchantId city :<|> getFRFSTicketServiceCustomerFrfsSearchQuote merchantId city :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingStatus merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts merchantId city :<|> getFRFSTicketServiceCustomerFrfsPaymentAttempts merchantId city :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantId city :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantId city :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability merchantId city :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction merchantId city :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantId city
+handler merchantId city = getFRFSTicketServiceCustomerFrfsConfig merchantId city :<|> getFRFSTicketServiceCustomerFrfsAutocomplete merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoutes merchantId city :<|> getFRFSTicketServiceCustomerFrfsStations merchantId city :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoute merchantId city :<|> postFRFSTicketServiceCustomerFrfsSearch merchantId city :<|> getFRFSTicketServiceCustomerFrfsSearchQuote merchantId city :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingStatus merchantId city :<|> postFRFSTicketServiceCustomerFrfsBookingCancel merchantId city :<|> postFRFSTicketServiceCustomerFrfsBookingReschedule merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts merchantId city :<|> getFRFSTicketServiceCustomerFrfsPaymentAttempts merchantId city :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantId city :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantId city :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability merchantId city :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction merchantId city :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantId city
 
 getFRFSTicketServiceCustomerFrfsConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSConfigAPIRes)
 getFRFSTicketServiceCustomerFrfsConfig a5 a4 a3 a2 a1 =
@@ -236,6 +251,24 @@ getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
+    )
+
+postFRFSTicketServiceCustomerFrfsBookingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketServiceCustomerFrfsBookingCancel a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_CANCEL" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.postFRFSTicketServiceCustomerFrfsBookingCancel a5 a4 a2 a1
+    )
+
+postFRFSTicketServiceCustomerFrfsBookingReschedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> API.Types.UI.FRFSTicketService.FRFSRescheduleReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
+postFRFSTicketServiceCustomerFrfsBookingReschedule a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_RESCHEDULE" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.postFRFSTicketServiceCustomerFrfsBookingReschedule a6 a5 a3 a2 a1
     )
 
 getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes)

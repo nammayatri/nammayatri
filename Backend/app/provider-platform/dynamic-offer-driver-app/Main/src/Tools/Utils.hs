@@ -1,7 +1,11 @@
 module Tools.Utils where
 
 import Control.Applicative ((<|>))
+import qualified Data.ByteString.Lazy as BSL
+import Data.Digest.Pure.MD5 (md5)
 import qualified Data.Map as M
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Image as Image
 import Domain.Types.Location
@@ -88,3 +92,7 @@ emailBasedonEmailVerificationMandate reqEmail person mandateEmailVerification = 
           mbLinked <- foldM (\acc role_ -> maybe (QP.findByEmailAndMerchantIdAndRole (Just reqEmail') person.merchantId role_) (pure . Just) acc) Nothing [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
           whenJust mbLinked $ \_ -> throwError (EmailAlreadyLinked reqEmail')
       pure $ reqEmail <|> person.email
+
+-- | Twilio identity for a person's in-app calls: MD5 of the person id, as 32 lowercase hex characters.
+generateTwillioCallerIdentity :: Id Person.Person -> Text
+generateTwillioCallerIdentity personId = T.pack (show (md5 (BSL.fromStrict (TE.encodeUtf8 personId.getId))))

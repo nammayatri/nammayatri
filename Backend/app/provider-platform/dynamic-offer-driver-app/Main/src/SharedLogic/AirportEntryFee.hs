@@ -17,6 +17,7 @@ module SharedLogic.AirportEntryFee
     deductAirportEntryFeeAtStartRide,
     ensureDriverEnabledForAirportPickup,
     isAirportPickupArea,
+    isAirportSpecialLocation,
     requiredEntryFeeForBooking,
     requiredDriverWalletAmountForBooking,
   )
@@ -32,6 +33,7 @@ import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, logInfo, throwError)
@@ -47,6 +49,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as Fields
 import Lib.Finance.Domain.Types.Extra.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as DGI
@@ -54,6 +57,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
+import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
@@ -134,6 +138,9 @@ requiredDriverWalletAmountForBooking enabled mbGateId mbServiceTier mbFareSettle
           total = entryFee + gateFeeItemsTotal
       pure $ if total > 0 then Just total else Nothing
 
+isAirportSpecialLocation :: SL.SpecialLocation -> Bool
+isAirportSpecialLocation specialLocation = specialLocation.category == "SureAirport"
+
 isAirportPickupArea ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe SL.Area ->
@@ -142,7 +149,7 @@ isAirportPickupArea mbArea =
   case mbArea >>= SL.pickupSpecialZoneIdFromArea of
     Just specialLocationId -> do
       mbSpecialLocation <- QSpecialLocation.findById (Id specialLocationId)
-      pure $ maybe False (\specialLocation -> specialLocation.category == "SureAirport") mbSpecialLocation
+      pure $ maybe False isAirportSpecialLocation mbSpecialLocation
     Nothing -> pure False
 
 ensureDriverEnabledForAirportPickup ::
@@ -180,7 +187,17 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
 --   Allows negative balance; does nothing if feature off or required fee 0.
 --   Runs inside startRide before the ride is marked INPROGRESS, so a failed debit fails the start.
 deductAirportEntryFeeAtStartRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, PostActionsEnv r) =>
+  ( BeamFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    PostActionsEnv r,
+    IJBeamFlow.BeamFlow m r,
+    CoreMetrics m
+  ) =>
   Bool ->
   DRide.Ride ->
   SRB.Booking ->

@@ -35,6 +35,7 @@ where
 
 import qualified Data.Aeson as Aeson
 import Domain.Types.Invoice (InvoiceType (..), IssuedToType)
+import qualified Domain.Types.Invoice as DInvoiceType
 import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -264,6 +265,7 @@ createInvoiceWithLayout layout input entryIds = do
         Aeson.object
           [ "invoiceNumber" Aeson..= invoiceNum,
             "invoiceType" Aeson..= input.invoiceType,
+            "referenceInvoiceNumber" Aeson..= input.referenceInvoiceNumber,
             "invoiceDate" Aeson..= now,
             "issuedToType" Aeson..= input.issuedToType,
             "issuedToId" Aeson..= input.issuedToId,
@@ -374,7 +376,7 @@ createInvoiceWithLayout layout input entryIds = do
                     taxCreditType = Output,
                     counterpartyId = input.issuedToId,
                     gstinOfParty = if isVat then Nothing else input.gstinOfParty,
-                    sacCode = if isVat then Nothing else Just (sacCodeForTransactionType txnType),
+                    sacCode = if isVat then Nothing else Just (sacCodeForTransactionType (invoiceTypeToTransactionType input.invoiceType)),
                     externalCharges = Just extCharges,
                     invoiceNumber = Just invoiceNum,
                     merchantId = input.merchantId,
@@ -592,6 +594,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
   Commission -> BuyerCommission
   AggregatedCommission -> BuyerCommission
   Refund -> CreditNote
+  DInvoiceType.CommissionRefund -> CreditNote
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
@@ -602,6 +605,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   Commission -> DirectTax.BuyerCommission
   AggregatedCommission -> DirectTax.BuyerCommission
   Refund -> DirectTax.RideFare
+  DInvoiceType.CommissionRefund -> DirectTax.BuyerCommission
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -624,6 +628,7 @@ invoiceTypeToPurpose = \case
   Commission -> purposeCommission
   AggregatedCommission -> purposeAggregatedCommission
   Refund -> purposeRefund
+  DInvoiceType.CommissionRefund -> purposeRefund
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text

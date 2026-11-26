@@ -15,5 +15,5 @@ import Servant
 
 type API = API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney.API
 
-handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
+handler :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney.handler merchantId city

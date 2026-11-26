@@ -121,6 +121,7 @@ defaultDriverDomainConfig =
         [ "TOLL_ROUTES",
           "CancellationRateDaily",
           "CancellationRateWeekly",
+          "CancellationRateEvents",
           "ExtraFareDaily",
           "ExtraFareWeekly",
           "DrunkAndDriveViolation",

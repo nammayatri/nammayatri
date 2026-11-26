@@ -115,7 +115,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
 
       pure $
         API.FinanceInvoiceItem
-          { invoiceNumber = invoice.invoiceNumber,
+          { invoiceId = invoice.id.getId,
+            invoiceNumber = invoice.invoiceNumber,
             invoiceType = invoice.invoiceType,
             invoiceDate = invoice.issuedAt,
             taxAmount = taxAmount,
@@ -174,13 +175,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
       unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId)
       let issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
-      QFinanceInvoiceExtra.findByReferenceIdWithOptions
-        ride.bookingId.getId
-        mbInvoiceType
-        (Just issuedToType)
-        [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid]
-        (Just 1)
-        (Just 0)
+      QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback ride.bookingId.getId mbInvoiceType (Just issuedToType)
     Nothing ->
       QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
         merchantOpCityId.getId
@@ -207,16 +202,15 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   -- Read path: return the stored artifact if present, else render on demand.
   -- Write-through: when the merchant opts into PDF storage, persist the freshly
   -- rendered PDF so subsequent reads (and ONDC sharing) are served from S3.
-  pdfBase64 <-
-    InvoiceDocument.getInvoicePdfBase64
-      (fromMaybe False (mbTransporterConfig >>= (.invoiceConfig) >>= (.enableInvoicePdfS3Storage)))
-      inv
-
-  pure $
-    API.FinanceInvoicePdfResp
-      { pdfBase64 = pdfBase64,
-        invoiceNumber = inv.invoiceNumber
-      }
+  let storePdf = fromMaybe False (mbTransporterConfig >>= (.invoiceConfig) >>= (.enableInvoicePdfS3Storage))
+      renderPdf invoice linkedInvoices = do
+        pdfBase64 <- InvoiceDocument.getInvoicePdfBase64 storePdf invoice
+        pure API.FinanceInvoicePdfResp {pdfBase64, invoiceNumber = invoice.invoiceNumber, linkedInvoices}
+  linkedGroups <- QFinanceInvoiceExtra.findLinkedInvoices inv
+  linkedInvoices <- forM linkedGroups $ \(linkedType, linked) -> do
+    linkedPdfs <- mapM (`renderPdf` []) linked
+    pure API.FinanceLinkedInvoicePdfs {invoiceType = linkedType, invoices = linkedPdfs}
+  renderPdf inv linkedInvoices
 
 -- | Resolve a short-lived presigned S3 GET URL for a single invoice's PDF, keyed by
 --   invoice id. Authorises that the invoice belongs to the requesting driver (as the

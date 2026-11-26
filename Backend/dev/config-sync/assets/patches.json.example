@@ -551,6 +551,97 @@
       {
         "find": "https://api.sandbox.beckn.juspay.in/loadtest",
         "replace": "http://localhost:8013/loadtest"
+      },
+      {
+        "_comment": "Leftover master hosts (CloudFront zip / newer master export). Path-specific rules above first; bare hosts last."
+      },
+      {
+        "find": "https://api.c2.sandbox.moving.tech/beckn",
+        "replace": "http://localhost:8015/v1"
+      },
+      {
+        "find": "http://api.c2.sandbox.moving.tech/dev/app",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "https://api.c2.sandbox.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "http://api.c2.sandbox.moving.tech",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "api.c2.sandbox.moving.tech",
+        "replace": "localhost:8013"
+      },
+      {
+        "find": "api.beckn.juspay.in/bap/beckn/v1",
+        "replace": "localhost:8013/beckn/cab/v1"
+      },
+      {
+        "find": "https://api.beckn.juspay.in",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "http://api.beckn.juspay.in",
+        "replace": "http://localhost:8013"
+      },
+      {
+        "find": "api.beckn.juspay.in",
+        "replace": "localhost:8013"
+      },
+      {
+        "find": "https://admin.eu.moving.tech",
+        "replace": "http://localhost:8022"
+      },
+      {
+        "find": "admin.eu.moving.tech",
+        "replace": "localhost:8022"
+      },
+      {
+        "find": "https://control-center.eu.moving.tech",
+        "replace": "http://localhost:8022"
+      },
+      {
+        "find": "control-center.eu.moving.tech",
+        "replace": "localhost:8022"
+      },
+      {
+        "find": "https://control-center.integ.moving.tech",
+        "replace": "http://localhost:8022"
+      },
+      {
+        "find": "control-center.integ.moving.tech",
+        "replace": "localhost:8022"
+      },
+      {
+        "find": "https://dashboard.eu.moving.tech",
+        "replace": "http://localhost:8022"
+      },
+      {
+        "find": "dashboard.eu.moving.tech",
+        "replace": "localhost:8022"
+      },
+      {
+        "find": "https://ocr.integ.moving.tech",
+        "replace": "http://localhost:8080/ocr"
+      },
+      {
+        "find": "ocr.integ.moving.tech",
+        "replace": "localhost:8080/ocr"
+      },
+      {
+        "find": "grpc.moving.tech",
+        "replace": "localhost"
+      },
+      {
+        "find": "api.sandbox.beckn.juspay.in",
+        "replace": "localhost:8013"
+      },
+      {
+        "find": "api.sandbox.moving.tech",
+        "replace": "localhost:8013"
       }
     ],
     "schema_replacements": {},
@@ -2112,7 +2203,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]
@@ -4188,7 +4280,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]
@@ -6275,7 +6368,8 @@
           {
             "where": {},
             "set": {
-              "driver_calling_option": "DirectCall"
+              "driver_calling_option": "DirectCall",
+              "calling_mode": "DirectCall"
             }
           }
         ]

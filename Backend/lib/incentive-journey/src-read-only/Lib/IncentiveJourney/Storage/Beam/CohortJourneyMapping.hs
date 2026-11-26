@@ -9,24 +9,29 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 import qualified Lib.IncentiveJourney.Domain.Types.Common
 
 data CohortJourneyMappingT f = CohortJourneyMappingT
-  { cohortId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    enabled :: B.C f Kernel.Prelude.Bool,
-    id :: B.C f Kernel.Prelude.Text,
-    journeyId :: B.C f Kernel.Prelude.Text,
-    maxWaiveOffCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    startDate :: B.C f Kernel.Prelude.UTCTime,
-    streakEndRewardExpirationAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    streakEndRewardMetadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    streakEndRewardType :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.Common.MilestoneRewardType),
-    streakEndRewardValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    streakRange :: B.C f Kernel.Prelude.Int,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { campaignUserLinkType :: (B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CampaignUserLinkType)),
+    cohortId :: (B.C f Kernel.Prelude.Text),
+    controlFeatures :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    enabled :: (B.C f Kernel.Prelude.Bool),
+    id :: (B.C f Kernel.Prelude.Text),
+    journeyId :: (B.C f Kernel.Prelude.Text),
+    maxWaiveOffCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    optInPeriod :: (B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.OptInPeriod)),
+    parentId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    startDate :: (B.C f Kernel.Prelude.UTCTime),
+    streakEndRewardExpirationAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    streakEndRewardMetadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    streakEndRewardType :: (B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.Common.MilestoneRewardType)),
+    streakEndRewardValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    streakRange :: (B.C f Kernel.Prelude.Int),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +41,6 @@ instance B.Table CohortJourneyMappingT where
 
 type CohortJourneyMapping = CohortJourneyMappingT Identity
 
-$(enableKVPG ''CohortJourneyMappingT ['id] [['cohortId], ['journeyId]])
+$(enableKVPG (''CohortJourneyMappingT) [('id)] [[('cohortId)], [('journeyId)]])
 
-$(mkTableInstancesGenericSchema ''CohortJourneyMappingT "cohort_journey_mapping")
+$(mkTableInstancesGenericSchema (''CohortJourneyMappingT) "cohort_journey_mapping")

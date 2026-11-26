@@ -27,90 +27,102 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "subscription" :> "invoices" :> QueryParam "fromDate" Data.Time.UTCTime :> QueryParam "invoiceType" Domain.Types.Invoice.InvoiceType
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam "toDate" Data.Time.UTCTime
-      :> Get
-           '[JSON]
-           API.Types.UI.FinanceInvoice.FinanceInvoiceListRes
-      :<|> TokenAuth
-      :> "finance"
-      :> "invoice"
-      :> "pdf"
-      :> QueryParam
-           "from"
-           Lib.Finance.Invoice.PdfService.DateOrTime
-      :> QueryParam
-           "invoiceType"
-           Domain.Types.Invoice.InvoiceType
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "referenceId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "to"
-           Lib.Finance.Invoice.PdfService.DateOrTime
-      :> Get
-           '[JSON]
-           API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
-      :<|> TokenAuth
-      :> "finance"
-      :> "invoice"
-      :> "pdfUrl"
-      :> MandatoryQueryParam
-           "invoiceId"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
+  ( TokenAuth
+      :> ( "subscription"
+             :> ( "invoices"
+                    :> ( QueryParam "fromDate" Data.Time.UTCTime
+                           :> ( QueryParam "invoiceType" Domain.Types.Invoice.InvoiceType
+                                  :> ( QueryParam
+                                         "limit"
+                                         Kernel.Prelude.Int
+                                         :> ( QueryParam "offset" Kernel.Prelude.Int
+                                                :> ( QueryParam "toDate" Data.Time.UTCTime
+                                                       :> Get
+                                                            ('[JSON])
+                                                            API.Types.UI.FinanceInvoice.FinanceInvoiceListRes
+                                                   )
+                                            )
+                                     )
+                              )
+                       )
+                )
+         )
   )
+    :<|> ( ( TokenAuth
+               :> ( "finance"
+                      :> ( "invoice"
+                             :> ( "pdf"
+                                    :> ( QueryParam
+                                           "from"
+                                           Lib.Finance.Invoice.PdfService.DateOrTime
+                                           :> ( QueryParam
+                                                  "invoiceType"
+                                                  Domain.Types.Invoice.InvoiceType
+                                                  :> ( QueryParam
+                                                         "limit"
+                                                         Kernel.Prelude.Int
+                                                         :> ( QueryParam
+                                                                "offset"
+                                                                Kernel.Prelude.Int
+                                                                :> ( QueryParam
+                                                                       "referenceId"
+                                                                       Kernel.Prelude.Text
+                                                                       :> ( QueryParam
+                                                                              "to"
+                                                                              Lib.Finance.Invoice.PdfService.DateOrTime
+                                                                              :> Get
+                                                                                   ('[JSON])
+                                                                                   API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
+                                                                          )
+                                                                   )
+                                                            )
+                                                     )
+                                              )
+                                       )
+                                )
+                         )
+                  )
+           )
+             :<|> ( TokenAuth
+                      :> ( "finance"
+                             :> ( "invoice"
+                                    :> ( "pdfUrl"
+                                           :> ( MandatoryQueryParam
+                                                  "invoiceId"
+                                                  Kernel.Prelude.Text
+                                                  :> Get
+                                                       ('[JSON])
+                                                       API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
+                                              )
+                                       )
+                                )
+                         )
+                  )
+         )
 
 handler :: Environment.FlowServer API
 handler = getSubscriptionInvoices :<|> getFinanceInvoicePdf :<|> getFinanceInvoicePdfUrl
 
 getSubscriptionInvoices ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoiceListRes
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  (Kernel.Prelude.Maybe (Data.Time.UTCTime) -> (Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoiceListRes)))))
 getSubscriptionInvoices a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FinanceInvoice.getSubscriptionInvoices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getFinanceInvoicePdf ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime ->
-    Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime ->
-    Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  (Kernel.Prelude.Maybe (Lib.Finance.Invoice.PdfService.DateOrTime) -> (Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Lib.Finance.Invoice.PdfService.DateOrTime) -> Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp))))))
 getFinanceInvoicePdf a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdf (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 getFinanceInvoicePdfUrl ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    Kernel.Prelude.Text ->
-    Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  (Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp)
 getFinanceInvoicePdfUrl a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdfUrl (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

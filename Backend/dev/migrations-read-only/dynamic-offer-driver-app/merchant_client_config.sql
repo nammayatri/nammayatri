@@ -15,3 +15,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_client_config ADD PRIMARY KEY ( serv
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_client_config ALTER COLUMN package_id TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.merchant_client_config ADD COLUMN client_os text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_client_config DROP CONSTRAINT merchant_client_config_pkey;
+ALTER TABLE atlas_driver_offer_bpp.merchant_client_config ADD PRIMARY KEY ( client_os, service_name, package_id);

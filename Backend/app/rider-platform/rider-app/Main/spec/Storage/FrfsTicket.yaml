@@ -392,6 +392,7 @@ FRFSTicketBooking:
     overrideType: Maybe OverrideType
     overriddenAmount: Maybe HighPrecMoney
     overrideAppliedEntityId: Maybe Text
+    settleableAmount: Maybe HighPrecMoney
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
@@ -480,6 +481,10 @@ FRFSTicketBooking:
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
     vehicleTripId: Maybe Text
+    # The driver platform's ride that carries this passenger (a SharedRoute run). Set when the ticket is
+    # bound to a run: at booking for a timetabled shuttle, at allocation for a shared cab. The run's manifest
+    # is every CONFIRMED booking with this rideId. Replaces vehicleTripId once shared cab moves onto runs.
+    rideId: Maybe Text
     sharedCabNoShows: Int
 
   default:
@@ -544,6 +549,7 @@ FRFSTicketBooking:
     toStationLon: double precision
     overrideType: text
     vehicleTripId: character varying(36)
+    rideId: character varying(36)
 
   constraints:
     id: PrimaryKey
@@ -554,6 +560,7 @@ FRFSTicketBooking:
     tripId: "!SecondaryKey"
     waybillNo: "!SecondaryKey"
     overrideAppliedEntityId: "!SecondaryKey"
+    rideId: "!SecondaryKey" # forcing to be a secondary key; the run's manifest reads its passengers by rideId from an Extra query
 
   queries:
     findById:
@@ -601,7 +608,7 @@ FRFSTicketBooking:
       where: id
     updatePassOverrideById:
       kvFunction: updateWithKV
-      params: [overrideType, overriddenAmount, overrideAppliedEntityId, updatedAt]
+      params: [overrideType, overriddenAmount, overrideAppliedEntityId, settleableAmount, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -681,6 +688,11 @@ FRFSTicketBooking:
     updateVehicleTripId:
       kvFunction: updateOneWithKV
       params: [vehicleTripId]
+      where: id
+    # Binds (or, with Nothing, unbinds) the passenger to a driver-platform run.
+    updateRideId:
+      kvFunction: updateOneWithKV
+      params: [rideId]
       where: id
     # Stamps updatedAt alone: the degrade time the shared-cab sweep window keys on.
     updateUpdatedAtById:

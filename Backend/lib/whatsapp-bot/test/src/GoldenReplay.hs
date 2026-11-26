@@ -56,8 +56,10 @@
 module GoldenReplay
   ( goldenTests,
     copyChecks,
+    flexiFareChecks,
     fixtureGuards,
     rideTypeButtonLayoutChecks,
+    phoneChecks,
   )
 where
 
@@ -81,12 +83,13 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
 import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
-import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
+import WhatsappBot.Flow.Booking (flexiFareLine, hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import qualified WhatsappBot.I18n.Types as Fields
 import WhatsappBot.Inbound (parseInbound)
+import WhatsappBot.Messages (formatDialable)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
 import WhatsappBot.Types
 
@@ -106,7 +109,11 @@ data Fixture = Fixture
 
 data FixtureEnv = FixtureEnv
   { merchant :: Text, -- phone_number_id, e.g. "pn_flexi"/"pn_reg"
-    systemTime :: UTCTime -- ISO-8601 seed for the virtual clock
+    systemTime :: UTCTime, -- ISO-8601 seed for the virtual clock
+    -- Turns on the merchant's favouritesEnabled. Absent = off, so every
+    -- fixture recorded before favourite places keeps its exact expectations;
+    -- only the fav-* scenarios set it.
+    favourites :: Maybe Bool
   }
   deriving (Generic, FromJSON)
 
@@ -306,8 +313,11 @@ cannedEstimates =
 -- | The default flexi quote (mock-client.ts:158) -- also the value the gate knob
 -- yields once released, so a gated search proceeds exactly as unstalled.
 cannedFlexiQuotes :: [BotQuote]
-cannedFlexiQuotes =
-  [BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, vehicleVariant = Just "AUTO_RICKSHAW"}]
+cannedFlexiQuotes = [cannedFlexiQuote]
+
+cannedFlexiQuote :: BotQuote
+cannedFlexiQuote =
+  BotQuote {quoteId = "mock-flexi-quote-auto", serviceTierName = Just "Auto", estimatedFare = Just 40, baseFare = Nothing, perKmFare = Nothing, vehicleVariant = Just "AUTO_RICKSHAW"}
 
 -- | The assigned driver as returned by getActiveBookings / the base for the
 -- getBookingDetails progression (mock-client.ts:173-214).
@@ -442,6 +452,12 @@ mkBackend rb =
       cancelRide = \_a bid st -> do
         recordCall (rbCalls rb) "cancelRide" [String bid, String st]
         guard1 rb "cancelRide" (pure ()),
+      addSavedLocation = \_a loc -> do
+        recordCall (rbCalls rb) "addSavedLocation" [String loc.tag, toJSON loc.lat, toJSON loc.lon]
+        guard1 rb "addSavedLocation" (pure ()),
+      replaceSavedLocation = \_a loc -> do
+        recordCall (rbCalls rb) "replaceSavedLocation" [String loc.tag, toJSON loc.lat, toJSON loc.lon]
+        guard1 rb "replaceSavedLocation" (pure ()),
       updateProfile = \_a upd -> do
         recordCall (rbCalls rb) "updateProfile" [toJSON upd]
         guard1 rb "updateProfile" (pure ())
@@ -467,6 +483,8 @@ mkSender outRef label =
         recordOut outRef (RecordedOut "buttons" to label (Just (map (\b -> b.btnId) btns)) Nothing) >> pure True,
       sendLocationRequest = \to _body ->
         recordOut outRef (RecordedOut "location_request" to label Nothing Nothing) >> pure True,
+      sendList = \to _body _label sections ->
+        recordOut outRef (RecordedOut "list" to label (Just [b.btnId | (_, rows) <- sections, b <- rows]) Nothing) >> pure True,
       sendVideo = \to lnk _cap ->
         recordOut outRef (RecordedOut "video" to label Nothing (Just lnk)) >> pure True
     }
@@ -586,16 +604,17 @@ fixtureMerchant pn
           phoneNumberId = pn,
           rideTypesOrder = [Flexi],
           maxDirectButtons = Nothing, -- unset by default; explicit override tested separately below
-          flexiBaseFare = Nothing, -- FLEXI_BASE_FARE unset in test/setup.ts
-          flexiPerKm = Nothing, -- FLEXI_PER_KM unset in test/setup.ts
           flexiServiceArea = Just "Tumkur",
           flexiServiceRadiusKm = Just 15,
           flexiRentalDistanceM = 10000,
           flexiRentalDurationS = 3600,
           flexiIntroVideoUrl = Just "https://videos.example/intro.mp4",
           flexiSupportPhone = Just "+91 90000 12345",
-          nyTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
+          trackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
           appDownloadUrl = "https://play.google.com/store/apps/details?id=in.juspay.nammayatri&hl=en_IN",
+          favouritesEnabled = False, -- per fixture: env.favourites (runFixture)
+          phoneCountryCode = "+91", -- the meta_config column defaults: India
+          phoneNumberLength = Just 10,
           cancelTriggers = ["cancel", "stop", "exit", "quit", "reset"],
           statusTriggers = ["status", "track", "where is my ride"],
           -- Unused by fixtureConfig below (it builds BotConfig directly,
@@ -795,7 +814,7 @@ runTrackerStep w i ts = do
 
 runFixture :: Fixture -> Assertion
 runFixture fx = do
-  let merchantCtx = fixtureMerchant fx.env.merchant
+  let merchantCtx = (fixtureMerchant fx.env.merchant) {favouritesEnabled = fromMaybe False fx.env.favourites}
       theKnobs = Map.fromList [(k.method, k.behavior) | k <- fromMaybe [] fx.knobs]
   w <- makeWorld merchantCtx theKnobs fx.env.systemTime
   mapM_ (\(i, s) -> runStep w merchantCtx i s) (zip [0 :: Int ..] fx.steps)
@@ -846,6 +865,15 @@ fixtureGuards =
             "cancel-after-register.json",
             "cancel-mid-search.json",
             "driver-not-found.json",
+            "fav-add-from-list.json",
+            "fav-hi-then-quick-ride.json",
+            "fav-name-with-status-word.json",
+            "fav-nudge-no-favourites.json",
+            "fav-pick-drop.json",
+            "fav-pick-pickup.json",
+            "fav-replace.json",
+            "fav-save-from-confirm.json",
+            "fav-share-new-location.json",
             "flexi-happy-path.json",
             "help-support-more.json",
             "language-switch.json",
@@ -867,6 +895,43 @@ fixtureGuards =
 -- English copy spot-checks -- guard the En table against wording drift
 -- (transcribed from ny-connectors/connectors/src/i18n/en.ts).
 -- ===========================================================================
+
+-- ===========================================================================
+-- Flexi fare line -- the rate shown to the rider comes from the quote's
+-- fare-policy rate card, not from merchant config. The golden fixtures can't
+-- see this (they drop message bodies and the canned quote has no rates).
+-- ===========================================================================
+
+flexiFareChecks :: TestTree
+flexiFareChecks =
+  testGroup
+    "flexi fare line from the quote's rate card"
+    [ testCase "shows the quote's base fare and per-km rate" $
+        assertEqual "fare line" (Just "Metered auto - from Rs.36 + Rs.28/km") (flexiFareLine staticTranslations (quoteWith (Just 36) (Just 28)) Nothing),
+      testCase "omitted when the quote has no per-km rate" $
+        assertEqual "fare line" Nothing (flexiFareLine staticTranslations (quoteWith (Just 36) Nothing) Nothing),
+      testCase "omitted when the quote has no base fare" $
+        assertEqual "fare line" Nothing (flexiFareLine staticTranslations (quoteWith Nothing (Just 28)) Nothing),
+      testCase "BASE_FARE is read from the rate card" $
+        assertEqual "base" (Just 36) (rateCardAmount "BASE_FARE" farePolicyRateCard),
+      testCase "EXTRA_PER_KM_FARE takes the first tier, the rate right after the base distance" $
+        assertEqual "per km" (Just 28) (rateCardAmount "EXTRA_PER_KM_FARE" farePolicyRateCard),
+      testCase "a title the policy doesn't emit (slab policy) gives Nothing" $
+        assertEqual "missing" Nothing (rateCardAmount "EXTRA_PER_KM_FARE" (filter ((/= "EXTRA_PER_KM_FARE") . fst) farePolicyRateCard))
+    ]
+  where
+    quoteWith base perKm = cannedFlexiQuote {baseFare = base, perKmFare = perKm}
+    -- Shaped like a real Progressive policy's quoteFareBreakup (base 36 for the
+    -- first 2 km, 28/km to 12 km, 18/km after), in the BPP's emission order.
+    farePolicyRateCard =
+      [ ("EXTRA_PER_KM_FARE", 28),
+        ("EXTRA_PER_KM_FARE", 18),
+        ("BASE_DISTANCE", 2000),
+        ("BASE_FARE", 36),
+        ("DEAD_KILOMETER_FARE", 10),
+        ("EXTRA_PER_KM_STEP_FARE_2000_12000", 28),
+        ("EXTRA_PER_KM_STEP_FARE_12000_Above", 18)
+      ]
 
 copyChecks :: TestTree
 copyChecks =
@@ -940,3 +1005,29 @@ rideTypeButtonLayoutChecks =
       assertEqual "direct buttons" expectedDirect direct
       assertEqual "More button present iff something is hidden" (not (null expectedHidden)) hasMore
       assertEqual "hidden (More-revealed) buttons" expectedHidden hidden
+
+-- | The WhatsApp number's country (meta_config phone_country_code /
+-- phone_number_length): the sender's number -> the rider's login number, and
+-- a phone in a message -> a tap-to-dial number. India (the column defaults)
+-- must behave exactly as the original India-only rule.
+phoneChecks :: TestTree
+phoneChecks =
+  testGroup
+    "phone number per country"
+    [ testCase "India: 91 + 10 digits -> the 10 digits" $ assertEqual "" (Just "9361176218") (extract india "919361176218"),
+      testCase "India: 10 digits without the code -> as is" $ assertEqual "" (Just "9361176218") (extract india "9361176218"),
+      testCase "India: wrong length -> refused" $ assertEqual "" Nothing (extract india "91936117621"),
+      testCase "Finland: 358 + 9 digits -> the 9 digits" $ assertEqual "" (Just "401234567") (extract finland "358401234567"),
+      testCase "Finland: 358 + 10 digits -> the 10 digits (no length check)" $ assertEqual "" (Just "4012345678") (extract finland "3584012345678"),
+      testCase "Finland: a number from another country -> refused" $ assertEqual "" Nothing (extract finland "919361176218"),
+      testCase "Finland: only the code -> refused" $ assertEqual "" Nothing (extract finland "358"),
+      testCase "dial India: 10 digits -> +91" $ assertEqual "" (Just "+919361176218") (formatDialable india (Just "9361176218")),
+      testCase "dial India: 91 + 10 digits -> +" $ assertEqual "" (Just "+919361176218") (formatDialable india (Just "919361176218")),
+      testCase "dial India: leading 0 (masked exophone) -> as is" $ assertEqual "" (Just "08012345678") (formatDialable india (Just "08012345678")),
+      testCase "dial Finland: national number -> +358" $ assertEqual "" (Just "+358401234567") (formatDialable finland (Just "401234567")),
+      testCase "dial Finland: already with 358 -> +" $ assertEqual "" (Just "+358401234567") (formatDialable finland (Just "358401234567"))
+    ]
+  where
+    india = fixtureMerchant "pn_flexi"
+    finland = india {phoneCountryCode = "+358", phoneNumberLength = Nothing}
+    extract m from = extractPhone m InboundEvent {fromPhone = from, waId = Nothing, profileName = Nothing, messageId = "wamid.phone", kind = InText "hi"}

@@ -228,6 +228,8 @@ data FareChargeComponent
   | GovtChargesComponent
   | PersonalDiscountComponent
   | BusinessDiscountComponent
+  | AirportEntryFeeComponent
+  | AirportEntryFeeTaxComponent
   deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

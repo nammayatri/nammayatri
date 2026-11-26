@@ -167,6 +167,8 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        - blockRC: Bool
       request:
         type: BlockDriverWithReasonReq
       response:
@@ -180,6 +182,8 @@ apis:
             params:
               driverId: Id Driver
               dashboardUserName: Text
+            query:
+              - blockRC: Bool
             request:
               type: BlockDriverWithReasonReq
             response:
@@ -197,6 +201,8 @@ apis:
       endpoint: /bulkBlock
       auditRequestBody: false
       auth: ApiAuthV2
+      query:
+        - blockRC: Bool
       request:
         type: BulkBlockReq
       response:
@@ -223,6 +229,7 @@ apis:
       query:
         - preventWeeklyCancellationRateBlockingTill: UTCTime
         - preventDailyCancellationRateBlockingTill: UTCTime
+        - unblockRC: Bool
       response:
         type: APISuccess
       migrate:
@@ -237,6 +244,7 @@ apis:
             query:
               - preventWeeklyCancellationRateBlockingTill: UTCTime
               - preventDailyCancellationRateBlockingTill: UTCTime
+              - unblockRC: Bool
             response:
               type: APISuccess
   - GET: # DriverLocationAPI
@@ -367,6 +375,25 @@ apis:
         type: UpdateRCInvalidStatusByRCNumberReq
       response:
         type: APISuccess
+  - POST: # BlockRCAPI
+      endpoint: /blockRC
+      auth: ApiAuthV2
+      request:
+        type: BlockRCReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
+  - GET: # LinkedRcDriversAPI
+      endpoint: /linkedRcDrivers
+      auth: ApiAuthV2
+      query:
+        - rcNumber: Text
+        - driverId: Text
+      response:
+        type: LinkedRcDriversRes
+      migrate:
+        capability: city-operations.driver_block.read
   - POST: # UpdateVehicleVariantAPI
       endpoint: /updateVehicleVariant/{driverId}
       auth: ApiAuthV2
@@ -893,6 +920,25 @@ types:
     - rcNumber: Text
     - vehicleVariant: VehicleVariant
     - derive: "'HideSecrets"
+  BlockRCReq:
+    - rcNumber: Text
+    - isBlocked: Bool
+    - reason: Maybe Text
+    - derive: "'HideSecrets"
+  LinkedRcDriversRes:
+    - rcs: [LinkedRcItem]
+  LinkedRcItem:
+    - rcNumber: Text
+    - isBlocked: Bool
+    - hasMoreDrivers: Bool
+    - drivers: [LinkedRcDriver]
+  LinkedRcDriver:
+    - driverId: Id Driver
+    - name: Maybe Text
+    - isRcActive: Bool
+    - associatedOn: UTCTime
+    - associatedTill: Maybe UTCTime
+    - isDriverBlocked: Bool
   UpdateVehicleVariantReq:
     - rcId: Text
     - vehicleVariant: VehicleVariant

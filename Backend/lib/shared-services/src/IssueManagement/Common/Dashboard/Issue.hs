@@ -777,8 +777,7 @@ data UpsertApiIntegrationReq = UpsertApiIntegrationReq
   { apiIntegrationId :: Maybe (Id DAI.IssueApiIntegration),
     name :: Text,
     description :: Maybe Text,
-    -- | Defaults to External when omitted, so older dashboard clients keep
-    -- working unchanged.
+    -- | InternalRider or InternalDriver; omitted means InternalRider.
     kind :: Maybe DAI.IntegrationKind,
     method :: DAI.ApiMethod,
     urlTemplate :: Text,
@@ -819,29 +818,6 @@ data ApiIntegrationItem = ApiIntegrationItem
 
 newtype ApiIntegrationListRes = ApiIntegrationListRes
   { integrations :: [ApiIntegrationItem]
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
--- | Test console: run the (possibly unsaved) integration definition with
--- sample parameter values and report what came back.
-data TestApiIntegrationReq = TestApiIntegrationReq
-  { definition :: UpsertApiIntegrationReq,
-    sampleParams :: Maybe Value
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets TestApiIntegrationReq where
-  hideSecrets = identity
-
-data TestApiIntegrationRes = TestApiIntegrationRes
-  { success :: Bool,
-    statusCode :: Maybe Int,
-    latencyMs :: Int,
-    extractedFields :: Maybe Value,
-    rawResponse :: Maybe Value,
-    errorMessage :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

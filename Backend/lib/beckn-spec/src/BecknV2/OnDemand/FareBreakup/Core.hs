@@ -16,6 +16,7 @@ module BecknV2.OnDemand.FareBreakup.Core
     clampDiscount,
     rateCardLineTitle,
     withoutHiddenLines,
+    withoutBoothLines,
   )
 where
 
@@ -180,6 +181,11 @@ withoutHiddenLines titleOf items = filter (not . isHidden . titleOf) items
   where
     hasLegacySummary = any ((`elem` legacySummaryTitles) . titleOf) items
     isHidden t = t `elem` legacySummaryTitles || (hasLegacySummary && t `elem` legacySummaryTaxTitles)
+
+withoutBoothLines :: Bool -> (a -> Text) -> [a] -> [a]
+withoutBoothLines edcCollectsParking titleOf = filter (not . (edcCollectsParking &&) . isBoothLine . titleOf)
+  where
+    isBoothLine t = any (\(isCharge, titles) -> isCharge t || t `elem` titles) [(isChargeTitle.parking, taxTitles.parking), (isChargeTitle.airportEntryFee, taxTitles.airportEntryFee)]
 
 clampDiscount :: HighPrecMoney -> [BreakupLine] -> HighPrecMoney -> HighPrecMoney
 clampDiscount fare ls discount = max 0 (min discount (discountableAmount fare ls))

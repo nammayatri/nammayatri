@@ -79,7 +79,7 @@ const loadStoredDataPick = (): DataPick => {
 };
 
 const VERSION_STATUS_TEXT: Record<string, string> = {
-  verified: 'verified',
+  stable: 'stable',
   not_verified: 'not verified',
   not_stable: 'not stable',
 };
@@ -942,7 +942,7 @@ export const RemoteStackPanel: React.FC = () => {
                 value={dataPick.version}
                 onChange={e => setDataPick(p => ({ ...p, version: e.target.value }))}
                 disabled={!!busy || !!dataBusy || !pickedSource}
-                title="“latest safe” = newest verified version, else the newest one not marked not stable"
+                title="“latest safe” = newest stable version, else the newest one not marked not stable"
               >
                 <option value="">
                   {pickedSource?.recommended != null
@@ -1285,7 +1285,7 @@ export const RemoteStackPanel: React.FC = () => {
                       <span className="rsp-sync-checked" title={timeExact(held.finished_at)}>
                         synced {timeAgo(held.finished_at)}
                       </span>
-                      {heldStatus && heldStatus !== 'verified' && (
+                      {heldStatus && heldStatus !== 'stable' && (
                         <span className="rsp-tag">{VERSION_STATUS_TEXT[heldStatus] || heldStatus}</span>
                       )}
                     </>

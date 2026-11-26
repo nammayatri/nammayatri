@@ -21,7 +21,15 @@ module Domain.Action.UI.Ride.Common
     DeliveryPersonDetailsAPIEntity (..),
     mkLocationFromLocationMapping,
     calculateLocations,
+    rentalNextAndLastStop,
+    getRentalStops,
+    getCurrentRentalStops,
+    withRideStopsLock,
+    waitForRideStopsLock,
+    getRentalStopsVersion,
+    setRentalStopsVersion,
     makeStop,
+    getWaitingChargeInfo,
   )
 where
 
@@ -29,17 +37,18 @@ import qualified BecknV2.OnDemand.FareBreakup.Core as Fields
 import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponent (..), FareUIComponentType (..), FareUISection (..), FareUISubItem (..), computeFareBreakupLines)
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Control.Applicative ((<|>))
-import Control.Monad (mfilter)
+import Control.Monad (forM, mfilter, unless)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import qualified Data.ByteString.Lazy as LBS
+import Data.Either (fromRight)
 import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, mapMaybe, maybeToList)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
@@ -67,6 +76,7 @@ import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import Domain.Types.OnUpdate (RentalStop (..))
 import qualified Domain.Types.ParcelType as DParcel
 import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Rating as DRating
@@ -80,16 +90,17 @@ import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
-import Kernel.Prelude (readMaybe, roundToIntegral)
+import Kernel.Prelude (MonadMask, finally, readMaybe, roundToIntegral, safeInit, threadDelay)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Centesimal, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, MonadFlow, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import qualified Kernel.Types.Distance as Fields
 import Kernel.Types.Id
 import Kernel.Types.Price
 import qualified Kernel.Types.Time as Fields
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, throwError, withTryCatch)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -118,9 +129,10 @@ import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.StopInformation as QSI
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
-import Tools.Error (LocationMappingError (..))
+import Tools.Error (GenericError (InvalidRequest), LocationMappingError (..))
 import qualified Tools.Fields as Fields
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
@@ -248,6 +260,7 @@ data DriverRideRes = DriverRideRes
     cancellationSource :: Maybe DBCR.CancellationSource,
     cancellationReasonCode :: Maybe Text,
     cancellationAdditionalInfo :: Maybe Text,
+    cancellationFaultVerdict :: Maybe Text,
     cancellationCompensation :: Maybe PriceAPIEntity,
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
@@ -288,6 +301,7 @@ data DriverRideRes = DriverRideRes
     constantWaitingCharge :: Maybe PriceAPIEntity,
     customerRating :: Maybe Centesimal,
     showRoutePerRequest :: Maybe Bool,
+    enableManualArrival :: Maybe Bool,
     invoiceId ::
       Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
   }
@@ -365,7 +379,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam mbC
       taxDeduction
         | fromMaybe False chargedFareParams.isVatTaxType = 0
         | Just dues <- mbCancellationDues = fromMaybe 0 dues.cancellationFeeTax
-        | otherwise = sum (map (fromMaybe 0) [chargedFareParams.govtCharges, chargedFareParams.tollFareTax, chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax])
+        | otherwise = sum (map (fromMaybe 0) ([chargedFareParams.govtCharges, chargedFareParams.tollFareTax] <> if SL.edcCollectsParking chargedFareParams.fareSettlementType then [] else [chargedFareParams.parkingChargeTax, chargedFareParams.airportEntryFeeTax]))
   let mkComp key componentType mbLabel value rowSubItems =
         if value > 0
           then
@@ -453,7 +467,7 @@ buildFootnotes ::
   m [FareUIComponent]
 buildFootnotes lang booking ride estimatedFareParams finalFareParams mbFreeWaitingTime = do
   (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.RIDE_FOOTNOTES_DISPLAY ride.createdAt Nothing Nothing
-  if null logics
+  if null logics || ride.status == DRide.CANCELLED
     then pure []
     else do
       let waitingTimeSeconds = case (ride.tripStartTime, ride.driverArrivalTime) of
@@ -617,8 +631,9 @@ mkDriverRideRes ::
   [DSI.StopInformation] ->
   ResolvedCalling ->
   Maybe Bool ->
+  Maybe Bool ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling showRoutePerRequest = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling showRoutePerRequest enableManualArrival = do
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe PaymentChargeBearer
@@ -629,8 +644,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       chargeInAppFee = customerBearsCharge || driverBearsCharge
       ridePaymentCharge = fromMaybe 0 ride.paymentCharge
       quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
-      componentTaxOf fp = sum (map (fromMaybe 0) [fp.govtCharges, fp.tollFareTax, fp.parkingChargeTax, fp.cancellationDuesTax])
-      airportEntryFeeWithTaxOf fp = fromMaybe 0 fp.airportEntryFee + fromMaybe 0 fp.airportEntryFeeTax
+      componentTaxOf fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if edcCollectsParking then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
@@ -648,10 +662,10 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       driverSelectedFareNet = netOf FarePolicyD.DriverSelectedFareComponent Nothing $ fromMaybe 0.0 estimatedFareParams.driverSelectedFare
       customerExtraFeeNet = netOf FarePolicyD.CustomerExtraFeeComponent Nothing <$> estimatedFareParams.customerExtraFee
       cancellationDuesNet = netTaxInclusive booking.paymentChargeDetails taxRegime estimatedFareParams.cancellationDuesTax booking.cancellationDuesCommission $ fromMaybe 0 estimatedFareParams.customerCancellationDues
-      estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (airportEntryFeeWithTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
+      estimatedBaseFareV2 = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (booking.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf estimatedFareParams) (estimatedBaseFareGrossV2 - (if customerBearsCharge then quoteTimeCharge else 0))
       estimatedBaseFare = estimatedBaseFareV2 - driverSelectedFareNet
       chargedFareParams = fromMaybe estimatedFareParams finalFareParams
-      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (airportEntryFeeWithTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
+      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (ride.paymentChargeBearer >>= (readMaybe . T.unpack)) (componentTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
   mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then QCDD.findByRideId ride.id else pure Nothing
   let cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
       penalityChargeNet = netTaxInclusive Nothing taxRegime ride.cancellationFeeTaxIfCancelled Nothing <$> ride.cancellationFeeIfCancelled
@@ -659,10 +673,9 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       cancelledRideAmount = max 0 (fromMaybe 0 cancellationCompensationNet)
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
-    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
-    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.Rental _ -> rentalNextAndLastStop ride booking
+    DTC.IntercityRental _ _ -> rentalNextAndLastStop ride booking
     _ -> return (Nothing, Nothing)
-  -- Rental stops come from the ride, fixed at assignment, which is also what stopAction checks.
   -- The booking's list picks up destinations reached and replaced mid-ride, which have no stop record.
   let rideStopLocations =
         QLM.getLatestStopsByEntityId ride.id.getId
@@ -735,7 +748,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
                 DMPM.Cash -> if offer > 0 then Just offer else Nothing
                 _ -> computedFareNet
 
-  mbRideEarningsVal <- case mbEarningsLabels of
+  mbRideEarningsVal <- case mfilter (const (not (isCancelled && cancelledRideAmount == 0))) mbEarningsLabels of
     Just earningsLabels -> do
       Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDuesDetails) customerBearsCharge driverBearsCharge (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsConfig)) mbDriverTaxRates ((.freeWaitingTime) <$> mbWaitingChargeInfo)
     Nothing -> pure Nothing
@@ -831,6 +844,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         cancellationSource = maybe (fmap (\cr -> cr.source) cancellationReason) Just (ride.cancelledBy >>= (readMaybe . T.unpack)),
         cancellationReasonCode = maybe (cancellationReason >>= (.reasonCode)) Just ride.cancellationReasonCode <&> (\(DTCR.CancellationReasonCode code) -> code),
         cancellationAdditionalInfo = maybe (cancellationReason >>= (.additionalInfo)) Just ride.cancellationAdditionalInfo,
+        cancellationFaultVerdict = ride.cancellationFaultVerdict,
         cancellationCompensation = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> cancellationCompensationNet,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> penalityChargeNet,
@@ -882,6 +896,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             DFPC.PerMinuteWaitingCharge _ -> Nothing,
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
+        enableManualArrival,
         invoiceId = mbInvoiceId
       }
 
@@ -905,6 +920,86 @@ makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
 makeStop stopsInfo stop =
   let stopInfo = find (\s -> s.stopLocId == stop.id) stopsInfo
    in Stop (DLocUI.makeLocationAPIEntity stop) stopInfo
+
+rentalNextAndLastStop ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DRide.Ride ->
+  DRB.Booking ->
+  m (Maybe DLoc.Location, Maybe DLoc.Location)
+rentalNextAndLastStop ride booking = do
+  mbStopsVersion <- getRentalStopsVersion booking.id
+  if isJust mbStopsVersion
+    then do
+      (reachedStops, pendingStops) <- partition (isJust . (.reachedAt)) <$> getRentalStops ride.id
+      pure ((.location) <$> listToMaybe pendingStops, (.location) <$> listToMaybe (reverse reachedStops))
+    else calculateLocations booking.id booking.stopLocationId
+
+getRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m [RentalStop]
+getRentalStops rideId = do
+  mappings <- QLM.getLatestStopsByEntityId' rideId.getId
+  stopsInfo <- QSI.findAllByRideIdFromKVAndDB rideId
+  forM mappings $ \mapping -> do
+    location <- QLoc.findById mapping.locationId >>= fromMaybeM (StopsLocationNotFound mapping.locationId.getId)
+    let reachedAt = (.waitingTimeStart) <$> find (\stopInfo -> stopInfo.stopOrder == mapping.order) stopsInfo
+    pure RentalStop {order = mapping.order, location, reachedAt}
+
+getCurrentRentalStops :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRB.Booking -> DRide.Ride -> m [RentalStop]
+getCurrentRentalStops booking ride = do
+  rideStops <- getRentalStops ride.id
+  mbStopsVersion <- getRentalStopsVersion booking.id
+  if isJust mbStopsVersion
+    then pure rideStops
+    else do
+      let reachedStops = filter (isJust . (.reachedAt)) rideStops
+          bookedPendingStops = if ride.hasStops == Just True then filter (isNothing . (.reachedAt)) (safeInit rideStops) else []
+          isListed stopLocationId = any (\stop -> stop.location.id == stopLocationId) (reachedStops <> bookedPendingStops)
+      singlePendingStop <- case booking.stopLocationId of
+        Nothing -> pure Nothing
+        Just stopLocationId
+          | isListed stopLocationId -> pure Nothing
+          | Just stop <- find (\stop -> stop.location.id == stopLocationId) rideStops -> pure (Just stop)
+          | otherwise -> do
+            bookingStops <- QLM.getLatestStopsByEntityId' booking.id.getId
+            forM (find (\mapping -> mapping.locationId == stopLocationId) bookingStops) $ \mapping -> do
+              location <- QLoc.findById stopLocationId >>= fromMaybeM (StopsLocationNotFound stopLocationId.getId)
+              pure RentalStop {order = mapping.order, location, reachedAt = Nothing}
+      pure $ reachedStops <> bookedPendingStops <> maybeToList singlePendingStop
+
+withRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r, MonadMask m) => Int -> Id DRide.Ride -> m a -> m a
+withRideStopsLock attempts rideId action = do
+  isLocked <- tryRideStopsLock attempts rideId
+  unless isLocked $ throwError (InvalidRequest "Stop update already in progress for this ride")
+  finally action (unlockRideStops rideId)
+
+waitForRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r, MonadMask m) => Id DRide.Ride -> m a -> m a
+waitForRideStopsLock rideId action = do
+  isLocked <- fromRight False <$> withTryCatch "ride stops lock" (tryRideStopsLock 10 rideId)
+  if isLocked then finally action (unlockRideStops rideId) else action
+
+tryRideStopsLock :: (MonadFlow m, Redis.HedisFlow m r) => Int -> Id DRide.Ride -> m Bool
+tryRideStopsLock attemptsLeft rideId = do
+  isLocked <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.tryLockRedis (rideStopsLockKey rideId) 30
+  if isLocked || attemptsLeft <= 1
+    then pure isLocked
+    else threadDelay 200000 >> tryRideStopsLock (attemptsLeft - 1) rideId
+
+unlockRideStops :: (MonadFlow m, Redis.HedisFlow m r) => Id DRide.Ride -> m ()
+unlockRideStops rideId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (rideStopsLockKey rideId)
+
+rideStopsLockKey :: Id DRide.Ride -> Text
+rideStopsLockKey rideId = "RideStopUpdate:RideId:" <> rideId.getId
+
+getRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id DRB.Booking -> m (Maybe Int)
+getRentalStopsVersion bookingId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get (rentalStopsVersionKey bookingId)
+
+setRentalStopsVersion :: (MonadFlow m, Redis.HedisFlow m r) => Id DRB.Booking -> Int -> m ()
+setRentalStopsVersion bookingId version = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setExp (rentalStopsVersionKey bookingId) version (2 * 24 * 60 * 60)
+
+rentalStopsVersionKey :: Id DRB.Booking -> Text
+rentalStopsVersionKey bookingId = "RentalStops:Version:BookingId-" <> bookingId.getId
 
 calculateLocations ::
   ( CacheFlow m r,

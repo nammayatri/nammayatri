@@ -72,6 +72,8 @@ stopDetection StopDetectionReq {..} = do
                 DTC.Rental _ -> logDebug $ "Skipping safety alert for rental ride with id" <> rideId.getId
                 DTC.IntercityRental _ _ -> logDebug $ "Skipping safety alert for rental ride with id" <> rideId.getId
                 DTC.InterCity _ _ -> logDebug $ "Skipping safety alert for intercity ride with id" <> rideId.getId
+                -- a run halts at every stop by design, and there is no BAP booking to alert
+                DTC.SharedRoute _ -> logDebug $ "Skipping safety alert for shared route run with id" <> rideId.getId
                 _ -> BP.sendSafetyAlertToBAP booking ride Enums.RIDE_STOPPAGE driver vehicle
               _ -> logDebug $ "Either condition not met or no merchant PN for driver with id" <> driverId.getId
           _ -> logDebug $ "Ride status for rideId:" <> rideId.getId

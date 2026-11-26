@@ -36,12 +36,15 @@ import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Action.UI.Ride.Common (rentalNextAndLastStop)
+import qualified Domain.Action.UI.Ride.Common as DRideCommon
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.Types as DTC
@@ -55,6 +58,7 @@ import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Feedback as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as Fields
@@ -103,6 +107,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkFleetDriverAndDriverOper
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -522,6 +527,47 @@ getRideSpecialLocations booking ride = do
       specialLocationOf =<< ride.tripEndPos
     )
 
+getPickupEdits :: (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> m [Common.PickupEditInfo]
+getPickupEdits bookingId = do
+  pickupMappings <- sortOn (.createdAt) <$> QLM.findAllByEntityIdAndOrder bookingId.getId 0
+  pickupLocations <- forM pickupMappings $ \mapping -> (mapping.createdAt,) <$> QL.findById mapping.locationId
+  pure
+    [ Common.PickupEditInfo
+        { editedAt = editedAt,
+          previousPickupLocation = mkLocationAPIEntity <$> previousPickup,
+          newPickupLocation = mkLocationAPIEntity <$> newPickup
+        }
+      | ((_, previousPickup), (editedAt, newPickup)) <- zip pickupLocations (drop 1 pickupLocations)
+    ]
+
+getDestinationEdits :: (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Currency -> m [Common.DestinationEditInfo]
+getDestinationEdits bookingId currency = do
+  updateRequests <- runInReplica $ QBUR.findAllByBookingId Nothing Nothing bookingId
+  forM updateRequests $ \updateRequest -> do
+    previousDrop <- mkLocationFromLocationMapping updateRequest.id.getId 1
+    newDrop <- mkLocationFromLocationMapping updateRequest.id.getId 2
+    pure
+      Common.DestinationEditInfo
+        { bookingUpdateRequestId = updateRequest.id.getId,
+          status = T.pack (show updateRequest.status),
+          createdAt = updateRequest.createdAt,
+          validTill = updateRequest.validTill,
+          previousDropLocation = mkLocationAPIEntity <$> previousDrop,
+          newDropLocation = mkLocationAPIEntity <$> newDrop,
+          driverLocationAtEdit = KEMT.LatLong <$> updateRequest.currentPointLat <*> updateRequest.currentPointLon,
+          oldEstimatedDistance = highPrecMetersToMeters <$> updateRequest.oldEstimatedDistance,
+          estimatedDistance = highPrecMetersToMeters <$> updateRequest.estimatedDistance,
+          oldMaxEstimatedDistance = highPrecMetersToMeters <$> updateRequest.oldMaxEstimatedDistance,
+          maxEstimatedDistance = highPrecMetersToMeters <$> updateRequest.maxEstimatedDistance,
+          oldEstimatedFare = PriceAPIEntity updateRequest.oldEstimatedFare currency,
+          estimatedFare = PriceAPIEntity updateRequest.estimatedFare currency,
+          estimatedDuration = updateRequest.estimatedDuration,
+          snapToRoadFailed = updateRequest.snapToRoadFailed,
+          oldFareParamsId = updateRequest.oldFareParamsId.getId,
+          fareParamsId = updateRequest.fareParamsId.getId,
+          farePolicyId = updateRequest.farePolicyId.getId
+        }
+
 findSpecialLocationName :: [(SL.SpecialLocation, [[[KEMT.LatLong]]])] -> Id DMOC.MerchantOperatingCity -> KEMT.LatLong -> Maybe Text
 findSpecialLocationName specialLocations merchantOpCityId point =
   listToMaybe
@@ -706,8 +752,8 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
-    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
-    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.Rental _ -> rentalNextAndLastStop ride booking
+    DTC.IntercityRental _ _ -> rentalNextAndLastStop ride booking
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
   let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
@@ -840,6 +886,13 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
   mbSos <- if hasGroup Common.SAFETY then maybe (pure Nothing) QSafetySos.findById ride.sosId else pure Nothing
   (mbPlannedPickupSpecialLocation, mbPlannedDropSpecialLocation, mbActualPickupSpecialLocation, mbActualDropSpecialLocation) <-
     if hasGroup Common.SPECIAL_LOCATIONS then getRideSpecialLocations booking ride else pure (Nothing, Nothing, Nothing, Nothing)
+  (mbPickupEdits, mbDestinationEdits) <-
+    if booking.isPickupOrDestinationEdited == Just True
+      then do
+        pickupEdits <- getPickupEdits booking.id
+        destinationEdits <- getDestinationEdits booking.id ride.currency
+        pure (mfilter (not . null) (Just pickupEdits), mfilter (not . null) (Just destinationEdits))
+      else pure (Nothing, Nothing)
   let inGroup :: Common.RideDetailGroup -> Maybe a -> Maybe a
       inGroup group value = if hasGroup group then value else Nothing
 
@@ -959,7 +1012,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         recomputeReason = ride.recomputeReason,
         passedThroughDestination = ride.passedThroughDestination,
         finalFarePolicyId = (.getId) <$> ride.finalFarePolicyId,
-        estimatedStaticDuration = booking.estimatedStaticDuration
+        estimatedStaticDuration = booking.estimatedStaticDuration,
+        pickupEdits = mbPickupEdits,
+        destinationEdits = mbDestinationEdits
       }
 
 mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
@@ -995,24 +1050,6 @@ castTripCategory = \case
   DTC.CrossCity _ _ -> Common.CrossCity
   DTC.Ambulance _ -> Common.Ambulance
   _ -> Common.OneWay
-
-calculateLocations ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Id SRB.Booking ->
-  Maybe (Id DLoc.Location) ->
-  m (Maybe DLoc.Location, Maybe DLoc.Location)
-calculateLocations bookingId stopLocationId = do
-  maxOrder <- QLM.maxOrderByEntity bookingId.getId
-  case stopLocationId of
-    Nothing -> do
-      lastLoc <- if maxOrder == 0 then pure Nothing else mkLocationFromLocationMapping bookingId.getId maxOrder
-      return (Nothing, lastLoc)
-    Just nextStopId -> do
-      nextLoc <- QL.findById nextStopId
-      lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
-      return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity loc@DLoc.Location {..} = do
@@ -1199,16 +1236,21 @@ fareBreakUp merchantShortId opCity reqRideId = do
   actualFareBreakUp <- case ride.fareParametersId of
     Just fareParamsId -> runInReplica $ SQFP.findById fareParamsId
     Nothing -> pure Nothing
+  -- The policy the ride was priced with, as snapshotted at quote time. It is cached, not
+  -- stored, so both fields are absent once that snapshot has expired.
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  mbRideDetails <- runInReplica $ QRideDetails.findById rideId
+  let mbWaitingChargeInfo = mbFarePolicy >>= DRideCommon.getWaitingChargeInfo booking.estimatedDistance (mbRideDetails >>= (.vehicleAge))
   return
     Common.FareBreakUpRes
-      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.discountAmount booking.fareParams,
+      { estimatedFareBreakUp = Just $ buildFareBreakUp mbWaitingChargeInfo booking.discountAmount booking.fareParams,
         actualFareBreakUp = case actualFareBreakUp of
-          Just fareParams -> Just $ buildFareBreakUp ride.discountAmount fareParams
+          Just fareParams -> Just $ buildFareBreakUp mbWaitingChargeInfo ride.discountAmount fareParams
           Nothing -> Nothing
       }
 
-buildFareBreakUp :: Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
-buildFareBreakUp mbDiscount DFP.FareParameters {..} = do
+buildFareBreakUp :: Maybe DFPC.WaitingChargeInfo -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
+buildFareBreakUp mbWaitingChargeInfo mbDiscount DFP.FareParameters {..} = do
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
       driverSelectedFare = roundToIntegral <$> driverSelectedFare,
@@ -1235,6 +1277,13 @@ buildFareBreakUp mbDiscount DFP.FareParameters {..} = do
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
       negotiatedFareDeltaWithCurrency = flip PriceAPIEntity currency <$> negotiatedFareDelta,
+      -- How the waiting charge is priced. The rate is absent for a flat (constant) waiting
+      -- charge, which has no per-minute rate.
+      waitingChargePerMin =
+        mbWaitingChargeInfo >>= \info -> case info.waitingCharge of
+          DFPC.PerMinuteWaitingCharge rate -> Just rate
+          DFPC.ConstantWaitingCharge _ -> Nothing,
+      freeWaitingTimeInMinutes = mbWaitingChargeInfo <&> (.freeWaitingTime.getMinutes),
       ..
     }
 

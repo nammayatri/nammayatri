@@ -14,18 +14,21 @@
 
 module Lib.Queries.SpecialLocation where
 
+import Control.Applicative ((<|>))
 import qualified Crypto.Hash as Hash
 import Data.Aeson (encode)
 import qualified Data.ByteString as BS
+import qualified Data.List as DL
 import qualified Data.Text as T
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.GateInfo.Geometry (minDistanceToPolygonEdges, parseGatePolygons, pointInPolygon)
+import Lib.GateInfo.Geometry (minDistanceToPolygonEdges, parseGatePolygons, pointInPolygon, polygonsOverlap)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocationPriority as QSLP
 import Lib.Storage.Beam.BeamFlow (BeamFlow)
@@ -44,6 +47,8 @@ data SpecialLocationFull = SpecialLocationFull
     gatesInfo :: [GD.GateInfoFull],
     gates :: [D.GatesInfo], --TODO: deprecate this later
     geoJson :: Maybe Text,
+    -- | Queue polygon, if configured separately from the pricing polygon ('geoJson').
+    queueGeoJson :: Maybe Text,
     createdAt :: UTCTime,
     priority :: Int,
     enabled :: Bool,
@@ -56,6 +61,7 @@ data SpecialLocationFull = SpecialLocationFull
     render :: Maybe D.RenderType,
     paymentModes :: Maybe [D.PaymentMode],
     fareSettlementType :: Maybe D.FareSettlementType,
+    poolingMode :: Maybe D.PoolingMode,
     pickupPriority :: Maybe Int,
     dropPriority :: Maybe Int
   }
@@ -129,6 +135,7 @@ makeFullSpecialLocation D.SpecialLocation {..} = do
     SpecialLocationFull
       { gatesInfo = gatesInfoFull,
         geoJson = geomGeoJson,
+        queueGeoJson = queueGeomGeoJson,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         pickupPriority = Nothing,
         dropPriority = Nothing,
@@ -167,6 +174,23 @@ clearSpecialZoneInMemCache = do
   IM.refreshInMem "GateInfo:"
   IM.refreshInMem "GateProximityPolygons"
 
+-- | Drop the Redis copy of the driver-app special-location list ('findFullSpecialLocationsByMerchantOperatingCityId')
+--   and its ETag for the given operating cities, so the next request rebuilds them from the DB.
+--   Both keys must go together: a surviving ETag would keep answering 304 for the old list.
+--   Zones with no operating city appear in every city's list; those are only refreshed by the
+--   key TTL ('fullSpecialLocationCacheTtl').
+--   Call this before 'clearSpecialZoneInMemCache': the in-memory list is loaded from this Redis
+--   key, so refreshing memory first lets a request in between reload the old list for up to 1h.
+clearSpecialLocationListCache :: (CacheFlow m r) => [Text] -> m ()
+clearSpecialLocationListCache mocIds =
+  forM_ (DL.nub mocIds) $ \mocId -> do
+    Hedis.del (fullSpecialLocationRedisKey mocId)
+    Hedis.del (fullSpecialLocationHashRedisKey mocId)
+
+-- | Backstop expiry for the driver-app list and ETag keys, matching the 1-hour in-mem TTL.
+fullSpecialLocationCacheTtl :: Hedis.ExpirationTime
+fullSpecialLocationCacheTtl = 3600
+
 fullSpecialLocationRedisKey :: Text -> Text
 fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
 
@@ -181,7 +205,7 @@ getFullSpecialLocationHash :: (CacheFlow m r) => Text -> m (Maybe Text)
 getFullSpecialLocationHash mocId = Hedis.safeGet (fullSpecialLocationHashRedisKey mocId)
 
 setFullSpecialLocationHash :: (CacheFlow m r) => Text -> Text -> m ()
-setFullSpecialLocationHash mocId eTag = Hedis.set (fullSpecialLocationHashRedisKey mocId) eTag
+setFullSpecialLocationHash mocId eTag = Hedis.setExp (fullSpecialLocationHashRedisKey mocId) eTag fullSpecialLocationCacheTtl
 
 specialLocationWarriorRedisKey :: Text -> Text -> Text
 specialLocationWarriorRedisKey category mocId = "SpecialLocation:Warrior:" <> category <> ":" <> mocId
@@ -194,7 +218,7 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
       Just a -> pure a
       Nothing -> do
         specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
-        Hedis.set cacheKey specialLocations
+        Hedis.setExp cacheKey specialLocations fullSpecialLocationCacheTtl
         pure specialLocations
 
 findFullSpecialLocationsByMerchantOperatingCityId' :: (BeamFlow m r, Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> m [SpecialLocationFull]
@@ -301,6 +325,106 @@ getAllEnabledSpecialLocationsWithGeom =
           orderBy [asc (specialLocation ^. SpecialLocationPriority)]
           return specialLocation
     pure $ map (\sl -> (sl, fromMaybe [] (sl.geomGeoJson >>= parseGatePolygons))) sls
+
+-- | Same set as 'getAllEnabledSpecialLocationsWithGeom', but each zone carries its queue
+--   polygon ('D.queueGeomGeoJson'), falling back to the pricing polygon when none is set.
+--   Use this for queue-facing lookups only; pricing and gates must keep using the pricing polygon.
+getAllEnabledSpecialLocationsWithQueueGeom :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => m [(D.SpecialLocation, [[[LatLong]]])]
+getAllEnabledSpecialLocationsWithQueueGeom =
+  IM.withInMemCache ["SpecialLocation:AllEnabledWithQueueGeom"] 3600 $
+    map (\(sl, pricingPolys) -> (sl, fromMaybe pricingPolys (sl.queueGeomGeoJson >>= parseGatePolygons))) <$> getAllEnabledSpecialLocationsWithGeom
+
+-- | Serve the queue polygon as 'geoJson' (falls back to the pricing polygon when none is set).
+--   For consumers whose notion of "inside the zone" is about the driver queue: LTS and the driver app.
+--   'queueGeoJson' is dropped so the (large) polygon isn't sent twice; neither consumer reads it.
+withQueueGeoJson :: SpecialLocationFull -> SpecialLocationFull
+withQueueGeoJson sl = sl {geoJson = sl.queueGeoJson <|> sl.geoJson, queueGeoJson = Nothing}
+
+-- | First zone (by priority) whose queue polygon contains the point.
+findInQueueBand :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
+findInQueueBand point = do
+  cached <- getAllEnabledSpecialLocationsWithQueueGeom
+  pure $ listToMaybe [sl | (sl, polys) <- cached, any (pointInPolygon point) polys]
+
+-- | Zone the driver is queueing for. A pricing-polygon match wins, so a driver standing inside a
+--   smaller zone that lies within another zone's wider queue band resolves to the smaller zone.
+--   Only when no pricing polygon contains the point is the queue band consulted.
+findQueueSpecialLocationByLatLongFull :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe SpecialLocationFull)
+findQueueSpecialLocationByLatLongFull point =
+  findSpecialLocationByLatLong' point
+    >>= maybe (findInQueueBand point) (pure . Just)
+    >>= mapM makeFullSpecialLocation
+
+-- | Queue-facing variant of 'findPickupSpecialLocationByLatLong': pricing polygon, then queue
+--   band, then the existing gate fallback.
+findQueueSpecialLocationByLatLong :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
+findQueueSpecialLocationByLatLong point =
+  findSpecialLocationByLatLong' point
+    >>= maybe (findInQueueBand point) (pure . Just)
+    >>= maybe (findPickupSpecialLocationByLatLong point) (pure . Just)
+
+-- | Enabled zones (other than 'selfId') that the queue band newly covers: their pricing polygon
+--   overlaps the queue polygon but not the zone's own pricing polygon. Zones already overlapping
+--   the own pricing polygon (e.g. a parking lot nested inside an airport) are an existing setup the
+--   band doesn't change, so they are not reported. The driver app and LTS pick a zone by their own
+--   rules when polygons overlap, so a queue band must not reach into another zone.
+findZonesOverlappingQueueGeom :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Maybe (Id D.SpecialLocation) -> Maybe Text -> Text -> m [D.SpecialLocation]
+findZonesOverlappingQueueGeom selfId mbOwnPricingGeoJson queueGeoJson = do
+  let queuePolys = fromMaybe [] (parseGatePolygons queueGeoJson)
+      ownPolys = fromMaybe [] (mbOwnPricingGeoJson >>= parseGatePolygons)
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure
+    [ sl
+      | (sl, pricingPolys) <- cached,
+        Just sl.id /= selfId,
+        overlapsAny queuePolys pricingPolys,
+        not (overlapsAny ownPolys pricingPolys)
+    ]
+
+-- | Reject a queue polygon that reaches into another enabled zone (see 'findZonesOverlappingQueueGeom').
+validateQueueGeomNoOverlap :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Maybe (Id D.SpecialLocation) -> Text -> Maybe Text -> Text -> m ()
+validateQueueGeomNoOverlap selfId locationName mbOwnPricingGeoJson queueGeoJson = do
+  case parseGatePolygons queueGeoJson of
+    Nothing -> throwError $ InvalidRequest $ "Queue polygon for " <> locationName <> " is not a valid Polygon/MultiPolygon"
+    Just _ -> pure ()
+  overlapping <- findZonesOverlappingQueueGeom selfId mbOwnPricingGeoJson queueGeoJson
+  unless (null overlapping) $
+    throwError $
+      InvalidRequest $
+        "Queue polygon for " <> locationName <> " overlaps the area of: "
+          <> T.intercalate ", " (map (\sl -> sl.locationName <> " (" <> sl.id.getId <> ")") overlapping)
+          <> ". A queue band must not cover another zone."
+
+-- | Reverse of 'findZonesOverlappingQueueGeom': enabled zones (other than 'selfId') whose queue
+--   band the given pricing polygon reaches into, excluding zones whose own pricing polygon it
+--   already overlaps (a zone nested inside an airport is an existing setup, not a band issue).
+findQueueBandsOverlappingPricingGeom :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Maybe (Id D.SpecialLocation) -> Text -> m [D.SpecialLocation]
+findQueueBandsOverlappingPricingGeom selfId pricingGeoJson = do
+  let pricingPolys = fromMaybe [] (parseGatePolygons pricingGeoJson)
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure
+    [ sl
+      | (sl, otherPricingPolys) <- cached,
+        Just sl.id /= selfId,
+        Just bandPolys <- [sl.queueGeomGeoJson >>= parseGatePolygons],
+        overlapsAny pricingPolys bandPolys,
+        not (overlapsAny pricingPolys otherPricingPolys)
+    ]
+
+-- | Reject a pricing polygon that lies in another zone's queue band, so a zone added after a band
+--   was set can't end up inside it. A polygon that doesn't parse is left to the upload's own checks.
+validatePricingGeomOutsideQueueBands :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Maybe (Id D.SpecialLocation) -> Text -> Text -> m ()
+validatePricingGeomOutsideQueueBands selfId locationName pricingGeoJson = do
+  overlapping <- findQueueBandsOverlappingPricingGeom selfId pricingGeoJson
+  unless (null overlapping) $
+    throwError $
+      InvalidRequest $
+        "Area of " <> locationName <> " lies inside the queue band of: "
+          <> T.intercalate ", " (map (\sl -> sl.locationName <> " (" <> sl.id.getId <> ")") overlapping)
+          <> ". Shrink that queue band first."
+
+overlapsAny :: [[[LatLong]]] -> [[[LatLong]]] -> Bool
+overlapsAny as bs = or [polygonsOverlap a b | a <- as, b <- bs]
 
 findSpecialLocationByLatLongFull :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point = do

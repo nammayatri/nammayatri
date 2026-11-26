@@ -769,8 +769,9 @@ notifySharedCabCheckIn ::
   Maybe FCM.FCMRecipientToken ->
   Language ->
   Text ->
+  Text ->
   m ()
-notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
+notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode routeName =
   dynamicFCMNotifyPerson
     merchantOpCityId
     personId
@@ -778,8 +779,8 @@ notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode =
     lang
     Nothing
     (createFCMReq "SHARED_CAB_CHECK_IN" personId.getId FCM.Person identity)
-    (Just ())
-    [("routeCode", routeCode)]
+    (Just (object ["routeCode" .= routeCode, "routeName" .= routeName]))
+    [("routeCode", routeCode), ("routeName", routeName)]
     Nothing
 
 -- FCM.ALLOCATION_REQUEST

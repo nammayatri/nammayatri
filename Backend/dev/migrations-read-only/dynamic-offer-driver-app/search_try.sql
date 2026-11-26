@@ -111,3 +111,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN reallocation_outcome ch
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN payment_charge_details json ;
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN estimate_offer_discounts json ;

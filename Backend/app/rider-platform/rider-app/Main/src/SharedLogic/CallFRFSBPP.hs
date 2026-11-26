@@ -146,6 +146,19 @@ cancel providerUrl req merchantId = do
   bapId <- req.cancelReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   callBecknAPIWithSignature' merchantId bapId "cancel" Spec.cancelAPI providerUrl internalEndPointHashMap req
 
+update ::
+  ( BecknAPICallFlow m r,
+    HasRequestId r
+  ) =>
+  BaseUrl ->
+  Spec.UpdateReq ->
+  Id Merchant.Merchant ->
+  m Spec.AckResponse
+update providerUrl req merchantId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- req.updateReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature' merchantId bapId "update" Spec.updateAPI providerUrl internalEndPointHashMap req
+
 callBecknAPIWithSignature' ::
   ( MonadFlow m,
     CoreMetrics m,

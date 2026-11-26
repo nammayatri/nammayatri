@@ -338,6 +338,7 @@ VehicleRegistrationCertificate:
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
     rcVehicleType: Maybe Kernel.External.Verification.Types.VehicleRegistrationType
+    isBlocked: Maybe Bool
   default:
     approved: "false"
   constraints:
@@ -423,6 +424,10 @@ VehicleRegistrationCertificate:
       kvFunction: updateOneWithKV
       params: [vehicleRating, vehicleRatingRemark]
       where: id
+    updateIsBlocked:
+      kvFunction: updateOneWithKV
+      params: [isBlocked]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -438,6 +443,10 @@ DriverRCAssociation:
     consentTimestamp: UTCTime
     isRcActive: Bool
     errorMessage: Maybe Text
+    # Latest RC takeover photo check by this driver for this RC: our verdict, scores and Grid's raw output.
+    takeoverVerifyResponse: Maybe Value
+  sqlType:
+    takeoverVerifyResponse: json
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -468,6 +477,7 @@ DriverRCAssociation:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
 Image:
   tableName: image
@@ -829,6 +839,9 @@ DocumentVerificationConfig:
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
+    forceImageVerification: Maybe Bool
+    failedAttemptLimit: Maybe Int
+    failedAttemptWindowSeconds: Maybe Int
     rolesAllowedToUploadDocument: Maybe [Role]
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
