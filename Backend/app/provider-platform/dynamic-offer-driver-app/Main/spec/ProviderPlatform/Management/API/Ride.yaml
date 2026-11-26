@@ -379,7 +379,7 @@ types:
     - cancelledBy: Maybe CancellationSource
     - cancellationReasonCode: Maybe CancellationReasonCode
   WaiverRideCancellationPenaltyReq:
-    - reason: "!Text"
+    - reason: Text
   NearbyResp:
     - nearbyDriverCount: Maybe Int
     - nearbyCustomerCount: Maybe Int
@@ -424,7 +424,7 @@ types:
   MultipleRideCancelItem:
     - rideId: Id Ride
     - reasonCode: CancellationReasonCode
-    - additionalInfo: "Maybe !Text"
+    - additionalInfo: Maybe Text
   MultipleRideCancelResp:
     - recordType: Type
     - type: MultipleRideSyncResp
@@ -910,7 +910,7 @@ types:
     - urlsExpireAt: Maybe UTCTime
   SetRideEvidenceVisibilityReq:
     - isHidden: Bool
-    - reason: "Maybe !Text"
+    - reason: Maybe Text
     - derive: "'HideSecrets"
   RideEvidenceFileRes:
     - evidenceId: "!Text"

@@ -35,10 +35,10 @@ types:
   RefundRequestReq:
     refundComponents: "[RefundComponentReq]"
     code: RefundRequestCode
-    description: "!Text"
-    evidence: "Maybe !Text"
+    description: Text
+    evidence: Maybe Text
     fileType: Maybe FileType
-    reqContentType: "Maybe !Text"
+    reqContentType: Maybe Text
   RefundRequestResp:
     rideId: Id Ride
     requestedAmount: Maybe PriceAPIEntity

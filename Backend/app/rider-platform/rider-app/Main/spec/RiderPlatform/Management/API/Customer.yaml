@@ -160,7 +160,7 @@ types:
     - blocked: Bool
     - paymentMode: Maybe PaymentMode
   BlockCustomerReq:
-    - blockedReason: "Maybe !Text"
+    - blockedReason: Maybe Text
     - derive: "'HideSecrets"
   CustomerInfoRes:
     - numberOfRides: Int
@@ -216,27 +216,27 @@ types:
     - amountSaved: HighPrecMoney
     - postOfferAmount: HighPrecMoney
   CustomerOffersListReq:
-    - mobileNumber: "!Text"
-    - mobileCountryCode: "Maybe !Text"
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
     - amount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
   ApplyCustomerOfferReq:
-    - mobileNumber: "!Text"
-    - mobileCountryCode: "Maybe !Text"
-    - offerCode: "!Text"
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
+    - offerCode: Text
     - validityHours: Int
     - amount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
   CustomerEnsureExistsReq:
-    - mobileNumber: "!Text"
-    - mobileCountryCode: "Maybe !Text"
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
     - derive: "'HideSecrets"
   BulkApplyOfferCustomer:
-    - mobileNumber: "!Text"
-    - mobileCountryCode: "Maybe !Text"
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
   BulkApplyCustomerOfferReq:
     - customers: [BulkApplyOfferCustomer]
-    - offerCode: "!Text"
+    - offerCode: Text
     - validityHours: Int
     - amount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
