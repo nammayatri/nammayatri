@@ -692,8 +692,7 @@ updateDriverNumberFromPlaintext :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> En
 updateDriverNumberFromPlaintext rideId driverNumber =
   updateOneWithKV
     [ Se.Set BeamR.driverNumberEncrypted $ Just (unEncrypted driverNumber.encrypted),
-      Se.Set BeamR.driverNumberHash $ Just driverNumber.hash,
-      Se.Set BeamR.driverMobileNumber Nothing
+      Se.Set BeamR.driverNumberHash $ Just driverNumber.hash
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 

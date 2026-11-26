@@ -9,14 +9,23 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Storage.Queries.Ride as QRide
+import qualified System.Environment as SE
 import qualified Tools.Fields as Fields
+
+-- | Clearing the plaintext number makes the row unreadable for pods on releases
+-- where ride.driverMobileNumber is non-null, so it stays off until every pod
+-- runs a release that reads it as Maybe. Turn on with CLEAR_PLAINTEXT_DRIVER_NUMBER=true.
+shouldClearPlaintext :: IO Bool
+shouldClearPlaintext = maybe False (`elem` ["true", "True", "TRUE"]) <$> SE.lookupEnv "CLEAR_PLAINTEXT_DRIVER_NUMBER"
 
 getDriverMobileNumber :: (EncFlow m r, EsqDBFlow m r, MonadFlow m) => DRide.Ride -> m (Maybe Text)
 getDriverMobileNumber ride = case (ride.driverPhoneNumber, ride.driverMobileNumber) of
   (Just encrypted, Nothing) -> Just <$> decrypt encrypted
   (Just encrypted, Just plaintext) -> do
     decrypted <- decrypt encrypted
-    fork "DriverNumber:clearPlaintext" $ clearPlaintext ride encrypted decrypted plaintext
+    clearEnabled <- liftIO shouldClearPlaintext
+    when clearEnabled $
+      fork "DriverNumber:clearPlaintext" $ clearPlaintext ride encrypted decrypted plaintext
     pure $ Just decrypted
   (Nothing, Just plaintext) -> do
     fork "DriverNumber:backfill" $ backfill ride plaintext

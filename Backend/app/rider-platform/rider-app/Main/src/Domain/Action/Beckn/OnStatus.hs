@@ -382,7 +382,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.MeterRideDetails _ -> True
         _ -> False
       enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
-  pure $ DRide.Ride {driverMobileNumber = Nothing, cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, ..}
+  -- driverMobileNumber is still written so pods on releases where it is non-null can read the row.
+  pure $ DRide.Ride {driverMobileNumber = Just driverMobileNumber, cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

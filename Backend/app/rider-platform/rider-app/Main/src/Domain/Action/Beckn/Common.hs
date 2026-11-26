@@ -424,7 +424,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   return
     DRide.Ride
       { id = guid,
-        driverMobileNumber = Nothing,
+        -- Still written so pods on releases where driverMobileNumber is non-null can read the row.
+        driverMobileNumber = Just bookingDetails.driverMobileNumber,
         bookingId = booking.id,
         shortId = ShortId $ DPayment.updateShortId Nothing isMetroTestTransaction shortId.getShortId,
         merchantId = Just booking.merchantId,
