@@ -31,6 +31,7 @@ data InvoiceT f = InvoiceT
     issuedByName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedByType :: B.C f Kernel.Prelude.Text,
     issuedToAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    issuedToGstin :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedToId :: B.C f Kernel.Prelude.Text,
     issuedToName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedToType :: B.C f Domain.Types.Invoice.IssuedToType,
