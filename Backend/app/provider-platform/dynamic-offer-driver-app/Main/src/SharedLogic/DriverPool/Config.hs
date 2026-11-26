@@ -33,7 +33,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry
 import Kernel.Prelude as KP
 import Kernel.Storage.Clickhouse.Config
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common
 import qualified Kernel.Types.Common as Common
@@ -205,7 +204,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs
   let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
-  oldVersion <- getConfigVersion Nothing
+      oldVersion = sreq.poolingConfigVersion
   (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion Nothing
   let customerTags = convertTags <$> sreq.customerNammaTags
   now <- getCurrentTime
@@ -217,31 +216,11 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
       resp <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) (Just sreq.transactionId) allLogics config
       case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
-          when
-            (isJust version && isNothing oldVersion)
-            ( do
-                QSR.updatePoolingConfigVersion version sreq.id
-                cacheConfigVersion Nothing (fromJust version)
-            )
+          when (isJust version && isNothing oldVersion) $
+            QSR.updatePoolingConfigVersion version sreq.id
           pure $ Just dpc''.config
         A.Error e -> do
           logError $ "Error in applying dynamic logic: " <> show e
           incrementSystemConfigsFailedCounter "driver_pool_config_dynamic_logic_failure"
           pure dpc'
     Nothing -> pure Nothing
-
-makeConfigVersionKey :: Text -> Text
-makeConfigVersionKey id = "DRIVER_POOL_CONFIG:STKID" <> id
-
-getConfigVersion :: (CacheFlow m r) => Maybe Text -> m (Maybe Int)
-getConfigVersion mbStickyKey = do
-  case mbStickyKey of
-    Nothing -> pure Nothing
-    Just stId' -> Hedis.withCrossAppRedis (Hedis.safeGet (makeConfigVersionKey stId'))
-
-cacheConfigVersion :: (CacheFlow m r) => Maybe Text -> Int -> m ()
-cacheConfigVersion mbStickyKey version = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  case mbStickyKey of
-    Nothing -> pure ()
-    Just stId' -> Hedis.withCrossAppRedis (Hedis.setExp (makeConfigVersionKey stId') version expTime)
