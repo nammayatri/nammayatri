@@ -12,6 +12,9 @@ import qualified API.Types.RiderPlatform.Management.Offer as Common
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PayoutConfig as Fields
+import qualified Domain.Types.VehicleCategory as DV
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -20,6 +23,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
@@ -29,7 +33,7 @@ import SharedLogic.Offer (OfferEligibilityInput)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Tools.Fields as Fields
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 
 postOfferCreate ::
   ShortId DM.Merchant ->
@@ -42,6 +46,7 @@ postOfferCreate merchantShortId opCity req = do
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
   validateValidityWindow req.validFrom req.validTill
+  validateCashbackRedeemWindow merchantOpCity.id req.offerType req.cashbackRedeemWindowInHours
   -- offer codes are unique per city (unique_offer_code_per_city); fail here instead of in the KV drainer
   existingOffer <- QOffer.findByOfferCodeAndCity req.offerCode merchantOpCity.id.getId
   when (isJust existingOffer) $
@@ -70,6 +75,7 @@ postOfferCreate merchantShortId opCity req = do
             isHidden = req.isHidden,
             frequencyType = req.frequencyType,
             maxApplyCount = req.maxApplyCount,
+            cashbackRedeemWindowInHours = req.cashbackRedeemWindowInHours,
             showMilestoneCard = req.showMilestoneCard,
             merchantId = merchant.id.getId,
             merchantOperatingCityId = merchantOpCity.id.getId,
@@ -87,10 +93,11 @@ postOfferUpdate ::
   Flow APISuccess
 postOfferUpdate merchantShortId opCity offerId req = do
   _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
   offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
+  validateCashbackRedeemWindow merchantOpCity.id offer.offerType req.cashbackRedeemWindowInHours
   now <- getCurrentTime
   let updatedOffer =
         offer
@@ -109,6 +116,7 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.isHidden = req.isHidden <|> offer.isHidden,
             DOffer.frequencyType = req.frequencyType <|> offer.frequencyType,
             DOffer.maxApplyCount = req.maxApplyCount <|> offer.maxApplyCount,
+            DOffer.cashbackRedeemWindowInHours = req.cashbackRedeemWindowInHours <|> offer.cashbackRedeemWindowInHours,
             DOffer.showMilestoneCard = req.showMilestoneCard <|> offer.showMilestoneCard,
             DOffer.updatedAt = now
           }
@@ -125,6 +133,18 @@ validateMaxApplyCount :: Maybe Int -> Flow ()
 validateMaxApplyCount mbMaxApplyCount =
   whenJust mbMaxApplyCount $ \maxApplyCount ->
     when (maxApplyCount < 1) $ throwError (InvalidRequest "maxApplyCount must be at least 1")
+
+-- | A redeem window is for cashback offers only, and must outlast the delay before the city's
+--   cashback payout job runs, else a rider who already has a VPA loses the cashback unpaid.
+validateCashbackRedeemWindow :: Id DMOC.MerchantOperatingCity -> DOffer.OfferType -> Maybe Int -> Flow ()
+validateCashbackRedeemWindow merchantOpCityId offerType mbWindowInHours =
+  whenJust mbWindowInHours $ \windowInHours -> do
+    when (offerType /= DOffer.CASHBACK) $ throwError (InvalidRequest "cashbackRedeemWindowInHours is only for CASHBACK offers")
+    when (windowInHours < 1) $ throwError (InvalidRequest "cashbackRedeemWindowInHours must be at least 1")
+    mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
+    whenJust mbPayoutConfig $ \payoutConfig ->
+      when (windowInHours * 3600 <= payoutConfig.scheduleCashbackPayoutAfter) $
+        throwError (InvalidRequest $ "cashbackRedeemWindowInHours must be longer than the cashback payout delay of " <> show payoutConfig.scheduleCashbackPayoutAfter <> " seconds")
 
 validateValidityWindow :: Maybe UTCTime -> Maybe UTCTime -> Flow ()
 validateValidityWindow mbValidFrom mbValidTill =
@@ -165,6 +185,7 @@ mkOfferResp offer =
       isHidden = offer.isHidden,
       frequencyType = offer.frequencyType,
       maxApplyCount = offer.maxApplyCount,
+      cashbackRedeemWindowInHours = offer.cashbackRedeemWindowInHours,
       showMilestoneCard = offer.showMilestoneCard,
       createdAt = offer.createdAt,
       updatedAt = offer.updatedAt

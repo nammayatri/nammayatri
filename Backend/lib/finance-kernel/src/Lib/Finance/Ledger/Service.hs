@@ -21,6 +21,7 @@ module Lib.Finance.Ledger.Service
     balanceUpdateFailedVoidReason,
     entryMovedMoney,
     createReversal,
+    createReversalWith,
 
     -- * Status management
     updateEntryStatus,
@@ -29,6 +30,8 @@ module Lib.Finance.Ledger.Service
     voidEntry,
     markEntriesAsPaidOut,
     markEntriesAsClaimed,
+    markEntriesAsForfeited,
+    mergeEntryMetadata,
 
     -- * Query by ID/reference
     getEntry,
@@ -498,7 +501,18 @@ createReversal ::
   Id LedgerEntry -> -- Entry to reverse
   Text -> -- Reason for reversal
   m (Either FinanceError LedgerEntry)
-createReversal originalId reason = do
+createReversal originalId reason = createReversalWith originalId reason Nothing
+
+-- | 'createReversal' that also stamps the reversal row's settlement fields at insert, so a
+--   payout never sees the reversal as unsettled money (e.g. a forfeited cashback's reversal).
+--   When the reversal already exists, it is returned as it is.
+createReversalWith ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Id LedgerEntry -> -- Entry to reverse
+  Text -> -- Reason for reversal
+  Maybe (SettlementStatus, Text) -> -- settlement status and settlement id for the reversal row
+  m (Either FinanceError LedgerEntry)
+createReversalWith originalId reason mbSettlement = do
   actorInfo <- asks (.actorInfo)
   mbOriginal <- withMasterReads (QLedger.findById originalId)
 
@@ -537,6 +551,7 @@ createReversal originalId reason = do
                         payoutOrderId = Nothing,
                         d2cReferralEarnings = Nothing,
                         d2dReferralEarnings = Nothing,
+                        cashbackRedeemBy = Nothing,
                         dailyStatsId = Nothing
                       },
                 reconciliationStatus = original.reconciliationStatus,
@@ -544,9 +559,9 @@ createReversal originalId reason = do
                 fromEndingBalance = Nothing,
                 toStartingBalance = Nothing,
                 toEndingBalance = Nothing,
-                settlementStatus = Nothing,
-                settlementId = Nothing,
-                settlementTimestamp = Nothing,
+                settlementStatus = fst <$> mbSettlement,
+                settlementId = snd <$> mbSettlement,
+                settlementTimestamp = now <$ mbSettlement,
                 timestamp = now,
                 merchantId = original.merchantId,
                 merchantOperatingCityId = original.merchantOperatingCityId,
@@ -683,6 +698,7 @@ mergeLedgerEntryMetadata new old =
       payoutOrderId = new.payoutOrderId <|> old.payoutOrderId,
       d2cReferralEarnings = new.d2cReferralEarnings <|> old.d2cReferralEarnings,
       d2dReferralEarnings = new.d2dReferralEarnings <|> old.d2dReferralEarnings,
+      cashbackRedeemBy = new.cashbackRedeemBy <|> old.cashbackRedeemBy,
       dailyStatsId = new.dailyStatsId <|> old.dailyStatsId
     }
 
@@ -1332,6 +1348,55 @@ markEntriesAsClaimed entryIds = do
     ]
     [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]
   auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
+
+-- | Mark entries as FORFEITED: money that is no longer owed and must never be paid out
+--   (an offer cashback past its redeem deadline, after its reversal is posted). Only flips
+--   entries that are still UNSETTLED / NULL, so an in-flight or paid-out entry is never touched.
+markEntriesAsForfeited ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  [Id LedgerEntry] ->
+  Text -> -- settlement id (what forfeited it)
+  m ()
+markEntriesAsForfeited [] _ = pure ()
+markEntriesAsForfeited entryIds settlementId = do
+  actorInfo <- asks (.actorInfo)
+  beforeEntries <- QLedgerExtra.findByIds entryIds
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamLE.settlementStatus (Just FORFEITED),
+      Se.Set BeamLE.settlementId (Just settlementId),
+      Se.Set BeamLE.settlementTimestamp (Just now),
+      Se.Set BeamLE.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamLE.id $ Se.In (map (.getId) entryIds),
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq Nothing,
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED)
+            ]
+        ]
+    ]
+  auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
+
+-- | Merge metadata into an entry: fields set in the given metadata win, the rest are kept.
+mergeEntryMetadata ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Id LedgerEntry ->
+  LedgerEntryMetadata ->
+  m ()
+mergeEntryMetadata entryId metadata = do
+  actorInfo <- asks (.actorInfo)
+  mbEntry <- QLedger.findById entryId
+  forM_ mbEntry $ \entry -> do
+    let updatedEntry =
+          entry
+            { metadataV2 = mergeMaybeLedgerEntryMetadata (Just metadata) entry.metadataV2,
+              updatedBy = Just actorInfo.actorType,
+              updatedById = actorInfo.actorId
+            }
+    when (updatedEntry.metadataV2 /= entry.metadataV2) $ do
+      QLedger.updateByPrimaryKey updatedEntry
+      auditLedgerUpdate actorInfo Updated entry updatedEntry
 
 -- | Reserve a batch of ledger entries for an in-flight payout.
 --   Sets settlementStatus = PROCESSING (so subsequent eligibility queries

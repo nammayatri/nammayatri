@@ -608,6 +608,7 @@ library
       SharedLogic.FareBreakdown
       SharedLogic.FareBreakupInfo
       SharedLogic.FeedbackForm
+      SharedLogic.Finance.CashbackExpiry
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
@@ -688,6 +689,7 @@ library
       SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
       SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+      SharedLogic.Scheduler.Jobs.ExpireOfferCashback
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance

@@ -24,6 +24,7 @@ import Lib.Finance.Transfer.Outbound (OutboundSpec (..), initiateTransferOut)
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified SharedLogic.Finance.CashbackExpiry as CashbackExpiry
 import qualified SharedLogic.Finance.Rails as Rails
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -57,7 +58,7 @@ type CashbackPayoutFlow m r c =
 --   request, and on PayoutInitiated the OwnerPayoutLiability hold.
 runCashbackPayout :: (CashbackPayoutFlow m r c) => Id Person -> m ()
 runCashbackPayout personId =
-  PayoutRequest.runPayoutUnderLock ("CashRideCashbackPayoutJob:" <> personId.getId) 120 (findCashbackPayoutAmount personId) submitCashbackPayout
+  PayoutRequest.runPayoutUnderLock (CashbackExpiry.cashbackPayoutLockKey personId) 120 (findCashbackPayoutAmount personId) submitCashbackPayout
 
 data CashbackPayoutPlan = CashbackPayoutPlan
   { person :: Person,
@@ -76,9 +77,11 @@ findCashbackPayoutAmount personId = do
       pure Nothing
     Just payoutVpa -> do
       (_walletBalance, unsettledWithNet) <- RidePaymentFinance.getPayoutEligibilityData DA.RIDER personId
+      now <- getCurrentTime
+      -- a cashback past its redeem deadline is never paid: the ExpireOfferCashback job forfeits it
       let cashbackEntries =
             filter
-              (\(e, _) -> e.referenceType == RidePaymentFinance.ridePaymentRefCashbackPayout)
+              (\(e, _) -> e.referenceType == RidePaymentFinance.ridePaymentRefCashbackPayout && CashbackExpiry.isCashbackRedeemable now e)
               unsettledWithNet
           totalAmount = sum (map snd cashbackEntries)
       if null cashbackEntries

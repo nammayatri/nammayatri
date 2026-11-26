@@ -53,13 +53,34 @@ data LedgerEntry = LedgerEntry
   }
   deriving (Generic)
 
-data EntityReferenceType = RefundRequest | LedgerAdjustmentRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntityReferenceType
+  = RefundRequest
+  | LedgerAdjustmentRequest
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntryStatus
+  = PENDING
+  | DUE
+  | SETTLED
+  | VOIDED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal | Adjustment deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntryType
+  = Expense
+  | Revenue
+  | LiabilityCreated
+  | LiabilitySettled
+  | Reversal
+  | Adjustment
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data SettlementStatus = UNSETTLED | PROCESSING | PAID_OUT | EXTERNAL_PENDING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SettlementStatus
+  = UNSETTLED
+  | PROCESSING
+  | PAID_OUT
+  | EXTERNAL_PENDING
+  | FORFEITED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntityReferenceType)
 

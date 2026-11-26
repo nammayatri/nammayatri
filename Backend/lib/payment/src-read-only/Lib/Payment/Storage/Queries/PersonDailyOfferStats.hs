@@ -18,28 +18,31 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats] -> m ()
 createMany = traverse_ create
 
 findAllByDateAndPayoutStatus ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Data.Time.Calendar.Day -> Lib.Payment.Domain.Types.Common.PayoutStatus -> m [Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats])
+  Data.Time.Calendar.Day ->
+  (Lib.Payment.Domain.Types.Common.PayoutStatus -> m [Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats])
 findAllByDateAndPayoutStatus date payoutStatus = do findAllWithKV [Se.And [Se.Is Beam.date $ Se.Eq date, Se.Is Beam.payoutStatus $ Se.Eq payoutStatus]]
 
 findByPersonIdAndDate ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m (Maybe Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats))
+  Kernel.Prelude.Text ->
+  (Data.Time.Calendar.Day -> m (Maybe Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats))
 findByPersonIdAndDate personId date = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq personId, Se.Is Beam.date $ Se.Eq date]]
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats -> m (Maybe Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats ->
+  m (Maybe Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats {..}) = do
   _now <- getCurrentTime
   updateWithKV

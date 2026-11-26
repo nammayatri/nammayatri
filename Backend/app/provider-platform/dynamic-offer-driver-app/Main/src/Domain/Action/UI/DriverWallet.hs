@@ -1447,6 +1447,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
               LedgerEntryMetadata
                 { d2cReferralEarnings = Nothing,
                   d2dReferralEarnings = Nothing,
+                  cashbackRedeemBy = Nothing,
                   dailyStatsId = Nothing,
                   driverPayable = Nothing,
                   payoutOrderId = Nothing,

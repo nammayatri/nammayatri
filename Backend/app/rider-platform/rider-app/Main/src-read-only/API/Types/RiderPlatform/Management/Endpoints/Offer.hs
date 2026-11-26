@@ -37,6 +37,7 @@ data CreateOfferReq = CreateOfferReq
     isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cashbackRedeemWindowInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
@@ -70,6 +71,7 @@ data OfferResp = OfferResp
     isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cashbackRedeemWindowInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
@@ -93,6 +95,7 @@ data UpdateOfferReq = UpdateOfferReq
     isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cashbackRedeemWindowInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
@@ -112,35 +115,38 @@ data ValidateOfferEligibilityResp = ValidateOfferEligibilityResp {eligible :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("offer" :> (PostOfferCreate :<|> PostOfferUpdate :<|> GetOfferList :<|> PostOfferToggle :<|> PostOfferValidateEligibility :<|> GetOfferEligibilitySchema))
+type API = "offer" :> (PostOfferCreate :<|> (PostOfferUpdate :<|> (GetOfferList :<|> (PostOfferToggle :<|> (PostOfferValidateEligibility :<|> GetOfferEligibilitySchema)))))
 
-type PostOfferCreate = ("create" :> ReqBody '[JSON] CreateOfferReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOfferCreate = "create" :> (ReqBody '[JSON] CreateOfferReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostOfferUpdate =
-  ( Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "update" :> ReqBody '[JSON] UpdateOfferReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+  Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer)
+    :> ( "update"
+           :> ( ReqBody '[JSON] UpdateOfferReq
+                  :> Post
+                       '[JSON]
+                       Kernel.Types.APISuccess.APISuccess
+              )
+       )
 
-type GetOfferList = ("list" :> Get '[JSON] [OfferResp])
+type GetOfferList = "list" :> Get '[JSON] [OfferResp]
 
-type PostOfferToggle = (Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "toggle" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOfferToggle = Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> ("toggle" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostOfferValidateEligibility = ("validateEligibility" :> ReqBody '[JSON] ValidateOfferEligibilityReq :> Post '[JSON] ValidateOfferEligibilityResp)
+type PostOfferValidateEligibility = "validateEligibility" :> (ReqBody '[JSON] ValidateOfferEligibilityReq :> Post '[JSON] ValidateOfferEligibilityResp)
 
-type GetOfferEligibilitySchema = ("eligibilitySchema" :> Get '[JSON] OfferEligibilitySchemaResp)
+type GetOfferEligibilitySchema = "eligibilitySchema" :> Get '[JSON] OfferEligibilitySchemaResp
 
 data OfferAPIs = OfferAPIs
   { postOfferCreate :: CreateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postOfferUpdate :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> UpdateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postOfferUpdate :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> (UpdateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getOfferList :: EulerHS.Types.EulerClient [OfferResp],
     postOfferToggle :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postOfferValidateEligibility :: ValidateOfferEligibilityReq -> EulerHS.Types.EulerClient ValidateOfferEligibilityResp,
     getOfferEligibilitySchema :: EulerHS.Types.EulerClient OfferEligibilitySchemaResp
   }
 
-mkOfferAPIs :: (Client EulerHS.Types.EulerClient API -> OfferAPIs)
+mkOfferAPIs :: Client EulerHS.Types.EulerClient API -> OfferAPIs
 mkOfferAPIs offerClient = (OfferAPIs {..})
   where
     postOfferCreate :<|> postOfferUpdate :<|> getOfferList :<|> postOfferToggle :<|> postOfferValidateEligibility :<|> getOfferEligibilitySchema = offerClient

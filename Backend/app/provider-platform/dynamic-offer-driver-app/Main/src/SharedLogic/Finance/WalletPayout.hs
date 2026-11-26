@@ -352,6 +352,7 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             subscriptionAllocations = Nothing,
             d2cReferralEarnings = Nothing,
             d2dReferralEarnings = Nothing,
+            cashbackRedeemBy = Nothing,
             dailyStatsId = Nothing
           }
       initiatedPush = Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken

@@ -290,6 +290,7 @@ data RideOfferStatus
   | CASHBACK_PROCESSING
   | CASHBACK_PAID
   | CASHBACK_FAILED
+  | CASHBACK_EXPIRED
   | UNKNOWN
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -347,107 +348,152 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRidePayoutOfferSyncHelper :<|> PostRideCancelMultiple :<|> GetRideKaptureList :<|> GetRideFlowDebugBap))
+type API = "ride" :> (GetRideList :<|> (GetRideInfo :<|> (CancellationChargesWaiveOff :<|> (GetShareRideInfo :<|> (GetShareRideInfoByShortId :<|> (GetRideTripRoute :<|> (GetRidePickupRoute :<|> (PostRideSyncMultiple :<|> (PostRidePayoutOfferSyncHelper :<|> (PostRideCancelMultiple :<|> (GetRideKaptureList :<|> GetRideFlowDebugBap)))))))))))
 
 type GetRideList =
-  ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "bookingStatus" BookingStatus
-      :> QueryParam
-           "rideShortId"
-           (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
-      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
-      :> QueryParam
-           "driverPhoneNo"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "from"
-           Kernel.Prelude.UTCTime
-      :> QueryParam
-           "to"
-           Kernel.Prelude.UTCTime
-      :> Get
-           '[JSON]
-           RideListRes
-  )
+  "list"
+    :> ( QueryParam "limit" Kernel.Prelude.Int
+           :> ( QueryParam "offset" Kernel.Prelude.Int
+                  :> ( QueryParam "bookingStatus" BookingStatus
+                         :> ( QueryParam
+                                "rideShortId"
+                                (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
+                                :> ( QueryParam
+                                       "customerPhoneNo"
+                                       Kernel.Prelude.Text
+                                       :> ( QueryParam
+                                              "driverPhoneNo"
+                                              Kernel.Prelude.Text
+                                              :> ( QueryParam
+                                                     "from"
+                                                     Kernel.Prelude.UTCTime
+                                                     :> ( QueryParam
+                                                            "to"
+                                                            Kernel.Prelude.UTCTime
+                                                            :> Get
+                                                                 '[JSON]
+                                                                 RideListRes
+                                                        )
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
-type GetRideInfo = ("rideinfo" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] RideInfoRes)
+type GetRideInfo = "rideinfo" :> (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] RideInfoRes)
 
-type CancellationChargesWaiveOff = ("cancellationChargesWaiveOff" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] CancellationChargesWaiveOffRes)
+type CancellationChargesWaiveOff = "cancellationChargesWaiveOff" :> (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] CancellationChargesWaiveOffRes)
 
-type GetShareRideInfo = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "info" :> Get '[JSON] ShareRideInfoRes)
+type GetShareRideInfo = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("info" :> Get '[JSON] ShareRideInfoRes)
 
-type GetShareRideInfoByShortId = (Capture "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> "rideInfo" :> Get '[JSON] ShareRideInfoRes)
+type GetShareRideInfoByShortId = Capture "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> ("rideInfo" :> Get '[JSON] ShareRideInfoRes)
 
 type GetRideTripRoute =
-  ( "trip" :> "route" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> MandatoryQueryParam "lat" Kernel.Prelude.Double
-      :> MandatoryQueryParam
-           "lon"
-           Kernel.Prelude.Double
-      :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
-  )
+  "trip"
+    :> ( "route"
+           :> ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride)
+                  :> ( MandatoryQueryParam "lat" Kernel.Prelude.Double
+                         :> ( MandatoryQueryParam
+                                "lon"
+                                Kernel.Prelude.Double
+                                :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
+                            )
+                     )
+              )
+       )
 
 type GetRidePickupRoute =
-  ( "pickup" :> "route" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> MandatoryQueryParam "lat" Kernel.Prelude.Double
-      :> MandatoryQueryParam
-           "lon"
-           Kernel.Prelude.Double
-      :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
-  )
+  "pickup"
+    :> ( "route"
+           :> ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride)
+                  :> ( MandatoryQueryParam "lat" Kernel.Prelude.Double
+                         :> ( MandatoryQueryParam
+                                "lon"
+                                Kernel.Prelude.Double
+                                :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
+                            )
+                     )
+              )
+       )
 
-type PostRideSyncMultiple = ("sync" :> ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
+type PostRideSyncMultiple = "sync" :> (ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
 
-type PostRidePayoutOfferSync = ("payoutOfferSync" :> ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
+type PostRidePayoutOfferSync = "payoutOfferSync" :> (ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
 
 type PostRidePayoutOfferSyncHelper =
-  ( "payoutOfferSync" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MultipleRideSyncReq
-      :> Post
-           '[JSON]
-           Dashboard.Common.Ride.MultipleRideSyncResp
-  )
+  "payoutOfferSync"
+    :> ( QueryParam "requestorId" Kernel.Prelude.Text
+           :> ( ReqBody '[JSON] MultipleRideSyncReq
+                  :> Post
+                       '[JSON]
+                       Dashboard.Common.Ride.MultipleRideSyncResp
+              )
+       )
 
-type PostRideCancelMultiple = ("cancel" :> ReqBody '[JSON] MultipleRideCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRideCancelMultiple = "cancel" :> (ReqBody '[JSON] MultipleRideCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetRideKaptureList =
-  ( "kapture" :> "list" :> QueryParam "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> QueryParam "countryCode" Kernel.Prelude.Text
-      :> QueryParam
-           "phoneNumber"
-           Kernel.Prelude.Text
-      :> QueryParam "supportPhoneNumber" Kernel.Prelude.Text
-      :> Get '[JSON] TicketRideListRes
-  )
+  "kapture"
+    :> ( "list"
+           :> ( QueryParam "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
+                  :> ( QueryParam
+                         "countryCode"
+                         Kernel.Prelude.Text
+                         :> ( QueryParam "phoneNumber" Kernel.Prelude.Text
+                                :> ( QueryParam "supportPhoneNumber" Kernel.Prelude.Text
+                                       :> Get
+                                            '[JSON]
+                                            TicketRideListRes
+                                   )
+                            )
+                     )
+              )
+       )
 
 type GetRideFlowDebugBap =
-  ( "flowDebug" :> "bap" :> QueryParam "bapBookingId" Kernel.Prelude.Text :> QueryParam "bapRideId" Kernel.Prelude.Text
-      :> QueryParam
-           "bapRideShortId"
-           Kernel.Prelude.Text
-      :> QueryParam "bapSearchRequestId" Kernel.Prelude.Text
-      :> QueryParam
-           "bppBookingId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "transactionId"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           Dashboard.Common.RideDebug.BAPSideDebug
-  )
+  "flowDebug"
+    :> ( "bap"
+           :> ( QueryParam "bapBookingId" Kernel.Prelude.Text
+                  :> ( QueryParam "bapRideId" Kernel.Prelude.Text
+                         :> ( QueryParam
+                                "bapRideShortId"
+                                Kernel.Prelude.Text
+                                :> ( QueryParam "bapSearchRequestId" Kernel.Prelude.Text
+                                       :> ( QueryParam
+                                              "bppBookingId"
+                                              Kernel.Prelude.Text
+                                              :> ( QueryParam
+                                                     "transactionId"
+                                                     Kernel.Prelude.Text
+                                                     :> Get
+                                                          '[JSON]
+                                                          Dashboard.Common.RideDebug.BAPSideDebug
+                                                 )
+                                          )
+                                   )
+                            )
+                     )
+              )
+       )
 
 data RideAPIs = RideAPIs
-  { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
+  { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe BookingStatus -> (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes))))))),
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideInfoRes,
     cancellationChargesWaiveOff :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient CancellationChargesWaiveOffRes,
     getShareRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
     getShareRideInfoByShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
-    getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
-    getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
+    getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Double -> (Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp)),
+    getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Double -> (Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp)),
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
-    postRidePayoutOfferSync :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
+    postRidePayoutOfferSync :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp),
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
-    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Dashboard.Common.RideDebug.BAPSideDebug
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes))),
+    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Dashboard.Common.RideDebug.BAPSideDebug)))))
   }
 
-mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
+mkRideAPIs :: Client EulerHS.Types.EulerClient API -> RideAPIs
 mkRideAPIs rideClient = (RideAPIs {..})
   where
     getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRidePayoutOfferSync :<|> postRideCancelMultiple :<|> getRideKaptureList :<|> getRideFlowDebugBap = rideClient

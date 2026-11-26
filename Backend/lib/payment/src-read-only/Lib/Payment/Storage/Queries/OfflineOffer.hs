@@ -16,24 +16,25 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.OfflineOffer as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer] -> m ()
 createMany = traverse_ create
 
-findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m (Maybe Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer))
+findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m (Maybe Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByReferenceId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer])
+findByReferenceId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer]
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m (Maybe Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer ->
+  m (Maybe Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer {..}) = do
   _now <- getCurrentTime
   updateWithKV

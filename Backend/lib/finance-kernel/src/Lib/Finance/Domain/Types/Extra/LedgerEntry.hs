@@ -21,7 +21,9 @@ data LedgerEntryMetadata = LedgerEntryMetadata
     driverPayable :: Maybe HighPrecMoney,
     payoutOrderId :: Maybe Text,
     reason :: Maybe Text,
-    subscriptionAllocations :: Maybe [SubscriptionCreditAllocation]
+    subscriptionAllocations :: Maybe [SubscriptionCreditAllocation],
+    -- | Offer cashback only: after this time an unpaid cashback is forfeited (reversed) and never paid out.
+    cashbackRedeemBy :: Maybe UTCTime
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToSchema)

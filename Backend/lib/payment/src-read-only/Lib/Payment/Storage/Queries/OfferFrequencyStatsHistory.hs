@@ -18,15 +18,16 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory] -> m ()
 createMany = traverse_ create
 
 findAllByEntityIdEntityTypeAndOfferId ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m [Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory])
+  Kernel.Prelude.Text ->
+  (Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m [Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory]))
 findAllByEntityIdEntityTypeAndOfferId entityId entityType offerId = do
   findAllWithKV
     [ Se.And
@@ -38,7 +39,8 @@ findAllByEntityIdEntityTypeAndOfferId entityId entityType offerId = do
 
 findByEntityIdEntityTypeOfferIdFrequencyTypeAndPeriodStart ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Lib.Payment.Domain.Types.Offer.OfferFrequency -> Kernel.Prelude.UTCTime -> m (Maybe Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory))
+  Kernel.Prelude.Text ->
+  (Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> (Lib.Payment.Domain.Types.Offer.OfferFrequency -> (Kernel.Prelude.UTCTime -> m (Maybe Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory)))))
 findByEntityIdEntityTypeOfferIdFrequencyTypeAndPeriodStart entityId entityType offerId frequencyType periodStart = do
   findOneWithKV
     [ Se.And
@@ -52,10 +54,11 @@ findByEntityIdEntityTypeOfferIdFrequencyTypeAndPeriodStart entityId entityType o
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory -> m (Maybe Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory ->
+  m (Maybe Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.OfferFrequencyStatsHistory.OfferFrequencyStatsHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV

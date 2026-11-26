@@ -77,6 +77,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - cashbackRedeemWindowInHours: Maybe Int
     - showMilestoneCard: Maybe Bool
     - derive: "'HideSecrets"
 
@@ -96,6 +97,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - cashbackRedeemWindowInHours: Maybe Int
     - showMilestoneCard: Maybe Bool
     - derive: "'HideSecrets"
 
@@ -120,6 +122,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - cashbackRedeemWindowInHours: Maybe Int
     - showMilestoneCard: Maybe Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime

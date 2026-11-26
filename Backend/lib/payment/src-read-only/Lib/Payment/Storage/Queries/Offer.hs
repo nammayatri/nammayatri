@@ -16,13 +16,13 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.Offer as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.Offer.Offer -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.Offer.Offer -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.Offer.Offer] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.Offer.Offer] -> m ()
 createMany = traverse_ create
 
-findAllActiveByMerchant :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m [Lib.Payment.Domain.Types.Offer.Offer])
+findAllActiveByMerchant :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Bool -> m [Lib.Payment.Domain.Types.Offer.Offer]))
 findAllActiveByMerchant merchantId merchantOperatingCityId isActive = do
   findAllWithKV
     [ Se.And
@@ -32,20 +32,21 @@ findAllActiveByMerchant merchantId merchantOperatingCityId isActive = do
         ]
     ]
 
-findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
+findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByOfferCodeAndCity :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
+findByOfferCodeAndCity :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
 findByOfferCodeAndCity offerCode merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.offerCode $ Se.Eq offerCode, Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]]
 
-findByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
+findByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.Offer.Offer -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.Offer.Offer -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.autoApply autoApply,
+      Se.Set Beam.cashbackRedeemWindowInHours cashbackRedeemWindowInHours,
       Se.Set Beam.currency currency,
       Se.Set Beam.description description,
       Se.Set Beam.discountType discountType,
@@ -77,6 +78,7 @@ instance FromTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
       Just
         Lib.Payment.Domain.Types.Offer.Offer
           { autoApply = autoApply,
+            cashbackRedeemWindowInHours = cashbackRedeemWindowInHours,
             createdAt = createdAt,
             currency = currency,
             description = description,
@@ -107,6 +109,7 @@ instance ToTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
   toTType' (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
     Beam.OfferT
       { Beam.autoApply = autoApply,
+        Beam.cashbackRedeemWindowInHours = cashbackRedeemWindowInHours,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.description = description,

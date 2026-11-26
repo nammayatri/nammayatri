@@ -549,6 +549,7 @@ cashbackOfferStatus hasPayoutVpa entries =
       Just LE.PROCESSING -> Common.CASHBACK_PROCESSING
       Just LE.UNSETTLED -> Common.CASHBACK_FAILED
       Just LE.EXTERNAL_PENDING -> Common.CASHBACK_PENDING
+      Just LE.FORFEITED -> Common.CASHBACK_EXPIRED
       Nothing
         | hasPayoutVpa -> Common.CASHBACK_PENDING
         | otherwise -> Common.CASHBACK_AWAITING_VPA

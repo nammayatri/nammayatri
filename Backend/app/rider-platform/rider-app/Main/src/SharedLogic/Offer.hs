@@ -41,6 +41,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTime)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
@@ -59,7 +61,8 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
-import SharedLogic.JobScheduler (ExecuteCashRideCashbackPayoutJobData (..), RiderJobType (..))
+import qualified SharedLogic.Finance.CashbackExpiry as CashbackExpiry
+import SharedLogic.JobScheduler (ExecuteCashRideCashbackPayoutJobData (..), ExpireOfferCashbackJobData (..), RiderJobType (..))
 import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -403,7 +406,10 @@ scheduleCashbackPayoutJob ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   DRB.Booking ->
   DRide.Ride ->
@@ -421,6 +427,35 @@ scheduleCashbackPayoutJob booking ride personId ridePayoutAmount =
         createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
       Nothing ->
         logError $ "No payout config found for vehicle category - for offers: " <> show vehicleCategory <> " merchant operating city: " <> booking.merchantOperatingCityId.getId
+    scheduleCashbackExpiry booking ride personId
+
+-- | When the ride's offer sets a cashback redeem window, write the deadline on the ride's
+--   cashback ledger leg and schedule the job that forfeits the cashback if it is still unpaid
+--   then. The window counts from ride end. Call it after the cashback leg is created.
+scheduleCashbackExpiry ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  DRB.Booking ->
+  DRide.Ride ->
+  Id Person.Person ->
+  m ()
+scheduleCashbackExpiry booking ride personId =
+  whenJust booking.selectedOfferId $ \offerId -> do
+    mbOffer <- QOffer.findById (Id offerId)
+    now <- getCurrentTime
+    whenJust (CashbackExpiry.cashbackRedeemBy (mbOffer >>= (.cashbackRedeemWindowInHours)) (fromMaybe now ride.rideEndTime)) $ \redeemBy -> do
+      CashbackExpiry.stampCashbackRedeemBy ride.id redeemBy
+      let jobData = ExpireOfferCashbackJobData {personId, rideId = ride.id, redeemBy, attempt = 0}
+      createJobIn @_ @'ExpireOfferCashback (Just booking.merchantId) (Just booking.merchantOperatingCityId) (max 0 (diffUTCTime redeemBy now)) jobData
+      logInfo $ "Offer cashback for ride " <> ride.id.getId <> " expires at " <> show redeemBy
 
 mkCumulativeOfferResp ::
   (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
