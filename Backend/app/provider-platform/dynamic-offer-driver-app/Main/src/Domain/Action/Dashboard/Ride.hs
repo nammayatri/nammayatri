@@ -55,7 +55,6 @@ import qualified Domain.Types.BapMetadata as Fields
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import qualified Domain.Types.CancellationDuesDetails as Fields
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.DriverQuote as Fields
@@ -71,7 +70,6 @@ import qualified Domain.Types.LocationMapping as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as Fields
-import Domain.Types.PaymentChargeBearer (PaymentChargeBearer (..))
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as Fields
@@ -116,12 +114,10 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareBreakup as SFB
-import SharedLogic.FareCalculator (fareSum)
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.Settlement (netTaxInclusive, netTotalTaxInclusive)
 import qualified SharedLogic.SyncRide as SyncRide
 import Storage.Beam.Sos ()
 import Storage.Beam.SpecialZone ()
@@ -1287,50 +1283,9 @@ rideInfoV2 ride = do
   finalFareParams <- maybe (pure Nothing) (runInReplica . SQFP.findById) ride.fareParametersId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
   mbCancellationDuesDetails <- if isJust ride.cancellationChargesOnCancel then runInReplica (QCDD.findByRideId ride.id) else pure Nothing
-  -- Net, cash and online: the same formulas as the driver app's ride API (mkDriverRideRes in
-  -- Domain.Action.UI.Ride.Common), but not rounded. Keep the two in sync until both use one shared function.
-  let estimatedFareParams = booking.fareParams
-      chargeBearerOf mbT = (mbT >>= (readMaybe . T.unpack)) :: Maybe PaymentChargeBearer
-      customerBearsCharge = chargeBearerOf ride.paymentChargeBearer == Just PAYMENT_CUSTOMER
-      ridePaymentCharge = fromMaybe 0 ride.paymentCharge
-      quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeTax
-      edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
-      componentTaxOf fp = sum (map (fromMaybe 0) ([fp.govtCharges, fp.tollFareTax, fp.cancellationDuesTax] <> if edcCollectsParking then [] else [fp.parkingChargeTax, fp.airportEntryFeeTax]))
-      rideTipsAmount = fromMaybe 0 ride.tipAmount
-      taxRegime = fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))
-      estimatedNet = netTotalTaxInclusive taxRegime (Just (fromMaybe 0 booking.commission + fromMaybe 0 booking.cancellationDuesCommission)) booking.paymentCharge (chargeBearerOf booking.paymentChargeBearer) (componentTaxOf estimatedFareParams) (fareSum estimatedFareParams Nothing - (if customerBearsCharge then quoteTimeCharge else 0))
-      chargedFareParams = fromMaybe estimatedFareParams finalFareParams
-      computedFareNet = (\fareAmt -> netTotalTaxInclusive taxRegime (Just (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission)) ride.paymentCharge (chargeBearerOf ride.paymentChargeBearer) (componentTaxOf chargedFareParams) (fareAmt - (if customerBearsCharge then ridePaymentCharge else 0)) + rideTipsAmount) <$> ride.fare
-      cancellationCompensationNet = netTaxInclusive (mfilter (const (isJust (mbCancellationDuesDetails >>= (.paymentCharge)))) booking.paymentChargeDetails) taxRegime (mbCancellationDuesDetails >>= (.cancellationFeeTax)) (mbCancellationDuesDetails >>= (.cancellationCommission)) <$> ride.cancellationChargesOnCancel
-      isCancelled = ride.status == DRide.CANCELLED
-      cancelledRideAmount = Kernel.Prelude.max 0 (fromMaybe 0 cancellationCompensationNet)
-      offer = fromMaybe 0 ride.discountAmount
-      commission = fromMaybe 0 ride.commission
-      -- No payment method on the booking means cash, as in the driver app.
-      instrumentOrCash = fromMaybe DMPM.Cash booking.paymentInstrument
-      mbAmountToCollectInCash =
-        if isCancelled
-          then Just 0
-          else case (booking.fareSettlementType, ride.fare) of
-            (Just SL.FullPayment, _) -> Nothing
-            (Just SL.ParkingOnly, Just fareAmt) -> Just $ Kernel.Prelude.max 0 (fareAmt - offer + rideTipsAmount)
-            (Just SL.ParkingOnly, Nothing) -> Nothing
-            (Just _, Just fareAmt) -> Just $ Kernel.Prelude.max 0 (fareAmt - commission + rideTipsAmount)
-            (Just _, Nothing) -> Nothing
-            (Nothing, _) ->
-              case (instrumentOrCash, ride.fare) of
-                (DMPM.Cash, Just fareAmt) -> Just $ Kernel.Prelude.max 0 (fareAmt - offer + rideTipsAmount)
-                _ -> Nothing
-      mbAmountToBeSettledOnline =
-        if isCancelled
-          then Just cancelledRideAmount
-          else case booking.fareSettlementType of
-            Just SL.FullPayment -> computedFareNet
-            Just _ -> Nothing
-            Nothing ->
-              case instrumentOrCash of
-                DMPM.Cash -> if offer > 0 then Just offer else Nothing
-                _ -> computedFareNet
+  -- Net, cash and online come from the same function as the driver app's ride API, but are not rounded here.
+  let rideAmounts = DRideCommon.computeRideAmounts (fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))) finalFareParams mbCancellationDuesDetails booking ride
+      estimatedFareParams = booking.fareParams
       -- Not rounded, like the estimated / actual fare in ride info: rounding by currency would
       -- turn an INR fare such as 51.50 into 52.
       price cur amt = PriceAPIEntity amt cur
@@ -1351,10 +1306,10 @@ rideInfoV2 ride = do
               grossActual = (\actualFare -> gross ride.currency actualFare ride.discountAmount) <$> ride.fare,
               -- Same rule as the driver app's net earnings: the final fare, else the
               -- cancellation compensation of a cancelled ride.
-              netEstimated = price ride.currency estimatedNet,
-              netActual = price ride.currency <$> (computedFareNet <|> cancellationCompensationNet),
-              amountToCollectInCash = price ride.currency <$> mbAmountToCollectInCash,
-              amountToBeSettledOnline = price ride.currency <$> mbAmountToBeSettledOnline
+              netEstimated = price ride.currency rideAmounts.estimatedNetFare,
+              netActual = price ride.currency <$> (rideAmounts.actualNetFare <|> rideAmounts.cancellationCompensationNetFare),
+              amountToCollectInCash = price ride.currency <$> rideAmounts.cashToCollect,
+              amountToBeSettledOnline = price ride.currency <$> rideAmounts.settledOnline
             },
         charges
       }
