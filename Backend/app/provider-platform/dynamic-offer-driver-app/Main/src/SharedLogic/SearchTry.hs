@@ -482,7 +482,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
       (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) ->
         return (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee, mbDriverCancellationNotAllowed)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion searchReq.configInExperimentVersions searchReq.specialLocationName
+        farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just searchReq.transactionId) searchReq.configInExperimentVersions searchReq.specialLocationName
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
             -- Parking already EDC-collected at the booth for these settlement types isn't the
             -- driver's cash to hold - don't factor it into the driver's cash-wallet eligibility check.
@@ -500,7 +500,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
           )
   (luggageFareAdjustment, luggageCharges) <-
     luggageQuoteCharges searchReq mbVehicleServiceTierItem mbEstimateFarePolicy mbEstimateFareParams $
-      getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion searchReq.configInExperimentVersions searchReq.specialLocationName
+      getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just searchReq.transactionId) searchReq.configInExperimentVersions searchReq.specialLocationName
   return $ TripQuoteDetail {baseFare = baseFare + luggageFareAdjustment, ..}
 
 -- The stored bags price the booking: the excess charge replaces the estimate's plain luggage charge.

@@ -304,8 +304,8 @@ import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
-import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.DriverPool.Config as SCDPC
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -2050,7 +2050,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
       mbRiderDetails <- maybe (pure Nothing) (runInReplica . QRiderDetails.findById) searchRequest.riderId
-      farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ Maps.getCoordinates searchRequest.fromLocation) (Just . Maps.getCoordinates =<< searchRequest.toLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion searchRequest.configInExperimentVersions searchRequest.specialLocationName
+      farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ Maps.getCoordinates searchRequest.fromLocation) (Just . Maps.getCoordinates =<< searchRequest.toLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing searchRequest.dynamicPricingLogicVersion (Just searchRequest.transactionId) searchRequest.configInExperimentVersions searchRequest.specialLocationName
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails

@@ -228,7 +228,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
           fromPoint = LatLong fromLocation.lat fromLocation.lon
           toPoint = LatLong toLocation.lat toLocation.lon
       -- priced like a static-offer quote off the run fare product; the fare at run end is the sum of the tickets
-      fullFarePolicy <- SFP.getFarePolicy Nothing (Just fromPoint) (Just toPoint) Nothing Nothing (Just distance) (Just duration) moc.id False tripCategory fareProduct.vehicleServiceTier Nothing (Just startTime) Nothing [] Nothing
+      fullFarePolicy <- SFP.getFarePolicy Nothing (Just fromPoint) (Just toPoint) Nothing Nothing (Just distance) (Just duration) moc.id False tripCategory fareProduct.vehicleServiceTier Nothing (Just startTime) Nothing Nothing [] Nothing
       fareParams <- SFP.calculateFareParametersForFarePolicy fullFarePolicy (Just distance) (Just duration) moc.id
       let estimatedFare = FC.fareSum fareParams Nothing
       mbTier <- CQVST.findByServiceTierTypeAndCityId fareProduct.vehicleServiceTier moc.id Nothing
