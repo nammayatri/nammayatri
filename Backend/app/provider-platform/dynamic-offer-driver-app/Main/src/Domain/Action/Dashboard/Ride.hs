@@ -1371,7 +1371,7 @@ pruneChargeGroups groups =
   where
     hasAmount line = any (maybe False (/= 0)) [line.chargeEstimated, line.chargeActual]
 
--- | Labels are in English, from the translations under "FARE_BREAKUP_<key>"; the key itself when there is none.
+-- | Labels come from the translations under "FARE_BREAKUP_<key>".
 mkChargeGroup :: KET.Language -> Currency -> Currency -> ChargeLine -> Flow Common.RideFinanceInfoChargeGroup
 mkChargeGroup language estimatedCurrency actualCurrency chargeGroup = do
   groupTitle <- labelOf chargeGroup.chargeKey
