@@ -421,6 +421,7 @@ let LocationTrackingeServiceConfig =
       { clouds =
         [ { cloud = common.CloudType.AWS, url = "http://localhost:${ltsPort}/" }
         ]
+      , crowdsourcedApiKey = sec.crowdsourcedApiKey
       }
 
 let kafkaClickhouseCfg =

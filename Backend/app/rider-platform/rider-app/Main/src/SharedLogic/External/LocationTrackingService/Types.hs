@@ -83,14 +83,35 @@ instance FromJSON VehicleTrackingOnRouteReq where
 instance ToJSON VehicleTrackingOnRouteReq where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
+data CrowdsourcedBusLocationReq = CrowdsourcedBusLocationReq
+  { gtfsId :: Text,
+    vehicleNo :: Text,
+    routeCode :: Maybe Text,
+    tripId :: Maybe Text,
+    lat :: Double,
+    lon :: Double,
+    timestamp :: Int64
+  }
+  deriving (Generic)
+
+instance ToSchema CrowdsourcedBusLocationReq where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON CrowdsourcedBusLocationReq where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON CrowdsourcedBusLocationReq where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
 data LtsCloudCfg = LtsCloudCfg
   { cloud :: CloudType,
     url :: BaseUrl
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 
-newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
-  { clouds :: [LtsCloudCfg]
+data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
+  { clouds :: [LtsCloudCfg],
+    crowdsourcedApiKey :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 

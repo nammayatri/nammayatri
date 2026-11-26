@@ -597,6 +597,7 @@ library
       SharedLogic.DummySignatureAuth
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
+      SharedLogic.External.LocationTrackingService.API.CrowdsourcedBusLocation
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute

@@ -44,4 +44,5 @@ in  { dbUserId = "atlas_app_user"
     , googleSAPrivateKey
     , parkingApiKey = "test-parking-api-key"
     , corporatePartnerApiToken = "test-partner-api-token"
+    , crowdsourcedApiKey = "your-secure-api-key-here"
     }

@@ -64,6 +64,7 @@ data RiderConfig = RiderConfig
     cancellationRateThresholdMonthly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    crowdsourcedTrackingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -258,7 +259,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data BetterPointWalkDistanceSource
   = STRAIGHT_LINE
@@ -366,12 +367,12 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BetterPointWalkDistanceSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BetterPointWalkDistanceSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SharedCabCallMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedCabCallMode)
