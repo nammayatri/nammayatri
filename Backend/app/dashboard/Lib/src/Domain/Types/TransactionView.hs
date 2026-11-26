@@ -126,6 +126,7 @@ nullaryEndpoints =
     ("DASHBOARD_USER/EMAIL_CHANGE_BY_ADMIN", "DashboardUserEmailChangeByAdmin"),
     ("DASHBOARD_USER/MOBILE_CHANGE_BY_ADMIN", "DashboardUserMobileChangeByAdmin"),
     ("DASHBOARD_USER/ROLE_ASSIGN", "DashboardUserRoleAssign"),
+    ("DASHBOARD_USER/FORCE_PASSWORD_RESET", "DashboardUserForcePasswordReset"),
     ("UNKNOWN_ENDPOINT", "UnknownEndpoint")
   ]
 

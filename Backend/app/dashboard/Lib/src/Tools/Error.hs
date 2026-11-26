@@ -126,7 +126,7 @@ instanceExceptionWithParent 'HTTPException ''PasswordPolicyError
 
 instance IsBaseError PasswordPolicyError where
   toMessage = \case
-    PasswordChangeRequired -> Just "Your password was reset by an administrator. Please set a new password before logging in."
+    PasswordChangeRequired -> Just "An administrator requires you to set a new password. Please set a new password before logging in."
     PasswordExpired -> Just "Your password has expired. Please set a new password."
 
 instance IsHTTPError PasswordPolicyError where

@@ -102,6 +102,11 @@ type API =
                     :> ReqBody '[JSON] DPerson.ChangeMobileNumberByAdminReq
                     :> Post '[JSON] APISuccess
                 )
+           -- SUPER_ADMIN only (checked in the handler; DashboardAuth has no tier for it)
+           :<|> "forcePasswordReset"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> ReqBody '[JSON] DPerson.ForcePasswordResetReq
+             :> Post '[JSON] DPerson.ForcePasswordResetRes
        )
     :<|> "user"
       :> ( "profile"
@@ -150,9 +155,11 @@ handler =
       :<|> createPerson
       :<|> deletePerson
       :<|> changeEnabledStatus
-      :<|> changeEmailByAdmin
-      :<|> changePasswordByAdmin
-      :<|> changeMobileByAdmin
+      :<|> ( changeEmailByAdmin
+               :<|> changePasswordByAdmin
+               :<|> changeMobileByAdmin
+           )
+      :<|> forcePasswordReset
   )
     :<|> ( profile
              :<|> updateProfile
@@ -229,6 +236,10 @@ changeEmailByAdmin tokenInfo personId req =
 changePasswordByAdmin :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.ChangePasswordByAdminReq -> FlowHandlerR r APISuccess
 changePasswordByAdmin tokenInfo personId req =
   withDashboardDbFlowHandlerAPI $ DPerson.changePasswordByAdmin tokenInfo personId req
+
+forcePasswordReset :: DashboardLoginFlow r => TokenInfo -> DPerson.ForcePasswordResetReq -> FlowHandlerR r DPerson.ForcePasswordResetRes
+forcePasswordReset tokenInfo =
+  withDashboardDbFlowHandlerAPI . DPerson.forcePasswordReset tokenInfo
 
 changeMobileByAdmin :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandlerR r APISuccess
 changeMobileByAdmin tokenInfo personId req =
