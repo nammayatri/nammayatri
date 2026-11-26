@@ -248,6 +248,14 @@ API). Business account `2899338557098050`, phone number id
 System User token (never expires). The Meta app **movindz** was subscribed to
 the business account the same day.
 
+**Checked again 2026-11-26** (the boss: « no account issue » on the Meta side), read-only, from the
+guard container with its own token (nothing printed but the answers): the number is `CONNECTED`,
+quality `GREEN`, `LIVE`, `CLOUD_API`, name « MovinApp » available; the business account's review is
+`APPROVED` and our app `movindz` is still subscribed to it. Business verification is
+`not_verified` (not needed to receive messages; it matters only for sending first). What this does
+**not** prove: a sign-in by WhatsApp end to end. The guard logged no `[whatsapp]` line in the last
+7 days, so the first real message after the ban of 2026-11-22 is still to be seen.
+
 The plan is sign-in **without a template**: the app opens WhatsApp with
 `MOVA 483920` already typed (`MOVIN` until 2026-10-21, still accepted), the passenger presses Send, and the sender's
 number — WhatsApp's word, not something he typed — proves he holds it.
