@@ -280,7 +280,9 @@ applyServiceTiers vehicle driverTiers driverId merchantOpCityId = do
             if walletGateEnabled && any (isJust . minBalance) protectedConfigs
               then getWalletBalanceByOwner DRIVER driverId.getId
               else pure Nothing
-          let walletCovers tier = not walletGateEnabled || maybe True (\m -> maybe False (>= m) mbBalance) (minBalance tier)
+          -- A missing wallet row is not "below the minimum", the same rule as the platform's wallet strip
+          -- ('checkAndAutoDisableWalletGatedTiers'), so a new driver without a wallet keeps auto-accept.
+          let walletCovers tier = not walletGateEnabled || maybe True (\m -> maybe True (>= m) mbBalance) (minBalance tier)
               autoAcceptOnly tier = maybe False ((== DC.AutoAcceptOnly) . (.mode)) (enabledAutoAccept tier)
               baseTiers = [tier.serviceTierType | tier <- protectedConfigs, walletCovers tier || not (autoAcceptOnly tier)]
               autoAcceptTiers = [tier.serviceTierType | tier <- protectedConfigs, isJust (enabledAutoAccept tier), walletCovers tier]
