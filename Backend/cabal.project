@@ -78,6 +78,9 @@ jobs: 6
 package whatsapp-bot
   tests: True
 
+package shared-services
+  tests: True
+
 -- ## Enables flags in the project.
 -- #  +flagname enables the flag.
 -- #  -flagname disables it.

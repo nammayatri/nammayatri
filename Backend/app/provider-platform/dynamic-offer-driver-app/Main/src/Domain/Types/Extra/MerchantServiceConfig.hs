@@ -2,6 +2,7 @@
 
 module Domain.Types.Extra.MerchantServiceConfig where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import ChatCompletion.Interface.Types
 import ChatCompletion.Types
 import qualified Data.List as List
@@ -132,6 +133,8 @@ data ServiceName
   | BmsService BmsProvider
   | EventTrackingService EventTracking.EventTrackingService
   | GridService GridProvider
+  | AppAttestationService AppAttestation.AppAttestationProvider
+  | CaptchaService AppAttestation.CaptchaProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -173,6 +176,8 @@ instance Show ServiceName where
   show (BmsService s) = "Bms_" <> show s
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (GridService s) = "Grid_" <> show s
+  show (AppAttestationService s) = "AppAttestation_" <> show s
+  show (CaptchaService s) = "Captcha_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -319,6 +324,14 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Grid_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (AppAttestationService v1, r2)
+                 | r1 <- stripPrefix "AppAttestation_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (CaptchaService v1, r2)
+                 | r1 <- stripPrefix "Captcha_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -360,6 +373,8 @@ data ServiceConfigD (s :: UsageSafety)
   | BmsServiceConfig !BmsBackendConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | GridServiceConfig !GridTypes.GridCfg
+  | AppAttestationServiceConfig !AppAttestation.PlayIntegrityConfig
+  | CaptchaServiceConfig !AppAttestation.CaptchaConfig
   deriving (Generic, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

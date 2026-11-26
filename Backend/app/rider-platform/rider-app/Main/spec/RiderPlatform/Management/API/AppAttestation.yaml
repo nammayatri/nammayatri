@@ -1,0 +1,38 @@
+imports:
+  AttestationConfigRes: AppAttestation.Admin
+  AttestationConfigUpdateReq: AppAttestation.Admin
+  RevokeIosKeyReq: AppAttestation.Admin
+  APISuccess: Kernel.Types.APISuccess
+
+module: AppAttestation
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /config
+      auth: ApiAuthV2
+      response:
+        type: AttestationConfigRes
+      migrate:
+        capability: system-config.merchant.read
+
+  - POST:
+      endpoint: /config
+      auth: ApiAuthV2
+      request:
+        type: AttestationConfigUpdateReq
+      response:
+        type: AttestationConfigRes
+      migrate:
+        capability: system-config.merchant.write
+
+  - POST:
+      endpoint: /iosKey/revoke
+      auth: ApiAuthV2
+      request:
+        type: RevokeIosKeyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.merchant.write

@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap, workbench_bap, kms
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap, workbench_bap, kms, appattest, playintegrity
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -92,6 +92,8 @@ def record_hit(hit):
 
 # Route table: (path substring, module, service name for overrides)
 ROUTES = [
+    ("/appattest",   appattest,   "appattest"),
+    ("/playintegrity", playintegrity, "playintegrity"),
     ("/juspay",      juspay,      "juspay"),
     # Retired Haskell mock-payment internal order-status path has no
     # "/juspay" segment (/payment/internal/orders/{id}/status).

@@ -9,6 +9,7 @@ imports:
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
   SpecialLocationTierOrderConfig: Domain.Types.Extra.RiderConfig
   SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
+  AppAttestationConfig: AppAttestation.Domain.Types.AppAttestationConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
@@ -193,6 +194,7 @@ RiderConfig:
     immediateCaptureRiderCancellationFee: Maybe Bool
     enablePaymentRefunds: Maybe Bool
     syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
+    appAttestationConfig: Maybe AppAttestationConfig
     validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     silentReallocationWindowSeconds: Maybe Seconds
     cxAgentDetails: "Maybe [CxAgentDetails]"
@@ -464,6 +466,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
+    appAttestationConfig: Maybe Value
     alwaysAllowedNotificationCategories: "Maybe [Text]"
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -535,6 +538,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    appAttestationConfig: appAttestationConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     alwaysAllowedNotificationCategories: fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack))|E
 
   toTType:
@@ -599,6 +603,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
     syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
+    appAttestationConfig: (appAttestationConfig >>= Just . Data.Aeson.toJSON)|E
     alwaysAllowedNotificationCategories: Just (map show alwaysAllowedNotificationCategories)|E
 
 
@@ -673,6 +678,11 @@ RiderConfig:
       params: [enableShareNumberWithDriver, pushConsentToBpp]
       where: merchantOperatingCityId
 
+    updateAppAttestationConfig:
+      kvFunction: updateOneWithKV
+      params: [appAttestationConfig]
+      where: merchantOperatingCityId
+
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -723,6 +733,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
     syncSearchDispatchConfig: "jsonb"
+    appAttestationConfig: "jsonb"
 
 #   configPilot:
 #     configType: RiderConfig

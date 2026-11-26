@@ -26,7 +26,7 @@ postRegistrationAuth ::
   Environment.Flow Domain.Action.UI.Registration.AuthRes
 postRegistrationAuth merchantShortId _opCity req = do
   let authReq = buildAuthReq merchantShortId req
-  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just True)
+  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just True) Nothing
 
 postRegistrationVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -41,7 +41,7 @@ postRegistrationOtpResend ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken ->
   Environment.Flow Domain.Action.UI.Registration.ResendAuthRes
-postRegistrationOtpResend _merchantShortId _opCity tokenId = Domain.Action.UI.Registration.resend tokenId Nothing
+postRegistrationOtpResend _merchantShortId _opCity tokenId = Domain.Action.UI.Registration.resend tokenId Nothing Nothing Nothing
 
 postRegistrationLogout ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -22,6 +22,7 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
   )
 where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
@@ -216,6 +217,8 @@ getServiceName msc = case msc.serviceConfig of
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
+  AppAttestationServiceConfig _ -> AppAttestationService AppAttestation.PlayIntegrity
+  CaptchaServiceConfig _ -> CaptchaService AppAttestation.SiteVerify
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

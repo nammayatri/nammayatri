@@ -26,6 +26,27 @@ flag Local
 
 library
   exposed-modules:
+      AppAttestation.Admin
+      AppAttestation.API
+      AppAttestation.AppAttest.Encoding
+      AppAttestation.AppAttest.Verify
+      AppAttestation.Canonical
+      AppAttestation.Captcha
+      AppAttestation.Challenge
+      AppAttestation.Domain.Types.AppAttestationConfig
+      AppAttestation.Domain.Types.Common
+      AppAttestation.Event
+      AppAttestation.Gate
+      AppAttestation.KeyRegistry
+      AppAttestation.Limit
+      AppAttestation.Metrics
+      AppAttestation.PlayIntegrity.Client
+      AppAttestation.PlayIntegrity.Types
+      AppAttestation.PlayIntegrity.Verify
+      AppAttestation.Policy
+      AppAttestation.Storage.BeamFlow
+      AppAttestation.Tools.Error
+      AppAttestation.Types
       ConfigPilotFrontend.API
       ConfigPilotFrontend.Common
       ConfigPilotFrontend.Flow
@@ -153,6 +174,9 @@ library
       API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
       API.Types.RiderPlatform.IssueManagement.Issue
       API.Types.RiderPlatform.IssueManagement.IssueList
+      AppAttestation.Domain.Types.AppAttestKey
+      AppAttestation.Storage.Beam.AppAttestKey
+      AppAttestation.Storage.Queries.AppAttestKey
       DashboardAlert.Domain.Types.DashboardAlert
       DashboardAlert.Storage.Beam.DashboardAlert
       DashboardAlert.Storage.Queries.DashboardAlert
@@ -219,7 +243,10 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , asn1-encoding
+    , asn1-types
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres
@@ -228,6 +255,7 @@ library
     , bytestring
     , casing
     , cassava
+    , cborg
     , cereal
     , containers
     , cryptonite
@@ -239,16 +267,20 @@ library
     , extra
     , generic-lens
     , geojson
+    , hourglass
     , hspec
+    , http-api-data
     , http-client
     , http-client-tls
     , http-types
     , lens
     , location-updates
+    , memory
     , mobility-core
     , mock-registry
     , network
     , openapi3
+    , pem
     , persistent
     , postgresql-simple
     , prometheus-client
@@ -277,8 +309,129 @@ library
     , vector
     , wai
     , warp
+    , x509
+    , x509-store
+    , x509-validation
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite shared-services-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_shared_services
+  hs-source-dirs:
+      test/AppAttestation
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+      OverloadedRecordDot
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wall -Werror -Wno-ambiguous-fields -Wno-incomplete-uni-patterns
+  build-depends:
+      aeson
+    , asn1-encoding
+    , asn1-types
+    , base >=4.7 && <5
+    , base16-bytestring
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , bytestring
+    , casing
+    , cassava
+    , cborg
+    , cereal
+    , containers
+    , cryptonite
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , external
+    , extra
+    , generic-lens
+    , hourglass
+    , hspec
+    , http-api-data
+    , http-client
+    , http-client-tls
+    , http-types
+    , lens
+    , memory
+    , mock-registry
+    , network
+    , openapi3
+    , pem
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , regex-compat
+    , regex-tdfa
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , singletons-th
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+    , x509
+    , x509-store
+    , x509-validation
+  default-language: Haskell2010

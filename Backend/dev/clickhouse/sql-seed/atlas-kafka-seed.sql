@@ -197,3 +197,67 @@ SELECT event_id, occurred_at, merchant_operating_city_id, merchant_short_id, cit
        behaviour, rulebook_version, action_type, kind, consequence_type, reason_tag,
        template_key, block_hours, source, extra
 FROM atlas_kafka.behaviour_consequence_events_queue;
+
+-- AppAttestationEvents -----------------------------------------------------
+-- One row per OTP attestation check (rider-app and driver app; see service).
+CREATE TABLE IF NOT EXISTS atlas_kafka.AppAttestationEvents (
+    `event_id`                   String,
+    `ts`                         DateTime64(3),
+    `service`                    String,
+    `merchant_id`                String,
+    `merchant_operating_city_id` String,
+    `endpoint`                   String,
+    `mode`                       String,
+    `platform`                   Nullable(String),
+    `outcome`                    String,
+    `reasons`                    Array(String),
+    `decision`                   String,
+    `enforced_decision`          String,
+    `fallback_method`            Nullable(String),
+    `user_kind`                  String,
+    `verdict_summary`            Nullable(String),
+    `client_version`             Nullable(String),
+    `device`                     Nullable(String),
+    `client_ip`                  Nullable(String),
+    `identifier_hash`            Nullable(String),
+    `latency_ms`                 Int32
+) ENGINE = MergeTree() PARTITION BY toYYYYMM(ts) ORDER BY (merchant_operating_city_id, ts);
+
+CREATE TABLE IF NOT EXISTS atlas_kafka.AppAttestationEvents_queue (
+    `eventId`                 String,
+    `timestamp`               String,
+    `service`                 String,
+    `merchantId`              String,
+    `merchantOperatingCityId` String,
+    `endpoint`                String,
+    `mode`                    String,
+    `platform`                Nullable(String),
+    `outcome`                 String,
+    `reasons`                 Array(String),
+    `decision`                String,
+    `enforcedDecision`        String,
+    `fallbackMethod`          Nullable(String),
+    `userKind`                String,
+    `verdictSummary`          Nullable(String),
+    `clientVersion`           Nullable(String),
+    `device`                  Nullable(String),
+    `clientIp`                Nullable(String),
+    `identifierHash`          Nullable(String),
+    `latencyMs`               Int32
+) ENGINE = Kafka
+SETTINGS
+    kafka_broker_list     = 'localhost:29092',
+    kafka_topic_list      = 'app-attestation-events',
+    kafka_group_name      = 'ch-atlas_kafka-AppAttestationEvents',
+    kafka_format          = 'JSONEachRow',
+    kafka_num_consumers   = 1,
+    kafka_skip_broken_messages = 100;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_kafka.AppAttestationEvents_mv
+TO atlas_kafka.AppAttestationEvents AS
+SELECT eventId AS event_id, parseDateTime64BestEffort(timestamp, 3) AS ts, service, merchantId AS merchant_id,
+       merchantOperatingCityId AS merchant_operating_city_id, endpoint, mode, platform, outcome, reasons, decision,
+       enforcedDecision AS enforced_decision, fallbackMethod AS fallback_method, userKind AS user_kind,
+       verdictSummary AS verdict_summary, clientVersion AS client_version, device, clientIp AS client_ip,
+       identifierHash AS identifier_hash, latencyMs AS latency_ms
+FROM atlas_kafka.AppAttestationEvents_queue;

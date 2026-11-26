@@ -231,7 +231,7 @@ postAuthEmailV2 mbXForwardedFor req = do
   SSL.findAccountByTrustedEmail merchant.id (Just req.email) >>= \case
     Just person -> do
       storedEmail <- maybe (pure req.email) decrypt person.email
-      authRes <- PR.auth (emailAuthReq req storedEmail) Nothing Nothing Nothing Nothing Nothing mbXForwardedFor Nothing Nothing
+      authRes <- PR.auth (emailAuthReq req storedEmail) Nothing Nothing Nothing Nothing Nothing mbXForwardedFor Nothing Nothing Nothing
       pure SL.EmailAuthV2Res {authId = authRes.authId.getId, attempts = authRes.attempts}
     Nothing -> do
       mbClientIP <- PR.extractClientIP mbXForwardedFor

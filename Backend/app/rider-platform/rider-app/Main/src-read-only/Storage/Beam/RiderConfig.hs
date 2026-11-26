@@ -26,6 +26,7 @@ import Tools.Beam.UtilsTH
 data RiderConfigT f = RiderConfigT
   { allowMultipleOpenMeterRides :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     alwaysAllowedNotificationCategories :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    appAttestationConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     appUrl :: (B.C f Kernel.Prelude.Text),
     autoSendBookingDetailsViaWhatsapp :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     autoUnblockSafetyCenterAfterDays :: (B.C f Kernel.Prelude.Int),

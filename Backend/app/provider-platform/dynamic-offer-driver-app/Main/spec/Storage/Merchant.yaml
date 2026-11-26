@@ -1,5 +1,6 @@
 imports:
   Regime: BecknV2.OnDemand.FareBreakup.Tax
+  AppAttestationConfig: AppAttestation.Domain.Types.AppAttestationConfig
   City: Kernel.Types.Beckn.Context
   IndianState: Kernel.Types.Beckn.Context
   Country: Kernel.Types.Beckn.Context
@@ -1670,6 +1671,7 @@ TransporterConfig:
     driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
     requireRcTakeoverPhoto: Maybe Bool # When True, a driver taking over an RC active on another driver's account must first pass the vehicle photo check (/driver/rc/takeover/verifyPhoto). Nothing = off. Set the city's Grid_Grid merchant_service_config and takeoverScoring first: without them verify always fails with RC_TAKEOVER_CHECK_UNAVAILABLE and no driver-app takeover can succeed
     takeoverScoring: Maybe TakeoverScoring # Scoring of the RC takeover photo check. Must be set before requireRcTakeoverPhoto; Nothing = verify fails with RC_TAKEOVER_CHECK_UNAVAILABLE
+    appAttestationConfig: Maybe AppAttestationConfig
     peerBapMerchantShortId: Maybe Text # BAP merchant whose FRFS bookings anna-checker ticket-verify validates against; no default since proxying to the wrong BAP would check another operator's tickets
     sharedCabDailyTripTarget: Maybe Int
     sharedCabTripEarningsTarget: Maybe HighPrecMoney
@@ -1756,6 +1758,7 @@ TransporterConfig:
     tripConfig: Maybe Value
     stclConfig: Maybe Value
     takeoverScoring: Maybe Value
+    appAttestationConfig: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1875,6 +1878,7 @@ TransporterConfig:
     tripConfig: Data.Aeson.toJSON <$> tripConfig|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
     takeoverScoring: Data.Aeson.toJSON <$> takeoverScoring|E
+    appAttestationConfig: Data.Aeson.toJSON <$> appAttestationConfig|E
 
   intermediateTransformers:
     fromTType:
@@ -2026,6 +2030,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
     takeoverScoring: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< takeoverScoring|E
+    appAttestationConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< appAttestationConfig|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -2120,6 +2126,7 @@ TransporterConfig:
     smsOtpAllowedCountryCodes: "text[]"
     stclConfig: json
     takeoverScoring: json
+    appAttestationConfig: jsonb
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
@@ -2383,6 +2390,10 @@ TransporterConfig:
     updateCustomerPayableFareBreakupSubItemsConfig:
       kvFunction: updateOneWithKV
       params: [customerPayableFareBreakupSubItemsConfig]
+      where: merchantOperatingCityId
+    updateAppAttestationConfig:
+      kvFunction: updateOneWithKV
+      params: [appAttestationConfig]
       where: merchantOperatingCityId
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV

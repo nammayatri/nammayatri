@@ -5,6 +5,7 @@ module Storage.CachedQueries.PlaceBasedServiceConfig
   )
 where
 
+import qualified AppAttestation.Domain.Types.Common as AppAttestation
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantServiceConfig
@@ -178,3 +179,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
+  AppAttestationServiceConfig _ -> AppAttestationService AppAttestation.PlayIntegrity
+  CaptchaServiceConfig _ -> CaptchaService AppAttestation.SiteVerify
