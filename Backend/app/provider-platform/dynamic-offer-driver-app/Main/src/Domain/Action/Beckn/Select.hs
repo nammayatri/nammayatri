@@ -55,7 +55,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.AddOn as SAddOn
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (offerToPreviousDriver', sendSearchRequestToDrivers')
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.DriverPool
 import qualified SharedLogic.FareCalculator as Fare
@@ -211,6 +211,7 @@ handler merchant sReq searchReq estimates addOnData = do
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+            offerToPreviousDriver = offerToPreviousDriver',
             merchant,
             searchReq = updatedSearchRequest,
             tripQuoteDetails,

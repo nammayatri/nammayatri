@@ -74,6 +74,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
 import "rider-app" SharedLogic.Scheduler.Jobs.PayoutStatusCheck
 import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
 import "rider-app" SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
+import "rider-app" SharedLogic.Scheduler.Jobs.RescheduleCancelBooking
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
@@ -166,6 +167,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
           & putJobHandlerInListWrapper flowRt env bookingDepositExpiryJob
+          & putJobHandlerInListWrapper flowRt env rescheduleCancelBookingJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
           & putJobHandlerInListWrapper flowRt env sharedCabAllocationTick
           & putJobHandlerInListWrapper flowRt env sharedCabSessionExpiry

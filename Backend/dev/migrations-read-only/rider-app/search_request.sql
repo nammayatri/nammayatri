@@ -562,3 +562,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN number_of_cabin_bags integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN silent_reallocation_window_seconds integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN rescheduled_from_booking_id text ;

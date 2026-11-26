@@ -18,6 +18,7 @@ module Domain.Action.UI.Confirm
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.SharedLogic.Cancel as SharedCancel
@@ -44,6 +45,7 @@ import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Confirm as SConfirm
 import SharedLogic.PassengerLuggage (validatePassengerLuggageCounts, validatePassengerLuggageOnTier)
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Reschedule as SReschedule
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
@@ -96,7 +98,13 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
           else (Nothing, Nothing, Nothing)
   whenJust numberOfPassengers $ \passengers ->
     validatePassengerLuggageOnTier passengers numberOfCheckInBags numberOfCabinBags (show quote'.vehicleServiceTierType) quote'.vehicleServiceTierLuggageCapacity quote'.vehicleServiceTierSeatingCapacity
-  let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
+  -- Reschedule: keep the old booking's offer unless the rider picked another; it is re-validated
+  -- against the new fare when the booking is built.
+  mbSearchRequest <- QSR.findById quote'.requestId
+  rescheduleOfferId <- do
+    mbOldBooking <- maybe (pure Nothing) SReschedule.findActiveRescheduleSource mbSearchRequest
+    pure (mbOldBooking >>= (.selectedOfferId))
+  let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId <|> rescheduleOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
@@ -106,7 +114,13 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
-  SConfirm.confirm SConfirm.DConfirmReq {mbOneShotDetails = Nothing, mbBetterDriverSwapDetails = Nothing, ..}
+  -- Reschedule: a confirm that fails frees the old booking for another attempt right away.
+  res <- withTryCatch "confirm" $ SConfirm.confirm SConfirm.DConfirmReq {mbOneShotDetails = Nothing, mbBetterDriverSwapDetails = Nothing, ..}
+  case res of
+    Right confirmRes -> pure confirmRes
+    Left err -> do
+      whenJust mbSearchRequest SReschedule.releaseRescheduleLock
+      throwM err
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking ::
@@ -126,6 +140,9 @@ cancelBooking ::
   DRB.Booking ->
   m ()
 cancelBooking booking = do
+  -- Reschedule: the replacement failed, so the old booking may be rescheduled again right away.
+  mbSearchRequest <- QSR.findById (Id booking.transactionId)
+  whenJust mbSearchRequest SReschedule.releaseRescheduleLock
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
   otherRelatedParties <- Notify.getAllOtherRelatedPartyPersons booking

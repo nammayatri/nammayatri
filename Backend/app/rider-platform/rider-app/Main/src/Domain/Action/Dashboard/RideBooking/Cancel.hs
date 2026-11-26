@@ -5,6 +5,7 @@ import qualified "this" Domain.Action.UI.Cancel
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified "this" Domain.Types.Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
@@ -16,6 +17,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.Reschedule (rescheduleCancellationReasonCode)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
@@ -28,6 +30,9 @@ postCancelBooking ::
   Domain.Action.UI.Cancel.CancelReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCancelBooking merchantShortId _opCity bookingId personId req = withPersonIdLogTag personId $ do
+  -- RESCHEDULED is reserved for the reschedule flow's own penalty-free cancel; see API.UI.Cancel.
+  when (req.reasonCode == SCR.CancellationReasonCode rescheduleCancellationReasonCode) $
+    throwError (InvalidRequest "Cancellation reason RESCHEDULED is reserved for rescheduling a ride")
   m <- findMerchantByShortId merchantShortId
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id

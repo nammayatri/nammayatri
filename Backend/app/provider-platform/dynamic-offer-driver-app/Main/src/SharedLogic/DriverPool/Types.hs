@@ -494,6 +494,10 @@ data TripQuoteDetail = TripQuoteDetail
 
 data DriverSearchBatchInput m = DriverSearchBatchInput
   { sendSearchRequestToDrivers :: DriverPoolConfig -> DST.SearchTry -> DriverSearchBatchInput m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds),
+    -- | Rider reschedule: offer a confirmed scheduled ride to the previous driver alone first.
+    -- True when the offer went out.
+    -- | Rider reschedule head start; the end of the previous driver's window when he was offered the ride.
+    offerToPreviousDriver :: DriverPoolConfig -> DST.SearchTry -> DriverSearchBatchInput m -> GoHomeConfig -> m (Maybe UTCTime),
     merchant :: DM.Merchant,
     searchReq :: DSR.SearchRequest,
     tripQuoteDetails :: [TripQuoteDetail],

@@ -96,6 +96,11 @@ SearchRequest:
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
     driverIdForSearch: Maybe (Id Person)
+    # Rider reschedule: this BPP's booking that the search replaces. Set only when that booking was
+    # made through the same BAP with this merchant in this city. Its driver, if any, is offered the
+    # new ride alone first. Untyped: a typed Booking id would make Booking -> SearchRequest -> Booking
+    # an import cycle.
+    rescheduledFromBookingId: Maybe Text
     configInExperimentVersions: "[ConfigVersionMap]"
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int

@@ -224,7 +224,16 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           else do
             mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
             case mbScheduleTime of
-              Just scheduleTime -> do
+              Just scheduleTime' -> do
+                -- Rider reschedule: the previous driver is offered the ride alone first; nothing else
+                -- reaches any driver before his window has passed. Only a search marked as a
+                -- reschedule, on its first try, takes this path.
+                mbHeadStartEnd <-
+                  if not isRepeatSearch && isJust searchReq.rescheduledFromBookingId
+                    then offerToPreviousDriver driverPoolConfig searchTry searchBatchInput goHomeCfg
+                    else pure Nothing
+                let headStartGap = maybe 0 (\windowEnd -> max 0 (diffUTCTime windowEnd now)) mbHeadStartEnd
+                    scheduleTime = max scheduleTime' headStartGap
                 scheduleBatching searchTry scheduleTime
                 let batchingStartedAt = scheduleTime `addUTCTime` now
                 SharedRedisKeys.setBatchConfig searchReq.transactionId $
@@ -235,7 +244,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                       batchingExpireAt = totalBatchTime `addUTCTime` batchingStartedAt
                     }
                 logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` batchingStartedAt)
-                scheduleTopDriversRound searchTry driverPoolConfig now
+                scheduleTopDriversRound searchTry driverPoolConfig now headStartGap
               Nothing -> do
                 booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
                 QST.updateStatus DST.CANCELLED searchTry.id
@@ -248,13 +257,14 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       Right _ -> return searchTry
   where
     -- Run 1 at booking; run 2 at pickup - lead time when the pickup is more than an hour away (closer than
-    -- that, run 1 alone is enough). Both end at the cutoff.
-    scheduleTopDriversRound searchTry driverPoolConfig now =
+    -- that, run 1 alone is enough). Both end at the cutoff. On a rider reschedule run 1 waits out the
+    -- previous driver's head start.
+    scheduleTopDriversRound searchTry driverPoolConfig now headStartGap =
       unless isAllocatorBatch $ do
         mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing
         whenJust mbTransporterConfig $ \transporterConfig ->
           whenJust (topDriversLeadTime transporterConfig driverPoolConfig.scheduleTryTimes) $ \leadTime -> do
-            let firstRunIn = 2
+            let firstRunIn = 2 + headStartGap
                 secondRunIn = diffUTCTime searchReq.startTime now - leadTime
                 pickupFarEnoughForSecondRun = diffUTCTime searchReq.startTime now > 3600
                 jobData =
@@ -268,7 +278,9 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
                   JC.createJobIn @_ @'SendScheduledSearchRequestToTopDrivers (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) runIn jobData
                   logInfo $ "initiateDriverSearchBatch: top drivers round for searchTry " <> searchTry.id.getId <> " queued in " <> show runIn
             createRound firstRunIn
-            when pickupFarEnoughForSecondRun $ createRound secondRunIn
+            -- With a head start, a second round due inside the window is left to run 1 (which already
+            -- waits for the window to end); without one the timing is unchanged.
+            when (pickupFarEnoughForSecondRun && (headStartGap == 0 || secondRunIn > firstRunIn)) $ createRound secondRunIn
 
     scheduleBatching searchTry inTime = do
       let jobData =

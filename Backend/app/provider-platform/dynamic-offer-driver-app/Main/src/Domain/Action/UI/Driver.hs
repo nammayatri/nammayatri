@@ -3571,7 +3571,10 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                             <$> withTryCatch "boardScheduledOverlap" (SBOC.isCandidateFeasible driver.merchantId cityId transporterConfig (SBOC.mkCandidateFromBooking scheduledBooking) committedIntervals)
                     filterM isBookingFeasibleForBoard stageVisibleBookings
               -- Offset and limit count the bookings that pass every filter.
-              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (take (fromIntegral limit) (drop (fromIntegral offset) feasibleBookings))
+              -- Rider reschedule: a booking in its previous driver's head start (one minute) is his alone.
+              openBookings <- filterM (\scheduledBooking -> maybe True ((== driver.id) . fst) <$> SBOC.previousDriverHoldingBooking scheduledBooking.quoteId) feasibleBookings
+              let pageBookings = take (fromIntegral limit) (drop (fromIntegral offset) openBookings)
+              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) pageBookings
               let sortedBookings = sortBookingsByDistance (catMaybes bookings)
               return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
@@ -3788,6 +3791,11 @@ acceptScheduledBookingWithPreFetched ::
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow APISuccess
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking mbForcedAcceptanceMode = do
+  -- Rider reschedule: during the previous driver's head start nobody else takes the booking (ops still can).
+  when (isNothing mbForcedAcceptanceMode) $ do
+    mbHolder <- SBOC.previousDriverHoldingBooking booking.quoteId
+    whenJust mbHolder $ \(holder, _) ->
+      unless (holder == driver.id) $ throwError (InvalidRequest "This ride is reserved for another driver right now. Please try again in a minute.")
   -- overlap enforced by the shared accept guard (SBOC.ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
   -- Prepaid credits valid today can still be swept before pickup, so mirror the dispatch-side gate
   -- on the direct-accept path. Solvency is not relaxed inside the R4 open-to-all window.

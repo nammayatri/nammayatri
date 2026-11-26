@@ -30,6 +30,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.MerchantPaymentMethod as Fields
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as Fields
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
@@ -65,9 +66,13 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
+import SharedLogic.Reschedule.PreviousDriverHeadStart (claimPreviousDriverHeadStart, previousDriverEntry, previousDriverHeadStartWindow, releasePreviousDriverHeadStart)
+import SharedLogic.ScheduledBooking.OverlapCheck (holdForPreviousDriver)
 import SharedLogic.ScheduledRideTopDrivers (topDriversRoundCutoff)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
@@ -75,11 +80,13 @@ import Storage.Beam.IncentiveJourney ()
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -322,6 +329,7 @@ processSendSearchRequestJobWithMode dispatchMode jobId jobData = withLogTag ("Jo
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                offerToPreviousDriver = offerToPreviousDriver',
                 merchant,
                 searchReq,
                 tripQuoteDetails,
@@ -388,6 +396,72 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
 sendSearchRequestToDrivers' = sendSearchRequestToDriversWithTopUp Nothing
+
+-- | Rider reschedule: right after the new booking is confirmed, offer it to the driver of the
+-- rescheduled booking alone, for 'previousDriverHeadStartWindow'. True when the offer went out.
+-- Never fails the caller: without a head start the ride is simply allocated as usual.
+offerToPreviousDriver' ::
+  ( SendSearchRequestJobFlow m r c
+  ) =>
+  DriverPoolConfig ->
+  SearchTry ->
+  DriverSearchBatchInput m ->
+  GoHomeConfig ->
+  m (Maybe UTCTime)
+offerToPreviousDriver' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg = do
+  let searchReq0 = driverSearchBatchInput.searchReq
+  case searchReq0.rescheduledFromBookingId of
+    Nothing -> pure Nothing
+    Just oldBookingId -> do
+      claimed <- claimPreviousDriverHeadStart searchReq0
+      if not claimed
+        then pure Nothing
+        else withLogTag "previousDriverHeadStart" $ do
+          res <- withTryCatch "offerToPreviousDriver" $ do
+            -- The driver is read now, at dispatch: one assigned after the reschedule search counts too.
+            mbRide <- QRide.findActiveByRBId (Id oldBookingId)
+            case mbRide of
+              Nothing -> do
+                logInfo $ "Rescheduled booking " <> oldBookingId <> " has no driver; no head start"
+                pure Nothing
+              Just ride -> do
+                let previousDriver = (ride.driverId, Id oldBookingId)
+                searchReq <- I.ensurePoolingLogicVersion searchReq0
+                -- His offer is built outside the driver pool, from his cached driver data and live position.
+                let merchant = driverSearchBatchInput.merchant
+                    isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+                mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing
+                cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+                poolData <- DPDBuilder.buildDriverPoolDataFromDB merchant.onlinePayment isPrepaidEnabled [cast ride.driverId]
+                locations <- LTSFlow.driversLocation [ride.driverId]
+                now <- getCurrentTime
+                let mbEntry = do
+                      transporterConfig <- mbTransporterConfig
+                      dpd <- listToMaybe poolData
+                      location <- listToMaybe locations
+                      previousDriverEntry now transporterConfig cityServiceTiers isPrepaidEnabled searchReq searchTry.vehicleServiceTier dpd location
+                case mbEntry of
+                  Nothing -> do
+                    logInfo $ "Previous driver " <> ride.driverId.getId <> " is not eligible for the rescheduled ride; no head start"
+                    pure Nothing
+                  Just entry -> do
+                    -- One window end for everything: his offer, the board hold, and (in the caller) the
+                    -- top-drivers and regular rounds, which start only once it has passed.
+                    windowEnd <- addUTCTime (secondsToNominalDiffTime previousDriverHeadStartWindow) <$> getCurrentTime
+                    holdForPreviousDriver searchTry.estimateId previousDriver windowEnd
+                    sendAt <- getCurrentTime
+                    let offerOpenFor = Seconds (max 1 (ceiling (diffUTCTime windowEnd sendAt)))
+                        headStartPoolConfig = driverPoolConfig {singleBatchProcessTime = offerOpenFor}
+                    I.sendSearchRequestToDrivers RegularDispatch driverSearchBatchInput.isAllocatorBatch False driverSearchBatchInput.tripQuoteDetails searchReq searchTry headStartPoolConfig driverSearchBatchInput.riderDetails [entry] [] goHomeCfg
+                    logInfo $ "Previous driver " <> ride.driverId.getId <> " has the rescheduled ride alone until " <> show windowEnd
+                    pure (Just windowEnd)
+          case res of
+            Left err -> do
+              -- Not delivered: give the claim back so the head start is not lost to a failed attempt.
+              logError $ "Previous-driver head start failed; allocating as usual: " <> show err
+              releasePreviousDriverHeadStart searchReq0.id
+              pure Nothing
+            Right mbWindowEnd -> pure mbWindowEnd
 
 sendSearchRequestToDriversWithTopUp ::
   ( SendSearchRequestJobFlow m r c

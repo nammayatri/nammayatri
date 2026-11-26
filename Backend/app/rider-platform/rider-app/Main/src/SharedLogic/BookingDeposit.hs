@@ -32,6 +32,8 @@ module SharedLogic.BookingDeposit
     isFailedDepositAttempt,
     reserveBookingDeposit,
     rekeyBookingDepositHold,
+    moveDepositPayments,
+    depositPaymentsToCarry,
     decideAndSecureBookingDeposit,
     creditAndSecureBookingDeposit,
     CreditOutcome (..),
@@ -190,14 +192,24 @@ rekeyBookingDepositHold oldBooking newBooking =
               releaseHolds_ newBooking.id
               throwError . InternalError $ "Booking deposit rekey could not release the old hold for " <> oldBooking.id.getId <> ": " <> show err
             Right () -> pure ()
-      -- Move, not copy, and repoint each order: the payment handler resolves the booking from the order,
-      -- so a payment on a carried order must land on the new booking, and the old one keeps nothing to refund.
-      -- PENDING and FAILED too: a superseded order can still be CHARGED.
-      rows <- filter (\r -> r.status `elem` [DBP.SUCCESS, DBP.PENDING, DBP.FAILED]) <$> QBookingPayment.findAllByBookingIdAndServiceType oldBooking.id DOrder.BookingDeposit
-      forM_ rows $ \row -> do
-        now <- getCurrentTime
-        QBookingPayment.updateByPrimaryKey row{DBP.bookingId = newBooking.id, DBP.updatedAt = now}
-        QPaymentOrder.updateDomainEntityId row.paymentOrderId newBooking.id.getId
+      moveDepositPayments oldBooking newBooking
+
+-- | Move the old booking's deposit payments onto the new booking. Move, not copy, and repoint each
+-- order: the payment handler resolves the booking from the order, so a payment on a carried order
+-- must land on the new booking, and the old one keeps nothing to refund. PENDING and FAILED too: a
+-- superseded order can still be CHARGED. Safe to run again: it moves whatever is still on the old booking.
+moveDepositPayments :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> DRB.Booking -> m ()
+moveDepositPayments oldBooking newBooking = do
+  rows <- depositPaymentsToCarry oldBooking.id
+  forM_ rows $ \row -> do
+    now <- getCurrentTime
+    QBookingPayment.updateByPrimaryKey row{DBP.bookingId = newBooking.id, DBP.updatedAt = now}
+    QPaymentOrder.updateDomainEntityId row.paymentOrderId newBooking.id.getId
+
+-- | The deposit payments a reschedule carries from this booking to its replacement.
+depositPaymentsToCarry :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m [DBP.BookingPayment]
+depositPaymentsToCarry bookingId =
+  filter (\r -> r.status `elem` [DBP.SUCCESS, DBP.PENDING, DBP.FAILED]) <$> QBookingPayment.findAllByBookingIdAndServiceType bookingId DOrder.BookingDeposit
 
 -- | Whether the fee ended up reserved against this booking.
 data ReserveResult = Reserved | Insufficient

@@ -256,3 +256,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_cancellati
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN number_of_check_in_bags integer ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN number_of_cabin_bags integer ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN number_of_passengers integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rescheduled_from_booking_id text ;

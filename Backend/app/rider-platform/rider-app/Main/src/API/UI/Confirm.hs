@@ -20,7 +20,11 @@ module API.UI.Confirm
   )
 where
 
+import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Init as ACL
+import qualified Beckn.OnDemand.Utils.Common as BecknUtils
+import qualified Domain.Action.Beckn.OnCancel as DOnCancel
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -38,11 +42,17 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as Fields
+import qualified SharedLogic.Reschedule as SReschedule
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Auth
+import Tools.Error (RescheduleError (..))
 import qualified Tools.Fields as Fields
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Metrics as Metrics
@@ -105,8 +115,9 @@ confirm' ::
   Maybe Int ->
   Maybe Int ->
   Flow ConfirmRes
-confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbSelectedOfferId mbSupportsBookingDeposit mbPassengers mbCheckInBags mbCabinBags =
+confirm' (personId, merchantId) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbSelectedOfferId mbSupportsBookingDeposit mbPassengers mbCheckInBags mbCabinBags =
   withPersonIdLogTag personId $ do
+    ensureRescheduleWithoutCancellationFee personId merchantId quoteId
     -- BoothOnline (Paytm EDC) always requires payment before confirm; derived from paymentInstrument only
     let requiresPaymentBeforeConfirm = mbPaymentInstrument == Just DMPM.BoothOnline && mbPaymentMethodId == Just "PAYTM_EDC"
     dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSupportsBookingDeposit mbSelectedOfferId mbPassengers mbCheckInBags mbCabinBags
@@ -133,3 +144,23 @@ confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentIns
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
       | otherwise = throwM exc
+
+-- | Rescheduling must not dodge a cancellation fee: when cancelling the old booking (it has a
+-- driver) would carry one right now, the reschedule is refused. Asks the BPP the same way the
+-- app does before showing its cancel popup (a soft cancel, which changes nothing).
+ensureRescheduleWithoutCancellationFee :: Id SP.Person -> Id Merchant.Merchant -> Id Quote.Quote -> Flow ()
+ensureRescheduleWithoutCancellationFee personId merchantId quoteId = do
+  mbQuote <- QQuote.findById quoteId
+  mbSearchRequest <- maybe (pure Nothing) (QSR.findById . (.requestId)) mbQuote
+  mbOldBooking <- maybe (pure Nothing) SReschedule.findActiveRescheduleSource mbSearchRequest
+  whenJust mbOldBooking $ \oldBooking -> do
+    mbRide <- QRide.findActiveByRBId oldBooking.id
+    when (isJust mbRide) $ do
+      bookingLite <- QBookingLite.findByIdLite oldBooking.id >>= fromMaybeM (BookingDoesNotExist oldBooking.id.getId)
+      dCancelRes <- DCancel.softCancel bookingLite (personId, merchantId)
+      cancelBecknReq <- CancelACL.buildCancelReqV2 dCancelRes Nothing
+      void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
+      messageId <- BecknUtils.getMessageIdText cancelBecknReq.cancelReqContext
+      mbSoftCancelQuote <- DOnCancel.getSoftCancelQuote messageId
+      when (maybe False (\fee -> fee.amount > 0) (mbSoftCancelQuote >>= (.cancellationFee))) $
+        throwError RescheduleNotAllowedInWindow

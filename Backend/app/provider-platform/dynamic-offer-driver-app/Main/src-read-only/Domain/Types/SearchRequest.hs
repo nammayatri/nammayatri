@@ -80,6 +80,7 @@ data SearchRequest = SearchRequest
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     preferSafetyPlus :: Kernel.Prelude.Bool,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    rescheduledFromBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

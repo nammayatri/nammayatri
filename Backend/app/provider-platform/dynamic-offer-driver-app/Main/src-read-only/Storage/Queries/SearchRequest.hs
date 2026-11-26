@@ -110,6 +110,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.poolingLogicVersion poolingLogicVersion,
       Se.Set Beam.preferSafetyPlus (Kernel.Prelude.Just preferSafetyPlus),
       Se.Set Beam.providerId (Kernel.Types.Id.getId providerId),
+      Se.Set Beam.rescheduledFromBookingId rescheduledFromBookingId,
       Se.Set Beam.returnTime returnTime,
       Se.Set Beam.riderId (Kernel.Types.Id.getId <$> riderId),
       Se.Set Beam.riderName riderName,

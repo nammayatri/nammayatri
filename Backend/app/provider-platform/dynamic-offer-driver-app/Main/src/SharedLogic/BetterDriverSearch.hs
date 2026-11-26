@@ -50,7 +50,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckBetterDriverSearchProximityJobData (..))
 import SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (betterDriverSearchProximityInitialDelaySec)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (offerToPreviousDriver', sendSearchRequestToDrivers')
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
@@ -148,6 +148,7 @@ startBetterDriverSearch merchant booking ride = do
   let driverSearchBatchInput =
         SDT.DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+            offerToPreviousDriver = offerToPreviousDriver',
             merchant,
             searchReq,
             tripQuoteDetails,

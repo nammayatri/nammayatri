@@ -4,6 +4,7 @@ module Storage.Queries.Person.GetNearestDrivers
     fetchSortedCandidatesByDriverIds,
     processCandidatesChunk,
     buildDriverResult,
+    mkResultHelper,
     isTierEligibleForDriver,
     scheduledTierEligibleForDriver,
     isDriverModeEligibleHelper,

@@ -77,6 +77,7 @@ import Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Referral as Referral
+import qualified SharedLogic.Reschedule as SReschedule
 import SharedLogic.Search
 import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Serviceability as Serviceability
@@ -222,6 +223,7 @@ extractSearchDetails now = \case
         placeNameSource = Nothing,
         recentLocationId = Nothing,
         city = Nothing,
+        rescheduledFromBookingId = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -263,6 +265,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         city = Nothing,
+        rescheduledFromBookingId = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -285,6 +288,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         city = Nothing,
+        rescheduledFromBookingId = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -311,6 +315,7 @@ extractSearchDetails now = \case
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
         city = Nothing,
+        rescheduledFromBookingId = Nothing,
         ..
       }
   FixedRouteSearch FixedRouteSearchReq {..} ->
@@ -342,7 +347,8 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Just fromSpecialLocationId,
         toSpecialLocationId = Just toSpecialLocationId,
         city = Nothing,
-        enforceTollRoute = Nothing
+        enforceTollRoute = Nothing,
+        rescheduledFromBookingId = Nothing
       }
 
 {-
@@ -371,8 +377,10 @@ search ::
   Maybe Bool ->
   Maybe Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId mbEnableSyncSearch mbIsWhatsappRequest = do
+search personId req' bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId mbEnableSyncSearch mbIsWhatsappRequest = do
   now <- getCurrentTime
+  -- Rescheduling: only the pickup time is the app's; the trip is the booking's.
+  req <- SReschedule.withRescheduledBookingTrip personId req'
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
         OneWaySearch OneWaySearchReq {isReserveRide} -> fromMaybe False isReserveRide
@@ -398,6 +406,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let txnCity = show merchant.defaultCity
+  -- Rescheduling: fail before any price is shown if this booking cannot move to this time.
+  -- The old booking's BPP booking id: the BPP offers the ride to its driver first.
+  previousDriverBppBookingId <- case rescheduledFromBookingId of
+    Nothing -> pure Nothing
+    Just oldBookingId -> SReschedule.validateRescheduleSearch personId merchant oldBookingId startTime
 
   let sourceLatLong = origin.gps
   let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
@@ -436,7 +449,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           stops
           stopLocations
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
-  searchRequest <-
+  searchRequest' <-
     buildSearchRequest
       searchRequestId
       mbClient
@@ -485,6 +498,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       (Just routeCacheUsed)
       isSilentReallocationEnabled
       (if isSilentReallocationEnabled == Just True then riderCfg.silentReallocationWindowSeconds else Nothing)
+  let searchRequest = searchRequest' {SearchRequest.rescheduledFromBookingId = getId <$> rescheduledFromBookingId}
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -541,7 +555,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain silentWindowSeconds,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain silentWindowSeconds previousDriverBppBookingId,
         riderGender = Just (show person.gender),
         origin = enrichedOrigin,
         stops = enrichedStops,
@@ -572,7 +586,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain mbSilentWindowSeconds = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain mbSilentWindowSeconds mbPreviousDriverBppBookingId = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
@@ -587,6 +601,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.RETURN_TIME, show <$> returnTime),
                      (Beckn.ROUND_TRIP, Just $ show roundTrip),
                      (Beckn.NUMBER_OF_LUGGAGE, show <$> numberOfLuggages),
+                     (Beckn.RESCHEDULED_FROM_BOOKING_ID, mbPreviousDriverBppBookingId),
                      (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                      (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
                      (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
@@ -893,6 +908,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         routeCacheUsed = mbRouteCacheUsed,
         isSilentReallocationEnabled = mbIsSilentReallocationEnabled,
         silentReallocationWindowSeconds = mbSilentReallocationWindowSeconds,
+        rescheduledFromBookingId = Nothing, -- set by 'search' for a reschedule search
         ..
       }
   where
