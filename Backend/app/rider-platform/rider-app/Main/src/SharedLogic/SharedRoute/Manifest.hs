@@ -110,10 +110,10 @@ applyRunAction rideId booking action vehicleNumber = do
       | otherwise -> do
         forM_ (filter ((== DFRFSTicketStatus.INPROGRESS) . (.status)) tickets) $ \ticket ->
           QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicketStatus.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
-        -- the ride is over once no ticket is left to board: end the rider's journey, as the shared cab's drop does
+        -- the ride is over once no ticket is left to board: end the rider's journey. A failure reaches the driver's call,
+        -- which can repeat the drop: the tickets are USED by then, so the repeat passes the boarded guard and ends it again.
         unless (DFRFSTicketStatus.ACTIVE `elem` statuses) $
-          withTryCatch "sharedRoute:drop:endJourney" (endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId)
-            >>= either (\e -> logError $ "shared-route journey not ended for dropped booking " <> booking.id.getId <> ": " <> show e) pure
+          endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId
   where
     board tickets = do
       forM_ (filter ((== DFRFSTicketStatus.ACTIVE) . (.status)) tickets) $ \ticket ->

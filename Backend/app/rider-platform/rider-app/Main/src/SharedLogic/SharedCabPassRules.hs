@@ -84,14 +84,13 @@ otpDue now departure hasVehicle =
     && now >= addUTCTime (negate otpLeadTime) departure
     && (hasVehicle || now >= addUTCTime (negate otpLastCall) departure)
 
--- | A day can be skipped or unskipped until its change cutoff. Without a known departure (timetable
--- unavailable) only days after today are open.
-dayOpenForChange :: UTCTime -> DT.Day -> Maybe UTCTime -> DT.Day -> Bool
-dayOpenForChange now today mbDeparture day
+-- | A day can be skipped or unskipped until its change cutoff. Without a known departure (timetable unavailable, or
+-- the pickup missing from the trip) the cutoff is taken from the day's local midnight: no departure of the service
+-- day is earlier, so the day stays open only while every departure it could have is still before its cutoff.
+dayOpenForChange :: Seconds -> UTCTime -> DT.Day -> Maybe UTCTime -> DT.Day -> Bool
+dayOpenForChange timeDiff now today mbDeparture day
   | day < today = False
-  | otherwise = case mbDeparture of
-    Just departure -> now < issueTimeOn departure
-    Nothing -> day > today
+  | otherwise = now < issueTimeOn (fromMaybe (localMidnightUtc timeDiff day) mbDeparture)
 
 -- | Where a ticket for this departure has its startTime: between the issue time and the departure (with slack).
 liveTicketWindow :: UTCTime -> (UTCTime, UTCTime)
@@ -162,4 +161,4 @@ hasFreeSeat capacity booked = booked < capacity
 rescheduleOpen :: UTCTime -> DT.Day -> Maybe UTCTime -> UTCTime -> DT.Day -> Bool
 rescheduleOpen now today mbCurrentDeparture newDeparture day = case mbCurrentDeparture of
   Nothing -> False
-  Just currentDeparture -> dayOpenForChange now today (Just currentDeparture) day && now < issueTimeOn newDeparture
+  Just currentDeparture -> day >= today && now < issueTimeOn currentDeparture && now < issueTimeOn newDeparture

@@ -73,13 +73,16 @@ tests =
         ],
       testGroup
         "skip / unskip cutoff"
-        [ testCase "a past day is closed" $ R.dayOpenForChange (localAt day0 0 10) day0 Nothing dayPrev @?= False,
-          testCase "today before the cutoff is open" $ R.dayOpenForChange (localAt day0 2 59) day0 (Just dep) day0 @?= True,
-          testCase "today at the cutoff is closed" $ R.dayOpenForChange (localAt day0 3 0) day0 (Just dep) day0 @?= False,
+        [ testCase "a past day is closed" $ R.dayOpenForChange ist (localAt day0 0 10) day0 Nothing dayPrev @?= False,
+          testCase "today before the cutoff is open" $ R.dayOpenForChange ist (localAt day0 2 59) day0 (Just dep) day0 @?= True,
+          testCase "today at the cutoff is closed" $ R.dayOpenForChange ist (localAt day0 3 0) day0 (Just dep) day0 @?= False,
           testCase "tomorrow's 02:00 slot closes this evening" $
-            R.dayOpenForChange (localAt day0 21 0) day0 (Just (localAt day1 2 0)) day1 @?= False,
-          testCase "unknown departure: today is closed" $ R.dayOpenForChange (localAt day0 0 10) day0 Nothing day0 @?= False,
-          testCase "unknown departure: tomorrow is open" $ R.dayOpenForChange (localAt day0 23 0) day0 Nothing day1 @?= True
+            R.dayOpenForChange ist (localAt day0 21 0) day0 (Just (localAt day1 2 0)) day1 @?= False,
+          testCase "unknown departure: today is closed" $ R.dayOpenForChange ist (localAt day0 0 10) day0 Nothing day0 @?= False,
+          testCase "unknown departure: tomorrow is open before 19:00 the evening before" $
+            R.dayOpenForChange ist (localAt day0 18 59) day0 Nothing day1 @?= True,
+          testCase "unknown departure: tomorrow is closed from 19:00 the evening before" $
+            R.dayOpenForChange ist (localAt day0 19 0) day0 Nothing day1 @?= False
         ],
       testGroup
         "ticket windows and statuses"

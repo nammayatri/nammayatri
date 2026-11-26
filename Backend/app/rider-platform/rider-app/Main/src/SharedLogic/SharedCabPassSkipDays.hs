@@ -9,8 +9,8 @@ module SharedLogic.SharedCabPassSkipDays
   )
 where
 
-import Data.List (nub)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.Merchant as DM
@@ -82,10 +82,10 @@ forEachTerm ::
   (Seconds -> DPPP.PurchasedPassPayment -> [(DT.Day, Maybe UTCTime)] -> Flow ()) ->
   Flow ()
 forEachTerm personId merchantId purchasedPassId requestedDays update = do
-  let days = nub requestedDays
+  days <-
+    distinctUpTo Rules.maxDaysPerRequest requestedDays
+      & fromMaybeM (InvalidRequest $ "At most " <> show Rules.maxDaysPerRequest <> " days per request")
   when (null days) $ throwError (InvalidRequest "days must not be empty")
-  when (length days > Rules.maxDaysPerRequest) $
-    throwError (InvalidRequest $ "At most " <> show Rules.maxDaysPerRequest <> " days per request")
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId && purchasedPass.merchantId == merchantId) $ throwError AccessDenied
   timeDiff <- SharedCabPass.cityTimeDiff purchasedPass.merchantOperatingCityId
@@ -100,7 +100,7 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
     case find (\term -> term.startDate <= day && day <= term.endDate) terms of
       Just term -> do
         mbDeparture <- SharedCabPass.slotDepartureOn timeDiff term day
-        unless (Rules.dayOpenForChange now today mbDeparture day) $
+        unless (Rules.dayOpenForChange timeDiff now today mbDeparture day) $
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
         pure (term.id, [(day, mbDeparture)])
       Nothing -> throwError (InvalidRequest $ "No shuttle term of this pass covers " <> show day)
@@ -113,13 +113,29 @@ forEachTerm personId merchantId purchasedPassId requestedDays update = do
     -- the day to another slot since the check above), and a fresh clock (the cutoff may have passed meanwhile).
     updateFresh timeDiff termId termDays = do
       term <- QPPP.findByPrimaryKey termId >>= fromMaybeM (InvalidRequest $ "Term not found: " <> termId.getId)
+      -- The term may have ended or been cut short (e.g. terminated from the dashboard) since it was first read.
+      unless (term.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+        throwError (InvalidRequest "This shuttle term is no longer active")
+      whenJust (find (\(day, _) -> day < term.startDate || term.endDate < day) termDays) $ \(day, _) ->
+        throwError (InvalidRequest $ "No shuttle term of this pass covers " <> show day)
       freshDays <- forM termDays $ \(day, _) -> (\d -> (day, d)) <$> SharedCabPass.slotDepartureOn timeDiff term day
       now <- getCurrentTime
       let today = Rules.localDay timeDiff now
       forM_ freshDays $ \(day, mbDeparture) ->
-        unless (Rules.dayOpenForChange now today mbDeparture day) $
+        unless (Rules.dayOpenForChange timeDiff now today mbDeparture day) $
           throwError (InvalidRequest $ "Changes for " <> show day <> " closed 5 hours before departure")
       update timeDiff term freshDays
+
+-- | The distinct days in first-occurrence order, or Nothing as soon as there are more than `limit` of them, so an
+-- oversized request is rejected without walking all of it.
+distinctUpTo :: Int -> [DT.Day] -> Maybe [DT.Day]
+distinctUpTo limit = go Set.empty []
+  where
+    go _ acc [] = Just (reverse acc)
+    go seen acc (d : ds)
+      | d `Set.member` seen = go seen acc ds
+      | Set.size seen >= limit = Nothing
+      | otherwise = go (Set.insert d seen) (d : acc) ds
 
 -- | Try-lock for 60s (see above); a busy lock fails the request rather than waiting.
 lockOrBusy :: Text -> Flow () -> Flow ()

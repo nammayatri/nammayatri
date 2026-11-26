@@ -14,6 +14,7 @@ module SharedLogic.Scheduler.Jobs.IssueSharedCabPassTickets
 where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import Control.Applicative ((<|>))
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Types.FRFSTicketBooking as DBooking
@@ -60,7 +61,9 @@ issueSharedCabPassTickets Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       timeDiff <- SharedCabPass.cityTimeDiff cityId
       now <- getCurrentTime
       let today = Rules.localDay timeDiff now
-      sum <$> mapM (issueForDay timeDiff now cityId.getId) [today, DT.addDays 1 today]
+      -- Yesterday too: a GTFS departure past 24:00 belongs to the previous service day, and its OTP and plate are due
+      -- after midnight. Tomorrow: a slot before 05:00 is issued the evening before.
+      sum <$> mapM (issueForDay timeDiff now cityId.getId) [DT.addDays (-1) today, today, DT.addDays 1 today]
 
 issueForDay :: Seconds -> UTCTime -> Text -> DT.Day -> Flow Int
 issueForDay timeDiff now cityId day = go Nothing 0
@@ -88,41 +91,50 @@ issueForTerm timeDiff now term day
       Nothing -> do
         logWarning $ "IssueSharedCabPassTickets: no departure for term=" <> term.id.getId <> " slot=" <> show (Rules.slotOn term day) <> " day=" <> show day
         pure False
+      -- A cheap filter on the page's read of the term; the locked read below decides.
       Just departure
         | not (Rules.inIssueWindow now departure) -> pure False
         | otherwise ->
-          -- The term lock is the one skip/unskip takes, so a day cannot be skipped while its ticket is being
-          -- booked. Held for as long as instant-book's own lock (600s), so it cannot expire mid-booking.
-          Hedis.whenWithLockRedisAndReturnValue (SharedCabPass.termLockKey term.id) 600 (issueLocked departure) >>= \case
+          -- The term lock is the one skip/unskip and reschedule take, so a day cannot be skipped or moved while its
+          -- ticket is being booked. Held for as long as instant-book's own lock (600s), so it cannot expire mid-booking.
+          Hedis.whenWithLockRedisAndReturnValue (SharedCabPass.termLockKey term.id) 600 issueLocked >>= \case
             Left _ -> do
               logInfo $ "IssueSharedCabPassTickets: term busy (skip/unskip in progress), next run retries term=" <> term.id.getId
               pure False
-            Right (issued, tickets) -> do
-              forM_ tickets $ \booking -> do
-                otp <- SharedCabPass.ensureBoardingOtp booking
-                -- A fresh clock: a long run can reach this ticket well after it started.
-                nowTicket <- getCurrentTime
-                when (Rules.otpDue nowTicket departure (isJust booking.vehicleNumber)) $
-                  sendOtpOnce timeDiff departure booking otp
-                stampRunPlate day booking
+            Right (issued, tickets, mbFreshDeparture) -> do
+              whenJust mbFreshDeparture $ \freshDeparture ->
+                forM_ tickets $ \booking -> do
+                  otp <- SharedCabPass.ensureBoardingOtp booking
+                  -- The plate the rider will board: the one they boarded, else the run's assigned plate. The OTP timing and
+                  -- the notification read this same value.
+                  mbRunPlate <- stampRunPlate day booking
+                  let plate = booking.vehicleNumber <|> mbRunPlate
+                  -- A fresh clock: a long run can reach this ticket well after it started.
+                  nowTicket <- getCurrentTime
+                  when (Rules.otpDue nowTicket freshDeparture (isJust plate)) $
+                    sendOtpOnce timeDiff freshDeparture booking {DBooking.vehicleNumber = plate} otp
               pure issued
   where
-    -- A fresh read of the term: a skip may have landed since the page of terms was read.
-    issueLocked departure = do
+    -- A fresh read of the term, and the day's departure from it: a skip or a reschedule may have landed since the page
+    -- of terms was read. The departure goes back with the result so the OTP uses the same value.
+    issueLocked = do
       fresh <- QPPP.findByPrimaryKey term.id >>= fromMaybeM (InvalidRequest $ "Term not found: " <> term.id.getId)
       if day `elem` map (.day) fresh.skipDays
-        then pure (False, [])
-        else do
-          existing <- SharedCabPass.ticketsForDay timeDiff fresh day (Just departure)
-          -- A fresh clock: waiting for the lock and the reads above take time, and the slot may have left meanwhile.
-          nowLocked <- getCurrentTime
-          if
-              | not (null existing) -> pure (False, existing)
-              | not (Rules.inIssueWindow nowLocked departure) -> pure (False, [])
-              | otherwise ->
-                book fresh day <&> \case
-                  Just booking -> (True, [booking])
-                  Nothing -> (False, [])
+        then pure (False, [], Nothing)
+        else
+          SharedCabPass.slotDepartureOn timeDiff fresh day >>= \case
+            Nothing -> pure (False, [], Nothing)
+            Just departure -> do
+              existing <- SharedCabPass.ticketsForDay timeDiff fresh day (Just departure)
+              -- A fresh clock: waiting for the lock and the reads above take time, and the slot may have left meanwhile.
+              nowLocked <- getCurrentTime
+              if
+                  | not (null existing) -> pure (False, existing, Just departure)
+                  | not (Rules.inIssueWindow nowLocked departure) -> pure (False, [], Just departure)
+                  | otherwise ->
+                    book fresh day <&> \case
+                      Just booking -> (True, [booking], Just departure)
+                      Nothing -> (False, [], Just departure)
 
 -- | Sent once per ticket. The claim is released when sending fails, so the next run tries again.
 sendOtpOnce :: Seconds -> UTCTime -> DBooking.FRFSTicketBooking -> Text -> Flow ()
@@ -173,26 +185,29 @@ book term day = do
 -- | Shows the rider their bus before boarding: the plate driver-app assigned to the run of the ticket's trip that day goes on the
 -- journey leg, as its fleetNo. Each run of the job re-reads it until departure, so a later assignment or a vehicle swap lands too.
 -- Left alone once the rider boarded (check-in wrote the plate they actually boarded) and when the run is not assigned yet.
-stampRunPlate :: DT.Day -> DBooking.FRFSTicketBooking -> Flow ()
+-- Returns the run's plate when one is assigned.
+stampRunPlate :: DT.Day -> DBooking.FRFSTicketBooking -> Flow (Maybe Text)
 stampRunPlate day booking = case booking.tripId of
   Just tripId
     | isNothing booking.vehicleNumber ->
       withTryCatch "IssueSharedCabPassTickets:stampRunPlate" (stamp tripId) >>= \case
-        Right () -> pure ()
-        Left err -> logWarning $ "IssueSharedCabPassTickets: run plate not stamped booking=" <> booking.id.getId <> " err=" <> show err
-  _ -> pure ()
+        Right mbPlate -> pure mbPlate
+        Left err -> do
+          logWarning $ "IssueSharedCabPassTickets: run plate not stamped booking=" <> booking.id.getId <> " err=" <> show err
+          pure Nothing
+  _ -> pure Nothing
   where
-    stamp tripId =
-      QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= \case
-        Nothing -> pure ()
-        Just leg -> do
-          integratedBppConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
-          city <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "City not found: " <> booking.merchantOperatingCityId.getId)
-          mbPlate <- TripClient.runVehicle booking.merchantId city.city integratedBppConfig.feedKey tripId day
-          whenJust mbPlate $ \plate ->
-            when (Just plate /= leg.finalBoardedBusNumber) $ do
-              QJourneyLegExtra.updateFinalBoardedBusById (Just plate) leg.busTagNumber leg.busVehicleVariant leg.id
-              logInfo $ "IssueSharedCabPassTickets: run plate " <> plate <> " on booking=" <> booking.id.getId
+    stamp tripId = do
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
+      city <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "City not found: " <> booking.merchantOperatingCityId.getId)
+      mbPlate <- TripClient.runVehicle booking.merchantId city.city integratedBppConfig.feedKey tripId day
+      whenJust mbPlate $ \plate ->
+        QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= \case
+          Just leg | Just plate /= leg.finalBoardedBusNumber -> do
+            QJourneyLegExtra.updateFinalBoardedBusById (Just plate) leg.busTagNumber leg.busVehicleVariant leg.id
+            logInfo $ "IssueSharedCabPassTickets: run plate " <> plate <> " on booking=" <> booking.id.getId
+          _ -> pure ()
+      pure mbPlate
 
 -- | One next run per city per 15 minutes, however many times this run is triggered.
 scheduleNext :: IssueSharedCabPassTicketsJobData -> Flow ()
