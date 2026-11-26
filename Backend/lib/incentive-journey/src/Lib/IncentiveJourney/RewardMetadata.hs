@@ -15,7 +15,9 @@ module Lib.IncentiveJourney.RewardMetadata
     MilestoneRewardMeta (..),
     StreakRewardMeta (..),
     parseMilestoneRewardMeta,
+    decodeMilestoneRewardMeta,
     parseStreakRewardMeta,
+    decodeStreakRewardMeta,
     injectPeriodDaysIntoStreakMeta,
     replacePeriodDaysInStreakMeta,
     streakMetaPeriodDays,
@@ -85,6 +87,7 @@ data PercentSlab = PercentSlab
     percent :: Int
   }
   deriving (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
 
 instance A.FromJSON PercentSlab where
   parseJSON = withObject "PercentSlab" $ \o ->
@@ -101,6 +104,7 @@ data MetricPercentRule = MetricPercentRule
     slabs :: [PercentSlab]
   }
   deriving (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
 
 instance A.FromJSON MetricPercentRule where
   parseJSON = withObject "MetricPercentRule" $ \o ->
@@ -126,6 +130,7 @@ data MilestoneRewardMeta = MilestoneRewardMeta
     violationMetrics :: [Text]
   }
   deriving (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
 
 instance A.FromJSON MilestoneRewardMeta where
   parseJSON = withObject "MilestoneRewardMeta" $ \o ->
@@ -212,13 +217,18 @@ amountSlabInMinutes unit AmountSlab {fromValue, amount} =
       amount = amount
     }
 
+-- | Strict decode for dashboard write validation. Left = malformed JSON shape/types.
+decodeMilestoneRewardMeta :: Value -> Either String MilestoneRewardMeta
+decodeMilestoneRewardMeta v =
+  case A.fromJSON v of
+    A.Success m -> Right m
+    A.Error err -> Left err
+
+-- | Soft parse for settle/eval: bad JSON → empty meta (no crash on legacy rows).
 parseMilestoneRewardMeta :: Maybe Value -> MilestoneRewardMeta
 parseMilestoneRewardMeta = \case
   Nothing -> emptyMilestoneMeta
-  Just v ->
-    case A.fromJSON v of
-      A.Success m -> m
-      A.Error _ -> emptyMilestoneMeta
+  Just v -> either (const emptyMilestoneMeta) (\m -> m) (decodeMilestoneRewardMeta v)
 
 emptyMilestoneMeta :: MilestoneRewardMeta
 emptyMilestoneMeta =
@@ -231,13 +241,17 @@ emptyMilestoneMeta =
       violationMetrics = []
     }
 
+decodeStreakRewardMeta :: Value -> Either String StreakRewardMeta
+decodeStreakRewardMeta v =
+  case A.fromJSON v of
+    A.Success m -> Right m
+    A.Error err -> Left err
+
+-- | Soft parse for settle/eval: bad JSON → empty meta.
 parseStreakRewardMeta :: Maybe Value -> StreakRewardMeta
 parseStreakRewardMeta = \case
   Nothing -> emptyStreakMeta
-  Just v ->
-    case A.fromJSON v of
-      A.Success m -> m
-      A.Error _ -> emptyStreakMeta
+  Just v -> either (const emptyStreakMeta) (\m -> m) (decodeStreakRewardMeta v)
 
 -- | Merge API periodDays into streakEndRewardMetadata JSON (Nothing keeps existing periodDays).
 injectPeriodDaysIntoStreakMeta :: Maybe Int -> Maybe Value -> Maybe Value

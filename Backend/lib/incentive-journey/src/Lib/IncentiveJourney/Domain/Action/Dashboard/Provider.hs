@@ -3,6 +3,7 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Provider
     postIncentiveJourneyCreate,
     getIncentiveJourneyMilestoneList,
     postIncentiveJourneyMilestoneCreate,
+    putIncentiveJourneyMilestoneUpdate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyDriverAssignments,
     postIncentiveJourneyStatsWaiveOff,
@@ -17,6 +18,8 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Provider
     postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
+    postIncentiveJourneyUnassignBulkFromS3,
+    getIncentiveJourneyUnassignBulkFromS3List,
     postIncentiveJourneyAutoApplyCohortCreate,
     putIncentiveJourneyAutoApplyCohortUpdate,
     getIncentiveJourneyAutoApplyCohortList,
@@ -186,6 +189,38 @@ postIncentiveJourneyMilestoneCreate handle merchantShortId opCity req = do
   handle.clearMilestoneCacheByJourneyId journeyId
   pure Common.CreateIncentiveJourneyMilestoneRes {milestoneId = ID.cast milestoneId}
 
+-- | Ops can retune NetOff MG / percent / violation slabs on a live milestone.
+-- Condition, order, and rewardType stay fixed. Already-paid stats are not recomputed.
+-- Contract: omitted / null 'rewardMetadata' keeps the stored value (no silent slab wipe).
+-- Send a full JSON object to replace. Clearing payout slabs for NetOff still requires
+-- validateMilestoneReward (rewardValue > 0 or mgAmountSlabs).
+putIncentiveJourneyMilestoneUpdate ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateIncentiveJourneyMilestoneReq ->
+  m APISuccess
+putIncentiveJourneyMilestoneUpdate handle merchantShortId opCity req = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  let milestoneId = ID.cast @Dashboard.Common.IncentiveJourneyMilestone @DIJM.IncentiveJourneyMilestone req.milestoneId
+  milestone <-
+    QMilestone.findById milestoneId
+      >>= fromMaybeM (InvalidRequest "Incentive journey milestone not found")
+  unless
+    ( milestone.merchantId == Just (ID.cast merchant.id)
+        && milestone.merchantOperatingCityId == Just (ID.cast merchantOpCityId)
+    )
+    $ throwError (InvalidRequest "Milestone does not belong to this merchant/city")
+  case req.rewardMetadata of
+    Nothing -> pure Success
+    Just meta -> do
+      let updated = milestone {DIJM.rewardMetadata = Just meta}
+      validateMilestoneReward updated
+      QMilestoneExtra.updateRewardMetadata milestoneId (Just meta)
+      handle.clearMilestoneCacheByJourneyId milestone.journeyId
+      pure Success
+
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
@@ -288,14 +323,23 @@ validateMilestoneReward milestone =
     DIJC.PoolingPriority ->
       throwError (InvalidRequest "PoolingPriority reward type is not supported")
     DIJC.NoReward -> pure ()
-    DIJC.NetOffEarnings ->
-      let meta = RM.parseMilestoneRewardMeta milestone.rewardMetadata
-       in case milestone.rewardValue of
-            Just amount | amount > 0 -> pure ()
-            _
-              | not (null meta.mgAmountSlabs) -> pure ()
-              | otherwise ->
-                throwError (InvalidRequest "NetOffEarnings requires rewardValue > 0 or mgAmountSlabs in rewardMetadata")
+    DIJC.NetOffEarnings -> do
+      meta <- case milestone.rewardMetadata of
+        Nothing -> pure $ RM.parseMilestoneRewardMeta Nothing
+        Just v ->
+          case RM.decodeMilestoneRewardMeta v of
+            Right m -> pure m
+            Left _ ->
+              throwError (InvalidRequest "rewardMetadata must be valid NetOff metadata JSON")
+      -- Slabs replace rewardValue at settle; a negative amount would clamp payout to 0.
+      when (any (\s -> s.amount < 0) meta.mgAmountSlabs) $
+        throwError (InvalidRequest "NetOffEarnings mgAmountSlabs amounts must be >= 0")
+      case milestone.rewardValue of
+        Just amount | amount > 0 -> pure ()
+        _
+          | not (null meta.mgAmountSlabs) -> pure ()
+          | otherwise ->
+            throwError (InvalidRequest "NetOffEarnings requires rewardValue > 0 or mgAmountSlabs in rewardMetadata")
 
 -- | Validate streak-end fields when streakEndRewardType is set on cohort_journey_mapping.
 validateStreakEndRewardOnMapping ::
@@ -319,14 +363,22 @@ validateStreakEndRewardOnMapping mbRewardType mbRewardValue mbRewardExpirationAt
     Just DIJC.SubscriptionWaiveOff ->
       validateStoredSubscriptionWaiveOff mbRewardValue mbRewardExpirationAt mbRewardMetadata
     Just DIJC.NoReward -> pure ()
-    Just DIJC.NetOffEarnings ->
-      let meta = RM.parseStreakRewardMeta mbRewardMetadata
-       in case mbRewardValue of
-            Just amount | amount > 0 -> pure ()
-            _
-              | not (null meta.mgAmountSlabs) -> pure ()
-              | otherwise ->
-                throwError (InvalidRequest "Streak-end NetOffEarnings requires streakEndRewardValue > 0 or mgAmountSlabs in metadata")
+    Just DIJC.NetOffEarnings -> do
+      meta <- case mbRewardMetadata of
+        Nothing -> pure $ RM.parseStreakRewardMeta Nothing
+        Just v ->
+          case RM.decodeStreakRewardMeta v of
+            Right m -> pure m
+            Left _ ->
+              throwError (InvalidRequest "streakEndRewardMetadata must be valid NetOff streak metadata JSON")
+      when (any (\s -> s.amount < 0) meta.mgAmountSlabs) $
+        throwError (InvalidRequest "Streak-end NetOffEarnings mgAmountSlabs amounts must be >= 0")
+      case mbRewardValue of
+        Just amount | amount > 0 -> pure ()
+        _
+          | not (null meta.mgAmountSlabs) -> pure ()
+          | otherwise ->
+            throwError (InvalidRequest "Streak-end NetOffEarnings requires streakEndRewardValue > 0 or mgAmountSlabs in metadata")
     Just other -> throwError (InvalidRequest $ show other <> " streak-end reward is not supported yet")
 
 getIncentiveJourneyStatsHistory ::
@@ -823,7 +875,28 @@ postIncentiveJourneyAssignBulkFromS3 ::
   Kernel.Types.Beckn.Context.City ->
   DBulkAssign.BulkAssignUserCohortFromS3Req ->
   m Common.BulkAssignUserCohortFromS3Res
-postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req = do
+postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req =
+  scheduleBulkUserCohortFromS3 handle merchantShortId opCity req DBulkRun.Assign
+
+postIncentiveJourneyUnassignBulkFromS3 ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DBulkAssign.BulkAssignUserCohortFromS3Req ->
+  m Common.BulkAssignUserCohortFromS3Res
+postIncentiveJourneyUnassignBulkFromS3 handle merchantShortId opCity req =
+  scheduleBulkUserCohortFromS3 handle merchantShortId opCity req DBulkRun.Unassign
+
+scheduleBulkUserCohortFromS3 ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DBulkAssign.BulkAssignUserCohortFromS3Req ->
+  DBulkRun.BulkUserCohortMappingOperation ->
+  m Common.BulkAssignUserCohortFromS3Res
+scheduleBulkUserCohortFromS3 handle merchantShortId opCity req operation = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   when (T.null (T.strip req.s3FilePath)) $
     throwError (InvalidRequest "s3FilePath must not be empty")
@@ -835,6 +908,7 @@ postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req = do
   let batchSize = SH.clampBatchSize $ fromMaybe SH.defaultBatchSize req.batchSize
       delaySecs = max 0 $ fromMaybe SH.defaultRescheduleDelaySeconds req.rescheduleDelaySeconds
       s3Path = T.strip req.s3FilePath
+      operationText = bulkOperationToText operation
   uploadFn <- handle.putBulkAssignCsv & fromMaybeM (InvalidRequest "csv upload not configured")
   uploadFn s3Path req.file
   runIdText <- generateGUIDText
@@ -848,6 +922,7 @@ postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req = do
         s3FilePath = s3Path,
         scheduledAt = req.scheduledAt,
         status = DBulkRun.Scheduled,
+        operationType = Just operation,
         fileOffset = 0,
         batchSize = batchSize,
         rescheduleDelaySeconds = delaySecs,
@@ -860,7 +935,7 @@ postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req = do
         updatedAt = now
       }
   scheduleFn <- handle.scheduleBulkUpload & fromMaybeM (InvalidRequest "scheduleBulkUpload not configured")
-  scheduleFn merchant.id merchantOpCityId s3Path req.scheduledAt batchSize delaySecs runIdText
+  scheduleFn merchant.id merchantOpCityId s3Path req.scheduledAt batchSize delaySecs runIdText operationText
   pure
     Common.BulkAssignUserCohortFromS3Res
       { runId = runIdText,
@@ -880,16 +955,42 @@ getIncentiveJourneyAssignBulkFromS3List ::
   Maybe Int ->
   Maybe Common.BulkUserCohortMappingRunStatus ->
   m Common.BulkAssignUserCohortFromS3ListRes
-getIncentiveJourneyAssignBulkFromS3List handle merchantShortId opCity mbLimit mbOffset mbStatus = do
+getIncentiveJourneyAssignBulkFromS3List handle merchantShortId opCity mbLimit mbOffset mbStatus =
+  listBulkUserCohortFromS3 handle merchantShortId opCity mbLimit mbOffset mbStatus (Just DBulkRun.Assign)
+
+getIncentiveJourneyUnassignBulkFromS3List ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.BulkUserCohortMappingRunStatus ->
+  m Common.BulkAssignUserCohortFromS3ListRes
+getIncentiveJourneyUnassignBulkFromS3List handle merchantShortId opCity mbLimit mbOffset mbStatus =
+  listBulkUserCohortFromS3 handle merchantShortId opCity mbLimit mbOffset mbStatus (Just DBulkRun.Unassign)
+
+listBulkUserCohortFromS3 ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.BulkUserCohortMappingRunStatus ->
+  Maybe DBulkRun.BulkUserCohortMappingOperation ->
+  m Common.BulkAssignUserCohortFromS3ListRes
+listBulkUserCohortFromS3 handle merchantShortId opCity mbLimit mbOffset mbStatus mbOperation = do
   (_merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   let limitVal = Just $ fromMaybe 20 mbLimit
       offsetVal = Just $ fromMaybe 0 mbOffset
   runs <-
-    QBulkRunExtra.findByMerchantOperatingCityIdAndMaybeStatus
+    QBulkRunExtra.findByMerchantOperatingCityIdAndMaybeStatusAndOperation
       limitVal
       offsetVal
       (ID.cast merchantOpCityId)
       (toDomainBulkRunStatus <$> mbStatus)
+      mbOperation
   pure
     Common.BulkAssignUserCohortFromS3ListRes
       { runs = map toBulkAssignListItem runs
@@ -902,6 +1003,7 @@ toBulkAssignListItem run =
       s3FilePath = run.s3FilePath,
       scheduledAt = run.scheduledAt,
       status = toApiBulkRunStatus run.status,
+      operationType = bulkOperationToText <$> run.operationType,
       offset = run.fileOffset,
       batchSize = run.batchSize,
       rescheduleDelaySeconds = run.rescheduleDelaySeconds,
@@ -913,6 +1015,11 @@ toBulkAssignListItem run =
       createdAt = run.createdAt,
       updatedAt = run.updatedAt
     }
+
+bulkOperationToText :: DBulkRun.BulkUserCohortMappingOperation -> Text
+bulkOperationToText = \case
+  DBulkRun.Assign -> "Assign"
+  DBulkRun.Unassign -> "Unassign"
 
 toApiBulkRunStatus :: DBulkRun.BulkUserCohortMappingRunStatus -> Common.BulkUserCohortMappingRunStatus
 toApiBulkRunStatus = \case

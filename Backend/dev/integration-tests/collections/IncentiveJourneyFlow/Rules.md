@@ -10,7 +10,9 @@ Provider/driver **Incentive Journey** E2E for **NAMMA_YATRI** (Bangalore): dashb
    ```bash
    , run-mobility-stack-full
    ```
-   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis, Kafka, **`kafka-ride-events-consumer-exe`**, **`kafka-ij-behavior-tick-consumer-exe`**, and **mock-server** (`:8080`). Suite `02` sends the CSV as a multipart file on `POST .../assign/bulkFromS3`. Driver-app writes that object under `Backend/s3/local/test-bucket/<key>`, and the allocator reads it from there. The mock `put-text` step also writes `collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv` so newman can attach that file. Restart mock-server after pulling that endpoint.
+   Must include `dynamic-offer-driver-app` (`:8016`), `driver-offer-allocator`, **`producer-exe`** (moves `Scheduled_Jobs{shard}` → `Available_Jobs` stream; without it bulk jobs stay `Scheduled` forever), `provider-dashboard` (`:8018`), `rider-app` (`:8013`), Postgres (`:5434`), Redis (+ cluster), Kafka, **`kafka-ride-events-consumer-exe`**, **`kafka-ij-behavior-tick-consumer-exe`**, and **mock-server** (`:8080`). Suite `02` sends CSVs as multipart on `POST .../assign/bulkFromS3` and `POST .../unassign/bulkFromS3`. Driver-app writes those objects under `Backend/s3/local/test-bucket/<key>`, and the allocator reads them from there. Mock `put-text` also writes `fixtures/bulk-assign.csv` / `fixtures/bulk-unassign.csv` so newman can attach the files. Restart mock-server after pulling that endpoint.
+
+   If poll stays `Scheduled` with `rowsInserted=0` / `currentSchedulerJobId=null`: job is usually in Redis cluster `Scheduled_Jobs{*}` but producer is hung/down (`/tmp/producer.log` not advancing). Restart `producer-exe` (and allocator if needed), keep the original `runId`, and resume polling that run. Do not re-POST schedule — each submit creates a new run; if the first job then completes, the second run skips existing mappings and cannot hit `rowsInserted=2`. Resubmit only when the original job cannot execute (e.g. job row gone / Failed permanently). If that failed run already inserted some rows (`batchSize` 1 → one UCM per chunk), delete those `atlas_driver_offer_bpp.user_cohort_mapping` rows for the CSV `(user_id, cohort_mapping_id)` pairs before resubmitting — bulk unassign only disables and still blocks insert-ignore; otherwise the new run reports `rowsInserted<2`. Or recreate fresh cohort-journey mappings and rebuild the CSV.
 
 2. **Consumers** —
    - Ride-end: `kafka-ride-events-consumer-exe` (`RIDE_EVENTS_CONSUMER` / `DriverCoinsAndJourney`). Without it, ride-end milestone polls fail.
@@ -95,7 +97,7 @@ newman run collections/IncentiveJourneyFlow/01-IncentiveJourneyRideProgressFlow.
 ## Collection
 
 | `01-IncentiveJourneyRideProgressFlow.json` | One cohort, two journeys (two mappings, two `/assign` calls). Journey 1 milestones stay legacy simple columns. Journey 2 uses **evaluation.logic** JsonLogic `ridesCompleted>=2 AND (earnings>=1 OR distanceMeters>=1)` (200 coins) on ride 2. Auto-apply uses the same AND/OR shape with `ridesCompleted>=1` (30 coins) on ride 1. Polls assert `currentMetrics`. Then waive earnings → streak-end cash ₹1. Before cleanup: roll campaign checks. Then unassign / disable mappings |
-| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by one `POST .../assign/bulkFromS3` job (`batchSize` 1, so two allocator ticks). That request uploads the CSV as a multipart file, and driver-app stores it at the given S3 key. Roll API is covered in `01` only |
+| `02-IncentiveJourneyBulkAssignRideProgressFlow.json` | Same ride progress as `01`, except both user mappings are inserted by `POST .../assign/bulkFromS3` and cleaned up by `POST .../unassign/bulkFromS3` (`batchSize` 1). CSVs upload as multipart; driver-app stores them at the given S3 keys. Roll API is covered in `01` only |
 | `03-IncentiveJourneyMgCampaignOptInFlow.json` | **MG OptIn + NetOff**. One journey / one `NetOffEarnings` milestone with full `rewardMetadata` slabs. CJM `OptIn` + `controlFeatures`, `streakRange=2`, `startDate=yesterday`. Invite → opt-in → ONLINE → **Local open-session onlineMinutes flush** (backdate OnlineHours + list → poll `ij:bm:onlineMinutes` today) → Accept/ride **stats-sync only** (`InProgress`) → Redis-seed closed `Day:` ij:bm → list settle **NetOff Cash** → unassign → re-invite → dashboard opt-in → cleanup |
 
 ## OptIn + controlFeatures suite (`03`)
@@ -107,7 +109,7 @@ Do **not** fold this into `01` — Assigned ride progress and OptIn+controls are
 1. **One milestone** — `rewardType=NetOffEarnings` + real bag `evaluation.logic`: `ridesCompleted>=0 AND (acceptanceRate>=0 OR onlineMinutes>=0)` (UI/shape only — NetOff settle does **not** gate on condition; slabs drive payout). Full **`rewardMetadata`**: `includeEarningsAllDay`, `mgAmountSlabs` (onlineMinutes→MG), `percentSlabs` (acceptanceRate + cancellationRate), `violationPercentSlabs` + `violationMetrics` (`dxCancel`/`dafCancel`). Fallback `rewardValue` when slabs empty.
 2. CJM **`campaignUserLinkType=OptIn`** + **`controlFeatures`**. **`streakEndRewardType=NetOffEarnings`** with the same slabs in **`streakEndRewardMetadata`** (explicit **`considerExtraEarning: true`**), **`periodDays=1`** (`streakRange=2`). Closed-day list settle pays **milestone** NetOff Cash **and** the **1-day periodized streak** NetOff Cash (ops may configure both; prod often uses milestone `NoReward` + streak-only NetOff). Behaviour milestones / NetOff keep `trackBehaviorMetrics` on so Accept/cancel still bump ij:bm.
 3. Opt-in **before** invite must fail; invite assign; driver list shows **Pending** OptIn (`campaignUserLinkType` / `optInStatus` / `validTill`) before opt-in
-4. Driver UI `/incentive/journey/optIn` then `GET /driver/profile` asserts `driverTags["IJCampaign:<cjmId>"]` starts with `OptIn;daily` (no milestone timeBounds → `daily`). Then list/history/assignments assert exact `controlFeatures` payloads (`CanDxCancelBooking=false`, `AutoAssign` locked ON, `PoolingPriority HIGH`). List/history milestones also expose **`mgSlabs`** (MG ladder only — not full `rewardMetadata`). `GET /driver/vehicleServiceTiers` → `autoAcceptLockedByFleet=true`. Nearby SRD → `driverCancellationNotAllowed=true`; post-accept cancel → non-2xx. (Pooling sort / silent-assign fire are not E2E-asserted.)
+4. Driver UI `/incentive/journey/optIn` then `GET /driver/profile` asserts `driverTags["IJCampaign:<cjmId>"]` starts with `OptIn;daily` (no milestone timeBounds → `daily`). Then list/history/assignments assert exact `controlFeatures` payloads (`CanDxCancelBooking=false`, `AutoAssign` locked ON, `PoolingPriority HIGH`). List/history milestones also expose typed **`rewardMetadata`** (MG + percent/violation slabs; omitted when empty). `GET /driver/vehicleServiceTiers` → `autoAcceptLockedByFleet=true`. Nearby SRD → `driverCancellationNotAllowed=true`; post-accept cancel → non-2xx. (Pooling sort / silent-assign fire are not E2E-asserted.)
 4b. **Local open-session onlineMinutes flush** (after `setActivity` ONLINE): backdate `driver-offer:OnlineHours:{driver}` `lastOnlineAt` by ~2m + clear `ij:online:flush:{driver}` → `GET /incentive/journey/list` → poll `ij:bm:onlineMinutes:{driver}:{cjm}:{Day:today}:daily` until `>= 1`. Asserts Redis bank from the list settle fork without waiting a real 60s. Do **not** assert list `currentMetrics.onlineMinutes` on that response (fork + tick→stats lag). Closed-day settle seed (`onlineMinutes=180` on `Day:yest`) is unchanged and still separate.
 5. Mid-period: behaviour + ride **stats-sync only** (`InProgress`, `slabPercent` present). NetOff settles the **previous closed period** via **list-API fork only**. Watermark `ij:settle:done:{person}:{cjm}`; catchup lock must release (or seed deletes it). NetOff payout ≤ 0 → Completed 0; payout > 0 + AwardSkipped → `RewardPending` (wallet off/`transfer_in` off and no verified VPA). Cancel/accept rates from period ij:bm/stats.
 5b. **After closed-day settle** (does not touch seeded `Day:yest`): second search → accept → **rider cancel** (customer-at-fault in this flow). Assert current-period **`ij:bm:dafCancel==0`** and **`dxCancel==0`** (daf = driver-at-fault only; rider cancel does **not** bump when customer is at fault), then stats Prefer `*InsideTimebound`. After 1 completed ride expect **rrReceived/rrAccepted ≈ 1** (primary-only INCR; no once-keys — each SRD batch send counts for `rrReceived`; accept/cancel gated by domain). Closed-day seed `Day:yest` is a different periodKey. `acceptanceRate` ≤ 100.
@@ -131,15 +133,22 @@ Requires `envType=Local` + mock-server. Cash/NetOff: after config-sync, Bangalor
 
 Run alone: `./run-tests.sh incentive-journey NY_Bangalore 03-IncentiveJourneyMgCampaignOptInFlow`
 
-## Bulk assign suite
+## Bulk assign / unassign suite
 
-`02` keeps the same journeys, rides, waive, and cleanup. It does not call `POST .../assign`. After both cohort-journey mappings exist it:
+`02` keeps the same journeys, rides, and waive. It does not call single `POST .../assign` or `POST .../unassign`. After both cohort-journey mappings exist it:
 
-1. Builds a two-row CSV (`userId,cohortMappingId,validTill,enabled`) from the driver id and both cohort-journey mapping ids, and writes a fixture with `POST {{mockServerUrl}}/mock/s3/put-text`.
-2. `POST .../assign/bulkFromS3` as `multipart/form-data`: file part `file` (built from those ids, no manual upload), plus `s3FilePath`, `scheduledAt` about 15 seconds ahead, `batchSize` 1, `rescheduleDelaySeconds` 2. Driver-app uploads that file to the object key, then schedules the job.
+1. Builds a two-row assign CSV (`userId,cohortMappingId,validTill,enabled`) and writes a fixture with `POST {{mockServerUrl}}/mock/s3/put-text`.
+2. `POST .../assign/bulkFromS3` as `multipart/form-data`: file part `file`, plus `s3FilePath`, `scheduledAt` about 15 seconds ahead, `batchSize` 1, `rescheduleDelaySeconds` 2.
 3. Polls `GET .../assign/bulkFromS3/list` until that `runId` is `Succeeded` with `rowsInserted` 2.
 
-`scheduledAt` must be in the future or the scheduler rejects the job. The allocator has to be up to consume it. A row that already exists for the same driver and mapping is skipped, not re-enabled.
+After rides / waive, cleanup uses bulk unassign instead of single unassign:
+
+4. Builds a two-row unassign CSV (`userId,cohortMappingId`) → mock S3 fixture `bulk-unassign.csv`.
+5. `POST .../unassign/bulkFromS3` (same multipart shape; separate S3 key).
+6. Polls `GET .../unassign/bulkFromS3/list` until that `runId` is `Succeeded` with `rowsInserted` 2 (processed rows).
+7. Then disables CJM / auto-apply rows as before.
+
+`scheduledAt` must be in the future or the scheduler rejects the job. **Both `producer-exe` and `driver-offer-allocator` must be up** (RedisBased: producer publishes due jobs to the stream; allocator consumes). Assign: a row that already exists for the same driver and mapping is skipped, not re-enabled. Unassign: same no per-row merchant/city lookup as assign (CSV trusted like assign).
 
 ## Milestone shape in this collection
 

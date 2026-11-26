@@ -31,16 +31,6 @@ data SubscriptionWaiveOffConfig = SubscriptionWaiveOffConfig
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- | Driver-facing NetOff MG ladder only (not full rewardMetadata — no percent/violation slabs).
-data MgSlabs = MgSlabs
-  { -- | Online-time thresholds → MG ₹ (same shape as rewardMetadata.mgAmountSlabs).
-    slabs :: [RM.AmountSlab],
-    -- | Unit of slabs[].fromValue (Minutes | Hours). Backend settle always converts to minutes.
-    fromValueUnit :: RM.MgAmountFromValueUnit
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data IncentiveJourneyMilestoneItem = IncentiveJourneyMilestoneItem
   { areaType :: Maybe DIJM.MilestoneAreaType,
     conditionOperator :: DIJM.MilestoneConditionOperator,
@@ -54,8 +44,8 @@ data IncentiveJourneyMilestoneItem = IncentiveJourneyMilestoneItem
     -- | From milestone template: { "logic": <JsonLogic> }. Null for simple conditionType targets.
     evaluation :: Maybe Value,
     milestoneId :: Id DIJM.IncentiveJourneyMilestone,
-    -- | Present only when NetOff (or other) milestone has non-empty mgAmountSlabs.
-    mgSlabs :: Maybe MgSlabs,
+    -- | Typed NetOff / slab meta when present (mg + percent + violation). Omitted when empty/SWO-only.
+    rewardMetadata :: Maybe RM.MilestoneRewardMeta,
     name :: Maybe Text,
     order :: Int,
     rewardType :: DIJC.MilestoneRewardType,
@@ -116,11 +106,12 @@ data IncentiveJourneyHistoryItem = IncentiveJourneyHistoryItem
     controlFeatures :: Maybe Value,
     -- | Live milestone template evaluation (same as list). Not snapshotted on stats.
     evaluation :: Maybe Value,
-    -- | Same as list: MG ladder only when configured (not full rewardMetadata).
-    mgSlabs :: Maybe MgSlabs,
+    -- | Same as list: typed NetOff / slab meta when present.
+    rewardMetadata :: Maybe RM.MilestoneRewardMeta,
     periodDays :: Maybe Int,
     journeyId :: Id DIJ.IncentiveJourney,
     journeyName :: Text,
+    journeyDescription :: Maybe Text,
     journeyType :: DIJ.IncentiveJourneyType,
     milestoneDescription :: Maybe Text,
     milestoneId :: Id DIJM.IncentiveJourneyMilestone,

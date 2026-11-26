@@ -12,10 +12,15 @@ BulkUserCohortMappingRun:
     BulkUserCohortMappingRunStatus:
       enum: "Scheduled, Running, Succeeded, Failed, Cancelled"
       derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    BulkUserCohortMappingOperation:
+      enum: "Assign, Unassign"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BulkUserCohortMappingRunStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BulkUserCohortMappingRunStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BulkUserCohortMappingOperation>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BulkUserCohortMappingOperation>
 
   fields:
     id: Id BulkUserCohortMappingRun
@@ -24,6 +29,8 @@ BulkUserCohortMappingRun:
     s3FilePath: Text
     scheduledAt: UTCTime
     status: BulkUserCohortMappingRunStatus
+    # Assign = bulk invite/upsert; Unassign = bulk disable + clear opt-in. Null → Assign (legacy rows).
+    operationType: Maybe BulkUserCohortMappingOperation
     fileOffset: Int
     batchSize: Int
     rescheduleDelaySeconds: Int
@@ -36,6 +43,7 @@ BulkUserCohortMappingRun:
     updatedAt: UTCTime
 
   default:
+    operationType: "NULL"
     fileOffset: "0"
     totalRows: "NULL"
     rowsInserted: "0"

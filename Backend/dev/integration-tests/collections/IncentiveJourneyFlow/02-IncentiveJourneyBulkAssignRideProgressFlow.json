@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Incentive Journey Bulk Assign Ride Progress Flow",
-    "description": "Same provider E2E as 01-IncentiveJourneyRideProgressFlow, except both user_cohort_mapping rows are created by POST /incentiveJourney/assign/bulkFromS3. The CSV is written to the local mock bucket (Backend/s3/local/test-bucket) via POST /mock/s3/put-text, scheduled about 15s ahead, and processed in two allocator batches (batchSize 1). Requires driver-offer-allocator and mock-server. See IncentiveJourneyFlow/Rules.md.",
+    "description": "Same provider E2E as 01-IncentiveJourneyRideProgressFlow, except both user_cohort_mapping rows are created by POST /incentiveJourney/assign/bulkFromS3 and cleaned up by POST /incentiveJourney/unassign/bulkFromS3. CSVs go to the local mock bucket (Backend/s3/local/test-bucket) via POST /mock/s3/put-text, scheduled about 15s ahead, batchSize 1. Requires driver-offer-allocator and mock-server. See IncentiveJourneyFlow/Rules.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -2882,7 +2882,7 @@
       }
     },
     {
-      "name": "Unassign Driver (Cleanup)",
+      "name": "Write Bulk Unassign CSV (Mock S3)",
       "request": {
         "method": "POST",
         "header": [
@@ -2896,11 +2896,140 @@
           }
         ],
         "url": {
-          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign"
+          "raw": "{{mockServerUrl}}/mock/s3/put-text"
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\"\n}"
+          "raw": "{\n  \"key\": \"{{ij_bulk_unassign_s3_key}}\",\n  \"content\": \"{{ij_bulk_unassign_csv}}\",\n  \"fixture\": \"bulk-unassign.csv\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var driverId = pm.environment.get('driver_id');",
+              "var cjm1 = pm.environment.get('ij_cohort_journey_mapping_id');",
+              "var cjm2 = pm.environment.get('ij_cohort_journey_mapping_2_id');",
+              "var suffix = pm.collectionVariables.get('_test_ij_suffix');",
+              "var key = 'incentive-journey/ucm-unassign-' + suffix + '.csv';",
+              "pm.environment.set('ij_bulk_unassign_s3_key', key);",
+              "var nl = '\\\\n';",
+              "var csv = 'userId,cohortMappingId' + nl",
+              "  + driverId + ',' + cjm1 + nl",
+              "  + driverId + ',' + cjm2 + nl;",
+              "pm.environment.set('ij_bulk_unassign_csv', csv);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Mock S3 put unassign CSV 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Unassign CSV key stored', function () { pm.expect(d.key).to.eql(pm.environment.get('ij_bulk_unassign_s3_key')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule Bulk Unassign From S3 (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign/bulkFromS3"
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "s3FilePath",
+              "type": "text",
+              "value": "{{ij_bulk_unassign_s3_key}}"
+            },
+            {
+              "key": "scheduledAt",
+              "type": "text",
+              "value": "{{ij_bulk_unassign_scheduled_at}}"
+            },
+            {
+              "key": "batchSize",
+              "type": "text",
+              "value": "1"
+            },
+            {
+              "key": "rescheduleDelaySeconds",
+              "type": "text",
+              "value": "2"
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": "collections/IncentiveJourneyFlow/fixtures/bulk-unassign.csv",
+              "value": "{{ij_bulk_unassign_csv}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var driverId = pm.environment.get('driver_id');",
+              "var cjm1 = pm.environment.get('ij_cohort_journey_mapping_id');",
+              "var cjm2 = pm.environment.get('ij_cohort_journey_mapping_2_id');",
+              "var suffix = pm.collectionVariables.get('_test_ij_suffix');",
+              "var key = 'incentive-journey/ucm-unassign-' + suffix + '.csv';",
+              "pm.environment.set('ij_bulk_unassign_s3_key', key);",
+              "var nl = '\\\\n';",
+              "var csv = 'userId,cohortMappingId' + nl",
+              "  + driverId + ',' + cjm1 + nl",
+              "  + driverId + ',' + cjm2 + nl;",
+              "pm.environment.set('ij_bulk_unassign_csv', csv);",
+              "pm.environment.set('ij_bulk_unassign_scheduled_at', new Date(Date.now() + 15000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_bulk_unassign_run_id', d.runId);",
+              "pm.test('Bulk unassign schedule 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('unassign runId returned', function () { pm.expect(d.runId).to.be.a('string').and.not.empty; });",
+              "pm.test('status Scheduled', function () { pm.expect(d.status).to.eql('Scheduled'); });",
+              "pm.test('batchSize is 1', function () { pm.expect(d.batchSize).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Poll Bulk Unassign Run Until Succeeded",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign/bulkFromS3/list?limit=20"
         }
       },
       "event": [
@@ -2909,7 +3038,54 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Unassign 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Bulk unassign list 200', function () { pm.response.to.have.status(200); });",
+              "var MAX_ATTEMPTS = 24;",
+              "var POLL_MS = 2000;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('dashboard_token');",
+              "var base = pm.environment.get('dashboard_base_url');",
+              "var merchant = pm.environment.get('dashboard_merchant_id');",
+              "var city = pm.environment.get('city');",
+              "var runId = pm.environment.get('ij_bulk_unassign_run_id');",
+              "var url = base + '/bpp/driver-offer/' + merchant + '/' + city + '/incentiveJourney/unassign/bulkFromS3/list?limit=20';",
+              "function busy(ms) { var start = Date.now(); while (Date.now() - start < ms) {} }",
+              "function finish(ok, detail) {",
+              "  pm.test('bulk unassign run succeeded with 2 processed rows', function () {",
+              "    pm.expect(ok, detail).to.eql(true);",
+              "  });",
+              "}",
+              "function poll() {",
+              "  pm.sendRequest({ url: url, method: 'GET', header: { token: token } }, function (err, res) {",
+              "    attempt++;",
+              "    if (err || !res || res.code !== 200) {",
+              "      if (attempt >= MAX_ATTEMPTS) {",
+              "        finish(false, 'list failed after ' + attempt + ' polls');",
+              "        return;",
+              "      }",
+              "      busy(POLL_MS);",
+              "      poll();",
+              "      return;",
+              "    }",
+              "    var runs = (res.json().runs || []);",
+              "    var run = null;",
+              "    for (var i = 0; i < runs.length; i++) { if (runs[i].runId === runId) { run = runs[i]; break; } }",
+              "    if (run && run.status === 'Succeeded' && run.rowsInserted === 2) {",
+              "      finish(true, 'runId=' + runId);",
+              "      return;",
+              "    }",
+              "    if (run && (run.status === 'Failed' || run.status === 'Cancelled')) {",
+              "      finish(false, 'run ' + run.status + ' error=' + (run.errorMessage || ''));",
+              "      return;",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      finish(false, 'run ' + runId + ' not succeeded. last=' + JSON.stringify(run));",
+              "      return;",
+              "    }",
+              "    busy(POLL_MS);",
+              "    poll();",
+              "  });",
+              "}",
+              "poll();"
             ]
           }
         }
@@ -2944,40 +3120,6 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Disable cohortJourney mapping 200', function () { pm.response.to.have.status(200); });"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Unassign Driver from Journey 2 (Cleanup)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{dashboard_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/unassign"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_2_id}}\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Unassign journey 2 200', function () { pm.response.to.have.status(200); });"
             ]
           }
         }
