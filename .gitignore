@@ -55,3 +55,4 @@ control-center/
 
 # Deploy/start bookkeeping (workspace fingerprint + last-started commit)
 /.stack-state.json
+node_modules/
