@@ -42,6 +42,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingPartiesLink as Fields
 import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.BookingStatus as DRB
+import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.CustomerBlockTransactions as DCBT
@@ -1434,7 +1435,7 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  cancellationTransaction booking mbRide cancellationSource Nothing Nothing Nothing False False (PaymentCharge.settlementFromTags Nothing)
+  cancellationTransaction booking mbRide cancellationSource Nothing Nothing Nothing Nothing False False (PaymentCharge.settlementFromTags Nothing)
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -1459,6 +1460,7 @@ cancellationTransaction ::
   DRB.Booking ->
   Maybe DRide.Ride ->
   DBCR.CancellationSource ->
+  Maybe Text ->
   Maybe PriceAPIEntity ->
   Maybe PriceAPIEntity ->
   Maybe PriceAPIEntity ->
@@ -1466,10 +1468,10 @@ cancellationTransaction ::
   Bool ->
   PaymentCharge.SettlementTags ->
   m ()
-cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge bapCollectsFee cancellationSettlement = do
+cancellationTransaction booking mbRide cancellationSource mbReasonCode cancellationFee cancellationFeeTax cancellationFeeTotal immediateCharge bapCollectsFee cancellationSettlement = do
   -- Before the deposit settlement below releases any hold.
   abandonedPayScreen <- BookingDeposit.isUnpaidDepositAbandon booking cancellationSource
-  bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
+  bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource mbReasonCode
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   fork "incrementing fraud counters" $ do
     case mbRide of
@@ -1696,8 +1698,9 @@ mkBookingCancellationReason ::
   DRB.Booking ->
   Maybe (Id DRide.Ride) ->
   DBCR.CancellationSource ->
+  Maybe Text ->
   m DBCR.BookingCancellationReason
-mkBookingCancellationReason booking mbRideId cancellationSource = do
+mkBookingCancellationReason booking mbRideId cancellationSource mbReasonCode = do
   now <- getCurrentTime
   return $
     DBCR.BookingCancellationReason
@@ -1706,7 +1709,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         distanceUnit = booking.distanceUnit,
         rideId = mbRideId,
         source = cancellationSource,
-        reasonCode = Nothing,
+        reasonCode = DCR.CancellationReasonCode <$> mbReasonCode,
         reasonStage = Nothing,
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
