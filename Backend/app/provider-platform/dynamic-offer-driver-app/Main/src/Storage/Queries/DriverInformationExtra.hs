@@ -260,104 +260,171 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
         LTSSync.hasRideStarted = if isJust mbHasRideStarted then LTSSync.Set mbHasRideStarted else LTSSync.Unchanged
       }
 
-updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
+-- | Result of a block or restriction write under "longest block wins".
+-- 'Applied' carries the end time now in force (Nothing = no end time, never auto-lifted).
+-- 'Dropped' means the current one ends at least as late, so nothing was written.
+data BlockWriteResult = Applied (Maybe UTCTime) | Dropped
+  deriving (Show, Eq)
+
+-- | Does a new block ending at @new@ end strictly later than the current one? Nothing = no end time.
+endsLater :: Maybe UTCTime -> Maybe UTCTime -> Bool
+endsLater _ Nothing = False
+endsLater Nothing (Just _) = True
+endsLater (Just new) (Just current) = new > current
+
+-- | Apply a new block ending at @new@? @current@: Nothing = nothing active, Just end = active
+-- until end (Just Nothing = no end time). Ties and earlier ends are dropped.
+shouldApplyBlock :: Maybe (Maybe UTCTime) -> Maybe UTCTime -> Bool
+shouldApplyBlock current new = maybe True (endsLater new) current
+
+-- | A soft block restricts something only when its tier list is non-empty (search removes exactly
+-- these tiers); @Nothing@ and @Just []@ both mean no soft block.
+hasSoftBlockTiers :: Maybe [a] -> Bool
+hasSoftBlockTiers = maybe False (not . null)
+
+-- | End time of a time-bound block or restriction, if it is still active at @now@.
+activeUntil :: UTCTime -> Maybe UTCTime -> Maybe UTCTime
+activeUntil now = mfilter (> now)
+
+-- | End time of the driver's current hard block: Nothing = not blocked, Just Nothing = no end time.
+currentBlockEnd :: Maybe DriverInformation -> Maybe (Maybe UTCTime)
+currentBlockEnd mbDriverInfo = do
+  driverInfo <- mbDriverInfo
+  guard driverInfo.blocked
+  pure driverInfo.blockExpiryTime
+
+-- | One log line for every dropped block or restriction.
+logDroppedBlock :: MonadFlow m => Text -> Id Person.Driver -> Maybe UTCTime -> Maybe Text -> Maybe UTCTime -> m ()
+logDroppedBlock kind driverId droppedEnd droppedReason currentEnd =
+  logInfo $
+    "LongestBlockWins: dropped kind=" <> kind
+      <> " driverId="
+      <> driverId.getId
+      <> " droppedEnd="
+      <> showEnd droppedEnd
+      <> " droppedReason="
+      <> fromMaybe "-" droppedReason
+      <> " currentEnd="
+      <> showEnd currentEnd
+  where
+    showEnd = maybe "none" show
+
+-- | Hard block (timed or indefinite). Applied only if the driver isn't blocked or the new
+-- block ends strictly later; otherwise nothing is written (no history row, no field).
+updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m BlockWriteResult
 updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let expiryTime = (\hrs -> addUTCTime (fromIntegral hrs * 3600) now) <$> blockedExpiryTime
+  let current = currentBlockEnd driverInfo
+  if isBlocked && not (shouldApplyBlock current expiryTime)
+    then do
+      logDroppedBlock "BLOCK" driverId expiryTime blockedReason (join current)
+      pure Dropped
+    else do
+      uid <- generateGUID
+      let driverBlockDetails =
+            DTDBT.DriverBlockTransactions
+              { blockLiftTime = expiryTime,
+                blockReason = blockedReason,
+                blockTimeInHours = blockedExpiryTime,
+                driverId = driverId,
+                id = uid,
+                reasonCode = Just reasonCode,
+                reportedAt = now,
+                merchantId = Just merchantId,
+                createdAt = now,
+                updatedAt = now,
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                blockedBy = blockedBy,
+                requestorId = Just dashboardUserName,
+                actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
+                blockReasonFlag = Just blockReasonFlag,
+                specialZoneId = Nothing
+              }
 
-  uid <- generateGUID
-  let driverBlockDetails =
-        DTDBT.DriverBlockTransactions
-          { blockLiftTime = expiryTime,
-            blockReason = blockedReason,
-            blockTimeInHours = blockedExpiryTime,
-            driverId = driverId,
-            id = uid,
-            reasonCode = Just reasonCode,
-            reportedAt = now,
-            merchantId = Just merchantId,
-            createdAt = now,
-            updatedAt = now,
-            merchantOperatingCityId = Just merchantOperatingCityId,
-            blockedBy = blockedBy,
-            requestorId = Just dashboardUserName,
-            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            blockReasonFlag = Just blockReasonFlag,
-            specialZoneId = Nothing
+      QDBT.create driverBlockDetails
+      let numOfLocks' = case driverInfo of
+            Just driverInfoResult -> driverInfoResult.numOfLocks
+            Nothing -> 0
+      let activeState = (.active) <$> driverInfo
+      let modeState = driverInfo >>= mode
+      updateOneWithKV
+        ( [ Se.Set BeamDI.blocked isBlocked,
+            Se.Set BeamDI.blockedReason blockedReason,
+            Se.Set BeamDI.blockExpiryTime expiryTime,
+            Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
+            Se.Set BeamDI.active $ fromMaybe True (mbActive <|> activeState),
+            Se.Set BeamDI.mode $ mbMode <|> modeState,
+            Se.Set BeamDI.blockReasonFlag (Just blockReasonFlag),
+            Se.Set BeamDI.updatedAt now,
+            Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
+          ]
+            <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
+        )
+        [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+      updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
+      LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+        LTSSync.emptyUpdate
+          { LTSSync.blocked = LTSSync.Set isBlocked,
+            LTSSync.active = LTSSync.Set $ fromMaybe True (mbActive <|> activeState),
+            LTSSync.mode = LTSSync.Set $ mbMode <|> modeState
           }
+      pure $ Applied expiryTime
 
-  QDBT.create driverBlockDetails
-  let numOfLocks' = case driverInfo of
-        Just driverInfoResult -> driverInfoResult.numOfLocks
-        Nothing -> 0
-  let activeState = (.active) <$> driverInfo
-  let modeState = driverInfo >>= mode
-  updateOneWithKV
-    ( [ Se.Set BeamDI.blocked isBlocked,
-        Se.Set BeamDI.blockedReason blockedReason,
-        Se.Set BeamDI.blockExpiryTime expiryTime,
-        Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
-        Se.Set BeamDI.active $ fromMaybe True (mbActive <|> activeState),
-        Se.Set BeamDI.mode $ mbMode <|> modeState,
-        Se.Set BeamDI.blockReasonFlag (Just blockReasonFlag),
-        Se.Set BeamDI.updatedAt now,
-        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
-      ]
-        <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
-    )
-    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
-  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate
-      { LTSSync.blocked = LTSSync.Set isBlocked,
-        LTSSync.active = LTSSync.Set $ fromMaybe True (mbActive <|> activeState),
-        LTSSync.mode = LTSSync.Set $ mbMode <|> modeState
-      }
-
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
+-- | Permanent block (isBlocked = True: no end time) or unblock (isBlocked = False).
+-- A permanent block is dropped only if the driver is already blocked with no end time.
+-- Unblock is never compared and always returns @Applied Nothing@.
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m BlockWriteResult
 updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
   now <- getCurrentTime
   driverInfo <- findById driverId
-  uid <- generateGUID
+  let current = currentBlockEnd driverInfo
+  if isBlocked && not (shouldApplyBlock current Nothing)
+    then do
+      logDroppedBlock "PERMANENT_BLOCK" driverId Nothing blockStateModifier (join current)
+      pure Dropped
+    else do
+      uid <- generateGUID
 
-  let driverBlockDetails =
-        DTDBT.DriverBlockTransactions
-          { blockLiftTime = Nothing,
-            blockReason = Nothing,
-            blockTimeInHours = Nothing,
-            driverId = driverId,
-            id = uid,
-            reasonCode = Nothing,
-            blockReasonFlag = Nothing,
-            reportedAt = now,
-            merchantId = Just merchantId,
-            createdAt = now,
-            updatedAt = now,
-            merchantOperatingCityId = Just merchantOperatingCityId,
-            blockedBy = blockedBy,
-            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            requestorId = blockStateModifier,
-            specialZoneId = Nothing
-          }
+      let driverBlockDetails =
+            DTDBT.DriverBlockTransactions
+              { blockLiftTime = Nothing,
+                blockReason = Nothing,
+                blockTimeInHours = Nothing,
+                driverId = driverId,
+                id = uid,
+                reasonCode = Nothing,
+                blockReasonFlag = Nothing,
+                reportedAt = now,
+                merchantId = Just merchantId,
+                createdAt = now,
+                updatedAt = now,
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                blockedBy = blockedBy,
+                actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
+                requestorId = blockStateModifier,
+                specialZoneId = Nothing
+              }
 
-  QDBT.create driverBlockDetails
-  let numOfLocks' = case driverInfo of
-        Just driverInfoResult -> driverInfoResult.numOfLocks
-        Nothing -> 0
-  updateOneWithKV
-    ( [ Se.Set BeamDI.blocked isBlocked,
-        Se.Set BeamDI.blockStateModifier blockStateModifier,
-        Se.Set BeamDI.blockExpiryTime Nothing, --this prevents wrong date to be in this column because same is passed in error to frontend
-        Se.Set BeamDI.updatedAt now,
-        Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
-      ]
-        <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
-    )
-    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
-  updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.blocked = LTSSync.Set isBlocked}
+      QDBT.create driverBlockDetails
+      let numOfLocks' = case driverInfo of
+            Just driverInfoResult -> driverInfoResult.numOfLocks
+            Nothing -> 0
+      updateOneWithKV
+        ( [ Se.Set BeamDI.blocked isBlocked,
+            Se.Set BeamDI.blockStateModifier blockStateModifier,
+            Se.Set BeamDI.blockExpiryTime Nothing, --this prevents wrong date to be in this column because same is passed in error to frontend
+            Se.Set BeamDI.updatedAt now,
+            Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now)
+          ]
+            <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
+        )
+        [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+      updateFleetDriverAssociationDocsVerificationStatusUpdatedAtByDriverId driverId now
+      LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+        LTSSync.emptyUpdate {LTSSync.blocked = LTSSync.Set isBlocked}
+      pure $ Applied Nothing
 
 findByDriverIdActiveRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
@@ -817,8 +884,32 @@ setRideBillingModelIfUnset model driverId = do
   when (maybe False (isNothing . (.rideBillingModel)) mbDriverInfo) $
     updateRideBillingModel (Just model) driverId
 
-updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
-updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
+-- | Soft block (tiers until an end time). Applied only if no soft block is active
+-- (tiers set and end time in the future) or the new one ends strictly later; the winner's
+-- tiers and reason replace the old ones.
+setSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> UTCTime -> Maybe Text -> Id Person.Person -> m BlockWriteResult
+setSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
+  now <- getCurrentTime
+  mbDriverInfo <- findById (cast driverId)
+  -- Active = a non-empty tier list and the end time still ahead.
+  let current = do
+        driverInfo <- mbDriverInfo
+        guard (hasSoftBlockTiers driverInfo.softBlockStiers)
+        activeUntil now driverInfo.softBlockExpiryTime
+  if not (shouldApplyBlock (Just <$> current) (Just softBlockExpiryTime))
+    then do
+      logDroppedBlock "SOFT_BLOCK" (cast driverId) (Just softBlockExpiryTime) softBlockReasonFlag current
+      pure Dropped
+    else do
+      writeSoftBlock softBlockStiers (Just softBlockExpiryTime) softBlockReasonFlag driverId
+      pure $ Applied (Just softBlockExpiryTime)
+
+-- | Clear a soft block right away (dashboard unblock, soft-block unblock job). Never compared.
+clearSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Person -> m ()
+clearSoftBlock = writeSoftBlock Nothing Nothing Nothing
+
+writeSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
+writeSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.softBlockStiers softBlockStiers,
@@ -844,12 +935,22 @@ updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId pre
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.isSpecialLocWarrior = LTSSync.Set isSpecialLocWarrior}
 
-updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe UTCTime -> Id Person.Person -> m ()
+-- | Toll-route restriction until a time. Keeps the later time: a new one that doesn't end
+-- strictly after an active one is dropped.
+updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => UTCTime -> Id Person.Person -> m BlockWriteResult
 updateTollRouteBlockedTill tollRouteBlockedTill driverId = do
   now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDI.tollRouteBlockedTill tollRouteBlockedTill, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.tollRouteBlockedTill = LTSSync.Set tollRouteBlockedTill}
+  mbDriverInfo <- findById (cast driverId)
+  let current = activeUntil now (mbDriverInfo >>= (.tollRouteBlockedTill))
+  if not (shouldApplyBlock (Just <$> current) (Just tollRouteBlockedTill))
+    then do
+      logDroppedBlock "TOLL_ROUTE_BLOCK" (cast driverId) (Just tollRouteBlockedTill) Nothing current
+      pure Dropped
+    else do
+      updateOneWithKV [Se.Set BeamDI.tollRouteBlockedTill (Just tollRouteBlockedTill), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+      LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+        LTSSync.emptyUpdate {LTSSync.tollRouteBlockedTill = LTSSync.Set (Just tollRouteBlockedTill)}
+      pure $ Applied (Just tollRouteBlockedTill)
 
 removeAcUsageRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Double -> DriverInfo.AirConditionedRestrictionType -> Int -> Id Person.Person -> m ()
 removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionLiftCount driverId = do

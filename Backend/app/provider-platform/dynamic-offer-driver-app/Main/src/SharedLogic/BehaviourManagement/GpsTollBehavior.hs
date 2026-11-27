@@ -179,4 +179,5 @@ blockDriverForTollRoutes driverId blockDurationHours = do
     now <- getCurrentTime
     let blockUntil = addUTCTime (fromIntegral blockDurationHours * 3600) now
     logInfo $ "Blocking driver " <> driverId.getId <> " for toll routes until: " <> show blockUntil
-    QDriverInformation.updateTollRouteBlockedTill (Just blockUntil) (cast driverId)
+    -- Keeps the later time if the driver already has a longer toll-route block (logged).
+    void $ QDriverInformation.updateTollRouteBlockedTill blockUntil (cast driverId)

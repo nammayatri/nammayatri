@@ -43,20 +43,21 @@ blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetric
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId
-  SFlags.markBlockFlags driverId $
-    SFlags.Block
-      SFlags.BlockPayload
-        { SFlags.bpReason = Just blockedReason,
-          SFlags.bpExpiryHours = Just blockTimeInHours,
-          SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
-          SFlags.bpMerchantId = merchantId,
-          SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
-          SFlags.bpMerchantOperatingCityId = merchantOperatingCityId,
-          SFlags.bpBlockedBy = DTDBT.Application,
-          SFlags.bpActive = Just False,
-          SFlags.bpMode = Just DriverInfo.OFFLINE,
-          SFlags.bpFlag = blockReasonFlag
-        }
+  void $
+    SFlags.markBlockFlags driverId $
+      SFlags.Block
+        SFlags.BlockPayload
+          { SFlags.bpReason = Just blockedReason,
+            SFlags.bpExpiryHours = Just blockTimeInHours,
+            SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+            SFlags.bpMerchantId = merchantId,
+            SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+            SFlags.bpMerchantOperatingCityId = merchantOperatingCityId,
+            SFlags.bpBlockedBy = DTDBT.Application,
+            SFlags.bpActive = Just False,
+            SFlags.bpMode = Just DriverInfo.OFFLINE,
+            SFlags.bpFlag = blockReasonFlag
+          }
   let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
   void $ LTS.blockDriverLocationsTill merchantId driverId expiryTime
   let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60

@@ -160,56 +160,70 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
           canApplyBlock = rule && maybe True (<= now) cooldownTime
       when canApplyBlock $ do
         let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
-        let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
-            notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral ibNotifyInMins) * 60
+        let notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral ibNotifyInMins) * 60
         case ibBlockType of
           IBSoft -> do
             logInfo $ "Soft Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-            QDriverInformation.updateSoftBlock (Just allowedSTiers) (Just expiryTime) (Just $ show blockReasonFlag) driverInfo.driverId
-            JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) unblockDriverJobTs $
-              UnblockSoftBlockedDriverRequestJobData
-                { driverId = driverInfo.driverId
-                }
-            let notificationEntityData =
-                  IssueBreachEntityData
-                    { ibName = "ISSUE_BREACH_" <> show issueType,
-                      blockExpirationTime = expiryTime,
-                      blockedReasonFlag = show blockReasonFlag,
-                      blockedSTiers = allowedSTiers
+            -- Rarely dropped: the guard above reads a snapshot, so a longer soft block written since then
+            -- wins. Only an applied soft block gets its unblock job and its notification.
+            result <- QDriverInformation.setSoftBlock (Just allowedSTiers) expiryTime (Just $ show blockReasonFlag) driverInfo.driverId
+            case result of
+              QDriverInformation.Dropped -> pure ()
+              QDriverInformation.Applied mbEndTime -> do
+                now' <- getCurrentTime
+                let endTime = fromMaybe expiryTime mbEndTime
+                JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) (diffUTCTime endTime now') $
+                  UnblockSoftBlockedDriverRequestJobData
+                    { driverId = driverInfo.driverId
                     }
-            let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
-            if not driverInfo.onRide
-              then do
-                void $
-                  JC.createJobIn @_ @'SoftBlockNotifyDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) notifyDriverJobTs $
-                    SoftBlockNotifyDriverRequestJobData
-                      { driverId = driverInfo.driverId,
-                        pendingNotificationRedisKey = isNotificationPendingKey,
-                        entityData = notificationEntityData
-                      }
-              else do
-                void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
+                let notificationEntityData =
+                      IssueBreachEntityData
+                        { ibName = "ISSUE_BREACH_" <> show issueType,
+                          blockExpirationTime = endTime,
+                          blockedReasonFlag = show blockReasonFlag,
+                          blockedSTiers = allowedSTiers
+                        }
+                let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
+                if not driverInfo.onRide
+                  then do
+                    void $
+                      JC.createJobIn @_ @'SoftBlockNotifyDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) notifyDriverJobTs $
+                        SoftBlockNotifyDriverRequestJobData
+                          { driverId = driverInfo.driverId,
+                            pendingNotificationRedisKey = isNotificationPendingKey,
+                            entityData = notificationEntityData
+                          }
+                  else do
+                    void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
           IBHard -> do
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-            SFlags.markBlockFlags (cast driverInfo.driverId) $
-              SFlags.Block
-                SFlags.BlockPayload
-                  { SFlags.bpReason = Just $ "ISSUE_BREACH_" <> show issueType,
-                    SFlags.bpExpiryHours = Just blockTimeInHours,
-                    SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
-                    SFlags.bpMerchantId = transporterConfig.merchantId,
-                    SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
-                    SFlags.bpMerchantOperatingCityId = transporterConfig.merchantOperatingCityId,
-                    SFlags.bpBlockedBy = DTDBT.Application,
-                    SFlags.bpActive = Just False,
-                    SFlags.bpMode = Just DriverInfo.OFFLINE,
-                    SFlags.bpFlag = blockReasonFlag
-                  }
-            void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId expiryTime
-            JC.createJobIn @_ @'UnblockDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) unblockDriverJobTs $
-              UnblockDriverRequestJobData
-                { driverId = driverInfo.driverId
-                }
+            -- Rarely dropped: the guard above (not blocked) reads a snapshot, so a block written since
+            -- then can win. LTS and the unblock job only for an applied block, at its end time.
+            result <-
+              SFlags.markBlockFlags (cast driverInfo.driverId) $
+                SFlags.Block
+                  SFlags.BlockPayload
+                    { SFlags.bpReason = Just $ "ISSUE_BREACH_" <> show issueType,
+                      SFlags.bpExpiryHours = Just blockTimeInHours,
+                      SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+                      SFlags.bpMerchantId = transporterConfig.merchantId,
+                      SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+                      SFlags.bpMerchantOperatingCityId = transporterConfig.merchantOperatingCityId,
+                      SFlags.bpBlockedBy = DTDBT.Application,
+                      SFlags.bpActive = Just False,
+                      SFlags.bpMode = Just DriverInfo.OFFLINE,
+                      SFlags.bpFlag = blockReasonFlag
+                    }
+            case result of
+              QDriverInformation.Dropped -> pure ()
+              QDriverInformation.Applied mbEndTime -> do
+                now' <- getCurrentTime
+                let endTime = fromMaybe expiryTime mbEndTime
+                void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId endTime
+                JC.createJobIn @_ @'UnblockDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) (diffUTCTime endTime now') $
+                  UnblockDriverRequestJobData
+                    { driverId = driverInfo.driverId
+                    }
       return canApplyBlock
 
 getBlockReasonFlag :: IssueBreachType -> (BlockReasonFlag, BlockReasonFlag)

@@ -169,8 +169,8 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
               counterConfig = Just counterConfig,
               actionEvent = Just actionEvent
             }
-    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+    dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications
   -- Legacy lifetime-rate block and driver-stats upkeep: driver-cancel behaviours only, so a
   -- rider-pressed at-fault cancel reaching this handler changes nothing outside the ladder.
   when cancelledByDriver $ do
@@ -185,14 +185,15 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     let inCooldown = dailyCooldownActive || weeklyCooldownActive || eventsCooldownActive
     when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
       logDebug $ "Blocking Driver: " <> driverId.getId
-      SFlags.markBlockFlags (cast driverId) $
-        SFlags.SimpleBlock
-          SFlags.SimplePayload
-            { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
-              SFlags.spMerchantId = merchantId,
-              SFlags.spMerchantOperatingCityId = merchantOpCityId,
-              SFlags.spBlockedBy = DTDBT.Application
-            }
+      void $
+        SFlags.markBlockFlags (cast driverId) $
+          SFlags.SimpleBlock
+            SFlags.SimplePayload
+              { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
+                SFlags.spMerchantId = merchantId,
+                SFlags.spMerchantOperatingCityId = merchantOpCityId,
+                SFlags.spBlockedBy = DTDBT.Application
+              }
   where
     overallCancellationRate driverStats merchantConfig = do
       let rate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int)

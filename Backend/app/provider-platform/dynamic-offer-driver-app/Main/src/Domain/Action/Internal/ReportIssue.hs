@@ -184,20 +184,21 @@ handleDrunkAndDriveViolation ride = do
           let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
           Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
       else
-        SFlags.markBlockFlags (cast ride.driverId) $
-          SFlags.Block
-            SFlags.BlockPayload
-              { SFlags.bpReason = Just "DRUNK_AND_DRIVE_VIOLATION",
-                SFlags.bpExpiryHours = Nothing,
-                SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
-                SFlags.bpMerchantId = person.merchantId,
-                SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
-                SFlags.bpMerchantOperatingCityId = ride.merchantOperatingCityId,
-                SFlags.bpBlockedBy = DTDBT.Application,
-                SFlags.bpActive = Nothing,
-                SFlags.bpMode = Nothing,
-                SFlags.bpFlag = DrunkAndDriveViolation
-              }
+        void $
+          SFlags.markBlockFlags (cast ride.driverId) $
+            SFlags.Block
+              SFlags.BlockPayload
+                { SFlags.bpReason = Just "DRUNK_AND_DRIVE_VIOLATION",
+                  SFlags.bpExpiryHours = Nothing,
+                  SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+                  SFlags.bpMerchantId = person.merchantId,
+                  SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+                  SFlags.bpMerchantOperatingCityId = ride.merchantOperatingCityId,
+                  SFlags.bpBlockedBy = DTDBT.Application,
+                  SFlags.bpActive = Nothing,
+                  SFlags.bpMode = Nothing,
+                  SFlags.bpFlag = DrunkAndDriveViolation
+                }
 
 handleUnhygienicVehicle :: Ride -> Flow ()
 handleUnhygienicVehicle ride =
@@ -303,6 +304,6 @@ runBehaviorPipeline transporterConfig driverId merchantOpCityId counterConfig ac
               counterConfig = Just counterConfig,
               actionEvent = Just actionEvent
             }
-    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+    dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications
   return (hasConsequences || hasCommunications)

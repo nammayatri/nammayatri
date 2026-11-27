@@ -1200,16 +1200,23 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 now <- getCurrentTime
                 if now > expiryTime
                   then do
-                    SFlags.markBlockFlags (cast driverId) $
-                      SFlags.Unblock
-                        SFlags.SimplePayload
-                          { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
-                            SFlags.spMerchantId = merchantId,
-                            SFlags.spMerchantOperatingCityId = merchantOpCityId,
-                            SFlags.spBlockedBy = DTDBT.Application
-                          }
+                    void $
+                      SFlags.markBlockFlags (cast driverId) $
+                        SFlags.Unblock
+                          SFlags.SimplePayload
+                            { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
+                              SFlags.spMerchantId = merchantId,
+                              SFlags.spMerchantOperatingCityId = merchantOpCityId,
+                              SFlags.spBlockedBy = DTDBT.Application
+                            }
                   else throwError $ DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason)
               Nothing -> throwError $ DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason)
+          -- Soft-block backstop, like the hard read-time unblock above: a soft block whose end time has
+          -- passed but is still set (its unblock job was lost or never scheduled) is cleared on go-online.
+          nowForSoftBlock <- getCurrentTime
+          when (QDriverInformation.hasSoftBlockTiers driverInfo.softBlockStiers && maybe False (<= nowForSoftBlock) driverInfo.softBlockExpiryTime) $ do
+            logInfo $ "setActivity: clearing expired soft block for driver " <> driverId.getId <> " (end=" <> show driverInfo.softBlockExpiryTime <> ")"
+            QDriverInformation.clearSoftBlock (cast driverId)
           when (driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER) $ do
             mbAnyFleetAssociation <- QFDA.findOneByDriverIdWithStatus driverId
             when (isNothing mbAnyFleetAssociation) $
@@ -2230,8 +2237,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                     counterConfig = Nothing,
                     actionEvent = Nothing
                   }
-          BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-          BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+          dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+          BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId

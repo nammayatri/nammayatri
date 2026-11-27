@@ -344,19 +344,22 @@ onVerifyPanHandler person imageId1 imageId2 output = do
             Nothing
             >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.PanCard))
         when (fromMaybe False panDocCfg.doNotValidateDuringOnboarding) $
-          updateDynamicBlockedStateWithActivity
-            (cast person.id)
-            (Just "PAN verification failed")
-            Nothing
-            "PanWebhook:Idfy"
-            person.merchantId
-            "PanWebhook:Idfy"
-            person.merchantOperatingCityId
-            DTDBT.Application
-            True
-            Nothing
-            Nothing
-            DocumentInvalid
+          -- No end time, so it wins over any timed block; dropped (and logged) only on top of
+          -- another block with no end time. Nothing follows the block, so the result is unused.
+          void $
+            updateDynamicBlockedStateWithActivity
+              (cast person.id)
+              (Just "PAN verification failed")
+              Nothing
+              "PanWebhook:Idfy"
+              person.merchantId
+              "PanWebhook:Idfy"
+              person.merchantOperatingCityId
+              DTDBT.Application
+              True
+              Nothing
+              Nothing
+              DocumentInvalid
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
           QFOI.updatePanImage mEncryptedPanNumber (Just imageId1.getId) person.id

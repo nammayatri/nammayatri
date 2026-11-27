@@ -101,5 +101,5 @@ recordAutoAcceptCancellation transporterConfig driverId merchantOpCityId rideId 
               counterConfig = Just autoAcceptCancellationCounterConfig,
               actionEvent = Just actionEvent
             }
-    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+    dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications

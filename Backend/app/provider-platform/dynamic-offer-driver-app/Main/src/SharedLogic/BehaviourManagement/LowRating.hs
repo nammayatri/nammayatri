@@ -106,5 +106,5 @@ recordDriverRating transporterConfig driverId merchantOpCityId rideId ratingValu
               counterConfig = Just lowRatingCounterConfig,
               actionEvent = Just actionEvent
             }
-    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+    dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications

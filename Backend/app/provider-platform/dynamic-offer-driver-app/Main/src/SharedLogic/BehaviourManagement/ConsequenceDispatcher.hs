@@ -14,6 +14,7 @@
 
 module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   ( DispatchContext (..),
+    DispatchOutcome (..),
     behaviourEventCity,
     handleConsequences,
     handleCommunications,
@@ -26,6 +27,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BSL
+import Data.List (partition)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Common as DriverInfo
@@ -97,7 +99,23 @@ behaviourEventCity mocId = fmap toEventCity <$> CQMOC.findById mocId
           EventLog.city = show moc.city
         }
 
+-- | What a consequence run means for the rest of the run.
+-- 'blockWon' is False when a block or restriction in the run was dropped (the driver is
+-- already blocked at least as long) or failed; the run's Warn/Nudge and communications are
+-- then skipped, so the driver isn't told about a block that didn't happen. True when the
+-- run has no block or restriction.
+newtype DispatchOutcome = DispatchOutcome {blockWon :: Bool}
+
+-- | Result of one consequence action. 'BlockDropped': a block or restriction that lost under
+-- "longest block wins". 'BlockNotApplied': a block or restriction that restricts nothing (unknown
+-- feature name, no valid service tier), so nothing was written. Either way the rung's Warn/Nudge
+-- and the run's communications are skipped.
+data ActionOutcome = ActionDone | BlockDropped | BlockNotApplied
+  deriving (Eq, Show)
+
 -- | Dispatch all consequence directives for a driver.
+-- Blocks and restrictions run first (a run fires one rung, so these all belong to it);
+-- every other action keeps its order and runs after them.
 handleConsequences ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -111,16 +129,62 @@ handleConsequences ::
   DispatchContext ->
   Id DP.Person ->
   [CET.ConsequenceDirective] ->
-  m ()
+  m DispatchOutcome
 handleConsequences ctx driverId directives = do
   let (actions, errors) = CEParser.parseDirectives directives
   unless (null errors) $
     logError $ "Consequence parse errors for driver " <> driverId.getId <> ": " <> show errors
-  forM_ actions $ \action -> do
-    result <- try @_ @SomeException $ dispatchConsequence ctx driverId action
-    case result of
-      Right () -> logDebug $ "Consequence executed for driver " <> driverId.getId <> ": " <> show action
-      Left err -> logError $ "Consequence failed for driver " <> driverId.getId <> ": " <> show err
+  let (blockActions, otherActions) = splitBlockActions actions
+  blockOutcomes <- mapM runAction blockActions
+  let blockWon = all (== Just ActionDone) blockOutcomes
+  forM_ otherActions $ \action ->
+    if not (runsAfterBlocks blockWon action)
+      then logInfo $ "Consequence skipped for driver " <> driverId.getId <> " because this run's block or restriction was dropped or failed: " <> show action
+      else void $ runAction action
+  pure $ DispatchOutcome blockWon
+  where
+    runAction action = do
+      result <- try @_ @SomeException $ dispatchConsequence ctx driverId action
+      case result of
+        Right outcome -> do
+          logDebug $ "Consequence executed for driver " <> driverId.getId <> " (" <> show outcome <> "): " <> show action
+          pure (Just outcome)
+        Left err -> do
+          logError $ "Consequence failed for driver " <> driverId.getId <> ": " <> show err
+          pure Nothing
+
+-- | Blocks and restrictions first; every other action after them, in its original order.
+splitBlockActions :: [CET.ConsequenceAction] -> ([CET.ConsequenceAction], [CET.ConsequenceAction])
+splitBlockActions = partition isBlockAction
+
+-- | Does a non-block action still run after the run's blocks? Warn/Nudge only if every block
+-- and restriction won (or there were none); other actions always.
+runsAfterBlocks :: Bool -> CET.ConsequenceAction -> Bool
+runsAfterBlocks blockWon action = blockWon || not (isMessageAction action)
+
+isBlockAction :: CET.ConsequenceAction -> Bool
+isBlockAction = \case
+  CET.HardBlock _ -> True
+  CET.PermanentBlock _ -> True
+  CET.SoftBlock _ -> True
+  CET.FeatureBlock _ -> True
+  _ -> False
+
+isMessageAction :: CET.ConsequenceAction -> Bool
+isMessageAction = \case
+  CET.Warn _ -> True
+  CET.Nudge _ -> True
+  _ -> False
+
+toActionOutcome :: QDriverInformation.BlockWriteResult -> ActionOutcome
+toActionOutcome = \case
+  QDriverInformation.Applied _ -> ActionDone
+  QDriverInformation.Dropped -> BlockDropped
+
+-- | The rung's cooldown is written whether its block won or was dropped: the rung fired.
+writeRungCooldown :: (MonadFlow m, Redis.HedisFlow m r) => Id DP.Person -> Text -> Maybe Int -> m ()
+writeRungCooldown driverId tag mbCooldownHours =
+  whenJust mbCooldownHours $ BT.writeCooldownKey BTT.DRIVER driverId.getId tag
 
 -- | Dispatch a single parsed consequence action.
 dispatchConsequence ::
@@ -136,82 +200,115 @@ dispatchConsequence ::
   DispatchContext ->
   Id DP.Person ->
   CET.ConsequenceAction ->
-  m ()
+  m ActionOutcome
 dispatchConsequence ctx driverId = \case
-  CET.NoAction -> pure ()
+  CET.NoAction -> pure ActionDone
   CET.FeatureBlock params -> do
     logWarning $ "Feature blocking driver " <> driverId.getId <> " for " <> params.featureName <> ", duration: " <> show params.blockDurationHours <> "h"
     now <- getCurrentTime
     let blockUntil = addUTCTime (fromIntegral params.blockDurationHours * 3600) now
-    case params.featureName of
-      "TOLL_ROUTES" -> QDriverInformation.updateTollRouteBlockedTill (Just blockUntil) (cast driverId)
+    outcome <- case params.featureName of
+      "TOLL_ROUTES" -> toActionOutcome <$> QDriverInformation.updateTollRouteBlockedTill blockUntil (cast driverId)
       "AC_USAGE" -> do
         QDriverInformation.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) (cast driverId)
         logInfo $ "AC usage restricted for driver " <> driverId.getId
         recomputeSelectedServiceTiers Nothing Nothing Nothing Nothing (cast driverId) ctx.merchantOperatingCityId
-      other -> logWarning $ "Unknown feature for FeatureBlock: " <> other
+        pure ActionDone
+      other -> do
+        -- Restricts nothing, so it must not look applied: no block key, no messages.
+        logWarning $ "FeatureBlock not applied for driver " <> driverId.getId <> ": unknown feature name " <> other
+        pure BlockNotApplied
     let tag = fromMaybe params.featureName params.blockReasonTag
-    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.FEATURE_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.featureName) params.cooldownHours
+    when (outcome == ActionDone) $
+      BT.writeBlockKey BTT.DRIVER driverId.getId BTT.FEATURE_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.featureName)
+    writeRungCooldown driverId tag params.cooldownHours
+    pure outcome
   CET.SoftBlock params -> do
     logWarning $ "Soft blocking driver " <> driverId.getId <> " from tiers: " <> show params.blockedFeatures <> ", duration: " <> show params.blockDurationHours <> "h"
     now <- getCurrentTime
     let blockUntil = addUTCTime (fromIntegral params.blockDurationHours * 3600) now
-    let blockedTiers = case params.blockedServiceTiers of
-          Just tiers | not (null tiers) -> Just (mapMaybe (readMaybe . toString) tiers)
-          _ -> Nothing
-    QDriverInformation.updateSoftBlock blockedTiers (Just blockUntil) (Just params.blockReason) (cast driverId)
-    -- Schedule auto-unblock
-    let unblockJobTs = secondsToNominalDiffTime (fromIntegral params.blockDurationHours) * 60 * 60
-    JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) unblockJobTs $
-      UnblockSoftBlockedDriverRequestJobData {driverId = cast driverId}
-    let tag = fromMaybe "SOFT_BLOCK" params.blockReasonTag
-    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.SOFT_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.blockedFeatures) params.cooldownHours
+    let requestedTiers = fromMaybe [] params.blockedServiceTiers
+        parsedTiers = map (\name -> (name, readMaybe (toString name))) requestedTiers
+        validTiers = mapMaybe snd parsedTiers
+        unknownTiers = [name | (name, Nothing) <- parsedTiers]
+        tag = fromMaybe "SOFT_BLOCK" params.blockReasonTag
+    unless (null unknownTiers) $
+      logWarning $ "Soft block for driver " <> driverId.getId <> ": ignoring unknown service tiers " <> show unknownTiers
+    if null validTiers
+      then do
+        -- No tier to restrict: write nothing (it would otherwise wipe an active soft block's tiers)
+        -- and send nothing.
+        logWarning $ "Soft block not applied for driver " <> driverId.getId <> ": no valid service tier in " <> show params.blockedServiceTiers
+        writeRungCooldown driverId tag params.cooldownHours
+        pure BlockNotApplied
+      else do
+        result <- QDriverInformation.setSoftBlock (Just validTiers) blockUntil (Just params.blockReason) (cast driverId)
+        case result of
+          QDriverInformation.Applied mbEndTime -> do
+            -- Schedule auto-unblock at the soft block's end time
+            let endTime = fromMaybe blockUntil mbEndTime
+            JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) (diffUTCTime endTime now) $
+              UnblockSoftBlockedDriverRequestJobData {driverId = cast driverId}
+            BT.writeBlockKey BTT.DRIVER driverId.getId BTT.SOFT_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.blockedFeatures)
+          QDriverInformation.Dropped -> pure ()
+        writeRungCooldown driverId tag params.cooldownHours
+        pure $ toActionOutcome result
   CET.HardBlock params -> do
     logWarning $ "Hard blocking driver " <> driverId.getId <> ", duration: " <> show params.blockDurationHours <> "h"
     let reasonFlag = parseBlockReasonFlag params.blockReasonTag
-    SFlags.markBlockFlags (cast driverId) $
-      SFlags.Block
-        SFlags.BlockPayload
-          { SFlags.bpReason = Just params.blockReason,
-            SFlags.bpExpiryHours = Just params.blockDurationHours,
-            SFlags.bpDashboardUserName = "BehaviorManagementFramework",
-            SFlags.bpMerchantId = ctx.merchantId,
-            SFlags.bpReasonCode = params.blockReason,
-            SFlags.bpMerchantOperatingCityId = ctx.merchantOperatingCityId,
-            SFlags.bpBlockedBy = DTDBT.Application,
-            SFlags.bpActive = Just False,
-            SFlags.bpMode = Just DriverInfo.OFFLINE,
-            SFlags.bpFlag = reasonFlag
-          }
-    -- The driver is blocked from here on, so their offences are served: reset the window now,
+    result <-
+      SFlags.markBlockFlags (cast driverId) $
+        SFlags.Block
+          SFlags.BlockPayload
+            { SFlags.bpReason = Just params.blockReason,
+              SFlags.bpExpiryHours = Just params.blockDurationHours,
+              SFlags.bpDashboardUserName = "BehaviorManagementFramework",
+              SFlags.bpMerchantId = ctx.merchantId,
+              SFlags.bpReasonCode = params.blockReason,
+              SFlags.bpMerchantOperatingCityId = ctx.merchantOperatingCityId,
+              SFlags.bpBlockedBy = DTDBT.Application,
+              SFlags.bpActive = Just False,
+              SFlags.bpMode = Just DriverInfo.OFFLINE,
+              SFlags.bpFlag = reasonFlag
+            }
+    -- The driver is blocked from here on (by this block, or by one that ends at least as
+    -- late when this one is dropped), so their offences are served: reset the window now,
     -- before the follow-up steps below, so a failure in one of them can't leave the old
     -- offences to block the driver again after the unblock.
     resetEventsWindow ctx driverId
-    -- Block location tracking + schedule auto-unblock
-    now <- getCurrentTime
-    let expiryTime = addUTCTime (fromIntegral params.blockDurationHours * 60 * 60) now
-    void $ LTS.blockDriverLocationsTill ctx.merchantId (cast driverId) expiryTime
-    when (params.blockDurationHours > 0) $ do
-      let unblockJobTs = secondsToNominalDiffTime (fromIntegral params.blockDurationHours) * 60 * 60
-      JC.createJobIn @_ @'UnblockDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) unblockJobTs $
-        UnblockDriverRequestJobData {driverId = cast driverId}
     let tag = fromMaybe "HARD_BLOCK" params.blockReasonTag
-    BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
+    case result of
+      QDriverInformation.Applied mbEndTime -> do
+        -- Block location tracking + schedule auto-unblock, both at the block's end time
+        now <- getCurrentTime
+        let expiryTime = fromMaybe (addUTCTime (fromIntegral params.blockDurationHours * 60 * 60) now) mbEndTime
+        void $ LTS.blockDriverLocationsTill ctx.merchantId (cast driverId) expiryTime
+        when (params.blockDurationHours > 0) $
+          JC.createJobIn @_ @'UnblockDriver (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) (diffUTCTime expiryTime now) $
+            UnblockDriverRequestJobData {driverId = cast driverId}
+        BT.writeBlockKey BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty)
+      QDriverInformation.Dropped -> pure ()
+    writeRungCooldown driverId tag params.cooldownHours
+    pure $ toActionOutcome result
   CET.PermanentBlock params -> do
     logWarning $ "Permanently blocking driver " <> driverId.getId <> ", reason: " <> params.blockReason
-    SFlags.markBlockFlags (cast driverId) $
-      SFlags.SimpleBlock
-        SFlags.SimplePayload
-          { SFlags.spModifier = Just "BehaviorManagementFramework",
-            SFlags.spMerchantId = ctx.merchantId,
-            SFlags.spMerchantOperatingCityId = ctx.merchantOperatingCityId,
-            SFlags.spBlockedBy = DTDBT.Application
-          }
-    -- Blocked from here on: reset the window before the follow-up step (see HardBlock).
+    result <-
+      SFlags.markBlockFlags (cast driverId) $
+        SFlags.SimpleBlock
+          SFlags.SimplePayload
+            { SFlags.spModifier = Just "BehaviorManagementFramework",
+              SFlags.spMerchantId = ctx.merchantId,
+              SFlags.spMerchantOperatingCityId = ctx.merchantOperatingCityId,
+              SFlags.spBlockedBy = DTDBT.Application
+            }
+    -- Blocked from here on (applied, or already blocked with no end time): reset the window
+    -- before the follow-up step (see HardBlock).
     resetEventsWindow ctx driverId
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
-    BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
-  CET.Nudge params -> void $ sendOverlayByKey ctx driverId params.nudgeKey params.templateParams
+    when (result /= QDriverInformation.Dropped) $
+      BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
+    pure $ toActionOutcome result
+  CET.Nudge params -> ActionDone <$ sendOverlayByKey ctx driverId params.nudgeKey params.templateParams
   CET.Warn params -> do
     mbSentOverlay <- sendOverlayByKey ctx driverId params.warnKey params.templateParams
     when params.showOnProfile $ do
@@ -225,6 +322,7 @@ dispatchConsequence ctx driverId = \case
             warnedAt = now,
             expiresAt = addUTCTime (fromIntegral hours * 3600) now
           }
+    pure ActionDone
   CET.ChargeFee params -> do
     logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency <> " (" <> params.chargeReason <> ")"
     let penaltyAmount :: HighPrecMoney = realToFrac params.penaltyAmount
@@ -258,6 +356,7 @@ dispatchConsequence ctx driverId = \case
             -- {"var": "cooldowns.<feeCooldownTag>"} to avoid re-emitting CHARGE_FEE.
             whenJust params.feeCooldownTag $ \cooldownTag ->
               BT.writeCooldownKey BTT.DRIVER driverId.getId cooldownTag (fromMaybe 24 params.feeCooldownHours)
+    pure ActionDone
   CET.IncrementCounter params -> do
     case (ctx.counterConfig, ctx.actionEvent) of
       (Just config, Just event) -> do
@@ -271,6 +370,7 @@ dispatchConsequence ctx driverId = \case
             BTRecorder.incrementCounterOnly config event.entityType event.entityId event.actionType counterType
           Nothing -> logWarning $ "Unknown counterType '" <> params.counterType <> "' for driver " <> driverId.getId
       _ -> logWarning $ "INCREMENT_COUNTER consequence for driver " <> driverId.getId <> " but no counterConfig/actionEvent in DispatchContext"
+    pure ActionDone
   CET.AssignTag params -> do
     logInfo $ "Assigning tag " <> params.tagName <> " with value " <> params.tagValue <> " for driver " <> driverId.getId
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -283,6 +383,7 @@ dispatchConsequence ctx driverId = \case
         tagWithExpiry = Yudhishthira.addTagExpiry tag expiryHours now
         updatedTags = Yudhishthira.replaceTagNameValue driver.driverTag tagWithExpiry
     QPerson.updateDriverTag (Just updatedTags) driverId
+    pure ActionDone
   CET.OptOutAutoAssign params -> do
     logInfo $ "Opting driver " <> driverId.getId <> " out of auto-assign: " <> params.reason
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -295,6 +396,7 @@ dispatchConsequence ctx driverId = \case
         let remainingServiceTiers = filter (`notElem` autoAcceptOnlyTierTypes cityServiceTiers) vehicle.selectedServiceTiers
         when (not (null (fromMaybe [] vehicle.selectedAutoAcceptTiers)) || remainingServiceTiers /= vehicle.selectedServiceTiers) $
           QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers remainingServiceTiers [] driverId
+    pure ActionDone
 
 -- | A hard or permanent block clears the events window of the behaviour that fired it, so
 -- the driver starts fresh (Time and Events versions alike; windows are kept in every city).
@@ -381,7 +483,8 @@ substituteOverlayParams (Just (A.Object o)) req =
       v -> TE.decodeUtf8 (BSL.toStrict (A.encode v)) -- numbers render bare: 4, 12.5
 substituteOverlayParams _ req = req
 
--- | Dispatch all communication directives for a driver.
+-- | Dispatch all communication directives for a driver. Skipped when the run's block or
+-- restriction was dropped or failed ('handleConsequences' result).
 handleCommunications ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -390,17 +493,22 @@ handleCommunications ::
   ) =>
   DispatchContext ->
   Id DP.Person ->
+  DispatchOutcome ->
   [CMT.CommunicationDirective] ->
   m ()
-handleCommunications ctx driverId directives = do
-  let (actions, errors) = CMParser.parseDirectives directives
-  unless (null errors) $
-    logError $ "Communication parse errors for driver " <> driverId.getId <> ": " <> show errors
-  forM_ actions $ \action -> do
-    result <- try @_ @SomeException $ dispatchCommunicationAction ctx driverId action
-    case result of
-      Right () -> logDebug $ "Communication dispatched for driver " <> driverId.getId <> ": " <> show action
-      Left err -> logError $ "Communication failed for driver " <> driverId.getId <> ": " <> show err
+handleCommunications ctx driverId outcome directives
+  | not outcome.blockWon =
+    unless (null directives) $
+      logInfo $ "Communications skipped for driver " <> driverId.getId <> " because this run's block or restriction was dropped or failed"
+  | otherwise = do
+    let (actions, errors) = CMParser.parseDirectives directives
+    unless (null errors) $
+      logError $ "Communication parse errors for driver " <> driverId.getId <> ": " <> show errors
+    forM_ actions $ \action -> do
+      result <- try @_ @SomeException $ dispatchCommunicationAction ctx driverId action
+      case result of
+        Right () -> logDebug $ "Communication dispatched for driver " <> driverId.getId <> ": " <> show action
+        Left err -> logError $ "Communication failed for driver " <> driverId.getId <> ": " <> show err
 
 -- | Dispatch a single parsed communication action.
 --

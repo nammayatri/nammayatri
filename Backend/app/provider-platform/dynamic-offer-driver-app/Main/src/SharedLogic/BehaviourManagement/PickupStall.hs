@@ -119,5 +119,5 @@ recordPickupStall transporterConfig driverId merchantOpCityId rideId stallCase s
               counterConfig = Just pickupStallCounterConfig,
               actionEvent = Just actionEvent
             }
-    BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
+    dispatchOutcome <- BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+    BehaviorDispatch.handleCommunications dispatchCtx driverId dispatchOutcome output.communications

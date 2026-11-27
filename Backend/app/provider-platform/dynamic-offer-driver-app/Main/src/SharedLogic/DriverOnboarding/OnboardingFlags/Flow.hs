@@ -663,14 +663,20 @@ markBlockFlags ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   BlockChange ->
-  m ()
+  m DIQueryExtra.BlockWriteResult
 markBlockFlags personId change = do
   mbPerson <- QPerson.findById personId
   if maybe False (SDO.isFleetRole . (.role)) mbPerson
-    then case change of
-      Block p -> QFOIExtra.updateFleetOwnerBlockedStatus True (Just p.bpFlag) personId
-      SimpleBlock _ -> QFOIExtra.updateFleetOwnerBlockedStatus True Nothing personId
-      Unblock _ -> QFOIExtra.updateFleetOwnerBlockedStatus False Nothing personId
+    then do
+      -- Fleet owners: unchanged, never compared. The end time is only reported back so the
+      -- caller schedules the unblock job as before.
+      now <- getCurrentTime
+      case change of
+        Block p -> do
+          QFOIExtra.updateFleetOwnerBlockedStatus True (Just p.bpFlag) personId
+          pure $ DIQueryExtra.Applied ((\hrs -> addUTCTime (fromIntegral hrs * 3600) now) <$> p.bpExpiryHours)
+        SimpleBlock _ -> QFOIExtra.updateFleetOwnerBlockedStatus True Nothing personId $> DIQueryExtra.Applied Nothing
+        Unblock _ -> QFOIExtra.updateFleetOwnerBlockedStatus False Nothing personId $> DIQueryExtra.Applied Nothing
     else case change of
       Block p ->
         DIQueryExtra.updateDynamicBlockedStateWithActivity (cast personId) p.bpReason p.bpExpiryHours p.bpDashboardUserName p.bpMerchantId p.bpReasonCode p.bpMerchantOperatingCityId p.bpBlockedBy True p.bpActive p.bpMode p.bpFlag
