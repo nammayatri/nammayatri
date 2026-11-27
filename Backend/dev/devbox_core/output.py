@@ -24,12 +24,20 @@ def result(fields: dict) -> None:
     print("DEVBOX_RESULT " + json.dumps(fields), flush=True)
 
 
+def _escape(text: str, prop: bool = False) -> str:
+    """GitHub workflow-command escaping: % CR LF always, : and , in properties."""
+    text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    if prop:
+        text = text.replace(":", "%3A").replace(",", "%2C")
+    return text
+
+
 def annotate(title: str, msg: str) -> None:
-    """A GitHub Actions error annotation (shown at the top of the run) plus the
-    full message in the log. The first line becomes the annotation title/summary,
-    which is also the line SCC's poller reads back for the release page."""
-    first = (msg.splitlines() or [title])[0]
-    print(f"::error title={title}::{first}", flush=True)
+    """A GitHub Actions error annotation (shown at the top of the run, with the
+    whole reason) plus the full message in the log. The first line is what SCC's
+    poller reads back for the release page."""
+    lines = msg.strip().splitlines() or [title]
+    print(f"::error title={_escape(title, prop=True)}::{_escape(chr(10).join(lines[:15]))}", flush=True)
     print(msg, flush=True)
 
 

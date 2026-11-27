@@ -58,10 +58,40 @@ READY_PATHS = ["rider-app/v2", "dynamic-offer-driver-app/ui"]
 # process-compose's REST API is on this unix socket in the workspace; curl reads
 # per-service state from it (no process-compose binary needed on the ssh PATH).
 PC_SOCKET = "data/process-compose.sock"
-# How many restarts of one service count as a crash-loop (a failure, not a hiccup).
+# The services a release needs. Only these fail a release: the rest of the stack
+# (mock-registry, location-tracking, notification-service, consumers, test tools)
+# restarts by design (availability.restart = always / on_failure in
+# nix/services/nammayatri.nix) while its dependencies warm up, so its restarts are
+# not a failure. One-shot steps fail when they exit non-zero; the two app servers
+# (restart = always) fail once they have restarted RESTART_LIMIT times.
+CORE_ONESHOT = ("nammayatri-init", "dashboard-migrations")
+CORE_SERVERS = ("rider-app-exe", "dynamic-offer-driver-app-exe")
 RESTART_LIMIT = 3
-# A line in a crashed service's own log -> a plain-English hint at the reason.
-# First match wins; order most-specific first.
+# The stages after which process-compose (and so its socket) is up.
+WATCHED_STAGES = ("cache-restore", "build", "services")
+# What a failure in each stage is called at the top of the GitHub run.
+TITLES = {
+    "none": "Stack did not start",
+    "nix-eval": "Stack setup failed",
+    "preflight": "Stack setup failed",
+    "cache-restore": "Build failed",
+    "build": "Build failed",
+    "services": "Start failed",
+}
+
+
+class StackFailure(RuntimeError):
+    """A failed stack, with the stage it failed in (for the run's error title)."""
+
+    def __init__(self, stage: str, msg: str):
+        super().__init__(msg)
+        self.stage = stage
+
+    @property
+    def title(self) -> str:
+        return TITLES.get(self.stage, "Release failed")
+
+
 HINTS = [
     ("Expression doesn't match annotation",
      "dhall config doesn't match the code — check Backend/dhall-configs/dev/<service>.dhall"),
@@ -152,28 +182,64 @@ def services(t: ssh.Target, wdir: str, timeout: int = 15) -> list:
         return []
 
 
+def _exited_bad(p: dict) -> bool:
+    return (not p.get("is_running")
+            and p.get("exit_code") not in (0, None)
+            and p.get("status") in ("Completed", "Error", "Failed"))
+
+
 def _root_failure(procs: list) -> tuple:
-    """The service that actually broke, and the ones left Skipped waiting on it.
-    'broke' = exited non-zero (Completed/Error/Failed and not running), or
-    restarted >= RESTART_LIMIT (a crash-loop). Returns (bad|None, [skipped names])."""
+    """The core service that actually broke, and the services left Skipped
+    waiting on it. Broke = a CORE_ONESHOT step exited non-zero, or a CORE_SERVERS
+    app restarted >= RESTART_LIMIT times or stopped for good with a non-zero exit.
+    Any other service is ignored (see CORE_ONESHOT). Returns (bad|None, [skipped])."""
+    by_name = {p.get("name"): p for p in procs}
     skipped = [p["name"] for p in procs if p.get("status") == "Skipped"]
-    for p in procs:
-        exited_bad = (not p.get("is_running")
-                      and p.get("exit_code") not in (0, None)
-                      and p.get("status") in ("Completed", "Error", "Failed"))
-        looping = (p.get("restarts") or 0) >= RESTART_LIMIT
-        if exited_bad or looping:
+    for name in CORE_ONESHOT:
+        p = by_name.get(name)
+        if p and _exited_bad(p):
+            return p, skipped
+    for name in CORE_SERVERS:
+        p = by_name.get(name)
+        if p and ((p.get("restarts") or 0) >= RESTART_LIMIT or _exited_bad(p)):
             return p, skipped
     return None, skipped
 
 
 def service_errors(t: ssh.Target, wdir: str, name: str, n: int = 20, timeout: int = 20) -> str:
-    """The error-ish lines from one service's own log (<wdir>/<name>.log), so a
-    failure report shows that service's reason, not the shared stack.log noise."""
-    r = ssh.run(t, f"tr '\\r' '\\n' < {shlex.quote(wdir)}/{shlex.quote(name)}.log 2>/dev/null"
-                   " | grep -aiE 'error|exception|Executing:|match annotation|SqlError|busy|in use'"
-                   f" | tail -n {int(n)}", timeout=timeout)
-    return r.stdout
+    """The error-ish lines of one service, so a failure report shows that
+    service's reason, not the whole stack's noise. Reads the service's own log
+    (process-compose writes <name>.log in the stack's working dir, Backend/),
+    else its "[<name>" lines in the stack log. When no line looks like an error,
+    the last n lines instead."""
+    d = shlex.quote(wdir)
+    pat = "'error|exception|Executing:|match annotation|SqlError|busy|in use'"
+    lines = f"| tr '\\r' '\\n' | sed 's/\\x1b\\[[0-9;]*m//g'"
+    r = ssh.run(t, f"""cd {d} 2>/dev/null || exit 0
+src=""
+for f in Backend/{shlex.quote(name)}.log {shlex.quote(name)}.log; do [ -s "$f" ] && {{ src=$f; break; }}; done
+if [ -n "$src" ]; then all=$(tail -n 5000 "$src" {lines}); else all=$(grep -aF {shlex.quote("[" + name)} {LOG} 2>/dev/null | tail -n 5000 {lines}); fi
+errs=$(printf '%s\\n' "$all" | grep -aiE {pat} | tail -n {int(n)})
+if [ -n "$errs" ]; then printf '%s\\n' "$errs"; else printf '%s\\n' "$all" | tail -n {int(n)}; fi""",
+                timeout=timeout)
+    return r.stdout.strip()
+
+
+def _failure_message(t: ssh.Target, wdir: str, bad: dict, skipped: list) -> str:
+    errs = service_errors(t, wdir, bad["name"])
+    hint = _hint_for(errs)
+    if _exited_bad(bad):
+        what = f"exited with code {bad.get('exit_code')}"
+    else:
+        what = f"keeps crashing ({bad.get('restarts', 0)} restarts)"
+    msg = f"{bad['name']} {what}"
+    if hint:
+        msg += f"\nHint: {hint}"
+    if errs:
+        msg += "\n" + errs
+    if skipped:
+        msg += "\nDid not start (waiting on it): " + ", ".join(skipped)
+    return msg
 
 
 def _hint_for(text: str) -> str | None:
@@ -243,8 +309,9 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
     """Follow the stack until rider-app and driver-app answer through the front
     desk (until="ready"), or only until the services start, i.e. the build is
     over (until="services"). Prints each stage change (and passes it to
-    on_stage). Raises RuntimeError (with the last log lines) when the stack
-    dies, the build fails, or the timeout passes."""
+    on_stage). Raises StackFailure (a RuntimeError naming the stage, with the
+    reason) when the stack dies, the build fails, a core service crashes, or
+    the timeout passes."""
     deadline = time.time() + timeout
     seen = ""
     last_progress = ""
@@ -256,9 +323,9 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             if on_stage:
                 on_stage(seen)
         if st.get("buildFailed"):
-            raise RuntimeError("build failed\n" + tail(t, wdir, 40))
+            raise StackFailure("build", "cabal build failed\n" + tail(t, wdir, 40))
         if not st["alive"]:
-            raise RuntimeError("stack is not running\n" + tail(t, wdir, 40))
+            raise StackFailure(seen, "the stack stopped\n" + tail(t, wdir, 40))
         # While building: show the cache result and the compile count, so Build
         # is not a silent 14-minute block.
         if seen in ("cache-restore", "build"):
@@ -266,23 +333,14 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             if prog and prog != last_progress:
                 last_progress = prog
                 out(f"[stack] {prog}")
-        # Once the services are up, watch each one. A crashed / crash-looping
-        # service leaves the process group alive, so without this the loop would
-        # just wait out the full timeout. Fail fast with that service's reason.
-        if seen == "services":
+        # Watch the core services from the moment process-compose is up. A crashed
+        # init step (stage stays "build": the apps never print) or a crash-looping
+        # app leaves the process group alive, so without this the loop would wait
+        # out the full timeout. Fail fast with that service's reason.
+        if seen in WATCHED_STAGES:
             bad, skipped = _root_failure(services(t, wdir))
             if bad is not None:
-                errs = service_errors(t, wdir, bad["name"])
-                hint = _hint_for(errs)
-                msg = (f"{bad['name']} crashed (exit {bad.get('exit_code')}, "
-                       f"{bad.get('restarts', 0)} restarts)")
-                if errs.strip():
-                    msg += "\n" + errs.strip()
-                if hint:
-                    msg += f"\nHint: {hint}"
-                if skipped:
-                    msg += "\nDid not start (waiting on it): " + ", ".join(skipped)
-                raise RuntimeError(msg)
+                raise StackFailure(seen, _failure_message(t, wdir, bad, skipped))
         if until == "services" and seen == "services":
             return {"services": True}
         urls = ready_urls(office_base(t.host, name))
@@ -290,7 +348,7 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             out("[stack] stage: ready")
             return {"ready": True, "urls": urls}
         if time.time() > deadline:
-            raise RuntimeError(f"not ready after {timeout}s (stage {seen})\n" + tail(t, wdir, 40))
+            raise StackFailure(seen, f"not ready after {timeout}s (stage {seen})\n" + tail(t, wdir, 40))
         time.sleep(interval)
 
 

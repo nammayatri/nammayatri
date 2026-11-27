@@ -140,12 +140,13 @@ def _stack_status(args, t, wdir) -> dict:
 
 
 def _stack_wait(args, t, wdir) -> dict:
-    # On failure, add a GitHub error annotation (top of the run) before letting
-    # _stack_cmd print the JSON error line that SCC's poller reads.
+    # On failure, add a GitHub error annotation (top of the run, titled by the
+    # stage that failed) before letting _stack_cmd print the JSON error line
+    # that SCC's poller reads.
     try:
         return stack.wait_ready(t, args.name, wdir, timeout=args.timeout, until=args.until)
-    except RuntimeError as e:
-        output.annotate("Build failed" if args.until == "services" else "Start failed", str(e))
+    except stack.StackFailure as e:
+        output.annotate(e.title, str(e))
         raise
 
 
