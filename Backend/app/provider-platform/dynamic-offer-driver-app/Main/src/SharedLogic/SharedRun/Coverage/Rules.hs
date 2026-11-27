@@ -16,9 +16,11 @@
 -- the assigned driver to acknowledge, what the fallback job does, who it tries, and what happens when nobody takes the
 -- run. The effects live in "SharedLogic.SharedRun.Coverage"; nothing here reads a clock or a table.
 --
--- The order the spec asks for is owned fleet, then the curated board, then the control centre: the fallback job tries
--- the drivers of the owned fleet ('selectCandidates'), leaves the run on the scheduled board (where curated drivers see
--- it through the visibility config) and, once the fallback window is reached, hands it to ops ('afterNoAssignment').
+-- The order is owned fleet, then the city's ordinary drivers, then the control centre, with the curated board open
+-- throughout: the fallback job tries the drivers of the owned fleet ('selectCandidates'); at the fallback time a run
+-- nobody in the fleet took is offered to the ordinary drivers as a ride request, and if it is still uncovered at the
+-- final look it goes to ops ('afterNoAssignment'). The run stays on the scheduled board all along, where curated
+-- drivers see it through the visibility config.
 module SharedLogic.SharedRun.Coverage.Rules
   ( RunState (..),
     Assignment (..),
@@ -101,7 +103,9 @@ decideFallback s
     Nothing -> FindDriver
 
 data NoAssignmentStep = NoAssignmentStep
-  { -- | the run is uncovered at or after its fallback time: tell ops (at most once per run; the caller guards it)
+  { -- | offer the run to the city's ordinary drivers as a ride request (once per run; the caller knows if it was)
+    broadcast :: Bool,
+    -- | the run is still uncovered: tell ops (at most once per run; the caller guards it)
     alertOps :: Bool,
     -- | when to look again; Nothing: stop (the scheduled fallback, or departure, comes first)
     recheckAt :: Maybe UTCTime
@@ -109,13 +113,18 @@ data NoAssignmentStep = NoAssignmentStep
   deriving (Show, Eq)
 
 -- | Nobody in the owned fleet took the run; it stays on the board. Before the fallback time the scheduled fallback job
--- still comes, so stop. From then on, tell ops and look once more just before the scheduled-ride buffer closes.
-afterNoAssignment :: RunState -> NominalDiffTime -> NoAssignmentStep
-afterNoAssignment s scheduleRideBufferTime
-  | s.now < s.fallbackDue = NoAssignmentStep {alertOps = False, recheckAt = Nothing}
+-- still comes, so stop. At the fallback time a run not yet offered goes to the ordinary drivers first, and ops hear of
+-- it only at the final look (just before the scheduled-ride buffer closes) if nobody took it; a run already offered,
+-- or with no time left for the offer, goes to ops now.
+afterNoAssignment :: RunState -> Bool -> NominalDiffTime -> NoAssignmentStep
+afterNoAssignment s offered scheduleRideBufferTime
+  | s.now < s.fallbackDue = NoAssignmentStep {broadcast = False, alertOps = False, recheckAt = Nothing}
   | otherwise =
     let finalCheck = addUTCTime (negate scheduleRideBufferTime) s.startTime
-     in NoAssignmentStep {alertOps = True, recheckAt = if finalCheck > s.now then Just finalCheck else Nothing}
+        recheckAt = if finalCheck > s.now then Just finalCheck else Nothing
+     in if offered
+          then NoAssignmentStep {broadcast = False, alertOps = True, recheckAt}
+          else NoAssignmentStep {broadcast = True, alertOps = isNothing recheckAt, recheckAt}
 
 -- | Bound vehicles first: the driver of a vehicle the route is mapped to, then the other drivers of those fleets.
 data CandidateSource = BoundVehicle | FleetDriver

@@ -872,6 +872,7 @@ library
       SharedLogic.SharedCab.Trip
       SharedLogic.SharedRun.Acknowledgement
       SharedLogic.SharedRun.Assign
+      SharedLogic.SharedRun.Broadcast
       SharedLogic.SharedRun.Coverage
       SharedLogic.SharedRun.Coverage.Rules
       SharedLogic.SharedRun.Fare

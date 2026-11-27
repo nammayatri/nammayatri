@@ -19,8 +19,9 @@
 -- * a driver holds the run but did not acknowledge by the fallback time: unassign them through the ordinary cancel
 --   (the activation job's own path); the cancel puts the run back on the board and runs this job again;
 -- * nobody holds it: offer it to the owned fleet ('Coverage.ownedFleetCandidates', through the scheduled accept's
---   steps); if nobody takes it, it stays on the scheduled board for curated drivers, and from the fallback time on ops
---   are told once and the run is looked at once more before the scheduled-ride buffer closes.
+--   steps); if nobody takes it, it stays on the scheduled board for curated drivers. At the fallback time it is offered
+--   once to the city's ordinary drivers as a ride request ('Broadcast.offerRunToDrivers'); if it is still uncovered at
+--   the last look before the scheduled-ride buffer closes, ops are told once.
 --
 -- Idempotent: every step re-reads the run, and one run's jobs never overlap (a per-run lock).
 module SharedLogic.Allocator.Jobs.SharedRun.SharedRunFallback
@@ -44,6 +45,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (ScheduledRideAssignedOnUpdateFlow, cancelOrReallocate)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.SharedRun.Assign as Assign
+import qualified SharedLogic.SharedRun.Broadcast as Broadcast
 import qualified SharedLogic.SharedRun.Coverage as Coverage
 import SharedLogic.SharedRun.Coverage.Rules (FallbackDecision (..), NoAssignmentStep (..), afterNoAssignment, decideFallback)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -103,8 +105,18 @@ sharedRunFallback Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
             Assign.Unassigned why -> do
               -- stays on the scheduled board, where curated drivers see it
               SBooking.addScheduledBookingInRedis booking
-              let step = afterNoAssignment snapshot.state snapshot.transporterConfig.scheduleRideBufferTime
+              let step = afterNoAssignment snapshot.state (Broadcast.alreadyOffered booking) snapshot.transporterConfig.scheduleRideBufferTime
               logInfo $ tag <> "not covered by the owned fleet: " <> why
-              when step.alertOps $
+              -- then the city's ordinary drivers, as a ride request; a failed offer goes straight to ops
+              offerFailed <-
+                if step.broadcast
+                  then
+                    withTryCatch "sharedRun:offerRunToDrivers" (Broadcast.offerRunToDrivers merchant booking) >>= \case
+                      Right () -> pure False
+                      Left err -> do
+                        logError $ tag <> "could not offer the run to the driver pool: " <> show err
+                        pure True
+                  else pure False
+              when (step.alertOps || offerFailed) $
                 Coverage.alertOpsOnce booking $ "Run not covered: " <> T.take 200 why
               pure $ maybe Complete ReSchedule step.recheckAt

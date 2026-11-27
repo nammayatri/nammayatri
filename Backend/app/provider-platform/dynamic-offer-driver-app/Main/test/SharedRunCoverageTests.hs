@@ -101,12 +101,16 @@ tests =
         ],
       testGroup
         "nobody took the run"
-        [ testCase "before the fallback time: no alert, the scheduled fallback comes later" $
-            afterNoAssignment (run (minutesBefore 90) Nothing) 1800 @?= NoAssignmentStep {alertOps = False, recheckAt = Nothing},
-          testCase "at the fallback time: alert ops and look again before the buffer closes" $
-            afterNoAssignment (run (minutesBefore 30) Nothing) 600 @?= NoAssignmentStep {alertOps = True, recheckAt = Just (minutesBefore 10)},
-          testCase "inside the buffer already: alert ops, no recheck" $
-            afterNoAssignment (run (minutesBefore 5) Nothing) 600 @?= NoAssignmentStep {alertOps = True, recheckAt = Nothing}
+        [ testCase "before the fallback time: no offer, no alert, the scheduled fallback comes later" $
+            afterNoAssignment (run (minutesBefore 90) Nothing) False 1800 @?= NoAssignmentStep {broadcast = False, alertOps = False, recheckAt = Nothing},
+          testCase "at the fallback time, not yet offered: offer it to the ordinary drivers, ops wait for the last look" $
+            afterNoAssignment (run (minutesBefore 30) Nothing) False 600 @?= NoAssignmentStep {broadcast = True, alertOps = False, recheckAt = Just (minutesBefore 10)},
+          testCase "at the last look, already offered and still uncovered: alert ops, no second offer" $
+            afterNoAssignment (run (minutesBefore 30) Nothing) True 600 @?= NoAssignmentStep {broadcast = False, alertOps = True, recheckAt = Just (minutesBefore 10)},
+          testCase "inside the buffer, not yet offered: offer it and alert ops at once (no time left to wait)" $
+            afterNoAssignment (run (minutesBefore 5) Nothing) False 600 @?= NoAssignmentStep {broadcast = True, alertOps = True, recheckAt = Nothing},
+          testCase "inside the buffer, already offered: alert ops, no recheck" $
+            afterNoAssignment (run (minutesBefore 5) Nothing) True 600 @?= NoAssignmentStep {broadcast = False, alertOps = True, recheckAt = Nothing}
         ],
       testGroup
         "candidates"
