@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.Fleet as SFleet
+import qualified SharedLogic.InternalAuth as SIA
 import qualified "lib-dashboard" Storage.Beam.SchemaInstances ()
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
@@ -67,8 +68,10 @@ instance FromJSON InternalAuthResp where
 
 internalAuthHandler :: Maybe Text -> Maybe RegToken -> FlowHandler InternalAuthResp
 internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
-  internalAuthAPIKey <- asks (.internalAuthAPIKey)
-  unless (apiKey == Just internalAuthAPIKey) $
+  currentKey <- asks (.internalAuthAPIKey)
+  oldKeys <- asks (.internalAuthAPIOldKeys)
+  validKey <- SIA.isValidKey "dashboardInternalAuth" currentKey oldKeys apiKey
+  unless validKey $
     throwError $ InvalidRequest "Invalid API key"
   personId <- runInDashboardDb $ Auth.verifyPerson (fromMaybe "" token)
   (topic, fleetOwnerIds) <- runInDashboardDb $ DTopic.resolveTopicForPerson fleetOwnerLookup personId

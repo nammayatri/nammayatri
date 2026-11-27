@@ -36,6 +36,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.DriverFlowStatus as SDF
+import qualified SharedLogic.InternalAuth as SIA
 import Storage.Beam.IncentiveJourney ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -52,13 +53,13 @@ data DriverModeReq = DriverModeReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-setDriverMode :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe Text -> DriverModeReq -> Flow APISuccess
+setDriverMode :: Maybe Text -> DriverModeReq -> Flow APISuccess
 setDriverMode apiKey req = do
   let driverId = req.driverId
       mode = req.mode
       isActive = req.isActive
-  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-  unless (apiKey == Just locationTrackingServiceKey) $ do
+  validKey <- SIA.isValidLtsKey "setDriverMode" apiKey
+  unless validKey $ do
     throwError $ InvalidRequest "Invalid API key"
 
   isLocked <- withLockDriverIdForSetActivity driverId
