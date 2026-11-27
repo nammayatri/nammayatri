@@ -1,15 +1,20 @@
 module Domain.Action.UI.SharedCabInternal
   ( postSharedCabAllocationFCM,
+    postSharedCabDemandNudge,
     postSharedCabCheckInFCM,
     getSharedCabDriverCallNumber,
     getSharedCabTripActive,
     postSharedCabTripExpire,
+    postSharedCabRecordDriverRouteTrip,
+    getSharedCabDriverRouteTrips,
   )
 where
 
-import API.Types.UI.SharedCabInternal (SharedCabCheckInReq, SharedCabDriverCallNumberResp, SharedCabTrip)
+import API.Types.UI.SharedCabInternal (SharedCabCheckInReq, SharedCabDemandNudgeReq, SharedCabDriverCallNumberResp, SharedCabDriverRouteTripCount, SharedCabDriverRouteTripReq, SharedCabTrip)
 import qualified Domain.Action.Internal.SharedCabAllocation as DAllocation
 import qualified Domain.Action.Internal.SharedCabCallNumber as DCallNumber
+import qualified Domain.Action.Internal.SharedCabDemandNudge as DDemandNudge
+import qualified Domain.Action.Internal.SharedCabDriverRouteTrip as DRouteTrip
 import qualified Domain.Action.Internal.SharedCabTrip as DTrip
 import Domain.Types.Merchant (Merchant)
 import Environment
@@ -22,6 +27,9 @@ import Tools.Notifications (SharedCabAllocationEntityData)
 postSharedCabAllocationFCM :: Maybe Text -> SharedCabAllocationEntityData -> Flow APISuccess
 postSharedCabAllocationFCM mbToken req = DAllocation.sharedCabAllocationFCM req mbToken
 
+postSharedCabDemandNudge :: Id Merchant -> Maybe Text -> SharedCabDemandNudgeReq -> Flow APISuccess
+postSharedCabDemandNudge = DDemandNudge.sharedCabDemandNudge
+
 postSharedCabCheckInFCM :: Maybe Text -> SharedCabCheckInReq -> Flow APISuccess
 postSharedCabCheckInFCM mbToken req = DAllocation.sharedCabCheckInFCM req mbToken
 
@@ -33,3 +41,9 @@ getSharedCabTripActive = DTrip.sharedCabActiveTrip
 
 postSharedCabTripExpire :: Id Merchant -> Text -> Maybe HighPrecMoney -> Maybe Text -> Flow APISuccess
 postSharedCabTripExpire = DTrip.expireSharedCabTrip
+
+postSharedCabRecordDriverRouteTrip :: Maybe Text -> SharedCabDriverRouteTripReq -> Flow APISuccess
+postSharedCabRecordDriverRouteTrip = DRouteTrip.recordDriverRouteTrip
+
+getSharedCabDriverRouteTrips :: Text -> Maybe Int -> Maybe Text -> Flow [SharedCabDriverRouteTripCount]
+getSharedCabDriverRouteTrips = DRouteTrip.driverRouteTrips

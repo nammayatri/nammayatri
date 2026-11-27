@@ -375,6 +375,8 @@ library
       Domain.Action.Internal.SendWelcomeEmail
       Domain.Action.Internal.SharedCabAllocation
       Domain.Action.Internal.SharedCabCallNumber
+      Domain.Action.Internal.SharedCabDemandNudge
+      Domain.Action.Internal.SharedCabDriverRouteTrip
       Domain.Action.Internal.SharedCabTrip
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
@@ -1728,6 +1730,7 @@ library
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
       Domain.Types.DriverRidePayoutBankAccount
+      Domain.Types.DriverRouteTrip
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverUdyam
@@ -1943,6 +1946,7 @@ library
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
       Storage.Beam.DriverRidePayoutBankAccount
+      Storage.Beam.DriverRouteTrip
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverUdyam
@@ -2164,6 +2168,7 @@ library
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
       Storage.Queries.DriverRidePayoutBankAccount
+      Storage.Queries.DriverRouteTrip
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverUdyam

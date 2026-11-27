@@ -23,6 +23,10 @@ module SharedLogic.SharedCab.Schedule
     ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
+    ensureDemandNudgeJob,
+    ownDemandNudgeChain,
+    claimDemandNudgeRun,
+    scheduleNextDemandNudge,
     sweepTickSec,
     scanWindowStart,
     ensureDegradedSweep,
@@ -233,6 +237,23 @@ scheduleNextExpiry merchantId mocId = scheduleNext (expiryChain merchantId mocId
 
 ownExpiryChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> (Text -> m ()) -> m ()
 ownExpiryChain merchantId mocId = ownChain (expiryChain merchantId mocId)
+
+demandNudgeChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Chain m
+demandNudgeChain merchantId mocId intervalSec =
+  chain @'SharedCabDemandNudge (nudgeJobGuardKey mocId) (guardTickMultiple * intervalSec) intervalSec merchantId mocId $
+    \chainId -> SharedCabDemandNudgeJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
+
+ensureDemandNudgeJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> m ()
+ensureDemandNudgeJob merchantId mocId = ensureChain . demandNudgeChain merchantId mocId
+
+ownDemandNudgeChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Text -> (Text -> m ()) -> m ()
+ownDemandNudgeChain merchantId mocId = ownChain . demandNudgeChain merchantId mocId
+
+claimDemandNudgeRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Int -> m Bool
+claimDemandNudgeRun mocId intervalSec = setNx (nudgeTickKey mocId) (max 1 (intervalSec - 5))
+
+scheduleNextDemandNudge :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Text -> m ()
+scheduleNextDemandNudge merchantId mocId = scheduleNext . demandNudgeChain merchantId mocId
 
 -- | Sweep cadence, far below the degraded horizon: a ride whose rider never polls ends at most one tick after its marker dies.
 sweepTickSec :: Int

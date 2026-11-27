@@ -712,6 +712,7 @@ library
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
       SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+      SharedLogic.Scheduler.Jobs.SharedCabDemandNudge
       SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -737,6 +738,7 @@ library
       SharedLogic.SharedCab.ConfirmHook
       SharedLogic.SharedCab.Degraded
       SharedLogic.SharedCab.Demand
+      SharedLogic.SharedCab.DemandNudge
       SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Enabled
       SharedLogic.SharedCab.FindingTimeout

@@ -1968,6 +1968,76 @@ sharedCabCheckInFCM apiKey internalUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabCheckInFCMClient req (Just apiKey)) "SharedCabCheckInFCM" sharedCabCheckInFCMApi
 
+data NudgeStop = NudgeStop
+  { code :: Text,
+    name :: Text,
+    point :: LatLong
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data OnRouteCab = OnRouteCab
+  { vehicleNumber :: Text,
+    nextIdx :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NudgeRoute = NudgeRoute
+  { routeCode :: Text,
+    routeName :: Text,
+    stops :: [NudgeStop],
+    ahead :: [Int],
+    onRoute :: [OnRouteCab]
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NudgeTunables = NudgeTunables
+  { minRiders :: Int,
+    maxLookups :: Int,
+    idleRadiusM :: Int,
+    mergeRadiusM :: Int,
+    maxOptions :: Int,
+    maxIdlePerRoute :: Int,
+    expiresAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data SharedCabDemandNudgeReq = SharedCabDemandNudgeReq
+  { routes :: [NudgeRoute],
+    onRoutePlates :: [Text],
+    tunables :: NudgeTunables
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+type SharedCabDemandNudgeAPI =
+  "internal"
+    :> "sharedCab"
+    :> Capture "merchantId" Text
+    :> "demandNudge"
+    :> ReqBody '[JSON] SharedCabDemandNudgeReq
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+sharedCabDemandNudgeClient :: Text -> SharedCabDemandNudgeReq -> Maybe Text -> EulerClient APISuccess
+sharedCabDemandNudgeClient = client sharedCabDemandNudgeApi
+
+sharedCabDemandNudgeApi :: Proxy SharedCabDemandNudgeAPI
+sharedCabDemandNudgeApi = Proxy
+
+sharedCabDemandNudge ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  SharedCabDemandNudgeReq ->
+  m APISuccess
+sharedCabDemandNudge apiKey internalUrl driverMerchantId req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sharedCabDemandNudgeClient driverMerchantId req (Just apiKey)) "SharedCabDemandNudge" sharedCabDemandNudgeApi
+
 newtype SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

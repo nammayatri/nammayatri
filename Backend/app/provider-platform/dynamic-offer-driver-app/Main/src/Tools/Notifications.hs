@@ -62,6 +62,10 @@ module Tools.Notifications
     notifyDriverNewAllocation,
     notifySharedCabAllocation,
     notifySharedCabCheckIn,
+    notifySharedCabDemandNudge,
+    SharedCabDemandStopCount (..),
+    SharedCabDemandOption (..),
+    SharedCabDemandNudgeEntityData (..),
     notifyDriverClearedFare,
     notifyOnCancelSearchRequest,
     notifyPaymentFailed,
@@ -906,6 +910,55 @@ notifySharedCabCheckIn merchantOpCityId personId mbDeviceToken lang routeCode ro
     (Just (object ["routeCode" .= routeCode, "routeName" .= routeName]))
     [("routeCode", routeCode), ("routeName", routeName)]
     Nothing
+
+data SharedCabDemandStopCount = SharedCabDemandStopCount
+  { stopCode :: Text,
+    stopName :: Text,
+    count :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, Eq)
+
+data SharedCabDemandOption = SharedCabDemandOption
+  { routeCode :: Text,
+    routeName :: Text,
+    nearStopCode :: Text,
+    nearStopName :: Text,
+    distanceM :: Int,
+    waiting :: Int,
+    stopsAhead :: [SharedCabDemandStopCount]
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, Eq)
+
+data SharedCabDemandNudgeEntityData = SharedCabDemandNudgeEntityData
+  { notificationType :: Text,
+    options :: [SharedCabDemandOption],
+    expiresAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, Eq)
+
+notifySharedCabDemandNudge ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  SharedCabDemandNudgeEntityData ->
+  m ()
+notifySharedCabDemandNudge merchantOpCityId personId mbDeviceToken lang entityData =
+  whenJust (listToMaybe entityData.options) $ \primary ->
+    dynamicFCMNotifyPerson
+      merchantOpCityId
+      personId
+      mbDeviceToken
+      lang
+      Nothing
+      (createFCMReq DriverPush_SharedCab_DemandNudge ("sharedCabDemand:" <> personId.getId) FCM.Person identity)
+      (Just entityData)
+      [("waiting", show primary.waiting), ("routeName", primary.routeName), ("stopName", primary.nearStopName)]
+      Nothing
 
 -- FCM.ALLOCATION_REQUEST
 -- title = FCM.FCMNotificationTitle "New allocation request."

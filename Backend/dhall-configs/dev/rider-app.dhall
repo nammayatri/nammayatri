@@ -336,6 +336,7 @@ let RiderJobType =
       | SharedCabAllocationTick
       | SharedCabSessionExpiry
       | SharedCabDegradedSweep
+      | SharedCabDemandNudge
       | SendRideInvoiceEmail
       >
 
@@ -346,6 +347,7 @@ let jobInfoMapx =
       [ { mapKey = RiderJobType.SharedCabAllocationTick, mapValue = False }
       , { mapKey = RiderJobType.SharedCabSessionExpiry, mapValue = False }
       , { mapKey = RiderJobType.SharedCabDegradedSweep, mapValue = False }
+      , { mapKey = RiderJobType.SharedCabDemandNudge, mapValue = False }
       , { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
