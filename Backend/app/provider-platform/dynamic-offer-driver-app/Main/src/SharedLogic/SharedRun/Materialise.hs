@@ -12,15 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | The shared-run materialiser: turns a city's GTFS timetables into scheduled runs (R1) and hands each new run to the
--- vehicle bound to its route (R2).
+-- | The shared-run materialiser: turns a city's GTFS timetables into scheduled runs (R1) and assigns each new run
+-- automatically to a NY (owned-fleet) driver (R2).
 --
 -- A run is a Booking with trip category SharedRoute, built the way a Beckn init would build one but from a GTFS trip:
 -- the trip's stops are its pickup, stops and drop, its first departure is the start time, the city's SharedRoute
 -- fare_product prices it (the run's real fare is the sum of its tickets at run end). One SearchRequest and one Quote
--- stand behind it, because the scheduled-ride accept path reads the quote. The booking goes on the scheduled board;
--- when vehicle_route_mapping binds a vehicle to the route, that vehicle's driver is assigned straight away, as a fleet
--- owner would from the dashboard.
+-- stand behind it, because the scheduled-ride accept path reads the quote. The booking goes on the scheduled board,
+-- and is assigned straight away, as a fleet owner would from the dashboard, to the first NY driver who can take it:
+-- the drivers of the vehicles vehicle_route_mapping binds to the route first, then the other drivers of their fleet.
+-- DCO drivers (ordinary app users) are reached later, by the fallback job's ride-request broadcast.
 --
 -- Idempotent: a run is keyed by feed, trip and service day in its transaction id, and a day that already has the run
 -- (whatever its status) is left alone. Polymorphic in its monad so the allocator's MaterialiseSharedRuns job runs it
@@ -37,11 +38,9 @@ module SharedLogic.SharedRun.Materialise
 where
 
 import qualified Data.ByteString as BS
-import Data.Either (partitionEithers)
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (Day, UTCTime (..), addDays)
 import qualified Data.UUID as UUID
@@ -61,10 +60,7 @@ import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SharedRoute (ScheduleMode (..), SharedSupplyKnobs (..))
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as Fields
-import qualified Domain.Types.VehicleRouteMapping as Fields
 import qualified Domain.Types.VehicleServiceTier as Fields
-import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -93,11 +89,8 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.Vehicle as QVehicle
-import qualified Storage.Queries.VehicleRouteMapping as QVRM
 
 -- | What the materialiser asks of its environment: what creating a ride asks (the assignment), plus the fare policy's
 -- ClickHouse read and the timetable's and own-address lookups. The driver app's Flow and the allocator's both have it.
@@ -469,7 +462,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
       SBooking.addScheduledBookingInRedis booking
       Coverage.scheduleCoverageJobs transporterConfig booking
       logInfo $ "shared run created: booking " <> bookingId.getId <> " for trip " <> tripId <> " of " <> routeCode <> " at " <> show startTime
-      Created <$> assignBoundVehicle merchant transporterConfig booking routeCode
+      Created <$> assignNyFleet merchant transporterConfig booking routeCode
 
 -- | A GTFS stop as a Location row of the run. The address carries the stop's name and, in @extras@, its code.
 stopLocation :: MonadFlow m => DM.Merchant -> DMOC.MerchantOperatingCity -> UTCTime -> GtfsTimetableStopTime -> m DLoc.Location
@@ -502,25 +495,13 @@ stopLocation merchant moc now stopTime = do
         updatedAt = now
       }
 
--- | The run goes to the driver of the first vehicle bound to the route that can take it
--- ('Assign.assignFirstAvailable', the scheduled accept's own steps). A failed assignment leaves the run on the
--- scheduled board for the next driver or the fallback job, and says why.
-assignBoundVehicle :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assign.Assignment
-assignBoundVehicle merchant transporterConfig booking routeCode = do
-  mappings <- filter ((== booking.merchantOperatingCityId) . (.merchantOperatingCityId)) <$> QVRM.findAllByRouteCode routeCode
-  if null mappings
-    then pure (Assign.Unassigned $ "no vehicle is bound to route " <> routeCode <> "; the run is on the scheduled board")
-    else do
-      (errors, candidates) <- partitionEithers <$> mapM boundCandidate mappings
-      outcome <- Assign.assignFirstAvailable merchant transporterConfig booking candidates
-      pure $ case outcome of
-        Assign.Unassigned why | not (null errors) -> Assign.Unassigned (T.intercalate "; " (errors <> [why | not (T.null why)]))
-        _ -> outcome
-  where
-    boundCandidate mapping = do
-      res <- withTryCatch "sharedRun:assignBoundVehicle" $ do
-        plate <- decrypt mapping.vehicleNumber
-        vehicle <- QVehicle.findByRegistrationNo plate >>= fromMaybeM (InvalidRequest $ "vehicle " <> plate <> " bound to route " <> routeCode <> " is not registered")
-        driver <- QPerson.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-        pure Assign.RunCandidate {driver, fleetOwnerId = mapping.fleetOwnerId, label = "the driver of " <> plate}
-      pure (either (Left . show) Right res)
+-- | The run is assigned automatically to the first NY (owned-fleet) driver who can take it, through the scheduled
+-- accept's own steps ('Assign.assignFirstAvailable'): the drivers of the vehicles bound to the run's route first, then
+-- the other active drivers of those vehicles' fleet owners ('Coverage.ownedFleetCandidates', the same list the fallback
+-- job uses). A run nobody in the fleet takes stays on the scheduled board for the fallback job, and says why.
+assignNyFleet :: MaterialiseFlow m r c => DM.Merchant -> DTC.TransporterConfig -> DRB.Booking -> Text -> m Assign.Assignment
+assignNyFleet merchant transporterConfig booking routeCode = do
+  candidates <- Coverage.ownedFleetCandidates booking
+  if null candidates
+    then pure (Assign.Unassigned $ "no NY fleet driver can serve route " <> routeCode <> "; the run is on the scheduled board")
+    else Assign.assignFirstAvailable merchant transporterConfig booking candidates
