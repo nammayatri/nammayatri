@@ -504,27 +504,28 @@ buildEarnings lang labels inputs estimatedFareParam finalFareParam mbCancellatio
                  isNothing mbCancellationDues,
                  discount > 0
              ]
-  pure $
-    catMaybes $
-      [ mkComp "FARE_PAID_BY_CUSTOMER" Earning lblAmountPaid amountPaidByCustomer farePaidSubItems,
-        mkComp "DISCOUNT" Earning lblDiscount discount [],
-        mkComp "TIPS" Earning lblTips tips [],
-        mkComp "COMMISSION" Deduction commissionLabel commission [],
-        mkComp "TAX" Deduction taxLabel taxDeduction [],
-        mkComp "PAYMENT_CHARGE" Deduction paymentChargeLabel (if chargeBorneByDriver then paymentChargeGross else 0) []
-      ]
-        -- NOTE: Backward compatibility for cities without customerPayableFareBreakupSubItemsConfig: these
-        -- charges stay top-level Additions, as before. Remove them, and the Nothing case of
-        -- amountPaidByCustomer, once the frontend is live and the config is added for all cities.
-        <> if isJust mbFarePaidSubItemsConfig
-          then []
-          else
-            [ mkComp "PAYMENT_CHARGE_PAID_BY_CUSTOMER" Earning lblPaymentChargePaid customerPaymentCharge [],
-              mkComp "CUSTOMER_CANCELLATION_CHARGE" Earning lblFare cancellationDues [],
-              mkComp "AIRPORT_CONVENIENCE_FEE" Earning lblAirportConvenienceFee airportConvenienceFee [],
-              mkComp "SERVICE_CHARGE" Earning lblServiceCharge serviceCharge [],
-              mkComp "TOLL_CHARGES" Earning (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount []
-            ]
+  let fareBreakupItems =
+        catMaybes $
+          [ mkComp "FARE_PAID_BY_CUSTOMER" Earning lblAmountPaid amountPaidByCustomer farePaidSubItems,
+            mkComp "DISCOUNT" Earning lblDiscount discount [],
+            mkComp "TIPS" Earning lblTips tips [],
+            mkComp "COMMISSION" Deduction commissionLabel commission [],
+            mkComp "TAX" Deduction taxLabel taxDeduction [],
+            mkComp "PAYMENT_CHARGE" Deduction paymentChargeLabel (if chargeBorneByDriver then paymentChargeGross else 0) []
+          ]
+            -- NOTE: Backward compatibility for cities without customerPayableFareBreakupSubItemsConfig: these
+            -- charges stay top-level Additions, as before. Remove them, and the Nothing case of
+            -- amountPaidByCustomer, once the frontend is live and the config is added for all cities.
+            <> if isJust mbFarePaidSubItemsConfig
+              then []
+              else
+                [ mkComp "PAYMENT_CHARGE_PAID_BY_CUSTOMER" Earning lblPaymentChargePaid customerPaymentCharge [],
+                  mkComp "CUSTOMER_CANCELLATION_CHARGE" Earning lblFare cancellationDues [],
+                  mkComp "AIRPORT_CONVENIENCE_FEE" Earning lblAirportConvenienceFee airportConvenienceFee [],
+                  mkComp "SERVICE_CHARGE" Earning lblServiceCharge serviceCharge [],
+                  mkComp "TOLL_CHARGES" Earning (Just (fromMaybe "Toll charges (included in fare)" lblTollCharges)) tollAmount []
+                ]
+  pure fareBreakupItems
 
 buildFootnotes ::
   (LYBF.BeamFlow m r) =>
