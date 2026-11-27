@@ -9,6 +9,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.InternalAuth as SIA
 import Storage.Beam.SystemConfigs ()
 import Tools.Error
 
@@ -25,7 +26,7 @@ handler =
 
 sosErssReauth :: Maybe Text -> Domain.ErssReauthReq -> FlowHandler Domain.ErssReauthResp
 sosErssReauth apiKey req = withFlowHandlerAPI $ do
-  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-  unless (apiKey == Just locationTrackingServiceKey) $
+  validKey <- SIA.isValidLtsKey "sosErssReauth" apiKey
+  unless validKey $
     throwError $ AuthBlocked "Invalid API key"
   Domain.postSosErssReauth req

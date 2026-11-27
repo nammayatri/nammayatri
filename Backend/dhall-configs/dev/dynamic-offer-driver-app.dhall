@@ -640,6 +640,7 @@ in  { esqDBCfg
     , totpClockSkew = Some +2
     , twoFaIssuerName = "Control Centre"
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , internalAuthAPIOldKeys = [] : List Text
     , exotelToken = sec.exotelToken
     , kafkaClickhouseCfg
     , driverClickhouseCfg
@@ -733,6 +734,7 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , locationTrackingServiceOldKeys = [] : List Text
     , enforcingInternalAuth = False
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
