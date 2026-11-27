@@ -284,7 +284,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
               OU.SOFT_UPDATE -> do
                 let items' = Utils.tfItemsSoftUpdate booking merchant.shortId.getShortId bookingUpdateReqDetails.estimatedDistance farePolicy Nothing bookingUpdateReqDetails ride.id.getId
                     quote' = Utils.tfQuotationSU isValueAddNP fareParameters bookingUpdateReqDetails.estimatedFare
-                    payment' = UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare fareParameters.currency
+                    payment' = Utils.withBapPaymentStatus booking.paymentStatus $ UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare fareParameters.currency
                 (items', quote', payment')
               OU.CONFIRM_UPDATE -> do
                 let items' = Utils.tfItems booking merchant.shortId.getShortId booking.estimatedDistance farePolicy Nothing
@@ -310,7 +310,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
               orderCancellationTerms = Nothing,
               orderItems = items,
               orderPayments = Just [payment],
-              orderProvider = Utils.tfProvider becknConfig,
+              orderProvider = Utils.tfProvider (Just merchant) becknConfig,
               orderQuote = quote,
               orderCreatedAt = Just booking.createdAt,
               orderUpdatedAt = Just booking.updatedAt
@@ -343,6 +343,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                   fulfillmentType = Nothing,
                   fulfillmentVehicle = Nothing
                 }
+        mbProvider <- Utils.tfProviderM becknConfig
         pure $
           Spec.Order
             { orderDocuments = Nothing,
@@ -355,7 +356,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
               orderCancellationTerms = Nothing,
               orderItems = Nothing,
               orderPayments = Nothing,
-              orderProvider = Utils.tfProvider becknConfig,
+              orderProvider = mbProvider,
               orderQuote = quote,
               orderCreatedAt = Just booking.createdAt,
               orderUpdatedAt = Just booking.updatedAt

@@ -50,7 +50,7 @@ tfOrder isValueAddNP res becknConfig mbFarePolicy = do
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
       orderPayments = tfPayments res becknConfig mbFarePolicy,
-      orderProvider = Utils.tfProvider becknConfig,
+      orderProvider = Utils.tfProvider (Just res.transporter) becknConfig,
       orderQuote = Utils.tfQuotation isValueAddNP res.booking,
       orderTags = Nothing,
       orderStatus = Nothing,
@@ -75,7 +75,7 @@ tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePoli
 tfPayments res bppConfig mbFarePolicy = do
   let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  let basePayment = mkPayment (show res.transporter.city) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing (show <$> res.booking.paymentInstrument)
+  let basePayment = Utils.withBapPaymentStatus res.booking.paymentStatus $ mkPayment (show res.transporter.city) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing (show <$> res.booking.paymentInstrument)
       commissionTagGroup = Utils.mkCommissionTagGroup (mbFarePolicy >>= (.commissionTaxConfig)) res.booking.commission res.booking.cancellationDuesCommission res.booking.cancellationDuesCommissionTaxBreakup res.booking.paymentCharge res.booking.paymentChargeDetails
   Just . L.singleton $ basePayment {Spec.paymentTags = basePayment.paymentTags <> commissionTagGroup}
 

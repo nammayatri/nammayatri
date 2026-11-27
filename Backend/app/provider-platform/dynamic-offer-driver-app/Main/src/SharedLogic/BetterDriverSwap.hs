@@ -122,7 +122,8 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
               initialStatus = DRB.TRIP_ASSIGNED,
               riderId = searchReq.riderId,
               riderName = searchReq.riderName,
-              paymentChargeDetails = oldBooking.paymentChargeDetails
+              paymentChargeDetails = oldBooking.paymentChargeDetails,
+              paymentStatus = oldBooking.paymentStatus -- the rebooked ride keeps what the BAP told us about payment
             }
     mbRiderConsent <- maybe (pure Nothing) (fmap (>>= (.consentToShareMobileNumber)) . QRD.findById) searchReq.riderId
     booking <- (\b -> b {DRB.numberShareConsent = mbRiderConsent}) <$> DInit.buildBooking bArgs searchReq driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now Nothing Nothing (Just driverQuote.distanceToPickup) Nothing searchReq.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData

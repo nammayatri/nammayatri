@@ -32,6 +32,11 @@ updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isPickupOrDestinationEdited isPickupOrDestinationEdited, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePaymentStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updatePaymentStatus paymentStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.paymentStatus paymentStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateRiderCallIdentity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
 updateRiderCallIdentity riderCallIdentity id = do
   _now <- getCurrentTime

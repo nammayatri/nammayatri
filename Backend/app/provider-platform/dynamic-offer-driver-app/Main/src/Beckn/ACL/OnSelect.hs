@@ -79,7 +79,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy mPaymentInstrum
           Spec.orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings (not $ null searchRequest.stops)) fulfillments,
           Spec.orderQuote = Just $ mkQuoteV2 isValueAddNP driverQuote req.now,
           Spec.orderPayments = Just [paymentV2],
-          Spec.orderProvider = mkProvider bppConfig
+          Spec.orderProvider = mkProvider merchant bppConfig
         }
 
 mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
@@ -198,6 +198,6 @@ mkQuotationPrice quote =
         Spec.priceValue = Just $ highPrecMoneyToText quote.estimatedFare
       }
 
-mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-mkProvider becknConfig = do
-  return $ emptyProvider {Spec.providerId = Just $ becknConfig.subscriberId}
+mkProvider :: DM.Merchant -> DBC.BecknConfig -> Maybe Spec.Provider
+mkProvider merchant becknConfig = do
+  return $ emptyProvider {Spec.providerId = Just $ becknConfig.subscriberId, Spec.providerDescriptor = Just $ Utils.mkProviderDescriptor merchant}

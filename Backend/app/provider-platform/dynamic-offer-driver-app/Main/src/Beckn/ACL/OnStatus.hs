@@ -213,7 +213,8 @@ mkOnStatusMessageV2 res mbFarePolicy bppConfig = do
       }
 
 tfOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
-tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
+tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig = do
+  mbProvider <- Utils.tfProviderM becknConfig
   pure
     Spec.Order
       { orderDocuments = Nothing,
@@ -226,7 +227,7 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,
         orderItems = Nothing,
         orderPayments = Nothing,
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = mbProvider,
         orderQuote = Nothing,
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
@@ -258,7 +259,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,
         orderItems = Nothing,
         orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig bookingDetails.paymentMethodInfo,
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider (Just bookingDetails.merchant) becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt

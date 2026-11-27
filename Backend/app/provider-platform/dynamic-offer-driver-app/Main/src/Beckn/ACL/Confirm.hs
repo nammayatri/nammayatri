@@ -67,7 +67,10 @@ buildConfirmReqV2 req isValueAddNP = do
       driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
       customerLanguage = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getCustomerLanguageTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) (Utils.parseAddressWithTag fulfillment.fulfillmentTags Tag.DROP_ADDRESS)
-  let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
+  let mbPayment = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe
+      paymentId = mbPayment >>= (.paymentId)
+      -- Stored as-is and echoed back in later on_* callbacks; Nothing => NOT_PAID.
+      paymentStatus = mbPayment >>= (.paymentStatus)
       orderTags = req.confirmReqMessage.confirmReqMessageOrder.orderTags
       customerDiscountAmount = (Utils.getTag Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
       bookingDepositSecured :: Maybe HighPrecMoney

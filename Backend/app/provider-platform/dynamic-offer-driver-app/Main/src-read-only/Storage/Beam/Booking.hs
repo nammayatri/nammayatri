@@ -91,6 +91,7 @@ data BookingT f = BookingT
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
+    paymentStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     preferenceMatchScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

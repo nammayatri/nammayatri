@@ -94,6 +94,7 @@ data DConfirmReq = DConfirmReq
     customerCallIdentity :: Maybe Text,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
+    paymentStatus :: Maybe Text, -- payment.status as sent by the BAP; echoed back in on_* callbacks
     enableOtpLessRide :: Bool,
     driverPreference :: Maybe [Text],
     customerDiscountAmount :: Maybe HighPrecMoney,
@@ -269,6 +270,7 @@ handler merchant req validatedQuote = do
         whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
+      whenJust req.paymentStatus $ \status -> QRB.updatePaymentStatus (Just status) booking.id
       whenJust req.customerDiscountAmount $ QRB.updateDiscountAmount booking.id
       whenJust req.customerLanguage $ QRB.updateCustomerLanguage booking.id
       when (req.bookingDepositSecured /= booking.bookingDeposit) $

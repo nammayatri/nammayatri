@@ -175,7 +175,7 @@ tfOrder isValueAddNP res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
       orderPayments = tfPayments res bppConfig,
-      orderProvider = Utils.tfProvider bppConfig,
+      orderProvider = Utils.tfProvider (Just res.transporter) bppConfig,
       orderQuote = Utils.tfQuotation isValueAddNP res.booking,
       orderTags = mkBPPInvoiceInfoTagGroup bppInvoiceInfo,
       orderStatus = Just "ACTIVE",
@@ -203,7 +203,7 @@ tfPayments res bppConfig = do
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
       -- Echo the resolved instrument; omitting it lets the far side default to Cash.
       mPaymentInstrument = show <$> res.booking.paymentInstrument
-  Just . L.singleton $ mkPayment (show res.booking.bapCity) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) NOT_PAID mPrice res.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . L.singleton . Utils.withBapPaymentStatus res.booking.paymentStatus $ mkPayment (show res.booking.bapCity) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) NOT_PAID mPrice res.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do
