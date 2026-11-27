@@ -17,7 +17,6 @@
 module Domain.Types.TranslationKeys
   ( TranslationKey (..),
     EarningsLabel (..),
-    FareBreakupAdjustment (..),
     AcUsageMessage (..),
     PushWord (..),
     RcRuleFailure (..),
@@ -66,7 +65,6 @@ data TranslationKey
   | DocumentDecision_Title DMM.MessageKey
   | DocumentDecision_Body DMM.MessageKey
   | Earnings_Label EarningsLabel
-  | FareBreakup_Adjustment FareBreakupAdjustment
   | AcUsage_Message AcUsageMessage
   | RcRule_Failure RcRuleFailure
   | DocumentReason_Text DocumentRejectReason
@@ -110,7 +108,6 @@ instance Show TranslationKey where
     DocumentDecision_Title k -> dotted ["DocumentDecision", "Title", keyName k]
     DocumentDecision_Body k -> dotted ["DocumentDecision", "Body", keyName k]
     Earnings_Label l -> dotted ["Earnings", "Label", keyName l]
-    FareBreakup_Adjustment a -> dotted ["FareBreakup", "Adjustment", keyName a]
     AcUsage_Message m -> dotted ["AcUsage", "Message", keyName m]
     RcRule_Failure f -> dotted ["RcRule", "Failure", keyName f]
     DocumentReason_Text r -> dotted ["DocumentReason", "Text", keyName r]
@@ -149,7 +146,6 @@ instance IsTranslationKey TranslationKey where
         map DocumentDecision_Title documentDecisions,
         map DocumentDecision_Body documentDecisions,
         map Earnings_Label [minBound .. maxBound],
-        map FareBreakup_Adjustment [minBound .. maxBound],
         map AcUsage_Message [minBound .. maxBound],
         map RcRule_Failure [minBound .. maxBound],
         map DocumentReason_Text [minBound .. maxBound],
@@ -186,7 +182,6 @@ instance IsTranslationKey TranslationKey where
     DocumentDecision_Title k -> Just (keyName k <> "_TITLE")
     DocumentDecision_Body k -> Just (keyName k <> "_BODY")
     Earnings_Label l -> Just (earningsLabelText l)
-    FareBreakup_Adjustment _ -> Nothing
     AcUsage_Message Restricted -> Just "AC_RESTRICTION_MESSAGE"
     AcUsage_Message Working -> Just "AC_WORKING_MESSAGE"
     RcRule_Failure f -> Just (keyName f)
@@ -262,6 +257,7 @@ data EarningsLabel
   | CommissionInclTax
   | PaymentChargeInclTax
   | BuyerDiscount
+  | Adjustments
   deriving stock (Show, Eq, Ord, Bounded, Enum)
 
 -- | The legacy row key of each earnings label.
@@ -283,17 +279,7 @@ earningsLabelText = \case
   CommissionInclTax -> "COMMISSION_INCL_TAX"
   PaymentChargeInclTax -> "PAYMENT_CHARGE_INCL_TAX"
   BuyerDiscount -> "BUYER_DISCOUNT"
-
--- | The rows of the adjustments group in the dashboard ride finance info: discounts and commission,
--- which are not fare pieces, so the fare breakup config cannot name them.
-data FareBreakupAdjustment
-  = Adjustments
-  | RideDiscount
-  | RideCommission
-  | PersonalDiscount
-  | BusinessDiscount
-  | NegativeFareAdjustment
-  deriving stock (Show, Eq, Ord, Bounded, Enum)
+  Adjustments -> "ADJUSTMENTS"
 
 -- | The AC-usage note on the driver's vehicle details.
 data AcUsageMessage = Restricted | Working

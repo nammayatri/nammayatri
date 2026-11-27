@@ -98,7 +98,7 @@ domains :: [Domain]
 domains =
   map translationsDomain ["Document", "FleetOwnerDocument"]
     <> [onboardingStageDomain]
-    <> map translationsDomain ["Verification", "ServiceTier", "OnboardingAs", "DocumentDecision", "RcRule", "DocumentReason", "AcUsage", "Coins", "Earnings", "FareBreakup", "PushValue"]
+    <> map translationsDomain ["Verification", "ServiceTier", "OnboardingAs", "DocumentDecision", "RcRule", "DocumentReason", "AcUsage", "Coins", "Earnings", "PushValue"]
     <> [walletDomain, documentFieldDomain, pushDomain, smsDomain]
 
 findDomain :: Text -> Flow Domain

@@ -23,7 +23,6 @@ module Domain.Action.UI.Ride
     StopAction (..),
     listDriverRides,
     getDriverRideById,
-    buildDriverRideResItem,
     resolveCallingNumber,
     effectiveCallingOption,
     mayDialDirectly,
