@@ -441,6 +441,7 @@ library
       Domain.Types.AccessMatrix
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
+      Domain.Types.BoardingOtp
       Domain.Types.Booking.API
       Domain.Types.CacType
       Domain.Types.Common
@@ -617,6 +618,7 @@ library
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.Rails
       SharedLogic.Finance.RidePayment
+      SharedLogic.FRFSBookingWrite
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelEffects
       SharedLogic.FRFSCancelJourney
@@ -695,6 +697,7 @@ library
       SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
+      SharedLogic.Scheduler.Jobs.IssueSharedCabPassTickets
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -765,6 +768,10 @@ library
       SharedLogic.SharedCab.StopProgress.Rules
       SharedLogic.SharedCab.TripClient
       SharedLogic.SharedCab.WalkUp
+      SharedLogic.SharedCabPass
+      SharedLogic.SharedCabPassReschedule
+      SharedLogic.SharedCabPassRules
+      SharedLogic.SharedCabPassSkipDays
       SharedLogic.SharedRoute.Knobs
       SharedLogic.SharedRoute.Manifest
       SharedLogic.SharedRoute.Passenger
@@ -1514,6 +1521,7 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.SharedCabSlotCapacity
       Domain.Types.ShuttleInterest
       Domain.Types.ShuttlePublishedTrip
       Domain.Types.SpecialOccasion
@@ -1696,6 +1704,7 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.SharedCabSlotCapacity
       Storage.Beam.ShuttleInterest
       Storage.Beam.ShuttlePublishedTrip
       Storage.Beam.SpecialOccasion
@@ -1965,6 +1974,7 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.SharedCabSlotCapacity
       Storage.Queries.ShuttleInterest
       Storage.Queries.ShuttlePublishedTrip
       Storage.Queries.SpecialOccasion
@@ -2312,6 +2322,7 @@ test-suite rider-app-test
       SharedCabLockTests
       SharedCabNoShowTests
       SharedCabNotifyTests
+      SharedCabPassRulesTests
       SharedCabRefundPolicyTests
       SharedCabRefundRetryTests
       SharedCabSeatTests

@@ -21,6 +21,7 @@ import qualified ExternalBPP.ExternalAPI.Metro.KMRL.Cancel as Fields
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSBookingWrite as FRFSBookingWrite
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -132,7 +133,7 @@ cancelOrder operator becknConfig mbOperatorConfig integratedBPPConfig req =
             Left err -> throwE (Unprocessable $ "Operator refused to cancel order id " <> orderId <> ": " <> show err)
           lift $ QTicket.updateAllStatusByBookingId DTicketStatus.CANCELLED booking.id
           lift $
-            QBooking.updateByPrimaryKey
+            FRFSBookingWrite.updateBookingKeepingOtp
               booking
                 { DBooking.status = DBookingStatus.CANCELLED,
                   DBooking.customerCancelled = True,

@@ -3,6 +3,7 @@
 
 module Storage.Queries.PurchasedPassPaymentExtra where
 
+import qualified Data.Aeson
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
@@ -182,3 +183,66 @@ updateAvailableTripCountIfLowerById availableTripCount id = do
             ]
         ]
     ]
+
+-- | Shuttle subscription terms of a city that cover the given day: Active or PreBooked, with a slot, startDate <= day <= endDate.
+-- Read by the ticket issue job; paged on id.
+findActiveSharedCabTermsOnDay ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Int ->
+  Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findActiveSharedCabTermsOnDay merchantOperatingCityId day limit mbAfterId =
+  -- Keyset pages (id > the last one seen) rather than offsets: a term leaving the set mid-scan does not shift later
+  -- rows past the reader, so every term still in the set is read exactly once.
+  findAllWithOptionsDb
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.routeId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.startDate $ Se.LessThanOrEq day,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq day
+        ]
+          <> [Se.Is Beam.id $ Se.GreaterThan afterId.getId | Just afterId <- [mbAfterId]]
+    ]
+    (Se.Asc Beam.id)
+    (Just limit)
+    Nothing
+
+-- | Active and pre-booked slotted terms of the city that overlap [fromDay, toDay], keyset paged by id like
+-- 'findActiveSharedCabTermsOnDay'.
+findActiveSharedCabTermsOverlapping ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Day ->
+  Int ->
+  Maybe (Id DPurchasedPassPayment.PurchasedPassPayment) ->
+  m [DPurchasedPassPayment.PurchasedPassPayment]
+findActiveSharedCabTermsOverlapping merchantOperatingCityId fromDay toDay limit mbAfterId =
+  findAllWithOptionsDb
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Is Beam.routeId $ Se.Not $ Se.Eq Nothing,
+          Se.Is Beam.startDate $ Se.LessThanOrEq toDay,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq fromDay
+        ]
+          <> [Se.Is Beam.id $ Se.GreaterThan afterId.getId | Just afterId <- [mbAfterId]]
+    ]
+    (Se.Asc Beam.id)
+    (Just limit)
+    Nothing
+
+-- | A reschedule's slot change and its un-skip of the day, in one row update, so the day cannot end up moved but still
+-- skipped (or the reverse) when one of two separate writes fails.
+updateSlotChangesAndSkipDaysById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DPurchasedPassPayment.SlotChange] -> [DPurchasedPassPayment.SkipDay] -> Id DPurchasedPassPayment.PurchasedPassPayment -> m ()
+updateSlotChangesAndSkipDaysById slotChanges skipDays id = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.slotChanges (Just (Data.Aeson.toJSON slotChanges)),
+      Se.Set Beam.skipDays (Just (Data.Aeson.toJSON skipDays)),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId id)]

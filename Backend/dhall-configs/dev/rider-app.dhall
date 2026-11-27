@@ -337,6 +337,7 @@ let RiderJobType =
       | SharedCabSessionExpiry
       | SharedCabDegradedSweep
       | SendRideInvoiceEmail
+      | IssueSharedCabPassTickets
       >
 
 let jobRetryOnExceptionMapx =
@@ -387,6 +388,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.UpdateCRISRDSBalance, mapValue = True }
       , { mapKey = RiderJobType.FRFSSeatHoldReaper, mapValue = True }
       , { mapKey = RiderJobType.DailyPassStatusUpdate, mapValue = True }
+      , { mapKey = RiderJobType.IssueSharedCabPassTickets, mapValue = True }
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }

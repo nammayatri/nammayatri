@@ -55,6 +55,7 @@ data JobName
   | PassExpiryReminderMasterTrigger
   | CashRideCashbackPayoutTrigger
   | SendLegalPolicyNotificationTrigger
+  | IssueSharedCabPassTicketsTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

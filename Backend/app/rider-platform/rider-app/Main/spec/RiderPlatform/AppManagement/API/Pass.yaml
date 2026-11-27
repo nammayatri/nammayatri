@@ -246,6 +246,16 @@ types:
     refund: Maybe Bool
     derive: "'HideSecrets"
 
+  # Shuttle subscription: seats on one timetable trip (slot). Riders can reschedule a day onto a slot only while it has room.
+  SharedCabSlotCapacityItem:
+    routeId: Text
+    capacity: Int
+
+  SharedCabSlotCapacityUpsertReq:
+    routeId: Text
+    capacity: Int
+    derive: "'HideSecrets"
+
 apis:
   - GET:
       endpoint: /customer/{customerId}/availablePasses
@@ -525,3 +535,23 @@ apis:
         type: PurchasedPassPaymentTripsResp
       migrate:
         capability: city-operations.pass.execute
+
+  - GET:
+      endpoint: /sharedCabSlotCapacity/list
+      name: ListSharedCabSlotCapacity
+      auth: ApiAuthV2
+      response:
+        type: "[SharedCabSlotCapacityItem]"
+      migrate:
+        capability: city-operations.pass.read
+
+  - POST:
+      endpoint: /sharedCabSlotCapacity/upsert
+      name: UpsertSharedCabSlotCapacity
+      auth: ApiAuthV2
+      request:
+        type: SharedCabSlotCapacityUpsertReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.pass.write

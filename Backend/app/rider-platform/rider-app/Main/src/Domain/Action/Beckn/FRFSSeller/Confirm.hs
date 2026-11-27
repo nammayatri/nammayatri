@@ -31,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSBookingWrite as FRFSBookingWrite
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common
 import qualified SharedLogic.FRFSSeller.QuoteStore as QuoteStore
@@ -254,7 +255,7 @@ issue operator transactionId bookingSearchId merchant becknConfig req order mbEx
       booking = mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPPConfig becknConfig quote journeyType account paymentTxnId ondcOrderId unitPrice requestedQuantity validTill now
       quoteCategories = [mkQuoteCategory bookingId merchant merchantOperatingCity quote unitPrice requestedQuantity now]
 
-  lift (maybe (QBooking.create booking) (const (QBooking.updateByPrimaryKey booking)) mbExisting)
+  lift (maybe (QBooking.create booking) (const (FRFSBookingWrite.updateBookingKeepingOtp booking)) mbExisting)
   existingCategories <- lift (QQuoteCategory.findAllByQuoteIds [Id bookingId.getId])
   lift $
     forM_ quoteCategories $ \category ->
@@ -307,7 +308,7 @@ issue operator transactionId bookingSearchId merchant becknConfig req order mbEx
           { DBooking.status = DBookingStatus.CONFIRMED,
             DBooking.totalPrice = booking.totalPrice{amount = realToFrac issuedTotal, amountInt = round issuedTotal}
           }
-  lift (QBooking.updateByPrimaryKey confirmedBooking)
+  lift (FRFSBookingWrite.updateBookingKeepingOtp confirmedBooking)
   lift (QRecon.create (mkRecon confirmedBooking merchant merchantOperatingCity becknConfig account bapId ondcOrderId paymentTxnId (length tickets) now))
   republish operator becknConfig integratedBPPConfig.operatorConfig order.orderBilling confirmedBooking tickets
 
@@ -493,6 +494,7 @@ mkBooking bookingId bookingSearchId merchant merchantOperatingCity integratedBPP
       sharedCabNoShows = 0,
       vehicleTripId = Nothing,
       rideId = Nothing,
+      boardingOtp = Nothing,
       _type = journeyType.quoteType,
       bookingAuthCode = Nothing,
       bppBankAccountNumber = Just account.bankAccountNumber,

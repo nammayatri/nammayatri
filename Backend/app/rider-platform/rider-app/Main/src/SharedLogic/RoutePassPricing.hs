@@ -5,6 +5,7 @@ module SharedLogic.RoutePassPricing
     resolveRoutePassTerm,
     resolveValidityDays,
     normaliseStopCode,
+    validateSlotRoute,
   )
 where
 
@@ -25,9 +26,12 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
 import qualified SharedLogic.FRFSUtils as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCabPassRules as SharedCabPassRules
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error (PassError (..))
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -49,7 +53,9 @@ data PassPurchaseSelection = PassPurchaseSelection
     destinationStopCode :: Maybe Text,
     tripCount :: Maybe Int,
     validityDays :: Maybe Int,
-    roundTrip :: Maybe Bool
+    roundTrip :: Maybe Bool,
+    -- Shared cab subscription: the slot route this term rides daily (one route per departure time).
+    routeId :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -64,7 +70,8 @@ data RoutePassTerm = RoutePassTerm
     perTripAmount :: HighPrecMoney,
     amount :: HighPrecMoney,
     originalAmount :: HighPrecMoney,
-    overrideConfig :: OverrideBenefitConfig
+    overrideConfig :: OverrideBenefitConfig,
+    routeId :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -88,6 +95,7 @@ resolveRoutePassTerm person pass config selection = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing pass.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory pass.vehicleType) DIBC.MULTIMODAL
   void $ normaliseStopCode integratedBPPConfig sourceStopCode
   void $ normaliseStopCode integratedBPPConfig destinationStopCode
+  whenJust selection.routeId $ validateSlotRoute integratedBPPConfig sourceStopCode destinationStopCode
   let serviceTier = config.pricing.primaryServiceTier
   referenceFare <- passReferenceFare person pass integratedBPPConfig serviceTier sourceStopCode destinationStopCode
   let perTripAmount = roundToUnits (max 0 (referenceFare - pricingSaving config.pricing referenceFare))
@@ -117,8 +125,28 @@ resolveRoutePassTerm person pass config selection = do
         perTripAmount,
         amount = perTripAmount * fromIntegral tripCount,
         originalAmount = referenceFare * fromIntegral tripCount,
-        overrideConfig = OverrideBenefitConfig [PassTicketBenefit PassTicketBenefitConfig {pricing = config.pricing, benefit = soldBenefit}]
+        overrideConfig = OverrideBenefitConfig [PassTicketBenefit PassTicketBenefitConfig {pricing = config.pricing, benefit = soldBenefit}],
+        routeId = selection.routeId
       }
+
+-- | The slot route must call at the pickup and then, later on, at the drop. Each departure time is its own route
+-- (A-B 7:30 and A-B 8:30 have different route ids), so the route's one trip is the slot. Stops match through their
+-- platforms, since a trip's stops are keyed by the platform it calls at.
+validateSlotRoute ::
+  RoutePassFlow m r c =>
+  DIBC.IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+validateSlotRoute integratedBPPConfig sourceStopCode destinationStopCode routeId = do
+  trip <- OTPRest.getExampleTrip integratedBPPConfig routeId >>= fromMaybeM (InvalidRequest $ "Unknown slot route: " <> routeId)
+  sourceCodes <- OTPRest.getEquivalentStopCodes sourceStopCode integratedBPPConfig
+  destinationCodes <- OTPRest.getEquivalentStopCodes destinationStopCode integratedBPPConfig
+  -- A stop may occur more than once in a trip; every occurrence counts.
+  let positionsOf codes = [stop.stopPosition | (stop :: NandiTypes.TripStopDetail) <- trip.stops, stop.stopCode `elem` codes]
+  unless (SharedCabPassRules.servesInOrder (positionsOf sourceCodes) (positionsOf destinationCodes)) $
+    throwError (InvalidRequest "The selected slot route does not run from sourceStopCode to destinationStopCode")
 
 resolveTripCount :: MonadFlow m => PassTicketBenefitConfig -> Maybe Int -> m Int
 resolveTripCount config mbRequested

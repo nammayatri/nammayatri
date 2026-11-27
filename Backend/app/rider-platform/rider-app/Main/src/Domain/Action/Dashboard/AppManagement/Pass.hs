@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.AppManagement.Pass
     getPurchasedPassPaymentTrips,
     adjustPurchasedPassPaymentTrips,
     terminatePurchasedPassPayment,
+    listSharedCabSlotCapacity,
+    upsertSharedCabSlotCapacity,
   )
 where
 
@@ -43,6 +45,7 @@ import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
+import qualified Domain.Types.SharedCabSlotCapacity as DSharedCabSlotCapacity
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Common.UI.Issue as IssueCommon
@@ -76,6 +79,7 @@ import qualified Storage.Queries.PassType as QPassType
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Storage.Queries.SharedCabSlotCapacity as QSharedCabSlotCapacity
 import Tools.Error
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Lang.Language -> Environment.Flow [API.Types.UI.Pass.PassInfoAPIEntity])
@@ -615,3 +619,40 @@ mkPassCategoryItem category =
       order = category.order,
       enable = DPass.isEnabledCategory category
     }
+
+listSharedCabSlotCapacity :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityItem]
+listSharedCabSlotCapacity merchantShortId opCity = do
+  merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
+  rows <- QSharedCabSlotCapacity.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  pure [API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityItem {routeId = row.routeId, capacity = row.capacity} | row <- rows]
+
+-- | Sets a slot's seats in the city, creating its row the first time. Lowering it below the riders already on a day
+-- does not move anyone; it only stops further reschedules (and unskips) onto that slot until seats free up.
+upsertSharedCabSlotCapacity :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.SharedCabSlotCapacityUpsertReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+upsertSharedCabSlotCapacity merchantShortId opCity req = do
+  let routeId = T.strip req.routeId
+  when (T.null routeId) $ throwError (InvalidRequest "routeId is required")
+  unless (req.capacity >= 0 && req.capacity <= 1000) $ throwError (InvalidRequest "capacity must be between 0 and 1000")
+  merchantOperatingCity <- DPass.findMerchantOperatingCity merchantShortId opCity
+  -- One row per (city, route): the lock keeps two concurrent first upserts from creating two.
+  let lockKey = "SharedCabSlotCapacity:upsert:" <> merchantOperatingCity.id.getId <> ":" <> routeId
+  Redis.whenWithLockRedisAndReturnValue lockKey 30 (upsert merchantOperatingCity routeId) >>= \case
+    Left _ -> throwError (InvalidRequest "This slot is being updated, please try again")
+    Right () -> pure Kernel.Types.APISuccess.Success
+  where
+    upsert merchantOperatingCity routeId =
+      QSharedCabSlotCapacity.findByRouteIdAndMerchantOperatingCityId routeId merchantOperatingCity.id >>= \case
+        Just row -> QSharedCabSlotCapacity.updateCapacityById req.capacity row.id
+        Nothing -> do
+          id <- generateGUID
+          now <- getCurrentTime
+          QSharedCabSlotCapacity.create
+            DSharedCabSlotCapacity.SharedCabSlotCapacity
+              { id,
+                routeId,
+                capacity = req.capacity,
+                merchantId = merchantOperatingCity.merchantId,
+                merchantOperatingCityId = merchantOperatingCity.id,
+                createdAt = now,
+                updatedAt = now
+              }

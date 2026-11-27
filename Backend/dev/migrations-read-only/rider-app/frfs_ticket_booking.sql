@@ -276,3 +276,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ride_id character varying(3
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN settleable_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN boarding_otp character(4) ;
+CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_override_applied_entity_id_start_time ON atlas_app.frfs_ticket_booking USING btree (override_applied_entity_id, start_time);

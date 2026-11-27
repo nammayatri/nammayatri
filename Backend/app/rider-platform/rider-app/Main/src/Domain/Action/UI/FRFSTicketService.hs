@@ -1244,7 +1244,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         latestBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId latestBooking.quoteId
         buildFRFSTicketBookingStatusAPIRes latestBooking quoteCategories Nothing
-  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes) booking person (\_ _ -> pure ())
+  withOwnerBoardingOtp personId booking
+    =<< frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes) booking person (\_ _ -> pure ())
   where
     withPaymentStatusResponseHandler ::
       ( EncFlow m r,
@@ -2157,7 +2158,7 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
                   bookingId = booking.id,
                   checkedIn = isCheckedIn,
                   quantity = bookingQuantity,
-                  hasOtp = manifestHasOtp,
+                  hasOtp = manifestHasOtp && isJust booking.boardingOtp,
                   state = SharedRoutePassenger.passengerStateOf booking frfsTickets <$ mbSharedKnobs
                 }
         pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)

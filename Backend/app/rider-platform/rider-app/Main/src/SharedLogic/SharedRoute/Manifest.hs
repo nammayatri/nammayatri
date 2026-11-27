@@ -18,7 +18,7 @@
 -- and a @start_time@ inside 'runTicketWindow' ('onRun'). A feed is every integrated_bpp_config row of it (one per
 -- platform type, sharing the agency key), since a ticket may carry any of them. @ride_id@ is not read. Nothing here is a new state:
 -- a board flips the booking's tickets to INPROGRESS, a drop to USED, a no-show counts on the booking, exactly the
--- transitions the shared cab uses, and 'passengerStateOf' reads them back. The driver platform reads and acts on them
+-- transitions the shared cab uses, and 'passengerStateOf' reads them back. A drop that leaves nothing to board ends the journey. The driver platform reads and acts on them
 -- through the shared cab's session and booking-operation endpoints.
 module SharedLogic.SharedRoute.Manifest
   ( RunPassenger (..),
@@ -36,6 +36,8 @@ import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.Journey as DJourney
+import Domain.Types.SharedRoute (SharedDemandKnobs (..), SharedPassengerState)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.SharedRoute (RunRef (..), SharedDemandKnobs (..), SharedPassengerState, runTicketWindow, ticketOnRun)
 import qualified Environment
@@ -43,6 +45,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.FRFSCancelJourney (endJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedRoute.Knobs as Knobs
 import SharedLogic.SharedRoute.Passenger (passengerStateOf)
@@ -122,9 +125,13 @@ applyRunAction feedConfigIds ref booking action vehicleNumber = do
       | otherwise -> QFRFSTicketBooking.updateSharedCabNoShowsById (booking.sharedCabNoShows + 1) booking.id
     Drop
       | not boarded -> throwError (InvalidRequest $ "booking " <> booking.id.getId <> " has not boarded")
-      | otherwise ->
+      | otherwise -> do
         forM_ (filter ((== DFRFSTicketStatus.INPROGRESS) . (.status)) tickets) $ \ticket ->
           QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicketStatus.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+        -- the ride is over once no ticket is left to board: end the rider's journey. A failure reaches the driver's call,
+        -- which can repeat the drop: the tickets are USED by then, so the repeat passes the boarded guard and ends it again.
+        unless (DFRFSTicketStatus.ACTIVE `elem` statuses) $
+          endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId
   where
     board tickets = do
       forM_ (filter ((== DFRFSTicketStatus.ACTIVE) . (.status)) tickets) $ \ticket ->
