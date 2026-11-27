@@ -13,6 +13,8 @@ imports:
   PermitUndertakingOtpRes: Lib.Permit.Api.Types
   PermitSubmitReq: Lib.Permit.Api.Types
   PermitPassRes: Lib.Permit.Api.Types
+  PermitLimitsRes: Lib.Permit.Api.Types
+  Day: Data.Time
   APISuccess: Kernel.Types.APISuccess
 
 module: Permit
@@ -47,6 +49,18 @@ apis:
         x-permit-token: Text
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /permit/limits
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      mandatoryQuery:
+        permitType: PermitType
+      query:
+        - travelDate: Day
+      response:
+        type: PermitLimitsRes
 
   - GET:
       endpoint: /permit/application/list

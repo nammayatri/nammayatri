@@ -73,3 +73,22 @@ data PicnicDetails = PicnicDetails
     passengerNames :: [Text]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The limits a form needs to point out a broken rule while it is being filled in.
+-- The server still applies every rule itself.
+data PicnicLimits = PicnicLimits
+  { earliestTravelDate :: Day,
+    -- | Departure must not be before this instant (the seven days' notice).
+    earliestDepartureAt :: UTCTime,
+    earliestDepartureTime :: Text,
+    -- | Latest time to be home on the travel date asked about.
+    latestReturnTime :: Maybe Text,
+    standardDriveMinutes :: Int,
+    maxDriveMinutes :: Int,
+    -- | This many challans on record, or more, blocks approval.
+    blockingChallanCount :: Int,
+    excludedVehicleCategories :: [PicnicVehicleCategory],
+    -- | Whether the driver and any handyman count against the seats.
+    crewTakesSeats :: Bool
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

@@ -7,6 +7,7 @@ module API.Action.UI.Permit
   )
 where
 
+import qualified Data.Time
 import qualified Domain.Action.UI.Permit
 import qualified Environment
 import EulerHS.Prelude
@@ -45,6 +46,20 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> "permit"
+      :> "limits"
+      :> QueryParam
+           "travelDate"
+           Data.Time.Day
+      :> MandatoryQueryParam
+           "permitType"
+           Lib.Permit.Types.PermitType
+      :> Header
+           "x-permit-token"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Lib.Permit.Api.Types.PermitLimitsRes
       :<|> "permit"
       :> "application"
       :> "list"
@@ -162,7 +177,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postPermitAuthOtp :<|> postPermitAuthVerify :<|> postPermitAuthLogout :<|> getPermitApplicationList :<|> postPermitApplication :<|> putPermitApplication :<|> getPermitApplication :<|> postPermitApplicationDocument :<|> postPermitApplicationUndertakingOtp :<|> postPermitApplicationSubmit :<|> postPermitApplicationWithdraw :<|> getPermitApplicationPass
+handler = postPermitAuthOtp :<|> postPermitAuthVerify :<|> postPermitAuthLogout :<|> getPermitLimits :<|> getPermitApplicationList :<|> postPermitApplication :<|> putPermitApplication :<|> getPermitApplication :<|> postPermitApplicationDocument :<|> postPermitApplicationUndertakingOtp :<|> postPermitApplicationSubmit :<|> postPermitApplicationWithdraw :<|> getPermitApplicationPass
 
 postPermitAuthOtp :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Permit.Api.Types.PermitAuthOtpReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPermitAuthOtp a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Permit.postPermitAuthOtp a2 a1
@@ -172,6 +187,9 @@ postPermitAuthVerify a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActo
 
 postPermitAuthLogout :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPermitAuthLogout a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Permit.postPermitAuthLogout a1
+
+getPermitLimits :: (Kernel.Prelude.Maybe Data.Time.Day -> Lib.Permit.Types.PermitType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Lib.Permit.Api.Types.PermitLimitsRes)
+getPermitLimits a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Permit.getPermitLimits a3 a2 a1
 
 getPermitApplicationList :: (Lib.Permit.Types.PermitType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Lib.Permit.Api.Types.PermitApplicationListRes)
 getPermitApplicationList a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Permit.getPermitApplicationList a2 a1

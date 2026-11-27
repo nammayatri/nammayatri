@@ -4,6 +4,7 @@ module Domain.Action.UI.Permit
   ( postPermitAuthOtp,
     postPermitAuthVerify,
     postPermitAuthLogout,
+    getPermitLimits,
     getPermitApplicationList,
     postPermitApplication,
     putPermitApplication,
@@ -17,6 +18,7 @@ module Domain.Action.UI.Permit
 where
 
 import qualified Data.Text as T
+import Data.Time (Day)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Environment (Flow)
@@ -64,6 +66,11 @@ postPermitAuthLogout :: Maybe Text -> Flow APISuccess
 postPermitAuthLogout mbToken = do
   PermitAuth.logout mbToken
   pure Success
+
+getPermitLimits :: Maybe Day -> PermitType -> Maybe Text -> Flow PermitLimitsRes
+getPermitLimits mbTravelDate permitType mbToken = do
+  _ <- PermitAuth.authenticate mbToken
+  Permit.getLimits permitType mbTravelDate
 
 getPermitApplicationList :: PermitType -> Maybe Text -> Flow PermitApplicationListRes
 getPermitApplicationList permitType mbToken = do

@@ -205,8 +205,16 @@ data PermitMyApplicationRes = PermitMyApplicationRes
     details :: PermitDetails,
     documents :: [PermitDocumentInfo],
     requiredDocuments :: [PermitDocumentType],
+    -- | For a draft: everything that currently stops submission. Otherwise empty.
+    ruleFailures :: [RuleFailure],
     decisionReason :: Maybe Text,
     decidedAt :: Maybe UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- | One optional field per permit type, like 'PermitDetails'.
+newtype PermitLimitsRes = PermitLimitsRes
+  { picnic :: Maybe PicnicLimits
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

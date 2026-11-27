@@ -192,6 +192,14 @@ def citizen_checks():
     status, response = call("GET", "/ui/permit/application/list?permitType=" + PICNIC_TYPE, headers={"x-permit-token": "not-a-token"})
     check("an unknown permit token is refused", status in (400, 401), (status, response))
 
+    status, limits = call("GET", "/ui/permit/limits?permitType=%s&travelDate=%s" % (PICNIC_TYPE, travel), headers=citizen)
+    week_ahead = (datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30, days=7)).date().isoformat()
+    day_after = (datetime.date.fromisoformat(week_ahead) + datetime.timedelta(days=1)).isoformat()
+    check("the limits give the earliest travel date and that day's return deadline",
+          status == 200 and limits["picnic"]["earliestTravelDate"] in (week_ahead, day_after) and len(limits["picnic"]["latestReturnTime"]) == 5, (status, limits))
+    status, response = call("GET", "/ui/permit/limits?permitType=" + PICNIC_TYPE, headers={"x-permit-token": "not-a-token"})
+    check("the limits need a signed-in citizen", status == 401, (status, response))
+
     bad = picnic(travel, registration, licence)
     bad["picnic"]["departureTime"] = "7:30"
     status, response = create(citizen, bad)
@@ -210,6 +218,8 @@ def citizen_checks():
     codes = [f["code"] for f in (response or {}).get("ruleFailures", [])] if status == 200 else []
     check("missing photos block the undertaking OTPs", status == 200 and not response["otpSent"] and "DOCUMENT_MISSING" in codes, (status, response))
 
+    status, fresh = call("GET", "/ui/permit/application/%s" % application_id, headers=citizen)
+    check("a draft already says what stops submission", status == 200 and "DOCUMENT_MISSING" in [x["code"] for x in fresh["ruleFailures"]], (status, fresh))
     status, response = upload(citizen, application_id, "RC", valid_until, PDF)
     check("a PDF is refused even when labelled as an image", status == 400, (status, response))
     status, response = upload(citizen, application_id, "RC", valid_until, base64.b64encode(b"x" * (5 * 1024 * 1024 + 10)).decode())

@@ -224,6 +224,27 @@ main = hspec $ do
     it "leaves no photo behind when both change" $
       length (documentsInvalidatedBy True True) `shouldBe` 9
 
+  describe "limits sent to the form" $ do
+    let limits = picnicLimits (ist (fromGregorian 2026 11 27) 20 30) (Just winterDay)
+        firstDateFrom hour minute = (picnicLimits (ist (fromGregorian 2026 11 27) hour minute) Nothing).earliestTravelDate
+    it "gives the day the notice ends when a trip can still be made that day" $ do
+      firstDateFrom 0 5 `shouldBe` fromGregorian 2026 12 4
+      firstDateFrom 9 0 `shouldBe` fromGregorian 2026 12 4
+    it "moves to the next day once no trip fits before the deadline" $ do
+      firstDateFrom 20 30 `shouldBe` fromGregorian 2026 12 5
+      limits.earliestTravelDate `shouldBe` fromGregorian 2026 12 5
+    it "changes day exactly when the last possible departure is gone" $ do
+      let deadline = returnDeadline (fromGregorian 2026 12 4)
+          minutesBefore back = let total = minutes deadline - back in firstDateFrom (total `div` 60) (total `mod` 60)
+      minutesBefore 3 `shouldBe` fromGregorian 2026 12 4
+      minutesBefore 2 `shouldBe` fromGregorian 2026 12 5
+    it "gives the exact instant the notice ends" $
+      limits.earliestDepartureAt `shouldBe` ist (fromGregorian 2026 12 4) 20 30
+    it "gives the same return deadline the rules apply" $
+      limits.latestReturnTime `shouldBe` Just (formatClock (returnDeadline winterDay))
+    it "gives no deadline until a date is chosen" $
+      (picnicLimits longBefore Nothing).latestReturnTime `shouldBe` Nothing
+
   describe "form checks" $ do
     it "refuses a time that is not HH:MM" $
       codes (checkForm trip {departureTime = "7:30"}) `shouldBe` ["FORM_INVALID"]

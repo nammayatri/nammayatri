@@ -6,6 +6,7 @@ module Lib.Permit.Picnic.Rules
     approvalLevelFor,
     requiredDocuments,
     documentsInvalidatedBy,
+    picnicLimits,
     returnDeadline,
     departureInstant,
     returnInstant,
@@ -22,7 +23,7 @@ where
 
 import qualified Data.Char as Char
 import qualified Data.Text as T
-import Data.Time (Day, TimeOfDay (..), UTCTime (..), addUTCTime, diffUTCTime, timeOfDayToTime, timeToTimeOfDay)
+import Data.Time (Day, TimeOfDay (..), UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, timeToTimeOfDay)
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -195,11 +196,15 @@ checkDistance details =
     | details.driveMinutes > dcDriveMinutes
   ]
 
+-- | SOP §1.
+excludedCategories :: [PicnicVehicleCategory]
+excludedCategories = [GOODS, TRUCK, TRACTOR, TRAILER]
+
 checkVehicle :: PicnicDetails -> [RuleFailure]
 checkVehicle details =
   concat
     [ [ failure "EXCLUDED_VEHICLE" "§1" "Goods vehicles, trucks, tractors and trailers cannot carry picnic passengers."
-        | details.vehicle.category `elem` [GOODS, TRUCK, TRACTOR, TRAILER]
+        | details.vehicle.category `elem` excludedCategories
       ],
       [ failure "OVER_CAPACITY" "§2" (show load <> " people counted against a registered seating capacity of " <> show details.vehicle.seatingCapacity <> ".")
         | load > details.vehicle.seatingCapacity
@@ -265,6 +270,34 @@ checkApproval now details facts =
     <> [ failure "DEPARTURE_PASSED" "§2" "The departure time has passed; this trip cannot be approved."
          | maybe True (<= now) (departureInstant details)
        ]
+
+-- | The first date on which a trip can still leave after the notice ends and be home
+-- by that day's deadline. Late in the day this is the day after the notice ends.
+firstTravelDate :: UTCTime -> Day
+firstTravelDate noticeEnds
+  | firstDeparture + shortestTripMinutes <= minutesOfDay (returnDeadline day) = day
+  | otherwise = addDays 1 day
+  where
+    (day, noticeTime) = istParts noticeEnds
+    -- Departure is typed to the minute, so it is the first whole minute after the notice.
+    firstDeparture = max (minutesOfDay earliestDeparture) (minutesOfDay noticeTime + 1)
+    -- One minute of driving each way, the least the form accepts.
+    shortestTripMinutes = 2
+
+picnicLimits :: UTCTime -> Maybe Day -> PicnicLimits
+picnicLimits now mbTravelDate =
+  let noticeEnds = addUTCTime (fromIntegral leadTimeSeconds) now
+   in PicnicLimits
+        { earliestTravelDate = firstTravelDate noticeEnds,
+          earliestDepartureAt = noticeEnds,
+          earliestDepartureTime = formatClock earliestDeparture,
+          latestReturnTime = formatClock . returnDeadline <$> mbTravelDate,
+          standardDriveMinutes = normalDriveMinutes,
+          maxDriveMinutes = dcDriveMinutes,
+          blockingChallanCount = challanBlockCount,
+          excludedVehicleCategories = excludedCategories,
+          crewTakesSeats = crewCountsTowardCapacity
+        }
 
 data ScanInput = ScanInput
   { now :: UTCTime,

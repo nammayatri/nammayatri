@@ -1,6 +1,7 @@
 -- | What a signed-in citizen can do with their own applications.
 module Lib.Permit.Application
-  ( listMine,
+  ( getLimits,
+    listMine,
     createDraft,
     updateDraft,
     getMine,
@@ -91,6 +92,12 @@ derive details = do
         primaryConflictHash = sha256Hex (Picnic.normaliseIdentifier details.vehicle.registrationNo),
         secondaryConflictHash = sha256Hex (Picnic.normaliseIdentifier details.driver.licenceNo)
       }
+
+getLimits :: (BeamFlow m r) => PermitType -> Maybe Day -> m PermitLimitsRes
+getLimits permitType mbDate = do
+  now <- getCurrentTime
+  pure $ case permitType of
+    PICNIC -> PermitLimitsRes {picnic = Just (Picnic.picnicLimits now mbDate)}
 
 listMine :: (BeamFlow m r, EncFlow m r) => PermitSession -> PermitType -> m PermitApplicationListRes
 listMine session wantedType = do
@@ -191,6 +198,10 @@ getMine session applicationId = do
   application <- findOwned session applicationId
   (_, details) <- loadDetails application
   documents <- findDocuments applicationId
+  draftFailures <-
+    if application.status == DRAFT
+      then (\(_, failures, _) -> failures) <$> submissionState application
+      else pure []
   pure
     PermitMyApplicationRes
       { applicationId,
@@ -201,6 +212,7 @@ getMine session applicationId = do
         details = PermitDetails {picnic = Just details},
         documents = map documentInfo documents,
         requiredDocuments = Picnic.requiredDocuments details.vehicle,
+        ruleFailures = draftFailures,
         decisionReason = application.decisionReason,
         decidedAt = application.decidedAt
       }
