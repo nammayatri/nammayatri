@@ -140,6 +140,7 @@ dependencies:
   - config-pilot
   - behavior-tracker
   - incentive-journey
+  - permit
   - behavior-engine
   - consequence-engine
   - communication-engine

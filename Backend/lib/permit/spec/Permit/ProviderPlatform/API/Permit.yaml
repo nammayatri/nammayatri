@@ -1,0 +1,105 @@
+imports:
+  PermitApplication: Lib.Permit.Domain.Types.PermitApplication
+  PermitType: Lib.Permit.Types
+  PermitStatus: Lib.Permit.Domain.Types.PermitApplication
+  PermitDocumentType: Lib.Permit.Domain.Types.PermitApplicationDocument
+  PermitApplicationListRes: Lib.Permit.Api.Types
+  PermitApplicationDetailsRes: Lib.Permit.Api.Types
+  PermitDocumentRes: Lib.Permit.Api.Types
+  PermitDecisionReq: Lib.Permit.Api.Types
+  PermitVerifyPassReq: Lib.Permit.Api.Types
+  PermitVerifyPassRes: Lib.Permit.Api.Types
+  Day: Data.Time
+
+module: Permit
+
+types: {}
+
+# Generic permit APIs. A capability applies to an endpoint, not to a permit type:
+# decide per-type access before a second PermitType is added.
+apis:
+  - GET:
+      endpoint: /application/list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        permitType: PermitType
+      query:
+        - status: PermitStatus
+        - permitDate: Day
+        - limit: Int
+        - offset: Int
+      response:
+        type: PermitApplicationListRes
+      migrate:
+        capability: permit.application.read
+
+  - GET:
+      endpoint: /application/{applicationId}
+      auth: ApiAuthV2
+      params:
+        applicationId: Id PermitApplication
+      response:
+        type: PermitApplicationDetailsRes
+      migrate:
+        capability: permit.application.read
+
+  - GET:
+      endpoint: /application/{applicationId}/document/{documentType}
+      auth: ApiAuthV2
+      params:
+        applicationId: Id PermitApplication
+        documentType: PermitDocumentType
+      response:
+        type: PermitDocumentRes
+      migrate:
+        capability: permit.application.read
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+
+  - POST:
+      endpoint: /application/{applicationId}/decision
+      auth: ApiAuthV2
+      params:
+        applicationId: Id PermitApplication
+      request:
+        type: PermitDecisionReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: permit.application.decide
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+
+  - POST:
+      endpoint: /application/{applicationId}/dcDecision
+      auth: ApiAuthV2
+      params:
+        applicationId: Id PermitApplication
+      request:
+        type: PermitDecisionReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: permit.application.dc_decide
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+
+  - POST:
+      endpoint: /pass/verify
+      auth: ApiAuthV2
+      request:
+        type: PermitVerifyPassReq
+      response:
+        type: PermitVerifyPassRes
+      migrate:
+        capability: permit.pass.verify
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text

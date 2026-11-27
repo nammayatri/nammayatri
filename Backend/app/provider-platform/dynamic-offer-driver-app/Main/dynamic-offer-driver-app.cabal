@@ -280,6 +280,7 @@ library
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
       Domain.Action.Dashboard.PayoutRequest
+      Domain.Action.Dashboard.Permit.Permit
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration
@@ -430,6 +431,7 @@ library
       Domain.Action.UI.Payout
       Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
+      Domain.Action.UI.Permit
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyContact
       Domain.Action.UI.PickupInstructions
@@ -739,6 +741,7 @@ library
       SharedLogic.ParkingFeeExemption
       SharedLogic.Payment
       SharedLogic.PayoutStatusCheck
+      SharedLogic.Permit
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.PersonDefaultEmergencyNumber
@@ -802,6 +805,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.MerchantDocument
       Storage.Beam.Payment
+      Storage.Beam.Permit
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
@@ -1302,6 +1306,8 @@ library
       API.Action.DashboardAuth.Operator.Driver
       API.Action.DashboardAuth.Operator.FleetManagement
       API.Action.DashboardAuth.Operator.Registration
+      API.Action.DashboardAuth.Permit
+      API.Action.DashboardAuth.Permit.Permit
       API.Action.DashboardAuth.RideBooking
       API.Action.DashboardAuth.RideBooking.Driver
       API.Action.DashboardAuth.RideBooking.DriverRegistration
@@ -1341,6 +1347,7 @@ library
       API.Action.UI.Operator
       API.Action.UI.PayoutDriverStatus
       API.Action.UI.Penalty
+      API.Action.UI.Permit
       API.Action.UI.PersonDefaultEmergencyContact
       API.Action.UI.PickupInstructions
       API.Action.UI.PolicyDocument
@@ -2353,6 +2360,7 @@ library
     , passetto-client
     , passetto-lib
     , payment
+    , permit
     , persistent
     , postgresql-simple
     , prometheus-client
@@ -2502,6 +2510,7 @@ executable dynamic-offer-driver-app-exe
     , openapi3
     , passetto-client
     , passetto-lib
+    , permit
     , persistent
     , postgresql-simple
     , prometheus-client

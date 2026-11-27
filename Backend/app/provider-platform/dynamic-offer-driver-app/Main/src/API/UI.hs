@@ -50,6 +50,7 @@ import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
+import qualified API.Action.UI.Permit as CitizenPermit
 import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PolicyDocument as PolicyDocument
@@ -160,6 +161,7 @@ type API =
            :<|> DriverCoins.API
            :<|> DriverIncentiveCoins.API
            :<|> IncentiveJourney.API
+           :<|> CitizenPermit.API
            :<|> RideSummary.API
            :<|> City.API
            :<|> LmsModule.API
@@ -247,6 +249,7 @@ handler =
     :<|> DriverCoins.handler
     :<|> DriverIncentiveCoins.handler
     :<|> IncentiveJourney.handler
+    :<|> CitizenPermit.handler
     :<|> RideSummary.handler
     :<|> City.handler
     :<|> LmsModule.handler

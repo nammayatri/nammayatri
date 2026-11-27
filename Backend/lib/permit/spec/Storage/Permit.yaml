@@ -1,0 +1,188 @@
+imports:
+  Merchant: Lib.Permit.Domain.Types.Common
+  MerchantOperatingCity: Lib.Permit.Domain.Types.Common
+  Day: Data.Time
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  PermitType: Lib.Permit.Types
+
+PermitApplicant:
+  tableName: permit_applicant
+
+  fields:
+    id: Id PermitApplicant
+    mobileCountryCode: Text
+    mobileNumber: EncryptedHashedField e Text
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Permit.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+PermitApplication:
+  tableName: permit_application
+
+  types:
+    PermitStatus:
+      enum: "DRAFT, SUBMITTED, APPROVED, REJECTED, WITHDRAWN"
+      derive: "HttpInstance"
+    ApprovalLevel:
+      enum: "STANDARD, DC"
+
+  fields:
+    id: Id PermitApplication
+    referenceNo: Text
+    permitType: PermitType
+    applicantId: Id PermitApplicant
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: PermitStatus
+    # Permit-type specific details as JSON, encrypted as one value.
+    details: EncryptedHashedField e Text
+    validFrom: UTCTime
+    validTill: UTCTime
+    permitDate: Day
+    # Each permit type decides what these mean. For PICNIC: vehicle and driving licence.
+    primaryConflictHash: Maybe Text
+    secondaryConflictHash: Maybe Text
+    approvalLevel: ApprovalLevel
+    consentAt: Maybe UTCTime
+    submittedAt: Maybe UTCTime
+    decisionReason: Maybe Text
+    decidedById: Maybe Text
+    decidedByName: Maybe Text
+    decidedAt: Maybe UTCTime
+    qrToken: Maybe (EncryptedHashedField e Text)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    applicantId: SecondaryKey
+    referenceNo: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByReferenceNo:
+      kvFunction: findOneWithKV
+      where: referenceNo
+    findAllByApplicantId:
+      kvFunction: findAllWithOptionsKV
+      where: applicantId
+      orderBy:
+        field: createdAt
+        order: desc
+
+  beamFields:
+    qrToken:
+      qrTokenEncrypted: Maybe Text
+      qrTokenHash: Maybe DbHash
+
+  fromTType:
+    qrToken: EncryptedHashed <$> (Encrypted <$> qrTokenEncrypted) <*> qrTokenHash|E
+
+  toTType:
+    qrTokenEncrypted: (qrToken <&> unEncrypted . (.encrypted))|E
+    qrTokenHash: (qrToken <&> (.hash))|E
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, permitType, status, permitDate]
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Permit.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+PermitApplicationDocument:
+  tableName: permit_application_document
+
+  types:
+    PermitDocumentType:
+      enum: "RC, INSURANCE, PUC, ROAD_TAX, FITNESS, VEHICLE_PERMIT, SPEED_LIMITER, DRIVING_LICENCE, CHALLAN_STATUS"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PermitApplicationDocument
+    applicationId: Id PermitApplication
+    documentType: PermitDocumentType
+    s3Path: Text
+    contentType: Text
+    sizeBytes: Int
+    fileHash: Text
+    validUntil: Maybe Day
+    lifetime: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    applicationId: SecondaryKey
+
+  queries:
+    findAllByApplicationId:
+      kvFunction: findAllWithKV
+      where: applicationId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    - columns: [applicationId, documentType]
+      unique: true
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Permit.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+PermitApplicationEvent:
+  tableName: permit_application_event
+
+  types:
+    PermitActorType:
+      enum: "APPLICANT, OFFICIAL"
+
+  fields:
+    id: Id PermitApplicationEvent
+    applicationId: Id PermitApplication
+    actorType: PermitActorType
+    actorId: Text
+    actorName: Maybe Text
+    action: Text
+    reason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    applicationId: SecondaryKey
+
+  queries:
+    findAllByApplicationId:
+      kvFunction: findAllWithOptionsKV
+      where: applicationId
+      orderBy:
+        field: createdAt
+        order: asc
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Permit.Storage.Beam.BeamFlow.BeamFlow m r)"

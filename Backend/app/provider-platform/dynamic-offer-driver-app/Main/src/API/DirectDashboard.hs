@@ -39,6 +39,7 @@ import qualified API.Action.DashboardAuth.IncentiveJourney as IncentiveJourneyDS
 import qualified API.Action.DashboardAuth.IssueManagement as IssueManagementDSL
 import qualified API.Action.DashboardAuth.Management as ManagementDSL
 import qualified API.Action.DashboardAuth.Operator as OperatorDSL
+import qualified API.Action.DashboardAuth.Permit as PermitDSL
 import qualified API.Action.DashboardAuth.RideBooking as RideBookingDSL
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -57,6 +58,7 @@ type API =
            :<|> ManagementDSL.API
            :<|> IssueManagementDSL.API
            :<|> IncentiveJourneyDSL.API
+           :<|> PermitDSL.API
        )
 
 handler :: FlowServer API
@@ -68,3 +70,4 @@ handler merchantId city =
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> IncentiveJourneyDSL.handler merchantId city
+    :<|> PermitDSL.handler merchantId city

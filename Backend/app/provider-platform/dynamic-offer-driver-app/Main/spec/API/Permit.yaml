@@ -1,0 +1,145 @@
+imports:
+  PermitApplication: Lib.Permit.Domain.Types.PermitApplication
+  PermitType: Lib.Permit.Types
+  PermitAuthOtpReq: Lib.Permit.Api.Types
+  PermitAuthVerifyReq: Lib.Permit.Api.Types
+  PermitAuthVerifyRes: Lib.Permit.Api.Types
+  PermitCreateApplicationReq: Lib.Permit.Api.Types
+  PermitCreateApplicationRes: Lib.Permit.Api.Types
+  PermitUpdateApplicationReq: Lib.Permit.Api.Types
+  PermitDocumentUploadReq: Lib.Permit.Api.Types
+  PermitApplicationListRes: Lib.Permit.Api.Types
+  PermitMyApplicationRes: Lib.Permit.Api.Types
+  PermitUndertakingOtpRes: Lib.Permit.Api.Types
+  PermitSubmitReq: Lib.Permit.Api.Types
+  PermitPassRes: Lib.Permit.Api.Types
+  APISuccess: Kernel.Types.APISuccess
+
+module: Permit
+
+types: {}
+
+# Public citizen APIs for the permit library. NoAuth on purpose: citizens use their
+# own permit token (x-permit-token), which driver APIs do not accept.
+apis:
+  - POST:
+      endpoint: /permit/auth/otp
+      auth: NoAuth
+      headers:
+        x-forwarded-for: Text
+      request:
+        type: PermitAuthOtpReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /permit/auth/verify
+      auth: NoAuth
+      request:
+        type: PermitAuthVerifyReq
+      response:
+        type: PermitAuthVerifyRes
+
+  - POST:
+      endpoint: /permit/auth/logout
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /permit/application/list
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      mandatoryQuery:
+        permitType: PermitType
+      response:
+        type: PermitApplicationListRes
+
+  - POST:
+      endpoint: /permit/application
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      request:
+        type: PermitCreateApplicationReq
+      response:
+        type: PermitCreateApplicationRes
+
+  - PUT:
+      endpoint: /permit/application/{applicationId}
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      request:
+        type: PermitUpdateApplicationReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /permit/application/{applicationId}
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      response:
+        type: PermitMyApplicationRes
+
+  - POST:
+      endpoint: /permit/application/{applicationId}/document
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      request:
+        type: PermitDocumentUploadReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /permit/application/{applicationId}/undertakingOtp
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      response:
+        type: PermitUndertakingOtpRes
+
+  - POST:
+      endpoint: /permit/application/{applicationId}/submit
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      request:
+        type: PermitSubmitReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /permit/application/{applicationId}/withdraw
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /permit/application/{applicationId}/pass
+      auth: NoAuth
+      headers:
+        x-permit-token: Text
+      params:
+        applicationId: Id PermitApplication
+      response:
+        type: PermitPassRes

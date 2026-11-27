@@ -1,0 +1,212 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           permit
+version:        0.1.0.0
+description:    Generic permit applications (apply, review, QR pass) with permit-type specific rules. Version 1 supports picnic journeys.
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2026 Moving Innovation Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Lib.Permit.Api.Types
+      Lib.Permit.Application
+      Lib.Permit.Auth
+      Lib.Permit.Domain.Types.Common
+      Lib.Permit.Otp
+      Lib.Permit.Picnic.Rules
+      Lib.Permit.Picnic.Sunset
+      Lib.Permit.Picnic.Types
+      Lib.Permit.Review
+      Lib.Permit.Storage.Beam.BeamFlow
+      Lib.Permit.Storage.Queries.PermitApplicantExtra
+      Lib.Permit.Storage.Queries.PermitApplicationDocumentExtra
+      Lib.Permit.Storage.Queries.PermitApplicationExtra
+      Lib.Permit.Store
+      Lib.Permit.Types
+      Tools.Beam.UtilsTH
+      API.Types.ProviderPlatform.Permit
+      API.Types.ProviderPlatform.Permit.Endpoints.Permit
+      API.Types.ProviderPlatform.Permit.Permit
+      Lib.Permit.Domain.Types.PermitApplicant
+      Lib.Permit.Domain.Types.PermitApplication
+      Lib.Permit.Domain.Types.PermitApplicationDocument
+      Lib.Permit.Domain.Types.PermitApplicationEvent
+      Lib.Permit.Storage.Beam.PermitApplicant
+      Lib.Permit.Storage.Beam.PermitApplication
+      Lib.Permit.Storage.Beam.PermitApplicationDocument
+      Lib.Permit.Storage.Beam.PermitApplicationEvent
+      Lib.Permit.Storage.Queries.OrphanInstances.PermitApplicant
+      Lib.Permit.Storage.Queries.OrphanInstances.PermitApplication
+      Lib.Permit.Storage.Queries.OrphanInstances.PermitApplicationDocument
+      Lib.Permit.Storage.Queries.PermitApplicant
+      Lib.Permit.Storage.Queries.PermitApplication
+      Lib.Permit.Storage.Queries.PermitApplicationDocument
+      Lib.Permit.Storage.Queries.PermitApplicationEvent
+  other-modules:
+      Paths_permit
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , containers
+    , crypton
+    , euler-hs
+    , extra
+    , lib-dashboard
+    , memory
+    , mobility-core
+    , openapi3
+    , postgresql-simple
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , singletons-th
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite permit-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_permit
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Werror -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , containers
+    , euler-hs
+    , extra
+    , hspec
+    , mobility-core
+    , openapi3
+    , permit
+    , postgresql-simple
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant
+    , servant-client
+    , servant-server
+    , singletons
+    , singletons-th
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
