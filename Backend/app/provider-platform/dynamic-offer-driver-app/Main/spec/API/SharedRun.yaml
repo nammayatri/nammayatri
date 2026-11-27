@@ -3,10 +3,17 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   APISuccess: Kernel.Types.APISuccess
+  SharedCabSession: Domain.Types.SharedCabSession
 
 module: SharedRun
 
-types: {}
+types:
+  # the driver's view of one of their shared-route runs, before and during it
+  SharedRunDetailsRes:
+    # the driver has confirmed they will drive it (POST /sharedRun/{rideId}/acknowledge)
+    acknowledged: Bool
+    # the run's route, stops and passengers, in the shared cab's session shape (the same the driver gets during the run)
+    session: SharedCabSession
 
 apis:
   # the assigned driver confirms they will drive this shared-route run (asked at the run's check-in time);
@@ -18,3 +25,13 @@ apis:
         rideId: Id Ride
       response:
         type: APISuccess
+
+  # one of the caller's own shared-route runs, UPCOMING or INPROGRESS: whether it is acknowledged, and its stops and
+  # passengers (who boards and alights where), so the driver can see the run before starting it
+  - GET:
+      endpoint: /sharedRun/{rideId}/details
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: SharedRunDetailsRes

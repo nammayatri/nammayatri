@@ -1641,6 +1641,7 @@ library
       API.Types.UI.SearchRoute
       API.Types.UI.SharedCab
       API.Types.UI.SharedCabInternal
+      API.Types.UI.SharedRun
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior

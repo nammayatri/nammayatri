@@ -3583,7 +3583,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
 
     possibleScheduledTripCategories :: [DTC.TripCategory]
-    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.SharedRoute DTC.OnDemandStaticOffer]
 
     sortBookingsByDistance :: [ScheduleBooking] -> [ScheduleBooking]
     sortBookingsByDistance = sortBy (compareDistances `on` (\booking -> booking.bookingDetails.distanceToPickup))
