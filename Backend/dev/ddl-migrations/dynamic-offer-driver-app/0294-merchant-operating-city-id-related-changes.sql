@@ -42,8 +42,9 @@ DROP CONSTRAINT PK_onboarding_document_configs;
 ALTER TABLE atlas_driver_offer_bpp.go_home_config
 ADD PRIMARY KEY (merchant_operating_city_id);
 
+-- language is added by migrations-read-only/merchant_message.sql, which runs before these files.
 ALTER TABLE atlas_driver_offer_bpp.merchant_message
-ADD PRIMARY KEY (merchant_operating_city_id, message_key);
+ADD PRIMARY KEY (language, merchant_operating_city_id, message_key);
 
 ALTER TABLE atlas_driver_offer_bpp.onboarding_document_configs
 ADD PRIMARY KEY (merchant_operating_city_id, document_type);
