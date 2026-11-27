@@ -105,6 +105,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
+import SharedLogic.NudgeRideTermination (endActiveNudgeRideForDriver)
 import SharedLogic.Ride
 import qualified SharedLogic.SharedRun.Session as RunSession
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
@@ -445,6 +446,7 @@ otpRideCreate driver otpCode booking clientId = do
   -- ensures we don't leave an orphan ride row when the balance is insufficient.
   AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
+  endActiveNudgeRideForDriver driver.id
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 
@@ -788,7 +790,8 @@ arrivedAtDestination rideId pt = do
             pure (Just otp)
         else pure Nothing
     let updatedRide = ride {DRide.returnOtp = mbReturnOtp}
-    BP.sendDestinationArrivalUpdateToBAP booking updatedRide (Just now)
+    unless (booking.bookingType == DRB.NudgeRide) $
+      BP.sendDestinationArrivalUpdateToBAP booking updatedRide (Just now)
     QRide.updateDestinationArrival ride.id now
   pure Success
   where

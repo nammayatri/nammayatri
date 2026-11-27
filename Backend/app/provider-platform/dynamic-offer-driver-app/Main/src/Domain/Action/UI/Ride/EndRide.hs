@@ -94,9 +94,11 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Queries.SpecialLocation as QSL
 import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
@@ -108,8 +110,10 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.NudgeRide as NudgeRide
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Ride (validateRideLocation)
@@ -280,7 +284,10 @@ type EndRideFlow m r =
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     Esq.EsqDBReplicaFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    FinanceBeamFlow.BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
+    PostActionsEnv r
   )
 
 driverEndRide ::
@@ -668,7 +675,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    notifyCompleteToBAPFork <-
+      awaitableFork "endRide->notifyCompleteToBAP" $
+        withTimeAPI "endRide" "notifyCompleteToBAP" $
+          unless (booking.bookingType == SRB.NudgeRide) $
+            notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
     whenJust (booking.area >>= SL.dropSpecialZoneIdFromArea) $ \slIdText ->
@@ -676,6 +687,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         skipQueue <- QSL.checkSkipQueueById (Id slIdText)
         when skipQueue $
           Redis.setExp (mkDriverAirportDropKey driverId.getId) True 1800
+
+    when (booking.bookingType == SRB.NudgeRide) $ do
+      Redis.del (NudgeRide.nudgeRideRedisKey driverId)
+      NudgeRide.triggerNudgeRidePayout booking updRide driverId
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 

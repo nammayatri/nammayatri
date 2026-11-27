@@ -55,6 +55,7 @@ import SharedLogic.Cancel (mkCancelSearchInitLockKey)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.NudgeRideTermination (endActiveNudgeRideForDriver)
 import SharedLogic.OneShotAssign (buildAssignedDriverRideRes, buildOneShotAssignPayload)
 import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
@@ -139,6 +140,7 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
     postBookingResult <- withTryCatch "betterDriverSwapAssign:postBooking" $ do
       mFleetAssociation <- QFDA.findByDriverId driver.id True
       (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True Nothing
+      endActiveNudgeRideForDriver driver.id
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) (Just transporterConfig)
       let prefetch =
             BP.RideAssignedPrefetch

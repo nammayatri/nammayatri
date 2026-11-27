@@ -22,12 +22,12 @@ import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
 import qualified Storage.Queries.FareParameters
 import qualified Storage.Queries.LocationMapping
-import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
+    let tripCategoryResolved = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
     fromAndToLocation' <- Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId
     merchant <- Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)
@@ -46,6 +46,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             bapUri = bapUri,
             billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingDeposit = bookingDeposit,
+            bookingType = bookingType,
             businessEmailDomain = businessEmailDomain,
             cancellationDuesCommission = cancellationDuesCommission,
             cancellationDuesCommissionTaxBreakup = Kernel.Utils.JSON.valueToMaybe =<< cancellationDuesCommissionTaxBreakup,
@@ -136,7 +137,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             tollIds = tollIds,
             tollNames = tollNames,
             transactionId = transactionId,
-            tripCategory = getTripCategory bookingType tripCategory,
+            tripCategory = tripCategoryResolved,
             tripId = tripId,
             updatedAt = updatedAt,
             vehicleServiceTier = vehicleVariant,
@@ -156,6 +157,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.bapUri = bapUri,
         Beam.billingCategory = Just billingCategory,
         Beam.bookingDeposit = bookingDeposit,
+        Beam.bookingType = bookingType,
         Beam.businessEmailDomain = businessEmailDomain,
         Beam.cancellationDuesCommission = cancellationDuesCommission,
         Beam.cancellationDuesCommissionTaxBreakup = toJSON <$> cancellationDuesCommissionTaxBreakup,
@@ -249,7 +251,6 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,
         Beam.transactionId = transactionId,
-        Beam.bookingType = Storage.Queries.Transformers.Booking.getBookingTypeFromTripCategory tripCategory,
         Beam.tripCategory = Just tripCategory,
         Beam.tripId = tripId,
         Beam.updatedAt = updatedAt,
