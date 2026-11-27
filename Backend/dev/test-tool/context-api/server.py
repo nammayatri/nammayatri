@@ -634,6 +634,10 @@ def _fcm_url(project: str) -> str:
     return f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/"
 
 
+def _fcm_token_prefix(project: str) -> str:
+    return f"devbox-fcm-{project}"
+
+
 def _collect_devbox_fcm_keys(side: str):
     """Keys for one app ("driver" or "rider"), as (default, merchant_keys, notes, error).
 
@@ -666,15 +670,23 @@ def _collect_devbox_fcm_keys(side: str):
 
 def _set_fcm(cur, schema: str, table: str, key: str, project: str, short_id=None) -> int:
     """Write one key (and the URL of its own project) to the FCM rows of one table: every row,
-    or only the rows of the merchant whose short_id matches (ignoring case). Returns rowcount."""
-    params = {"url": _fcm_url(project), "key": key}
+    or only the rows of the merchant whose short_id matches (ignoring case). Returns rowcount.
+
+    The token cache prefix is set from the project too. The apps cache the Google access token
+    in Redis under <fcmTokenKeyPrefix>:mobility:fcm_token, and many merchants share one prefix
+    (ardu-bpp, NAMMA_YATRI, ...). With different keys, a merchant would reuse another project's
+    cached token and Firebase would reject every push (403). One prefix per project keeps one
+    token per project, and a fresh name means no token cached before the sync is reused."""
+    params = {"url": _fcm_url(project), "key": key, "prefix": _fcm_token_prefix(project)}
     if table == "merchant_service_config":
         sql = (f"UPDATE {schema}.merchant_service_config"
                " SET config_json = (config_json::jsonb"
-               "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json")
+               "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s,"
+               "                         'fcmTokenKeyPrefix', %(prefix)s))::json")
         where = ["service_name = 'Notification_FCM'"]
     else:
-        sql = f"UPDATE {schema}.transporter_config SET fcm_url = %(url)s, fcm_service_account = %(key)s"
+        sql = (f"UPDATE {schema}.transporter_config"
+               " SET fcm_url = %(url)s, fcm_service_account = %(key)s, fcm_token_key_prefix = %(prefix)s")
         where = []
     if short_id is not None:
         where.append(f"merchant_id IN (SELECT id FROM {schema}.merchant"
