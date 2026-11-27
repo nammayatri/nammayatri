@@ -2,6 +2,7 @@ module SharedLogic.Finance.CashbackPayout (runCashbackPayout) where
 
 import Domain.Types.PayoutConfig (PayoutConfig (..))
 import Domain.Types.Person (Person)
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
@@ -180,7 +181,7 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
         Right transfer -> case transfer.status of
           DT.FAILED -> do
             logError $ "Cashback payout failed for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId <> ": " <> fromMaybe "-" transfer.lastError
-            Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+            Notify.notifyRiderPayoutStatus person RiderPush_OfferCashback_Failed totalAmount
           DT.NEEDS_REVIEW ->
             logError $ "Cashback payout outcome unknown for person=" <> person.id.getId <> " payoutRequestId=" <> payoutRequest.id.getId <> ": " <> fromMaybe "-" transfer.lastError <> " -- hold kept, needs manual review"
           _ -> do
@@ -199,4 +200,4 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
             -- SUBMITTED here means an idempotent re-entry (NotExecutable), which the
             -- pre-kernel code logged without pushing.
             when (transfer.status == DT.IN_FLIGHT) $
-              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
+              Notify.notifyRiderPayoutStatus person RiderPush_OfferCashback_Initiated totalAmount

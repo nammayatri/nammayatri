@@ -109,6 +109,8 @@ library
       IssueManagement.Tools.ApiIntegrationExecutor
       IssueManagement.Tools.Error
       IssueManagement.Tools.JsonLogic
+      IssueManagement.Tools.LookupGuard
+      IssueManagement.Tools.LookupWhitelist
       IssueManagement.Tools.UtilsTH
       IssueManagement.Utils.Html
       IssueManagement.Utils.RemoteFile
@@ -132,6 +134,7 @@ library
       Safety.Tools.Error
       SMS.API
       SMS.Domain
+      SMS.OtpCountryRestriction
       SMS.Types
       TempAppCode.Flow
       TempAppCode.Types

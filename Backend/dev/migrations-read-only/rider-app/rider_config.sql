@@ -992,3 +992,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_person_call_identity boolea
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rental_stop_updates boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sms_otp_allowed_country_codes text [] ;

@@ -115,7 +115,8 @@ processMerchantCreateRequest merchantShortId opCity canCreateMerchant req@Dashbo
 postMerchantSpecialLocationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantSpecialLocationUpsert a5 a4 _a3 a2 req@Dashboard.Common.Merchant.UpsertSpecialLocationReq {..} = do
   geom <- maybe (pure Nothing) mkGeom req.file
-  Domain.Action.Dashboard.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, ..}
+  -- Queue polygon is only consumed by the BPP's LTS feed; the rider side leaves it unset.
+  Domain.Action.Dashboard.Merchant.postMerchantSpecialLocationUpsert a5 a4 a2 Dashboard.Common.Merchant.UpsertSpecialLocationReqT {geom = geom, queueGeom = Nothing, pricingGeoJson = Nothing, ..}
 
 -- | @\/specialLocation\/{specialLocationId}\/gates\/upsert@: same optional KML.
 postMerchantSpecialLocationGatesUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

@@ -51,8 +51,8 @@ data TimeDiffEvent
   | END_TIME
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventTime)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EventTime))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TimeDiffEvent)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TimeDiffEvent))

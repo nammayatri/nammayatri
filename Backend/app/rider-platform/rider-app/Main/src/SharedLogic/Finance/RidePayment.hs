@@ -1302,8 +1302,8 @@ createPendingCancellationFeeLedger ctx taxRegime gstRates cancellationFee cancel
         { invoiceType = RideCancellation,
           issuedToType = DInvType.RIDER,
           issuedToId = ctx.counterpartyId,
-          issuedToName = Nothing,
-          issuedToAddress = Nothing,
+          issuedToName = ctx.issuedToName,
+          issuedToAddress = ctx.fromLocationAddress,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)

@@ -80,7 +80,8 @@ data BPPInvoiceProviderInfo = BPPInvoiceProviderInfo
     supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
     issuedByGstin :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    issuedByLogoUrl :: Maybe Text
   }
 
 bppInvoiceProviderInfoToFields :: BPPInvoiceProviderInfo -> QRBE.BPPInvoiceProviderFields
@@ -95,7 +96,8 @@ bppInvoiceProviderInfoToFields info =
       supplierTaxNo = info.supplierTaxNo,
       supplierId = info.supplierId,
       issuedByGstin = info.issuedByGstin,
-      issuedByTaxNo = info.issuedByTaxNo
+      issuedByTaxNo = info.issuedByTaxNo,
+      issuedByLogoUrl = info.issuedByLogoUrl
     }
 
 data BookingConfirmedInfo = BookingConfirmedInfo
@@ -183,7 +185,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let countryCode = fromMaybe "+91" customer.mobileCountryCode
             let phoneNumber = countryCode <> mobileNumber
-            buildSmsReq <- MessageBuilder.buildBookingOtpSmsForCategory merchantOperatingCityId booking otp
+            buildSmsReq <- MessageBuilder.buildBookingOtpSmsForCategory merchantOperatingCityId customer.language booking otp
             Sms.sendSMS booking.merchantId merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
           else do
             logInfo "Merchant not configured to send dashboard sms"

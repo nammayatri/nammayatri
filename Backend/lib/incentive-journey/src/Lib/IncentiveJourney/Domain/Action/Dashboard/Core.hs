@@ -386,14 +386,14 @@ assignUser handle merchantShortId opCity personId cjmId enabled validTill notFou
                 let periodEnd =
                       IJ.optInPeriodExclusiveEnd
                         localTime
-                        (fromMaybe DUCM.Daily ucm.optInPeriod)
+                        (fromMaybe DCJM.Daily ucm.optInPeriod)
                         (Just cjm.startDate)
                  in Just (min endDate (min ucm.validTill periodEnd))
               else Nothing
       syncMgMembershipSnapshot handle personId journey cjm snapshotOptedIn snapshotValidTill localTime
 
 -- | Opt-in for OptIn cohorts. Requires an existing invite UCM row.
--- validTill should be the period end (caller computes from terms / daily|weekly).
+-- Cadence comes from CJM.optInPeriod (request optional fallback; default Daily).
 optInUser ::
   BeamFlow m r =>
   ServiceHandle m ->
@@ -401,13 +401,13 @@ optInUser ::
   Kernel.Types.Beckn.Context.City ->
   ID.Id DIJC.Person ->
   ID.Id DCJM.CohortJourneyMapping ->
-  DUCM.OptInPeriod ->
+  Maybe DCJM.OptInPeriod ->
   UTCTime ->
   Text ->
   Text ->
   Text ->
   m ()
-optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill optedInBy notFoundMessage cityMessage = do
+optInUser handle merchantShortId opCity personId cjmId mbReqOptInPeriod validTill optedInBy notFoundMessage cityMessage = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   person <- handle.findPersonById personId >>= fromMaybeM (InvalidRequest notFoundMessage)
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
@@ -423,6 +423,7 @@ optInUser handle merchantShortId opCity personId cjmId optInPeriod validTill opt
   timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let endDate = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+      optInPeriod = IJ.resolveCampaignOptInPeriod cjm mbReqOptInPeriod
   when (localTime >= endDate) $
     throwError (InvalidRequest "Cohort journey mapping has expired")
   when (validTill > endDate) $
@@ -612,6 +613,7 @@ rollCohortJourneyMapping handle merchantId merchantOpCityId previousId newStartD
       previous.streakEndRewardExpirationAt
       previous.streakEndRewardMetadata
       previous.campaignUserLinkType
+      previous.optInPeriod
       previous.controlFeatures
   rolloverAutoApplyMappings handle previous rolled
   handle.clearAssignmentCacheByCohortMappingId previous.id

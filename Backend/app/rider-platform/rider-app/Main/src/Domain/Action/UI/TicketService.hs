@@ -59,6 +59,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as Fields
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.TicketRule.Apply as TicketRule
@@ -1777,7 +1778,7 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
       case mobileNumber of
         Just mNumber -> do
           let phoneNumber = countryCode <> mNumber
-          buildSmsReq <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
+          buildSmsReq <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId person.language $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
           Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
             >>= Sms.checkSmsResult
         _ -> logDebug $ "Could n't send Ticket Booking Cancellation SMS : " <> person.id.getId
@@ -2243,6 +2244,9 @@ postTicketDashboardLoginAuth merchant req = do
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       countryCode = req.mobileCountryCode
       phoneNumber = countryCode <> req.mobileNumber
+  when (isNothing person.useFakeOtp) $ do
+    mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+    validateSmsOtpCountryCode (mbRiderConfig >>= (.smsOtpAllowedCountryCodes)) countryCode
   if not person.blocked
     then do
       otp <- maybe generateOTPCode return useFakeOtpM
@@ -2253,6 +2257,7 @@ postTicketDashboardLoginAuth merchant req = do
           buildSmsRes <-
             MessageBuilder.buildSendOTPMessage
               merchantOperatingCityId
+              person.language
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash
@@ -2322,6 +2327,8 @@ postTicketDashboardSendVerifyOtp merchant req = do
               ( MerchantOperatingCityNotFound $
                   "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
               )
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      validateSmsOtpCountryCode (mbRiderConfig >>= (.smsOtpAllowedCountryCodes)) req.mobileCountryCode
       let useFakeOtpM = (show <$> useFakeSms smsCfg)
       otp <- maybe generateOTPCode return useFakeOtpM
       whenNothing_ useFakeOtpM $ do
@@ -2331,6 +2338,7 @@ postTicketDashboardSendVerifyOtp merchant req = do
           buildSmsRes <-
             MessageBuilder.buildSendOTPMessage
               merchantOperatingCityId
+              Nothing
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash

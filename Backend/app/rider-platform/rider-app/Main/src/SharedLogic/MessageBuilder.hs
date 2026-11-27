@@ -13,7 +13,11 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( buildSendSmsReq,
+  ( SmsBody,
+    smsBodyText,
+    prebuiltSmsBody,
+    SendSMSReq (..),
+    buildSendSmsReq,
     BuildSendOTPMessageReq (..),
     BuildSOSAlertMessageReq (..),
     buildSendOTPMessage,
@@ -66,6 +70,8 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.RiderConfig as Fields
+import Domain.Types.TranslationKeys (RiderTranslationKey (..))
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Types.Id
@@ -73,13 +79,35 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
-import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+-- | The text an SMS carries: a @merchant_message@ row's text with its placeholders filled (the @build*Message@
+-- functions here), or 'prebuiltSmsBody' for text that is final before it gets here. Only this module builds one.
+newtype SmsBody = SmsBody Text
+
+smsBodyText :: SmsBody -> Text
+smsBodyText (SmsBody text) = text
+
+-- | For text that is already final: handed over by another service (internal SMS API, notification webhooks) or
+-- transformed by hand after the row lookup (scheduled ride notifications). Never a string literal: a message a user
+-- reads belongs in a @merchant_message@ row.
+prebuiltSmsBody :: Text -> SmsBody
+prebuiltSmsBody = SmsBody
+
+-- | 'Kernel.External.SMS.SendSMSReq' with the body typed; 'Tools.SMS.sendSMS' converts it back.
+data SendSMSReq = SendSMSReq
+  { smsBody :: SmsBody,
+    phoneNumber :: Text,
+    sender :: Text,
+    templateId :: Text,
+    messageType :: Maybe Text
+  }
 
 -- | Substitute {#key#} placeholders in a template with the given key/value pairs.
 substituteVariables :: Text -> [(Text, Text)] -> Text
@@ -104,16 +132,16 @@ type BuildMessageFlow m r =
     CacheFlow m r
   )
 
-type SmsReqBuilder = Text -> Sms.SendSMSReq
+type SmsReqBuilder = Text -> SendSMSReq
 
 buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
 buildSendSmsReq merchantMessage vars = do
   smsCfg <- asks (.smsCfg)
-  let smsBody = substituteVariables merchantMessage.message vars
+  let smsBody = SmsBody (substituteVariables merchantMessage.message vars)
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
       messageType = merchantMessage.messageType
-  return $ \phoneNumber -> Sms.SendSMSReq {..}
+  return $ \phoneNumber -> SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   { otp :: Text,
@@ -121,10 +149,10 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
-buildSendOTPMessage merchantOperatingCityId req = do
+buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildSendOTPMessageReq -> m SmsReqBuilder
+buildSendOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_OTP mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
 
@@ -147,10 +175,10 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
-buildSendBookingOTPMessage merchantOperatingCityId req = do
+buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
+buildSendBookingOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_BOOKING_OTP mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount), ("serviceTier", req.serviceTier)]
 
@@ -164,9 +192,9 @@ data BuildSendBookingOTPRentalMessageReq = BuildSendBookingOTPRentalMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPRentalMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPRentalMessageReq -> m SmsReqBuilder
-buildSendBookingOTPRentalMessage merchantOperatingCityId req = do
-  mbRentalMsg <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP_RENTAL Nothing
+buildSendBookingOTPRentalMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildSendBookingOTPRentalMessageReq -> m SmsReqBuilder
+buildSendBookingOTPRentalMessage merchantOperatingCityId mbLanguage req = do
+  mbRentalMsg <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_BOOKING_OTP_RENTAL mbLanguage Nothing
   case mbRentalMsg of
     Just merchantMessage ->
       buildSendSmsReq
@@ -178,7 +206,7 @@ buildSendBookingOTPRentalMessage merchantOperatingCityId req = do
           ("var5", req.appUrl)
         ]
     Nothing ->
-      buildSendBookingOTPMessage merchantOperatingCityId $
+      buildSendBookingOTPMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount, serviceTier = req.serviceTier}
 
 data BuildSendBookingOTPIntercityMessageReq = BuildSendBookingOTPIntercityMessageReq
@@ -191,9 +219,9 @@ data BuildSendBookingOTPIntercityMessageReq = BuildSendBookingOTPIntercityMessag
   }
   deriving (Generic)
 
-buildSendBookingOTPIntercityMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPIntercityMessageReq -> m SmsReqBuilder
-buildSendBookingOTPIntercityMessage merchantOperatingCityId req = do
-  mbIntercityMsg <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP_INTERCITY Nothing
+buildSendBookingOTPIntercityMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildSendBookingOTPIntercityMessageReq -> m SmsReqBuilder
+buildSendBookingOTPIntercityMessage merchantOperatingCityId mbLanguage req = do
+  mbIntercityMsg <- QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_BOOKING_OTP_INTERCITY mbLanguage Nothing
   case mbIntercityMsg of
     Just merchantMessage ->
       buildSendSmsReq
@@ -205,21 +233,23 @@ buildSendBookingOTPIntercityMessage merchantOperatingCityId req = do
           ("var5", req.appUrl)
         ]
     Nothing ->
-      buildSendBookingOTPMessage merchantOperatingCityId $
+      buildSendBookingOTPMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount, serviceTier = req.serviceTier}
 
 buildBookingOtpSmsForCategory ::
   BuildMessageFlow m r =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Lang.Language ->
   DRB.Booking ->
   Text ->
   m SmsReqBuilder
-buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
+buildBookingOtpSmsForCategory merchantOperatingCityId mbLanguage booking otp = do
   let otpTxt = otp
       amountTxt = show booking.estimatedTotalFare.amountInt
+  serviceTier <- CQTranslations.findTextByKeyWithFallback merchantOperatingCityId mbLanguage (ServiceTier_Name booking.vehicleServiceTierType) (fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName)
   case booking.tripCategory of
-    Just (DTC.Rental _) -> rentalOtpSms
-    Just (DTC.IntercityRental _ _) -> rentalOtpSms
+    Just (DTC.Rental _) -> rentalOtpSms serviceTier
+    Just (DTC.IntercityRental _ _) -> rentalOtpSms serviceTier
     Just (DTC.InterCity _ mbCity) -> do
       appUrl <- getAppUrl merchantOperatingCityId
       let (destination, distanceKms) = case booking.bookingDetails of
@@ -231,35 +261,35 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
               ( fromMaybe "" mbCity,
                 show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
               )
-      buildSendBookingOTPIntercityMessage merchantOperatingCityId $
+      buildSendBookingOTPIntercityMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPIntercityMessageReq
           { otp = otpTxt,
             amount = amountTxt,
             destination = destination,
             distanceKms = distanceKms,
             appUrl = appUrl,
-            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
+            serviceTier
           }
     _ ->
-      buildSendBookingOTPMessage merchantOperatingCityId $
+      buildSendBookingOTPMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPMessageReq
           { otp = otpTxt,
             amount = amountTxt,
-            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
+            serviceTier
           }
   where
-    rentalOtpSms = do
+    rentalOtpSms serviceTier = do
       appUrl <- getAppUrl merchantOperatingCityId
       let durationHours = show (fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration) `div` 3600)
           distanceKms = show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
-      buildSendBookingOTPRentalMessage merchantOperatingCityId $
+      buildSendBookingOTPRentalMessage merchantOperatingCityId mbLanguage $
         BuildSendBookingOTPRentalMessageReq
           { otp = otp,
             amount = show booking.estimatedTotalFare.amountInt,
             durationHours = durationHours,
             distanceKms = distanceKms,
             appUrl = appUrl,
-            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
+            serviceTier
           }
     getAppUrl mocId = do
       riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
@@ -276,10 +306,10 @@ newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
   }
   deriving (Generic)
 
-buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
-buildSendRideEndOTPMessage merchantOperatingCityId req = do
+buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
+buildSendRideEndOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.SEND_RIDE_END_OTP mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_RIDE_END_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp)]
 
@@ -361,10 +391,10 @@ data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageR
   }
   deriving (Generic)
 
-buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
-buildTicketBookingCancelled merchantOperatingCityId req = do
+buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
+buildTicketBookingCancelled merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.TICKET_BOOKING_CANCELLED))
   buildSendSmsReq merchantMessage [("personName", req.personName), ("categoryName", req.categoryName)]
 
@@ -374,8 +404,8 @@ data BuildFRFSTicketBookedMessageReq = BuildFRFSTicketBookedMessageReq
   }
   deriving (Generic, Show)
 
-buildFRFSTicketBookedMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketBookedMessageReq -> m (Maybe SmsReqBuilder)
-buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
+buildFRFSTicketBookedMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> Maybe Lang.Language -> BuildFRFSTicketBookedMessageReq -> m (Maybe SmsReqBuilder)
+buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId mbLanguage req = do
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
     DPOC.getTicketSMSConfig pOrgCfg.config
@@ -386,7 +416,7 @@ buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
       2. `{#TICKET_PLURAL#}` as a placeholder for the word "tickets are" or "ticket is"
   -}
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKED Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.METRO_TICKET_BOOKED mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKED))
 
   forM smsPOCfg.publicUrl $
@@ -413,10 +443,10 @@ data BuildFRFSTicketCancelMessageReq = BuildFRFSTicketCancelMessageReq
   }
   deriving (Generic, Show)
 
-buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketCancelMessageReq -> m (Maybe SmsReqBuilder)
-buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
+buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> Maybe Lang.Language -> BuildFRFSTicketCancelMessageReq -> m (Maybe SmsReqBuilder)
+buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKING_CANCELLED))
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
@@ -468,13 +498,13 @@ data BuildDeliveryMessageReq = BuildDeliveryMessageReq
     deliveryMessageType :: DeliveryMessageRequestType
   }
 
-buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
-buildDeliveryDetailsMessage merchantOperatingCityId req = do
+buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage merchantOperatingCityId mbLanguage req = do
   let merchantMessageKey = case req.deliveryMessageType of
         SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
         ReceiverReq -> bool DMM.PRE_PICKUP_DELIVERY_RECEIVER DMM.SMS_DELIVERY_DETAILS_RECEIVER req.pickedUp
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId merchantMessageKey mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
   shortTrackingUrl <- maybe (pure mempty) (shortenTrackingUrl (Just UrlShortner.RIDE_TRACKING)) req.trackingUrl
   buildSendSmsReq
@@ -492,9 +522,9 @@ newtype BuildPassSuccessMessage = BuildPassSuccessMessage
   { passName :: Text
   }
 
-buildPassSuccessMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildPassSuccessMessage -> m SmsReqBuilder
-buildPassSuccessMessage merchantOperatingCityId req = do
+buildPassSuccessMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Lang.Language -> BuildPassSuccessMessage -> m SmsReqBuilder
+buildPassSuccessMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.PASS_PURCHASED_MESSAGE Nothing
+    QMM.findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId DMM.PASS_PURCHASED_MESSAGE mbLanguage Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.PASS_PURCHASED_MESSAGE))
   buildSendSmsReq merchantMessage [("passName", req.passName)]

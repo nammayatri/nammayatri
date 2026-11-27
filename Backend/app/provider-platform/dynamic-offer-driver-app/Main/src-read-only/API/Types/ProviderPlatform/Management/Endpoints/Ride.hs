@@ -11,6 +11,7 @@ import qualified Dashboard.Common.RideDebug
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
@@ -607,7 +608,7 @@ data RideInfoRes = RideInfoRes
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
-    vehicleServiceTierName :: Kernel.Prelude.Text,
+    vehicleServiceTierName :: Domain.Types.TranslationKey.TranslatedText,
     nextStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     lastStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     stopInformation :: Kernel.Prelude.Maybe [StopInformation],
@@ -645,7 +646,7 @@ data RideInfoRes = RideInfoRes
     paymentReferenceInternal :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     walletTransactions :: [WalletTransactionItem],
     invoiceIds :: [Kernel.Prelude.Text],
-    badge :: [Kernel.Prelude.Text],
+    badge :: [Domain.Types.TranslationKey.TranslatedText],
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
     actualTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],

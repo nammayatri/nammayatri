@@ -22,6 +22,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person.Type as Fields
 import qualified Domain.Types.VehicleCategory
 import qualified Environment
 import EulerHS.Prelude
@@ -34,17 +35,18 @@ import Servant
 import qualified SharedLogic.Fleet
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
+import qualified Tools.Auth.DashboardUser as Fields
 import Tools.Auth.DashboardUserAuth
 
 getOnboardingDocumentConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Onboarding.Role) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigList)
 getOnboardingDocumentConfigs a7 a6 a5 a4 a3 a2 a1 = do
   fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a5) Kernel.Prelude.Nothing
-  Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingDocumentConfigs a7 a6 fleetOwnerId a4 a3 a2 a1
+  Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingDocumentConfigs a7 a6 a5.person.language fleetOwnerId a4 a3 a2 a1
 
 getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.VehicleCategory.VehicleCategory) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.StatusRes)
 getOnboardingRegisterStatus a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
   fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a8) Kernel.Prelude.Nothing
-  res <- Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterStatus a10 a9 fleetOwnerId a7 a6 a5 a4 a3 a2 a1
+  res <- Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterStatus a10 a9 a8.person.language fleetOwnerId a7 a6 a5 a4 a3 a2 a1
   Kernel.Prelude.when (Kernel.Prelude.maybe fleetOwnerId Kernel.Types.Id.getId a7 Kernel.Prelude.== fleetOwnerId) $
     Tools.Auth.DashboardUserAuth.syncDashboardPersonVerified fleetOwnerId res.verified
   Kernel.Prelude.pure res

@@ -44,9 +44,7 @@ sendScheduledRidePopupToRider Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
     DTB.CANCELLED -> terminateJob
     DTB.REALLOCATED -> terminateJob
     _ -> do
-      let title = "Scheduled Ride Reminder"
-          body = "Your scheduled ride is about to start. Please be ready for the ride."
-      void $ notifyAboutScheduledRide booking title body
+      void $ notifyAboutScheduledRide booking
       return Complete
   where
     terminateJob = return $ Terminate "Job Terminated because this booking is cancelled or reallocated"

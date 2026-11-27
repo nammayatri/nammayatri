@@ -62,6 +62,7 @@ resolveTopDriverRules transporterConfig serviceTier now pickupTime =
       mbMaxCancellation = mbRules >>= (.maxCancellationRatePct)
       mbMinRides = mbRules >>= (.minCompletedRides)
       mbRadius = mbRules >>= (.pickupRadiusMeters)
+      mbRequiredTags = mbRules >>= (.requiredTags)
       rules =
         DTC.ScheduledRideVisibilityRules
           Nothing
@@ -69,7 +70,7 @@ resolveTopDriverRules transporterConfig serviceTier now pickupTime =
           (Just (fromMaybe defaultMinCompletedRides mbMinRides))
           (Just (fromMaybe defaultMinRating mbMinRating))
           mbRadius
-          Nothing
+          mbRequiredTags
           (True <$ mbRadius)
           Nothing
    in (rules, isNothing mbMinRating && isNothing mbMaxCancellation && isNothing mbMinRides)

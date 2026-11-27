@@ -33,6 +33,7 @@ import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.FRFSUtils as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.WalkUp as SharedCab
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
@@ -61,7 +62,10 @@ postNearbyBusBooking (mbPersonId, _) req = do
 
   simpleNearbyBuses <-
     if req.requireNearbyBuses
-      then getSimpleNearbyBuses person.merchantOperatingCityId riderConfig req
+      then do
+        -- the cab feed sits on its own config, which the city's bus lookup never returns
+        mbCabConfig <- if SharedCab.isSharedCabTier req.serviceTier then Just <$> (SharedCab.findSharedCabConfig (Just person.id) >>= fromMaybeM (InvalidRequest "Shared cab is not available in your city")) else pure Nothing
+        getSimpleNearbyBuses person.merchantOperatingCityId riderConfig mbCabConfig req
       else return []
 
   recentRides <-
@@ -85,11 +89,12 @@ castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
 castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
 castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
-getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
-getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
+-- | Vehicles near the rider on one feed: the given config, else the city's own for the vehicle type.
+getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> Maybe DIBC.IntegratedBPPConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
+getSimpleNearbyBuses merchantOperatingCityId riderConfig mbFeedConfig req = do
   vehicleType <- fromMaybeM (InvalidRequest "vehicleType is required when requireNearbyBuses is true") req.vehicleType
   let vehicleCategory = castToOnDemandVehicleCategory vehicleType
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
+  mbIntegratedBPPConfig <- maybe (SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType) (pure . Just) mbFeedConfig
   case mbIntegratedBPPConfig of
     Just integratedBPPConfig -> do
       buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig
@@ -98,7 +103,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
       logDebug $ "Number of nearby buses: " <> show (length buses)
 
-      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
+      integratedBPPConfigs <- maybe (SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType) (pure . pure) mbFeedConfig
 
       let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
       logDebug $ "Vehicle numbers: " <> show vehicleNumbers

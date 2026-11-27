@@ -21,7 +21,7 @@
 -- the running driver-app will keep serving the cached AnonymousCall value.
 
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET driver_calling_option = 'DirectCall';
+SET driver_calling_option = 'DirectCall', calling_mode = 'DirectCall';
 
 UPDATE atlas_app.rider_config
 SET enable_share_number_with_driver = true;

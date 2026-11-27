@@ -24,6 +24,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
+import Data.Map.Strict (Map)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -267,13 +268,25 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
 data OSRMTrafficCfgUpdateReq = OSRMTrafficCfgUpdateReq
   { jamBelowKmph :: Double,
     slowBelowKmph :: Double,
-    minSegmentLengthMeters :: Double
+    minSegmentLengthMeters :: Double,
+    tierThresholds :: Maybe (Map Maps.RoadTier OSRMTrafficThresholdsUpdateReq)
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OSRMTrafficThresholdsUpdateReq = OSRMTrafficThresholdsUpdateReq
+  { jamBelowKmph :: Double,
+    slowBelowKmph :: Double
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mkOSRMTrafficConfig :: OSRMTrafficCfgUpdateReq -> Maps.OSRMTrafficConfig
-mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} = Maps.OSRMTrafficConfig {..}
+mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} =
+  Maps.OSRMTrafficConfig {tierThresholds = (fmap . fmap) mkOSRMTrafficThresholds tierThresholds, ..}
+
+mkOSRMTrafficThresholds :: OSRMTrafficThresholdsUpdateReq -> Maps.OSRMTrafficThresholds
+mkOSRMTrafficThresholds OSRMTrafficThresholdsUpdateReq {..} = Maps.OSRMTrafficThresholds {..}
 
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
@@ -756,7 +769,9 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
     fareSettlementType :: Maybe SLT.FareSettlementType,
-    poolingMode :: Maybe SLT.PoolingMode
+    poolingMode :: Maybe SLT.PoolingMode,
+    -- | Optional KML for the queue polygon (LTS queue membership), when it should differ from the pricing polygon in @file@.
+    queueFile :: Maybe FilePath
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -765,6 +780,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
   fromMultipart form = do
     let eitherFile = lookupFile "file" form
         (fileField, contentType_) = getFileAndFileType eitherFile
+        (queueFileField, _) = getFileAndFileType (lookupFile "queueFile" form)
     ( UpsertSpecialLocationReq fileField contentType_
         <$> parseMaybeInput "locationName" form
       )
@@ -777,6 +793,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "paymentModes" form
       <*> parseMaybeInput "fareSettlementType" form
       <*> parseMaybeInput "poolingMode" form
+      <*> pure queueFileField
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -801,7 +818,12 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
     fareSettlementType :: Maybe SLT.FareSettlementType,
-    poolingMode :: Maybe SLT.PoolingMode
+    poolingMode :: Maybe SLT.PoolingMode,
+    -- | Queue polygon as GeoJSON. Omitted keeps the existing value.
+    queueGeom :: Maybe Text,
+    -- | The uploaded pricing polygon as GeoJSON ('geom' carries it as PostGIS hex). Used only by
+    --   the overlap checks; Nothing when no new pricing KML was sent or it didn't convert.
+    pricingGeoJson :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

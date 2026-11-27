@@ -32,6 +32,7 @@ module Tools.Maps
     getDistanceForScheduledRides,
     getDistancesForScheduledRides,
     getDynamicPickupDistances,
+    getNavigationRoutingConfig,
   )
 where
 
@@ -296,6 +297,28 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   msc <- getMapsServiceConfig merchantOpCityId (getCfg orgMapsConfig)
   func entityId (Just merchantOpCityId.getId) msc req
+
+-- | This city's routing server for turn-by-turn navigation routes, which talk to it directly instead
+-- of through the provider-agnostic interface: Disha (OSRM with live traffic and road blocks) when the
+-- city has a Disha maps service config, else its OSRM one.
+getNavigationRoutingConfig :: ServiceFlow m r => Id MerchantOperatingCity -> m OSRMCfg
+getNavigationRoutingConfig merchantOpCityId =
+  findMapsServiceConfig Maps.Disha >>= \case
+    Just (Maps.DishaConfig dishaCfg) -> do
+      logInfo "Navigation routing: Disha"
+      pure dishaCfg
+    _ ->
+      findMapsServiceConfig Maps.OSRM >>= \case
+        Just (Maps.OSRMConfig osrmCfg) -> do
+          logInfo "Navigation routing: OSRM"
+          pure osrmCfg
+        _ -> throwError $ MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" "Disha or OSRM"
+  where
+    findMapsServiceConfig mapsService = do
+      mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService mapsService)}) Nothing
+      pure $ case (.serviceConfig) <$> mbConfig of
+        Just (DOSC.MapsServiceConfig msc) -> Just msc
+        _ -> Nothing
 
 getMapsServiceConfig :: ServiceFlow m r => Id MerchantOperatingCity -> MapsService -> m MapsServiceConfig
 getMapsServiceConfig merchantOpCityId mapsService = do

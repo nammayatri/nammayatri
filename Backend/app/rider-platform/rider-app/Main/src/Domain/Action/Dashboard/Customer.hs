@@ -53,6 +53,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
@@ -359,10 +360,11 @@ findCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber = do
   unless (person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist mobileNumber)
   pure (merchant, person)
 
-postCustomerOffersList :: ShortId DM.Merchant -> Context.City -> Common.CustomerOffersListReq -> Flow [Common.CustomerOfferEntity]
-postCustomerOffersList merchantShortId opCity req = do
+-- | The offers in the dashboard user's language, else in the customer's.
+postCustomerOffersList :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Common.CustomerOffersListReq -> Flow [Common.CustomerOfferEntity]
+postCustomerOffersList merchantShortId opCity mbDashboardLanguage req = do
   (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
-  offers <- SOffer.listOffersForPerson merchant.id person req.amount
+  offers <- SOffer.listOffersForPerson' mbDashboardLanguage merchant.id person req.amount
   pure $ map mkCustomerOfferEntity offers
 
 -- Eligibility check + tag application, shared by single-apply and bulk-apply so the

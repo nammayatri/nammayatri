@@ -84,6 +84,15 @@ types:
     currency: Currency
     derive: "Show,Eq"
 
+  SharedCabSuggestedRoute:
+    routeCode: Text
+    tripCount: Int
+    derive: "Show,Eq"
+
+  SharedCabSuggestedRoutesResp:
+    routes: "[SharedCabSuggestedRoute]"
+    derive: "Show,Eq"
+
 apis:
   - GET:
       endpoint: /publicTransport/data
@@ -148,3 +157,10 @@ apis:
         callId: Id CallStatus
       response:
         type: GetCallStatusRes
+  - GET:
+      endpoint: /sharedCab/routes/suggested
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - days: Int
+      response:
+        type: SharedCabSuggestedRoutesResp

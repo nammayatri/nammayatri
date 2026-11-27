@@ -14,7 +14,7 @@ import Storage.Queries.OrphanInstances.VehicleInsurance ()
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
-updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
+  (Kernel.Types.Documents.VerificationStatus -> Text -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndRejectReason verificationStatus rejectReason rejectReasonKey (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamVI.verificationStatus verificationStatus, Se.Set BeamVI.rejectReason (Just rejectReason), Se.Set BeamVI.updatedAt _now] [Se.Is BeamVI.documentImageId $ Se.Eq imageId]
+  updateOneWithKV [Se.Set BeamVI.verificationStatus verificationStatus, Se.Set BeamVI.rejectReason (Just rejectReason), Se.Set BeamVI.rejectReasonKey rejectReasonKey, Se.Set BeamVI.updatedAt _now] [Se.Is BeamVI.documentImageId $ Se.Eq imageId]

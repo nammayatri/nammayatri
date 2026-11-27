@@ -20,13 +20,18 @@
 -- call. The generated @API.Action.DashboardAuth@ handler calls these functions
 -- for every endpoint marked @appServerHandler: custom@ in the spec.
 module Domain.Action.DashboardAuth.AppManagement.Payment
-  ( postPaymentRefundRequestInitiate,
+  ( getPaymentRefundRequestList,
+    getPaymentRefundRequestInfo,
+    postPaymentRefundRequestInitiate,
   )
 where
 
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified Domain.Action.Dashboard.AppManagement.Payment
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
+import qualified Domain.Types.Person.Type as Fields
+import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified Environment
@@ -34,6 +39,7 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Tools.Auth.DashboardUserAuth
 
 -- | Only a DASHBOARD_ADMIN caller auto-approves the refund they initiate;
@@ -48,3 +54,13 @@ postPaymentRefundRequestInitiate a6 a5 a4 a3 _clientAutoApprove a1 = do
   accessType <- dashboardRequestorAccessType a4
   let autoApprove = accessType == DDashboardRole.DASHBOARD_ADMIN
   Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestInitiate a6 a5 a3 (Kernel.Prelude.Just autoApprove) (Kernel.Prelude.Just (dashboardRequestorId a4)) a1
+
+-- | The refund list with each description in the dashboard user's language.
+getPaymentRefundRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestCode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.Dashboard.AppManagement.Payment.RefundRequestResp)
+getPaymentRefundRequestList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  Domain.Action.Dashboard.AppManagement.Payment.getPaymentRefundRequestList a11 a10 a9.person.language a8 a7 a6 a5 a4 a3 a2 a1 (Kernel.Prelude.Just (dashboardRequestorId a9))
+
+-- | One refund with its description in the dashboard user's language.
+getPaymentRefundRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.Dashboard.AppManagement.Payment.RefundRequestInfoResp)
+getPaymentRefundRequestInfo a5 a4 a3 a2 a1 =
+  Domain.Action.Dashboard.AppManagement.Payment.getPaymentRefundRequestInfo a5 a4 a3.person.language a2 a1 (Kernel.Prelude.Just (dashboardRequestorId a3))

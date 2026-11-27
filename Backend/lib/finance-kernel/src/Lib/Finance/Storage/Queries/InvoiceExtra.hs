@@ -1,5 +1,6 @@
 module Lib.Finance.Storage.Queries.InvoiceExtra where
 
+import Data.List (nub)
 import Data.Time (UTCTime (UTCTime), utctDay)
 import qualified Domain.Types.Invoice as DInvoiceSpec
 import Kernel.Beam.Functions
@@ -138,7 +139,32 @@ findByReferenceIdWithOptions referenceId mbInvoiceType mbIssuedToType statusIn m
     mbLimit
     mbOffset
 
--- | Commission invoices in date range (Issued/Draft only). ASC by issuedAt.
+findByReferenceIdWithStatusFallback ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
+  Kernel.Prelude.Maybe DInvoiceSpec.IssuedToType ->
+  m [DInvoice.Invoice]
+findByReferenceIdWithStatusFallback referenceId mbInvoiceType mbIssuedToType = do
+  invoices <- findByReferenceIdWithOptions referenceId mbInvoiceType mbIssuedToType [DInvoice.Paid, DInvoice.Issued, DInvoice.Draft] Nothing Nothing
+  let statusRank invoice = case invoice.status of
+        DInvoice.Paid -> 0 :: Int
+        DInvoice.Issued -> 1
+        _ -> 2
+      sameParty a b = a.invoiceType == b.invoiceType && a.issuedToType == b.issuedToType && a.issuedToId == b.issuedToId
+      isBestForParty invoice = all (\other -> not (sameParty invoice other) || statusRank invoice <= statusRank other) invoices
+  pure $ filter isBestForParty invoices
+
+findLinkedInvoices :: (BeamFlow.BeamFlow m r) => DInvoice.Invoice -> m [(DInvoiceSpec.InvoiceType, [DInvoice.Invoice])]
+findLinkedInvoices invoice = case invoice.referenceId of
+  Nothing -> pure []
+  Just referenceId -> do
+    linked <-
+      filter (\linkedInvoice -> linkedInvoice.id /= invoice.id && linkedInvoice.issuedToId == invoice.issuedToId)
+        <$> findByReferenceIdWithOptions referenceId Nothing (Just invoice.issuedToType) [DInvoice.Paid, DInvoice.Issued, DInvoice.Draft] Nothing Nothing
+    pure [(invoiceType, filter ((== invoiceType) . (.invoiceType)) linked) | invoiceType <- nub (map (.invoiceType) linked)]
+
+-- | Commission and CommissionRefund invoices in date range (Issued/Draft only). ASC by issuedAt.
 -- Type filtering (FLEET_OWNER vs DRIVER) done in Haskell, not SQL — when
 -- issuedToId is provided it already pins the recipient. Paginated via
 -- (limit, offset) to bound per-query load under concurrent fleet chains.
@@ -154,7 +180,7 @@ findCommissionInvoicesInRange ::
 findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId mbLimit mbOffset = do
   let conds =
         [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
-          <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.Commission]
+          <> [Se.Is Beam.invoiceType $ Se.In [DInvoiceSpec.Commission, DInvoiceSpec.CommissionRefund]]
           <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from]
           <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to]
           <> [Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft]]

@@ -105,6 +105,17 @@ data SpecialLocation = SpecialLocation
     -- | Pickup/zone polygon as GeoJSON text (the @geom_geo_json@ column), used for
     --   in-Haskell point-in-polygon checks so the read path needs no PostGIS.
     geomGeoJson :: Maybe Text,
+    -- | Optional queue polygon as GeoJSON text (the @queue_geom_geo_json@ column), so the queue
+    --   area can extend beyond the pricing area. When set it replaces 'geomGeoJson' for
+    --   "is the driver in this zone's queue area" decisions:
+    --     * LTS queue membership (internal specialLocation/list?getAllLocations=true),
+    --     * the driver-app list (/ui/specialLocation/list: map outline, queue card, pickup
+    --       screen, location-update config),
+    --     * BPP queue lookups: skip limit (SpecialZoneQueue) and zone tier names (DriverOnboardingV2),
+    --       where a pricing-polygon match still wins over a queue-band match.
+    --   Pricing (search area / fares), gate lookups and the dashboard lists keep using 'geomGeoJson'.
+    --   Must not overlap another zone's pricing polygon (validated on upload).
+    queueGeomGeoJson :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
     enabled :: Bool,
@@ -120,6 +131,7 @@ data SpecialLocation = SpecialLocation
     fareSettlementType :: Maybe FareSettlementType,
     boothSpecificFleet :: Maybe Text,
     poolingMode :: Maybe PoolingMode,
+    skipQueue :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

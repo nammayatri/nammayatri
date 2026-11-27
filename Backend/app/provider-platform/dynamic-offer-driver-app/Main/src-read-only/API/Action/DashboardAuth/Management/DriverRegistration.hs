@@ -231,7 +231,7 @@ getDriverRegistrationGetDocument a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
-        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationGetDocument a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.DashboardAuth.Management.DriverRegistration.getDriverRegistrationGetDocument a6 a5 a4 a3 a2 a1
     )
 
 postDriverRegistrationGenerateTempAppCode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.TempAppCodeRes)

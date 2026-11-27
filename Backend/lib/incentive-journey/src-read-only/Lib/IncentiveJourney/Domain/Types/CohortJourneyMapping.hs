@@ -24,6 +24,7 @@ data CohortJourneyMapping = CohortJourneyMapping
     maxWaiveOffCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.MerchantOperatingCity,
+    optInPeriod :: Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.OptInPeriod,
     parentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping.CohortJourneyMapping),
     startDate :: Kernel.Prelude.UTCTime,
     streakEndRewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -35,8 +36,20 @@ data CohortJourneyMapping = CohortJourneyMapping
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CampaignUserLinkType = Assigned | OptIn deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data CampaignUserLinkType
+  = Assigned
+  | OptIn
+  deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CampaignUserLinkType)
+data OptInPeriod
+  = Daily
+  | Weekly
+  deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''CampaignUserLinkType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CampaignUserLinkType))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''CampaignUserLinkType))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''OptInPeriod))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''OptInPeriod))

@@ -78,7 +78,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
                 supplierTaxNo = BecknV2Utils.getTag Tag.SUPPLIER_TAX_NO orderTagGroups,
                 supplierId = BecknV2Utils.getTag Tag.SUPPLIER_ID orderTagGroups,
                 issuedByGstin = BecknV2Utils.getTag Tag.ISSUED_BY_GSTIN orderTagGroups,
-                issuedByTaxNo = BecknV2Utils.getTag Tag.ISSUED_BY_TAX_NO orderTagGroups
+                issuedByTaxNo = BecknV2Utils.getTag Tag.ISSUED_BY_TAX_NO orderTagGroups,
+                issuedByLogoUrl = BecknV2Utils.getTag Tag.ISSUED_BY_LOGO_URL orderTagGroups
               }
 
       let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust

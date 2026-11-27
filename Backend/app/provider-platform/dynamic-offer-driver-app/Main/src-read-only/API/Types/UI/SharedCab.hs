@@ -88,6 +88,14 @@ data SharedCabSessionOperationReq = SharedCabSessionOperationReq
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SharedCabSuggestedRoute = SharedCabSuggestedRoute {routeCode :: Kernel.Prelude.Text, tripCount :: Kernel.Prelude.Int}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabSuggestedRoutesResp = SharedCabSuggestedRoutesResp {routes :: [SharedCabSuggestedRoute]}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabTripSummary = SharedCabTripSummary
   { currency :: Kernel.Types.Common.Currency,
     earnings :: Kernel.Types.Common.HighPrecMoney,

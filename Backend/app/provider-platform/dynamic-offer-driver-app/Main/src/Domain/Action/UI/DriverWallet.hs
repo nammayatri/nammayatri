@@ -17,8 +17,11 @@
 module Domain.Action.UI.DriverWallet
   ( getWalletBalance,
     getWalletTransactions,
+    getWalletTransactions',
     getWalletTransactionHistory,
+    getWalletTransactionHistory',
     getWalletLedgerHistory,
+    allWalletReferences,
     postWalletPayout,
     postWalletTopup,
     clearDuesByWalletTopup,
@@ -53,11 +56,14 @@ import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.ScheduledPayoutConfig as Fields
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
@@ -115,6 +121,7 @@ import SharedLogic.Payout.Bulk.Driver (runInstantPayout)
 import SharedLogic.Payout.RetimeScheduledBatchPayout (nextQueuedSweepRunAt)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
@@ -244,7 +251,21 @@ getWalletTransactions ::
     Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
     Environment.Flow DriverWallet.WalletSummaryResponse
   )
-getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAggBy = do
+getWalletTransactions = getWalletTransactions' Nothing
+
+-- | 'getWalletTransactions' with the item names in the given language rather than the person's:
+-- the dashboard passes its own user's.
+getWalletTransactions' ::
+  Kernel.Prelude.Maybe Language ->
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
+  Environment.Flow DriverWallet.WalletSummaryResponse
+getWalletTransactions' mbLanguage (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAggBy = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
@@ -256,7 +277,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
   now <- getCurrentTime
   case mbOwner of
     Nothing -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig 0}
-    Just _ -> walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+    Just _ -> walletTransactionsFor (fromMaybe ENGLISH (mbLanguage <|> person.language)) canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
 
 -- | Whose wallet a person sees, and whose rides within it. Per city: FLEET_ACCOUNT (default) shows a
 --   linked driver the fleet owner's account filtered to their rides, OWN_ACCOUNT their own account,
@@ -271,8 +292,20 @@ walletOwnerFor person transporterConfig = do
       | walletView == DTConf.HIDDEN -> Nothing
     _ -> Just (counterpartyFromRole person.role, person.id.getId, Nothing)
 
+-- | Gives a reference its item name in the reader's language, else the English name passed with it;
+-- the references are read here, each distinct one once.
+walletItemNamer :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Language -> [Text] -> Environment.Flow (Text -> Text -> TranslatedText)
+walletItemNamer mocId language refs = (\textOf ref -> textOf (Wallet_Item ref)) <$> CQTranslations.findTranslatedTexts (Just mocId) language (map Wallet_Item refs)
+
+-- | 'walletRowItemName' in the reader's language: a gate fee showing its gate name keeps it, no key can stand in for it.
+translatedRowItemName :: (Text -> Text -> TranslatedText) -> Bool -> Text -> Maybe Text -> TranslatedText
+translatedRowItemName nameOf isVat ref mbReason
+  | ref == walletReferenceGateDriverFee, Just reason <- mbReason, not (T.null reason) = textAsReceived (walletRowItemName isVat ref mbReason)
+  | otherwise = nameOf ref (walletRowItemName isVat ref mbReason)
+
 -- | The wallet read itself, once it has been decided whose account to read.
 walletTransactionsFor ::
+  Language ->
   Bool -> -- whether the app may offer this person an instant payout
   ResolvedAccountConfig -> -- kernel policy for the viewed account's class
   FAccount.CounterpartyType ->
@@ -284,7 +317,7 @@ walletTransactionsFor ::
   Kernel.Prelude.Maybe Data.Time.UTCTime ->
   Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
   Environment.Flow DriverWallet.WalletSummaryResponse
-walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
+walletTransactionsFor language canWithdraw classCfg counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
@@ -305,12 +338,13 @@ walletTransactionsFor canWithdraw classCfg counterparty ownerId mbConcernedIndiv
         Just walletAcc -> getPayoutEligibilityData ownerId walletAcc
       dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
       offerHoldBalance <- getWalletOfferHoldTotal ownerId
+      nameOf <- walletItemNamer transporterConfig.merchantOperatingCityId language (map (.walletReferenceType) rows)
       let holdBalance = dbHoldBalance + offerHoldBalance
           -- Bucketing cutoff comes from the kernel's breakdown, never recomputed here;
           -- no cutoff policy -> 'now' (everything counts as redeemable).
           cutoff = fromMaybe now eligibility.cutoffAt
           (rawAdditions, rawDeductions, _) =
-            aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
+            aggregateWalletRows nameOf (isVatMerchant transporterConfig) accountIds cutoff rows
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
           redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
           rounded = roundAmountByCurrency' transporterConfig.currency
@@ -419,12 +453,13 @@ fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
 --   current balance and is computed by the caller, so the two answer different
 --   questions and are not expected to agree.
 aggregateWalletRows ::
+  (Text -> Text -> TranslatedText) -> -- an item's name in the reader's language
   Bool -> -- merchant charges VAT rather than GST
   [Id Account] ->
   UTCTime -> -- payout cutoff time
   [CHLE.WalletEntryRow] ->
   (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
-aggregateWalletRows isVat accountIds cutoff entries =
+aggregateWalletRows nameOf isVat accountIds cutoff entries =
   let (addEntries, dedEntries) = partition (\e -> e.walletToAccountId `elem` accountIds) entries
 
       addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.walletReferenceType (e.walletAmount, if e.walletTimestamp >= cutoff then e.walletAmount else 0) acc) Map.empty addEntries
@@ -433,7 +468,7 @@ aggregateWalletRows isVat accountIds cutoff entries =
           ( \(ref, (total, nonRedeem)) ->
               DriverWallet.WalletItem
                 { itemReference = ref,
-                  itemName = referenceTypeToItemName isVat ref,
+                  itemName = nameOf ref (referenceTypeToItemName isVat ref),
                   itemValue = total,
                   redeemableBalance = max 0 (total - nonRedeem),
                   nonRedeemableBalance = nonRedeem
@@ -448,7 +483,7 @@ aggregateWalletRows isVat accountIds cutoff entries =
           ( \(ref, val) ->
               DriverWallet.WalletItem
                 { itemReference = ref,
-                  itemName = referenceTypeToItemName isVat ref,
+                  itemName = nameOf ref (referenceTypeToItemName isVat ref),
                   itemValue = val,
                   redeemableBalance = val,
                   nonRedeemableBalance = 0
@@ -552,6 +587,81 @@ generateMonthBuckets startDay endDay =
            in (firstDay, lastDay) : step next
    in step (sy, sm)
 
+-- | Every reference a wallet row can carry: the key list of the "Wallet" translation domain. The ones
+-- 'referenceTypeToItemName' does not name show the reference itself until the key has text.
+allWalletReferences :: [Text]
+allWalletReferences =
+  [ walletReferenceBaseRide,
+    walletReferenceTollCharges,
+    walletReferenceParkingCharges,
+    walletReferenceAirportEntryFeeCharges,
+    walletReferenceTopup,
+    walletReferenceTDSDeduction,
+    walletReferenceTDSDeductionCancellation,
+    tdsReimbursementReferenceType,
+    walletReferencePayout,
+    walletReferenceGateDriverFee,
+    walletReferenceAirportCashRecharge,
+    walletReferenceAirportCashWithdrawal,
+    walletReferenceDiscounts,
+    walletReferenceIncentiveJourneyCash,
+    walletReferenceCustomerCancellationCharges,
+    walletReferenceCommission,
+    walletReferenceCancellationCommission,
+    walletReferenceDeductedAtPaymentByPlatform,
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePGPaymentCharges,
+    walletReferencePGPayoutCharges,
+    walletReferenceConnectAccountCharges,
+    WalletSubscription.walletReferenceSubscriptionFee,
+    WalletSubscription.walletReferenceSubscriptionGST,
+    WalletSubscription.walletReferenceSubscriptionPenalty,
+    WalletSubscription.walletReferenceMigratedDues,
+    WalletSubscription.walletReferenceMigratedDuesGST,
+    WalletSubscription.walletReferenceMigratedDuesPenalty,
+    WalletSubscription.walletReferenceAutopayRecharge,
+    WalletSubscription.walletReferenceLatePaymentCredit,
+    WalletSubscription.walletReferenceBehaviourPenalty,
+    walletReferencePayoutSettlement,
+    walletReferenceDriverCancellationCharges,
+    walletReferenceTips,
+    walletReferenceD2DReferral,
+    walletReferenceAirportEntryFee,
+    walletReferenceWalletIncentive,
+    walletReferenceRideFareRefund,
+    walletReferenceTollRefund,
+    walletReferenceParkingRefund,
+    walletReferenceRideFareRefundCommission,
+    walletReferenceDiscountsRefund,
+    walletReferenceCancellationFeeRefund,
+    walletReferencePaymentChargeRefund,
+    walletReferencePaymentChargeRefundVAT,
+    walletReferenceCancellationRefundCommission,
+    WA.walletReferenceStatutoryHold,
+    walletItemOnlineRideFare,
+    walletItemOnlineRideGst
+  ]
+    <> [taxReference regime | taxReference <- taxReferences, regime <- [Tax.GST, Tax.VAT]]
+  where
+    taxReferences =
+      [ walletReferenceTollChargesTax,
+        walletReferenceParkingChargesTax,
+        walletReferenceAirportEntryFeeChargesTax,
+        walletReferenceRideTax,
+        walletReferenceCustomerCancellationTax,
+        walletReferenceCommissionTax,
+        walletReferenceCancellationCommissionTax,
+        walletReferencePaymentChargeTaxPaidByCustomer,
+        walletReferencePGPaymentChargesTax,
+        walletReferenceAirportEntryFeeTax,
+        walletReferenceRideFareRefundTax,
+        walletReferenceTollRefundTax,
+        walletReferenceParkingRefundTax,
+        walletReferenceRideFareRefundCommissionTax,
+        walletReferenceCancellationFeeRefundTax,
+        walletReferenceCancellationRefundCommissionTax
+      ]
+
 referenceTypeToItemName :: Bool -> Text -> Text
 referenceTypeToItemName isVat storedRef
   | ref == walletReferenceBaseRide = "Ride Earnings"
@@ -648,7 +758,22 @@ getWalletTransactionHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow DriverWallet.WalletTransactionHistoryResponse
   )
-getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset = do
+getWalletTransactionHistory = getWalletTransactionHistory' Nothing
+
+-- | 'getWalletTransactionHistory' with the item names in the given language rather than the
+-- person's: the dashboard passes its own user's.
+getWalletTransactionHistory' ::
+  Kernel.Prelude.Maybe Language ->
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Environment.Flow DriverWallet.WalletTransactionHistoryResponse
+getWalletTransactionHistory' mbLanguage (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset = do
   validateInput
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -660,6 +785,7 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
     Nothing -> pure DriverWallet.WalletTransactionHistoryResponse {items = []}
     Just walletAcc -> do
       entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
+      nameOf <- walletItemNamer mocId (fromMaybe ENGLISH (mbLanguage <|> person.language)) (map (.referenceType) entries)
       let referenceIdsOf refType = [e.referenceId | e <- entries, e.referenceType == refType]
           topupOrderIds = referenceIdsOf walletReferenceTopup
           payoutRequestIds = referenceIdsOf walletReferencePayout
@@ -699,7 +825,7 @@ getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate
                     else Nothing
              in DriverWallet.WalletTransactionHistoryItem
                   { itemReference = e.referenceType,
-                    itemName = walletRowItemName isVat e.referenceType mbReason,
+                    itemName = translatedRowItemName nameOf isVat e.referenceType mbReason,
                     itemValue = e.amount,
                     isCredit = e.toAccountId == walletAcc.id,
                     status = e.status,
@@ -854,12 +980,14 @@ getWalletLedgerHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLi
         filter keepEntry
           <$> QLedgerEntry.findByAccountsWithConcernedIndividual [walletAcc.id] [] (Just fromDate) (Just toDate) Nothing Nothing mbConcernedIndividualId
       accountConfig <- FinanceAccountConfig.getAccountConfigForAccount walletAcc
+      let groups = groupEntriesByReference entries
+          pageOfGroups = take limit (drop offset groups)
+      nameOf <- walletItemNamer person.merchantOperatingCityId (fromMaybe ENGLISH person.language) [e.referenceType | (_, _, refEntries) <- pageOfGroups, e <- refEntries]
       let isVat = isVatMerchant transporterConfig
           cutoff = maybe now (`FinanceAccountConfig.cutoffTimeFor` now) accountConfig.redeemableCutoff
           (additions, deductions, netAmount) =
-            aggregateWalletRows isVat [walletAcc.id] cutoff (map ledgerEntryToWalletRow entries)
-          groups = groupEntriesByReference entries
-      pageGroups <- buildLedgerEntryGroups isVat person walletAcc.id (take limit (drop offset groups))
+            aggregateWalletRows nameOf isVat [walletAcc.id] cutoff (map ledgerEntryToWalletRow entries)
+      pageGroups <- buildLedgerEntryGroups nameOf isVat person walletAcc.id pageOfGroups
       pure
         DriverWallet.WalletLedgerEntriesResponse
           { additions = toLedgerTotal additions,
@@ -883,7 +1011,7 @@ emptyLedgerEntriesResponse =
       groups = []
     }
   where
-    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0}
+    emptyTotal = DriverWallet.WalletLedgerTotal {totalAmount = 0, redeemableAmount = 0, nonRedeemableAmount = 0, items = []}
 
 isWalletPayoutEntry :: FLedgerEntry.LedgerEntry -> Bool
 isWalletPayoutEntry e = e.referenceType == walletReferencePayout
@@ -893,7 +1021,8 @@ toLedgerTotal itemGroup =
   DriverWallet.WalletLedgerTotal
     { totalAmount = itemGroup.totalAmount,
       redeemableAmount = sum (map (.redeemableBalance) itemGroup.items),
-      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items)
+      nonRedeemableAmount = sum (map (.nonRedeemableBalance) itemGroup.items),
+      items = itemGroup.items
     }
 
 groupEntriesByReference :: [FLedgerEntry.LedgerEntry] -> [(Text, UTCTime, [FLedgerEntry.LedgerEntry])]
@@ -905,12 +1034,13 @@ groupEntriesByReference entries =
           Map.fromListWith (\(es1, t1) (es2, t2) -> (es1 <> es2, max t1 t2)) [(e.referenceId, ([e], e.timestamp)) | e <- entries]
 
 buildLedgerEntryGroups ::
+  (Text -> Text -> TranslatedText) ->
   Bool ->
   DP.Person ->
   Id Account ->
   [(Text, UTCTime, [FLedgerEntry.LedgerEntry])] ->
   Environment.Flow [DriverWallet.WalletLedgerEntryGroup]
-buildLedgerEntryGroups isVat viewer walletAccId groups = do
+buildLedgerEntryGroups nameOf isVat viewer walletAccId groups = do
   bookings <- QBooking.findAllByIds [Id refId | (refId, _, _) <- groups]
   rides <- if null bookings then pure [] else QRide.findRidesByBookingId (map (.id) bookings)
   rideDetails <- QRideDetails.findAllByRideIds (map (.id) rides)
@@ -924,6 +1054,7 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
     if isVat || null onlineBookingIds
       then pure []
       else QLedgerEntry.findByReferenceTypesAndReferenceIds (Map.keys onlineTaxBaseReferenceTypes) onlineBookingIds
+  onlineNameOf <- if null (govtTaxLegs onlineTaxEntries) then pure nameOf else walletItemNamer viewer.merchantOperatingCityId (fromMaybe ENGLISH viewer.language) [walletItemOnlineRideFare, walletItemOnlineRideGst]
   let bookingById = Map.fromList [(b.id.getId, b) | b <- bookings]
       onlineTaxLegsByBooking = Map.fromListWith (<>) [(e.referenceId, [e]) | e <- govtTaxLegs onlineTaxEntries]
       ridesByBookingId = Map.fromListWith (<>) [(r.bookingId.getId, [r]) | r <- rides]
@@ -958,8 +1089,9 @@ buildLedgerEntryGroups isVat viewer walletAccId groups = do
                 groupData = (DriverWallet.RideWallet <$> mbRideInfo) <|> (DriverWallet.PayoutWallet <$> mbPayoutInfo),
                 entries =
                   withOnlineTaxBreakup
+                    onlineNameOf
                     (sortOn (.timestamp) (Map.findWithDefault [] refId onlineTaxLegsByBooking))
-                    (map (mkLedgerEntryItem isVat walletAccId) refEntries)
+                    (map (mkLedgerEntryItem nameOf isVat walletAccId) refEntries)
               }
   pure (map mkGroup groups)
 
@@ -986,12 +1118,12 @@ mkLedgerRideInfo driverNameById vehicleNumberByRideId booking ride =
 bookingIsOnline :: DRB.Booking -> Maybe Bool
 bookingIsOnline booking = booking.ledgerWriteMode <|> (isOnlinePaymentInstrument <$> booking.paymentInstrument)
 
-mkLedgerEntryItem :: Bool -> Id Account -> FLedgerEntry.LedgerEntry -> DriverWallet.WalletLedgerEntryItem
-mkLedgerEntryItem isVat walletAccId e =
+mkLedgerEntryItem :: (Text -> Text -> TranslatedText) -> Bool -> Id Account -> FLedgerEntry.LedgerEntry -> DriverWallet.WalletLedgerEntryItem
+mkLedgerEntryItem nameOf isVat walletAccId e =
   DriverWallet.WalletLedgerEntryItem
     { entryId = e.id,
       itemReference = e.referenceType,
-      itemName = walletRowItemName isVat e.referenceType (e.metadataV2 >>= (.reason)),
+      itemName = translatedRowItemName nameOf isVat e.referenceType (e.metadataV2 >>= (.reason)),
       itemValue = e.amount,
       isCredit = e.toAccountId == walletAccId,
       isReversal = e.entryType == FLedgerEntry.Reversal,
@@ -1022,8 +1154,13 @@ govtTaxLegs taxEntries = filter isGovtLeg live
       e.status == FLedgerEntry.SETTLED
         && any (\prev -> prev.referenceId == e.referenceId && prev.referenceType == e.referenceType && prev.toAccountId == e.fromAccountId) live
 
-withOnlineTaxBreakup :: [FLedgerEntry.LedgerEntry] -> [DriverWallet.WalletLedgerEntryItem] -> [DriverWallet.WalletLedgerEntryItem]
-withOnlineTaxBreakup taxLegs items = case appliedLegs of
+-- | The references that name the grossed-up online ride fare and its GST line.
+walletItemOnlineRideFare, walletItemOnlineRideGst :: Text
+walletItemOnlineRideFare = "OnlineRideFare"
+walletItemOnlineRideGst = "OnlineRideGst"
+
+withOnlineTaxBreakup :: (Text -> Text -> TranslatedText) -> [FLedgerEntry.LedgerEntry] -> [DriverWallet.WalletLedgerEntryItem] -> [DriverWallet.WalletLedgerEntryItem]
+withOnlineTaxBreakup nameOf taxLegs items = case appliedLegs of
   leg : _ | not (any (.isReversal) items) -> reverse throughLastGrossed <> [gstItem leg] <> reverse afterLastGrossed
   _ -> items
   where
@@ -1034,7 +1171,7 @@ withOnlineTaxBreakup taxLegs items = case appliedLegs of
         | item.isCredit && not item.isReversal && isNothing item.entityReferenceType ->
           ( Map.delete item.itemReference pendingTax,
             item
-              { DriverWallet.itemName = if item.itemReference == walletReferenceBaseRide then "Ride Fare" else item.itemName,
+              { DriverWallet.itemName = if item.itemReference == walletReferenceBaseRide then nameOf walletItemOnlineRideFare "Ride Fare" else item.itemName,
                 DriverWallet.itemValue = item.itemValue + tax,
                 DriverWallet.isDisplayOnly = Just True
               } ::
@@ -1047,7 +1184,7 @@ withOnlineTaxBreakup taxLegs items = case appliedLegs of
       DriverWallet.WalletLedgerEntryItem
         { entryId = leg.id,
           itemReference = leg.referenceType,
-          itemName = "GST",
+          itemName = nameOf walletItemOnlineRideGst "GST",
           itemValue = sum (map (.amount) appliedLegs),
           isCredit = False,
           isReversal = False,
@@ -1343,15 +1480,19 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
       mShortId = Just merchant.shortId.getShortId
       address =
         Just $
-          show merchantOpCity.city
-            <> ", "
-            <> show merchantOpCity.state
-            <> ", "
-            <> show merchantOpCity.country
+          fromMaybe
+            ( show merchantOpCity.city
+                <> ", "
+                <> show merchantOpCity.state
+                <> ", "
+                <> show merchantOpCity.country
+            )
+            merchantOpCity.address
       supplierName = (mbInvoiceConfig >>= (.walletInvoiceSupplierName)) <|> mName
       supplierAddress = (mbInvoiceConfig >>= (.walletInvoiceSupplierAddress)) <|> address
-      supplierGSTIN = merchantOpCity.gstin <|> merchant.gstin
-      supplierId = Nothing
+      merchantGstin = merchantOpCity.gstin <|> merchant.gstin
+      supplierId = Just merchantId.getId
+  (issuedToName, _) <- driverInvoiceParty mocId driverId Nothing
   pure
     FinanceCtx
       { merchantId = merchantId.getId,
@@ -1368,18 +1509,18 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
         merchantShortId = mShortId,
         issuedByAddress = address,
         supplierName = supplierName,
-        supplierGSTIN = supplierGSTIN,
-        merchantGstin = Nothing,
-        supplierVatNumber = Nothing,
+        supplierGSTIN = merchantGstin,
+        merchantGstin = merchantGstin,
+        supplierVatNumber = merchant.vatNumber,
         supplierAddress = supplierAddress,
-        merchantVatNumber = Nothing,
+        merchantVatNumber = merchant.vatNumber,
         supplierId = supplierId,
         panOfParty = Nothing,
         panType = Nothing,
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing,
+        issuedToName = issuedToName,
         enableWalletGatedTierCheck = walletGateEnabled,
         buyerCounterpartyId = Nothing,
         initialSettlementStatus = Nothing

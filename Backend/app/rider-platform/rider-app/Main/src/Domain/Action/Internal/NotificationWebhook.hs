@@ -15,6 +15,7 @@ import EulerHS.Prelude hiding (id, map)
 import qualified IssueManagement.Utils.RemoteFile as RemoteFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Sms.Config as Fields
 import Kernel.Types.APISuccess (APISuccess)
@@ -95,7 +96,8 @@ listMerchantMessages' :: Webhook.NotifyChannel -> Text -> Flow [Webhook.RawTempl
 listMerchantMessages' channel opCityId = do
   let merchantOpCityId = Id opCityId :: Id DMOC.MerchantOperatingCity
   msgs <- QMM.findAllByMerchantOpCityId merchantOpCityId
-  pure $ map toRaw msgs
+  -- A key has a row per language; the list names it once, with its English text.
+  pure $ map toRaw (filter ((== ENGLISH) . (.language)) msgs)
   where
     toRaw m =
       Webhook.RawTemplate
@@ -114,7 +116,7 @@ sendSms' :: Webhook.Contact -> Webhook.SmsMsg -> Flow ()
 sendSms' contact msg = do
   smsCfg <- asks (.smsCfg)
   let sender = fromMaybe smsCfg.sender msg.sender
-  Sms.sendSMS (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Sms.SendSMSReq msg.body msg.phoneNumber sender msg.templateId Nothing) >>= Sms.checkSmsResult
+  Sms.sendSMS (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Sms.SendSMSReq (Sms.prebuiltSmsBody msg.body) msg.phoneNumber sender msg.templateId Nothing) >>= Sms.checkSmsResult
 
 sendWhatsapp' :: Webhook.Contact -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq -> Flow ()
 sendWhatsapp' contact req = do

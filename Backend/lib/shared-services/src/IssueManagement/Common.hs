@@ -213,7 +213,7 @@ data RideInfoRes = RideInfoRes
   }
 
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE | IN_PROGRESS
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema, Bounded, Enum)
 
 -- | The customer's reaction to a post-resolution satisfaction prompt.
 -- ACCEPT  : customer confirms the issue is resolved (drives transition to CLOSED).
@@ -422,6 +422,8 @@ data ChatNotifPayload = ChatNotifPayload
     messageId :: Text,
     senderType :: Text,
     snippet :: Text,
+    -- | Set on a status-update notification; the sender reads that status push's text by it.
+    status :: Maybe IssueStatus,
     hasMedia :: Bool,
     timestamp :: UTCTime
   }

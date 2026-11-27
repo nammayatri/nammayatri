@@ -89,6 +89,22 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantCommonConfigUpdateReq
+  - GET: # CallingConfigAPI
+      endpoint: /config/calling
+      auth: ApiAuthV2
+      response:
+        type: CallingConfigRes
+      migrate:
+        capability: city-config.launch.read
+  - POST: # CallingConfigUpdateAPI
+      endpoint: /config/calling/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateCallingConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.launch.write
   - GET: # DriverPoolConfigAPI
       endpoint: /config/driverPool
       auth: ApiAuthV2
@@ -731,26 +747,34 @@ apis:
 
 types:
   MerchantUpdateReq:
-    - name: Maybe Text
-    - description: Maybe Text
+    - name: "Maybe !Text"
+    - description: "Maybe !Text"
     - enabled: Maybe Bool
     - exoPhones: Maybe (NonEmpty ExophoneReq)
     - fcmConfig: Maybe FCMConfigUpdateReq
   MerchantUpdateRes:
-    - name: Text
-    - description: Maybe Text
-    - contactNumber: Maybe Text
+    - name: "!Text"
+    - description: "Maybe !Text"
+    - contactNumber: "Maybe !Text"
     - status: Status
     - enabled: Bool
   Status:
     - enum: "PENDING_VERIFICATION, APPROVED, REJECTED"
+  CallingMode:
+    - enum: "CLOUD_CALLING, DIRECT_CALLING_WITH_CONSENT, FORCED_DIRECT_CALLING"
+  CallingConfigRes:
+    - mode: CallingMode
+    - callingMode: "Maybe !Text"
+  UpdateCallingConfigReq:
+    - mode: CallingMode
+    - derive: "'HideSecrets"
   RideEvidenceConfigItem:
     - enabled: Maybe Bool
     - maxFilesPerRide: Maybe Int
     - completedRideWindowHours: Maybe Int
     - linkExpirySeconds: Maybe Int
   ManualTollChargeConfigItem:
-    - tripCategories: Maybe [Text]
+    - tripCategories: "Maybe [!Text]"
     - maxAmountWithoutEstimate: HighPrecMoney
     - approvalTimeoutSeconds: Maybe Int
     - maxApprovalAttempts: Maybe Int
@@ -765,7 +789,7 @@ types:
     - popupDelayToAddAsPenalty: Maybe Seconds
     - thresholdCancellationScore: Maybe Int
     - minRidesForCancellationScore: Maybe Int
-    - mediaFileUrlPattern: Text
+    - mediaFileUrlPattern: "!Text"
     - mediaFileSizeUpperLimit: Int
     - onboardingTryLimit: Int
     - onboardingRetryTimeInHours: Int
@@ -806,7 +830,7 @@ types:
     - popupDelayToAddAsPenalty: Maybe (OptionalValue Seconds)
     - thresholdCancellationScore: Maybe (OptionalValue Int)
     - minRidesForCancellationScore: Maybe (OptionalValue Int)
-    - mediaFileUrlPattern: Maybe (MandatoryValue Text)
+    - mediaFileUrlPattern: "Maybe (MandatoryValue !Text)"
     - mediaFileSizeUpperLimit: Maybe (MandatoryValue Int)
     - onboardingTryLimit: Maybe (MandatoryValue Int)
     - onboardingRetryTimeInHours: Maybe (MandatoryValue Int)
@@ -913,7 +937,7 @@ types:
     - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
     - onRideRadiusConfig: [OnRideRadiusConfig]
     - enableForwardBatching: Bool
-    - currentRideTripCategoryValidForForwardBatching: [Text]
+    - currentRideTripCategoryValidForForwardBatching: "[!Text]"
     - batchSizeOnRide: Int
     - batchSizeOnRideWithStraightLineDistance: Maybe Int
     - useOneToOneOsrmMapping: Maybe Bool
@@ -973,17 +997,17 @@ types:
     - distanceBasedBatchSplit: [BatchSplitByPickupDistance]
     - vehicleVariant: Maybe ServiceTierType
     - scheduleTryTimes: [Int]
-    - tripCategory: Text
+    - tripCategory: "!Text"
     - thresholdToIgnoreActualDistanceThreshold: Maybe Meters
     - area: Area
     - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
     - maxParallelSearchRequestsOnRide: Int
     - enableForwardBatching: Bool
-    - currentRideTripCategoryValidForForwardBatching: [Text]
+    - currentRideTripCategoryValidForForwardBatching: "[!Text]"
     - batchSizeOnRide: Int
     - actualDistanceThresholdOnRide: Maybe Meters
     - onRideRadiusConfig: [OnRideRadiusConfig]
-    - timeBounds: Text
+    - timeBounds: "!Text"
     - distanceUnit: DistanceUnit
     - useOneToOneOsrmMapping: Maybe Bool
     - batchSizeOnRideWithStraightLineDistance: Maybe Int
@@ -1034,7 +1058,7 @@ types:
     - supportedVehicleClasses: SupportedVehicleClasses
     - vehicleClassCheckType: VehicleClassCheckType
     - documentFlowGrouping: DocumentFlowGrouping
-    - rcNumberPrefixList: Maybe [Text]
+    - rcNumberPrefixList: "Maybe [!Text]"
     - maxRetryCount: Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
@@ -1049,8 +1073,8 @@ types:
     - checkExtraction: Maybe (MandatoryValue Bool)
     - checkExpiry: Maybe (MandatoryValue Bool)
     - supportedVehicleClasses: Maybe SupportedVehicleClasses # value wrapper make no sense for lists and objects
-    - rcNumberPrefix: Maybe (MandatoryValue Text)
-    - rcNumberPrefixList: Maybe (MandatoryValue [Text])
+    - rcNumberPrefix: "Maybe (MandatoryValue !Text)"
+    - rcNumberPrefixList: "Maybe (MandatoryValue [!Text])"
     - maxRetryCount: Maybe (MandatoryValue Int)
     - vehicleClassCheckType: Maybe (MandatoryValue VehicleClassCheckType)
     - documentFlowGrouping: Maybe (MandatoryValue DocumentFlowGrouping)
@@ -1059,8 +1083,8 @@ types:
     - checkExtraction: Bool
     - checkExpiry: Bool
     - supportedVehicleClasses: SupportedVehicleClasses
-    - rcNumberPrefix: Text
-    - rcNumberPrefixList: Maybe [Text]
+    - rcNumberPrefix: "!Text"
+    - rcNumberPrefixList: "Maybe [!Text]"
     - maxRetryCount: Int
     - vehicleClassCheckType: VehicleClassCheckType
     - isDefaultEnabledOnManualVerification: Maybe Bool
@@ -1105,7 +1129,7 @@ types:
     - pickupBufferInSecsForNightShiftCal: Maybe Seconds
     - perMinuteRideExtraTimeChargeWithCurrency: Maybe PriceAPIEntity
     - congestionChargeMultiplier: Maybe CongestionChargeMultiplierAPIEntity
-    - description: Maybe Text
+    - description: "Maybe !Text"
     - baseDistance: Maybe Meters
     - baseDistanceWithUnit: Maybe Distance
     - baseFare: Maybe Money
@@ -1140,20 +1164,20 @@ types:
     - nightShiftBounds: Maybe NightShiftBounds
     - allowedTripDistanceBounds: Maybe AllowedTripDistanceBoundsAPIEntity
     - congestionChargeMultiplier: Maybe CongestionChargeMultiplierAPIEntity
-    - description: Maybe Text
-    - farePolicyType: Text
+    - description: "Maybe !Text"
+    - farePolicyType: "!Text"
     - baseFare: Maybe HighPrecMoney
     - baseDistance: Maybe Meters
     - deadKmFare: Maybe HighPrecMoney
     - waitingChargeInfo: Maybe WaitingChargeInfoAPIEntity
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - perMinRateSections: Maybe [PerMinRateSectionAPIEntity]
-    - perMinRateDurationBasis: Maybe Text
+    - perMinRateDurationBasis: "Maybe !Text"
   FareProductListItem:
-    - farePolicyId: Text
+    - farePolicyId: "!Text"
     - timeBounds: TimeBound
     - vehicleVariant: ServiceTierType
-    - serviceTierName: Text
+    - serviceTierName: "!Text"
   FareProductListRes:
     - fareProducts: "[FareProductListItem]"
   WaitingChargeInfoAPIEntity:
@@ -1178,9 +1202,10 @@ types:
     - maxAllowedTripDistanceWithUnit: Maybe Distance
     - minAllowedTripDistanceWithUnit: Maybe Distance
   UpsertFarePolicyResp:
-    - unprocessedFarePolicies: [Text]
-    - success: Text
-    - warnings: Maybe [Text]
+    # operator-only upload result lines
+    - unprocessedFarePolicies: "[!Text]"
+    - success: "!Text"
+    - warnings: "Maybe [!Text]"
   UpsertFarePolicyReq:
     - recordType: NewType
     - file: FilePath
@@ -1188,25 +1213,26 @@ types:
   SchedulerTriggerReq:
     - scheduledAt: Maybe UTCTime
     - jobName: Maybe JobName
-    - jobData: Text
+    - jobData: "!Text"
     - derive: "'HideSecrets"
   JobName:
     - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger, SendLegalPolicyNotificationTrigger, MaterialiseSharedRunsTrigger"
   ReviveSchedulerJobsReq:
     - recordType: NewType
-    - jobIds: [Text]
+    - jobIds: "[!Text]"
     - derive: "'HideSecrets"
   ReviveSchedulerJobsRes:
     - recordType: NewType
-    - list: [Either Text Text]
+    # operator-only per-job result lines
+    - list: "[Either !Text !Text]"
     - derive: "'HideSecrets"
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
-    - vehicleCategory: Text
+    - vehicleCategory: "!Text"
     - derive: "'HideSecrets"
   ClearCacheSubscriptionReq:
     - serviceName: Maybe ServiceNames
-    - planId: Maybe Text
+    - planId: "Maybe !Text"
     - tableName: Maybe TableName
     - derive: "'HideSecrets"
   PayoutConfigReq:
@@ -1217,7 +1243,7 @@ types:
     - payoutRegistrationCgst: Maybe HighPrecMoney
     - payoutRegistrationSgst: Maybe HighPrecMoney
     - thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
-    - remark: Maybe Text
+    - remark: "Maybe !Text"
     - derive: "'HideSecrets"
   UpsertPlanAndConfigReq:
     - action: Action
@@ -1235,20 +1261,21 @@ types:
     - respCode: APISuccess
     - executedAction: Action
     - executedCommand: Command
-    - error_resp : Maybe Text
+    # operator-only upload result line
+    - error_resp : "Maybe !Text"
     - diff : Maybe Value
   VendorSplitDetailsAPIEntity:
-    - merchantOperatingCityId: Text
-    - area: Text
-    - vendorId: Text
-    - vehicleVariant: Text
-    - splitType: Text
+    - merchantOperatingCityId: "!Text"
+    - area: "!Text"
+    - vendorId: "!Text"
+    - vehicleVariant: "!Text"
+    - splitType: "!Text"
     - splitValue: Double
     - maxVendorFeeAmount: Maybe HighPrecMoney
-    - dailyPlanId: Maybe Text
+    - dailyPlanId: "Maybe !Text"
   SubscriptionConfigAPIEntity:
-    - merchantOperatingCityId: Text
-    - serviceName: Text
+    - merchantOperatingCityId: "!Text"
+    - serviceName: "!Text"
     # bools
     - allowDriverFeeCalcSchedule: Bool
     - allowDueAddition: Bool
@@ -1276,14 +1303,14 @@ types:
     - deepLinkExpiryTimeInMinutes: Maybe Int
     - numberOfFreeTrialRides: Maybe Int
     # text
-    - waiveOffOfferTitle: Text
-    - waiveOffOfferDescription: Text
+    - waiveOffOfferTitle: "!Text"
+    - waiveOffOfferDescription: "!Text"
     # enums (rendered as selects; carried as their string form)
-    - defaultCityVehicleCategory: Text
-    - paymentLinkChannel: Text
+    - defaultCityVehicleCategory: "!Text"
+    - paymentLinkChannel: "!Text"
     - paymentServiceName: Value
     - payoutServiceName: Value
-    - partialDueClearanceMessageKey: Maybe Text
+    - partialDueClearanceMessageKey: "Maybe !Text"
     # money / durations / arrays / nested objects — raw JSON (exact round-trip)
     - cgstPercentageOneTimeSecurityDeposit: Value
     - sgstPercentageOneTimeSecurityDeposit: Value
@@ -1305,9 +1332,9 @@ types:
     - type: [VehicleServiceTierItem]
   VehicleServiceTierItem:
     - serviceTierType: ServiceTierType
-    - name: Text
-    - shortDescription: Maybe Text
-    - longDescription: Maybe Text
+    - name: "!Text"
+    - shortDescription: "Maybe !Text"
+    - longDescription: "Maybe !Text"
     - seatingCapacity: Maybe Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
@@ -1315,15 +1342,15 @@ types:
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
-    - spotServiceTierName: Maybe Text
-    - spotServiceTierShortDesc: Maybe Text
+    - spotServiceTierName: "Maybe !Text"
+    - spotServiceTierShortDesc: "Maybe !Text"
     - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
     - specialZoneQueueCalloutVariants: "[VehicleVariant]"
     - vehicleCategory: Maybe VehicleCategory
-    - vehicleIconUrl: Maybe Text
+    - vehicleIconUrl: "Maybe !Text"
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
     - priority: Int
@@ -1334,7 +1361,7 @@ types:
     - luggageCapacity: Maybe Int
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
-    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - scheduleBookingListEligibilityTags: "Maybe [!Text]"
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
     - vehicleAgeThreshold: Maybe Months
@@ -1347,9 +1374,9 @@ types:
     - autopayTriggerBalance: Maybe HighPrecMoney
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
-    - name: Maybe Text
-    - shortDescription: Maybe Text
-    - longDescription: Maybe Text
+    - name: "Maybe !Text"
+    - shortDescription: "Maybe !Text"
+    - longDescription: "Maybe !Text"
     - seatingCapacity: Maybe Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
@@ -1357,14 +1384,14 @@ types:
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
-    - spotServiceTierName: Maybe Text
-    - spotServiceTierShortDesc: Maybe Text
+    - spotServiceTierName: "Maybe !Text"
+    - spotServiceTierShortDesc: "Maybe !Text"
     - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: Maybe [VehicleVariant]
     - autoSelectedVehicleVariant: Maybe [VehicleVariant]
     - defaultForVehicleVariant: Maybe [VehicleVariant]
     - specialZoneQueueCalloutVariants: Maybe [VehicleVariant]
-    - vehicleIconUrl: Maybe Text
+    - vehicleIconUrl: "Maybe !Text"
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
     - priority: Maybe Int
@@ -1376,7 +1403,7 @@ types:
     - luggageCapacity: Maybe Int
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
-    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - scheduleBookingListEligibilityTags: "Maybe [!Text]"
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
     - specialZone: Maybe SpecialZone
@@ -1391,9 +1418,9 @@ types:
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
-    - name: Text
-    - shortDescription: Text
-    - longDescription: Maybe Text
+    - name: "!Text"
+    - shortDescription: "!Text"
+    - longDescription: "Maybe !Text"
     - seatingCapacity: Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
@@ -1401,14 +1428,14 @@ types:
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
-    - spotServiceTierName: Maybe Text
-    - spotServiceTierShortDesc: Maybe Text
+    - spotServiceTierName: "Maybe !Text"
+    - spotServiceTierShortDesc: "Maybe !Text"
     - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
     - specialZoneQueueCalloutVariants: "[VehicleVariant]"
-    - vehicleIconUrl: Text
+    - vehicleIconUrl: "!Text"
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
     - priority: Int
@@ -1419,7 +1446,7 @@ types:
     - luggageCapacity: Maybe Int
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
-    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - scheduleBookingListEligibilityTags: "Maybe [!Text]"
     - vehicleCategory: VehicleCategory
     - isEnabled: Bool
     - allowedAreas: Maybe [Area]
@@ -1446,30 +1473,30 @@ types:
     - recordType: Type
     - type: [GeometryAPIEntity]
   GeometryAPIEntity:
-    - region: Text
+    - region: "!Text"
     - state: IndianState
     - city: City
-    - geom: Maybe Text
+    - geom: "Maybe !Text"
   MerchantDocumentRoleT:
     - enum: "Driver,FleetOwner,Operator,Rider,Admin"
     - derive: "HttpInstance"
   MerchantDocumentItem:
-    - id: Text
-    - documentType: Text
+    - id: "!Text"
+    - documentType: "!Text"
     - role: MerchantDocumentRoleT
     - language: Language
-    - url: Text
-    - title: Text
-    - merchantId: Text
-    - merchantOperatingCityId: Maybe Text
+    - url: "!Text"
+    - title: "!Text"
+    - merchantId: "!Text"
+    - merchantOperatingCityId: "Maybe !Text"
   MerchantDocumentListResp:
     - documents: "[MerchantDocumentItem]"
   CreateMerchantDocumentReq:
-    - documentType: Text
+    - documentType: "!Text"
     - role: MerchantDocumentRoleT
     - language: Language
-    - url: Text
-    - title: Text
+    - url: "!Text"
+    - title: "!Text"
     - city: Maybe City
     - platformType: Maybe MerchantDocumentPlatformTypeT
     - derive: "'HideSecrets"
@@ -1477,31 +1504,32 @@ types:
     - enum: "WEB,ANDROID,IOS"
     - derive: "HttpInstance"
   UpdateMerchantDocumentReq:
-    - id: Text
-    - url: Text
-    - title: Text
+    - id: "!Text"
+    - url: "!Text"
+    - title: "!Text"
     - derive: "'HideSecrets"
   DeleteMerchantDocumentReq:
-    - id: Text
+    - id: "!Text"
     - derive: "'HideSecrets"
   MerchantMessageCatalogType:
     - enum: "KEY,CHANNEL,DOMAIN"
     - derive: "HttpInstance"
   MerchantMessageCatalogResp:
-    - values: "[Text]"
+    - values: "[!Text]"
   UpsertMerchantMessageReq:
-    - messageKey: Text
-    - message: Text
-    - templateId: Text
+    - messageKey: "!Text"
+    - message: "!Text"
+    - templateId: "!Text"
     - containsUrlButton: Bool
-    - channel: Maybe Text
-    - domain: Maybe Text
+    - channel: "Maybe !Text"
+    - domain: "Maybe !Text"
     - jsonData: Maybe Value
-    - messageType: Maybe Text
-    - senderHeader: Maybe Text
-    - templateName: Maybe Text
-    - mediaUrl: Maybe Text
+    - messageType: "Maybe !Text"
+    - senderHeader: "Maybe !Text"
+    - templateName: "Maybe !Text"
+    - mediaUrl: "Maybe !Text"
     - vehicleCategory: Maybe VehicleCategory
+    - language: Maybe Language
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]
@@ -1516,7 +1544,7 @@ types:
     - instantTransferOutEnabled: Maybe Bool
     - minTransferOutAmount: Maybe HighPrecMoney
     - redeemableCutoffDays: Maybe Int
-    - redeemableCutoffTimeOfDay: Maybe Text
+    - redeemableCutoffTimeOfDay: "Maybe !Text"
     - redeemableCutoffTzOffsetSeconds: Maybe Int
     - rideCgstPercentage: Maybe HighPrecMoney
     - rideSgstPercentage: Maybe HighPrecMoney
@@ -1527,7 +1555,7 @@ types:
     - instantTransferOutEnabled: Maybe Bool
     - minTransferOutAmount: Maybe HighPrecMoney
     - redeemableCutoffDays: Maybe Int
-    - redeemableCutoffTimeOfDay: Maybe Text
+    - redeemableCutoffTimeOfDay: "Maybe !Text"
     - redeemableCutoffTzOffsetSeconds: Maybe Int
     - clearRedeemableCutoff: Maybe Bool
     - derive: "'HideSecrets"

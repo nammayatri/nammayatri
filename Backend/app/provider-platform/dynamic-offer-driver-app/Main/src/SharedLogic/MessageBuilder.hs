@@ -13,7 +13,11 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( buildSendSmsReq,
+  ( SmsBody,
+    smsBodyText,
+    prebuiltSmsBody,
+    SendSMSReq (..),
+    buildSendSmsReq,
     BuildSendOTPMessageReq (..),
     buildSendOTPMessage,
     WelcomeToPlatformMessageReq (..),
@@ -70,7 +74,7 @@ import qualified Domain.Types.MessageTranslation as Fields
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
-import qualified Kernel.External.SMS as Sms
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig (..))
 import Kernel.Streaming.Kafka.Commons
@@ -86,13 +90,35 @@ import qualified UrlShortner.Common as UrlShortner
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
 
+-- | The text an SMS carries: a @merchant_message@ row's text with its placeholders filled (the @build*Message@
+-- functions here), or 'prebuiltSmsBody' for text that is final before it gets here. Only this module builds one.
+newtype SmsBody = SmsBody Text
+
+smsBodyText :: SmsBody -> Text
+smsBodyText (SmsBody text) = text
+
+-- | For text that is already final: typed by ops (dashboard broadcasts, document decision templates), handed over by
+-- another service (internal SMS API, notification webhooks) or transformed by hand after the row lookup. Never a
+-- string literal: a message a user reads belongs in a @merchant_message@ row.
+prebuiltSmsBody :: Text -> SmsBody
+prebuiltSmsBody = SmsBody
+
+-- | 'Kernel.External.SMS.SendSMSReq' with the body typed; 'Tools.SMS.sendSMS' converts it back.
+data SendSMSReq = SendSMSReq
+  { smsBody :: SmsBody,
+    phoneNumber :: Text,
+    sender :: Text,
+    templateId :: Text,
+    messageType :: Maybe Text
+  }
+
 type BuildMessageFlow m r =
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     CacheFlow m r
   )
 
-type SmsReqBuilder = Text -> Sms.SendSMSReq
+type SmsReqBuilder = Text -> SendSMSReq
 
 buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
 buildSendSmsReq merchantMessage vars = do
@@ -100,7 +126,7 @@ buildSendSmsReq merchantMessage vars = do
   let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
-  return $ \phoneNumber -> Sms.SendSMSReq smsBody phoneNumber sender templateId merchantMessage.messageType
+  return $ \phoneNumber -> SendSMSReq (SmsBody smsBody) phoneNumber sender templateId merchantMessage.messageType
 
 data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
   { paymentLink :: Text,
@@ -108,17 +134,17 @@ data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
   }
   deriving (Generic)
 
-buildSendPaymentLink :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendPaymentLinkReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildSendPaymentLink merchantOpCityId req = do
+buildSendPaymentLink :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendPaymentLinkReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildSendPaymentLink merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.SEND_PAYMENT_LINK Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.SEND_PAYMENT_LINK mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_PAYMENT_LINK))
   let msg =
         merchantMessage.message
           & T.replace (templateText "paymentLink") req.paymentLink
           & T.replace (templateText "amount") req.amount
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   { otp :: Text,
@@ -126,24 +152,24 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildSendOTPMessage merchantOpCityId req = do
+buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendOTPMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildSendOTPMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.SEND_OTP Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.SEND_OTP mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_OTP))
   let msg =
         merchantMessage.message
           & T.replace (templateText "otp") req.otp
           & T.replace (templateText "hash") req.hash
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 newtype WelcomeToPlatformMessageReq = WelcomeToPlatformMessageReq
   { orgName :: Text
   }
   deriving (Generic)
 
-buildWelcomeToPlatformMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> WelcomeToPlatformMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildWelcomeToPlatformMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> WelcomeToPlatformMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
 buildWelcomeToPlatformMessage merchantOpCityId req = do
   merchantMessage <-
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.WELCOME_TO_PLATFORM Nothing Nothing
@@ -151,20 +177,19 @@ buildWelcomeToPlatformMessage merchantOpCityId req = do
   let msg =
         merchantMessage.message
           & T.replace (templateText "orgName") req.orgName
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
-
-buildSendAlternateNumberOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildSendAlternateNumberOTPMessage merchantOpCityId req = do
+buildSendAlternateNumberOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendOTPMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildSendAlternateNumberOTPMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.ALTERNATE_NUMBER_OTP Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.ALTERNATE_NUMBER_OTP mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.ALTERNATE_NUMBER_OTP))
   let msg =
         merchantMessage.message
           & T.replace (templateText "otp") req.otp
           & T.replace (templateText "hash") req.hash
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildEndRideMessageReq = BuildEndRideMessageReq
   { rideAmount :: Text,
@@ -172,28 +197,28 @@ data BuildEndRideMessageReq = BuildEndRideMessageReq
   }
   deriving (Generic)
 
-buildEndRideMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildEndRideMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildEndRideMessage merchantOpCityId req = do
+buildEndRideMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildEndRideMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildEndRideMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.END_RIDE_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.END_RIDE_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.END_RIDE_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "rideAmount") req.rideAmount
           & T.replace (templateText "rideId") req.rideShortId
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildOnboardingMessageReq = BuildOnboardingMessageReq {}
   deriving (Generic)
 
-buildOnboardingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOnboardingMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildOnboardingMessage merchantOpCityId _ = do
+buildOnboardingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildOnboardingMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildOnboardingMessage merchantOpCityId mbLanguage _ = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.ONBOARDING_YATRI_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.ONBOARDING_YATRI_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.ONBOARDING_YATRI_MESSAGE))
 
-  pure (merchantMessage.senderHeader, merchantMessage.message, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody merchantMessage.message, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildBookingMessageReq = BuildBookingMessageReq
   { otp :: Text,
@@ -201,33 +226,33 @@ data BuildBookingMessageReq = BuildBookingMessageReq
   }
   deriving (Generic)
 
-buildBookingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildBookingMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildBookingMessage merchantOpCityId req = do
+buildBookingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildBookingMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildBookingMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.BOOKING_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.BOOKING_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.BOOKING_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "otp") req.otp
           & T.replace (templateText "amount") req.amount
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 newtype BuildCollectCashMessageReq = BuildCollectCashMessageReq
   { amount :: Text
   }
   deriving (Generic)
 
-buildCollectCashMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildCollectCashMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildCollectCashMessage merchantOpCityId req = do
+buildCollectCashMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildCollectCashMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildCollectCashMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.CASH_COLLECTED_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.CASH_COLLECTED_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.CASH_COLLECTED_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "amount") req.amount
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildDriverPayoutMessageReq = BuildDriverPayoutMessageReq
   { payoutAmount :: Text,
@@ -238,11 +263,12 @@ data BuildDriverPayoutMessageReq = BuildDriverPayoutMessageReq
 buildDriverPayoutMessage ::
   (EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Language ->
   BuildDriverPayoutMessageReq ->
-  m (Maybe Text, Text, Text, Maybe Text)
-buildDriverPayoutMessage merchantOpCityId req = do
+  m (Maybe Text, SmsBody, Text, Maybe Text)
+buildDriverPayoutMessage merchantOpCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.DRIVER_PAYOUT Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId DMM.DRIVER_PAYOUT mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.DRIVER_PAYOUT))
   let baseUrl = fromMaybe "" merchantMessage.jsonData.var1
       payoutUrl = baseUrl <> "id=" <> fromMaybe "" req.bookingId
@@ -250,7 +276,7 @@ buildDriverPayoutMessage merchantOpCityId req = do
         merchantMessage.message
           & T.replace (templateText "numeric") req.payoutAmount
           & T.replace (templateText "url") payoutUrl
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   { userName :: Text,
@@ -278,10 +304,10 @@ buildSOSAlertMessage merchantOperatingCityId req = do
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)
 
-buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> Maybe DVC.VehicleCategory -> BuildGenericMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildGenericMessage merchantOpCityId messageKey vehicleCategory _ = do
+buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> DMM.MessageKey -> Maybe DVC.VehicleCategory -> BuildGenericMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildGenericMessage merchantOpCityId mbLanguage messageKey vehicleCategory _ = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey vehicleCategory Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey mbLanguage vehicleCategory Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let jsonData = merchantMessage.jsonData
   let msg =
@@ -290,7 +316,7 @@ buildGenericMessage merchantOpCityId messageKey vehicleCategory _ = do
           & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
           & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 addBroadcastMessageToKafka :: (HasField "broadcastMessageTopic" r KafkaTopic, HasKafkaProducer r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Message.RawMessage -> Id P.Person -> m ()
 addBroadcastMessageToKafka check msg driverId = do
@@ -315,7 +341,7 @@ data BuildSendReceiptMessageReq = BuildSendReceiptMessageReq
     rideShortId :: Text
   }
 
-buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig, "meterRideReferralLink" ::: Text]) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig, "meterRideReferralLink" ::: Text]) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
 buildSendReceiptMessage merchantOperatingCityId req = do
   meterRideReferralLink <- asks (.meterRideReferralLink)
   let referralLink = T.replace "{referralCode}" req.referralCode meterRideReferralLink
@@ -328,71 +354,71 @@ buildSendReceiptMessage merchantOperatingCityId req = do
           & T.replace (templateText "rideIdAndFare") (req.rideShortId <> " " <> req.totalFare)
           & T.replace (templateText "referralLink") shortReferralLink.shortUrl
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildFleetJoiningMessageReq = BuildFleetJoiningMessageReq
   { fleetOwnerName :: Text,
     otp :: Text
   }
 
-buildFleetJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetJoiningMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildFleetJoiningMessage merchantOperatingCityId req = do
+buildFleetJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildFleetJoiningMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildFleetJoiningMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.FLEET_JOINING_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId DMM.FLEET_JOINING_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_JOINING_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
           & T.replace (templateText "otp") req.otp
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildOperatorJoiningMessageReq = BuildOperatorJoiningMessageReq
   { operatorName :: Text,
     otp :: Text
   }
 
-buildOperatorJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoiningMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildOperatorJoiningMessage merchantOperatingCityId req = do
+buildOperatorJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildOperatorJoiningMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildOperatorJoiningMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOINING_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOINING_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.OPERATOR_JOINING_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "operatorName") req.operatorName
           & T.replace (templateText "otp") req.otp
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 newtype BuildDownloadAppMessageReq = BuildDownloadAppMessageReq
   { fleetOwnerName :: Text
   }
 
-buildFleetJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildDownloadAppMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
+buildFleetJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildDownloadAppMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildFleetJoinAndDownloadAppMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId DMM.FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 newtype BuildOperatorJoinAndDownloadAppMessageReq = BuildOperatorJoinAndDownloadAppMessageReq
   { operatorName :: Text
   }
 
-buildOperatorJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoinAndDownloadAppMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
+buildOperatorJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildOperatorJoinAndDownloadAppMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId DMM.OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE))
   let msg =
         merchantMessage.message
           & T.replace (templateText "operatorName") req.operatorName
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 data BuildDriverOnboardingLinkMessageReq = BuildDriverOnboardingLinkMessageReq
   { code :: Text,
@@ -403,10 +429,10 @@ data BuildDriverOnboardingLinkMessageReq = BuildDriverOnboardingLinkMessageReq
 
 -- | Onboarding-link SMS. The row's @var1@ is the city's link template with @{#code#}@; the filled
 -- link is shortened (long link if the shortener fails) and substituted as @{#url#}@.
-buildDriverOnboardingLinkMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildDriverOnboardingLinkMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildDriverOnboardingLinkMessage merchantOperatingCityId messageKey req = do
+buildDriverOnboardingLinkMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Maybe Language -> DMM.MessageKey -> BuildDriverOnboardingLinkMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildDriverOnboardingLinkMessage merchantOperatingCityId mbLanguage messageKey req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId messageKey mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show messageKey))
   linkTemplate <- merchantMessage.jsonData.var1 & fromMaybeM (InvalidRequest $ "Missing json_data.var1 link template for " <> show messageKey)
   url <- shortenOnboardingLink UrlShortner.DRIVER_ONBOARDING_LINK (req.expiryHours + 24) (T.replace (templateText "code") req.code linkTemplate)
@@ -418,7 +444,7 @@ buildDriverOnboardingLinkMessage merchantOperatingCityId messageKey req = do
           & T.replace (templateText "fleetOwnerName") (fromMaybe "" req.fleetOwnerName)
           & T.replace (templateText "fleetName") (fromMaybe "" req.fleetName)
           & T.replace (templateText "expiryDate") expiryDate
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
 -- | The shortener stores hours in a u8, hence the 255 cap.
 shortenOnboardingLink :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => UrlShortner.UrlCategory -> Int -> Text -> m Text
@@ -443,13 +469,13 @@ newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
   { operatorName :: Text
   }
 
-buildOperatorDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorDeepLinkAuthMessage -> m (Maybe Text, Text, Text, Maybe Text)
-buildOperatorDeepLinkAuthMessage merchantOperatingCityId req = do
-  (senderHeader, staticMsg, templateId, messageType) <- buildGenericMessage merchantOperatingCityId DMM.OPERATOR_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+buildOperatorDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildOperatorDeepLinkAuthMessage -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildOperatorDeepLinkAuthMessage merchantOperatingCityId mbLanguage req = do
+  (senderHeader, staticMsg, templateId, messageType) <- buildGenericMessage merchantOperatingCityId mbLanguage DMM.OPERATOR_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
   let dynamicMsg =
-        staticMsg
+        smsBodyText staticMsg
           & T.replace (templateText "operatorName") req.operatorName
-  pure (senderHeader, dynamicMsg, templateId, messageType)
+  pure (senderHeader, SmsBody dynamicMsg, templateId, messageType)
 
 newtype BuildFleetLinkUnlinkSuccessMessageReq = BuildFleetLinkUnlinkSuccessMessageReq
   { operatorName :: Text
@@ -459,36 +485,37 @@ buildFleetLinkOrUnlinkSuccessMessage ::
   (EsqDBFlow m r, CacheFlow m r) =>
   DMM.MessageKey ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Language ->
   BuildFleetLinkUnlinkSuccessMessageReq ->
-  m (Maybe Text, Text, Text, Maybe Text)
-buildFleetLinkOrUnlinkSuccessMessage messageKey merchantOpCityId req = do
+  m (Maybe Text, SmsBody, Text, Maybe Text)
+buildFleetLinkOrUnlinkSuccessMessage messageKey merchantOpCityId mbLanguage req = do
   unless (messageKey `elem` [DMM.FLEET_LINK_SUCCESS_MESSAGE, DMM.FLEET_UNLINK_SUCCESS_MESSAGE])
     . throwError
     . InvalidRequest
     $ "Invalid MessageKey " <> show messageKey
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId messageKey mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let msg = merchantMessage.message & T.replace (templateText "operatorName") req.operatorName
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)
 
-buildFleetLinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildFleetLinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
 buildFleetLinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_LINK_SUCCESS_MESSAGE
 
-buildFleetUnlinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildFleetUnlinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
 buildFleetUnlinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_UNLINK_SUCCESS_MESSAGE
 
 newtype BuildDocumentExpiryReminderMessageReq = BuildDocumentExpiryReminderMessageReq
   { documentType :: Text
   }
 
-buildDocumentExpiryReminderMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildDocumentExpiryReminderMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
-buildDocumentExpiryReminderMessage merchantOperatingCityId req = do
+buildDocumentExpiryReminderMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildDocumentExpiryReminderMessageReq -> m (Maybe Text, SmsBody, Text, Maybe Text)
+buildDocumentExpiryReminderMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.DOCUMENT_EXPIRY_REMINDER_SMS Nothing Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOperatingCityId DMM.DOCUMENT_EXPIRY_REMINDER_SMS mbLanguage Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.DOCUMENT_EXPIRY_REMINDER_SMS))
   let msg =
         merchantMessage.message
           & T.replace (templateText "documentType") req.documentType
 
-  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  pure (merchantMessage.senderHeader, SmsBody msg, merchantMessage.templateId, merchantMessage.messageType)

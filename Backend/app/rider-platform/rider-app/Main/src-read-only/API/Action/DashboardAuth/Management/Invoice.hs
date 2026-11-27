@@ -26,18 +26,18 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("invoice" :> (GetInvoiceInvoice :<|> GetInvoiceFinanceList :<|> GetInvoiceFinancePdf))
+type API = "invoice" :> (GetInvoiceInvoice :<|> (GetInvoiceFinanceList :<|> GetInvoiceFinancePdf))
 
-type GetInvoiceInvoice = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_INVOICE" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceInvoice)
+type GetInvoiceInvoice = DashboardUserAuth ('APP_BACKEND_MANAGEMENT) "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_INVOICE" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceInvoice
 
-type GetInvoiceFinanceList = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_FINANCE_LIST" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinanceList)
+type GetInvoiceFinanceList = DashboardUserAuth ('APP_BACKEND_MANAGEMENT) "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_FINANCE_LIST" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinanceList
 
-type GetInvoiceFinancePdf = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_FINANCE_PDF" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinancePdf)
+type GetInvoiceFinancePdf = DashboardUserAuth ('APP_BACKEND_MANAGEMENT) "RIDER_MANAGEMENT/INVOICE/GET_INVOICE_FINANCE_PDF" :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinancePdf
 
-handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
+handler :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getInvoiceInvoice merchantId city :<|> getInvoiceFinanceList merchantId city :<|> getInvoiceFinancePdf merchantId city
 
-getInvoiceInvoice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Invoice.InvoiceRes])
+getInvoiceInvoice :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.UTCTime -> (Data.Text.Text -> (Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Invoice.InvoiceRes])))))
 getInvoiceInvoice a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
@@ -45,15 +45,15 @@ getInvoiceInvoice a6 a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Invoice.getInvoiceInvoice a6 a5 a3 a2 a1
     )
 
-getInvoiceFinanceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoiceListRes)
-getInvoiceFinanceList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+getInvoiceFinanceList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoiceListRes)))))))))))
+getInvoiceFinanceList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a9 a11 a10
-        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.Invoice.getInvoiceFinanceList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a10 a12 a11
+        Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Invoice.getInvoiceFinanceList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
     )
 
-getInvoiceFinancePdf :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoicePdfRes)
+getInvoiceFinancePdf :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoicePdfRes)))
 getInvoiceFinancePdf a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do

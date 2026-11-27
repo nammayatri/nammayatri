@@ -107,7 +107,9 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoFeeItems :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text,
-    boothSpecificFleet :: Maybe Text
+    boothSpecificFleet :: Maybe Text,
+    queueLocationFileName :: Maybe Text,
+    queueGeomClear :: Maybe Text
   }
   deriving (Show)
 
@@ -162,6 +164,8 @@ instance FromNamedRecord SpecialLocationCSVRow where
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
     boothSpecificFleet <- optional (r .: "booth_specific_fleet")
+    queueLocationFileName <- optional (r .: "queue_location_file_name")
+    queueGeomClear <- optional (r .: "queue_geom_clear")
     pure SpecialLocationCSVRow {..}
 
 ---------------------------------------------------------------------
@@ -228,6 +232,17 @@ resolveGateConfig idx mbFieldValue =
         Aeson.decodeStrict (TE.encodeUtf8 t)
           & fromMaybeM (InvalidRequest $ "Invalid Gate Info (config): " <> t <> " at row: " <> show idx)
 
+-- | Lenient boolean cell (True/true/1/yes, False/false/0/no); blank or missing means False.
+--   Spreadsheet tools rewrite booleans freely, so a strict 'readMaybe' would silently drop "true".
+readLenientBoolCSVField :: Int -> Maybe Text -> Text -> Flow Bool
+readLenientBoolCSVField idx mbFieldValue fieldName =
+  case T.toLower <$> (mbFieldValue >>= cleanField) of
+    Nothing -> pure False
+    Just v
+      | v `elem` ["true", "1", "yes", "y"] -> pure True
+      | v `elem` ["false", "0", "no", "n"] -> pure False
+      | otherwise -> throwError $ InvalidRequest $ "Invalid " <> fieldName <> ": " <> v <> " at row: " <> show idx
+
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
   case cleanField fieldValue of
@@ -281,7 +296,7 @@ readCsv ::
   [(Text, FilePath)] ->
   [(Text, FilePath)] ->
   DMOC.MerchantOperatingCity ->
-  Flow [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)]
+  Flow [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)]
 readCsv csvFile locationGeomFiles gateGeomFiles merchantOpCity = do
   csvData <- L.runIO $ BS.readFile csvFile
   case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector SpecialLocationCSVRow)) of
@@ -297,7 +312,7 @@ makeSpecialLocation ::
   DMOC.MerchantOperatingCity ->
   Int ->
   SpecialLocationCSVRow ->
-  Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)
+  Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)
 makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   now <- getCurrentTime
   city :: Context.City <- readCSVField idx row.city "City"
@@ -306,6 +321,13 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   (_, locationGeomFile) <- find (\(geomFileName, _) -> locationFileName == geomFileName) locationGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for location: " <> locationName)
   locationGeom <- getGeomFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for location: " <> locationName)
   locationGeomGeoJson <- GGeom.getGeoJsonFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to GeoJSON for location: " <> locationName)
+  -- Optional separate queue polygon (LTS queue membership); its KML comes from the same location KML set.
+  queueGeomGeoJson <- forM (row.queueLocationFileName >>= cleanField) $ \queueFileName -> do
+    (_, queueGeomFile) <- find (\(geomFileName, _) -> queueFileName == geomFileName) locationGeomFiles & fromMaybeM (InvalidRequest $ "Queue KML file missing for location: " <> locationName)
+    GGeom.getGeoJsonFromKML queueGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given queue KML to GeoJSON for location: " <> locationName)
+  queueGeomClear <- readLenientBoolCSVField idx row.queueGeomClear "Queue Geom Clear"
+  when (queueGeomClear && isJust queueGeomGeoJson) $
+    throwError $ InvalidRequest $ "queue_geom_clear and queue_location_file_name both set for location: " <> locationName <> " at row: " <> show idx
   category :: Text <- cleanCSVField idx row.category "Category"
   let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
       mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
@@ -370,7 +392,9 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             paymentModes = resolvedPaymentModes,
             fareSettlementType = mbFareSettlementType,
             boothSpecificFleet = boothSpecificFleet,
-            poolingMode = Nothing
+            poolingMode = Nothing,
+            queueGeomGeoJson = queueGeomGeoJson,
+            skipQueue = Nothing
           }
       gateInfo =
         DGI.GateInfo
@@ -408,17 +432,17 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             entryFeeDisabledServiceTiers = fromMaybe [] . parseGateTags <$> row.gateInfoEntryFeeDisabledServiceTiers,
             gateConfig = resolvedGateConfig
           }
-  return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
+  return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId, queueGeomClear)
 
 ---------------------------------------------------------------------
 -- Group Special Locations and Gates
 ---------------------------------------------------------------------
 groupSpecialLocationAndGates ::
-  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)] ->
-  [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)]]
+  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)] ->
+  [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)]]
 groupSpecialLocationAndGates = DL.groupBy (\a b -> fst2 a == fst2 b) . DL.sortBy (compare `on` fst2)
   where
-    fst2 (c, l, _, _, _, _) = (c, l)
+    fst2 (c, l, _, _, _, _, _) = (c, l)
 
 ---------------------------------------------------------------------
 -- Run Validation on Special Location and Gates Group
@@ -426,11 +450,11 @@ groupSpecialLocationAndGates = DL.groupBy (\a b -> fst2 a == fst2 b) . DL.sortBy
 runValidationOnSpecialLocationAndGatesGroup ::
   Context.City ->
   DMOC.MerchantOperatingCity ->
-  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)] ->
+  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)] ->
   Flow ()
 runValidationOnSpecialLocationAndGatesGroup _ _ [] = throwError $ InvalidRequest "Empty Special Location Group"
 runValidationOnSpecialLocationAndGatesGroup opCity merchantOpCity (x : _) = do
-  let (city, _locationName, (specialLocation, _), pickupPriority, dropPriority, _) = x
+  let (city, _locationName, (specialLocation, _), pickupPriority, dropPriority, _, _) = x
   if city /= opCity
     then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
     else do
@@ -459,18 +483,42 @@ runValidationOnSpecialLocationAndGatesGroup opCity merchantOpCity (x : _) = do
 processSpecialLocationAndGatesGroup ::
   Context.City ->
   DMOC.MerchantOperatingCity ->
-  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text)] ->
+  [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int, Maybe Text, Bool)] ->
   Flow ()
 processSpecialLocationAndGatesGroup _ _ [] = throwError $ InvalidRequest "Empty Special Location Group"
 processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGates@(x : _) = do
-  void $ runValidationOnSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGates
-  let (_city, locationName, (specialLocation, _), _, _, mbSpecialLocationIdFromCsv) = x
+  let (_city, locationName, (specialLocation0, _), _, _, mbSpecialLocationIdFromCsv, _) = x
+      -- The zone's other fields come from its first row, but the queue file and the clear flag
+      -- may sit on any row of the zone, so gather them across all rows.
+      clearQueueGeom = any (\(_, _, _, _, _, _, clear) -> clear) specialLocationAndGates
+      rowQueueGeoms = DL.nub $ mapMaybe (\(_, _, (sl, _), _, _, _, _) -> sl.queueGeomGeoJson) specialLocationAndGates
+  newQueueGeom <- case rowQueueGeoms of
+    [] -> pure Nothing
+    [geom] -> pure $ Just geom
+    _ -> throwError $ InvalidRequest $ "Different queue_location_file_name files on rows of location: " <> locationName
+  when (clearQueueGeom && isJust newQueueGeom) $
+    throwError $ InvalidRequest $ "queue_geom_clear and queue_location_file_name both set for location: " <> locationName
+  let specialLocation = specialLocation0 {DSL.queueGeomGeoJson = newQueueGeom}
   mbExisting <-
     case mbSpecialLocationIdFromCsv of
       Just splId -> QSL.findById (Id splId)
       Nothing ->
         QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
           |<|>| QSL.findByLocationName locationName
+  specialLocationId <-
+    case mbSpecialLocationIdFromCsv of
+      Just splId -> return $ Id splId
+      Nothing -> maybe generateGUID (return . (.id)) mbExisting
+  -- Overlap checks run before anything is written (the category priority below, the zone delete).
+  -- The CSV always carries the pricing polygon, so a kept queue polygon is re-checked against it too.
+  let storedQueueGeom = mbExisting >>= (.queueGeomGeoJson) >>= \g -> g <$ GGeom.parseGatePolygons g
+  if clearQueueGeom
+    then pure ()
+    else case newQueueGeom of
+      Just geom -> QSL.validateQueueGeomNoOverlap (Just specialLocationId) locationName specialLocation.geomGeoJson geom
+      Nothing -> whenJust storedQueueGeom $ QSL.validateQueueGeomNoOverlap (Just specialLocationId) locationName specialLocation.geomGeoJson
+  whenJust specialLocation.geomGeoJson $ QSL.validatePricingGeomOutsideQueueBands (Just specialLocationId) locationName
+  void $ runValidationOnSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGates
   existingGatesByName <- case mbExisting of
     Just spl -> do
       gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson spl.id
@@ -479,20 +527,18 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
   -- Fetch any existing gates by gate ids supplied via CSV (works across SLs).
   existingGatesById <-
     fmap (Map.fromList . catMaybes) $
-      forM specialLocationAndGates $ \(_, _, (_, gi), _, _, _) -> do
+      forM specialLocationAndGates $ \(_, _, (_, gi), _, _, _, _) -> do
         mbGate <- QGI.findById gi.id
         pure $ (gi.id,) <$> mbGate
   whenJust mbExisting $ \spl -> do
     void $ runTransaction $ QSL.deleteById spl.id
     QGI.deleteAll spl.id
-  specialLocationId <-
-    case mbSpecialLocationIdFromCsv of
-      Just splId -> return $ Id splId
-      Nothing -> maybe generateGUID (return . (.id)) mbExisting
-  let mergedSL = mergeSpecialLocationWithExisting specialLocation mbExisting
+  let mergedSL0 = mergeSpecialLocationWithExisting specialLocation mbExisting
+      -- A blank queue cell keeps the stored polygon (see the merge), so removal needs the explicit flag.
+      mergedSL = if clearQueueGeom then mergedSL0 {DSL.queueGeomGeoJson = Nothing} else mergedSL0
   void $ runTransaction $ QSLG.create $ mergedSL {DSL.id = specialLocationId}
   mapM_
-    ( \(_, _, (_, gateInfo), _, _, _) -> do
+    ( \(_, _, (_, gateInfo), _, _, _, _) -> do
         let mbExistingGate =
               Map.lookup gateInfo.id existingGatesById
                 <|> Map.lookup gateInfo.name existingGatesByName
@@ -500,6 +546,8 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
         QGI.create $ merged {DGI.specialLocationId = specialLocationId}
     )
     specialLocationAndGates
+  QSL.clearSpecialLocationListCache $
+    merchantOpCity.id.getId : maybeToList (mbExisting >>= fmap (.getId) . (.merchantOperatingCityId))
   QSL.clearSpecialZoneInMemCache
 
 ---------------------------------------------------------------------
@@ -518,7 +566,9 @@ mergeSpecialLocationWithExisting new (Just old) =
       DSL.enforceTollRoute = new.enforceTollRoute <|> old.enforceTollRoute,
       DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType,
       DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet,
-      DSL.poolingMode = new.poolingMode <|> old.poolingMode
+      DSL.poolingMode = new.poolingMode <|> old.poolingMode,
+      DSL.queueGeomGeoJson = new.queueGeomGeoJson <|> old.queueGeomGeoJson,
+      DSL.skipQueue = new.skipQueue <|> old.skipQueue
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

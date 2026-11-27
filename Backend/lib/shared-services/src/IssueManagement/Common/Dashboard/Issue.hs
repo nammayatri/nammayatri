@@ -777,8 +777,7 @@ data UpsertApiIntegrationReq = UpsertApiIntegrationReq
   { apiIntegrationId :: Maybe (Id DAI.IssueApiIntegration),
     name :: Text,
     description :: Maybe Text,
-    -- | Defaults to External when omitted, so older dashboard clients keep
-    -- working unchanged.
+    -- | InternalRider or InternalDriver; omitted means InternalRider.
     kind :: Maybe DAI.IntegrationKind,
     method :: DAI.ApiMethod,
     urlTemplate :: Text,

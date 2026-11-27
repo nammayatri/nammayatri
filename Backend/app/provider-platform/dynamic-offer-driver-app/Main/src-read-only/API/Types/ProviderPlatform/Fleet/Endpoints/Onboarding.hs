@@ -13,6 +13,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
 import qualified Domain.Types.DocumentFieldConstraints
+import qualified Domain.Types.TranslationKey
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -95,14 +96,14 @@ data DocumentMetadata
 
 data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
   { applicableTo :: DocumentApplicableType,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     guidelines :: Kernel.Prelude.Maybe [ImageInfo],
-    hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hint :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     media :: Kernel.Prelude.Maybe [MediaInfo],
     order :: Kernel.Prelude.Int,
     stage :: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage,
     stageDependency :: [API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage],
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving stock (Generic)
@@ -129,8 +130,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType],
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    disableWarning :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     doStrictVerification :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
@@ -148,7 +149,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     onboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStageAPIEntity,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType],
-    title :: Kernel.Prelude.Text
+    title :: Domain.Types.TranslationKey.TranslatedText
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -169,16 +170,16 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
 
 data FieldInfo = FieldInfo
   { _type :: FieldType,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     descriptionUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fieldConstraints :: Kernel.Prelude.Maybe Domain.Types.DocumentFieldConstraints.FieldConstraints,
     fields :: Kernel.Prelude.Maybe [FieldInfo],
-    hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hint :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     images :: Kernel.Prelude.Maybe [ImageInfo],
     isMandatory :: Kernel.Prelude.Bool,
-    name :: Kernel.Prelude.Text,
-    placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    name :: Domain.Types.TranslationKey.TranslatedText,
+    placeholder :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
@@ -203,7 +204,7 @@ data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
+data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText, title :: Domain.Types.TranslationKey.TranslatedText}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -220,9 +221,9 @@ data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MediaInfo = MediaInfo
-  { description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     url :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)

@@ -43,8 +43,8 @@ onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
 onCancel merchant booking dOnCancel = do
   let booking' = booking {Booking.bppOrderId = Just dOnCancel.bppOrderId}
   mbSideEffectData <- onCancelCore merchant booking dOnCancel
-  whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters) ->
-    FRFSCancel.handleCancelledSideEffects booking' mRiderNumber mRiderMobileCountryCode fareParameters
+  whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, mRiderLanguage, fareParameters) ->
+    FRFSCancel.handleCancelledSideEffects booking' mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters
   when (isFinalCancelStatus dOnCancel.orderStatus) $
     FRFSCancelJourney.cancelJourney booking'
   where
