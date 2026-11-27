@@ -51,6 +51,17 @@ data RiderTranslationKey
     Frfs_UpdatedField_DriverAndBus
   | Frfs_UpdatedField_BusNumber
   | Frfs_UpdatedField_Driver
+  | -- The end-of-ride fare-change line on the booking (SharedLogic.FareUpdateReason): the
+    -- sentence ({0} = the amount), then the reasons it joins with "and"
+    FareUpdate_Sentence_IncreasedByAmountAsThe
+  | FareUpdate_Sentence_ReducedByAmountAsThe
+  | FareUpdate_Sentence_IncreasedByAmount
+  | FareUpdate_Sentence_ReducedByAmount
+  | FareUpdate_Reason_RideWas
+  | FareUpdate_Reason_Longer
+  | FareUpdate_Reason_Shorter
+  | FareUpdate_Reason_And
+  | FareUpdate_Reason_WaitTimeWasLonger
   | -- An offer row's texts, by the row's id; the dashboard lists them from the city's offers
     Offer_Title Text
   | Offer_Description Text
@@ -81,7 +92,16 @@ instance IsTranslationKey RiderTranslationKey where
           LiveActivity_Message_UserCancelled,
           Frfs_UpdatedField_DriverAndBus,
           Frfs_UpdatedField_BusNumber,
-          Frfs_UpdatedField_Driver
+          Frfs_UpdatedField_Driver,
+          FareUpdate_Sentence_IncreasedByAmountAsThe,
+          FareUpdate_Sentence_ReducedByAmountAsThe,
+          FareUpdate_Sentence_IncreasedByAmount,
+          FareUpdate_Sentence_ReducedByAmount,
+          FareUpdate_Reason_RideWas,
+          FareUpdate_Reason_Longer,
+          FareUpdate_Reason_Shorter,
+          FareUpdate_Reason_And,
+          FareUpdate_Reason_WaitTimeWasLonger
         ]
       ]
     where
@@ -101,6 +121,15 @@ instance IsTranslationKey RiderTranslationKey where
     Frfs_UpdatedField_DriverAndBus -> Nothing
     Frfs_UpdatedField_BusNumber -> Nothing
     Frfs_UpdatedField_Driver -> Nothing
+    FareUpdate_Sentence_IncreasedByAmountAsThe -> Nothing
+    FareUpdate_Sentence_ReducedByAmountAsThe -> Nothing
+    FareUpdate_Sentence_IncreasedByAmount -> Nothing
+    FareUpdate_Sentence_ReducedByAmount -> Nothing
+    FareUpdate_Reason_RideWas -> Nothing
+    FareUpdate_Reason_Longer -> Nothing
+    FareUpdate_Reason_Shorter -> Nothing
+    FareUpdate_Reason_And -> Nothing
+    FareUpdate_Reason_WaitTimeWasLonger -> Nothing
     -- The offer rows are stored under the name the offer lookup builds from the offer id
     Offer_Title offerId -> Just ("OFFER_" <> offerId <> "_title")
     Offer_Description offerId -> Just ("OFFER_" <> offerId <> "_description")
