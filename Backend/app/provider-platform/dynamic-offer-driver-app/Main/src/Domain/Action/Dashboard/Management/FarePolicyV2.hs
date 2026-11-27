@@ -87,8 +87,8 @@ import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Settlement as Settlement
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.CachedQueries.CancellationFarePolicy as CQCFP
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -159,7 +159,7 @@ getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier m
   pure $ Common.FPV2ProductListRes {fareProducts = catMaybes items}
   where
     mkItem tierName fp = do
-      mbPolicy <- CQFP.findById Nothing fp.farePolicyId
+      mbPolicy <- CQFP.findFarePolicyFromDB fp.farePolicyId
       case mbPolicy of
         Nothing -> do
           -- a dangling farePolicyId must be visible, never silently dropped
@@ -215,7 +215,7 @@ getFarePolicyV2Policy :: ShortId DM.Merchant -> Context.City -> Id DCommon.FareP
 getFarePolicyV2Policy merchantShortId opCity reqFarePolicyId = do
   (_, merchantOpCity) <- resolveCity merchantShortId opCity
   let farePolicyId :: Id FarePolicyD.FarePolicy = cast reqFarePolicyId
-  policy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> farePolicyId.getId)
+  policy <- CQFP.findFarePolicyFromDB farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> farePolicyId.getId)
   checkCityScope merchantOpCity.id policy
   mbCancellation <- maybe (pure Nothing) CQCFP.findById policy.cancellationFarePolicyId
   pure
@@ -286,7 +286,7 @@ prepareReplace ::
   Common.FPV2Policy ->
   Flow ([Common.FPV2ValidationIssue], [Common.FPV2FieldDiff], Flow ())
 prepareReplace merchantOpCity transporterConfig farePolicyId requestedPolicy = do
-  old <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> farePolicyId.getId)
+  old <- CQFP.findFarePolicyFromDB farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> farePolicyId.getId)
   checkCityScope merchantOpCity.id old
   oldCancellation <- maybe (pure Nothing) CQCFP.findById old.cancellationFarePolicyId
   now <- getCurrentTime
@@ -389,7 +389,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
   now <- getCurrentTime
   (domainPolicy, mbCancellation, serviceTier, tripCategory) <- case (req.farePolicyId, req.policy) of
     (Just fpId, _) -> do
-      policy <- CQFP.findById Nothing (cast fpId) >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fpId.getId)
+      policy <- CQFP.findFarePolicyFromDB (cast fpId) >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fpId.getId)
       checkCityScope merchantOpCity.id policy
       mbCanc <- maybe (pure Nothing) CQCFP.findById policy.cancellationFarePolicyId
       refs <- CQFProduct.findAllFareProductByFarePolicyId policy.id
@@ -527,7 +527,7 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
       mbCancellationId <- upsertInlineCancellation merchantOpCity Nothing apiPolicy.cancellationFarePolicy now
       fromApiPolicy (NewPolicyCtx newPolicyId merchantOpCity.currency merchantOpCity.distanceUnit merchant.id merchantOpCity.id) mbCancellationId now apiPolicy
     (Just sourceId, Nothing) -> do
-      source <- CQFP.findById Nothing (cast sourceId) >>= fromMaybeM (InvalidRequest $ "Source fare policy not found: " <> sourceId.getId)
+      source <- CQFP.findFarePolicyFromDB (cast sourceId) >>= fromMaybeM (InvalidRequest $ "Source fare policy not found: " <> sourceId.getId)
       -- a legacy source may predate validation; refuse to propagate an invalid
       -- template into a new combo (same bar as the inline-policy path)
       let cloneIssues = validatePolicy transporterConfig (toApiPolicy source Nothing)
@@ -620,7 +620,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
         if length boundProducts <= 1
           then pure Nothing
           else do
-            source <- CQFP.findById Nothing fareProduct.farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fareProduct.farePolicyId.getId)
+            source <- CQFP.findFarePolicyFromDB fareProduct.farePolicyId >>= fromMaybeM (InvalidRequest $ "Fare policy not found: " <> fareProduct.farePolicyId.getId)
             now <- getCurrentTime
             clonePolicyId <- generateGUID
             let clone = (source :: FarePolicyD.FarePolicy) {FarePolicyD.id = clonePolicyId, FarePolicyD.createdAt = now, FarePolicyD.updatedAt = now}

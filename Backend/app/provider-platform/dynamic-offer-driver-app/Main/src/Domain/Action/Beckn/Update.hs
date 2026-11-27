@@ -107,7 +107,6 @@ import Tools.Error
 import qualified Tools.Fields as Fields
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 data DUpdateReq
   = UPaymentCompletedReq PaymentCompletedReq
@@ -533,7 +532,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             let pricingTime = Just $ if booking.isScheduled then booking.startTime else booking.createdAt
             interStateDestination <- if DTC.isInterCityTrip booking.tripCategory then DSearch.getInterStateDestination booking.providerId srcPt dropLatLong else pure Nothing
-            farePolicy <- applyStateEntryPermitCharges interStateDestination <$> getFarePolicyOnEndRide pricingTime (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) dropLatLong merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+            farePolicy <- applyStateEntryPermitCharges interStateDestination <$> getFarePolicyOnEndRide pricingTime (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) dropLatLong merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just booking.transactionId) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =

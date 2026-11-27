@@ -23,24 +23,15 @@ import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API =
-  ( TokenAuth :> "driver" :> "getUiConfigs" :> QueryParam "toss" Kernel.Prelude.Int :> QueryParam "tenant" Kernel.Prelude.Text :> ReqBody '[JSON] Data.Aeson.Object
-      :> Post
-           '[JSON]
-           Data.Aeson.Object
-  )
+type API = TokenAuth :> ("driver" :> ("getUiConfigs" :> (ReqBody '[JSON] Data.Aeson.Object :> Post '[JSON] Data.Aeson.Object)))
 
 handler :: Environment.FlowServer API
 handler = postDriverGetUiConfigs
 
 postDriverGetUiConfigs ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Data.Aeson.Object ->
-    Environment.FlowHandler Data.Aeson.Object
-  )
-postDriverGetUiConfigs a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Cac.postDriverGetUiConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  (Data.Aeson.Object -> Environment.FlowHandler Data.Aeson.Object)
+postDriverGetUiConfigs a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Cac.postDriverGetUiConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

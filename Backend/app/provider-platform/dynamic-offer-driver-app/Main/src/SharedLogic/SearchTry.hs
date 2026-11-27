@@ -56,6 +56,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
+import SharedLogic.DriverPool.Config (getDriverPoolConfig)
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
@@ -65,7 +66,6 @@ import qualified SharedLogic.PassengerLuggage as SPL
 import SharedLogic.Pricing
 import SharedLogic.ScheduledRideTopDrivers (topDriversLeadTime)
 import qualified SharedLogic.Type as SLT
-import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -79,7 +79,6 @@ import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
-import Utils.Common.Cac.KeyNameConstants
 
 getNextScheduleTime ::
   ( MonadFlow m,
@@ -185,7 +184,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   withTryCatch
     "initiateDriverSearchBatch"
     ( do
-        driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+        driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter searchReq
         mbSearchRadiusOverride <- computeBetterDriverSearchRadiusOverride searchTry
         let driverPoolConfig = maybe driverPoolConfigFetched (\radius -> driverPoolConfigFetched {maxRadiusOfSearch = min radius driverPoolConfigFetched.maxRadiusOfSearch}) mbSearchRadiusOverride
         goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
@@ -290,7 +289,6 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           searchReq.estimatedDistance
           searchRepeatType
           searchRepeatCounter
-          (Just (TransactionId (Id searchReq.transactionId)))
           searchReq
       pure $ Just (getBatchingMode driverPoolConfig)
 
@@ -484,7 +482,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
       (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) ->
         return (Just parkingCharge, Just tollCharges', Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee, mbDriverCancellationNotAllowed)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+        farePolicy <- getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just searchReq.transactionId) searchReq.configInExperimentVersions searchReq.specialLocationName
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
             -- Parking already EDC-collected at the booth for these settlement types isn't the
             -- driver's cash to hold - don't factor it into the driver's cash-wallet eligibility check.
@@ -502,7 +500,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
           )
   (luggageFareAdjustment, luggageCharges) <-
     luggageQuoteCharges searchReq mbVehicleServiceTierItem mbEstimateFarePolicy mbEstimateFareParams $
-      getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
+      getFarePolicyByEstOrQuoteId Nothing (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just searchReq.transactionId) searchReq.configInExperimentVersions searchReq.specialLocationName
   return $ TripQuoteDetail {baseFare = baseFare + luggageFareAdjustment, ..}
 
 -- The stored bags price the booking: the excess charge replaces the estimate's plain luggage charge.

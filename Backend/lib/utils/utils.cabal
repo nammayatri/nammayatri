@@ -28,12 +28,6 @@ library
   exposed-modules:
       Tools.DynamicLogic
       Tools.SharedRedisKeys
-      Utils.Common.Cac.ContextConstants
-      Utils.Common.Cac.KeyNameConstants
-      Utils.Common.Cac.PrefixConstants
-      Utils.Common.Cac.UtilsConstants
-      Utils.Common.Cac.UtilsTH
-      Utils.Common.CacUtils
       Utils.Common.CrossCloudProxy
       Utils.Common.Events
       Utils.Common.JWT.Config
@@ -109,7 +103,6 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
-    , haskell-cac
     , hedis
     , hspec
     , http-client

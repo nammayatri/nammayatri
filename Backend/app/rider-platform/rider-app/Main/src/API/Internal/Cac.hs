@@ -1,15 +1,14 @@
+-- | Kept after haskell-cac removal for backward compatibility: older CAC
+-- tooling may still call /internal/typeCheck; dropping the route would 404.
+-- Auth and real type validation are gone — always succeed.
 module API.Internal.Cac where
 
 import qualified Domain.Action.Internal.Cac as Domain
 import Environment (FlowHandler, FlowServer)
 import qualified Environment as Fields
-import GHC.Base
 import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI)
-import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
-import Servant hiding (throwError)
-import System.Environment (lookupEnv)
-import Tools.Error
+import Servant
 
 type API =
   "typeCheck"
@@ -21,10 +20,4 @@ handler :: FlowServer API
 handler = typeCheckHandler
 
 typeCheckHandler :: Maybe String -> Domain.CacTypeValidationReq -> FlowHandler Domain.CacTypeValidationResp
-typeCheckHandler token req = withFlowHandlerAPI $ do
-  token' <- fromMaybeM CacAuthError token
-  authtkn <- liftIO $ lookupEnv "AUTH_TOKEN"
-  let tokenEnv = fromMaybe "Sample" authtkn
-      mbAcl = eqString token' tokenEnv
-  unless mbAcl $ throwError CacInvalidToken
-  Domain.typeCheckHandler req
+typeCheckHandler _token req = withFlowHandlerAPI $ Domain.typeCheckHandler req

@@ -189,7 +189,6 @@ library:
           - -j4
   dependencies:
     - mobility-core
-    - haskell-cac
     - beckn-spec
     - special-zone-a
     - payment

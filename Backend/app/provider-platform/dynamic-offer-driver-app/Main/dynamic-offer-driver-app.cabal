@@ -527,8 +527,6 @@ library
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AccessMatrix
       Domain.Types.Beckn.Status
-      Domain.Types.Cac
-      Domain.Types.CacType
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
@@ -691,7 +689,6 @@ library
       SharedLogic.BetterDriverSwap
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
-      SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
@@ -930,24 +927,6 @@ library
       Storage.Beam.Toll
       Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
-      Storage.Cac.DriverIntelligentPoolConfig
-      Storage.Cac.DriverPoolConfig
-      Storage.Cac.FarePolicy
-      Storage.Cac.FarePolicy.DriverExtraFeeBounds
-      Storage.Cac.FarePolicy.FarePolicyAmbulanceDetails
-      Storage.Cac.FarePolicy.FarePolicyInterCityDetails
-      Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPerKmRateSection
-      Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
-      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
-      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
-      Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
-      Storage.Cac.FarePolicy.FarePolicyRentalDetails
-      Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
-      Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
-      Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Cac.GoHomeConfig
-      Storage.Cac.MerchantServiceUsageConfig
-      Storage.Cac.TransporterConfig
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -2500,7 +2479,6 @@ library
     , geohash ==1.0.1
     , gtfs-data-server
     , hashable
-    , haskell-cac
     , hedis
     , hex-text
     , hspec
@@ -2564,8 +2542,6 @@ library
     , xml-conduit
     , xmlbf
     , yudhishthira
-  extra-libraries:
-      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -2650,7 +2626,6 @@ executable dynamic-offer-driver-app-exe
     , generic-lens
     , geohash ==1.0.1
     , hashable
-    , haskell-cac
     , hedis
     , hex-text
     , hspec
@@ -2708,8 +2683,6 @@ executable dynamic-offer-driver-app-exe
     , xml-conduit
     , xmlbf
     , yudhishthira
-  extra-libraries:
-      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -2762,8 +2735,6 @@ test-suite driver-app-test
       TemplateHaskell
       OverloadedRecordDot
   ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates
-  extra-libraries:
-      cac_client
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -2800,7 +2771,6 @@ test-suite driver-app-test
     , generic-lens
     , geohash ==1.0.1
     , hashable
-    , haskell-cac
     , hedis
     , hex-text
     , hspec

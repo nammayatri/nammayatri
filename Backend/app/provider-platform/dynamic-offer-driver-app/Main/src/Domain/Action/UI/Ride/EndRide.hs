@@ -139,7 +139,6 @@ import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
 import Tools.Utils (isDropInsideThreshold)
-import Utils.Common.Cac.KeyNameConstants
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 
@@ -189,15 +188,15 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> HighPrecMoney -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicyByEstOrQuoteId :: Maybe UTCTime -> Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
-    getFarePolicyOnEndRide :: Maybe UTCTime -> Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Maybe UTCTime -> Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe Text -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
+    getFarePolicyOnEndRide :: Maybe UTCTime -> Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe Text -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
-    findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
+    findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: forall a. Id DP.Person -> m a -> m a,
     getRouteAndDistanceBetweenPoints :: Maybe Text -> LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
@@ -234,7 +233,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = \_ -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing,
+        findConfig = getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
@@ -446,7 +445,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
   finalUpdatedRide <- whenWithLocationUpdatesLock driverId $ do
     now <- getCurrentTime
-    thresholdConfig <- findConfig (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
         estimatedTollCharges = rideOld.estimatedTollCharges
         estimatedTollNames = rideOld.estimatedTollNames
@@ -695,7 +694,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         mbDriverPerson <- QP.findById finalUpdatedRide.driverId
         let endRideLanguage = fromMaybe KET.ENGLISH (mbDriverPerson >>= (.language))
         endRideLabels <- DUIRideCommon.fetchEarningsLabels finalUpdatedRide.merchantOperatingCityId endRideLanguage
-        mbEndRideTransporterConfig <- findConfig (Just (TransactionId (Id booking.transactionId)))
+        mbEndRideTransporterConfig <- findConfig
         let endRideCalling =
               DUIRideCommon.ResolvedCalling
                 { riderMobileNumber = Nothing,
@@ -891,8 +890,8 @@ recalculateFareForDistance useEstimatedDuration ServiceHandle {..} booking ride 
   let pricingTime = Just $ if booking.isScheduled then booking.startTime else booking.createdAt
   farePolicy <-
     if recomputeWithLatestPricing
-      then getFarePolicyOnEndRide pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
-      else getFarePolicyByEstOrQuoteId pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+      then getFarePolicyOnEndRide pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just booking.transactionId) booking.configInExperimentVersions booking.specialLocationName
+      else getFarePolicyByEstOrQuoteId pricingTime (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just booking.transactionId) booking.configInExperimentVersions booking.specialLocationName
   QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
   if farePolicy.disableRecompute == Just True && not endedAtPickup
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, Just farePolicy)

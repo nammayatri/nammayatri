@@ -11,13 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.TransporterConfig
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ But most likely you need a version from Cac with inMem results feature."
-    #-}
   ( create,
     clearCache,
     update,

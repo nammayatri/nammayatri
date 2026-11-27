@@ -123,9 +123,9 @@ import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.FarePolicy as QFPolicy
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
+import qualified Storage.CachedQueries.FarePolicy as QFPolicy
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -149,7 +149,6 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-import Utils.Common.Cac.KeyNameConstants
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -364,7 +363,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   -- the pin. Idempotent, so re-running (or a shadow search) rewrites the same
   -- decisions.
   withTimeAPI "search" "decideAndPinFareAdjustments" $ SFA.decideAndPinFareAdjustments merchantOpCityId sReq.customerPhoneNum sReq.transactionId
-  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct (Just possibleTripOption.schedule) merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct (Just possibleTripOption.schedule) merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just sReq.transactionId) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
@@ -1478,7 +1477,7 @@ dedupCI = go []
 
 transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
 transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
-  farePolicy <- QFPolicy.findById Nothing (fromMaybe "" farePolicyId)
+  farePolicy <- QFPolicy.findFarePolicyFromDB (fromMaybe "" farePolicyId)
   fareParams <- QFP.findById (fromMaybe "" fareParamsId)
   let businessDiscount = case (farePolicy, fareParams) of
         (Just farePolicy', Just params) -> if isJust farePolicy'.businessDiscountPercentage then farePolicy'.businessDiscountPercentage >>= computeRideDiscount params.fareParametersDetails params.baseFare params.congestionCharge params.nightShiftCharge params.stopCharges else Nothing

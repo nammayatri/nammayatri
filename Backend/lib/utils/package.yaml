@@ -165,8 +165,6 @@ library:
     - special-zone-a
     - payment
     - sessionizer-metrics
-    - haskell-cac
-
 
 tests:
   utils-rate-limit-test:

@@ -127,18 +127,12 @@ type API =
            :<|> "profile"
            :> ( TokenAuth
                   :> Header "x-package" Text
-                  :> QueryParam "toss" Int
-                  :> QueryParam "tenant" Text
-                  :> QueryParam "context" Text
                   :> QueryParam "serviceName" DPlan.ServiceNames
                   :> QueryParam "fleetInfo" Bool
                   :> Get '[JSON] DDriver.DriverInformationRes
                   :<|> TokenAuth
                     :> "info"
                     :> Header "x-package" Text
-                    :> QueryParam "toss" Int
-                    :> QueryParam "tenant" Text
-                    :> QueryParam "context" Text
                     :> QueryParam "serviceName" DPlan.ServiceNames
                     :> QueryParam "fleetInfo" Bool
                     :> ReqBody '[JSON] DDriver.UpdateProfileInfoPoints
@@ -317,8 +311,8 @@ handler =
     :<|> consentResponse
     :<|> marketingEventsPostLogin
 
-getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo >>= withSharedCabInfo merchantOpCityId
+getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
+getInformation (personId, merchantId, merchantOpCityId) mbClientId serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, merchantId, merchantOpCityId) mbClientId serviceName Nothing mbFleetInfo >>= withSharedCabInfo merchantOpCityId
 
 withSharedCabInfo :: Id DMOC.MerchantOperatingCity -> DDriver.DriverInformationRes -> Flow DDriver.DriverInformationRes
 withSharedCabInfo merchantOpCityId res = do
@@ -447,8 +441,8 @@ listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Id DRB.Booking -> FlowHandler APISuccess
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId Nothing
 
-getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req >>= withSharedCabInfo merchantOpCityId
+getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId serviceName mbFleetInfo req >>= withSharedCabInfo merchantOpCityId
 
 getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
 getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType

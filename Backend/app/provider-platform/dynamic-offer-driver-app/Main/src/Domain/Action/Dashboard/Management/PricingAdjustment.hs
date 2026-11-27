@@ -63,8 +63,8 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareAdjustment as SFA
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareAdjustment as CQFA
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Estimate as CHEst
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -272,7 +272,7 @@ validateAdjustmentReq merchantOpCity req = do
       product' <-
         fromMaybeM (InvalidRequest $ "no enabled OneWay fare product for tier " <> show tier <> " / area " <> show area <> " — the adjustment would never fire there") $
           listToMaybe candidates
-      farePolicy <- CQFP.findById Nothing product'.farePolicyId >>= fromMaybeM (InvalidRequest $ "fare policy missing for tier " <> show tier <> " / area " <> show area)
+      farePolicy <- CQFP.findFarePolicyFromDB product'.farePolicyId >>= fromMaybeM (InvalidRequest $ "fare policy missing for tier " <> show tier <> " / area " <> show area)
       unless (DFP.getFarePolicyType farePolicy == DFP.Progressive) $
         throwError (InvalidRequest $ "tier " <> show tier <> " / area " <> show area <> " uses a " <> show (DFP.getFarePolicyType farePolicy) <> " policy; adjustments support Progressive only (v1)")
 
@@ -301,7 +301,7 @@ postPricingAdjustmentPreview merchantShortId opCity req = do
   product' <-
     fromMaybeM (InvalidRequest $ "no enabled OneWay fare product for tier " <> show req.vehicleServiceTier <> " in the Default area") $
       listToMaybe candidates
-  farePolicy <- CQFP.findById Nothing product'.farePolicyId >>= fromMaybeM (InvalidRequest "fare policy missing for the tier's Default OneWay product")
+  farePolicy <- CQFP.findFarePolicyFromDB product'.farePolicyId >>= fromMaybeM (InvalidRequest "fare policy missing for the tier's Default OneWay product")
   details <- case farePolicy.farePolicyDetails of
     DFP.ProgressiveDetails d -> pure d
     _ -> throwError (InvalidRequest "the tier's Default OneWay policy is not Progressive; adjustments support Progressive only (v1)")

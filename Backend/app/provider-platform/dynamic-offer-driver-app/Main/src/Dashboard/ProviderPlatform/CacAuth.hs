@@ -23,7 +23,7 @@ import Dashboard.Common as Reexport
 import Kernel.Prelude
 import Servant hiding (Summary, throwError)
 
--- This is a temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
+-- Stub CacUser types for /CAC/auth, kept for backward compatibility after haskell-cac removal.
 
 data CacUser = CacUser
   { username :: String,

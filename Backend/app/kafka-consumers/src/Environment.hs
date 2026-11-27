@@ -38,7 +38,7 @@ import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR, runFlowR)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (lookupDeploymentVersion)
-import Kernel.Utils.Common (CacConfig, CacheConfig)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -128,7 +128,6 @@ data AppCfg = AppCfg
     kafkaConsumerCfg :: ConsumerConfig,
     loggerConfig :: LoggerConfig,
     cacheConfig :: CacheConfig,
-    cacConfig :: CacConfig,
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -191,7 +190,6 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    cacConfig :: CacConfig,
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     isShuttingDown :: Shutdown,
     httpClientOptions :: HttpClientOptions,

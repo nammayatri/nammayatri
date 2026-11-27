@@ -156,8 +156,6 @@ library
       DerivingStrategies
       OverloadedRecordDot
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
-  extra-libraries:
-      cac_client
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -184,7 +182,6 @@ library
     , generic-lens
     , geohash ==1.0.1
     , hashable
-    , haskell-cac
     , hedis
     , hspec
     , http-client

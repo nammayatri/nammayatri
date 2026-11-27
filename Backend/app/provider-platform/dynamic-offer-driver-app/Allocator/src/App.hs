@@ -15,9 +15,7 @@
 
 module App where
 
-import qualified Client.Main as CM
 import qualified Control.Concurrent.MVar as MVar
-import qualified Data.Bool as B
 import Data.Singletons (SingI)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as Fields
@@ -114,25 +112,6 @@ import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (HasSchemaName (..), curren
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
-
-createCAC :: AppCfg -> IO ()
-createCAC appCfg = do
-  when appCfg.cacConfig.enableCac $ do
-    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
-    case cacStatus of
-      0 -> CM.startCACPolling appCfg.cacTenants
-      _ -> do
-        -- logError "CAC client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  when appCfg.superPositionConfig.enableSuperPosition $ do
-    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
-    case superPositionStatus of
-      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
-      _ -> do
-        -- logError "CAC super position client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 putJobHandlerInListWrapper ::
   forall t (e :: t).
@@ -242,7 +221,6 @@ runDriverOfferAllocator configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
-  _ <- liftIO $ createCAC handlerCfg.appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt

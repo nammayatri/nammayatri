@@ -98,7 +98,7 @@ import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SpecialZone ()
-import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDI
@@ -222,7 +222,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           possibleFares <-
             mapMaybeM
               ( \fp -> do
-                  mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+                  mbFarePolicy <- CQFP.findFarePolicyFromDB fp.farePolicyId
                   case mbFarePolicy of
                     Nothing -> pure Nothing
                     Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy

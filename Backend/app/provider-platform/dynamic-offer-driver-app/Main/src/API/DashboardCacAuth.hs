@@ -12,13 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Token-to-ACL lookup for CAC. A temporary shim, to be dropped once CAC has
--- SSO -- carried over verbatim so nothing depends on provider-dashboard for it
--- in the meantime.
---
--- Touches no database: the map comes from AUTH_MAP at startup. Unlike
--- provider-dashboard, an unset AUTH_MAP is not fatal here (see Environment) --
--- it simply means no token matches.
+-- | Kept after haskell-cac removal for backward compatibility: older CAC
+-- clients may still call /CAC/auth; dropping the route would 404 them.
+-- Real token→ACL lookup is gone — always return a stub CacUser.
 module API.DashboardCacAuth
   ( API,
     handler,
@@ -26,16 +22,10 @@ module API.DashboardCacAuth
 where
 
 import qualified "this" Dashboard.ProviderPlatform.CacAuth as Common
-import Data.Aeson as DA
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TLE
 import Environment
 import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI')
-import Kernel.Utils.Error.Throwing
-import Servant hiding (throwError)
-import "lib-dashboard" Tools.Error
+import Servant
 
 type API =
   "CAC"
@@ -47,17 +37,13 @@ handler :: FlowServer API
 handler _ _ = cacAuthHandler
 
 cacAuthHandler :: Maybe String -> FlowHandler Common.CacUser
-cacAuthHandler mbToken = withFlowHandlerAPI' $ do
-  token <- fromMaybeM CacAuthError mbToken
-  mbAcl <- lookup token <$> asks (.cacAclMap)
-  case mbAcl of
-    Just acl' -> do
-      let acl = (TL.unpack . TLE.decodeUtf8 . DA.encode . HM.fromList) acl'
-      return $
-        Common.CacUser
-          { username = "admin",
-            email = "admin@juspay.in",
-            auth_type = "Bearer",
-            ..
-          }
-    Nothing -> throwError CacInvalidToken
+cacAuthHandler mbToken =
+  withFlowHandlerAPI' $
+    pure
+      Common.CacUser
+        { username = "admin",
+          email = "admin@juspay.in",
+          acl = "{}",
+          token = fromMaybe "" mbToken,
+          auth_type = "Bearer"
+        }

@@ -3,7 +3,6 @@
   - Images/PDF: direct upload (base64) -> S3 put -> store s3Path and fileType in knowledge_center.
   - SOP type names are stored as an array in transporter config (per merchantOpCity); documents are queried from knowledge_center table by sopType + merchantOpCityId.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.KnowledgeCenter
   ( knowledgeCenterSopList,
@@ -33,8 +32,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTT
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.KnowledgeCenter as QKC
 import Tools.Error
@@ -142,8 +141,8 @@ updateKnowledgeCenterSopConfigAndClearCache ::
   [Text] ->
   m ()
 updateKnowledgeCenterSopConfigAndClearCache mocId transporterConfig newSopTypes = do
-  CCT.update transporterConfig {knowledgeCenterSopTypes = Extra.KnowledgeCenterSopTypesConfig newSopTypes}
-  CCT.clearCache mocId
+  CTT.update transporterConfig {knowledgeCenterSopTypes = Extra.KnowledgeCenterSopTypesConfig newSopTypes}
+  CTT.clearCache mocId
 
 allowedDocumentExtensions :: [Text]
 allowedDocumentExtensions = ["jpg", "jpeg", "png", "pdf"]

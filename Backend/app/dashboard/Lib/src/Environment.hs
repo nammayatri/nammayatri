@@ -79,7 +79,6 @@ data AppCfg = AppCfg
     slackChannel :: Text,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
-    cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     kvConfigUpdateFrequency :: Int,
@@ -137,9 +136,7 @@ data AppEnv = AppEnv
     slackEnv :: SlackEnv,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
-    cacConfig :: CacConfig,
     kafkaProducerTools :: KafkaProducerTools,
-    cacAclMap :: [(String, [(String, String)])],
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
@@ -189,8 +186,6 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
-  cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
-  let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") (readMaybe cacAclMapRaw :: Maybe [(String, [(String, String)])])
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC

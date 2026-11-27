@@ -31,7 +31,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as BeamQSZ
-import Storage.Cac.FarePolicy as BeamFPolicy
+import Storage.CachedQueries.FarePolicy as BeamFPolicy
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
@@ -75,7 +75,7 @@ updateEstimatedFareAndFareParameters (Id quoteId) estimatedFare (Id fareParamete
 -}
 instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing . Id) farePolicyId
+    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findFarePolicyFromDB . Id) farePolicyId
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
       Just

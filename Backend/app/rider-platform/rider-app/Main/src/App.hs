@@ -17,8 +17,6 @@
 module App where
 
 import qualified App.Server as App
-import Client.Main as CM
-import qualified Data.Bool as B
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -73,25 +71,6 @@ import WhatsappBot.Adapter.Tracker (startWhatsAppTracker)
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
 
-createCAC :: AppCfg -> IO ()
-createCAC appCfg = do
-  when appCfg.cacConfig.enableCac $ do
-    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
-    case cacStatus of
-      0 -> CM.startCACPolling appCfg.cacTenants
-      _ -> do
-        -- logError "CAC client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-  when appCfg.superPositionConfig.enableSuperPosition $ do
-    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
-    case superPositionStatus of
-      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
-      _ -> do
-        -- logError "CAC super position client failed to start"
-        threadDelay 1000000
-        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
-
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "rider-app"
@@ -145,7 +124,6 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
-        _ <- liftIO $ createCAC appCfg
         -- Load FRFS BAPs
         frfsBap <-
           try QBecknConfig.findAll

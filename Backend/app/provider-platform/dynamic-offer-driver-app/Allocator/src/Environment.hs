@@ -132,7 +132,6 @@ data HandlerEnv = HandlerEnv
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
-    cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
     searchRequestExpirationSeconds :: NominalDiffTime,
     searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,

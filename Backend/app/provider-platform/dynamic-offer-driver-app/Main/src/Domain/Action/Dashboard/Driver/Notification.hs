@@ -54,8 +54,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
-import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CMDP
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -66,7 +66,6 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
-import Utils.Common.Cac.KeyNameConstants
 
 --------------------------------------------------------------------------------------------------
 
@@ -140,7 +139,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
       let mbDriverLocation = case driverLocationResult of
             Left _ -> Nothing
             Right locations -> safeLast locations
-      intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id)))
+      intelligentPoolConfig <- CMDP.getDriverIntelligentPoolConfigFromDB merchantOperatingCityId
       let locationUpdateSampleTime = maybe 3 (.locationUpdateSampleTime) intelligentPoolConfig
           gpsFreshnessCutoff = addUTCTime (fromIntegral $ (-60) * locationUpdateSampleTime.getMinutes) now
           hasStaleGps = maybe True (\driverLocation -> driverLocation.coordinatesCalculatedAt < gpsFreshnessCutoff) mbDriverLocation

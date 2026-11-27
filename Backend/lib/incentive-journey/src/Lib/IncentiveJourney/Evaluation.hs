@@ -114,6 +114,8 @@ mergeCurrentMetrics mbExisting bag =
       merged =
         foldl'
           ( \acc (k, v) ->
+              -- Campaign behaviour bag keys are flat (rrAccepted, ...). Tick path writes
+              -- the InsideTimebound suffix too — keep both in sync so rates never see Inside=4, flat=2.
               let targets =
                     if k `elem` campaignBehaviorMetricBaseNames
                       then [k, metricInsideKey k]

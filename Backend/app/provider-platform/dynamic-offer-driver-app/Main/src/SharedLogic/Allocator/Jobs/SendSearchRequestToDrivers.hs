@@ -64,7 +64,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
-import SharedLogic.DriverPool hiding (getDriverPoolConfig)
+import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
@@ -72,7 +72,6 @@ import SharedLogic.ScheduledRideTopDrivers (topDriversRoundCutoff)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.IncentiveJourney ()
-import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
@@ -89,7 +88,6 @@ import qualified Tools.Fields as Fields
 import qualified Tools.Metrics as Metrics
 import Tools.Utils
 import TransactionLogs.Types
-import Utils.Common.Cac.KeyNameConstants
 
 -- | Dummy driverId for the "drivers exhausted" marker row; analytics filter on it.
 driversNotFoundDriverId :: Id DPerson.Person
@@ -279,7 +277,7 @@ processSendSearchRequestJobWithMode dispatchMode jobId jobData = withLogTag ("Jo
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   L.setOptionLocal TxnIdKey searchReq.transactionId
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+  driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter searchReq
   mbSearchRadiusOverride <- SST.computeBetterDriverSearchRadiusOverride searchTry
   let driverPoolConfig = maybe driverPoolConfigFetched (\radius -> driverPoolConfigFetched {maxRadiusOfSearch = min radius driverPoolConfigFetched.maxRadiusOfSearch}) mbSearchRadiusOverride
   -- An early batch advance orphans the job that was already scheduled. Terminate the orphan here

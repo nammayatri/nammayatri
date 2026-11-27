@@ -56,6 +56,7 @@ module SharedLogic.DriverPool
     PoolCalculationStage (..),
     CalculateDriverPoolReq (..),
     module Reexport,
+    getDriverPoolConfig,
     getBatchSize,
     addSearchRequestInfoToCache,
     isLessThenNParallelRequests,
@@ -145,10 +146,12 @@ import qualified Lib.Queries.SpecialLocation as Fields
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DST
+import SharedLogic.DriverPool.Config (getDriverPoolConfig)
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import SharedLogic.DriverPool.Types as Reexport
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import qualified SharedLogic.PassengerLuggage as SPL
@@ -156,9 +159,8 @@ import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
 import qualified SharedLogic.ScheduledRideVisibility as SRV
-import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
-import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CDIP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
@@ -169,7 +171,6 @@ import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
-import Utils.Common.Cac.KeyNameConstants
 
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
@@ -712,7 +713,7 @@ updateDriverSpeedInRedis ::
   UTCTime ->
   m ()
 updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.withCrossAppRedis $ do
-  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> CDIP.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> CDIP.getDriverIntelligentPoolConfigFromDB merchantOpCityId
   now <- getCurrentTime
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <-
@@ -734,7 +735,7 @@ getDriverAverageSpeed ::
   Id DP.Person ->
   m Double
 getDriverAverageSpeed merchantOpCityId driverId = Redis.withCrossAppRedis $ do
-  intelligentPoolConfig <- CDIP.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  intelligentPoolConfig <- CDIP.getDriverIntelligentPoolConfigFromDB merchantOpCityId
   let minLocationUpdates = maybe 3 (.minLocationUpdates) intelligentPoolConfig
       defaultDriverSpeed = maybe 27.0 (.defaultDriverSpeed) intelligentPoolConfig
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
