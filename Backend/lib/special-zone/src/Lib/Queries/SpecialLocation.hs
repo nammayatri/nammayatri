@@ -346,6 +346,14 @@ updateParkingFeeExemptionEnabled parkingFeeExemptionEnabled now specialLocationI
     ]
   where_ $ tbl ^. SpecialLocationUuid ==. val specialLocationId.getId
 
+checkSkipQueueById :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Id D.SpecialLocation -> m Bool
+checkSkipQueueById slId = do
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure $
+    fromMaybe False $ do
+      (sl, _) <- find (\(sl, _) -> sl.id == slId) cached
+      sl.skipQueue
+
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT
 
