@@ -1,0 +1,79 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+  Double: Kernel.Prelude
+
+# One row per question asked to Grid (AI verification) for an entity type (e.g. a document type).
+# merchantOperatingCityId NULL: the question applies to every city of the merchant; a city's own row
+# with the same questionLabel takes its place in that city.
+# The question text may contain {key} placeholders; callers pass the values as key-value pairs.
+AiVerificationQuestion:
+  tableName: ai_verification_question
+
+  types:
+    AiQuestionType:
+      enum: "NOUL, CHOICE, SCORE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    # CHOICE: the options Grid may pick from; the answer is one of the keys.
+    # SCORE: the levels, worst to best, in list order; key is ignored.
+    AiQuestionOption:
+      key: Text
+      text: Text
+      derive: "Eq"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <AiQuestionType>
+
+  derives: "Generic, Show, Eq, FromJSON, ToJSON"
+
+  fields:
+    id: Id AiVerificationQuestion
+    merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    entityType: Text
+    questionLabel: Text
+    question: Text
+    questionType: AiQuestionType
+    options: Maybe [AiQuestionOption]
+    threshold: Maybe Double
+    enabled: Bool
+
+  beamType:
+    options: Maybe Value
+
+  toTType:
+    options: Data.Aeson.toJSON <$> options|E
+
+  fromTType:
+    options: Kernel.Utils.JSON.valueToMaybe =<< options|E
+
+  sqlType:
+    entityType: character varying(255)
+    questionLabel: character varying(255)
+    question: text
+    questionType: character varying(255)
+    options: jsonb
+
+  default:
+    enabled: "true"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantIdAndEntityType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, entityType]
+
+  cachedQueries:
+    findAllByMerchantIdAndEntityType:
+      keyParams:
+        - merchantId: Id Merchant
+        - entityType: Text
+      dbQuery: findAllByMerchantIdAndEntityType
+      dbQueryParams:
+        - merchantId: Id Merchant
+        - entityType: Text

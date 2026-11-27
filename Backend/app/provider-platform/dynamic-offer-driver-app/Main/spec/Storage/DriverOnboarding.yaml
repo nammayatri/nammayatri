@@ -850,6 +850,7 @@ DocumentVerificationConfig:
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     faceMatchSourceDoc: Maybe DocumentType
     allowNonTransportVehicle: Maybe Bool
+    aiImageVerificationEnabled: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"

@@ -724,6 +724,7 @@ library
       SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
+      SharedLogic.DriverOnboarding.VehicleImageGridVerification
       SharedLogic.DriverOnboardingDocumentVersion
       SharedLogic.DriverOnlineHoursCache
       SharedLogic.DriverPool
@@ -807,6 +808,7 @@ library
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
+      SharedLogic.Grid.GridDecision
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IncentiveJourney
       SharedLogic.IncentiveJourney.BehaviorTickPublisher
@@ -1668,6 +1670,7 @@ library
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AddOnConfig
+      Domain.Types.AiVerificationQuestion
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -1882,6 +1885,7 @@ library
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AddOnConfig
+      Storage.Beam.AiVerificationQuestion
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -2092,6 +2096,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WalletTransaction
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.AiVerificationQuestion
       Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FleetBadgeAssociation
@@ -2101,6 +2106,7 @@ library
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AddOnConfig
+      Storage.Queries.AiVerificationQuestion
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
