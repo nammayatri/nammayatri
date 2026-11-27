@@ -523,25 +523,49 @@ maxXyneIssuesPageSize = 100
 -- than dropped, so this flat shape loses no detail relative to a
 -- per-issue/nested response. 'senderEmail' stays 'Nothing' — there's no
 -- reliable email data to attach per message.
+--
+-- @mbChannelId@ (Xyne's channel) limits the feed to issues from the cities
+-- whose XyneSpaces config carries that channel, so each Xyne channel only
+-- pulls its own cities. The cities are matched through the same
+-- 'lookupXyneCfg' the response uses for 'channelId', so a city that takes
+-- its config from a fallback city is matched the same way. The filter is
+-- applied in the query, not on the page, so offset paging stays stable and
+-- an empty page still means the window is done. Omitted, every city is
+-- returned, as before.
 fetchXyneIssues ::
   (Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   Text ->
   (Id Common.Merchant -> Id Common.MerchantOperatingCity -> m Xyne.XyneSpacesCfg) ->
+  m [(Id Common.Merchant, Id Common.MerchantOperatingCity)] ->
   DUI.ServiceHandle m ->
   Common.Identifier ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   m [Xyne.XyneInboundReq]
-fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDate mbLimit mbOffset mbAuthHeader = do
+fetchXyneIssues bearerToken lookupXyneCfg listMerchantOpCities issueHandle identifier mbChannelId mbSince mbEndDate mbLimit mbOffset mbAuthHeader = do
   unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
     throwError $ AuthBlocked "Invalid Authorization header"
   let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
-  issueReports <- QIR.findAllCreatedAfter mbSince mbEndDate (Just cappedLimit) mbOffset
-  concat <$> mapM safeToXyneInboundReqs issueReports
+  mbMocIds <- forM (find (not . T.null) mbChannelId) $ \channelId -> do
+    mocIds <- findMocIdsForChannel channelId
+    when (null mocIds) $ logWarning $ "Xyne issues feed: no city has XyneSpaces channelId " <> channelId
+    pure mocIds
+  case mbMocIds of
+    Just [] -> pure []
+    _ -> do
+      issueReports <- QIR.findAllCreatedAfter mbMocIds mbSince mbEndDate (Just cappedLimit) mbOffset
+      concat <$> mapM safeToXyneInboundReqs issueReports
   where
+    findMocIdsForChannel channelId = do
+      cities <- listMerchantOpCities
+      fmap catMaybes . forM cities $ \(merchantId, mocId) ->
+        withTryCatch "fetchXyneIssues:matchChannel" (lookupXyneCfg merchantId mocId) <&> \case
+          Right cfg | cfg.channelId == channelId -> Just mocId.getId
+          _ -> Nothing
     safeToXyneInboundReqs issue =
       withTryCatch "fetchXyneIssues:issue" (toXyneInboundReqs issue) >>= \case
         Right reqs -> pure reqs

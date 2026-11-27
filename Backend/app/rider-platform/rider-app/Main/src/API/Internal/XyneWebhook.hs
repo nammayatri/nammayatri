@@ -57,7 +57,8 @@ bearerHandler = postXyneBearerWebhook
 -- inclusive), so it can catch up on syncs that were dropped in transit and
 -- has a real stopping point instead of guessing from an empty page.
 -- @since@ is kept as a deprecated alias for @startDate@ for existing
--- callers; @startDate@ wins if both are given.
+-- callers; @startDate@ wins if both are given. @channelId@ (optional) limits
+-- the feed to the cities whose XyneSpaces config carries that channel.
 type IssuesAPI =
   "xyne" :> "webhook" :> "issues"
     :> Header "Authorization" Kernel.Prelude.Text
@@ -66,10 +67,11 @@ type IssuesAPI =
     :> QueryParam "endDate" Kernel.Prelude.UTCTime
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
+    :> QueryParam "channelId" Kernel.Prelude.Text
     :> Get '[JSON] [XyneTypes.XyneInboundReq]
 
 issuesHandler :: FlowServer IssuesAPI
 issuesHandler = getXyneIssues
   where
-    getXyneIssues mbAuth mbSince mbStartDate mbEndDate mbLimit mbOffset =
-      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues (mbStartDate <|> mbSince) mbEndDate mbLimit mbOffset mbAuth
+    getXyneIssues mbAuth mbSince mbStartDate mbEndDate mbLimit mbOffset mbChannelId =
+      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues mbChannelId (mbStartDate <|> mbSince) mbEndDate mbLimit mbOffset mbAuth

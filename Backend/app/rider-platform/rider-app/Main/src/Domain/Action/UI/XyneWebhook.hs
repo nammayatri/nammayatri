@@ -20,6 +20,8 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantOperatingCity as QMOC
 import qualified Tools.Fields as Fields
 
 postXyneWebhook :: Maybe Text -> Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
@@ -40,10 +42,18 @@ postXyneBearerWebhook mbAuth rawBody = do
   bearerToken <- asks (.xyneWebhookBearerToken)
   XyneShared.processXyneBearerWebhook bearerToken DDIM.dashboardIssueHandle Common.CUSTOMER mbAuth rawBody
 
-getXyneIssues :: Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Flow [XyneTypes.XyneInboundReq]
-getXyneIssues mbStartDate mbEndDate mbLimit mbOffset mbAuth = do
+getXyneIssues :: Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Flow [XyneTypes.XyneInboundReq]
+getXyneIssues mbChannelId mbStartDate mbEndDate mbLimit mbOffset mbAuth = do
   bearerToken <- asks (.xyneWebhookBearerToken)
-  XyneShared.fetchXyneIssues bearerToken lookupXyneCfg DDIM.dashboardIssueHandle Common.CUSTOMER mbStartDate mbEndDate mbLimit mbOffset mbAuth
+  XyneShared.fetchXyneIssues bearerToken lookupXyneCfg listMerchantOpCities DDIM.dashboardIssueHandle Common.CUSTOMER mbChannelId mbStartDate mbEndDate mbLimit mbOffset mbAuth
+
+-- | Every city of every merchant, for matching a Xyne channel to its cities.
+listMerchantOpCities :: Flow [(KId.Id Common.Merchant, KId.Id Common.MerchantOperatingCity)]
+listMerchantOpCities = do
+  merchants <- QM.findAll
+  fmap concat . forM merchants $ \merchant -> do
+    cities <- QMOC.findAllByMerchantId merchant.id
+    pure [(KId.cast merchant.id, KId.cast city.id) | city <- cities]
 
 resolveXyneSigningSecret :: Maybe Text -> Flow (Maybe (KId.Id Common.Merchant), Bool, Text)
 resolveXyneSigningSecret Nothing = do

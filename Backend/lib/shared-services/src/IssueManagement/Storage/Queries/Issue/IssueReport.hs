@@ -67,9 +67,15 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssig
 -- holds zero keys for this table, so it isn't stale-cache data being
 -- served, the KV routing itself misses them. A reconciliation read for an
 -- external party needs Postgres-correct results more than KV-cache speed.
-findAllCreatedAfter :: BeamFlow m r => Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> m [IssueReport]
-findAllCreatedAfter mbSince mbEndDate mbLimit mbOffset = do
-  let sinceCond = case mbSince of
+--
+-- 'mbMocIds' narrows the result to issues raised in those cities; 'Nothing'
+-- keeps every city, 'Just []' matches nothing.
+findAllCreatedAfter :: BeamFlow m r => Maybe [Text] -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> m [IssueReport]
+findAllCreatedAfter mbMocIds mbSince mbEndDate mbLimit mbOffset = do
+  let mocCond = case mbMocIds of
+        Nothing -> []
+        Just mocIds -> [Is BeamIR.merchantOperatingCityId $ In (map Just mocIds)]
+      sinceCond = case mbSince of
         Nothing -> []
         Just ts -> [Is BeamIR.createdAt $ GreaterThan (T.utcToLocalTime T.utc ts)]
       endCond = case mbEndDate of
@@ -80,6 +86,7 @@ findAllCreatedAfter mbSince mbEndDate mbLimit mbOffset = do
         ( [ Is BeamIR.deleted $ Eq False,
             Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
           ]
+            <> mocCond
             <> sinceCond
             <> endCond
         )
