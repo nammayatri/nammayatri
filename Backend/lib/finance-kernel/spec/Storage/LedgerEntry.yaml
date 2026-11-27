@@ -30,8 +30,9 @@ LedgerEntry:
     # Sub-domain entity an entry belongs to, when referenceId (the ride) is not selective
     # enough on its own — e.g. the legs of one refund request among the ride's many, or one
     # manual ledger adjustment among the booking's. Part of the leg's identity (unique index).
+    # ExpiringLot: the entry consumes (or expires) part of the lot entry named by entityReferenceId.
     EntityReferenceType:
-      enum: "RefundRequest,LedgerAdjustmentRequest"
+      enum: "RefundRequest,LedgerAdjustmentRequest,ExpiringLot"
       derive: "HttpInstance"
 
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
@@ -71,6 +72,8 @@ LedgerEntry:
     settlementTimestamp: Maybe UTCTime
     createdAt: UTCTime
     reconciliationStatus: Maybe Value
+    # When the amount this entry credits lapses (an expiring lot); Nothing = never expires.
+    expiresAt: Maybe UTCTime
 
     # --- Audit ---
     createdBy: Maybe ActorType                     # Who created this record
@@ -176,7 +179,7 @@ LedgerEntry:
     - columns: [timestamp, toAccountId]
     - columns: [timestamp, concernedIndividualId]
     - columns: [concernedIndividualId]
-    - columns: [settlementId]
+    - columns: [settlementId]\
 
   extraOperations:
     - GENERATE_INDEXES

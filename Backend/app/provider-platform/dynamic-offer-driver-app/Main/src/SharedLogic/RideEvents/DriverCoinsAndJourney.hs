@@ -217,7 +217,7 @@ isDriverCoinsBlockedForDay id = do
   pure $ fromMaybe False (mbBlocked :: Maybe Bool)
 
 blockDriverCoinsForToday ::
-  (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, ClickhouseFlow m r, MonadReader r m) =>
+  (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, ClickhouseFlow m r, MonadReader r m, BeamFlow m r, Finance.HasActorInfo m r) =>
   Id DP.Person ->
   Seconds ->
   m ()

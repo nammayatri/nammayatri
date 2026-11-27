@@ -25,6 +25,7 @@ module Lib.DriverCoins.Coins
     incrementScopedValidRideCounts,
     getScopedValidRideCount,
     updateDriverCoins,
+    recordCoinsUsed,
     resetTodayCoinsAndAdjustLifetime,
     sendCoinsNotification,
     sendCoinsNotificationV2,
@@ -43,7 +44,7 @@ where
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
-import qualified Domain.Types.Coins.CoinHistory as DTCC
+import qualified Domain.Types.Coins.CoinHistory as Fields
 import qualified Domain.Types.Coins.CoinsConfig as DTCoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDS
@@ -76,6 +77,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Finance.CoinLedger as CoinLedger
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
@@ -84,7 +86,6 @@ import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
@@ -93,9 +94,9 @@ import qualified Storage.Queries.Person as Person
 import qualified Tools.Notifications as Notify
 import Tools.Utils
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
+type EventFlow m r = (CoinLedger.CoinFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisLTSFlowEnv r)
 
-getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
+getCoinsByDriverId :: CoinLedger.CoinFlow m r => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withWaitAndLockRedis driverId.getId 60 50000 $ do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
@@ -105,13 +106,12 @@ getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withWaitAndLockRedis driverI
   case coinKeyExists of
     Just coinBalance -> pure coinBalance
     Nothing -> do
-      totalCoins <- CHistory.getTotalCoins driverId (secondsToNominalDiffTime timeDiffFromUtc)
-      let coinBalance = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) totalCoins
+      coinBalance <- CoinLedger.getSpendableCoins driverId timeDiffFromUtc
       Hedis.whenWithLockRedis (mkCoinAccumulationByDriverIdKey driverId currentDate) 60 $ do
         setCoinAccumulationByDriverIdKey driverId currentDate coinBalance expirationPeriod
       pure coinBalance
 
-updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Seconds -> m ()
+updateCoinsByDriverId :: CoinLedger.CoinFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
@@ -128,35 +128,37 @@ updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
   void $ runQuery $ updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
+-- | Bookkeeping for coins spent outside the redeem API (against a plan fee): the used-coins counter, and the
+-- day's cached balance is dropped so the next read comes from the ledger.
+recordCoinsUsed :: CoinLedger.CoinFlow m r => Id DP.Person -> Int -> Seconds -> m ()
+recordCoinsUsed driverId coins timeDiffFromUtc = do
+  now <- getCurrentTime
+  let currentDate = show $ utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  void $ Person.updateUsedCoins (coins + driver.usedCoins) driverId
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.del (mkCoinAccumulationByDriverIdKey driverId currentDate)
+
 resetTodayCoinsAndAdjustLifetime :: EventFlow m r => Id DP.Person -> Seconds -> m ()
 resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
       currentDate = show $ utctDay istTime
-  todayCoinHistory <- B.runInReplica $ CHistory.getCoinEventSummary driverId istTime (secondsToNominalDiffTime timeDiffFromUtc)
+  todayCoinHistory <- CoinLedger.coinsOfDay driverId istTime (secondsToNominalDiffTime timeDiffFromUtc)
   let reversalAlreadyApplied = any (\historyItem -> historyItem.eventFunction == DCT.FraudCoinsReversal) todayCoinHistory
       todayAddedCoins = sum $ map (.coins) $ filter (\historyItem -> historyItem.coins > 0) todayCoinHistory
   when (todayAddedCoins > 0 && not reversalAlreadyApplied) $ do
     forM_ (listToMaybe todayCoinHistory) $ \historyItem -> do
-      reversalTxnId <- generateGUIDText
       resetEntityId <- generateGUIDText
-      CHistory.updateCoinEvent $
-        DTCC.CoinHistory
-          { id = Id reversalTxnId,
-            driverId = driverId.getId,
-            merchantId = historyItem.merchantId,
-            merchantOptCityId = historyItem.merchantOptCityId,
+      CoinLedger.postCoinEvent
+        CoinLedger.CoinEvent
+          { driverId = driverId,
+            merchantId = Id historyItem.merchantId,
+            merchantOperatingCityId = Id historyItem.merchantOptCityId,
             eventFunction = DCT.FraudCoinsReversal,
             coins = negate todayAddedCoins,
-            status = Used,
-            createdAt = now,
-            updatedAt = now,
-            expirationAt = Nothing,
-            coinsUsed = 0,
-            bulkUploadTitle = Nothing,
+            expiresAt = Nothing,
             entityId = Just resetEntityId,
-            vehicleCategory = historyItem.vehicleCategory,
-            serviceTierType = historyItem.serviceTierType
+            attrs = CoinLedger.CoinAttrs {bulkUploadTitle = Nothing, vehicleCategory = historyItem.vehicleCategory, serviceTierType = historyItem.serviceTierType, earnedAt = Nothing}
           }
     driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
@@ -590,33 +592,23 @@ updateEventAndGetCoinsvalueWithoutNotification ::
   m Int
 updateEventAndGetCoinsvalueWithoutNotification driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
   now <- getCurrentTime
-  newId <- generateGUID
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currentBalance <- getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let expiryTime =
         if currentBalance < 0
           then Nothing -- if current balance is negative we dont expire the coins.
           else fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-      status_ = if numCoins > 0 then Remaining else Used
-  let driverCoinEvent =
-        DTCC.CoinHistory
-          { id = newId,
-            driverId = driverId.getId,
-            merchantId = merchantId.getId,
-            merchantOptCityId = merchantOpCityId.getId,
-            eventFunction = eventFunction,
-            coins = numCoins,
-            status = status_,
-            createdAt = now,
-            updatedAt = now,
-            expirationAt = expiryTime,
-            coinsUsed = 0,
-            bulkUploadTitle = Nothing,
-            entityId = entityId,
-            vehicleCategory = Just vehCategory,
-            serviceTierType = mbServiceTierType
-          }
-  CHistory.updateCoinEvent driverCoinEvent
+  CoinLedger.postCoinEvent
+    CoinLedger.CoinEvent
+      { driverId = driverId,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOpCityId,
+        eventFunction = eventFunction,
+        coins = numCoins,
+        expiresAt = expiryTime,
+        entityId = entityId,
+        attrs = CoinLedger.CoinAttrs {bulkUploadTitle = Nothing, vehicleCategory = Just vehCategory, serviceTierType = mbServiceTierType, earnedAt = Nothing}
+      }
   pure numCoins
 
 awardJourneyMilestoneCoins ::
@@ -944,7 +936,7 @@ getCohortValidRideCount driverId tripCategoryType metricWindow =
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdWindowKey driverId metricWindow
         DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdWindowKey driverId metricWindow
 
-safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
+safeIncrBy :: CoinLedger.CoinFlow m r => Text -> Integer -> Id DP.Person -> Seconds -> m ()
 safeIncrBy key value driverId timeDiffFromUtc = do
   _ <- getCoinsByDriverId driverId timeDiffFromUtc
   void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key value

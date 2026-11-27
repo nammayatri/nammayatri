@@ -547,7 +547,8 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                       metadata = metadata,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      expiresAt = Nothing
                     }
               pure $ fmap (const ()) res
           Just _ -> do
@@ -569,7 +570,8 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                       metadata = metadata,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      expiresAt = Nothing
                     }
             entryRes <- createEntry entryInput
             case entryRes of
@@ -774,7 +776,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                         metadata = metadata,
                         merchantId = merchantId,
                         merchantOperatingCityId = merchantOperatingCityId,
-                        settlementStatus = Nothing
+                        settlementStatus = Nothing,
+                        expiresAt = Nothing
                       }
               result <- createEntryWithBalanceUpdate creditEntry
               pure $ either (const Nothing) (Just . (.id)) result
@@ -982,7 +985,8 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
                           metadata = mbMetadata,
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
+                          settlementStatus = Nothing,
+                          expiresAt = Nothing
                         }
                 void $ createEntryWithBalanceUpdate debitEntry
           when (revenueAmount > 0) $
@@ -1245,7 +1249,8 @@ handleSubscriptionExpiry stalePurchase = do
                         metadata = Nothing,
                         merchantId = merchantId,
                         merchantOperatingCityId = merchantOperatingCityId,
-                        settlementStatus = Nothing
+                        settlementStatus = Nothing,
+                        expiresAt = Nothing
                       }
               void $ createEntryWithBalanceUpdate creditTransferEntry
         _ -> do

@@ -762,6 +762,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.B2CQRCode
+      SharedLogic.Finance.CoinLedger
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.GstBreakdown
       SharedLogic.Finance.InvoiceDocument

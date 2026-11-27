@@ -653,7 +653,8 @@ transferWithEntryType entryType mbSettlementStatus fromRole toRole amount refTyp
                 metadata = mbMetadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = mbSettlementStatus <|> ctx.initialSettlementStatus
+                settlementStatus = mbSettlementStatus <|> ctx.initialSettlementStatus,
+                expiresAt = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectAffectedAccount fromAcc
@@ -691,7 +692,8 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = ctx.initialSettlementStatus
+                settlementStatus = ctx.initialSettlementStatus,
+                expiresAt = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectAffectedAccount fromAcc
@@ -730,7 +732,8 @@ transfer_ fromRole toRole amount refType = do
               metadata = Nothing,
               merchantId = ctx.merchantId,
               merchantOperatingCityId = ctx.merchantOpCityId,
-              settlementStatus = ctx.initialSettlementStatus
+              settlementStatus = ctx.initialSettlementStatus,
+              expiresAt = Nothing
             }
     _result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     collectAffectedAccount fromAcc
@@ -783,7 +786,8 @@ transferPendingWithEntryType entryType metadata fromRole toRole amount refType =
                 metadata = metadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = ctx.initialSettlementStatus
+                settlementStatus = ctx.initialSettlementStatus,
+                expiresAt = Nothing
               }
       result <- liftFinanceM (createEntry entryInput)
       collectEntryId result.id
@@ -821,7 +825,8 @@ transferAllowZero fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = ctx.initialSettlementStatus
+                settlementStatus = ctx.initialSettlementStatus,
+                expiresAt = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectAffectedAccount fromAcc

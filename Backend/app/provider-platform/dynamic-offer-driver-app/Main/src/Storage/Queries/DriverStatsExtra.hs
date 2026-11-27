@@ -174,14 +174,15 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEar
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-updateCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
-updateCoinToCashByDriverId driverId amountToAdd = do
+-- | Adds to the lifetime coins-converted-to-cash total only; the coin cash left lives on the ledger.
+addToTotalCoinsConvertedCash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+addToTotalCoinsConvertedCash driverId amount = do
   now <- getCurrentTime
   mbDriverStat <- findById driverId
   case mbDriverStat of
     Just driverStat -> do
       updateWithKV
-        [ Se.Set BeamDS.coinCovertedToCashLeft $ Just (driverStat.coinCovertedToCashLeft + amountToAdd),
+        [ Se.Set BeamDS.totalCoinsConvertedCash $ Just (driverStat.totalCoinsConvertedCash + amount),
           Se.Set BeamDS.updatedAt now
         ]
         [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
@@ -201,20 +202,6 @@ incrementTotalIncentiveJourneyEarnings driverId amountToAdd = do
           ]
           [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
       Nothing -> pure ()
-
-updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
-updateCoinFieldsByDriverId driverId amount = do
-  now <- getCurrentTime
-  mbDriverStat <- findById driverId
-  case mbDriverStat of
-    Just driverStat -> do
-      updateWithKV
-        [ Se.Set BeamDS.coinCovertedToCashLeft $ Just (driverStat.coinCovertedToCashLeft + amount),
-          Se.Set BeamDS.totalCoinsConvertedCash $ Just (driverStat.totalCoinsConvertedCash + amount),
-          Se.Set BeamDS.updatedAt now
-        ]
-        [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
-    Nothing -> pure ()
 
 updateCoinsFieldsForDirectPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
 updateCoinsFieldsForDirectPayout driverId amount = do

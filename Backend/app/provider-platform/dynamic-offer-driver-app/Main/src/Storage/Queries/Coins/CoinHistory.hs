@@ -49,6 +49,20 @@ getCoinEventSummary (Id driverId) time timeDiffFromUtc = do
     Nothing
     Nothing
 
+-- | Rows created in [from, to), newest first.
+getCoinHistoryBetween :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> UTCTime -> UTCTime -> m [CoinHistory]
+getCoinHistoryBetween (Id driverId) from to =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDC.createdAt $ Se.GreaterThanOrEq from,
+          Se.Is BeamDC.createdAt $ Se.LessThan to,
+          Se.Is BeamDC.driverId $ Se.Eq driverId
+        ]
+    ]
+    (Se.Desc BeamDC.createdAt)
+    Nothing
+    Nothing
+
 getTotalCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> m [CoinHistory]
 getTotalCoins (Id driverId) timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime

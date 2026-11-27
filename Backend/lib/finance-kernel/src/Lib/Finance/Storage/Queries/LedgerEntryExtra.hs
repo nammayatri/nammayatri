@@ -199,3 +199,162 @@ findByAccountsWithConcernedIndividual accountIds referenceTypes mbFrom mbTo limi
     (Se.Desc Beam.timestamp)
     limit
     offset
+
+findOpenLotsByToAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m [Domain.LedgerEntry]
+findOpenLotsByToAccount accountId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.entryType $ Se.Eq Domain.LiabilityCreated,
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversedBy $ Se.Eq Nothing,
+          Se.Is Beam.reversalOf $ Se.Eq Nothing,
+          Se.Or
+            [ Se.Is Beam.settlementStatus $ Se.Eq Nothing,
+              Se.Is Beam.settlementStatus $ Se.Eq (Just Domain.UNSETTLED)
+            ]
+        ]
+    ]
+
+-- | Entries that spent or expired part of the given lots (entityReferenceType = ExpiringLot, entityReferenceId =
+--   the lot's id), skipping voided and reversed ones so a reversed spend frees its amount again.
+findLotConsumptions ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  m [Domain.LedgerEntry]
+findLotConsumptions [] = pure []
+findLotConsumptions lotIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.entityReferenceType $ Se.Eq (Just Domain.ExpiringLot),
+          Se.Is Beam.entityReferenceId $ Se.In (map Just lotIds),
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversedBy $ Se.Eq Nothing
+        ]
+    ]
+
+-- | Debits out of an account that name no lot: LiabilitySettled entries with no entity reference, not voided or
+--   reversed, not yet settled. A debit that lapses is restored and then settled by its owner, so the set stays
+--   small; debits that never lapse stay in it.
+findUnlinkedDebitsByFromAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m [Domain.LedgerEntry]
+findUnlinkedDebitsByFromAccount accountId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.entryType $ Se.Eq Domain.LiabilitySettled,
+          Se.Is Beam.entityReferenceType $ Se.Eq Nothing,
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversedBy $ Se.Eq Nothing,
+          Se.Or
+            [ Se.Is Beam.settlementStatus $ Se.Eq Nothing,
+              Se.Is Beam.settlementStatus $ Se.Eq (Just Domain.UNSETTLED)
+            ]
+        ]
+    ]
+
+-- | Lot credits to an account under one reference type and entity reference (the event that earned them).
+findLotsByToAccountReferenceAndEntity ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Text ->
+  Maybe Text ->
+  m [Domain.LedgerEntry]
+findLotsByToAccountReferenceAndEntity accountId referenceType entityReferenceId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.entryType $ Se.Eq Domain.LiabilityCreated,
+          Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.entityReferenceId $ Se.Eq entityReferenceId,
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversalOf $ Se.Eq Nothing
+        ]
+    ]
+
+-- | An account's own movements in time order, newest first: lot credits into it and debits out of it that name
+--   no lot (spending and expiry entries, which name a lot, are left out). From is inclusive, to exclusive.
+findAccountActivity ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Domain.LedgerEntry]
+findAccountActivity accountId mbFrom mbTo mbLimit mbOffset =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Or
+            [ Se.And
+                [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+                  Se.Is Beam.entryType $ Se.Eq Domain.LiabilityCreated
+                ],
+              Se.And
+                [ Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+                  Se.Is Beam.entryType $ Se.Eq Domain.LiabilitySettled,
+                  Se.Is Beam.entityReferenceType $ Se.Eq Nothing
+                ]
+            ]
+        ]
+          <> [Se.Is Beam.timestamp $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
+          <> [Se.Is Beam.timestamp $ Se.LessThan to | Just to <- [mbTo]]
+    ]
+    (Se.Desc Beam.timestamp)
+    mbLimit
+    mbOffset
+
+-- | 'findOpenLotsByToAccount' narrowed to the lots that lapsed before the given instant.
+findLapsedOpenLotsByToAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  UTCTime ->
+  m [Domain.LedgerEntry]
+findLapsedOpenLotsByToAccount accountId now =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.entryType $ Se.Eq Domain.LiabilityCreated,
+          -- the not-null check is not redundant: rows still held in Redis are matched in memory, where
+          -- Nothing < Just now is True, so a lot that never expires would count as lapsed
+          Se.Is Beam.expiresAt $ Se.Not (Se.Eq Nothing),
+          Se.Is Beam.expiresAt $ Se.LessThan (Just now),
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversedBy $ Se.Eq Nothing,
+          Se.Is Beam.reversalOf $ Se.Eq Nothing,
+          Se.Or
+            [ Se.Is Beam.settlementStatus $ Se.Eq Nothing,
+              Se.Is Beam.settlementStatus $ Se.Eq (Just Domain.UNSETTLED)
+            ]
+        ]
+    ]
+
+-- | 'findUnlinkedDebitsByFromAccount' narrowed to the debits that lapsed before the given instant.
+findLapsedUnlinkedDebitsByFromAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  UTCTime ->
+  m [Domain.LedgerEntry]
+findLapsedUnlinkedDebitsByFromAccount accountId now =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+          Se.Is Beam.entryType $ Se.Eq Domain.LiabilitySettled,
+          Se.Is Beam.entityReferenceType $ Se.Eq Nothing,
+          -- see findLapsedOpenLotsByToAccount: keeps a debit with no expiry out of the in-memory match
+          Se.Is Beam.expiresAt $ Se.Not (Se.Eq Nothing),
+          Se.Is Beam.expiresAt $ Se.LessThan (Just now),
+          Se.Is Beam.status $ Se.Not $ Se.Eq Domain.VOIDED,
+          Se.Is Beam.reversedBy $ Se.Eq Nothing,
+          Se.Or
+            [ Se.Is Beam.settlementStatus $ Se.Eq Nothing,
+              Se.Is Beam.settlementStatus $ Se.Eq (Just Domain.UNSETTLED)
+            ]
+        ]
+    ]
