@@ -3,6 +3,7 @@
 module Domain.Action.Internal.SharedCabTrip
   ( sharedCabActiveTrip,
     expireSharedCabTrip,
+    authMerchant,
   )
 where
 

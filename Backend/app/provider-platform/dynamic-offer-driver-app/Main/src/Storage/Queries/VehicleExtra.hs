@@ -224,6 +224,12 @@ findEnabledByVariantsCityAndManufacturingDateAfter variantVals cutoffDate (Id me
       Just minRating ->
         B.maybe_ (B.sqlBool_ $ B.val_ False) (\r -> B.sqlBool_ (r B.>=. B.val_ minRating)) vr
 
+findAllByRegistrationNos :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Text] -> m [Vehicle]
+findAllByRegistrationNos registrationNos =
+  if null registrationNos
+    then pure []
+    else findAllWithKV [Se.Is BeamV.registrationNo $ Se.In registrationNos]
+
 findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id Person] -> m [Vehicle]
 findAllByDriverIds driverIds =
   if null driverIds

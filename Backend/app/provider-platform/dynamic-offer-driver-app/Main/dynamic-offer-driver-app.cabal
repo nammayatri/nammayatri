@@ -375,6 +375,7 @@ library
       Domain.Action.Internal.SendWelcomeEmail
       Domain.Action.Internal.SharedCabAllocation
       Domain.Action.Internal.SharedCabCallNumber
+      Domain.Action.Internal.SharedCabDemandNudge
       Domain.Action.Internal.SharedCabTrip
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection

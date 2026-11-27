@@ -258,7 +258,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data BetterPointWalkDistanceSource
   = STRAIGHT_LINE
@@ -333,6 +333,7 @@ data SharedCabConfig = SharedCabConfig
     chatEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     checkInLeadSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     degradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    demandNudgeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     demandStopsPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverAcceptEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -347,6 +348,16 @@ data SharedCabConfig = SharedCabConfig
     maxSkipsAndCancels :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     movingTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     noLocationSpotBookingsPerVehiclePerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeIdleRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeIntervalSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMaxIdleDriversPerRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMaxLookupsPerCity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMaxOptionsPerDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMergeRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMinRequestsPerRider :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeMinRiders :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeSessionSeenSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nudgeWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offRouteSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerRetryTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -366,12 +377,12 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BetterPointWalkDistanceSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BetterPointWalkDistanceSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SharedCabCallMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedCabCallMode)

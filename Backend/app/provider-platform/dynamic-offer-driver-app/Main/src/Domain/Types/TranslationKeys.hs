@@ -381,6 +381,7 @@ data DriverPushKey
   | DriverPush_Ride_EkdLiveCallFeedback
   | DriverPush_SharedCab_Allocation
   | DriverPush_SharedCab_CheckIn
+  | DriverPush_SharedCab_DemandNudge
   | -- Bus trips
     DriverPush_BusTrip_Assigned
   | DriverPush_BusTrip_Started
@@ -523,6 +524,7 @@ instance IsTranslationKey DriverPushKey where
            DriverPush_Ride_EkdLiveCallFeedback,
            DriverPush_SharedCab_Allocation,
            DriverPush_SharedCab_CheckIn,
+           DriverPush_SharedCab_DemandNudge,
            DriverPush_BusTrip_Assigned,
            DriverPush_BusTrip_Started,
            DriverPush_BusTrip_Ended,
@@ -646,6 +648,7 @@ instance IsTranslationKey DriverPushKey where
     DriverPush_Ride_EkdLiveCallFeedback -> Just "EKD_LIVE_CALL_FEEDBACK"
     DriverPush_SharedCab_Allocation -> Just "SHARED_CAB_ALLOCATION"
     DriverPush_SharedCab_CheckIn -> Just "SHARED_CAB_CHECK_IN"
+    DriverPush_SharedCab_DemandNudge -> Just "SHARED_CAB_DEMAND_NUDGE"
     DriverPush_BusTrip_Assigned -> Nothing
     DriverPush_BusTrip_Started -> Nothing
     DriverPush_BusTrip_Ended -> Nothing

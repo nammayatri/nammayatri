@@ -85,6 +85,7 @@ data RiderJobType
   | SharedCabAllocationTick
   | SharedCabSessionExpiry
   | SharedCabDegradedSweep
+  | SharedCabDemandNudge
   | SendRideInvoiceEmail
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -139,6 +140,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
   restoreAnyJobInfo SSharedCabSessionExpiry jobData = AnyJobInfo <$> restoreJobInfo SSharedCabSessionExpiry jobData
   restoreAnyJobInfo SSharedCabDegradedSweep jobData = AnyJobInfo <$> restoreJobInfo SSharedCabDegradedSweep jobData
+  restoreAnyJobInfo SSharedCabDemandNudge jobData = AnyJobInfo <$> restoreJobInfo SSharedCabDemandNudge jobData
   restoreAnyJobInfo SSendRideInvoiceEmail jobData = AnyJobInfo <$> restoreJobInfo SSendRideInvoiceEmail jobData
 
 instance JobInfoProcessor 'Daily
@@ -562,6 +564,17 @@ type instance JobContent 'SharedCabSessionExpiry = SharedCabSessionExpiryJobData
 instance JobInfoProcessor 'SharedCabDegradedSweep
 
 type instance JobContent 'SharedCabDegradedSweep = SharedCabDegradedSweepJobData
+
+data SharedCabDemandNudgeJobData = SharedCabDemandNudgeJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedCabDemandNudge
+
+type instance JobContent 'SharedCabDemandNudge = SharedCabDemandNudgeJobData
 
 data SendRideInvoiceEmailJobData = SendRideInvoiceEmailJobData
   { rideId :: Id DRide.Ride,

@@ -70,7 +70,18 @@ data SharedCabTunables = SharedCabTunables
     -- | The assigned cab's ETA to the board stop must be over this for the rider to skip it.
     skipMinEtaSec :: Int,
     -- | Seconds a cab the rider skipped stays off their booking in FALLBACK; after that, with no other cab found, the old one may come back.
-    riderSkipTtlSec :: Int
+    riderSkipTtlSec :: Int,
+    demandNudgeEnabled :: Bool,
+    nudgeIntervalSec :: Int,
+    nudgeWindowSec :: Int,
+    nudgeMinRequestsPerRider :: Int,
+    nudgeMinRiders :: Int,
+    nudgeSessionSeenSec :: Int,
+    nudgeMaxLookupsPerCity :: Int,
+    nudgeIdleRadiusM :: Int,
+    nudgeMergeRadiusM :: Int,
+    nudgeMaxOptionsPerDriver :: Int,
+    nudgeMaxIdleDriversPerRoute :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -111,7 +122,18 @@ defaultTunables =
       maxSkipsAndCancels = 15,
       skipCancelCountTtlSec = 5 * 60 * 60,
       skipMinEtaSec = 120,
-      riderSkipTtlSec = 120
+      riderSkipTtlSec = 120,
+      demandNudgeEnabled = False,
+      nudgeIntervalSec = 5 * 60,
+      nudgeWindowSec = 10 * 60,
+      nudgeMinRequestsPerRider = 3,
+      nudgeMinRiders = 2,
+      nudgeSessionSeenSec = 30,
+      nudgeMaxLookupsPerCity = 20,
+      nudgeIdleRadiusM = 1500,
+      nudgeMergeRadiusM = 300,
+      nudgeMaxOptionsPerDriver = 3,
+      nudgeMaxIdleDriversPerRoute = 10
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -155,7 +177,18 @@ tunablesOf busPingMaxAgeSec mbConfig =
       maxSkipsAndCancels = pick (.maxSkipsAndCancels) (.maxSkipsAndCancels),
       skipCancelCountTtlSec = pickPositive (.skipCancelCountTtlSec) (.skipCancelCountTtlSec),
       skipMinEtaSec = pick (.skipMinEtaSec) (.skipMinEtaSec),
-      riderSkipTtlSec = pickPositive (.riderSkipTtlSec) (.riderSkipTtlSec)
+      riderSkipTtlSec = pickPositive (.riderSkipTtlSec) (.riderSkipTtlSec),
+      demandNudgeEnabled = pick (.demandNudgeEnabled) (.demandNudgeEnabled),
+      nudgeIntervalSec = pickPositive (.nudgeIntervalSec) (.nudgeIntervalSec),
+      nudgeWindowSec = pickPositive (.nudgeWindowSec) (.nudgeWindowSec),
+      nudgeMinRequestsPerRider = pickPositive (.nudgeMinRequestsPerRider) (.nudgeMinRequestsPerRider),
+      nudgeMinRiders = pickPositive (.nudgeMinRiders) (.nudgeMinRiders),
+      nudgeSessionSeenSec = pickPositive (.nudgeSessionSeenSec) (.nudgeSessionSeenSec),
+      nudgeMaxLookupsPerCity = pickPositive (.nudgeMaxLookupsPerCity) (.nudgeMaxLookupsPerCity),
+      nudgeIdleRadiusM = pickPositive (.nudgeIdleRadiusM) (.nudgeIdleRadiusM),
+      nudgeMergeRadiusM = pickPositive (.nudgeMergeRadiusM) (.nudgeMergeRadiusM),
+      nudgeMaxOptionsPerDriver = pickPositive (.nudgeMaxOptionsPerDriver) (.nudgeMaxOptionsPerDriver),
+      nudgeMaxIdleDriversPerRoute = pickPositive (.nudgeMaxIdleDriversPerRoute) (.nudgeMaxIdleDriversPerRoute)
     }
   where
     pick :: (DRC.SharedCabConfig -> Maybe a) -> (SharedCabTunables -> a) -> a

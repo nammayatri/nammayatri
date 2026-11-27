@@ -1,6 +1,10 @@
 module SharedLogic.SharedCab.Demand
   ( searchWindowMin,
     recordSearch,
+    recordWaitHit,
+    markSessionSeen,
+    recentMembers,
+    waitHitsAtStops,
     StopDemand (..),
     demandByStop,
     waitingRiders,
@@ -15,9 +19,12 @@ module SharedLogic.SharedCab.Demand
 where
 
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Char8 as BS8
+import Data.Either (lefts)
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Database.Redis as RawRedis
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -29,10 +36,10 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Select (groupByKey)
-import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince)
+import SharedLogic.SharedCab.Booking (cityLiveWindowSec, findingOnRoute, liveSince, shared)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Interest (interestedOnRoutes)
-import SharedLogic.SharedCab.Keys (demandKey)
+import SharedLogic.SharedCab.Keys (activeDemandRoutesKey, demandKey, sessionSeenKey, waitHitsKey)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 bucketSec, bucketCount, bucketTtlSec :: Int
@@ -51,6 +58,86 @@ recordSearch :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> Text -> m 
 recordSearch cityId riderId stopCode = do
   now <- getCurrentTime
   Redis.withMasterRedis $ Redis.sAddExp (demandKey cityId stopCode (bucketOf now)) [riderId] bucketTtlSec
+
+posixScore :: UTCTime -> Double
+posixScore = realToFrac . utcTimeToPOSIXSeconds
+
+expireAsCount :: RawRedis.Redis (Either RawRedis.Reply Bool) -> RawRedis.Redis (Either RawRedis.Reply Integer)
+expireAsCount = fmap (fmap (\set -> if set then 1 else 0))
+
+logPipelineFailure :: (MonadFlow m) => Text -> Either SomeException [Either RawRedis.Reply a] -> m ()
+logPipelineFailure what = \case
+  Left err -> logError (what <> show err)
+  Right replies -> whenJust (listToMaybe (lefts replies)) $ \reply -> logError (what <> show reply)
+
+recordWaitHit :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> [Text] -> Text -> m Bool
+recordWaitHit cfg cityId stopCode routeCodes riderId
+  | not cfg.demandNudgeEnabled = pure False
+  | otherwise = do
+    now <- getCurrentTime
+    let ttl = toInteger (cfg.nudgeWindowSec + bucketSec)
+    shared $ do
+      hitsKey <- Redis.buildKey (waitHitsKey cityId stopCode (bucketOf now))
+      routesKey <- Redis.buildKey (activeDemandRoutesKey cityId)
+      let routeOps =
+            if null routeCodes
+              then []
+              else [RawRedis.zadd routesKey [(posixScore now, TE.encodeUtf8 r) | r <- nub routeCodes], expireAsCount (RawRedis.expire routesKey ttl)]
+      res <- Redis.runPipelined "sharedCabWaitHits" identity ([RawRedis.hincrby hitsKey (TE.encodeUtf8 riderId) 1, expireAsCount (RawRedis.expire hitsKey ttl)] <> routeOps)
+      logPipelineFailure "shared-cab wait hit not recorded: " res
+      pure $ case res of
+        Right (Right 1 : _) -> True
+        _ -> False
+
+markSessionSeen :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Text -> Text -> m ()
+markSessionSeen cfg cityId plate = when cfg.demandNudgeEnabled $ do
+  now <- getCurrentTime
+  let score = posixScore now
+  shared $ do
+    key <- Redis.buildKey (sessionSeenKey cityId)
+    res <-
+      Redis.runPipelined
+        "sharedCabSessionSeen"
+        identity
+        [ RawRedis.zadd key [(score, TE.encodeUtf8 plate)],
+          RawRedis.zremrangebyscore key 0 (score - fromIntegral cfg.nudgeSessionSeenSec),
+          expireAsCount (RawRedis.expire key (toInteger (2 * cfg.nudgeSessionSeenSec)))
+        ]
+    logPipelineFailure "shared-cab session seen not recorded: " res
+
+recentMembers :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> UTCTime -> m [Text]
+recentMembers key windowSec now = shared $ do
+  let end = posixScore now
+      start = end - fromIntegral windowSec
+  prefixed <- Redis.buildKey key
+  res <-
+    Redis.runPipelined
+      "sharedCabRecentMembers"
+      identity
+      [ fmap (const []) <$> RawRedis.zremrangebyscore prefixed 0 (start - 0.001),
+        RawRedis.zrangebyscore prefixed start end
+      ]
+  logPipelineFailure "shared-cab recent members not read: " res
+  pure $ case res of
+    Right [_, Right members] -> map TE.decodeUtf8 members
+    _ -> []
+
+waitHitsAtStops :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Text -> UTCTime -> [Text] -> m [(Text, Text, Int)]
+waitHitsAtStops windowSec cityId now stopCodes = do
+  let buckets = max 1 (ceiling (fromIntegral windowSec / fromIntegral bucketSec :: Double))
+      keys = [(stopCode, waitHitsKey cityId stopCode (bucketOf now - i)) | stopCode <- stopCodes, i <- [0 .. buckets - 1]]
+  res <- shared $ do
+    prefixed <- traverse (Redis.buildKey . snd) keys
+    Redis.runPipelined "sharedCabWaitHitsRead" RawRedis.hgetall prefixed
+  logPipelineFailure "shared-cab wait hits not read: " res
+  pure $ case res of
+    Right replies ->
+      [ (stopCode, TE.decodeUtf8 rider, hits)
+        | ((stopCode, _), Right fields) <- zip keys replies,
+          (rider, count) <- fields,
+          Just hits <- [readMaybe (BS8.unpack count)]
+      ]
+    Left _ -> []
 
 data StopDemand = StopDemand {waiting :: Int, searching :: Int}
   deriving (Show, Eq, Generic, ToJSON)

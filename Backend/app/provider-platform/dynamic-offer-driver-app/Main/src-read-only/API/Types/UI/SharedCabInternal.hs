@@ -4,6 +4,7 @@ module API.Types.UI.SharedCabInternal where
 
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
@@ -12,7 +13,35 @@ data SharedCabCheckInReq = SharedCabCheckInReq {driverId :: Kernel.Prelude.Text,
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SharedCabDemandNudgeReq = SharedCabDemandNudgeReq {onRoutePlates :: [Kernel.Prelude.Text], routes :: [SharedCabNudgeRoute], tunables :: SharedCabNudgeTunables}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabNudgeRoute = SharedCabNudgeRoute {ahead :: [Kernel.Prelude.Int], onRoute :: [SharedCabOnRouteCab], routeCode :: Kernel.Prelude.Text, routeName :: Kernel.Prelude.Text, stops :: [SharedCabNudgeStop]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabNudgeStop = SharedCabNudgeStop {code :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text, point :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabNudgeTunables = SharedCabNudgeTunables
+  { expiresAt :: Kernel.Prelude.UTCTime,
+    idleRadiusM :: Kernel.Prelude.Int,
+    maxIdlePerRoute :: Kernel.Prelude.Int,
+    maxLookups :: Kernel.Prelude.Int,
+    maxOptions :: Kernel.Prelude.Int,
+    mergeRadiusM :: Kernel.Prelude.Int,
+    minRiders :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabOnRouteCab = SharedCabOnRouteCab {nextIdx :: Kernel.Prelude.Int, vehicleNumber :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

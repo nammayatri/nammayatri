@@ -225,6 +225,7 @@ getSharedCabSession mbRideId agencyId driver plate mbToken = do
     Nothing -> do
       merchantId <- agencyMerchant agencyId
       s <- ownSession merchantId driver plate
+      fork "sharedCabSessionSeen" $ Config.getTunables s.merchantOperatingCityId >>= \cfg -> Demand.markSessionSeen cfg s.merchantOperatingCityId.getId s.vehicleNumber
       -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
       -- journey completed (the next poll shows it), then the cab's tick step runs
       fork "sharedCabSessionStopProgress" $ do

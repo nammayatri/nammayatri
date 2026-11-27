@@ -83,6 +83,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SendRideInvoiceEmail
 import "rider-app" SharedLogic.Scheduler.Jobs.SettlementReportIngestion
 import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
 import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
+import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabDemandNudge
 import "rider-app" SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -170,6 +171,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sharedCabAllocationTick
           & putJobHandlerInListWrapper flowRt env sharedCabSessionExpiry
           & putJobHandlerInListWrapper flowRt env sharedCabDegradedSweep
+          & putJobHandlerInListWrapper flowRt env sharedCabDemandNudge
     }
 
 runRiderAppScheduler ::

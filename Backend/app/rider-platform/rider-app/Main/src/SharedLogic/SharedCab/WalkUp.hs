@@ -56,6 +56,7 @@ import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.RateLimit (enforceStickerCodeLimit)
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
+import qualified SharedLogic.SharedCab.Schedule as Schedule
 import qualified SharedLogic.SharedCab.Seats as Seats
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -282,7 +283,13 @@ sharedCabRouteServiceability person cabIbc req legReqs = do
   cfg <- Config.getTunables person.merchantOperatingCityId
   -- opening the cab list for a boarding stop is a search for a cab there
   whenJust req.sourceStopCode $ \stopCode ->
-    void $ bestEffort (logError . ("shared-cab search not recorded: " <>)) (Demand.recordSearch cabIbc.merchantOperatingCityId.getId person.id.getId stopCode)
+    void $
+      bestEffort
+        (logError . ("shared-cab search not recorded: " <>))
+        ( Demand.recordSearch cabIbc.merchantOperatingCityId.getId person.id.getId stopCode
+            >> Demand.recordWaitHit cfg cabIbc.merchantOperatingCityId.getId stopCode (concatMap (.routeCodes) legReqs) person.id.getId
+            >>= \firstHit -> when firstHit (Schedule.ensureDemandNudgeJob person.merchantId cabIbc.merchantOperatingCityId cfg.nudgeIntervalSec)
+        )
   legs <- forM legReqs $ \legReq -> do
     routes <- forM (nub legReq.routeCodes) $ \code -> do
       mbRoute <- OTPRest.getRouteByRouteId cabIbc code
