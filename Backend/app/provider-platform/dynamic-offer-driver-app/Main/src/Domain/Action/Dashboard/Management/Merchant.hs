@@ -73,6 +73,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigVendorSplitDetailsList,
     getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
+    getMerchantConfigOperatingCityWhiteListList,
     postMerchantConfigAllowedDestinationStates,
     getMerchantConfigAllowedDestinationStates,
     postMerchantConfigMerchantCreate,
@@ -5188,34 +5189,66 @@ postMerchantPayoutConfigUpdate merchantShortId city req = do
 -- provider side changes here
 postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> Context.City -> Common.WhiteListOperatingCityReq -> Flow Common.WhiteListOperatingCityRes
 postMerchantConfigOperatingCityWhiteList _ _ req = do
-  let merchantId = req.bppMerchantId
-      merchantOperatingCityId = req.bppMerchantOperatingCityId
-      bapSubId = req.bapSubscriberId
-      bapUniqueKeyId = req.bapUniqueKeyId
-      bppDomain = req.bppSubscriberDomain
+  merchantId <- fromMaybeM (InvalidRequest "bppMerchantId is required for driver side whitelisting") req.bppMerchantId
+  merchantOperatingCityId <- fromMaybeM (InvalidRequest "bppMerchantOperatingCityId is required for driver side whitelisting") req.bppMerchantOperatingCityId
+  bapSubId <- fromMaybeM (InvalidRequest "bapSubscriberId is required for driver side whitelisting") req.bapSubscriberId
+  let bppDomain = req.bppSubscriberDomain
+      source = fromMaybe Common.Internal req.source
+      action = fromMaybe Common.WhiteList req.action
+  mbBapUniqueKeyId <- case (source, action) of
+    (Common.Internal, Common.CreateNew) -> Just <$> fromMaybeM (InvalidRequest "bapUniqueKeyId is required for driver side whitelisting") req.bapUniqueKeyId
+    _ -> pure Nothing
+  validateWhiteListMerchantAndCity (Id merchantId) (Id merchantOperatingCityId)
   now <- getCurrentTime
-  nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   whiteListOrgId <- generateGUID
   let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, supportedBecknProtocols = Nothing, createdAt = now, updatedAt = now}
-      -- enableOneShotAssign deliberately Nothing at onboarding: the one-shot assignment
-      -- fast path is opted in per subscriber during rollout, never by default.
-      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, enableOneShotAssign = Nothing, createdAt = now, updatedAt = now}
-      registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
   existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
   when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
-  SQVNP.findByPrimaryKey bapSubId.getShortId >>= \case
-    Just existing ->
-      unless existing.enabled $
-        SQVNP.updateByPrimaryKey existing {VNP.enabled = True, VNP.updatedAt = now}
-    Nothing -> SQVNP.create valueAddNpReq
-  existingRegistryMapFallback <- QRMF.findByPrimaryKey bapSubId.getShortId bapUniqueKeyId
-  when (isNothing existingRegistryMapFallback) $ QRMF.create registryMapFallbackReq
+  when (source == Common.Internal) $ do
+    -- enableOneShotAssign deliberately Nothing at onboarding: the one-shot assignment
+    -- fast path is opted in per subscriber during rollout, never by default.
+    let valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, enableOneShotAssign = Nothing, createdAt = now, updatedAt = now}
+    SQVNP.findByPrimaryKey bapSubId.getShortId >>= \case
+      Just existing ->
+        unless existing.enabled $
+          SQVNP.updateByPrimaryKey existing {VNP.enabled = True, VNP.updatedAt = now}
+      Nothing -> SQVNP.create valueAddNpReq
+  whenJust mbBapUniqueKeyId $ \bapUniqueKeyId -> do
+    nyRegistryBaseUrl <- asks (.nyRegistryUrl)
+    let registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
+    existingRegistryMapFallback <- QRMF.findByPrimaryKey bapSubId.getShortId bapUniqueKeyId
+    when (isNothing existingRegistryMapFallback) $ QRMF.create registryMapFallbackReq
   pure $
     Common.WhiteListOperatingCityRes
       { whiteListSuccess = True,
         whiteListMessage = "Success",
         whiteListError = Nothing
       }
+
+getMerchantConfigOperatingCityWhiteListList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.WhiteListOrgListRes
+getMerchantConfigOperatingCityWhiteListList merchantShortId city mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show city)
+  let limit = min 100 . max 1 $ fromMaybe 10 mbLimit
+      offset = max 0 $ fromMaybe 0 mbOffset
+  whiteListOrgs <- QWLO.findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset merchant.id merchantOperatingCity.id limit offset
+  pure $ Common.WhiteListOrgListRes {list = map mkWhiteListOrgItem whiteListOrgs}
+  where
+    mkWhiteListOrgItem wlo =
+      Common.WhiteListOrgItem
+        { id = wlo.id.getId,
+          subscriberId = wlo.subscriberId.getShortId,
+          domain = wlo.domain,
+          merchantId = wlo.merchantId.getId,
+          merchantOperatingCityId = wlo.merchantOperatingCityId.getId,
+          createdAt = wlo.createdAt
+        }
+
+validateWhiteListMerchantAndCity :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+validateWhiteListMerchantAndCity merchantId merchantOperatingCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
+  unless (merchantOperatingCity.merchantId == merchantId) $
+    throwError $ InvalidRequest $ "bppMerchantOperatingCityId " <> merchantOperatingCityId.getId <> " does not belong to bppMerchantId " <> merchantId.getId
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate

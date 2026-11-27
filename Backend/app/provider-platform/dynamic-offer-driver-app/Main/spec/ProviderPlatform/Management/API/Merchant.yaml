@@ -45,6 +45,7 @@ imports:
   DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  WhiteListOrgListRes: Dashboard.Common.Merchant
   UpsertAllowedDestinationStatesReq: Dashboard.Common.Merchant
   AllowedDestinationStatesResp: Dashboard.Common.Merchant
   ServiceTierType: Dashboard.Common
@@ -541,6 +542,18 @@ apis:
         type: WhiteListOperatingCityReq
       response:
         type: WhiteListOperatingCityRes
+      migrate:
+        capability: system-config.whitelist.write
+  - GET: # getWhiteListOrgListAPI
+      endpoint: /config/operatingCity/whiteList/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: WhiteListOrgListRes
+      migrate:
+        capability: system-config.whitelist.read
   - POST: # UpsertAllowedDestinationStatesAPI
       endpoint: /config/allowedDestinationStates
       auth: ApiAuthV2

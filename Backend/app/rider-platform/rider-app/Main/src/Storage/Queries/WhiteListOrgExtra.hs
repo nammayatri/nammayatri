@@ -1,6 +1,7 @@
 module Storage.Queries.WhiteListOrgExtra where
 
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -31,3 +32,21 @@ findBySubscriberIdAndDomainAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (ShortId Subscriber -> Domain -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
 findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId = do listToMaybe <$> findAllWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId), Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
+
+findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Int ->
+  Int ->
+  m [WhiteListOrg]
+findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset merchantId merchantOperatingCityId limit offset =
+  findAllWithOptionsDb
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    (Just offset)

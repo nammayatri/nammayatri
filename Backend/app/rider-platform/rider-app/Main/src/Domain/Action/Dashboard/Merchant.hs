@@ -39,6 +39,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantSchedulerTrigger,
     postMerchantSchedulerRevive,
     postMerchantConfigOperatingCityWhiteList,
+    getMerchantConfigOperatingCityWhiteListList,
     postMerchantConfigAllowedDestinationStates,
     getMerchantConfigAllowedDestinationStates,
     getMerchantConfigSpecialLocationList,
@@ -2219,9 +2220,12 @@ postMerchantSchedulerRevive merchantShortId _opCity req = do
 
 postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> Context.City -> Common.WhiteListOperatingCityReq -> Flow Common.WhiteListOperatingCityRes
 postMerchantConfigOperatingCityWhiteList _ _ req = do
-  let merchantId = req.bapMerchantId
-      merchantOperatingCityId = req.bapMerchantOperatingCityId
-      bppSubDomain = req.bppSubscriberDomain
+  merchantId <- fromMaybeM (InvalidRequest "bapMerchantId is required for rider side whitelisting") req.bapMerchantId
+  merchantOperatingCityId <- fromMaybeM (InvalidRequest "bapMerchantOperatingCityId is required for rider side whitelisting") req.bapMerchantOperatingCityId
+  bppSubId <- fromMaybeM (InvalidRequest "bppSubscriberId is required for rider side whitelisting") req.bppSubscriberId
+  let bppSubDomain = req.bppSubscriberDomain
+      source = fromMaybe Common.Internal req.source
+  validateWhiteListMerchantAndCity (Id merchantId) (Id merchantOperatingCityId)
   now <- getCurrentTime
   whiteListOrgId <- generateGUID
   let whiteListOrgReq =
@@ -2230,27 +2234,28 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
             id = whiteListOrgId,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            subscriberId = req.bppSubscriberId,
+            subscriberId = bppSubId,
             supportedBecknProtocols = Nothing,
             createdAt = now,
             updatedAt = now
           }
-  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId req.bppSubscriberId bppSubDomain (Id merchantId) (Id merchantOperatingCityId)
+  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bppSubId bppSubDomain (Id merchantId) (Id merchantOperatingCityId)
   when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
 
-  let bppSubscriberId = req.bppSubscriberId.getShortId
-  QValueAddNP.findByPrimaryKey bppSubscriberId >>= \case
-    Just existing ->
-      unless existing.enabled $
-        QValueAddNP.updateByPrimaryKey existing {DValueAddNP.enabled = True, DValueAddNP.updatedAt = now}
-    Nothing ->
-      QValueAddNP.create
-        DValueAddNP.ValueAddNP
-          { enabled = True,
-            subscriberId = bppSubscriberId,
-            createdAt = now,
-            updatedAt = now
-          }
+  when (source == Common.Internal) $ do
+    let bppSubscriberId = bppSubId.getShortId
+    QValueAddNP.findByPrimaryKey bppSubscriberId >>= \case
+      Just existing ->
+        unless existing.enabled $
+          QValueAddNP.updateByPrimaryKey existing {DValueAddNP.enabled = True, DValueAddNP.updatedAt = now}
+      Nothing ->
+        QValueAddNP.create
+          DValueAddNP.ValueAddNP
+            { enabled = True,
+              subscriberId = bppSubscriberId,
+              createdAt = now,
+              updatedAt = now
+            }
 
   pure $
     Common.WhiteListOperatingCityRes
@@ -2258,6 +2263,31 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
         whiteListMessage = "Success",
         whiteListError = Nothing
       }
+
+getMerchantConfigOperatingCityWhiteListList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.WhiteListOrgListRes
+getMerchantConfigOperatingCityWhiteListList merchantShortId city mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show city)
+  let limit = min 100 . max 1 $ fromMaybe 10 mbLimit
+      offset = max 0 $ fromMaybe 0 mbOffset
+  whiteListOrgs <- QWLO.findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset merchant.id merchantOperatingCity.id limit offset
+  pure $ Common.WhiteListOrgListRes {list = map mkWhiteListOrgItem whiteListOrgs}
+  where
+    mkWhiteListOrgItem wlo =
+      Common.WhiteListOrgItem
+        { id = wlo.id.getId,
+          subscriberId = wlo.subscriberId.getShortId,
+          domain = wlo.domain,
+          merchantId = wlo.merchantId.getId,
+          merchantOperatingCityId = wlo.merchantOperatingCityId.getId,
+          createdAt = wlo.createdAt
+        }
+
+validateWhiteListMerchantAndCity :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+validateWhiteListMerchantAndCity merchantId merchantOperatingCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
+  unless (merchantOperatingCity.merchantId == merchantId) $
+    throwError $ InvalidRequest $ "bapMerchantOperatingCityId " <> merchantOperatingCityId.getId <> " does not belong to bapMerchantId " <> merchantId.getId
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Flow Common.GeometryResp
 getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset mbAllCities = do

@@ -45,3 +45,21 @@ findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId =
             Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
           ]
       ]
+
+findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  Int ->
+  m [Domain.Types.WhiteListOrg.WhiteListOrg]
+findAllByMerchantIdAndMerchantOperatingCityIdWithLimitOffset merchantId merchantOperatingCityId limit offset =
+  findAllWithOptionsDb
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    (Just offset)
