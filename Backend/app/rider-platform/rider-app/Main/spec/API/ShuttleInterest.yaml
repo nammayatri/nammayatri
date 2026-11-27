@@ -1,0 +1,53 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  DayOfWeek: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  ShuttleTripType: Domain.Types.ShuttleInterest
+  ShuttleLocationSource: Domain.Types.ShuttleInterest
+
+module: ShuttleInterest
+
+types:
+  # Corporate shuttle interest form. The person and the company come from the auth token and the verified work email.
+  ShuttleInterestReq:
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Maybe Text # the formatted address; resolved from the coordinates when not given
+    pickupLocationSource: Maybe ShuttleLocationSource # GPS (the phone's position) or MANUAL (an address searched for)
+    pickupAccuracyMeters: Maybe Double # GPS accuracy; a GPS pickup must come with it and be accurate enough
+    dropLat: Double
+    dropLon: Double
+    dropAddress: Maybe Text
+    dropLocationSource: Maybe ShuttleLocationSource
+    dropAccuracyMeters: Maybe Double
+    tripType: ShuttleTripType
+    pickupTime: Maybe TimeOfDay # required for TO_OFFICE and ROUND_TRIP
+    dropTime: Maybe TimeOfDay # required for TO_HOME and ROUND_TRIP
+    daysOfWeek: "[DayOfWeek]"
+
+  # Whether the caller can fill the form: their work email is verified and belongs to an onboarded company.
+  ShuttleEligibilityResp:
+    workEmailVerified: Bool # the business email OTP is done
+    eligible: Bool # verified, and the email's domain belongs to a company
+    companyName: Maybe Text
+    officeAddress: Maybe Text # the company's address, to prefill the form's drop
+    officeLat: Maybe Double # the office's location: the form's drop
+    officeLon: Maybe Double
+    hasSubmittedInterest: Bool
+
+apis:
+  # POST /shuttle/interest  (creates the caller's interest, or replaces the one they already submitted)
+  - POST:
+      endpoint: /shuttle/interest
+      auth: TokenAuth
+      request:
+        type: ShuttleInterestReq
+      response:
+        type: APISuccess
+
+  # GET /shuttle/eligibility  (after the work-email OTP: which company the caller belongs to, before showing the form)
+  - GET:
+      endpoint: /shuttle/eligibility
+      auth: TokenAuth
+      response:
+        type: ShuttleEligibilityResp

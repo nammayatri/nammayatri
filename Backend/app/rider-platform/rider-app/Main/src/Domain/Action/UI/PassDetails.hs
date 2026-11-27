@@ -62,6 +62,7 @@ import Kernel.Types.TryException (withTryCatch)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.CorporateMembership as SCorporate
 import qualified SharedLogic.External.Nandi.Types as Fields
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab as SharedCab
@@ -103,7 +104,8 @@ getGetOrganizations (mbPersonId, _merchantId) passEnumText = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   organizations <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum (DPerson.merchantOperatingCityId person) passEnum
-  pure $ map mkPassOrganizationResp organizations
+  -- corporate shuttle companies are regular-pass organisations too; riders reach them through their work email, not this list
+  pure $ map mkPassOrganizationResp $ filter (not . SCorporate.isCorporateOrg) organizations
 
 mkPassOrganizationResp :: DPassOrganization.PassOrganization -> PassDetailsAPI.GetOrganizationResp
 mkPassOrganizationResp DPassOrganization.PassOrganization {..} =

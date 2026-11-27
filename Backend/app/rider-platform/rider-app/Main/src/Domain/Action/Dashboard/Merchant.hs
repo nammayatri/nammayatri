@@ -216,16 +216,18 @@ postMerchantUpdate merchantShortId city req = do
   mbAllExophones <- forM req.exoPhones $ const CQExophone.findAllExophones
 
   void $ CQM.update updMerchant
-  whenJust req.exoPhones \exophones -> do
+  mbNewExophones <- forM req.exoPhones $ \exophones -> do
     CQExophone.deleteByMerchantOperatingCityId merchantOperatingCity.id
-    forM_ exophones $ \exophoneReq -> do
+    forM (toList exophones) $ \exophoneReq -> do
       exophone <- buildExophone merchant.id merchantOperatingCity.id now exophoneReq
       CQExophone.create exophone
+      pure exophone
 
   CQM.clearCache updMerchant
-  whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id) allExophones
-    CQExophone.clearCache merchantOperatingCity.id oldExophones
+  let oldExophones = maybe [] (filter (\exophone -> exophone.merchantOperatingCityId == merchantOperatingCity.id)) mbAllExophones
+  let newExophones = fromMaybe [] mbNewExophones
+  unless (null oldExophones && null newExophones) $
+    CQExophone.clearCache merchantOperatingCity.id (oldExophones <> newExophones)
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
 
@@ -448,6 +450,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
             poolingMode = request.poolingMode <|> (mbExistingSpLoc >>= (.poolingMode)),
             queueGeomGeoJson = request.queueGeom <|> (mbExistingSpLoc >>= (.queueGeomGeoJson)),
+            skipQueue = mbExistingSpLoc >>= (.skipQueue),
             ..
           }
 
@@ -1933,7 +1936,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 fareSettlementType = mbFareSettlementType,
                 boothSpecificFleet = Nothing,
                 poolingMode = Nothing,
-                queueGeomGeoJson = Nothing
+                queueGeomGeoJson = Nothing,
+                skipQueue = Nothing
               }
           gateInfo =
             DGI.GateInfo
@@ -2032,7 +2036,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
           DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
-          DSL.paymentModes = new.paymentModes <|> old.paymentModes
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+          DSL.skipQueue = new.skipQueue <|> old.skipQueue
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

@@ -29,6 +29,7 @@ data Invoice = Invoice
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByType :: Kernel.Prelude.Text,
     issuedToAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issuedToGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToId :: Kernel.Prelude.Text,
     issuedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToType :: Domain.Types.Invoice.IssuedToType,

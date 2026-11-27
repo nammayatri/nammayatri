@@ -1987,7 +1987,7 @@ fareCategories planId mbPlanName (driverId, _merchantId, merchantOpCityId) = do
     -- plan-dependently-charged" fees in the sense this endpoint reports on.
     waivedFor chargesBy plan = case chargesBy of
       DFP.NoCharge -> Just True
-      DFP.PlanBased -> Just plan.waivesSpecialRideCharges
+      DFP.PlanBased -> Just (fromMaybe False plan.waivesSpecialRideCharges)
       DFP.FixedAmount -> Just False
       _ -> Nothing
 
@@ -2032,7 +2032,7 @@ fareCategories planId mbPlanName (driverId, _merchantId, merchantOpCityId) = do
     toConditionalEntry plan now mbPerson mbDriverInfo currency chargeRow = do
       (categoryName, isWaived) <- case chargeRow.chargeCategory of
         DCCE.PURPLE_RIDE_CHARGE -> Just ("PURPLE_RIDE", True)
-        DCCE.AUTO_INSTANT_CHARGE -> Just ("AUTO_INSTANT", plan.waivesSpecialRideCharges)
+        DCCE.AUTO_INSTANT_CHARGE -> Just ("AUTO_INSTANT", fromMaybe False plan.waivesSpecialRideCharges)
         _ -> Nothing
       Just
         FareCategoryEntity

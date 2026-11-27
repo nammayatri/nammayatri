@@ -1156,7 +1156,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           mbPlanForWaiver <- do
             mbDriverPlanForWaiver <- findByDriverIdWithServiceName (cast driverId) serviceName
             getPlan mbDriverPlanForWaiver serviceName merchantOpCityId Nothing currentVehicleCategory
-          if maybe False (.waivesSpecialRideCharges) mbPlanForWaiver
+          if fromMaybe False (mbPlanForWaiver >>= (.waivesSpecialRideCharges))
             then return (0, 0, 0, False)
             else return (fee, feeCgst, feeSgst, True)
         _ -> return (0, 0, 0, False)

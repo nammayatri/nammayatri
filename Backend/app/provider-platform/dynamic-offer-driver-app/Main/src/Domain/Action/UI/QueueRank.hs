@@ -7,6 +7,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
@@ -23,11 +24,15 @@ data QueueRankResponse = QueueRankResponse
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
--- Driver is prioritized if they have an active fleet association.
+mkDriverAirportDropKey :: Text -> Text
+mkDriverAirportDropKey did = "Driver:AirportDrop:" <> did
+
+-- Driver is prioritized if they have an active fleet association or completed an airport drop within the last 30 min.
 checkDriverProgramMembership :: Id DP.Person -> Environment.Flow (Maybe Bool)
 checkDriverProgramMembership driverId = do
   mbAssoc <- QFDA.findByDriverId driverId True
-  pure $ Just $ isJust mbAssoc
+  mbAirportDrop <- Redis.get (mkDriverAirportDropKey driverId.getId)
+  pure $ Just $ isJust mbAssoc || (mbAirportDrop == Just True)
 
 getQueuePosition ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

@@ -155,6 +155,6 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.validityInDays validityInDays,
       Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
       Se.Set Beam.vehicleVariant vehicleVariant,
-      Se.Set Beam.waivesSpecialRideCharges (Kernel.Prelude.Just waivesSpecialRideCharges)
+      Se.Set Beam.waivesSpecialRideCharges waivesSpecialRideCharges
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

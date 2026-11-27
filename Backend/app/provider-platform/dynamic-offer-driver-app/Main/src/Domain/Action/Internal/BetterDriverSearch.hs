@@ -32,6 +32,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.BetterDriverSearch as SBDS
+import SharedLogic.CallBAP (betterDriverCutoffRadius)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as Fields
 import Storage.CachedQueries.Merchant as QMerchant
@@ -58,13 +59,14 @@ betterDriverSearch req = do
     throwError (InvalidRequest "A better-driver search is already running for this booking")
   merchant <- QMerchant.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  whenJust transporterConfig.betterDriverProximityAbortRadiusMeters $ \abortRadius -> do
+  whenJust transporterConfig.betterDriverSearchMaxRadiusMeters $ \searchRadius -> do
+    cutoffRadius <- betterDriverCutoffRadius searchRadius transporterConfig.betterDriverProximityAbortRadiusMeters booking ride.driverId
     -- Pre-pickup driver: pings are in LTS's on_pickup bucket, not on_ride.
     driverLocationResp <- LTSF.pickupDriverLocation ride.id merchant.id ride.driverId
     whenJust (lastMaybe driverLocationResp.loc) $ \latest -> do
       let pickupLoc = getCoordinates booking.fromLocation
           distance = distanceBetweenInMeters (LatLong latest.lat latest.lon) pickupLoc
-      when (distance < abortRadius) $ throwError (InvalidRequest "Driver is already close to pickup; not eligible for a better-driver search")
+      when (distance < cutoffRadius) $ throwError (InvalidRequest "Driver is already close to pickup; not eligible for a better-driver search")
   SBDS.startBetterDriverSearch merchant booking ride
   pure Success
   where

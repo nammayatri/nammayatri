@@ -68,6 +68,7 @@ import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified SharedLogic.SharedRun.Reassign as SharedRunReassign
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
@@ -157,9 +158,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
     DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
     DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     DTC.OneWay DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer
-    -- a dropped run is not re-offered through the on-demand path; the shared-run fallback job
-    -- re-assigns it from the owned fleet or the curated board (module A)
-    DTC.SharedRoute _ -> cancelRideTransactionForNonReallocation Nothing Nothing
+    -- a dropped run goes back to the scheduled board, not to CANCELLED, and the shared-run fallback job
+    -- re-assigns it from the owned fleet or the curated board; at/after departure it is cancelled as before
+    DTC.SharedRoute _ -> SharedRunReassign.returnRunToBoard booking ride bookingCReason >>= bool (cancelRideTransactionForNonReallocation Nothing Nothing) (pure True)
     _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateDynamicOffer = do

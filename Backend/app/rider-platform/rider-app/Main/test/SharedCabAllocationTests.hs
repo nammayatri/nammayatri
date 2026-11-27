@@ -21,6 +21,7 @@ import "rider-app" Domain.Action.UI.SharedCab (skipReason)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as BS
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "beckn-spec" Domain.Types.SharedCabSession as SCS
+import "beckn-spec" Domain.Types.SharedCabSession (DemandAtStop (..))
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Allocation (eachIsolated, mergeLive)

@@ -1447,8 +1447,8 @@ TransporterConfig:
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
     arrivingPickupThreshold: HighPrecMeters
-    # Assigned driver inside this ⇒ abort any stand-by better-driver search.
-    betterDriverProximityAbortRadiusMeters: Maybe HighPrecMeters
+    # Share (0-1) of the gap between the driver's starting distance and the search radius he must cover before a better-driver search stops (default 0.5).
+    betterDriverProximityAbortRadiusMeters: Maybe Double
     # Ceiling on a stand-by better-driver search's own pool radius.
     betterDriverSearchMaxRadiusMeters: Maybe HighPrecMeters
     specialDrivers: "[Text]"

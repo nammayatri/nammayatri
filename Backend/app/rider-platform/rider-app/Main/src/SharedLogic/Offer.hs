@@ -171,7 +171,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
       rider = Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
-  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
+  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
   offerListResp <-
     if useDomainOffers
@@ -243,6 +243,8 @@ recomputePostOfferAmount mbCtx offer = case mbCtx of
       -- rescaled. This is why the saving exceeds the offer's face value, and it
       -- must match what the BPP captures.
       pure (fst b - uncurry FB.clampDiscount b offer.discountAmount)
+    | otherwise ->
+      pure (fst b)
   Nothing | offer.discountAmount > 0 -> do
     logWarning $
       "recomputePostOfferAmount: offer " <> offer.offerId

@@ -1,0 +1,49 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Data.Time
+
+# Corporate shuttle: which day each published trip runs, and how many employees it carries that day. Written by the control
+# centre's GTFS download, from the same plan as the feed: GIMS serves the routes, stops and stop times but not the trips'
+# calendar, so the days are kept here. One row per feed, trip and day: trip ids follow the
+# naming convention inside one city's feed and need not be unique across feeds.
+ShuttlePublishedTrip:
+  tableName: shuttle_published_trip
+
+  fields:
+    tripId: Text # <route>-<HHMM>, as in the GTFS feed
+    day: Text # lower-case day name, e.g. monday
+    feedKey: Text # corp_<city>
+    routeCode: Text # CORP-<ORG>-<n>
+    departure: Text # HH:MM from the route's first stop
+    riders: Int # employees planned on this trip that day
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    feedKey: PrimaryKey
+    tripId: PrimaryKey
+    day: PrimaryKey
+
+  sqlType:
+    tripId: text
+    day: text
+    feedKey: text
+    routeCode: text
+    departure: text
+
+  queries:
+    # scoped to the city as well: a feed key is only meaningful inside one merchant operating city
+    findAllByFeedKeyAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [feedKey, merchantOperatingCityId]
+
+    deleteByFeedKeyAndTripIdAndDay:
+      kvFunction: deleteWithKV
+      where:
+        and: [feedKey, tripId, day]
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

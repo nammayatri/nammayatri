@@ -63,6 +63,7 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
@@ -217,13 +218,19 @@ agencyMerchant :: Text -> Environment.Flow (Id DM.Merchant)
 agencyMerchant agencyId = (.merchantId) <$> getIntegratedBppConfigByAgency agencyId
 
 -- | The driver's session poll reads the cab's fix and seats from the route snapshot; an action's reply reads them fresh.
--- With a ride id the driver is on a shared-route run, which has no cab session: its passengers are the bookings on the ride.
-getSharedCabSession :: Maybe Text -> Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
-getSharedCabSession mbRideId agencyId driver plate mbToken = do
+-- With a run ref (trip id and departure) the driver is on a shared-route run, which has no cab session: its passengers
+-- are that day's tickets on the trip, on the feed the agency names. The ride id, when sent, only labels the session.
+getSharedCabSession :: Maybe Text -> Maybe UTCTime -> Maybe Text -> Text -> Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
+getSharedCabSession mbRideId mbRunDeparture mbRunTripId agencyId driver plate mbToken = do
   checkToken mbToken
-  case mbRideId of
-    Just rideId -> runSessionView rideId
+  runRefOf mbRunTripId mbRunDeparture >>= \case
+    Just ref -> do
+      feedConfigIds <- feedConfigIdsOf agencyId
+      when (null feedConfigIds) $ throwError (IntegratedBPPConfigNotFoundForAgency agencyId "any")
+      runSessionView feedConfigIds ref mbRideId
     Nothing -> do
+      -- a ride id alone is a run asked for by its old name, which no longer finds its passengers
+      whenJust mbRideId $ \rideId -> throwError (InvalidRequest $ "run " <> rideId <> " must be asked for by runTripId and runDeparture")
       merchantId <- agencyMerchant agencyId
       s <- ownSession merchantId driver plate
       -- off the poll's path, one after the other so the two never race on a booking: a rider who has reached their drop stop has the
@@ -234,14 +241,28 @@ getSharedCabSession mbRideId agencyId driver plate mbToken = do
         StopProgress.stepSessionCab s
       mkSessionRespFrom CachedCab s
 
--- | A shared-route run in the session's shape. The run is the driver platform's ride and its passengers the CONFIRMED
--- bookings placed on it, each shown at the stops it boards and alights; the dropped and no-show ones are off the rider list
+-- | Every config row of the feed the agency key names (one per platform type); a run's tickets may carry any of them.
+-- Kept 5 min, as the driver polls the run's session.
+feedConfigIdsOf :: Text -> Environment.Flow [Id DIBC.IntegratedBPPConfig]
+feedConfigIdsOf agencyKey =
+  IM.withInMemCache ["SharedRunFeedConfigIds", agencyKey] 300 $
+    map (.id) <$> QIBC.findAllByAgencyKey agencyKey
+
+-- | A request names a run by both its fields or by neither; one without the other is refused.
+runRefOf :: Maybe Text -> Maybe UTCTime -> Environment.Flow (Maybe DSharedRoute.RunRef)
+runRefOf mbTripId mbDeparture = case (mbTripId, mbDeparture) of
+  (Just tripId, Just departure) -> pure (Just DSharedRoute.RunRef {tripId, departure})
+  (Nothing, Nothing) -> pure Nothing
+  _ -> throwError (InvalidRequest "a run is named by both runTripId and runDeparture")
+
+-- | A shared-route run in the session's shape. The run is the feed's GTFS trip on one day ('DSharedRoute.RunRef') and its
+-- passengers that day's CONFIRMED bookings on the trip (see "SharedLogic.SharedRoute.Manifest"), each shown at the stops it boards and alights; the dropped and no-show ones are off the rider list
 -- but the boarded fares, dropped included, are the trip earnings the run's fare reads. Nothing of a cab's live state
 -- applies (no offers, walk-ups, demand, fix or check-in). The route and stops come from the first passenger's booking,
 -- as nothing else on this side names the run's route; an empty run shows none.
-runSessionView :: Text -> Environment.Flow View.SharedCabSession
-runSessionView rideId = do
-  passengers <- Manifest.runPassengers rideId
+runSessionView :: [Id DIBC.IntegratedBPPConfig] -> DSharedRoute.RunRef -> Maybe Text -> Environment.Flow View.SharedCabSession
+runSessionView feedConfigIds ref mbRideId = do
+  passengers <- Manifest.runPassengers feedConfigIds ref
   let live = [p | p <- passengers, p.state `elem` [DSharedRoute.WAITING, DSharedRoute.BOARDED]]
       carried = [p.booking.totalPrice.amount | p <- passengers, p.state `elem` [DSharedRoute.BOARDED, DSharedRoute.DROPPED]]
   (route, stops, addresses, feedKey) <- case [(p.booking, code) | p <- passengers, Just code <- [p.booking.routeCode]] of
@@ -279,7 +300,7 @@ runSessionView rideId = do
   pure
     View.SharedCabSession
       { route,
-        tripId = rideId,
+        tripId = fromMaybe ref.tripId mbRideId,
         gtfsId = feedKey,
         queuedRoute = Nothing,
         status = View.ACTIVE,
@@ -324,18 +345,21 @@ postSharedCabBookingOperations :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API
 postSharedCabBookingOperations bookingId mbToken req = do
   checkToken mbToken
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
-  case booking.rideId of
-    -- a passenger of a shared-route run: the rider platform placed them on the ride, so the offer verbs do not apply and the
-    -- board / no-show / drop go to the run's manifest
-    Just rideId -> do
+  runRefOf req.runTripId req.runDeparture >>= \case
+    -- a passenger of a shared-route run: their ticket is on the run's trip, so the offer verbs do not apply and the
+    -- board / no-show / drop go to the run's manifest, which checks the booking is on this run's feed, trip and day
+    Just ref -> do
       action <- case req.operation of
         API.BOARDED_WITHOUT_CODE -> pure (Manifest.Board Nothing)
         API.BOARDED_WITH_OTP -> Manifest.Board . Just <$> (req.otp & fromMaybeM (InvalidRequest "otp is required to board with OTP"))
         API.NO_SHOW -> pure Manifest.NoShow
         API.DROPPED -> pure Manifest.Drop
         other -> throwError (InvalidRequest $ show other <> " is a shared-cab offer verb; a run's passengers are placed by the rider platform")
-      Manifest.applyRunAction rideId booking action req.vehicleNumber
-      runSessionView rideId
+      -- the run is on the booking's feed: every config row sharing its agency key
+      bookingFeed <- getIntegratedBppConfig booking.integratedBppConfigId
+      feedConfigIds <- (booking.integratedBppConfigId :) . filter (/= booking.integratedBppConfigId) <$> feedConfigIdsOf bookingFeed.agencyKey
+      Manifest.applyRunAction feedConfigIds ref booking action req.vehicleNumber
+      runSessionView feedConfigIds ref Nothing
     Nothing -> cabBookingOperation
   where
     cabBookingOperation = case req.operation of

@@ -18,10 +18,13 @@ data PassOrganization = PassOrganization
     createdAt :: Data.Time.UTCTime,
     depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     depotPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    emailDomains :: [Kernel.Prelude.Text],
     id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
+    officeLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    officeLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     passEnum :: Domain.Types.PassType.PassEnum,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     updatedAt :: Data.Time.UTCTime
