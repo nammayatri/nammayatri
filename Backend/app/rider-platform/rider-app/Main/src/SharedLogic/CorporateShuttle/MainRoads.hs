@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Language.Haskell.TH as TH
 import qualified Language.Haskell.TH.Syntax as TH
 import qualified SharedLogic.CorporateShuttle.RoutePlanner as RP
+import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 
 -- | A point on a main road: where, its class (4 trunk, primary or secondary; 3 tertiary) and the road's name.
@@ -42,12 +43,18 @@ roadData :: BS.ByteString
 roadData =
   $( do
        let path = "data/corporate-shuttle/bangalore-main-roads.txt"
-       TH.addDependentFile path
-       bytes <- TH.runIO (BS.readFile path)
-       -- unsafePerformIO (BSU.unsafePackAddressLen <length> "<bytes>"#), built without a [| |] quote
-       TH.appE
-         (TH.varE 'unsafePerformIO)
-         (TH.appsE [TH.varE 'BSU.unsafePackAddressLen, TH.lift (BS.length bytes), TH.litE (TH.stringPrimL (BS.unpack bytes))])
+       -- the file is not in git: without it the build embeds no roads, and the planner classes roads by the road
+       -- network's speeds instead (touch this module to rebuild once the file is there)
+       exists <- TH.runIO (doesFileExist path)
+       if not exists
+         then TH.varE 'BS.empty
+         else do
+           TH.addDependentFile path
+           bytes <- TH.runIO (BS.readFile path)
+           -- unsafePerformIO (BSU.unsafePackAddressLen <length> "<bytes>"#), built without a [| |] quote
+           TH.appE
+             (TH.varE 'unsafePerformIO)
+             (TH.appsE [TH.varE 'BSU.unsafePackAddressLen, TH.lift (BS.length bytes), TH.litE (TH.stringPrimL (BS.unpack bytes))])
    )
 {-# NOINLINE roadData #-}
 
