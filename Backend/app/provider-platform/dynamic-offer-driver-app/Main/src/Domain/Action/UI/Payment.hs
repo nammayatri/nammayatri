@@ -642,6 +642,7 @@ mkTopupInvoiceConfig order =
       issuedToId = order.personId.getId,
       issuedToName = Nothing,
       issuedToAddress = Nothing,
+      issuedById = Nothing,
       referenceId = Nothing,
       lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
       gstBreakdown = Nothing,

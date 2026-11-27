@@ -966,6 +966,7 @@ buildRidePaymentInvoiceConfig ctx taxRegime gstRates rideFare taxAmount tollFare
           issuedToId = ctx.counterpartyId,
           issuedToName = ctx.issuedToName,
           issuedToAddress = ctx.fromLocationAddress,
+          issuedById = Nothing,
           referenceId = Just ctx.referenceId,
           lineItems =
             catMaybes
@@ -1304,6 +1305,7 @@ createPendingCancellationFeeLedger ctx taxRegime gstRates cancellationFee cancel
           issuedToId = ctx.counterpartyId,
           issuedToName = ctx.issuedToName,
           issuedToAddress = ctx.fromLocationAddress,
+          issuedById = Nothing,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)

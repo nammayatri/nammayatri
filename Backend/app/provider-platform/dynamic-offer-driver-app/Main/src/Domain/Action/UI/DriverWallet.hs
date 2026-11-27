@@ -1569,6 +1569,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
                 issuedToId = driverId.getId,
                 issuedToName = Nothing,
                 issuedToAddress = Nothing,
+                issuedById = Nothing,
                 referenceId = Nothing,
                 lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", descriptionType = Just AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Just Fare}],
                 gstBreakdown = Nothing,

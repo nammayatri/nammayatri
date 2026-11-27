@@ -68,7 +68,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, FinanceM, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), getEntriesByReference, includeEntryIds, invoice, settleEntry, transferPending, updateEntryStatus, voidEntry, withOwnerLock)
+import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx (supplierId), FinanceM, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), getEntriesByReference, includeEntryIds, invoice, settleEntry, transferPending, updateEntryStatus, voidEntry, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as Fields
@@ -431,7 +431,6 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
             customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
             paymentChargeAmt = fromMaybe 0 (mbDues >>= (.paymentCharge))
             paymentChargeVatAmt = Tax.taxTotal (mbDues >>= (.paymentChargeTaxBreakup))
-            driverIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
             mkLine gId ty desc descType amt = InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = gId, itemType = Just ty}
             mkPair desc descType ty amt = if amt > 0 then Just (mkLine (Just "g-payment") ty desc descType amt) else Nothing
             cancellationLines =
@@ -448,10 +447,11 @@ createCancellationLedgerEntries booking ride baseCancellation cancellationFeeTax
             cancellationInvoiceConfig =
               InvoiceConfig
                 { invoiceType = RideCancellation,
-                  issuedToType = driverIssuedToType,
-                  issuedToId = driverOrFleetPersonId.getId,
+                  issuedToType = CUSTOMER,
+                  issuedToId = maybe "" (.getId) booking.riderId,
                   issuedToName = booking.riderName,
                   issuedToAddress = booking.fromLocation.address.fullAddress,
+                  issuedById = ctx.supplierId,
                   gstBreakdown = rideGstBreakdown,
                   lineItems = cancellationLines,
                   referenceId = Just booking.id.getId,
@@ -621,6 +621,7 @@ settleCancellationLedger booking ride transporterConfig =
                 issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                 issuedToName = partyName,
                 issuedToAddress = partyAddress,
+                issuedById = Nothing,
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes

@@ -284,9 +284,9 @@ createRefundInvoice ctx ride booking refundsRequestId comps = do
   let referenceId = ctx.referenceId -- booking.id
       lineItems = concatMap mkRefundInvoiceLineItems comps
       anyVat = any (\c -> c.taxAmount > 0) comps
-      issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+      issuedToType = CUSTOMER
       parentInvoiceType = if booking.status == DBooking.CANCELLED then BeckInvoice.RideCancellation else BeckInvoice.Ride
-  mbParentInvoice <- listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just parentInvoiceType) (Just issuedToType) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
+  mbParentInvoice <- listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just parentInvoiceType) (Just CUSTOMER) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
   createRes <-
     InvoiceSvc.createInvoice
       InvoiceI.InvoiceInput
@@ -294,11 +294,11 @@ createRefundInvoice ctx ride booking refundsRequestId comps = do
           entityReferenceId = Just refundsRequestId,
           referenceInvoiceNumber = (.invoiceNumber) <$> mbParentInvoice,
           issuedToType = issuedToType,
-          issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+          issuedToId = maybe "" (.getId) booking.riderId,
           issuedToName = booking.riderName,
           issuedToAddress = booking.fromLocation.address.fullAddress,
           issuedByType = "BUYER",
-          issuedById = ctx.merchantId,
+          issuedById = fromMaybe ride.driverId.getId ctx.supplierId,
           issuedByName = ctx.merchantName,
           issuedByAddress = ctx.issuedByAddress,
           supplierName = ctx.supplierName,

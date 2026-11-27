@@ -97,7 +97,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transfer_, withMasterReads, withOwnerLock)
+import Lib.Finance (AccountRole (..), FinanceCtx (supplierId), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transfer_, withMasterReads, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
@@ -695,8 +695,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         (paymentChargeAmt, paymentChargeVatAmt) = splitGrossByTaxPct ((.tax) <$> (booking.paymentChargeDetails >>= (.chargeTax))) paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
         paymentChargeTaxRef = walletReferencePGPaymentChargesTax taxRegime
-    let rideInvoiceIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
-        rideLineItems =
+    let rideLineItems =
           let -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
               -- collapses them into one main-table row.
               mkPair gId ty isExt desc descType amt =
@@ -755,10 +754,11 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         rideInvoiceConfig =
           InvoiceConfig
             { invoiceType = BeckInvoice.Ride,
-              issuedToType = rideInvoiceIssuedToType,
-              issuedToId = driverOrFleetPersonId.getId,
+              issuedToType = CUSTOMER,
+              issuedToId = maybe "" (.getId) booking.riderId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
+              issuedById = ctx.supplierId,
               lineItems = rideLineItems,
               gstBreakdown = rideGstBreakdown,
               referenceId = Just booking.id.getId,
@@ -781,7 +781,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- doubled; the invoices are created only if missing.
     -- From the master, like the ledger once-checks: a retry must see invoices the previous run created.
     existingRideInvoices <- withMasterReads (QFInvoice.findByReferenceId (Just booking.id.getId))
-    let existingRideInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.issuedToType == rideInvoiceIssuedToType && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
+    let existingRideInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
     result <- runFinance ctx $ do
       -- Ride-earning components. Online: 2-leg pass-through (BAP cash in via
       -- BuyerExternal, then credited to driver wallet). Cash: single leg
@@ -892,6 +892,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 issuedToId = driverOrFleetPersonId.getId,
                 issuedToName = commissionPartyName,
                 issuedToAddress = commissionPartyAddress,
+                issuedById = Nothing,
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
