@@ -36,9 +36,8 @@ import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
-import qualified Domain.Types.Journey as DJourney
-import Domain.Types.SharedRoute (SharedDemandKnobs (..), SharedPassengerState)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJourney
 import Domain.Types.SharedRoute (RunRef (..), SharedDemandKnobs (..), SharedPassengerState, runTicketWindow, ticketOnRun)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
