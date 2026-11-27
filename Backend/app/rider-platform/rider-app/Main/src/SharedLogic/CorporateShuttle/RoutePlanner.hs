@@ -34,10 +34,14 @@ module SharedLogic.CorporateShuttle.RoutePlanner
     nodesOf,
     pathSecs,
     planRoutes,
+    fillShuttles,
+    minSeats,
+    maxRideSecs,
   )
 where
 
 import Control.Applicative ((<|>))
+import Data.Containers.ListUtils (nubOrd)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (sortOn)
@@ -52,14 +56,15 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 data Home = Home {homeAt :: LatLong, homeWeight :: Int}
 
 -- | A point on a road where a shuttle can stop, the road's name (for the stop's name only) and its class from the road
--- network: 4 a metro station or bus stand, 3 a main road, 2 an ordinary road, 1 a lane or side street (see the caller's
+-- network: 5 a metro station or bus stand, 4 a big main road, 3 a main road, 2 an ordinary road, 1 a lane or side street (see the caller's
 -- road classification).
 data Site = Site {siteAt :: LatLong, siteRoad :: Maybe Text, siteClass :: Int}
 
 mainRoadClass, hubClass :: Int
+-- the least a shared pickup's road is: a main road (OpenStreetMap's tertiary and up; 4 for trunk, primary, secondary)
 mainRoadClass = 3
 -- a metro station or a bus stand: a place everyone knows, on a main road
-hubClass = 4
+hubClass = 5
 
 -- | Seats on one shuttle.
 seats :: Int
@@ -86,7 +91,8 @@ walkEstimate a b = metersBetween a b * walkDetour
 
 rankFactor :: Int -> Double
 rankFactor = \case
-  4 -> 1.15
+  5 -> 1.2
+  4 -> 1.1
   3 -> 1.0
   2 -> 0.85
   1 -> 0.6
@@ -200,7 +206,7 @@ nodesOf Loop ps = 0 : ps <> [0]
 
 dwellSecs, maxRouteSecs, maxDetour, maxExtraSecs, loopFactor, routeFixedSecs :: Double
 dwellSecs = 60
-maxRouteSecs = 75 * 60
+maxRouteSecs = 90 * 60
 maxDetour = 2.0
 maxExtraSecs = 20 * 60
 -- a loop serves both directions when it is at most this much longer than driving the stops one way
@@ -361,3 +367,159 @@ planRoutes m boardWaves leaveWaves points = concatMap shapeGroup (improve (savin
       let times = arrivals m (nodesOf kind ps)
           endT = maybe 0 fst (lastMay times)
        in sum [(if boardsTo p && kind /= FromOffice then endT - t else 0) + (if leavesFrom p && kind /= ToOffice then t else 0) | (t, p) <- times, p /= 0]
+
+-- | One slot's shuttles in one direction (ToOffice or FromOffice), each carrying minSeats to seats riders and never more
+-- than maxRideSecs from its first stop to the office (or from the office to its last): riders are (pickup point, rider
+-- id).
+--
+--   1. fill     the farthest point still waiting seeds a shuttle and gives up to the seats there; then the point that adds
+--               the least driving (at its best place in the order, within maxRideSecs) gives the next riders, part of
+--               them when fewer seats are left, until the shuttle is full or nothing more fits
+--   2. repair   a shuttle with fewer than minSeats riders is dissolved: each of its riders joins the shuttle with a free
+--               seat that it adds the least driving to (within maxRideSecs); failing that it is merged with another small
+--               shuttle; failing that its riders are left off (too few, too far apart to share a shuttle)
+--   3. order    VND orders each shuttle's stops for the least driving, both ways round
+--   4. improve  between shuttles: a stop (its riders) moves to another shuttle, or two stops swap, while it saves driving
+--               (emptying a shuttle counts as routeFixedSecs saved)
+--
+-- Steps 2-4 run on two starts, the greedy fill above and Clarke-Wright savings (each point's riders beyond whole
+-- shuttles its own route, routes joined end to start in order of the driving saved, within the seats and maxRideSecs);
+-- the better is kept: the fewest riders left off, then the fewest shuttles, then the least driving.
+--
+-- Gives the shuttles (pickup points in driving order, their riders) and the riders left off.
+fillShuttles :: Matrix -> RouteKind -> [(Int, Text)] -> ([([Int], [Text])], [Text])
+fillShuttles m kind riders =
+  case sortOn score [solve (fill byPoint), solve (savingsFill byPoint)] of
+    (shuttles, leftOff) : _ -> ([(ps, map snd ids) | (ps, ids) <- shuttles], leftOff)
+    [] -> ([], [])
+  where
+    byPoint = IM.fromListWith (flip (<>)) [(p, [r]) | (p, r) <- riders]
+    solve shs0 =
+      let (shs1, leftOff) = repair shs0
+       in ([(order ps, ids) | (ps, ids) <- improveShuttles [(order ps, ids) | (ps, ids) <- shs1]], leftOff)
+    score (shs, leftOff) = (length leftOff, length shs, sum [cost ps | (ps, _) <- shs])
+    -- Clarke-Wright savings on open routes: joining a route ending at i to one starting at j saves the drive from i to the
+    -- office (to the office) or from the office to j (from it), less the drive from i to j
+    savingsFill waiting =
+      let chunk xs = if null xs then [] else take seats xs : chunk (drop seats xs)
+          whole = [([p], [(p, r) | r <- c]) | (p, rs) <- IM.toList waiting, c <- chunk rs, length c == seats]
+          rest = IM.filter (not . null) (IM.map (\rs -> drop (seats * (length rs `div` seats)) rs) waiting)
+          pts = IM.keys rest
+          link i j = (if kind == ToOffice then secsOf m i 0 else secsOf m 0 j) - secsOf m i j
+          candidates = map snd (sortOn fst [(negate (link i j), (i, j)) | i <- pts, j <- pts, i /= j])
+          ridersIn ps = sum [length (IM.findWithDefault [] p rest) | p <- ps]
+          join' (routes, owner) (i, j) = fromMaybe (routes, owner) $ do
+            ri <- IM.lookup i owner
+            rj <- IM.lookup j owner
+            guard (ri /= rj)
+            a <- IM.lookup ri routes
+            b <- IM.lookup rj routes
+            guard (lastMay a == Just i && listToMaybe b == Just j)
+            let ab = a <> b
+            guard (ridersIn ab <= seats && inTime ab)
+            pure (IM.insert ri ab (IM.delete rj routes), foldr (`IM.insert` ri) owner b)
+          routes0 = IM.elems (fst (foldl join' (IM.fromList [(p, [p]) | p <- pts], IM.fromList [(p, p) | p <- pts]) candidates))
+       in whole <> [(ps, [(p, r) | p <- ps, r <- IM.findWithDefault [] p rest]) | ps <- routes0]
+    -- 4.
+    improveShuttles = go (60 :: Int)
+      where
+        go 0 shs = shs
+        go k shs = maybe shs (go (k - 1)) (relocateMove shs <|> swapMove shs)
+        withIx = zip [0 :: Int ..]
+        others shs ia ib = [sh | (i, sh) <- withIx shs, i /= ia, i /= ib]
+        ridersAt p ids = [x | x@(q, _) <- ids, q == p]
+        dropStop p (ps, ids) = (filter (/= p) ps, filter ((/= p) . fst) ids)
+        bestInsert ps p = take 1 (sortOn cost [order ps' | ps' <- insertions ps p, inTime ps'])
+        kept (ps, ids) = [(ps, ids) | not (null ids)]
+        gain before after = before - after > 1
+        shuttleCost (ps, ids) = if null ids then 0 else cost ps + routeFixedSecs
+        relocateMove shs =
+          listToMaybe
+            [ kept a' <> [b'] <> others shs ia ib
+              | (ia, a@(psA, idsA)) <- withIx shs,
+                p <- psA,
+                let moving = ridersAt p idsA
+                    (psA0, idsA') = dropStop p a,
+                null idsA' || (length idsA' >= minSeats && inTime psA0),
+                let a' = (if null idsA' then [] else order psA0, idsA'),
+                (ib, b@(psB, idsB)) <- withIx shs,
+                ib /= ia,
+                length idsB + length moving <= seats,
+                psB' <- bestInsert psB p,
+                let b' = (psB', idsB <> moving),
+                gain (shuttleCost a + shuttleCost b) (shuttleCost a' + shuttleCost b')
+            ]
+        swapMove shs =
+          listToMaybe
+            [ [a', b'] <> others shs ia ib
+              | (ia, a@(psA, idsA)) <- withIx shs,
+                (ib, b@(psB, idsB)) <- withIx shs,
+                ia < ib,
+                p <- psA,
+                p `notElem` psB,
+                q <- psB,
+                q `notElem` psA,
+                let (psA0, idsA0) = dropStop p a
+                    (psB0, idsB0) = dropStop q b
+                    idsA' = idsA0 <> ridersAt q idsB
+                    idsB' = idsB0 <> ridersAt p idsA,
+                length idsA' <= seats,
+                length idsB' <= seats,
+                psA' <- bestInsert psA0 q,
+                psB' <- bestInsert psB0 p,
+                let a' = (psA', idsA')
+                    b' = (psB', idsB'),
+                gain (cost psA + cost psB) (cost psA' + cost psB')
+            ]
+    cost ps = pathSecs m (nodesOf kind ps)
+    inTime ps = cost ps <= maxRideSecs
+    farness p = secsOf m p 0 + secsOf m 0 p
+    order ps = maybe ps snd (listToMaybe (sortOn fst [(cost o, o) | o <- [vnd cost inTime ps, vnd cost inTime (reverse ps)]]))
+    insertions ps n = if n `elem` ps then [ps] else [take i ps <> [n] <> drop i ps | i <- [0 .. length ps]]
+    -- 1.
+    fill waiting = case sortOn (negate . farness) (IM.keys waiting) of
+      [] -> []
+      seed : _ ->
+        let (ps, ids, rest) = grow [seed] [(seed, r) | r <- take seats (waiting IM.! seed)] (takeFrom seed seats waiting)
+         in (ps, ids) : fill rest
+    takeFrom p k w = let remaining = drop k (IM.findWithDefault [] p w) in if null remaining then IM.delete p w else IM.insert p remaining w
+    grow ps ids waiting
+      | length ids >= seats = (ps, ids, waiting)
+      | otherwise =
+        case sortOn fst [(cost ps' - cost ps, (c, ps')) | c <- IM.keys waiting, c `notElem` ps, ps' <- insertions ps c, inTime ps'] of
+          (_, (c, ps')) : _ ->
+            let k = seats - length ids
+             in grow ps' (ids <> [(c, r) | r <- take k (waiting IM.! c)]) (takeFrom c k waiting)
+          [] -> (ps, ids, waiting)
+    -- 2.
+    repair shs = case sortOn (length . snd . snd) [(i, sh) | (i, sh) <- zip [0 :: Int ..] shs, length (snd sh) < minSeats] of
+      [] -> (shs, [])
+      (i, small) : _ ->
+        let others = [sh | (j, sh) <- zip [0 ..] shs, j /= i]
+         in case foldM placeRider others (snd small) <|> mergeInto small others of
+              Just shs' -> repair shs'
+              Nothing -> let (kept, dropped) = repair others in (kept, dropped <> map snd (snd small))
+    placeRider shs (n, rid) =
+      fmap snd . listToMaybe . sortOn fst $
+        [ (cost ps' - cost ps, [if j == k then (ps', ids <> [(n, rid)]) else sh | (k, sh) <- zip [0 :: Int ..] shs])
+          | (j, (ps, ids)) <- zip [0 ..] shs,
+            length ids < seats,
+            ps' <- insertions ps n,
+            inTime ps'
+        ]
+    mergeInto (sps, sids) shs =
+      fmap snd . listToMaybe . sortOn fst $
+        [ (cost merged, [if j == k then (merged, ids <> sids) else sh | (k, sh) <- zip [0 :: Int ..] shs])
+          | (j, (ps, ids)) <- zip [0 ..] shs,
+            length ids + length sids <= seats,
+            let merged = order (nubOrd (ps <> sps)),
+            inTime merged
+        ]
+
+-- | The fewest riders a shuttle runs with, and the longest it takes from its first stop to the office (or from the office
+-- to its last stop), stops included.
+minSeats :: Int
+minSeats = 4
+
+maxRideSecs :: Double
+maxRideSecs = 40 * 60

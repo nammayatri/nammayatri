@@ -99,6 +99,29 @@ types:
     fileName: Text # <city>.corp_shuttle.gtfs.zip
     gtfsZipBase64: Text
 
+  # A rider's shuttle subscription (purchased_pass with its latest term in purchased_pass_payment), with their form.
+  ShuttleSubscriptionItem:
+    personId: Id Person
+    employeeName: Maybe Text
+    companyName: Maybe Text
+    passCode: Maybe Text
+    passStatus: Maybe Text # the term's status: Active, PreBooked, Pending, Refunded, ...; none: not subscribed
+    attendance: Text # COMING (subscribed and active), CANCELLED (a refund status), NOT_SUBSCRIBED
+    startDate: Maybe Text # YYYY-MM-DD of the current term
+    endDate: Maybe Text
+    amount: Maybe Double
+    routeId: Maybe Text
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    pickupAddress: Text
+    tripType: ShuttleTripType
+    pickupTime: Maybe TimeOfDay
+    dropTime: Maybe TimeOfDay
+    daysOfWeek: "[DayOfWeek]"
+
+  ShuttleSubscriptionListResp:
+    subscriptions: "[ShuttleSubscriptionItem]"
+
   ShuttlePublishedRoutesResp:
     feedKey: Maybe Text # corp_<city>, or none when the city has no published corporate feed
     routes: "[ShuttlePublishedRoute]"
@@ -133,6 +156,7 @@ apis:
         capability: corporate-shuttle.interest.read
       query:
         - day: Text # e.g. monday: only the routes with a trip that day, with that day's trips
+        - subscribedOnly: Bool # only the riders subscribed and coming
       response:
         type: ShuttlePublishedRoutesResp
   - POST:
@@ -140,5 +164,14 @@ apis:
       auth: ApiAuthV2
       migrate:
         capability: corporate-shuttle.routes.write
+      query:
+        - subscribedOnly: Bool # only the riders subscribed and coming
       response:
         type: ShuttleRoutesPublishResp
+  - GET:
+      endpoint: /subscriptions
+      auth: ApiAuthV2
+      migrate:
+        capability: corporate-shuttle.interest.read
+      response:
+        type: ShuttleSubscriptionListResp
