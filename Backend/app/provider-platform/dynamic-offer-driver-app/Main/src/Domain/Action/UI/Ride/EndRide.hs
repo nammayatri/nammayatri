@@ -92,6 +92,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
+import qualified Lib.Queries.SpecialLocation as QSL
 import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -679,8 +680,11 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
-    when (booking.specialLocationTag == Just "SpecialZone_SureAirport_PriorityDrop") $
-      Redis.setExp (mkDriverAirportDropKey driverId.getId) True 1800
+    whenJust (booking.area >>= SL.dropSpecialZoneIdFromArea) $ \slIdText ->
+      fork "endRide -> airport drop queue priority" $ do
+        skipQueue <- QSL.checkSkipQueueById (Id slIdText)
+        when skipQueue $
+          Redis.setExp (mkDriverAirportDropKey driverId.getId) True 1800
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 
