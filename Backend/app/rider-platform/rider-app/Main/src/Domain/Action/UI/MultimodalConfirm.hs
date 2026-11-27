@@ -2297,6 +2297,7 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantId :: Id Domain.Types.Merchant.Merchant,
     maxLiveVehiclesPerRoute :: Int,
     maxAlternateRouteVehicles :: Int,
+    dropSchedulesPastSourceStop :: Bool,
     allowUpcomingTrips :: Bool
   }
 
@@ -2339,6 +2340,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
               merchantId = person.merchantId,
               maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
               maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
+              dropSchedulesPastSourceStop = fromMaybe False riderConfig.dropSchedulesPastSourceStop,
               allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips
             }
     let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
@@ -2593,7 +2595,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                 transportModes = Nothing,
                 minimumWalkDistance = riderConfig.minimumWalkDistance,
                 permissibleModes = fromMaybe [] riderConfig.permissibleModes,
-                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                maxAllowedPublicTransportLegs = fromMaybe riderConfig.maxAllowedPublicTransportLegs riderConfig.routeServiceabilityMaxPublicTransportLegs,
                 sortingType = MultiModal.Fastest,
                 walkSpeed = Nothing
               }
@@ -2875,8 +2877,8 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                 )
                 (zip busesForRoutes schedulesForRoutes)
 
-          -- Separate user-requested routes (5 per route, already limited by distance)
-          -- from alternate routes (capped to 7 total combined by ETA)
+          -- Separate user-requested routes (live vehicles already limited per route by distance)
+          -- from alternate routes (their schedules share one cap across routes, by ETA)
           let (requestedRoutes, alternateRoutes) =
                 partition (\r -> r.routeCode `elem` userRequestedCodes) routesWithLiveVehicles
               -- Clustered routes board at their own stop, not the leg's requested one,
@@ -2888,7 +2890,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
           let boardingStopFor rc =
                 let stop = maybe rlFromStopCode fst (lookup rc rlStopsByRoute)
                  in fromMaybe [stop] (lookup stop equivalentsByStop)
-              cappedAlternates = capVehiclesAcrossRoutes boardingStopFor ctx.maxAlternateRouteVehicles alternateRoutes
+          cappedAlternates <- capVehiclesAcrossRoutes boardingStopFor ctx.dropSchedulesPastSourceStop ctx.maxAlternateRouteVehicles alternateRoutes
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle
@@ -2995,63 +2997,50 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       ]
     capVehiclesAcrossRoutes ::
       (Text -> [Text]) ->
+      Bool ->
       Int ->
       [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle] ->
-      [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle]
-    capVehiclesAcrossRoutes boardingStopFor maxCount routes =
-      let -- Tag each vehicle with its route code and boarding-stop arrival time
-          taggedLive =
+      Environment.Flow [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle]
+    capVehiclesAcrossRoutes boardingStopFor dropPastAtSource maxCount routes = do
+      nowIST <- CQMMB.utcToIST <$> getCurrentTime
+      let -- Live vehicles are already limited per route. Each schedule is tagged with its boarding-stop arrival
+          -- and whether it is the active trip; a past one is dropped unless it is the active trip.
+          tagged =
             concatMap
               ( \r ->
                   let boardingStop = boardingStopFor r.routeCode
-                   in map
-                        (\v -> (r.routeCode, Left v, getSourceStopETAFromLive boardingStop v))
-                        r.liveVehicles
-              )
-              routes
-          taggedScheduled =
-            concatMap
-              ( \r ->
-                  let boardingStop = boardingStopFor r.routeCode
-                   in map
-                        (\v -> (r.routeCode, Right v, getSourceStopETAFromScheduled boardingStop v))
+                   in mapMaybe
+                        (\v -> (\(arrival, live) -> (r.routeCode, v, arrival, live)) <$> scheduleAtBoardingStop boardingStop dropPastAtSource nowIST v)
                         r.schedules
               )
               routes
-          allTagged = taggedLive <> taggedScheduled
           -- Sort by arrival time (earliest first, Nothing goes to the end)
-          sorted = sortBy (\(_, _, a) (_, _, b) -> compareETA a b) allTagged
+          sorted = sortBy (\(_, _, a, _) (_, _, b, _) -> compareETA a b) tagged
           compareETA (Just t1) (Just t2) = compare t1 t2
           compareETA (Just _) Nothing = LT
           compareETA Nothing (Just _) = GT
           compareETA Nothing Nothing = EQ
-          top = take maxCount sorted
-          -- Redistribute back into per-route grouping
-          topByRoute =
-            Map.fromListWith
-              (\(l1, s1) (l2, s2) -> (l1 <> l2, s1 <> s2))
-              (map toRouteEntry top)
-          toRouteEntry (rc, Left lv, _) = (rc, ([lv], []))
-          toRouteEntry (rc, Right sv, _) = (rc, ([], [sv]))
-       in -- Rebuild routes, keeping only vehicles that made the cut
-          filter (\r -> not (null r.liveVehicles && null r.schedules)) $
-            map
-              ( \r ->
-                  let (keptLive, keptScheduled) = fromMaybe ([], []) $ Map.lookup r.routeCode topByRoute
-                   in -- PassingRoutes shares liveVehicles/schedules, so the update needs the type spelled out.
-                      (r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled} :: API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-              )
-              routes
+          (onLiveTrip, others) = partition (\(_, _, _, live) -> live) sorted
+          kept = onLiveTrip <> take maxCount others
+          keptByRoute = Map.fromListWith (flip (<>)) [(rc, [sv]) | (rc, sv, _, _) <- kept]
+      -- Rebuild routes, keeping all live vehicles and only the kept schedules
+      pure $
+        filter (\r -> not (null r.liveVehicles && null r.schedules)) $
+          map
+            ( \r ->
+                -- PassingRoutes shares liveVehicles/schedules, so the update needs the type spelled out.
+                (r {API.Types.UI.MultimodalConfirm.schedules = Map.findWithDefault [] r.routeCode keptByRoute} :: API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
+            )
+            routes
 
     -- Takes the boarding stop's equivalent codes: feed ETAs are keyed by platform, so a station
-    -- is only found through the platform codes under it.
-    getSourceStopETAFromLive :: [Text] -> API.Types.UI.MultimodalConfirm.LiveVehicleInfo -> Maybe UTCTime
-    getSourceStopETAFromLive stopCodes v =
-      v.eta >>= find (\e -> e.stopCode `elem` stopCodes) >>= \e -> Just e.arrivalTime
-
-    getSourceStopETAFromScheduled :: [Text] -> API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo -> Maybe UTCTime
-    getSourceStopETAFromScheduled stopCodes v =
-      v.eta >>= find (\e -> e.stopCode `elem` stopCodes) >>= \e -> Just e.arrivalTime
+    -- is only found through the platform codes under it. Returns the schedule's arrival there and whether
+    -- it is the active trip, or Nothing when that arrival is past and it is not the active trip.
+    scheduleAtBoardingStop :: [Text] -> Bool -> UTCTime -> API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo -> Maybe (Maybe UTCTime, Bool)
+    scheduleAtBoardingStop stopCodes dropPastAtSource nowIST v =
+      let arrival = (.arrivalTime) <$> (v.eta >>= find (\e -> e.stopCode `elem` stopCodes))
+          live = v.isActiveTrip == Just True
+       in if dropPastAtSource && not live && maybe False (< nowIST) arrival then Nothing else Just (arrival, live)
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

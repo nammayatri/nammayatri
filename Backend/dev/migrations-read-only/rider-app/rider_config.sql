@@ -997,3 +997,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rental_stop_updates boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sms_otp_allowed_country_codes text [] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN route_serviceability_max_public_transport_legs integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN drop_schedules_past_source_stop boolean ;
