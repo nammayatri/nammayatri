@@ -31,6 +31,7 @@ import Kernel.Utils.Common (throwError)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.IntegratedBPPConfig (findIbppConfigByCityVehicleAndFeedKey, getGimsBaseUrl)
+import qualified SharedLogic.InternalAuth as SIA
 import Tools.Error (GenericError (InvalidRequest))
 
 data VehicleTripOwnerReq = VehicleTripOwnerReq
@@ -48,8 +49,8 @@ data VehicleTripOwner = VehicleTripOwner
 
 resolveVehicleTripOwner :: Maybe Text -> VehicleTripOwnerReq -> Flow VehicleTripOwner
 resolveVehicleTripOwner apiKey req = do
-  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-  unless (apiKey == Just locationTrackingServiceKey) $ throwError $ InvalidRequest "Invalid API key"
+  validKey <- SIA.isValidLtsKey "resolveVehicleTripOwner" apiKey
+  unless validKey $ throwError $ InvalidRequest "Invalid API key"
   integratedBPPConfig <- findIbppConfigByCityVehicleAndFeedKey (Id req.merchantOperatingCityId) (show BUS) req.gtfsId
   let busNo = T.strip req.vehicleNumber
   toOwner <$> busOnlineWaybill integratedBPPConfig busNo

@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
+import qualified SharedLogic.InternalAuth as SIA
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Auth (verifyPerson)
@@ -37,10 +38,10 @@ data InternalResp = InternalResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-internalAuth :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe RegToken -> Maybe Text -> Flow InternalResp
+internalAuth :: Maybe RegToken -> Maybe Text -> Flow InternalResp
 internalAuth token apiKey = do
-  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-  unless (apiKey == Just locationTrackingServiceKey) $ do
+  validKey <- SIA.isValidLtsKey "internalAuth" apiKey
+  unless validKey $ do
     throwError $ InvalidRequest "Invalid API key"
   (driverId, currentMerchantId, merchantOpCityId) <- verifyPerson (fromMaybe "" token)
   merchant <- QM.findById currentMerchantId >>= fromMaybeM (MerchantNotFound currentMerchantId.getId)
